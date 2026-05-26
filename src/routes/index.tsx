@@ -4,7 +4,7 @@ import { PanelLeft } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
-import { ModelSelector } from "@/components/ModelSelector";
+
 import { SettingsDialog, type Settings } from "@/components/SettingsDialog";
 import { NovaLogo } from "@/components/NovaLogo";
 import { useUser, SignInButton, clerkEnabled } from "@/components/auth/ClerkSafe";
@@ -328,7 +328,9 @@ function NovaGPT() {
               <PanelLeft className="w-5 h-5" />
             </button>
           )}
-          <ModelSelector mode={mode} onChange={setMode} />
+          <div className="flex items-center gap-1.5 px-3 py-1.5 font-semibold">
+            <span>Nova GPT</span>
+          </div>
           <div className="ml-auto flex items-center gap-2">
             <SignInButton mode="modal">
               <button className="text-sm px-3 py-1.5 rounded-lg border border-border hover:bg-accent transition md:hidden">
@@ -363,6 +365,8 @@ function NovaGPT() {
                 isStreaming={isStreaming}
                 attachments={attachments}
                 onAttachmentsChange={setAttachments}
+                mode={mode}
+                onModeChange={setMode}
               />
             </div>
           </div>
@@ -388,6 +392,8 @@ function NovaGPT() {
               isStreaming={isStreaming}
               attachments={attachments}
               onAttachmentsChange={setAttachments}
+              mode={mode}
+              onModeChange={setMode}
             />
           </>
         )}

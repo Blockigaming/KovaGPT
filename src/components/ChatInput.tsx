@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { createRecognition, sttSupported } from "@/lib/voice";
 import { tryUseUpload, DAILY_UPLOAD_LIMIT, getUsage } from "@/lib/limits";
 import { toast } from "sonner";
+import { ModelSelector } from "@/components/ModelSelector";
+import type { ModeId, Tier } from "@/lib/modes";
 
 export type PendingAttachment = { kind: "image"; dataUrl: string; name: string };
 
@@ -14,6 +16,9 @@ export function ChatInput({
   isStreaming,
   attachments,
   onAttachmentsChange,
+  mode,
+  onModeChange,
+  userTier = "free",
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -22,6 +27,9 @@ export function ChatInput({
   isStreaming: boolean;
   attachments: PendingAttachment[];
   onAttachmentsChange: (a: PendingAttachment[]) => void;
+  mode?: ModeId;
+  onModeChange?: (m: ModeId) => void;
+  userTier?: Tier;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -174,6 +182,11 @@ export function ChatInput({
               )}
             </div>
           </div>
+          {mode && onModeChange && (
+            <div className="flex items-center px-2 pb-2 -mt-1">
+              <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
+            </div>
+          )}
         </div>
         <p className="text-center text-xs text-muted-foreground mt-2">
           Nova GPT can make mistakes. Check important info.
