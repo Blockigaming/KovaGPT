@@ -334,7 +334,6 @@ function NovaGPT() {
                 isStreaming={isStreaming}
                 attachments={attachments}
                 onAttachmentsChange={setAttachments}
-                onGenerateImage={generateImage}
               />
             </div>
           </div>
@@ -360,7 +359,6 @@ function NovaGPT() {
               isStreaming={isStreaming}
               attachments={attachments}
               onAttachmentsChange={setAttachments}
-              onGenerateImage={generateImage}
             />
           </>
         )}
