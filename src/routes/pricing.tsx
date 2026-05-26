@@ -1,7 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Check, ArrowLeft, Sparkles, Zap, Crown } from "lucide-react";
+import { Check, ArrowLeft, Sparkles, Zap, Crown, X } from "lucide-react";
 import { useState } from "react";
 import { NovaLogo } from "@/components/NovaLogo";
+import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
+import { useUser } from "@/components/auth/ClerkSafe";
+import { useStripeCheckout } from "@/hooks/useStripeCheckout";
+import { useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/pricing")({
   component: PricingPage,
@@ -19,54 +23,34 @@ export const Route = createFileRoute("/pricing")({
 
 type ProTier = "5x" | "10x";
 
-const PRO_TIERS: Record<ProTier, { price: string; usage: string; cta: string }> = {
-  "5x": { price: "$79", usage: "5x more usage than Plus", cta: "Upgrade to Pro 5x" },
-  "10x": { price: "$149", usage: "10x more usage than Plus", cta: "Upgrade to Pro 10x" },
+const PRO_TIERS: Record<ProTier, { price: string; usage: string; cta: string; priceId: string }> = {
+  "5x": { price: "$79", usage: "5x more usage than Plus", cta: "Upgrade to Pro 5x", priceId: "pro_5x_monthly" },
+  "10x": { price: "$149", usage: "10x more usage than Plus", cta: "Upgrade to Pro 10x", priceId: "pro_10x_monthly" },
 };
-
-const staticPlans = [
-  {
-    name: "Free",
-    price: "$0",
-    period: "forever",
-    icon: Sparkles,
-    description: "Get started with Nova GPT.",
-    cta: "Current plan",
-    highlight: false,
-    features: [
-      "Access to Nova GPT (Auto mode)",
-      "Up to 3 image generations / day",
-      "Up to 2 image uploads / day",
-      "Voice input & read-aloud",
-      "Conversation history saved when signed in",
-    ],
-  },
-  {
-    name: "Plus",
-    price: "$14",
-    period: "/ month",
-    icon: Zap,
-    description: "More of everything, plus advanced modes.",
-    cta: "Upgrade to Plus",
-    highlight: true,
-    features: [
-      "Everything in Free",
-      "5x more usage per day",
-      "Up to 5x more image generations / day",
-      "Unlimited image uploads",
-      "Creative, Precise, Code & Study modes",
-      "Faster response times",
-      "Priority access during peak hours",
-    ],
-  },
-];
 
 function PricingPage() {
   const [proTier, setProTier] = useState<ProTier>("5x");
   const pro = PRO_TIERS[proTier];
+  const { user, isSignedIn } = useUser();
+  const navigate = useNavigate();
+  const { openCheckout, closeCheckout, isOpen, checkoutElement } = useStripeCheckout();
+
+  const startCheckout = (priceId: string) => {
+    if (!isSignedIn) {
+      navigate({ to: "/auth" });
+      return;
+    }
+    openCheckout({
+      priceId,
+      customerEmail: user?.email,
+      userId: user?.id,
+      returnUrl: `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+    });
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <PaymentTestModeBanner />
       <header className="border-b border-border">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-sm hover:opacity-80">
@@ -82,62 +66,53 @@ function PricingPage() {
 
       <main className="max-w-6xl mx-auto px-6 py-16">
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
-            Upgrade your plan
-          </h1>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">Upgrade your plan</h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Choose the plan that fits how you work. Cancel anytime.
           </p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
-          {staticPlans.map((plan) => {
-            const Icon = plan.icon;
-            return (
-              <div
-                key={plan.name}
-                className={`relative rounded-2xl border p-6 flex flex-col ${
-                  plan.highlight
-                    ? "border-foreground bg-card shadow-2xl scale-[1.02]"
-                    : "border-border bg-card/50"
-                }`}
-              >
-                {plan.highlight && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-foreground text-background text-xs font-semibold">
-                    MOST POPULAR
-                  </div>
-                )}
-                <div className="flex items-center gap-2 mb-2">
-                  <Icon className="w-5 h-5" />
-                  <h2 className="text-xl font-semibold">{plan.name}</h2>
-                </div>
-                <div className="flex items-baseline gap-1 mb-2">
-                  <span className="text-4xl font-bold">{plan.price}</span>
-                  <span className="text-muted-foreground text-sm">{plan.period}</span>
-                </div>
-                <p className="text-sm text-muted-foreground mb-6">{plan.description}</p>
-                <button
-                  className={`w-full py-2.5 rounded-lg font-medium text-sm transition mb-6 ${
-                    plan.highlight
-                      ? "bg-foreground text-background hover:opacity-90"
-                      : "border border-border hover:bg-accent"
-                  }`}
-                >
-                  {plan.cta}
-                </button>
-                <ul className="space-y-3 text-sm">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2">
-                      <Check className="w-4 h-4 mt-0.5 text-foreground shrink-0" />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
+          {/* Free */}
+          <PlanCard
+            icon={Sparkles}
+            name="Free"
+            price="$0"
+            period="forever"
+            description="Get started with Nova GPT."
+            cta="Current plan"
+            ctaDisabled
+            features={[
+              "Access to Nova GPT (Auto mode)",
+              "Up to 3 image generations / day",
+              "Up to 2 image uploads / day",
+              "Voice input & read-aloud",
+              "Conversation history saved when signed in",
+            ]}
+          />
 
-          {/* Pro card with 5x/10x toggle */}
+          {/* Plus */}
+          <PlanCard
+            icon={Zap}
+            name="Plus"
+            price="$14"
+            period="/ month"
+            description="More of everything, plus advanced modes."
+            cta="Upgrade to Plus"
+            highlight
+            onCta={() => startCheckout("plus_monthly")}
+            features={[
+              "Everything in Free",
+              "5x more usage per day",
+              "Up to 5x more image generations / day",
+              "Unlimited image uploads",
+              "Creative, Precise, Code & Study modes",
+              "Faster response times",
+              "Priority access during peak hours",
+            ]}
+          />
+
+          {/* Pro */}
           <div className="relative rounded-2xl border border-border bg-card/50 p-6 flex flex-col">
             <div className="flex items-center gap-2 mb-2">
               <Crown className="w-5 h-5" />
@@ -167,7 +142,10 @@ function PricingPage() {
             <p className="text-sm text-muted-foreground mb-6">
               Maximum capability with exclusive Pro modes.
             </p>
-            <button className="w-full py-2.5 rounded-lg font-medium text-sm transition mb-6 border border-border hover:bg-accent">
+            <button
+              onClick={() => startCheckout(pro.priceId)}
+              className="w-full py-2.5 rounded-lg font-medium text-sm transition mb-6 border border-border hover:bg-accent"
+            >
               {pro.cta}
             </button>
             <ul className="space-y-3 text-sm">
@@ -190,9 +168,92 @@ function PricingPage() {
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-10">
-          Payment processing not yet enabled. Buttons are placeholders for now.
+          Secured by Stripe. Cancel anytime from your account.
         </p>
       </main>
+
+      {isOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center overflow-y-auto py-10 px-4">
+          <div className="relative w-full max-w-2xl bg-background rounded-2xl border border-border overflow-hidden">
+            <button
+              onClick={closeCheckout}
+              className="absolute top-3 right-3 z-10 p-2 rounded-full bg-background/80 border border-border hover:bg-accent transition"
+              aria-label="Close checkout"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            {checkoutElement}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+type CardProps = {
+  icon: React.ComponentType<{ className?: string }>;
+  name: string;
+  price: string;
+  period: string;
+  description: string;
+  cta: string;
+  features: string[];
+  highlight?: boolean;
+  ctaDisabled?: boolean;
+  onCta?: () => void;
+};
+
+function PlanCard({
+  icon: Icon,
+  name,
+  price,
+  period,
+  description,
+  cta,
+  features,
+  highlight,
+  ctaDisabled,
+  onCta,
+}: CardProps) {
+  return (
+    <div
+      className={`relative rounded-2xl border p-6 flex flex-col ${
+        highlight ? "border-foreground bg-card shadow-2xl scale-[1.02]" : "border-border bg-card/50"
+      }`}
+    >
+      {highlight && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-foreground text-background text-xs font-semibold">
+          MOST POPULAR
+        </div>
+      )}
+      <div className="flex items-center gap-2 mb-2">
+        <Icon className="w-5 h-5" />
+        <h2 className="text-xl font-semibold">{name}</h2>
+      </div>
+      <div className="flex items-baseline gap-1 mb-2">
+        <span className="text-4xl font-bold">{price}</span>
+        <span className="text-muted-foreground text-sm">{period}</span>
+      </div>
+      <p className="text-sm text-muted-foreground mb-6">{description}</p>
+      <button
+        onClick={onCta}
+        disabled={ctaDisabled}
+        className={`w-full py-2.5 rounded-lg font-medium text-sm transition mb-6 ${
+          highlight
+            ? "bg-foreground text-background hover:opacity-90"
+            : "border border-border hover:bg-accent"
+        } ${ctaDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
+      >
+        {cta}
+      </button>
+      <ul className="space-y-3 text-sm">
+        {features.map((f) => (
+          <li key={f} className="flex items-start gap-2">
+            <Check className="w-4 h-4 mt-0.5 text-foreground shrink-0" />
+            <span>{f}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

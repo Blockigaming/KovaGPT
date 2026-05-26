@@ -1,82 +1,126 @@
-// Wrapper that no-ops when Clerk publishable key isn't configured.
-import {
-  ClerkProvider as RealClerkProvider,
-  SignedIn as RealSignedIn,
-  SignedOut as RealSignedOut,
-  SignInButton as RealSignInButton,
-  SignUpButton as RealSignUpButton,
-  UserButton as RealUserButton,
-  useUser as realUseUser,
-} from "@clerk/clerk-react";
-import type { ReactNode } from "react";
+// Supabase-based auth shim. Keeps the original export surface so existing
+// imports (SignedIn, SignedOut, SignInButton, SignUpButton, UserButton,
+// useUser, clerkEnabled, ClerkProvider) continue to work.
+import { useEffect, useState, type ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
+import { LogOut } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import type { User } from "@supabase/supabase-js";
 
-const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined;
+export const clerkEnabled = true; // auth is always available via Lovable Cloud
 
-export const clerkEnabled = !!PUBLISHABLE_KEY;
+type Status = "loading" | "signed-in" | "signed-out";
+
+function useAuthState(): { status: Status; user: User | null } {
+  const [state, setState] = useState<{ status: Status; user: User | null }>({
+    status: "loading",
+    user: null,
+  });
+
+  useEffect(() => {
+    let mounted = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!mounted) return;
+      setState({
+        status: data.session?.user ? "signed-in" : "signed-out",
+        user: data.session?.user ?? null,
+      });
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setState({
+        status: session?.user ? "signed-in" : "signed-out",
+        user: session?.user ?? null,
+      });
+    });
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  return state;
+}
 
 export function ClerkProvider({ children }: { children: ReactNode }) {
-  if (!clerkEnabled) return <>{children}</>;
-  return (
-    <RealClerkProvider
-      publishableKey={PUBLISHABLE_KEY!}
-      appearance={{
-        variables: {
-          colorPrimary: "oklch(0.7 0.18 280)",
-          colorBackground: "oklch(0.24 0.006 285)",
-          colorText: "oklch(0.96 0 0)",
-          colorInputBackground: "oklch(0.28 0.006 285)",
-          colorInputText: "oklch(0.96 0 0)",
-          colorTextSecondary: "oklch(0.7 0.01 285)",
-          borderRadius: "0.75rem",
-        },
-      }}
-    >
-      {children}
-    </RealClerkProvider>
-  );
+  return <>{children}</>;
 }
 
 export function SignedIn({ children }: { children: ReactNode }) {
-  if (!clerkEnabled) return null;
-  return <RealSignedIn>{children}</RealSignedIn>;
+  const { status } = useAuthState();
+  if (status !== "signed-in") return null;
+  return <>{children}</>;
 }
 
 export function SignedOut({ children }: { children: ReactNode }) {
-  if (!clerkEnabled) return <>{children}</>;
-  return <RealSignedOut>{children}</RealSignedOut>;
+  const { status } = useAuthState();
+  if (status === "signed-in") return null;
+  return <>{children}</>;
 }
 
-function notConfigured() {
-  alert(
-    "Authentication isn't configured yet.\n\nAdd VITE_CLERK_PUBLISHABLE_KEY as a Build Secret in Workspace Settings to enable login.",
+export function SignInButton({ children }: { children: ReactNode; mode?: "modal" | "redirect" }) {
+  return (
+    <Link to="/auth" style={{ display: "contents" }}>
+      {children}
+    </Link>
   );
 }
 
-export function SignInButton({ children, mode }: { children: ReactNode; mode?: "modal" | "redirect" }) {
-  if (!clerkEnabled) {
-    return (
-      <span onClick={notConfigured} style={{ display: "contents", cursor: "pointer" }}>
-        {children}
-      </span>
-    );
-  }
-  return <RealSignInButton mode={mode}>{children}</RealSignInButton>;
-}
-
-export function SignUpButton({ children, mode }: { children: ReactNode; mode?: "modal" | "redirect" }) {
-  if (!clerkEnabled) return <SignInButton mode={mode}>{children}</SignInButton>;
-  return <RealSignUpButton mode={mode}>{children}</RealSignUpButton>;
+export function SignUpButton({ children }: { children: ReactNode; mode?: "modal" | "redirect" }) {
+  return (
+    <Link to="/auth" search={{ mode: "signup" }} style={{ display: "contents" }}>
+      {children}
+    </Link>
+  );
 }
 
 export function UserButton() {
-  if (!clerkEnabled) return null;
-  return <RealUserButton afterSignOutUrl="/" />;
+  const { user } = useAuthState();
+  if (!user) return null;
+  const initial = (user.email ?? "?").slice(0, 1).toUpperCase();
+  const signOut = async () => {
+    await supabase.auth.signOut();
+  };
+  return (
+    <button
+      onClick={signOut}
+      title="Sign out"
+      className="w-8 h-8 rounded-full bg-foreground text-background text-xs font-semibold grid place-items-center hover:opacity-80 transition relative group"
+    >
+      <span className="group-hover:opacity-0 transition">{initial}</span>
+      <LogOut className="w-3.5 h-3.5 absolute opacity-0 group-hover:opacity-100 transition" />
+    </button>
+  );
 }
 
-export function useUser() {
-  if (!clerkEnabled) {
-    return { isSignedIn: false as const, user: null, isLoaded: true };
+type ShimUser = {
+  firstName?: string;
+  username?: string;
+  emailAddresses?: { emailAddress: string }[];
+  id?: string;
+  email?: string;
+};
+
+export function useUser(): { isSignedIn: boolean; user: ShimUser | null; isLoaded: boolean } {
+  const { status, user } = useAuthState();
+  if (!user) {
+    return { isSignedIn: false, user: null, isLoaded: status !== "loading" };
   }
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  return realUseUser();
+  const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
+  const firstName =
+    typeof meta.full_name === "string"
+      ? (meta.full_name as string).split(" ")[0]
+      : typeof meta.name === "string"
+        ? (meta.name as string).split(" ")[0]
+        : undefined;
+  return {
+    isSignedIn: true,
+    isLoaded: true,
+    user: {
+      id: user.id,
+      email: user.email ?? undefined,
+      firstName,
+      username: typeof meta.user_name === "string" ? (meta.user_name as string) : undefined,
+      emailAddresses: user.email ? [{ emailAddress: user.email }] : [],
+    },
+  };
 }
