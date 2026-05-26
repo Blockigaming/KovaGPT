@@ -365,6 +365,8 @@ function NovaGPT() {
                 isStreaming={isStreaming}
                 attachments={attachments}
                 onAttachmentsChange={setAttachments}
+                mode={mode}
+                onModeChange={setMode}
               />
             </div>
           </div>
