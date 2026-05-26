@@ -134,6 +134,9 @@ function NovaGPT() {
       const trimmed = text.trim();
       if ((!trimmed && atts.length === 0) || isStreaming) return;
 
+      const nextConvId = activeId ?? newId();
+      const isNewConversation = !activeId;
+
       const userMsg: Message = {
         id: newId(),
         role: "user",
@@ -142,30 +145,42 @@ function NovaGPT() {
       };
       const assistantMsg: Message = { id: newId(), role: "assistant", content: "" };
 
-      let convId = activeId;
       let priorMessages: Message[] = [];
 
       setConversations((prev) => {
-        if (!convId) {
+        if (isNewConversation) {
           const c: Conversation = {
-            id: newId(),
+            id: nextConvId,
             title: deriveTitle(trimmed || "Image chat"),
             messages: [userMsg, assistantMsg],
             mode,
             createdAt: Date.now(),
             updatedAt: Date.now(),
           };
-          convId = c.id;
           priorMessages = [];
           return [c, ...prev];
         }
+
+        let found = false;
         return prev.map((c) => {
-          if (c.id !== convId) return c;
+          if (c.id !== nextConvId) return c;
+          found = true;
           priorMessages = c.messages.slice();
           return { ...c, messages: [...c.messages, userMsg, assistantMsg], updatedAt: Date.now() };
-        });
+        }).concat(
+          found
+            ? []
+            : [{
+                id: nextConvId,
+                title: deriveTitle(trimmed || "Image chat"),
+                messages: [userMsg, assistantMsg],
+                mode,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+              }],
+        );
       });
-      setActiveId(convId);
+      setActiveId(nextConvId);
       setInput("");
       setAttachments([]);
       setIsStreaming(true);
@@ -176,7 +191,7 @@ function NovaGPT() {
       const updateAssistant = (chunk: string) => {
         setConversations((prev) =>
           prev.map((c) => {
-            if (c.id !== convId) return c;
+            if (c.id !== nextConvId) return c;
             const messages = c.messages.map((m) =>
               m.id === assistantMsg.id ? { ...m, content: m.content + chunk } : m,
             );
@@ -241,8 +256,8 @@ function NovaGPT() {
         }
 
         // Auto title after first exchange
-        if (priorMessages.length === 0 && convId) {
-          autoTitle(convId, [userMsg, { ...assistantMsg, content: assembledReply }]);
+        if (priorMessages.length === 0) {
+          autoTitle(nextConvId, [userMsg, { ...assistantMsg, content: assembledReply }]);
         }
 
         // Auto speak
