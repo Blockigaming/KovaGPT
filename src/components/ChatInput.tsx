@@ -182,6 +182,11 @@ export function ChatInput({
               )}
             </div>
           </div>
+          {mode && onModeChange && (
+            <div className="flex items-center px-2 pb-2 -mt-1">
+              <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
+            </div>
+          )}
         </div>
         <p className="text-center text-xs text-muted-foreground mt-2">
           Nova GPT can make mistakes. Check important info.
