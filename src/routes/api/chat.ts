@@ -40,11 +40,13 @@ export const Route = createFileRoute("/api/chat")({
             return { role: msg.role, content: msg.content };
           });
 
-          // Use pro model when images present or in reasoning mode
+          // Use pro model only for reasoning; flash-lite for speed by default
           const model =
-            hasImages || m.id === "reason"
+            m.id === "reason"
               ? "google/gemini-2.5-pro"
-              : "google/gemini-3-flash-preview";
+              : hasImages
+                ? "google/gemini-2.5-flash"
+                : "google/gemini-2.5-flash-lite";
 
           const body: Record<string, unknown> = {
             model,

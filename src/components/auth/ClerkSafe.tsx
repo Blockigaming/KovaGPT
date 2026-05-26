@@ -46,18 +46,18 @@ export function SignedOut({ children }: { children: ReactNode }) {
   return <RealSignedOut>{children}</RealSignedOut>;
 }
 
+function notConfigured() {
+  alert(
+    "Authentication isn't configured yet.\n\nAdd VITE_CLERK_PUBLISHABLE_KEY as a Build Secret in Workspace Settings to enable login.",
+  );
+}
+
 export function SignInButton({ children, mode }: { children: ReactNode; mode?: "modal" | "redirect" }) {
   if (!clerkEnabled) {
     return (
-      <button
-        onClick={() =>
-          alert(
-            "Authentication isn't configured yet.\n\nAdd VITE_CLERK_PUBLISHABLE_KEY as a Build Secret in Workspace Settings to enable login.",
-          )
-        }
-      >
+      <span onClick={notConfigured} style={{ display: "contents", cursor: "pointer" }}>
         {children}
-      </button>
+      </span>
     );
   }
   return <RealSignInButton mode={mode}>{children}</RealSignInButton>;
