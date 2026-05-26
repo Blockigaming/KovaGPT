@@ -70,7 +70,15 @@ function NovaGPT() {
 
   useEffect(() => {
     setSettings(loadSettings());
-    setConversations(loadConversations());
+    // When not signed in, wipe any previously stored chats on (re)load
+    // so reloading the page clears history. Chats still persist in-session.
+    if (clerkEnabled && !isSignedIn) {
+      try { localStorage.removeItem("nova-gpt-conversations-v2"); } catch { /* ignore */ }
+      setConversations([]);
+    } else {
+      setConversations(loadConversations());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -79,12 +87,18 @@ function NovaGPT() {
     }
   }, [settings]);
 
-  // Only save conversations when signed in (or Clerk not configured)
+  // Persist conversations across in-session navigation. When not signed in,
+  // they're wiped on the next reload by the mount effect above.
   useEffect(() => {
-    if (!clerkEnabled || isSignedIn) {
-      saveConversations(conversations);
+    saveConversations(conversations);
+  }, [conversations]);
+
+  // If the user signs out mid-session, clear stored chats immediately.
+  useEffect(() => {
+    if (clerkEnabled && !isSignedIn) {
+      try { localStorage.removeItem("nova-gpt-conversations-v2"); } catch { /* ignore */ }
     }
-  }, [conversations, isSignedIn]);
+  }, [isSignedIn]);
 
   const active = useMemo(
     () => conversations.find((c) => c.id === activeId) ?? null,

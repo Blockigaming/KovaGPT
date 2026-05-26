@@ -128,7 +128,7 @@ export const Route = createFileRoute("/api/chat")({
               ? "google/gemini-2.5-pro"
               : hasImages
                 ? "google/gemini-2.5-flash"
-                : "google/gemini-2.5-flash-lite";
+                : "google/gemini-3.1-flash-lite-preview";
 
           const body: Record<string, unknown> = {
             model,

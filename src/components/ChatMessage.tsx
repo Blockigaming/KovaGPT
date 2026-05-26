@@ -72,8 +72,14 @@ function ChatMessageInner({
           {isUser ? (
             <div className="prose-chat whitespace-pre-wrap">{message.content}</div>
           ) : (
-            <div className={`prose-chat ${streaming && !message.content ? "cursor-blink" : ""}`}>
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+            <div className="prose-chat">
+              {streaming && !message.content ? (
+                <div className="thinking-dots" aria-label="Thinking">
+                  <span /><span /><span />
+                </div>
+              ) : (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+              )}
               {streaming && message.content && <span className="cursor-blink" />}
             </div>
           )}
