@@ -1,14 +1,23 @@
+import type { ModeId } from "./modes";
+
 export type Role = "user" | "assistant";
-export type Message = { id: string; role: Role; content: string };
+export type Attachment = { kind: "image"; dataUrl: string };
+export type Message = {
+  id: string;
+  role: Role;
+  content: string;
+  attachments?: Attachment[];
+};
 export type Conversation = {
   id: string;
   title: string;
   messages: Message[];
+  mode: ModeId;
   createdAt: number;
   updatedAt: number;
 };
 
-const KEY = "nova-gpt-conversations-v1";
+const KEY = "nova-gpt-conversations-v2";
 
 export function loadConversations(): Conversation[] {
   if (typeof window === "undefined") return [];
@@ -24,6 +33,11 @@ export function loadConversations(): Conversation[] {
 export function saveConversations(convs: Conversation[]) {
   if (typeof window === "undefined") return;
   localStorage.setItem(KEY, JSON.stringify(convs));
+}
+
+export function clearConversations() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(KEY);
 }
 
 export function newId() {
