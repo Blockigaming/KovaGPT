@@ -4,7 +4,7 @@ import { PanelLeft } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
-import { ModelSelector } from "@/components/ModelSelector";
+
 import { SettingsDialog, type Settings } from "@/components/SettingsDialog";
 import { NovaLogo } from "@/components/NovaLogo";
 import { useUser, SignInButton, clerkEnabled } from "@/components/auth/ClerkSafe";
