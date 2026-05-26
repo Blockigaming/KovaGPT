@@ -66,7 +66,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
             })
           : undefined;
 
-      const session = await stripe.checkout.sessions.create({
+      const sessionParams: Record<string, unknown> = {
         line_items: [{ price: stripePrice.id, quantity: data.quantity || 1 }],
         mode: isRecurring ? "subscription" : "payment",
         ui_mode: "embedded_page",
@@ -77,7 +77,10 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
           metadata: { userId: data.userId },
           ...(isRecurring && { subscription_data: { metadata: { userId: data.userId } } }),
         }),
-      });
+      };
+      const session = await stripe.checkout.sessions.create(
+        sessionParams as Parameters<typeof stripe.checkout.sessions.create>[0],
+      );
 
       return { clientSecret: session.client_secret ?? "" };
     } catch (error) {
