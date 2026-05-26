@@ -33,14 +33,9 @@ function PricingPage() {
   const [proTier, setProTier] = useState<ProTier>("5x");
   const pro = PRO_TIERS[proTier];
   const { user, isSignedIn } = useUser();
-  const navigate = useNavigate();
   const { openCheckout, closeCheckout, isOpen, checkoutElement } = useStripeCheckout();
 
   const startCheckout = (priceId: string) => {
-    if (!isSignedIn) {
-      navigate({ to: "/auth" });
-      return;
-    }
     openCheckout({
       priceId,
       customerEmail: user?.email,
@@ -48,6 +43,7 @@ function PricingPage() {
       returnUrl: `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
     });
   };
+
 
   return (
     <div className="min-h-screen bg-background text-foreground">
