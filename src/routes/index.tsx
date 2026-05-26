@@ -1,10 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PanelLeft, ChevronDown } from "lucide-react";
+import { PanelLeft } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatMessage } from "@/components/ChatMessage";
-import { ChatInput } from "@/components/ChatInput";
+import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
+import { ModelSelector } from "@/components/ModelSelector";
+import { SettingsDialog, type Settings } from "@/components/SettingsDialog";
 import { NovaLogo } from "@/components/NovaLogo";
+import { useUser, SignInButton, clerkEnabled } from "@/components/auth/ClerkSafe";
+import { speak } from "@/lib/voice";
+import { tryUseImage, DAILY_IMAGE_LIMIT, getUsage } from "@/lib/limits";
+import { type ModeId } from "@/lib/modes";
 import {
   type Conversation,
   type Message,
@@ -24,35 +30,61 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Nova GPT is an advanced multimodal AI assistant for chat, coding, research, writing, and analysis.",
+          "Nova GPT is an advanced multimodal AI assistant for chat, coding, research, voice, and image generation.",
       },
     ],
   }),
 });
 
 const SUGGESTIONS = [
-  { title: "Explain a concept", subtitle: "like I'm five" },
-  { title: "Write code", subtitle: "for a Python web scraper" },
-  { title: "Draft an email", subtitle: "to reschedule a meeting" },
+  { title: "Generate an email", subtitle: "to reschedule a meeting" },
+  { title: "Write a website", subtitle: "landing page in React" },
   { title: "Brainstorm ideas", subtitle: "for a weekend project" },
+  { title: "Explain a concept", subtitle: "like I'm five" },
 ];
 
+const SETTINGS_KEY = "nova-gpt-settings-v1";
+
+function loadSettings(): Settings {
+  if (typeof window === "undefined") return { autoSpeak: false, voiceRate: 1 };
+  try {
+    return { autoSpeak: false, voiceRate: 1, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") };
+  } catch {
+    return { autoSpeak: false, voiceRate: 1 };
+  }
+}
+
 function NovaGPT() {
+  const { isSignedIn } = useUser();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
+  const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
+  const [mode, setMode] = useState<ModeId>("auto");
   const [isStreaming, setIsStreaming] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settings, setSettings] = useState<Settings>({ autoSpeak: false, voiceRate: 1 });
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    setSettings(loadSettings());
     setConversations(loadConversations());
   }, []);
 
   useEffect(() => {
-    if (conversations.length) saveConversations(conversations);
-  }, [conversations]);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    }
+  }, [settings]);
+
+  // Only save conversations when signed in (or Clerk not configured)
+  useEffect(() => {
+    if (!clerkEnabled || isSignedIn) {
+      saveConversations(conversations);
+    }
+  }, [conversations, isSignedIn]);
 
   const active = useMemo(
     () => conversations.find((c) => c.id === activeId) ?? null,
@@ -66,53 +98,76 @@ function NovaGPT() {
   const newChat = useCallback(() => {
     setActiveId(null);
     setInput("");
+    setAttachments([]);
   }, []);
 
   const deleteChat = useCallback(
     (id: string) => {
-      setConversations((prev) => {
-        const next = prev.filter((c) => c.id !== id);
-        saveConversations(next);
-        return next;
-      });
+      setConversations((prev) => prev.filter((c) => c.id !== id));
       if (activeId === id) setActiveId(null);
     },
     [activeId],
   );
 
-  const send = useCallback(
-    async (text: string) => {
-      const trimmed = text.trim();
-      if (!trimmed || isStreaming) return;
+  const autoTitle = useCallback(async (convId: string, msgs: Message[]) => {
+    try {
+      const resp = await fetch("/api/title", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: msgs.slice(0, 4).map((m) => ({ role: m.role, content: m.content })),
+        }),
+      });
+      const { title } = await resp.json();
+      if (title) {
+        setConversations((prev) =>
+          prev.map((c) => (c.id === convId ? { ...c, title } : c)),
+        );
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
-      const userMsg: Message = { id: newId(), role: "user", content: trimmed };
+  const send = useCallback(
+    async (text: string, atts: PendingAttachment[]) => {
+      const trimmed = text.trim();
+      if ((!trimmed && atts.length === 0) || isStreaming) return;
+
+      const userMsg: Message = {
+        id: newId(),
+        role: "user",
+        content: trimmed,
+        attachments: atts.map((a) => ({ kind: "image", dataUrl: a.dataUrl })),
+      };
       const assistantMsg: Message = { id: newId(), role: "assistant", content: "" };
 
       let convId = activeId;
-      let convoMessages: Message[] = [];
+      let priorMessages: Message[] = [];
 
       setConversations((prev) => {
         if (!convId) {
           const c: Conversation = {
             id: newId(),
-            title: deriveTitle(trimmed),
+            title: deriveTitle(trimmed || "Image chat"),
             messages: [userMsg, assistantMsg],
+            mode,
             createdAt: Date.now(),
             updatedAt: Date.now(),
           };
           convId = c.id;
-          convoMessages = [userMsg];
+          priorMessages = [];
           return [c, ...prev];
         }
         return prev.map((c) => {
           if (c.id !== convId) return c;
-          const messages = [...c.messages, userMsg, assistantMsg];
-          convoMessages = c.messages.concat(userMsg);
-          return { ...c, messages, updatedAt: Date.now() };
+          priorMessages = c.messages.slice();
+          return { ...c, messages: [...c.messages, userMsg, assistantMsg], updatedAt: Date.now() };
         });
       });
       setActiveId(convId);
       setInput("");
+      setAttachments([]);
       setIsStreaming(true);
 
       const controller = new AbortController();
@@ -130,16 +185,19 @@ function NovaGPT() {
         );
       };
 
+      let assembledReply = "";
+
       try {
+        const payloadMessages = [...priorMessages, userMsg].map((m) => ({
+          role: m.role,
+          content: m.content,
+          attachments: m.attachments,
+        }));
+
         const resp = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messages: [...convoMessages, userMsg].map((m) => ({
-              role: m.role,
-              content: m.content,
-            })),
-          }),
+          body: JSON.stringify({ messages: payloadMessages, mode }),
           signal: controller.signal,
         });
 
@@ -152,7 +210,6 @@ function NovaGPT() {
         const decoder = new TextDecoder();
         let buffer = "";
         let done = false;
-
         while (!done) {
           const { done: d, value } = await reader.read();
           if (d) break;
@@ -172,17 +229,31 @@ function NovaGPT() {
             try {
               const parsed = JSON.parse(data);
               const delta = parsed.choices?.[0]?.delta?.content;
-              if (delta) updateAssistant(delta);
+              if (delta) {
+                assembledReply += delta;
+                updateAssistant(delta);
+              }
             } catch {
               buffer = line + "\n" + buffer;
               break;
             }
           }
         }
+
+        // Auto title after first exchange
+        if (priorMessages.length === 0 && convId) {
+          autoTitle(convId, [userMsg, { ...assistantMsg, content: assembledReply }]);
+        }
+
+        // Auto speak
+        if (settings.autoSpeak && assembledReply) {
+          speak(
+            assembledReply.replace(/```[\s\S]*?```/g, " code block ").replace(/[#*_`>]/g, ""),
+            { rate: settings.voiceRate },
+          );
+        }
       } catch (e: unknown) {
-        if ((e as Error).name === "AbortError") {
-          // user stopped
-        } else {
+        if ((e as Error).name !== "AbortError") {
           const msg = e instanceof Error ? e.message : "Something went wrong";
           toast.error(msg);
           updateAssistant(`\n\n_Error: ${msg}_`);
@@ -192,13 +263,101 @@ function NovaGPT() {
         abortRef.current = null;
       }
     },
-    [activeId, isStreaming],
+    [activeId, isStreaming, mode, autoTitle, settings.autoSpeak, settings.voiceRate],
   );
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
     setIsStreaming(false);
   }, []);
+
+  const generateImage = useCallback(async () => {
+    const prompt = input.trim();
+    if (!prompt) {
+      toast.error("Type a prompt describing the image you want.");
+      return;
+    }
+    const u = getUsage();
+    if (u.images >= DAILY_IMAGE_LIMIT) {
+      toast.error(`Daily image limit reached (${DAILY_IMAGE_LIMIT}/day on Free).`);
+      return;
+    }
+    if (!tryUseImage()) {
+      toast.error("Daily image limit reached.");
+      return;
+    }
+
+    const userMsg: Message = { id: newId(), role: "user", content: `🎨 Generate: ${prompt}` };
+    const placeholder: Message = {
+      id: newId(),
+      role: "assistant",
+      content: "Generating image…",
+    };
+
+    let convId = activeId;
+    setConversations((prev) => {
+      if (!convId) {
+        const c: Conversation = {
+          id: newId(),
+          title: deriveTitle(prompt),
+          messages: [userMsg, placeholder],
+          mode,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        convId = c.id;
+        return [c, ...prev];
+      }
+      return prev.map((c) =>
+        c.id === convId
+          ? { ...c, messages: [...c.messages, userMsg, placeholder], updatedAt: Date.now() }
+          : c,
+      );
+    });
+    setActiveId(convId);
+    setInput("");
+
+    try {
+      const resp = await fetch("/api/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Image generation failed");
+      setConversations((prev) =>
+        prev.map((c) => {
+          if (c.id !== convId) return c;
+          return {
+            ...c,
+            messages: c.messages.map((m) =>
+              m.id === placeholder.id
+                ? {
+                    ...m,
+                    content: `Here's your image:`,
+                    attachments: [{ kind: "image", dataUrl: data.imageUrl }],
+                  }
+                : m,
+            ),
+          };
+        }),
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Image generation failed";
+      toast.error(msg);
+      setConversations((prev) =>
+        prev.map((c) => {
+          if (c.id !== convId) return c;
+          return {
+            ...c,
+            messages: c.messages.map((m) =>
+              m.id === placeholder.id ? { ...m, content: `_Error: ${msg}_` } : m,
+            ),
+          };
+        }),
+      );
+    }
+  }, [input, activeId, mode]);
 
   return (
     <div className="flex h-screen w-full bg-background text-foreground">
@@ -211,6 +370,7 @@ function NovaGPT() {
         onDelete={deleteChat}
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
 
       <main className="flex-1 flex flex-col min-w-0">
@@ -224,21 +384,25 @@ function NovaGPT() {
               <PanelLeft className="w-5 h-5" />
             </button>
           )}
-          <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-accent transition font-semibold">
-            Nova GPT
-            <ChevronDown className="w-4 h-4 text-muted-foreground" />
-          </button>
+          <ModelSelector mode={mode} onChange={setMode} />
+          <div className="ml-auto flex items-center gap-2">
+            <SignInButton mode="modal">
+              <button className="text-sm px-3 py-1.5 rounded-lg border border-border hover:bg-accent transition md:hidden">
+                Sign in
+              </button>
+            </SignInButton>
+          </div>
         </header>
 
         {!active || active.messages.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4">
             <NovaLogo className="w-14 h-14 mb-6" />
-            <h1 className="text-3xl font-semibold mb-8">What can I help with?</h1>
+            <h1 className="text-3xl font-semibold mb-8 text-center">What can I help with?</h1>
             <div className="w-full max-w-3xl grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
               {SUGGESTIONS.map((s) => (
                 <button
                   key={s.title}
-                  onClick={() => send(`${s.title} ${s.subtitle}`)}
+                  onClick={() => send(`${s.title} ${s.subtitle}`, [])}
                   className="text-left rounded-2xl border border-border bg-card/50 hover:bg-card p-4 transition"
                 >
                   <div className="font-medium text-sm">{s.title}</div>
@@ -250,9 +414,12 @@ function NovaGPT() {
               <ChatInput
                 value={input}
                 onChange={setInput}
-                onSubmit={() => send(input)}
+                onSubmit={() => send(input, attachments)}
                 onStop={stop}
                 isStreaming={isStreaming}
+                attachments={attachments}
+                onAttachmentsChange={setAttachments}
+                onGenerateImage={generateImage}
               />
             </div>
           </div>
@@ -263,20 +430,34 @@ function NovaGPT() {
                 <ChatMessage
                   key={m.id}
                   message={m}
-                  streaming={isStreaming && i === active.messages.length - 1 && m.role === "assistant"}
+                  streaming={
+                    isStreaming && i === active.messages.length - 1 && m.role === "assistant"
+                  }
+                  voiceRate={settings.voiceRate}
                 />
               ))}
             </div>
             <ChatInput
               value={input}
               onChange={setInput}
-              onSubmit={() => send(input)}
+              onSubmit={() => send(input, attachments)}
               onStop={stop}
               isStreaming={isStreaming}
+              attachments={attachments}
+              onAttachmentsChange={setAttachments}
+              onGenerateImage={generateImage}
             />
           </>
         )}
       </main>
+
+      <SettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        settings={settings}
+        onChange={setSettings}
+        onClearAll={() => setConversations([])}
+      />
     </div>
   );
 }
