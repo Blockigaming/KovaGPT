@@ -102,3 +102,6 @@ function ChatMessageInner({
     </div>
   );
 }
+
+export const ChatMessage = memo(ChatMessageInner);
+
