@@ -92,7 +92,7 @@ function NovaGPT() {
   );
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [active?.messages.length, isStreaming]);
 
   const newChat = useCallback(() => {
@@ -271,93 +271,8 @@ function NovaGPT() {
     setIsStreaming(false);
   }, []);
 
-  const generateImage = useCallback(async () => {
-    const prompt = input.trim();
-    if (!prompt) {
-      toast.error("Type a prompt describing the image you want.");
-      return;
-    }
-    const u = getUsage();
-    if (u.images >= DAILY_IMAGE_LIMIT) {
-      toast.error(`Daily image limit reached (${DAILY_IMAGE_LIMIT}/day on Free).`);
-      return;
-    }
-    if (!tryUseImage()) {
-      toast.error("Daily image limit reached.");
-      return;
-    }
+  // Image generation removed; can be reintroduced when user explicitly asks.
 
-    const userMsg: Message = { id: newId(), role: "user", content: `🎨 Generate: ${prompt}` };
-    const placeholder: Message = {
-      id: newId(),
-      role: "assistant",
-      content: "Generating image…",
-    };
-
-    let convId = activeId;
-    setConversations((prev) => {
-      if (!convId) {
-        const c: Conversation = {
-          id: newId(),
-          title: deriveTitle(prompt),
-          messages: [userMsg, placeholder],
-          mode,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        };
-        convId = c.id;
-        return [c, ...prev];
-      }
-      return prev.map((c) =>
-        c.id === convId
-          ? { ...c, messages: [...c.messages, userMsg, placeholder], updatedAt: Date.now() }
-          : c,
-      );
-    });
-    setActiveId(convId);
-    setInput("");
-
-    try {
-      const resp = await fetch("/api/generate-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
-      const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || "Image generation failed");
-      setConversations((prev) =>
-        prev.map((c) => {
-          if (c.id !== convId) return c;
-          return {
-            ...c,
-            messages: c.messages.map((m) =>
-              m.id === placeholder.id
-                ? {
-                    ...m,
-                    content: `Here's your image:`,
-                    attachments: [{ kind: "image", dataUrl: data.imageUrl }],
-                  }
-                : m,
-            ),
-          };
-        }),
-      );
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Image generation failed";
-      toast.error(msg);
-      setConversations((prev) =>
-        prev.map((c) => {
-          if (c.id !== convId) return c;
-          return {
-            ...c,
-            messages: c.messages.map((m) =>
-              m.id === placeholder.id ? { ...m, content: `_Error: ${msg}_` } : m,
-            ),
-          };
-        }),
-      );
-    }
-  }, [input, activeId, mode]);
 
   return (
     <div className="flex h-screen w-full bg-background text-foreground">
@@ -419,7 +334,6 @@ function NovaGPT() {
                 isStreaming={isStreaming}
                 attachments={attachments}
                 onAttachmentsChange={setAttachments}
-                onGenerateImage={generateImage}
               />
             </div>
           </div>
@@ -445,7 +359,6 @@ function NovaGPT() {
               isStreaming={isStreaming}
               attachments={attachments}
               onAttachmentsChange={setAttachments}
-              onGenerateImage={generateImage}
             />
           </>
         )}

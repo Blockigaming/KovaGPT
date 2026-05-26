@@ -1,4 +1,4 @@
-import { ArrowUp, Square, Mic, Paperclip, X, Image as ImageIcon } from "lucide-react";
+import { ArrowUp, Square, Mic, Plus, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createRecognition, sttSupported } from "@/lib/voice";
 import { tryUseUpload, DAILY_UPLOAD_LIMIT, getUsage } from "@/lib/limits";
@@ -14,7 +14,6 @@ export function ChatInput({
   isStreaming,
   attachments,
   onAttachmentsChange,
-  onGenerateImage,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -23,7 +22,6 @@ export function ChatInput({
   isStreaming: boolean;
   attachments: PendingAttachment[];
   onAttachmentsChange: (a: PendingAttachment[]) => void;
-  onGenerateImage: () => void;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -103,6 +101,7 @@ export function ChatInput({
                 <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border">
                   <img src={a.dataUrl} alt={a.name} className="w-full h-full object-cover" />
                   <button
+                    type="button"
                     onClick={() => onAttachmentsChange(attachments.filter((_, j) => j !== i))}
                     className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-background/80 flex items-center justify-center hover:bg-background"
                   >
@@ -113,16 +112,7 @@ export function ChatInput({
             </div>
           )}
           <div className="flex items-end">
-            <textarea
-              ref={ref}
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              onKeyDown={handleKey}
-              placeholder={listening ? "Listening…" : "Message Nova GPT…"}
-              rows={1}
-              className="flex-1 resize-none bg-transparent px-5 py-4 outline-none text-foreground placeholder:text-muted-foreground max-h-[200px]"
-            />
-            <div className="flex items-center gap-1 p-2">
+            <div className="flex items-center pl-2 pb-2">
               <input
                 ref={fileRef}
                 type="file"
@@ -132,22 +122,27 @@ export function ChatInput({
                 onChange={onFileChange}
               />
               <button
+                type="button"
                 onClick={() => fileRef.current?.click()}
                 className="w-9 h-9 rounded-full hover:bg-accent flex items-center justify-center transition"
                 aria-label="Attach image"
                 title="Attach image"
               >
-                <Paperclip className="w-4 h-4" />
+                <Plus className="w-5 h-5" />
               </button>
+            </div>
+            <textarea
+              ref={ref}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              onKeyDown={handleKey}
+              placeholder={listening ? "Listening…" : "Message Nova GPT…"}
+              rows={1}
+              className="flex-1 resize-none bg-transparent px-3 py-4 outline-none text-foreground placeholder:text-muted-foreground max-h-[200px]"
+            />
+            <div className="flex items-center gap-1 p-2">
               <button
-                onClick={onGenerateImage}
-                className="w-9 h-9 rounded-full hover:bg-accent flex items-center justify-center transition"
-                aria-label="Generate image"
-                title="Generate image from prompt"
-              >
-                <ImageIcon className="w-4 h-4" />
-              </button>
-              <button
+                type="button"
                 onClick={toggleMic}
                 className={`w-9 h-9 rounded-full flex items-center justify-center transition ${
                   listening ? "bg-destructive text-destructive-foreground animate-pulse" : "hover:bg-accent"
@@ -159,6 +154,7 @@ export function ChatInput({
               </button>
               {isStreaming ? (
                 <button
+                  type="button"
                   onClick={onStop}
                   className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center hover:opacity-80 transition"
                   aria-label="Stop"
@@ -167,6 +163,7 @@ export function ChatInput({
                 </button>
               ) : (
                 <button
+                  type="button"
                   onClick={onSubmit}
                   disabled={!value.trim() && attachments.length === 0}
                   className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition"

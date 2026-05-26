@@ -1,12 +1,12 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Copy, Check, User, Volume2, VolumeX } from "lucide-react";
-import { useState } from "react";
+import { memo, useState } from "react";
 import type { Message } from "@/lib/chat-store";
 import { NovaLogo } from "./NovaLogo";
 import { speak, stopSpeaking, isSpeaking } from "@/lib/voice";
 
-export function ChatMessage({
+function ChatMessageInner({
   message,
   streaming,
   voiceRate,
@@ -102,3 +102,6 @@ export function ChatMessage({
     </div>
   );
 }
+
+export const ChatMessage = memo(ChatMessageInner);
+
