@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Check, ArrowLeft, Sparkles, Zap, Crown } from "lucide-react";
+import { useState } from "react";
 import { NovaLogo } from "@/components/NovaLogo";
 
 export const Route = createFileRoute("/pricing")({
@@ -16,7 +17,14 @@ export const Route = createFileRoute("/pricing")({
   }),
 });
 
-const plans = [
+type ProTier = "5x" | "10x";
+
+const PRO_TIERS: Record<ProTier, { price: string; usage: string; cta: string }> = {
+  "5x": { price: "$79", usage: "5x more usage than Plus", cta: "Upgrade to Pro 5x" },
+  "10x": { price: "$149", usage: "10x more usage than Plus", cta: "Upgrade to Pro 10x" },
+};
+
+const staticPlans = [
   {
     name: "Free",
     price: "$0",
@@ -51,44 +59,12 @@ const plans = [
       "Priority access during peak hours",
     ],
   },
-  {
-    name: "Pro",
-    price: "$79",
-    period: "/ month",
-    icon: Crown,
-    description: "5x more usage than Plus and exclusive Pro modes.",
-    cta: "Upgrade to Pro",
-    highlight: false,
-    features: [
-      "Everything in Plus",
-      "5x more usage than Plus",
-      "Reasoning, Research, Writer Pro & Tutor Pro modes",
-      "Generate emails, websites & components",
-      "Highest quality voice synthesis",
-      "Longer context for big documents",
-      "Early access to new features",
-    ],
-  },
-  {
-    name: "Pro 10x",
-    price: "$149",
-    period: "/ month",
-    icon: Crown,
-    description: "For heavy power users — the highest limits we offer.",
-    cta: "Upgrade to Pro 10x",
-    highlight: false,
-    features: [
-      "Everything in Pro",
-      "10x more usage than Plus",
-      "All Plus and Pro modes included",
-      "Top priority during peak hours",
-      "Largest context window",
-      "Dedicated support",
-    ],
-  },
 ];
 
 function PricingPage() {
+  const [proTier, setProTier] = useState<ProTier>("5x");
+  const pro = PRO_TIERS[proTier];
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border">
@@ -114,8 +90,8 @@ function PricingPage() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {plans.map((plan) => {
+        <div className="grid md:grid-cols-3 gap-6">
+          {staticPlans.map((plan) => {
             const Icon = plan.icon;
             return (
               <div
@@ -160,6 +136,57 @@ function PricingPage() {
               </div>
             );
           })}
+
+          {/* Pro card with 5x/10x toggle */}
+          <div className="relative rounded-2xl border border-border bg-card/50 p-6 flex flex-col">
+            <div className="flex items-center gap-2 mb-2">
+              <Crown className="w-5 h-5" />
+              <h2 className="text-xl font-semibold">Pro</h2>
+            </div>
+            <div className="flex items-baseline gap-1 mb-3">
+              <span className="text-4xl font-bold">{pro.price}</span>
+              <span className="text-muted-foreground text-sm">/ month</span>
+            </div>
+
+            <div className="inline-flex p-1 rounded-lg bg-accent/50 border border-border mb-4 self-start">
+              {(["5x", "10x"] as ProTier[]).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setProTier(t)}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition ${
+                    proTier === t
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {t} usage
+                </button>
+              ))}
+            </div>
+
+            <p className="text-sm text-muted-foreground mb-6">
+              Maximum capability with exclusive Pro modes.
+            </p>
+            <button className="w-full py-2.5 rounded-lg font-medium text-sm transition mb-6 border border-border hover:bg-accent">
+              {pro.cta}
+            </button>
+            <ul className="space-y-3 text-sm">
+              {[
+                "Everything in Plus",
+                pro.usage,
+                "Reasoning, Research, Writer Pro & Tutor Pro modes",
+                "Generate emails, websites & components",
+                "Highest quality voice synthesis",
+                "Longer context for big documents",
+                "Early access to new features",
+              ].map((f) => (
+                <li key={f} className="flex items-start gap-2">
+                  <Check className="w-4 h-4 mt-0.5 text-foreground shrink-0" />
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-10">
