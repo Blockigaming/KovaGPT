@@ -328,7 +328,9 @@ function NovaGPT() {
               <PanelLeft className="w-5 h-5" />
             </button>
           )}
-          <ModelSelector mode={mode} onChange={setMode} />
+          <div className="flex items-center gap-1.5 px-3 py-1.5 font-semibold">
+            <span>Nova GPT</span>
+          </div>
           <div className="ml-auto flex items-center gap-2">
             <SignInButton mode="modal">
               <button className="text-sm px-3 py-1.5 rounded-lg border border-border hover:bg-accent transition md:hidden">
