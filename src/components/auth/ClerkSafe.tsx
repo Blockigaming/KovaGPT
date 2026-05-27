@@ -7,7 +7,7 @@
 // underlying implementation now uses Supabase auth (email/password + Google)
 // and renders a local <AuthDialog> for sign in/up.
 
-import type { ReactNode } from "react";
+import { cloneElement, isValidElement, type MouseEvent, type ReactElement, type ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -193,16 +193,28 @@ function AuthTrigger({
   variant: "sign-in" | "sign-up";
 }) {
   const { openAuth } = useAuthCtx();
-  const handleClick = (e: React.MouseEvent<HTMLElement>) => {
+  const handleClick = (e: MouseEvent<HTMLElement>) => {
     e.preventDefault();
     e.stopPropagation();
     openAuth(variant);
   };
-  // Wrap arbitrary children (often a <button>) so onClick is intercepted.
+
+  if (isValidElement(children)) {
+    const child = children as ReactElement<{ onClick?: (e: MouseEvent<HTMLElement>) => void }>;
+
+    return cloneElement(child, {
+      onClick: (e: MouseEvent<HTMLElement>) => {
+        child.props.onClick?.(e);
+        if (e.defaultPrevented) return;
+        handleClick(e);
+      },
+    });
+  }
+
   return (
-    <span onClick={handleClick} className="contents">
-      {children}
-    </span>
+    <button type="button" onClick={handleClick}>
+      {children ?? (variant === "sign-in" ? "Log in" : "Sign up")}
+    </button>
   );
 }
 
