@@ -187,10 +187,11 @@ export const Route = createFileRoute("/api/chat")({
     handlers: {
       POST: async ({ request }) => {
         try {
-          const { messages, mode, user } = (await request.json()) as {
+          const { messages, mode, user, voice } = (await request.json()) as {
             messages: IncomingMessage[];
             mode?: ModeId;
             user?: UserContext;
+            voice?: boolean;
           };
           const apiKey = process.env.LOVABLE_API_KEY;
           if (!apiKey) {
@@ -204,6 +205,7 @@ export const Route = createFileRoute("/api/chat")({
           const lastUser = [...messages].reverse().find((m) => m.role === "user");
           const lastText = lastUser?.content?.trim() ?? "";
           const isImageRequest =
+            !voice &&
             lastText.length > 0 &&
             (!lastUser?.attachments || lastUser.attachments.length === 0) &&
             IMAGE_INTENT.test(lastText);
@@ -227,23 +229,29 @@ export const Route = createFileRoute("/api/chat")({
             return { role: msg.role, content: msg.content };
           });
 
-          const model =
-            m.id === "reason"
+          // Voice mode prioritizes latency — use the fastest streaming model.
+          const model = voice
+            ? "google/gemini-3.1-flash-lite-preview"
+            : m.id === "reason"
               ? "google/gemini-2.5-pro"
               : hasImages
                 ? "google/gemini-2.5-flash"
-                : "google/gemini-3.1-flash-lite-preview";
+                : "google/gemini-3.5-flash";
 
-          // Optional live web search — only when user enabled it and the
-          // question looks time-sensitive (or the user asked to "search").
+          // Live web search: explicit user opt-in OR voice mode (so spoken
+          // answers about current events stay accurate).
           let webBlock = "";
-          if (user?.webSearch && lastText && !hasImages) {
+          if ((user?.webSearch || voice) && lastText && !hasImages) {
             const explicitSearch = /\b(search|google|look up|find online)\b/i.test(lastText);
             if (explicitSearch || SEARCH_TRIGGER.test(lastText)) {
               const result = await runWebSearch(lastText);
               if (result) webBlock = result;
             }
           }
+
+          const voiceInstruction = voice
+            ? `\n\nVOICE MODE: Your reply will be spoken aloud by a text-to-speech engine. Reply in natural, conversational spoken English with complete grammatical sentences. Use proper punctuation so sentences flow. Do NOT use markdown, bullet points, headings, code blocks, emojis, URLs, or symbols. Keep answers concise — usually 1 to 3 sentences unless the user explicitly asks for detail.`
+            : "";
 
           const body: Record<string, unknown> = {
             model,
@@ -255,14 +263,16 @@ export const Route = createFileRoute("/api/chat")({
                   m.systemPrompt +
                   buildUserContextBlock(user) +
                   webBlock +
+                  voiceInstruction +
                   CURRENT_DATE_INSTRUCTION,
               },
               ...transformed,
             ],
           };
-          if (m.reasoning) {
+          if (m.reasoning && !voice) {
             body.reasoning = { effort: m.reasoning };
           }
+
 
 
           const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

@@ -12,7 +12,7 @@ import { HelpDialog } from "@/components/HelpDialog";
 import { applyThemeColors } from "@/lib/theme";
 import { VoiceMode } from "@/components/VoiceMode";
 import { NovaLogo } from "@/components/NovaLogo";
-import { useUser, SignInButton, SignUpButton, SignedIn, SignedOut, UserButton, clerkEnabled } from "@/components/auth/ClerkSafe";
+import { useUser, SignInButton, SignUpButton, SignedIn, UserButton, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { speak } from "@/lib/voice";
 import { type ModeId } from "@/lib/modes";
 import {
@@ -432,21 +432,25 @@ function NovaGPT() {
               <AudioLines className="w-4 h-4" />
               <span className="hidden sm:inline">Voice</span>
             </button>
-            <SignedOut>
-              <SignInButton mode="modal">
-                <button className="text-sm font-medium px-4 py-1.5 rounded-full border border-border/70 hover:bg-accent transition">
-                  Sign in
-                </button>
-              </SignInButton>
-              <SignUpButton mode="modal">
-                <button className="text-sm font-medium px-4 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition">
-                  Sign up
-                </button>
-              </SignUpButton>
-            </SignedOut>
-            <SignedIn>
-              <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
-            </SignedIn>
+            {isSignedIn ? (
+              <SignedIn>
+                <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
+              </SignedIn>
+            ) : (
+              <>
+                <SignInButton mode="modal">
+                  <button className="text-sm font-medium px-4 py-1.5 rounded-full border border-border/70 hover:bg-accent transition">
+                    Sign in
+                  </button>
+                </SignInButton>
+                <SignUpButton mode="modal">
+                  <button className="text-sm font-medium px-4 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition">
+                    Sign up
+                  </button>
+                </SignUpButton>
+              </>
+            )}
+
           </div>
         </header>
 
