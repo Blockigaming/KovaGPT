@@ -390,9 +390,10 @@ function NovaGPT() {
               <PanelLeft className="w-5 h-5" />
             </button>
           )}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 font-semibold">
+          <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-accent transition font-semibold">
             <span>NovaGPT</span>
-          </div>
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          </button>
           <div className="ml-auto flex items-center gap-2">
             <button
               onClick={() => setVoiceModeOpen(true)}
@@ -402,22 +403,20 @@ function NovaGPT() {
               <AudioLines className="w-4 h-4" />
               <span className="hidden sm:inline">Voice</span>
             </button>
-            {!isLoaded ? (
-              <div className="w-8 h-8 rounded-full bg-accent/40 animate-pulse" aria-hidden />
-            ) : isSignedIn ? (
+            {isLoaded && isSignedIn ? (
               <SignedIn>
                 <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
               </SignedIn>
             ) : (
               <>
                 <SignInButton mode="modal">
-                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full border border-border hover:bg-accent transition">
-                    Sign in
+                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-lg hover:bg-accent transition">
+                    Log in
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition">
-                    Sign up
+                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition whitespace-nowrap">
+                    Sign up for free
                   </button>
                 </SignUpButton>
               </>
