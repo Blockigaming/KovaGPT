@@ -435,8 +435,10 @@ export function SettingsDialog({
               checked={settings.rememberAcross}
               onCheckedChange={(v) => onChange({ ...settings, rememberAcross: v })}
             />
-
+            </>
+            )}
           </TabsContent>
+
 
           {/* BEHAVIOR — how it should respond */}
           <TabsContent value="behavior" className="overflow-y-auto pr-1 space-y-5 py-4">
