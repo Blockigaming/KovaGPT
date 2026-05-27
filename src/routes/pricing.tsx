@@ -34,9 +34,14 @@ function PricingPage() {
   const [proTier, setProTier] = useState<ProTier>("5x");
   const pro = PRO_TIERS[proTier];
   const { user, isSignedIn } = useUser();
+  const { openSignIn } = useClerk();
   const { openCheckout, closeCheckout, isOpen, checkoutElement } = useStripeCheckout();
 
   const startCheckout = (priceId: string) => {
+    if (!isSignedIn) {
+      openSignIn();
+      return;
+    }
     openCheckout({
       priceId,
       customerEmail: user?.email,
@@ -44,6 +49,7 @@ function PricingPage() {
       returnUrl: `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
     });
   };
+
 
 
   return (
