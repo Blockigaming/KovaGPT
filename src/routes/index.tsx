@@ -373,28 +373,42 @@ function NovaGPT() {
   return (
     <div className="flex h-screen w-full bg-background text-foreground">
       <Toaster />
-      <div className="fixed bottom-3 left-3 z-50 flex flex-col gap-1 rounded-xl border border-border/70 bg-background/95 backdrop-blur p-1.5 shadow-md">
+      <div className="fixed bottom-3 left-3 z-50 flex flex-col gap-1 rounded-xl border border-border/70 bg-background/95 backdrop-blur p-1.5 shadow-md max-w-[calc(100vw-1.5rem)]">
         <Link
           to="/pricing"
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-accent transition text-sm"
+          className="flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-accent transition text-sm"
           title="View pricing plans"
         >
-          <Sparkles className="w-4 h-4" />
-          <span>Pricing</span>
+          <Sparkles className="w-4 h-4 shrink-0" />
+          <span className="hidden sm:inline">Pricing</span>
         </Link>
-        <button
-          onClick={() => setSettingsOpen(true)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-accent transition text-sm text-left"
-        >
-          <Cog className="w-4 h-4" />
-          <span>Settings</span>
-        </button>
+        {isSignedIn ? (
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-accent transition text-sm text-left"
+            title="Settings"
+          >
+            <Cog className="w-4 h-4 shrink-0" />
+            <span className="hidden sm:inline">Settings</span>
+          </button>
+        ) : (
+          <SignInButton mode="modal">
+            <button
+              className="flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-accent transition text-sm text-left"
+              title="Sign in to access settings"
+            >
+              <Cog className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">Settings</span>
+            </button>
+          </SignInButton>
+        )}
         <button
           onClick={() => setHelpOpen(true)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-accent transition text-sm text-left"
+          className="flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-accent transition text-sm text-left"
+          title="Help & FAQs"
         >
-          <HelpCircle className="w-4 h-4" />
-          <span>Help & FAQs</span>
+          <HelpCircle className="w-4 h-4 shrink-0" />
+          <span className="hidden sm:inline">Help</span>
         </button>
       </div>
       <Sidebar
