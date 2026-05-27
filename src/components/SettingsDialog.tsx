@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trash2, Play, Palette, User2, ShieldCheck, Sparkles, MessageSquare, CreditCard, Globe2, ExternalLink } from "lucide-react";
+import { Trash2, Play, Palette, User2, ShieldCheck, Sparkles, MessageSquare, CreditCard, Globe2, ExternalLink, Lock } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { clearConversations } from "@/lib/chat-store";
@@ -144,23 +144,26 @@ export function SettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Settings</DialogTitle>
+      <DialogContent className="max-w-3xl max-h-[88vh] overflow-hidden flex flex-col gap-0 p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
+          <DialogTitle className="text-lg">Settings</DialogTitle>
         </DialogHeader>
 
         <Tabs defaultValue="general" className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="flex w-full overflow-x-auto justify-start gap-1 h-auto p-1">
-            <TabsTrigger value="general" className="shrink-0"><Sparkles className="w-4 h-4 mr-1.5 hidden sm:inline" />General</TabsTrigger>
-            <TabsTrigger value="personalization" className="shrink-0"><User2 className="w-4 h-4 mr-1.5 hidden sm:inline" />You</TabsTrigger>
-            <TabsTrigger value="behavior" className="shrink-0"><MessageSquare className="w-4 h-4 mr-1.5 hidden sm:inline" />Behavior</TabsTrigger>
-            <TabsTrigger value="appearance" className="shrink-0"><Palette className="w-4 h-4 mr-1.5 hidden sm:inline" />Appearance</TabsTrigger>
-            <TabsTrigger value="billing" className="shrink-0"><CreditCard className="w-4 h-4 mr-1.5 hidden sm:inline" />Billing</TabsTrigger>
-            <TabsTrigger value="security" className="shrink-0"><ShieldCheck className="w-4 h-4 mr-1.5 hidden sm:inline" />Security</TabsTrigger>
+          <TabsList className="flex w-full overflow-x-auto justify-start gap-1 h-auto p-1.5 mx-6 mt-4 mb-2 max-w-[calc(100%-3rem)]">
+            <TabsTrigger value="general" className="shrink-0 gap-1.5"><Sparkles className="w-4 h-4 hidden sm:inline" />General</TabsTrigger>
+            <TabsTrigger value="personalization" className="shrink-0 gap-1.5"><User2 className="w-4 h-4 hidden sm:inline" />You {!loggedIn && <Lock className="w-3 h-3 opacity-60" />}</TabsTrigger>
+            <TabsTrigger value="behavior" className="shrink-0 gap-1.5"><MessageSquare className="w-4 h-4 hidden sm:inline" />Behavior {!loggedIn && <Lock className="w-3 h-3 opacity-60" />}</TabsTrigger>
+            <TabsTrigger value="appearance" className="shrink-0 gap-1.5"><Palette className="w-4 h-4 hidden sm:inline" />Appearance {!loggedIn && <Lock className="w-3 h-3 opacity-60" />}</TabsTrigger>
+            <TabsTrigger value="billing" className="shrink-0 gap-1.5"><CreditCard className="w-4 h-4 hidden sm:inline" />Billing {!loggedIn && <Lock className="w-3 h-3 opacity-60" />}</TabsTrigger>
+            <TabsTrigger value="security" className="shrink-0 gap-1.5"><ShieldCheck className="w-4 h-4 hidden sm:inline" />Security {!loggedIn && <Lock className="w-3 h-3 opacity-60" />}</TabsTrigger>
           </TabsList>
 
+
           {/* GENERAL — voice + usage + data */}
-          <TabsContent value="general" className="overflow-y-auto pr-1 space-y-6 py-4">
+          {/* GENERAL — voice + usage + data (always available) */}
+          <TabsContent value="general" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+
             <section>
               <h3 className="text-sm font-semibold mb-3">Voice</h3>
               <div className="flex items-center justify-between">
@@ -318,13 +321,17 @@ export function SettingsDialog({
             </section>
           </TabsContent>
 
-          {/* PERSONALIZATION — only useful when signed in */}
-          <TabsContent value="personalization" className="overflow-y-auto pr-1 space-y-5 py-4">
-            {!loggedIn && (
-              <p className="text-sm text-muted-foreground">
-                Sign in to save personalization across devices. Settings are stored locally for now.
-              </p>
-            )}
+          {/* PERSONALIZATION — locked behind sign in */}
+          <TabsContent value="personalization" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+            {!loggedIn ? (
+              <LockedTab
+                title="Sign in to personalize NovaGPT"
+                body="Save your name, pronouns, contact info, and custom facts to your account so NovaGPT remembers them on every device."
+                onSignIn={() => clerk?.openSignIn()}
+              />
+            ) : (
+            <>
+
 
             <section className="space-y-4">
               <h3 className="text-sm font-semibold">How to address you</h3>
@@ -428,11 +435,22 @@ export function SettingsDialog({
               checked={settings.rememberAcross}
               onCheckedChange={(v) => onChange({ ...settings, rememberAcross: v })}
             />
-
+            </>
+            )}
           </TabsContent>
 
+
           {/* BEHAVIOR — how it should respond */}
-          <TabsContent value="behavior" className="overflow-y-auto pr-1 space-y-5 py-4">
+          <TabsContent value="behavior" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+            {!loggedIn ? (
+              <LockedTab
+                title="Sign in to fine-tune NovaGPT"
+                body="Mood and custom response instructions are saved per account so NovaGPT acts the same on every device."
+                onSignIn={() => clerk?.openSignIn()}
+              />
+            ) : (
+            <>
+
             <div>
               <label className="text-sm font-medium mb-1.5 block">Mood</label>
               <Select
@@ -468,13 +486,24 @@ export function SettingsDialog({
                 Applied to every response.
               </p>
             </div>
+            </>
+            )}
           </TabsContent>
 
           {/* APPEARANCE — color customization */}
-          <TabsContent value="appearance" className="overflow-y-auto pr-1 space-y-5 py-4">
+          <TabsContent value="appearance" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+            {!loggedIn ? (
+              <LockedTab
+                title="Sign in to customize the look"
+                body="Theme colors are saved to your account so the app looks the same on every device."
+                onSignIn={() => clerk?.openSignIn()}
+              />
+            ) : (
+            <>
             <p className="text-sm text-muted-foreground">
-              Customize app colors. Changes apply instantly and are saved to this device.
+              Customize app colors. Changes apply instantly and are saved to your account.
             </p>
+
 
             <ColorRow
               label="Background"
@@ -509,11 +538,22 @@ export function SettingsDialog({
             >
               Reset to defaults
             </Button>
+            </>
+            )}
           </TabsContent>
 
           {/* BILLING */}
-          <TabsContent value="billing" className="overflow-y-auto pr-1 space-y-5 py-4">
+          <TabsContent value="billing" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+            {!loggedIn ? (
+              <LockedTab
+                title="Sign in to manage billing"
+                body="View your plan, payment methods, and receipts once you're signed in to your account."
+                onSignIn={() => clerk?.openSignIn()}
+              />
+            ) : (
+            <>
             <div className="rounded-lg border border-border p-4 flex items-center justify-between gap-3">
+
               <div>
                 <div className="text-sm font-medium">Current plan</div>
                 <div className="text-xs text-muted-foreground mt-1">
@@ -575,10 +615,13 @@ export function SettingsDialog({
                 <ExternalLink className="w-4 h-4" /> Open billing portal
               </a>
             </section>
+            </>
+            )}
           </TabsContent>
 
           {/* SECURITY */}
-          <TabsContent value="security" className="overflow-y-auto pr-1 space-y-5 py-4">
+          <TabsContent value="security" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+
 
             {loggedIn ? (
               <>
@@ -609,16 +652,49 @@ export function SettingsDialog({
                 </div>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                Sign in to manage your account, password, and active sessions.
-              </p>
+              <LockedTab
+                title="Sign in to manage your security"
+                body="Manage your password, two-factor authentication, and active sessions from your account."
+                onSignIn={() => clerk?.openSignIn()}
+              />
             )}
+
           </TabsContent>
         </Tabs>
       </DialogContent>
     </Dialog>
   );
 }
+
+function LockedTab({
+  title,
+  body,
+  onSignIn,
+}: {
+  title: string;
+  body: string;
+  onSignIn?: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center text-center py-12 px-6 rounded-xl border border-dashed border-border bg-muted/30">
+      <div className="w-12 h-12 rounded-full bg-foreground/10 flex items-center justify-center mb-4">
+        <Lock className="w-5 h-5 text-foreground/70" />
+      </div>
+      <h3 className="text-base font-semibold mb-1.5">{title}</h3>
+      <p className="text-sm text-muted-foreground max-w-sm mb-5">{body}</p>
+      <Button
+        size="sm"
+        onClick={() => onSignIn?.()}
+        className="rounded-full px-5"
+      >
+        Log in or sign up
+      </Button>
+    </div>
+  );
+}
+
+
+
 
 function ColorRow({
   label,

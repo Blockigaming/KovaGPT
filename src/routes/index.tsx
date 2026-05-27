@@ -38,19 +38,29 @@ export const Route = createFileRoute("/")({
 });
 
 
-const SETTINGS_KEY = "nova-gpt-settings-v1";
+const SETTINGS_KEY_BASE = "nova-gpt-settings-v1";
+function settingsKey(userKey: string | null) {
+  return userKey ? `${SETTINGS_KEY_BASE}:${userKey}` : `${SETTINGS_KEY_BASE}:guest`;
+}
 
-function loadSettings(): Settings {
+function loadSettings(userKey: string | null): Settings {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
   try {
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") };
+    const raw = localStorage.getItem(settingsKey(userKey));
+    if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    // Migration: pick up legacy single-key settings the first time.
+    const legacy = localStorage.getItem(SETTINGS_KEY_BASE);
+    if (legacy) return { ...DEFAULT_SETTINGS, ...JSON.parse(legacy) };
+    return DEFAULT_SETTINGS;
   } catch {
     return DEFAULT_SETTINGS;
   }
 }
 
+
 function NovaGPT() {
-  const { isSignedIn, isLoaded } = useUser();
+  const { isSignedIn, isLoaded, user } = useUser();
+  const userKey = (user as any)?.id ?? null;
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
@@ -67,12 +77,12 @@ function NovaGPT() {
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Load (or reload) settings whenever the signed-in user changes so each
+  // account gets its own personalization, behavior, appearance, etc.
   useEffect(() => {
-    const loaded = loadSettings();
+    const loaded = loadSettings(userKey);
     setSettings(loaded);
     applyThemeColors(loaded.theme);
-    // When not signed in, wipe any previously stored chats on (re)load
-    // so reloading the page clears history. Chats still persist in-session.
     if (clerkEnabled && !isSignedIn) {
       try { localStorage.removeItem("nova-gpt-conversations-v2"); } catch { /* ignore */ }
       setConversations([]);
@@ -80,7 +90,7 @@ function NovaGPT() {
       setConversations(loadConversations());
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [userKey, isSignedIn]);
 
   // Re-apply theme whenever it changes
   useEffect(() => {
@@ -89,9 +99,9 @@ function NovaGPT() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      localStorage.setItem(settingsKey(userKey), JSON.stringify(settings));
     }
-  }, [settings]);
+  }, [settings, userKey]);
 
   // Persist conversations across in-session navigation. When not signed in,
   // they're wiped on the next reload by the mount effect above.
@@ -105,6 +115,7 @@ function NovaGPT() {
       try { localStorage.removeItem("nova-gpt-conversations-v2"); } catch { /* ignore */ }
     }
   }, [isSignedIn]);
+
 
   const active = useMemo(
     () => conversations.find((c) => c.id === activeId) ?? null,
