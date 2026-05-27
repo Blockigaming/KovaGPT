@@ -113,7 +113,10 @@ async function runWebSearch(query: string): Promise<string | null> {
       web?: WebSearchResult[];
       results?: WebSearchResult[];
     };
-    const results = data?.data && Array.isArray(data.data) ? data.data : data?.data?.web ?? data?.web ?? data?.results ?? [];
+    const nestedData = data?.data;
+    const results = Array.isArray(nestedData)
+      ? nestedData
+      : nestedData?.web ?? data?.web ?? data?.results ?? [];
     if (!Array.isArray(results) || results.length === 0) return null;
     const lines = results.slice(0, 5).map((res, i) => {
       const title = res.title || res.metadata?.title || "Untitled";
