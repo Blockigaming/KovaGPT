@@ -1,100 +1,32 @@
-// Clerk auth shim that NEVER blocks the UI.
+// Clerk auth shim.
 //
-// Clerk's publishable key is tied to a specific frontend API host
-// (clerk.nova-aigpt.lovable.app). On any other origin (Lovable preview,
-// local dev, custom subdomain, etc.) the Clerk SDK either fails to load
-// or rejects the host — leaving sign-in/up buttons broken and the page
-// half-rendered while everything inside <ClerkProvider /> waits.
-//
-// To keep the app usable everywhere, we detect at module load whether
-// the current origin matches the Clerk-allowed host. If yes → real Clerk.
-// If no → no-op shim components that render plain buttons which redirect
-// to the production sign-in pages.
+// Goals:
+// 1) Never block initial render on Clerk loading — the page must show
+//    Log in / Sign up buttons immediately even if Clerk's hosted JS is
+//    slow, blocked, or unreachable (which is the case on origins that
+//    aren't bound to the publishable key, e.g. preview / local dev).
+// 2) Always make those buttons functional. If Clerk loads → modal opens.
+//    If Clerk never loads → redirect to the production sign-in URL.
+// 3) Keep the React tree (provider, hooks) identical between SSR and
+//    client to avoid hydration mismatches.
 import {
   ClerkProvider as RealClerkProvider,
-  SignedIn as RealSignedIn,
-  SignedOut as RealSignedOut,
-  SignInButton as RealSignInButton,
-  SignUpButton as RealSignUpButton,
-  UserButton as RealUserButton,
+  SignedIn,
+  SignedOut,
+  UserButton,
+  useClerk,
   useUser as useClerkUser,
 } from "@clerk/clerk-react";
 import type { ReactNode } from "react";
+import { Children, cloneElement, isValidElement } from "react";
 
 // Clerk publishable keys are public and safe to embed in client code.
 export const CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsubm92YS1haWdwdC5sb3ZhYmxlLmFwcCQ";
-const CLERK_HOST = "clerk.nova-aigpt.lovable.app";
 const PROD_ORIGIN = "https://nova-aigpt.lovable.app";
 
-// Decide once at module load.
-function detectClerkAvailable(): boolean {
-  if (typeof window === "undefined") return false;
-  const host = window.location.hostname;
-  // The publishable live key only works on its frontend API's parent
-  // domain (and subdomains). Anywhere else, Clerk's hosted JS rejects
-  // the origin.
-  return host === "nova-aigpt.lovable.app" || host.endsWith(".nova-aigpt.lovable.app");
-}
+export const clerkEnabled = true;
 
-export const clerkEnabled = detectClerkAvailable();
-
-function prodAuthUrl(path: "sign-in" | "sign-up") {
-  const redirect = typeof window !== "undefined" ? window.location.href : PROD_ORIGIN;
-  return `${PROD_ORIGIN}/?${path}=1&redirect_url=${encodeURIComponent(redirect)}`;
-}
-
-// --- Fallback shim components ---------------------------------------------
-function FallbackProvider({ children }: { children: ReactNode }) {
-  return <>{children}</>;
-}
-
-function FallbackSignedIn(_: { children?: ReactNode }) {
-  return null;
-}
-function FallbackSignedOut({ children }: { children?: ReactNode }) {
-  return <>{children}</>;
-}
-
-function FallbackAuthButton({
-  children,
-  mode: _mode,
-  variant,
-}: {
-  children?: ReactNode;
-  mode?: "modal" | "redirect";
-  variant: "sign-in" | "sign-up";
-}) {
-  const href = typeof window !== "undefined" ? prodAuthUrl(variant) : "#";
-  const handler = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (typeof window !== "undefined") window.location.href = href;
-  };
-  // Clerk wraps its single child; do the same so existing JSX keeps working.
-  if (children && typeof children === "object" && "type" in (children as any)) {
-    const child = children as React.ReactElement<any>;
-    return {
-      ...child,
-      props: { ...child.props, onClick: handler },
-    } as React.ReactElement;
-  }
-  return (
-    <button onClick={handler}>
-      {children ?? (variant === "sign-in" ? "Log in" : "Sign up")}
-    </button>
-  );
-}
-
-function FallbackUserButton(_: any) {
-  return null;
-}
-
-function fallbackUseUser() {
-  return { user: null, isSignedIn: false, isLoaded: true };
-}
-
-// --- Public exports -------------------------------------------------------
 export function ClerkProvider({ children }: { children: ReactNode }) {
-  if (!clerkEnabled) return <FallbackProvider>{children}</FallbackProvider>;
   return (
     <RealClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} afterSignOutUrl="/">
       {children}
@@ -102,22 +34,76 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export const SignedIn = clerkEnabled ? RealSignedIn : FallbackSignedIn;
-export const SignedOut = clerkEnabled ? RealSignedOut : FallbackSignedOut;
+export { SignedIn, SignedOut, UserButton };
 
-export const SignInButton = clerkEnabled
-  ? RealSignInButton
-  : (props: any) => <FallbackAuthButton {...props} variant="sign-in" />;
+function prodAuthUrl(variant: "sign-in" | "sign-up") {
+  const redirect = typeof window !== "undefined" ? window.location.href : PROD_ORIGIN;
+  const path = variant === "sign-in" ? "sign-in" : "sign-up";
+  return `${PROD_ORIGIN}/?${path}=1&redirect_url=${encodeURIComponent(redirect)}`;
+}
 
-export const SignUpButton = clerkEnabled
-  ? RealSignUpButton
-  : (props: any) => <FallbackAuthButton {...props} variant="sign-up" />;
+function AuthButtonWrapper({
+  children,
+  variant,
+}: {
+  children?: ReactNode;
+  variant: "sign-in" | "sign-up";
+}) {
+  const clerk = useClerk();
+  const { isLoaded } = useClerkUser();
 
-export const UserButton = clerkEnabled ? RealUserButton : FallbackUserButton;
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // If Clerk is ready, open the modal. Otherwise fall back to the
+    // production hosted sign-in page so the button always works.
+    if (isLoaded && clerk && (clerk as any).loaded !== false) {
+      try {
+        if (variant === "sign-in") clerk.openSignIn();
+        else clerk.openSignUp();
+        return;
+      } catch {
+        /* fall through to redirect */
+      }
+    }
+    if (typeof window !== "undefined") {
+      window.location.href = prodAuthUrl(variant);
+    }
+  };
+
+  // Mirror Clerk's API: wrap the single child element and attach onClick.
+  const child = Children.only(children);
+  if (isValidElement(child)) {
+    return cloneElement(child as React.ReactElement<any>, { onClick: handleClick });
+  }
+  return (
+    <button type="button" onClick={handleClick}>
+      {child}
+    </button>
+  );
+}
+
+export function SignInButton({
+  children,
+  mode: _mode,
+}: {
+  children?: ReactNode;
+  mode?: "modal" | "redirect";
+}) {
+  return <AuthButtonWrapper variant="sign-in">{children}</AuthButtonWrapper>;
+}
+
+export function SignUpButton({
+  children,
+  mode: _mode,
+}: {
+  children?: ReactNode;
+  mode?: "modal" | "redirect";
+}) {
+  return <AuthButtonWrapper variant="sign-up">{children}</AuthButtonWrapper>;
+}
 
 export function useUser() {
-  if (!clerkEnabled) return fallbackUseUser();
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { user, isSignedIn, isLoaded } = useClerkUser();
   if (!user) return { user: null, isSignedIn: !!isSignedIn, isLoaded };
   return {
