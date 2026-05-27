@@ -22,6 +22,22 @@ type UserContext = {
   webSearch?: boolean;
 };
 
+type WebSearchResult = {
+  title?: string;
+  url?: string;
+  description?: string;
+  snippet?: string;
+  markdown?: string;
+  metadata?: {
+    title?: string;
+    sourceURL?: string;
+  };
+};
+
+type ChatContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
 function buildUserContextBlock(u?: UserContext): string {
   if (!u) return "";
   const lines: string[] = [];
@@ -92,8 +108,12 @@ async function runWebSearch(query: string): Promise<string | null> {
       body: JSON.stringify({ query, limit: 5 }),
     });
     if (!r.ok) return null;
-    const data: any = await r.json();
-    const results: any[] = data?.data?.web ?? data?.data ?? data?.web ?? data?.results ?? [];
+    const data = (await r.json()) as {
+      data?: { web?: WebSearchResult[] } | WebSearchResult[];
+      web?: WebSearchResult[];
+      results?: WebSearchResult[];
+    };
+    const results = data?.data && Array.isArray(data.data) ? data.data : data?.data?.web ?? data?.web ?? data?.results ?? [];
     if (!Array.isArray(results) || results.length === 0) return null;
     const lines = results.slice(0, 5).map((res, i) => {
       const title = res.title || res.metadata?.title || "Untitled";
@@ -252,7 +272,7 @@ export const Route = createFileRoute("/api/chat")({
 
           const transformed = messages.map((msg) => {
             if (msg.role === "user" && msg.attachments && msg.attachments.length > 0) {
-              const parts: any[] = [];
+              const parts: ChatContentPart[] = [];
               if (msg.content) parts.push({ type: "text", text: msg.content });
               for (const att of msg.attachments) {
                 parts.push({ type: "image_url", image_url: { url: att.dataUrl } });
