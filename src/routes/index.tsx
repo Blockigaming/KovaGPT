@@ -12,7 +12,7 @@ import { HelpDialog } from "@/components/HelpDialog";
 import { applyThemeColors } from "@/lib/theme";
 import { VoiceMode } from "@/components/VoiceMode";
 import { NovaLogo } from "@/components/NovaLogo";
-import { useUser, SignInButton, SignUpButton, SignedIn, SignedOut, UserButton, clerkEnabled } from "@/components/auth/ClerkSafe";
+import { useUser, SignInButton, SignUpButton, SignedIn, UserButton, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { speak } from "@/lib/voice";
 import { type ModeId } from "@/lib/modes";
 import {
