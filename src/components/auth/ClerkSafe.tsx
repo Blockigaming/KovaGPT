@@ -23,12 +23,17 @@ import { Children, cloneElement, isValidElement, useEffect, useState } from "rea
 // Clerk publishable keys are public and safe to embed in client code.
 export const CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsubm92YS1haWdwdC5sb3ZhYmxlLmFwcCQ";
 const PROD_ORIGIN = "https://nova-aigpt.lovable.app";
+const CLERK_JS_URL = "https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js";
 
 export const clerkEnabled = true;
 
 export function ClerkProvider({ children }: { children: ReactNode }) {
   return (
-    <RealClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} afterSignOutUrl="/">
+    <RealClerkProvider
+      publishableKey={CLERK_PUBLISHABLE_KEY}
+      clerkJSUrl={CLERK_JS_URL}
+      afterSignOutUrl="/"
+    >
       <AuthQueryParamHandler />
       {children}
     </RealClerkProvider>
