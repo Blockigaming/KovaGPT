@@ -13,11 +13,11 @@ export const Route = createFileRoute("/pricing")({
   component: PricingPage,
   head: () => ({
     meta: [
-      { title: "Nova GPT Pricing — Plus & Pro plans" },
+      { title: "NovaGPT Pricing — Plus & Pro plans" },
       {
         name: "description",
         content:
-          "Compare Nova GPT Free, Plus, and Pro plans. Get more messages, image generations, voice, and advanced reasoning.",
+          "Compare NovaGPT Free, Plus, and Pro plans. Get more messages, image generations, voice, and advanced reasoning.",
       },
     ],
   }),
@@ -59,11 +59,11 @@ function PricingPage() {
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-sm hover:opacity-80">
             <ArrowLeft className="w-4 h-4" />
-            Back to Nova GPT
+            Back to NovaGPT
           </Link>
           <div className="flex items-center gap-2">
             <NovaLogo className="w-6 h-6" />
-            <span className="font-semibold">Nova GPT</span>
+            <span className="font-semibold">NovaGPT</span>
           </div>
         </div>
       </header>
@@ -83,11 +83,11 @@ function PricingPage() {
             name="Free"
             price="$0"
             period="forever"
-            description="Get started with Nova GPT."
+            description="Get started with NovaGPT."
             cta="Current plan"
             ctaDisabled
             features={[
-              "Access to Nova GPT (Auto mode)",
+              "Access to NovaGPT (Auto mode)",
               "Up to 3 image generations / day",
               "Up to 2 image uploads / day",
               "Voice input & read-aloud",

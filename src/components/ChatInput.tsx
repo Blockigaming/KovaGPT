@@ -144,7 +144,7 @@ export function ChatInput({
               value={value}
               onChange={(e) => onChange(e.target.value)}
               onKeyDown={handleKey}
-              placeholder={listening ? "Listening…" : "Message Nova GPT…"}
+              placeholder={listening ? "Listening…" : "Message NovaGPT…"}
               rows={1}
               className="flex-1 resize-none bg-transparent px-3 py-4 outline-none text-foreground placeholder:text-muted-foreground max-h-[200px]"
             />

@@ -7,7 +7,7 @@ export const Route = createFileRoute("/checkout/return")({
     session_id: typeof s.session_id === "string" ? s.session_id : undefined,
   }),
   component: CheckoutReturn,
-  head: () => ({ meta: [{ title: "Payment complete — Nova GPT" }] }),
+  head: () => ({ meta: [{ title: "Payment complete — NovaGPT" }] }),
 });
 
 function CheckoutReturn() {
@@ -23,7 +23,7 @@ function CheckoutReturn() {
             </div>
             <h1 className="text-2xl font-semibold mb-2">You're all set</h1>
             <p className="text-sm text-muted-foreground mb-6">
-              Your subscription is active. Welcome to Nova GPT.
+              Your subscription is active. Welcome to NovaGPT.
             </p>
           </>
         ) : (
@@ -39,7 +39,7 @@ function CheckoutReturn() {
           to="/"
           className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-foreground text-background text-sm font-medium hover:opacity-90 transition"
         >
-          Back to Nova GPT
+          Back to NovaGPT
         </Link>
       </div>
     </div>

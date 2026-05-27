@@ -26,11 +26,11 @@ export const Route = createFileRoute("/")({
   component: NovaGPT,
   head: () => ({
     meta: [
-      { title: "Nova GPT — Your intelligent AI assistant" },
+      { title: "NovaGPT — Your intelligent AI assistant" },
       {
         name: "description",
         content:
-          "Nova GPT is an advanced multimodal AI assistant for chat, coding, research, voice, and image generation.",
+          "NovaGPT is an advanced multimodal AI assistant for chat, coding, research, voice, and image generation.",
       },
     ],
   }),
@@ -328,7 +328,7 @@ function NovaGPT() {
             </button>
           )}
           <div className="flex items-center gap-1.5 px-3 py-1.5 font-semibold">
-            <span>Nova GPT</span>
+            <span>NovaGPT</span>
           </div>
           <div className="ml-auto flex items-center gap-2">
             <button
