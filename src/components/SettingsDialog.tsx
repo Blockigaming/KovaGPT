@@ -441,7 +441,16 @@ export function SettingsDialog({
 
 
           {/* BEHAVIOR — how it should respond */}
-          <TabsContent value="behavior" className="overflow-y-auto pr-1 space-y-5 py-4">
+          <TabsContent value="behavior" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+            {!loggedIn ? (
+              <LockedTab
+                title="Sign in to fine-tune NovaGPT"
+                body="Mood and custom response instructions are saved per account so NovaGPT acts the same on every device."
+                onSignIn={() => clerk?.openSignIn()}
+              />
+            ) : (
+            <>
+
             <div>
               <label className="text-sm font-medium mb-1.5 block">Mood</label>
               <Select
@@ -477,13 +486,24 @@ export function SettingsDialog({
                 Applied to every response.
               </p>
             </div>
+            </>
+            )}
           </TabsContent>
 
           {/* APPEARANCE — color customization */}
-          <TabsContent value="appearance" className="overflow-y-auto pr-1 space-y-5 py-4">
+          <TabsContent value="appearance" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+            {!loggedIn ? (
+              <LockedTab
+                title="Sign in to customize the look"
+                body="Theme colors are saved to your account so the app looks the same on every device."
+                onSignIn={() => clerk?.openSignIn()}
+              />
+            ) : (
+            <>
             <p className="text-sm text-muted-foreground">
-              Customize app colors. Changes apply instantly and are saved to this device.
+              Customize app colors. Changes apply instantly and are saved to your account.
             </p>
+
 
             <ColorRow
               label="Background"
@@ -518,11 +538,22 @@ export function SettingsDialog({
             >
               Reset to defaults
             </Button>
+            </>
+            )}
           </TabsContent>
 
           {/* BILLING */}
-          <TabsContent value="billing" className="overflow-y-auto pr-1 space-y-5 py-4">
+          <TabsContent value="billing" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+            {!loggedIn ? (
+              <LockedTab
+                title="Sign in to manage billing"
+                body="View your plan, payment methods, and receipts once you're signed in to your account."
+                onSignIn={() => clerk?.openSignIn()}
+              />
+            ) : (
+            <>
             <div className="rounded-lg border border-border p-4 flex items-center justify-between gap-3">
+
               <div>
                 <div className="text-sm font-medium">Current plan</div>
                 <div className="text-xs text-muted-foreground mt-1">
