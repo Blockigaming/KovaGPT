@@ -58,7 +58,7 @@ function loadSettings(): Settings {
 }
 
 function NovaGPT() {
-  const { isSignedIn } = useUser();
+  const { isSignedIn, isLoaded } = useUser();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
@@ -373,7 +373,7 @@ function NovaGPT() {
   return (
     <div className="flex h-screen w-full bg-background text-foreground">
       <Toaster />
-      <div className="fixed bottom-3 left-3 z-50 flex flex-col gap-1 rounded-xl border border-border/70 bg-background/95 backdrop-blur p-1.5 shadow-md max-w-[calc(100vw-1.5rem)]">
+      <div className="fixed bottom-3 left-3 z-50 flex flex-col gap-1 rounded-xl border border-border bg-background/95 backdrop-blur p-1.5 shadow-md max-w-[calc(100vw-1.5rem)]">
         <Link
           to="/pricing"
           className="flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-accent transition text-sm"
@@ -424,7 +424,7 @@ function NovaGPT() {
       />
 
       <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 flex items-center px-3 border-b border-border/50">
+        <header className="h-14 flex items-center px-3 border-b border-border">
           {!sidebarOpen && (
             <button
               onClick={() => setSidebarOpen(true)}
@@ -440,33 +440,35 @@ function NovaGPT() {
           <div className="ml-auto flex items-center gap-2">
             <button
               onClick={() => setVoiceModeOpen(true)}
-              className="text-sm px-3 py-1.5 rounded-full border border-border/70 hover:bg-accent transition flex items-center gap-1.5"
+              className="text-sm px-3 py-1.5 rounded-full border border-border hover:bg-accent transition flex items-center gap-1.5"
               title="Voice mode"
             >
               <AudioLines className="w-4 h-4" />
               <span className="hidden sm:inline">Voice</span>
             </button>
-            {isSignedIn ? (
+            {!isLoaded ? (
+              <div className="w-8 h-8 rounded-full bg-accent/40 animate-pulse" aria-hidden />
+            ) : isSignedIn ? (
               <SignedIn>
                 <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
               </SignedIn>
             ) : (
               <>
                 <SignInButton mode="modal">
-                  <button className="text-sm font-medium px-4 py-1.5 rounded-full border border-border/70 hover:bg-accent transition">
+                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full border border-border hover:bg-accent transition">
                     Sign in
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button className="text-sm font-medium px-4 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition">
+                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition">
                     Sign up
                   </button>
                 </SignUpButton>
               </>
             )}
-
           </div>
         </header>
+
 
         {!active || active.messages.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4">
