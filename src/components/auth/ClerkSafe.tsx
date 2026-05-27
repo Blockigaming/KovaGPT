@@ -131,10 +131,27 @@ export function SignUpButton({
 }
 
 export function useUser() {
-  const { user, isSignedIn, isLoaded } = useClerkUser();
-  if (!user) return { user: null, isSignedIn: !!isSignedIn, isLoaded };
+  // Always call the same hooks in the same order, but during SSR (no window)
+  // and any environment where Clerk's provider context isn't established,
+  // return a deterministic signed-out state instead of letting Clerk throw.
+  const mounted = useClientOnly();
+  let user: ReturnType<typeof useClerkUser>["user"] = null as any;
+  let isSignedIn = false;
+  let isLoaded = false;
+  try {
+    const c = useClerkUser();
+    user = c.user as any;
+    isSignedIn = !!c.isSignedIn;
+    isLoaded = c.isLoaded;
+  } catch {
+    /* Clerk not ready / no provider on server — defaults already set. */
+  }
+  if (!mounted) {
+    return { user: null, isSignedIn: false, isLoaded: false };
+  }
+  if (!user) return { user: null, isSignedIn, isLoaded };
   return {
-    isSignedIn: !!isSignedIn,
+    isSignedIn,
     isLoaded,
     user: Object.assign(user, {
       email:
