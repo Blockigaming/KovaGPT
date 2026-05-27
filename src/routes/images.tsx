@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { PanelLeft, ChevronDown, ChevronLeft, ChevronRight, ImageIcon, ArrowUp, Mic } from "lucide-react";
+import { PanelLeft, ChevronDown, ChevronLeft, ChevronRight, ImageIcon, ArrowUp, Mic, Loader2, Download } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 import { HelpDialog } from "@/components/HelpDialog";
+import { LoginPromptDialog } from "@/components/LoginPromptDialog";
 import {
   SignInButton,
   SignUpButton,
@@ -22,21 +23,96 @@ export const Route = createFileRoute("/images")({
   }),
 });
 
-const PRESETS = [
-  { label: "Disco mode", gradient: "from-slate-200 via-slate-400 to-slate-600" },
-  { label: "Improve Your Desk Setup", gradient: "from-amber-100 via-orange-200 to-rose-300" },
-  { label: "Wanderlust", gradient: "from-fuchsia-300 via-purple-400 to-indigo-600" },
-  { label: "Scribble", gradient: "from-emerald-200 via-teal-300 to-cyan-400" },
-  { label: "Chibi stickers", gradient: "from-pink-200 via-rose-300 to-orange-300" },
-  { label: "Cinematic portrait", gradient: "from-zinc-700 via-zinc-900 to-black" },
+// Curated AI-art style example images (Unsplash, free to use).
+const EXAMPLES: { label: string; prompt: string; src: string }[] = [
+  {
+    label: "Cinematic portrait",
+    prompt: "Cinematic portrait of a woman in golden hour light, 85mm lens, shallow depth of field",
+    src: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Cyberpunk city",
+    prompt: "Neon-lit cyberpunk Tokyo street at night, rainy reflections, blade runner aesthetic",
+    src: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Surreal landscape",
+    prompt: "Surreal floating islands above a sea of clouds at sunrise, ethereal lighting",
+    src: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Astronaut on Mars",
+    prompt: "An astronaut walking on Mars at golden hour, dramatic shadows, hyperreal detail",
+    src: "https://images.unsplash.com/photo-1457364887197-9150188c107b?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Watercolor mountains",
+    prompt: "Soft watercolor painting of misty mountains and pine forest, pastel palette",
+    src: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Anime sunset",
+    prompt: "Anime style girl on a rooftop watching a vivid sunset, Makoto Shinkai inspired",
+    src: "https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Chibi sticker pack",
+    prompt: "Cute chibi sticker of a fox wizard, vector style, white background",
+    src: "https://images.unsplash.com/photo-1612392061787-2d078b3e573a?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Product render",
+    prompt: "Studio product render of futuristic wireless headphones on a marble pedestal",
+    src: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Fantasy castle",
+    prompt: "Epic fantasy castle on a cliff at twilight, dramatic clouds, painterly",
+    src: "https://images.unsplash.com/photo-1533154683836-84ea7a0bc310?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Cozy interior",
+    prompt: "Cozy reading nook with warm lamp light, plants, rainy window, 3D render",
+    src: "https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=600&q=70",
+  },
 ];
 
 function ImagesPage() {
-  const { isSignedIn, isLoaded } = useUser();
+  const { isSignedIn } = useUser();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<string | null>(null);
+  const [loginOpen, setLoginOpen] = useState(false);
+
+  async function generate(p: string) {
+    const trimmed = p.trim();
+    if (!trimmed) return;
+    if (!isSignedIn) {
+      setLoginOpen(true);
+      return;
+    }
+    setError(null);
+    setResult(null);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/generate-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: trimmed }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Failed to generate image");
+      setResult(data.imageUrl);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to generate image");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="flex h-screen w-full bg-background text-foreground">
@@ -68,7 +144,7 @@ function ImagesPage() {
             <ChevronDown className="w-4 h-4 text-muted-foreground" />
           </button>
           <div className="ml-auto flex items-center gap-2">
-            {isLoaded && isSignedIn ? (
+            {isSignedIn ? (
               <SignedIn>
                 <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
               </SignedIn>
@@ -93,7 +169,13 @@ function ImagesPage() {
           <div className="max-w-5xl mx-auto px-6 py-8">
             <h1 className="text-3xl font-semibold mb-6">Images</h1>
 
-            <div className="rounded-3xl border border-border bg-card shadow-sm">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                generate(prompt);
+              }}
+              className="rounded-3xl border border-border bg-card shadow-sm"
+            >
               <div className="flex items-center px-4 py-3 gap-2">
                 <ImageIcon className="w-5 h-5 text-muted-foreground shrink-0" />
                 <input
@@ -110,19 +192,48 @@ function ImagesPage() {
                   <Mic className="w-4 h-4" />
                 </button>
                 <button
-                  type="button"
-                  disabled={!prompt.trim()}
+                  type="submit"
+                  disabled={!prompt.trim() || loading}
                   className="w-8 h-8 rounded-full bg-foreground text-background flex items-center justify-center disabled:opacity-30 hover:opacity-90 transition"
                   aria-label="Generate"
                 >
-                  <ArrowUp className="w-4 h-4" />
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-4 h-4" />}
                 </button>
               </div>
-            </div>
+            </form>
+
+            {error && (
+              <div className="mt-4 text-sm text-destructive">{error}</div>
+            )}
+
+            {(loading || result) && (
+              <div className="mt-6 rounded-2xl border border-border bg-card overflow-hidden">
+                {loading && !result && (
+                  <div className="aspect-square w-full max-w-md mx-auto flex flex-col items-center justify-center gap-3 text-muted-foreground">
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <div className="text-sm">Generating your image…</div>
+                  </div>
+                )}
+                {result && (
+                  <div className="p-3">
+                    <img src={result} alt="Generated" className="w-full max-w-md mx-auto rounded-xl" />
+                    <div className="flex justify-center mt-3">
+                      <a
+                        href={result}
+                        download="novagpt-image.png"
+                        className="inline-flex items-center gap-2 text-sm px-4 py-1.5 rounded-full border border-border hover:bg-accent transition"
+                      >
+                        <Download className="w-4 h-4" /> Download
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="mt-10">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Create an image</h2>
+                <h2 className="text-lg font-semibold">Explore AI image examples</h2>
                 <div className="flex items-center gap-1">
                   <button className="w-8 h-8 rounded-full border border-border hover:bg-accent flex items-center justify-center" aria-label="Previous">
                     <ChevronLeft className="w-4 h-4" />
@@ -132,14 +243,27 @@ function ImagesPage() {
                   </button>
                 </div>
               </div>
+              <p className="text-sm text-muted-foreground mb-4">
+                Click any example to use it as your prompt.
+              </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                {PRESETS.map((p) => (
+                {EXAMPLES.map((ex) => (
                   <button
-                    key={p.label}
-                    className={`relative aspect-[3/4] rounded-2xl overflow-hidden bg-gradient-to-br ${p.gradient} hover:scale-[1.02] transition-transform`}
+                    key={ex.label}
+                    onClick={() => {
+                      setPrompt(ex.prompt);
+                      generate(ex.prompt);
+                    }}
+                    className="group relative aspect-[3/4] rounded-2xl overflow-hidden bg-muted hover:scale-[1.02] transition-transform text-left"
                   >
-                    <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
-                      <div className="text-sm font-medium text-white text-left">{p.label}</div>
+                    <img
+                      src={ex.src}
+                      alt={ex.label}
+                      loading="lazy"
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 to-transparent">
+                      <div className="text-sm font-medium text-white">{ex.label}</div>
                     </div>
                   </button>
                 ))}
@@ -157,6 +281,7 @@ function ImagesPage() {
         onClearAll={() => {}}
       />
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+      <LoginPromptDialog open={loginOpen} onOpenChange={setLoginOpen} />
     </div>
   );
 }
