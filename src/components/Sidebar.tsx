@@ -41,11 +41,19 @@ export function Sidebar({
     } catch { /* ignore */ }
   }, []);
 
+  // Clamp width to a sensible fraction of the viewport so the sidebar
+  // never eats the whole screen on smaller laptops (e.g. Chromebooks at
+  // ~1366px or zoomed displays).
+  const clampWidth = (w: number) => {
+    const vw = typeof window !== "undefined" ? window.innerWidth : 1280;
+    const cap = Math.max(MIN_W, Math.min(MAX_W, Math.floor(vw * 0.4)));
+    return Math.max(MIN_W, Math.min(cap, w));
+  };
+
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
       if (!draggingRef.current) return;
-      const w = Math.max(MIN_W, Math.min(MAX_W, e.clientX));
-      setWidth(w);
+      setWidth(clampWidth(e.clientX));
     };
     const onUp = () => {
       if (draggingRef.current) {
@@ -55,11 +63,14 @@ export function Sidebar({
         try { localStorage.setItem(WIDTH_KEY, String(width)); } catch { /* ignore */ }
       }
     };
+    const onResize = () => setWidth((w) => clampWidth(w));
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
+    window.addEventListener("resize", onResize);
     return () => {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("resize", onResize);
     };
   }, [width]);
 
