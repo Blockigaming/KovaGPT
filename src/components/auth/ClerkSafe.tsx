@@ -117,7 +117,10 @@ function AuthButtonClient({
 }) {
   const clerk = useClerk();
   const { isLoaded } = useClerkUser();
-  const clerkLoaded = typeof clerk === "object" && clerk !== null && "loaded" in clerk ? clerk.loaded !== false : true;
+  const clerkLoaded =
+    typeof clerk === "object" && clerk !== null && "loaded" in clerk
+      ? clerk.loaded !== false
+      : true;
 
   const href = prodAuthUrl(variant);
 
