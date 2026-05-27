@@ -7,6 +7,36 @@ type IncomingMessage = {
   attachments?: { kind: "image"; dataUrl: string }[];
 };
 
+type UserContext = {
+  name?: string;
+  phone?: string;
+  extraFacts?: string;
+  customInstructions?: string;
+  mood?: string;
+  rememberAcross?: boolean;
+};
+
+function buildUserContextBlock(u?: UserContext): string {
+  if (!u) return "";
+  const lines: string[] = [];
+  if (u.name) lines.push(`The user prefers to be called "${u.name}".`);
+  if (u.phone) lines.push(`The user's phone (for formatting/context only): ${u.phone}.`);
+  if (u.extraFacts) lines.push(`Facts the user shared about themselves: ${u.extraFacts}`);
+  if (u.mood && u.mood !== "neutral") {
+    lines.push(`Respond in a ${u.mood} tone.`);
+  }
+  if (u.customInstructions) {
+    lines.push(`User's custom response instructions (follow these): ${u.customInstructions}`);
+  }
+  if (u.rememberAcross === false) {
+    lines.push(`Do NOT reference prior conversations. Treat each chat as fresh.`);
+  }
+  if (lines.length === 0) return "";
+  return `\n\n--- User profile & preferences ---\n${lines.join("\n")}\n--- End user profile ---`;
+}
+
+const CURRENT_DATE_INSTRUCTION = `\n\nIMPORTANT: Today's date is ${new Date().toISOString().slice(0, 10)}. When asked about recent events, news, prices, or anything that may have changed, clearly state that you don't have live web access and tell the user what year/cutoff you're confident in. Never invent recent facts.`;
+
 const IMAGE_INTENT =
   /\b(generate|make|create|draw|design|render|paint|produce|give\s+me)\b[^.?!]{0,40}\b(image|picture|photo|photograph|illustration|logo|drawing|artwork|painting|render|wallpaper|icon)\b/i;
 
