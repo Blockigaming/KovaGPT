@@ -356,11 +356,21 @@ function NovaGPT() {
               <AudioLines className="w-4 h-4" />
               <span className="hidden sm:inline">Voice</span>
             </button>
-            <SignInButton mode="modal">
-              <button className="text-sm px-3 py-1.5 rounded-lg border border-border hover:bg-accent transition md:hidden">
-                Sign in
-              </button>
-            </SignInButton>
+            <SignedOut>
+              <SignInButton mode="modal">
+                <button className="text-sm px-3 py-1.5 rounded-lg border border-border hover:bg-accent transition">
+                  Sign in
+                </button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <button className="text-sm px-3 py-1.5 rounded-lg bg-foreground text-background hover:opacity-90 transition">
+                  Sign up
+                </button>
+              </SignUpButton>
+            </SignedOut>
+            <SignedIn>
+              <UserButton afterSignOutUrl="/" />
+            </SignedIn>
           </div>
         </header>
 
