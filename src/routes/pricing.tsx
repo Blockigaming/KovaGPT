@@ -4,8 +4,10 @@ import { useState } from "react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { useUser } from "@/components/auth/ClerkSafe";
+import { useClerk } from "@clerk/clerk-react";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
-import { useNavigate } from "@tanstack/react-router";
+
+
 
 export const Route = createFileRoute("/pricing")({
   component: PricingPage,
@@ -32,12 +34,12 @@ function PricingPage() {
   const [proTier, setProTier] = useState<ProTier>("5x");
   const pro = PRO_TIERS[proTier];
   const { user, isSignedIn } = useUser();
-  const navigate = useNavigate();
+  const { openSignIn } = useClerk();
   const { openCheckout, closeCheckout, isOpen, checkoutElement } = useStripeCheckout();
 
   const startCheckout = (priceId: string) => {
     if (!isSignedIn) {
-      navigate({ to: "/auth" });
+      openSignIn();
       return;
     }
     openCheckout({
@@ -47,6 +49,8 @@ function PricingPage() {
       returnUrl: `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
     });
   };
+
+
 
   return (
     <div className="min-h-screen bg-background text-foreground">
