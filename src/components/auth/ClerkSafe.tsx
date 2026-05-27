@@ -141,19 +141,20 @@ function AuthButtonClient({
 
   const child = Children.only(children);
   if (isValidElement(child)) {
-    if (typeof child.type === "string" && child.type === "button") {
+    const element = child as React.ReactElement<any>;
+    if (typeof element.type === "string" && element.type === "button") {
       return (
         <a
           href={href}
           onClick={handleClick}
-          className={child.props.className}
+          className={element.props.className}
           role="button"
         >
-          {child.props.children}
+          {element.props.children}
         </a>
       );
     }
-    return cloneElement(child as React.ReactElement<any>, { onClick: handleClick });
+    return cloneElement(element, { onClick: handleClick });
   }
   return (
     <a href={href} onClick={handleClick}>
