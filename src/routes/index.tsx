@@ -489,6 +489,10 @@ function NovaGPT() {
         onClearAll={() => setConversations([])}
       />
 
+      <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+
+
+
       <VoiceMode
         open={voiceModeOpen}
         onClose={() => setVoiceModeOpen(false)}
