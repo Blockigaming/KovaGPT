@@ -223,6 +223,71 @@ export function SettingsDialog({
               </div>
             </section>
 
+            <section className="space-y-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Globe2 className="w-4 h-4" /> Knowledge & input
+              </h3>
+
+              <ToggleRow
+                title="Live web search"
+                hint="Fetch fresh results from the web for time-sensitive questions so answers stay up to date."
+                checked={settings.webSearch}
+                onCheckedChange={(v) => onChange({ ...settings, webSearch: v })}
+              />
+              <ToggleRow
+                title="Send on Enter"
+                hint="Enter sends. Shift + Enter for a new line. Turn off to require the send button."
+                checked={settings.sendOnEnter}
+                onCheckedChange={(v) => onChange({ ...settings, sendOnEnter: v })}
+              />
+              <ToggleRow
+                title="Show timestamps"
+                hint="Display a small timestamp under each message."
+                checked={settings.showTimestamps}
+                onCheckedChange={(v) => onChange({ ...settings, showTimestamps: v })}
+              />
+
+              <div>
+                <label className="text-sm mb-2 block">Preferred response length</label>
+                <Select
+                  value={settings.responseLength}
+                  onValueChange={(v) => onChange({ ...settings, responseLength: v as Settings["responseLength"] })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="short">Short — get to the point</SelectItem>
+                    <SelectItem value="medium">Medium — balanced (default)</SelectItem>
+                    <SelectItem value="long">Long — detailed, thorough</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-sm mb-2 block">Response language</label>
+                <Select
+                  value={settings.language}
+                  onValueChange={(v) => onChange({ ...settings, language: v })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">Auto (match my message)</SelectItem>
+                    <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="es">Español</SelectItem>
+                    <SelectItem value="fr">Français</SelectItem>
+                    <SelectItem value="de">Deutsch</SelectItem>
+                    <SelectItem value="pt">Português</SelectItem>
+                    <SelectItem value="it">Italiano</SelectItem>
+                    <SelectItem value="nl">Nederlands</SelectItem>
+                    <SelectItem value="zh">中文</SelectItem>
+                    <SelectItem value="ja">日本語</SelectItem>
+                    <SelectItem value="ko">한국어</SelectItem>
+                    <SelectItem value="ar">العربية</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </section>
+
+
             <section>
               <h3 className="text-sm font-semibold mb-3">Daily Usage (Free)</h3>
               <div className="space-y-2 text-sm">
