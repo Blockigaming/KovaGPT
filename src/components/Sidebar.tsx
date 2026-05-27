@@ -216,6 +216,8 @@ export function Sidebar({
             </SignInButton>
           </div>
         )}
+      </div>
+
 
       {open && (
         <div
