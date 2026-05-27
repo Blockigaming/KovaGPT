@@ -23,16 +23,16 @@ export function NovaLogo({
   }
   return (
     <span
-      className={`${className} inline-flex items-center justify-center rounded-full bg-white overflow-hidden`}
+      className={`${className} relative inline-flex items-center justify-center rounded-full bg-white`}
     >
       <img
         src={logo}
         alt="NovaGPT"
-        className="w-[94%] h-[94%]"
+        className="absolute inset-0 w-full h-full rounded-full"
         width={512}
         height={512}
         loading="lazy"
-        style={{ objectFit: "contain", display: "block" }}
+        style={{ objectFit: "cover", display: "block" }}
       />
     </span>
   );
