@@ -23,12 +23,17 @@ import { Children, cloneElement, isValidElement, useEffect, useState } from "rea
 // Clerk publishable keys are public and safe to embed in client code.
 export const CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsubm92YS1haWdwdC5sb3ZhYmxlLmFwcCQ";
 const PROD_ORIGIN = "https://nova-aigpt.lovable.app";
+const CLERK_JS_URL = "https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js";
 
 export const clerkEnabled = true;
 
 export function ClerkProvider({ children }: { children: ReactNode }) {
   return (
-    <RealClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} afterSignOutUrl="/">
+    <RealClerkProvider
+      publishableKey={CLERK_PUBLISHABLE_KEY}
+      clerkJSUrl={CLERK_JS_URL}
+      afterSignOutUrl="/"
+    >
       <AuthQueryParamHandler />
       {children}
     </RealClerkProvider>
@@ -76,7 +81,10 @@ function AuthQueryParamHandler() {
 export { SignedIn, SignedOut, UserButton };
 
 function prodAuthUrl(variant: "sign-in" | "sign-up") {
-  const redirect = typeof window !== "undefined" ? window.location.href : PROD_ORIGIN;
+  const redirect =
+    typeof window !== "undefined" && window.location.origin === PROD_ORIGIN
+      ? window.location.href
+      : `${PROD_ORIGIN}/`;
   const path = variant === "sign-in" ? "sign-in" : "sign-up";
   return `${PROD_ORIGIN}/?${path}=1&redirect_url=${encodeURIComponent(redirect)}`;
 }
@@ -94,14 +102,6 @@ function AuthButtonWrapper({
   children?: ReactNode;
   variant: "sign-in" | "sign-up";
 }) {
-  // SSR/prerender path: render the child unchanged. Clerk hooks are not
-  // safe to call on the server when the SDK script hasn't initialized,
-  // and the click handler is meaningless without a window anyway.
-  const mounted = useClientOnly();
-  if (!mounted) {
-    const child = Children.only(children);
-    return isValidElement(child) ? (child as React.ReactElement) : <>{child}</>;
-  }
   return <AuthButtonClient variant={variant}>{children}</AuthButtonClient>;
 }
 
@@ -121,6 +121,8 @@ function AuthButtonClient({
     /* Clerk provider not available — fall back to redirect. */
   }
 
+  const href = prodAuthUrl(variant);
+
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -138,18 +140,31 @@ function AuthButtonClient({
       }
     }
     if (typeof window !== "undefined") {
-      window.location.href = prodAuthUrl(variant);
+      window.location.assign(href);
     }
   };
 
   const child = Children.only(children);
   if (isValidElement(child)) {
-    return cloneElement(child as React.ReactElement<any>, { onClick: handleClick });
+    const element = child as React.ReactElement<any>;
+    if (typeof element.type === "string" && element.type === "button") {
+      return (
+        <a
+          href={href}
+          onClick={handleClick}
+          className={element.props.className}
+          role="button"
+        >
+          {element.props.children}
+        </a>
+      );
+    }
+    return cloneElement(element, { onClick: handleClick });
   }
   return (
-    <button type="button" onClick={handleClick}>
+    <a href={href} onClick={handleClick}>
       {child}
-    </button>
+    </a>
   );
 }
 
