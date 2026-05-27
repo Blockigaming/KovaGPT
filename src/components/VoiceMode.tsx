@@ -268,7 +268,7 @@ export function VoiceMode({
                   : "none",
             }}
           >
-            <Mic className="w-14 h-14 text-primary-foreground" />
+            <NovaLogo className="w-20 h-20" />
           </div>
         </div>
 
