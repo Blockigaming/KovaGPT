@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { X, Mic } from "lucide-react";
+import { X } from "lucide-react";
 import {
   createRecognition,
   sttSupported,
-  speak,
+  speakChunk,
   stopSpeaking,
   defaultVoiceName,
 } from "@/lib/voice";
+import { NovaLogo } from "@/components/NovaLogo";
 import type { Message } from "@/lib/chat-store";
 import { toast } from "sonner";
 
