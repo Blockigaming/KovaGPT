@@ -160,3 +160,18 @@ export function useUser() {
     }),
   };
 }
+
+// SSR-safe wrapper around Clerk's useClerk(). Returns null during SSR or
+// when Clerk's provider context isn't established, so callers can do
+// `useClerkSafe()?.openUserProfile()` without crashing the server render.
+export function useClerkSafe() {
+  const mounted = useClientOnly();
+  let clerk: ReturnType<typeof useClerk> | null = null;
+  try {
+    clerk = useClerk();
+  } catch {
+    clerk = null;
+  }
+  return mounted ? clerk : null;
+}
+
