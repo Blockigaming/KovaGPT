@@ -71,7 +71,7 @@ export function SettingsDialog({
                 >
                   {list.map((v) => (
                     <option key={v.name} value={v.name}>
-                      {v.name} ({v.lang})
+                      {friendlyVoiceLabel(v)}
                     </option>
                   ))}
                 </select>
