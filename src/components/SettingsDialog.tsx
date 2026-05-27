@@ -326,27 +326,90 @@ export function SettingsDialog({
               </p>
             )}
 
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">What should NovaGPT call you?</label>
-              <Input
-                placeholder={user?.firstName || "Your name"}
-                value={settings.displayName}
-                onChange={(e) => onChange({ ...settings, displayName: e.target.value })}
-              />
-            </div>
+            <section className="space-y-4">
+              <h3 className="text-sm font-semibold">How to address you</h3>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Preferred name</label>
+                  <Input
+                    placeholder={user?.firstName || "Your name"}
+                    value={settings.displayName}
+                    onChange={(e) => onChange({ ...settings, displayName: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Pronouns</label>
+                  <Input
+                    placeholder="e.g. she/her, he/him, they/them"
+                    value={settings.preferredPronouns}
+                    onChange={(e) => onChange({ ...settings, preferredPronouns: e.target.value })}
+                  />
+                </div>
+              </div>
+            </section>
 
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Phone number (optional)</label>
+            <section className="space-y-4">
+              <h3 className="text-sm font-semibold">Contact</h3>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Email</label>
+                  <Input
+                    type="email"
+                    placeholder={user?.primaryEmailAddress?.emailAddress || "you@example.com"}
+                    value={settings.email}
+                    onChange={(e) => onChange({ ...settings, email: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Phone</label>
+                  <Input
+                    type="tel"
+                    placeholder="+1 555 123 4567"
+                    value={settings.phone}
+                    onChange={(e) => onChange({ ...settings, phone: e.target.value })}
+                  />
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-4">
+              <h3 className="text-sm font-semibold">Address</h3>
               <Input
-                type="tel"
-                placeholder="+1 555 123 4567"
-                value={settings.phone}
-                onChange={(e) => onChange({ ...settings, phone: e.target.value })}
+                placeholder="Address line 1"
+                value={settings.addressLine1}
+                onChange={(e) => onChange({ ...settings, addressLine1: e.target.value })}
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Used only as context for things like reminders or formatting.
+              <Input
+                placeholder="Address line 2 (optional)"
+                value={settings.addressLine2}
+                onChange={(e) => onChange({ ...settings, addressLine2: e.target.value })}
+              />
+              <div className="grid sm:grid-cols-3 gap-3">
+                <Input
+                  placeholder="City"
+                  value={settings.city}
+                  onChange={(e) => onChange({ ...settings, city: e.target.value })}
+                />
+                <Input
+                  placeholder="State / Region"
+                  value={settings.region}
+                  onChange={(e) => onChange({ ...settings, region: e.target.value })}
+                />
+                <Input
+                  placeholder="Postal code"
+                  value={settings.postalCode}
+                  onChange={(e) => onChange({ ...settings, postalCode: e.target.value })}
+                />
+              </div>
+              <Input
+                placeholder="Country"
+                value={settings.country}
+                onChange={(e) => onChange({ ...settings, country: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Used for billing receipts and to format addresses or local info correctly.
               </p>
-            </div>
+            </section>
 
             <div>
               <label className="text-sm font-medium mb-1.5 block">Extra facts about you</label>
@@ -359,18 +422,13 @@ export function SettingsDialog({
               />
             </div>
 
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-medium">Remember across conversations</div>
-                <div className="text-xs text-muted-foreground">
-                  Let NovaGPT use facts above + a short summary of past chats as context.
-                </div>
-              </div>
-              <Switch
-                checked={settings.rememberAcross}
-                onCheckedChange={(v) => onChange({ ...settings, rememberAcross: v })}
-              />
-            </div>
+            <ToggleRow
+              title="Remember across conversations"
+              hint="Let NovaGPT carry your profile, custom instructions, and a short summary of past chats into every new conversation."
+              checked={settings.rememberAcross}
+              onCheckedChange={(v) => onChange({ ...settings, rememberAcross: v })}
+            />
+
           </TabsContent>
 
           {/* BEHAVIOR — how it should respond */}
