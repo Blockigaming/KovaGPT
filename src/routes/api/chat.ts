@@ -190,7 +190,10 @@ export const Route = createFileRoute("/api/chat")({
           const body: Record<string, unknown> = {
             model,
             stream: true,
-            messages: [{ role: "system", content: m.systemPrompt }, ...transformed],
+            messages: [
+              { role: "system", content: m.systemPrompt + buildUserContextBlock(user) + CURRENT_DATE_INSTRUCTION },
+              ...transformed,
+            ],
           };
           if (m.reasoning) {
             body.reasoning = { effort: m.reasoning };
