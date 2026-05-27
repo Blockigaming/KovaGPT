@@ -376,18 +376,18 @@ function NovaGPT() {
             </button>
             <SignedOut>
               <SignInButton mode="modal">
-                <button className="text-sm px-3 py-1.5 rounded-lg border border-border hover:bg-accent transition">
+                <button className="text-sm font-medium px-4 py-2 rounded-full border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground transition shadow-sm">
                   Sign in
                 </button>
               </SignInButton>
               <SignUpButton mode="modal">
-                <button className="text-sm px-3 py-1.5 rounded-lg bg-foreground text-background hover:opacity-90 transition">
-                  Sign up
+                <button className="text-sm font-semibold px-4 py-2 rounded-full bg-primary text-primary-foreground hover:opacity-90 transition shadow-lg shadow-primary/20 ring-2 ring-primary/40 ring-offset-2 ring-offset-background animate-pulse-slow">
+                  Sign up — it's free
                 </button>
               </SignUpButton>
             </SignedOut>
             <SignedIn>
-              <UserButton afterSignOutUrl="/" />
+              <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-9 h-9 ring-2 ring-primary/40" } }} />
             </SignedIn>
           </div>
         </header>
