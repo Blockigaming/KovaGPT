@@ -381,14 +381,6 @@ function NovaGPT() {
             <span>NovaGPT</span>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <Link
-              to="/pricing"
-              className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full border border-border/70 hover:bg-accent transition"
-              title="Upgrade your plan"
-            >
-              <Sparkles className="w-4 h-4" />
-              Upgrade
-            </Link>
             <button
               onClick={() => setVoiceModeOpen(true)}
               className="text-sm px-3 py-1.5 rounded-full border border-border/70 hover:bg-accent transition flex items-center gap-1.5"
@@ -396,14 +388,6 @@ function NovaGPT() {
             >
               <AudioLines className="w-4 h-4" />
               <span className="hidden sm:inline">Voice</span>
-            </button>
-            <button
-              onClick={() => setHelpOpen(true)}
-              className="p-2 rounded-full border border-border/70 hover:bg-accent transition"
-              title="Help & tips"
-              aria-label="Help"
-            >
-              <HelpCircle className="w-4 h-4" />
             </button>
             <SignedOut>
               <SignInButton mode="modal">
