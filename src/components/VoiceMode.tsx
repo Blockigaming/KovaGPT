@@ -203,7 +203,7 @@ export function VoiceMode({
               }
               return current;
             });
-          }, 350);
+          }, 200);
         } else {
           setPartial(text);
           lastInterim = text;
