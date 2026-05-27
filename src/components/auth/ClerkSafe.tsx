@@ -85,7 +85,11 @@ function AuthButtonClient({
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isLoaded && clerk && (clerk as any).loaded !== false) {
+    const onProd =
+      typeof window !== "undefined" && window.location.origin === PROD_ORIGIN;
+    // The Clerk publishable key is bound to the production origin, so the
+    // modal only works there. On preview / dev origins, always redirect.
+    if (onProd && isLoaded && clerk && (clerk as any).loaded !== false) {
       try {
         if (variant === "sign-in") clerk.openSignIn();
         else clerk.openSignUp();
