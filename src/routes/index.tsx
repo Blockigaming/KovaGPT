@@ -291,7 +291,7 @@ function NovaGPT() {
         abortRef.current = null;
       }
     },
-    [activeId, isStreaming, mode, autoTitle, settings.autoSpeak, settings.voiceRate],
+    [activeId, isStreaming, mode, autoTitle, settings.autoSpeak, settings.voiceRate, settings.voiceName],
   );
 
   const stop = useCallback(() => {
