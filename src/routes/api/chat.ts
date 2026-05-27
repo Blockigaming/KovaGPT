@@ -22,6 +22,22 @@ type UserContext = {
   webSearch?: boolean;
 };
 
+type WebSearchResult = {
+  title?: string;
+  url?: string;
+  description?: string;
+  snippet?: string;
+  markdown?: string;
+  metadata?: {
+    title?: string;
+    sourceURL?: string;
+  };
+};
+
+type ChatContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
 function buildUserContextBlock(u?: UserContext): string {
   if (!u) return "";
   const lines: string[] = [];
@@ -40,7 +56,9 @@ function buildUserContextBlock(u?: UserContext): string {
     lines.push("Provide thorough, detailed responses with examples where helpful.");
   }
   if (u.language && u.language !== "auto") {
-    lines.push(`Always reply in language code "${u.language}" unless the user clearly writes in another language.`);
+    lines.push(
+      `Always reply in language code "${u.language}" unless the user clearly writes in another language.`,
+    );
   }
   if (u.customInstructions) {
     lines.push(`User's custom response instructions (follow these): ${u.customInstructions}`);
@@ -90,9 +108,15 @@ async function runWebSearch(query: string): Promise<string | null> {
       body: JSON.stringify({ query, limit: 5 }),
     });
     if (!r.ok) return null;
-    const data: any = await r.json();
-    const results: any[] =
-      data?.data?.web ?? data?.data ?? data?.web ?? data?.results ?? [];
+    const data = (await r.json()) as {
+      data?: { web?: WebSearchResult[] } | WebSearchResult[];
+      web?: WebSearchResult[];
+      results?: WebSearchResult[];
+    };
+    const nestedData = data?.data;
+    const results = Array.isArray(nestedData)
+      ? nestedData
+      : (nestedData?.web ?? data?.web ?? data?.results ?? []);
     if (!Array.isArray(results) || results.length === 0) return null;
     const lines = results.slice(0, 5).map((res, i) => {
       const title = res.title || res.metadata?.title || "Untitled";
@@ -106,6 +130,11 @@ async function runWebSearch(query: string): Promise<string | null> {
   }
 }
 
+function shouldRunWebSearch(text: string, userWantsWebSearch?: boolean): boolean {
+  if (!text.trim()) return false;
+  if (userWantsWebSearch !== false) return true;
+  return /\b(search|google|look up|find online|browse)\b/i.test(text) || SEARCH_TRIGGER.test(text);
+}
 
 const IMAGE_INTENT =
   /\b(generate|make|create|draw|design|render|paint|produce|give\s+me)\b[^.?!]{0,40}\b(image|picture|photo|photograph|illustration|logo|drawing|artwork|painting|render|wallpaper|icon)\b/i;
@@ -187,12 +216,16 @@ async function handleImageRequest(prompt: string, apiKey: string): Promise<Respo
           controller.enqueue(enc.encode(sseChunk(`![generated image](${imageUrl})`)));
         } else {
           controller.enqueue(
-            enc.encode(sseChunk("Sorry — I couldn't generate that image. Try rephrasing the prompt.")),
+            enc.encode(
+              sseChunk("Sorry — I couldn't generate that image. Try rephrasing the prompt."),
+            ),
           );
         }
       } catch (e) {
         controller.enqueue(
-          enc.encode(sseChunk(`Sorry — ${e instanceof Error ? e.message : "image generation failed"}.`)),
+          enc.encode(
+            sseChunk(`Sorry — ${e instanceof Error ? e.message : "image generation failed"}.`),
+          ),
         );
       }
       controller.enqueue(enc.encode(sseDone()));
@@ -242,7 +275,7 @@ export const Route = createFileRoute("/api/chat")({
 
           const transformed = messages.map((msg) => {
             if (msg.role === "user" && msg.attachments && msg.attachments.length > 0) {
-              const parts: any[] = [];
+              const parts: ChatContentPart[] = [];
               if (msg.content) parts.push({ type: "text", text: msg.content });
               for (const att of msg.attachments) {
                 parts.push({ type: "image_url", image_url: { url: att.dataUrl } });
@@ -261,14 +294,11 @@ export const Route = createFileRoute("/api/chat")({
                 ? "google/gemini-2.5-pro"
                 : "google/gemini-3.5-flash";
 
-          // Live web data: NovaGPT always runs a web search when the user
-          // asks about something time-sensitive (today, latest, news, prices,
-          // scores, weather, etc.) or explicitly asks to search. This keeps
-          // answers grounded in real-time data without the user toggling it.
+          // Live web data is on for everyone by default. Users can still opt
+          // out in settings except for explicit/time-sensitive search asks.
           let webBlock = "";
           if (lastText && !hasImages) {
-            const explicitSearch = /\b(search|google|look up|find online|browse)\b/i.test(lastText);
-            if (explicitSearch || SEARCH_TRIGGER.test(lastText) || user?.webSearch || voice) {
+            if (shouldRunWebSearch(lastText, user?.webSearch) || voice) {
               const result = await runWebSearch(lastText);
               if (result) webBlock = result;
             }
@@ -302,8 +332,6 @@ export const Route = createFileRoute("/api/chat")({
           if (m.reasoning && !voice && m.id === "reason") {
             body.reasoning = { effort: m.reasoning };
           }
-
-
 
           const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",

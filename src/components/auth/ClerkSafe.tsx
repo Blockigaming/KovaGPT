@@ -17,7 +17,7 @@ import {
   useClerk,
   useUser as useClerkUser,
 } from "@clerk/clerk-react";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactElement, ReactNode } from "react";
 import { Children, cloneElement, isValidElement, useEffect, useState } from "react";
 
 // Clerk publishable keys are public and safe to embed in client code.
@@ -45,14 +45,8 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
 // open the corresponding Clerk modal automatically and strip the param.
 function AuthQueryParamHandler() {
   const mounted = useClientOnly();
-  let clerk: ReturnType<typeof useClerk> | null = null;
-  let isLoaded = false;
-  try {
-    clerk = useClerk();
-    isLoaded = useClerkUser().isLoaded;
-  } catch {
-    /* provider not ready */
-  }
+  const clerk = useClerk();
+  const { isLoaded } = useClerkUser();
   useEffect(() => {
     if (!mounted || !isLoaded || !clerk) return;
     if (typeof window === "undefined") return;
@@ -95,14 +89,23 @@ function useClientOnly() {
   return mounted;
 }
 
-function AuthButtonWrapper({
-  children,
-  variant,
-}: {
+function callChildOnClick(child: ReactNode, event: MouseEvent<HTMLElement>) {
+  if (!isValidElement(child)) return;
+  const props = (child as ReactElement<{ onClick?: (e: MouseEvent<HTMLElement>) => void }>).props;
+  props.onClick?.(event);
+}
+
+type ButtonLikeProps = {
+  className?: string;
   children?: ReactNode;
-  variant: "sign-in" | "sign-up";
-}) {
-  return <AuthButtonClient variant={variant}>{children}</AuthButtonClient>;
+  onClick?: (e: MouseEvent<HTMLElement>) => void;
+  "aria-label"?: string;
+};
+
+type AuthButtonElement = ReactElement<ButtonLikeProps>;
+
+function isButtonElement(element: AuthButtonElement) {
+  return typeof element.type === "string" && element.type === "button";
 }
 
 function AuthButtonClient({
@@ -112,25 +115,22 @@ function AuthButtonClient({
   children?: ReactNode;
   variant: "sign-in" | "sign-up";
 }) {
-  let clerk: ReturnType<typeof useClerk> | null = null;
-  let isLoaded = false;
-  try {
-    clerk = useClerk();
-    isLoaded = useClerkUser().isLoaded;
-  } catch {
-    /* Clerk provider not available — fall back to redirect. */
-  }
+  const clerk = useClerk();
+  const { isLoaded } = useClerkUser();
+  const clerkLoaded =
+    typeof clerk === "object" && clerk !== null && "loaded" in clerk
+      ? clerk.loaded !== false
+      : true;
 
   const href = prodAuthUrl(variant);
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = (e: React.MouseEvent<HTMLElement>) => {
+    callChildOnClick(children, e as MouseEvent<HTMLElement>);
+    if (e.defaultPrevented) return;
     e.preventDefault();
     e.stopPropagation();
-    const onProd =
-      typeof window !== "undefined" && window.location.origin === PROD_ORIGIN;
-    // The Clerk publishable key is bound to the production origin, so the
-    // modal only works there. On preview / dev origins, always redirect.
-    if (onProd && isLoaded && clerk && (clerk as any).loaded !== false) {
+    const onProd = typeof window !== "undefined" && window.location.origin === PROD_ORIGIN;
+    if (onProd && isLoaded && clerkLoaded) {
       try {
         if (variant === "sign-in") clerk.openSignIn();
         else clerk.openSignUp();
@@ -144,28 +144,38 @@ function AuthButtonClient({
     }
   };
 
-  const child = Children.only(children);
+  const child = Children.only(children) as AuthButtonElement;
   if (isValidElement(child)) {
-    const element = child as React.ReactElement<any>;
-    if (typeof element.type === "string" && element.type === "button") {
+    if (isButtonElement(child)) {
       return (
         <a
           href={href}
           onClick={handleClick}
-          className={element.props.className}
+          className={child.props.className}
           role="button"
+          aria-label={child.props["aria-label"]}
         >
-          {element.props.children}
+          {child.props.children}
         </a>
       );
     }
-    return cloneElement(element, { onClick: handleClick });
+    return cloneElement(child, { ...child.props, onClick: handleClick });
   }
   return (
     <a href={href} onClick={handleClick}>
       {child}
     </a>
   );
+}
+
+function AuthButtonWrapper({
+  children,
+  variant,
+}: {
+  children?: ReactNode;
+  variant: "sign-in" | "sign-up";
+}) {
+  return <AuthButtonClient variant={variant}>{children}</AuthButtonClient>;
 }
 
 export function SignInButton({
@@ -193,17 +203,7 @@ export function useUser() {
   // and any environment where Clerk's provider context isn't established,
   // return a deterministic signed-out state instead of letting Clerk throw.
   const mounted = useClientOnly();
-  let user: ReturnType<typeof useClerkUser>["user"] = null as any;
-  let isSignedIn = false;
-  let isLoaded = false;
-  try {
-    const c = useClerkUser();
-    user = c.user as any;
-    isSignedIn = !!c.isSignedIn;
-    isLoaded = c.isLoaded;
-  } catch {
-    /* Clerk not ready / no provider on server — defaults already set. */
-  }
+  const { user, isSignedIn, isLoaded } = useClerkUser();
   if (!mounted) {
     return { user: null, isSignedIn: false, isLoaded: false };
   }
@@ -212,9 +212,7 @@ export function useUser() {
     isSignedIn,
     isLoaded,
     user: Object.assign(user, {
-      email:
-        user.primaryEmailAddress?.emailAddress ??
-        user.emailAddresses?.[0]?.emailAddress,
+      email: user.primaryEmailAddress?.emailAddress ?? user.emailAddresses?.[0]?.emailAddress,
     }),
   };
 }
@@ -224,12 +222,6 @@ export function useUser() {
 // `useClerkSafe()?.openUserProfile()` without crashing the server render.
 export function useClerkSafe() {
   const mounted = useClientOnly();
-  let clerk: ReturnType<typeof useClerk> | null = null;
-  try {
-    clerk = useClerk();
-  } catch {
-    clerk = null;
-  }
+  const clerk = useClerk();
   return mounted ? clerk : null;
 }
-

@@ -10,7 +10,13 @@ import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/Se
 import { HelpDialog } from "@/components/HelpDialog";
 import { applyThemeColors } from "@/lib/theme";
 import { VoiceMode } from "@/components/VoiceMode";
-import { useUser, SignInButton, SignUpButton, SignedIn, UserButton, clerkEnabled } from "@/components/auth/ClerkSafe";
+import {
+  useUser,
+  SignInButton,
+  SignUpButton,
+  UserButton,
+  clerkEnabled,
+} from "@/components/auth/ClerkSafe";
 import { speak } from "@/lib/voice";
 import { type ModeId } from "@/lib/modes";
 import {
@@ -37,7 +43,6 @@ export const Route = createFileRoute("/")({
   }),
 });
 
-
 const SETTINGS_KEY_BASE = "nova-gpt-settings-v1";
 function settingsKey(userKey: string | null) {
   return userKey ? `${SETTINGS_KEY_BASE}:${userKey}` : `${SETTINGS_KEY_BASE}:guest`;
@@ -57,10 +62,9 @@ function loadSettings(userKey: string | null): Settings {
   }
 }
 
-
 function NovaGPT() {
   const { isSignedIn, isLoaded, user } = useUser();
-  const userKey = (user as any)?.id ?? null;
+  const userKey = user?.id ?? null;
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
@@ -84,12 +88,15 @@ function NovaGPT() {
     setSettings(loaded);
     applyThemeColors(loaded.theme);
     if (clerkEnabled && !isSignedIn) {
-      try { localStorage.removeItem("nova-gpt-conversations-v2"); } catch { /* ignore */ }
+      try {
+        localStorage.removeItem("nova-gpt-conversations-v2");
+      } catch {
+        /* ignore */
+      }
       setConversations([]);
     } else {
       setConversations(loadConversations());
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userKey, isSignedIn]);
 
   // Re-apply theme whenever it changes
@@ -112,10 +119,13 @@ function NovaGPT() {
   // If the user signs out mid-session, clear stored chats immediately.
   useEffect(() => {
     if (clerkEnabled && !isSignedIn) {
-      try { localStorage.removeItem("nova-gpt-conversations-v2"); } catch { /* ignore */ }
+      try {
+        localStorage.removeItem("nova-gpt-conversations-v2");
+      } catch {
+        /* ignore */
+      }
     }
   }, [isSignedIn]);
-
 
   const active = useMemo(
     () => conversations.find((c) => c.id === activeId) ?? null,
@@ -139,7 +149,6 @@ function NovaGPT() {
       setSignupPromptShown(true);
     }
   }, [conversations, isSignedIn, isStreaming, signupPromptShown]);
-
 
   const newChat = useCallback(() => {
     setActiveId(null);
@@ -166,9 +175,7 @@ function NovaGPT() {
       });
       const { title } = await resp.json();
       if (title) {
-        setConversations((prev) =>
-          prev.map((c) => (c.id === convId ? { ...c, title } : c)),
-        );
+        setConversations((prev) => prev.map((c) => (c.id === convId ? { ...c, title } : c)));
       }
     } catch {
       /* ignore */
@@ -208,23 +215,31 @@ function NovaGPT() {
         }
 
         let found = false;
-        return prev.map((c) => {
-          if (c.id !== nextConvId) return c;
-          found = true;
-          priorMessages = c.messages.slice();
-          return { ...c, messages: [...c.messages, userMsg, assistantMsg], updatedAt: Date.now() };
-        }).concat(
-          found
-            ? []
-            : [{
-                id: nextConvId,
-                title: deriveTitle(trimmed || "Image chat"),
-                messages: [userMsg, assistantMsg],
-                mode,
-                createdAt: Date.now(),
-                updatedAt: Date.now(),
-              }],
-        );
+        return prev
+          .map((c) => {
+            if (c.id !== nextConvId) return c;
+            found = true;
+            priorMessages = c.messages.slice();
+            return {
+              ...c,
+              messages: [...c.messages, userMsg, assistantMsg],
+              updatedAt: Date.now(),
+            };
+          })
+          .concat(
+            found
+              ? []
+              : [
+                  {
+                    id: nextConvId,
+                    title: deriveTitle(trimmed || "Image chat"),
+                    messages: [userMsg, assistantMsg],
+                    mode,
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                  },
+                ],
+          );
       });
       setActiveId(nextConvId);
       setInput("");
@@ -287,7 +302,9 @@ function NovaGPT() {
                 settings.region,
                 settings.postalCode,
                 settings.country,
-              ].filter(Boolean).join(", "),
+              ]
+                .filter(Boolean)
+                .join(", "),
               extraFacts: settings.extraFacts,
               customInstructions: settings.customInstructions,
               mood: settings.mood,
@@ -372,7 +389,6 @@ function NovaGPT() {
 
   // Image generation removed; can be reintroduced when user explicitly asks.
 
-
   return (
     <div className="flex h-screen w-full bg-background text-foreground">
       <Toaster />
@@ -405,9 +421,7 @@ function NovaGPT() {
           </button>
           <div className="ml-auto flex items-center gap-2">
             {isLoaded && isSignedIn ? (
-              <SignedIn>
-                <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
-              </SignedIn>
+              <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
             ) : (
               <>
                 <SignInButton mode="modal">
@@ -425,10 +439,11 @@ function NovaGPT() {
           </div>
         </header>
 
-
         {!active || active.messages.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4">
-            <h1 className="text-2xl sm:text-3xl font-semibold mb-8 text-center">Ready when you are.</h1>
+            <h1 className="text-2xl sm:text-3xl font-semibold mb-8 text-center">
+              Ready when you are.
+            </h1>
             <div className="w-full">
               <ChatInput
                 value={input}
@@ -487,8 +502,6 @@ function NovaGPT() {
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
 
       <SignUpPrompt open={signupPromptOpen} onOpenChange={setSignupPromptOpen} />
-
-
 
       <VoiceMode
         open={voiceModeOpen}
