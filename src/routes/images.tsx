@@ -77,8 +77,35 @@ const EXAMPLES: { label: string; prompt: string; src: string }[] = [
   },
 ];
 
+type HistoryItem = { id: string; prompt: string; imageUrl: string; createdAt: number };
+
+const HISTORY_KEY_PREFIX = "novagpt-image-history-";
+const HISTORY_LIMIT = 50;
+
+function loadHistory(userKey: string | null): HistoryItem[] {
+  if (!userKey || typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY_PREFIX + userKey);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(userKey: string | null, items: HistoryItem[]) {
+  if (!userKey || typeof window === "undefined") return;
+  try {
+    localStorage.setItem(HISTORY_KEY_PREFIX + userKey, JSON.stringify(items.slice(0, HISTORY_LIMIT)));
+  } catch {
+    /* quota — ignore */
+  }
+}
+
 function ImagesPage() {
-  const { isSignedIn } = useUser();
+  const { isSignedIn, user } = useUser();
+  const userKey = (user as any)?.id ?? null;
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -87,6 +114,44 @@ function ImagesPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
   const [loginOpen, setLoginOpen] = useState(false);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+
+  // Load per-user history when sign-in state resolves.
+  useEffect(() => {
+    if (isSignedIn && userKey) {
+      setHistory(loadHistory(userKey));
+    } else {
+      setHistory([]);
+    }
+  }, [isSignedIn, userKey]);
+
+  function addToHistory(p: string, imageUrl: string) {
+    if (!isSignedIn || !userKey) return;
+    const item: HistoryItem = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      prompt: p,
+      imageUrl,
+      createdAt: Date.now(),
+    };
+    setHistory((prev) => {
+      const next = [item, ...prev].slice(0, HISTORY_LIMIT);
+      saveHistory(userKey, next);
+      return next;
+    });
+  }
+
+  function removeFromHistory(id: string) {
+    setHistory((prev) => {
+      const next = prev.filter((h) => h.id !== id);
+      saveHistory(userKey, next);
+      return next;
+    });
+  }
+
+  function clearHistory() {
+    setHistory([]);
+    saveHistory(userKey, []);
+  }
 
   async function generate(p: string) {
     const trimmed = p.trim();
@@ -107,6 +172,7 @@ function ImagesPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to generate image");
       setResult(data.imageUrl);
+      addToHistory(trimmed, data.imageUrl);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to generate image");
     } finally {
