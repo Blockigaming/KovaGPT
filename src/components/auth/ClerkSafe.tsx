@@ -17,7 +17,7 @@ import {
   useClerk,
   useUser as useClerkUser,
 } from "@clerk/clerk-react";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { Children, cloneElement, isValidElement, useEffect, useState } from "react";
 
 // Clerk publishable keys are public and safe to embed in client code.
@@ -95,6 +95,12 @@ function useClientOnly() {
   return mounted;
 }
 
+function callChildOnClick(child: ReactNode, event: MouseEvent<HTMLElement>) {
+  if (!isValidElement(child)) return;
+  const props = (child as React.ReactElement<any>).props as { onClick?: (e: MouseEvent<HTMLElement>) => void };
+  props.onClick?.(event);
+}
+
 function AuthButtonWrapper({
   children,
   variant,
@@ -124,6 +130,8 @@ function AuthButtonClient({
   const href = prodAuthUrl(variant);
 
   const handleClick = (e: React.MouseEvent) => {
+    callChildOnClick(children, e as MouseEvent<HTMLElement>);
+    if (e.defaultPrevented) return;
     e.preventDefault();
     e.stopPropagation();
     const onProd =
@@ -154,12 +162,13 @@ function AuthButtonClient({
           onClick={handleClick}
           className={element.props.className}
           role="button"
+          aria-label={element.props["aria-label"]}
         >
           {element.props.children}
         </a>
       );
     }
-    return cloneElement(element, { onClick: handleClick });
+    return cloneElement(element, { ...element.props, onClick: handleClick });
   }
   return (
     <a href={href} onClick={handleClick}>
