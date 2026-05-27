@@ -150,28 +150,6 @@ export function Sidebar({
         </SignedOut>
 
         <div className="border-t border-border p-3 space-y-1">
-          <Link
-            to="/pricing"
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-sidebar-hover transition text-sm"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>View pricing plans</span>
-          </Link>
-          <button
-            onClick={onOpenSettings}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-sidebar-hover transition text-sm"
-          >
-            <Cog className="w-4 h-4" />
-            <span>Settings</span>
-          </button>
-          <button
-            onClick={onOpenHelp}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-sidebar-hover transition text-sm"
-          >
-            <HelpCircle className="w-4 h-4" />
-            <span>Help & FAQs</span>
-          </button>
-
           <SignedIn>
             <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-sidebar-hover transition">
               <UserButton />
@@ -190,6 +168,30 @@ export function Sidebar({
               </button>
             </SignInButton>
           </SignedOut>
+
+          <div className="pt-1 mt-1 border-t border-border/60 space-y-1">
+            <Link
+              to="/pricing"
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-sidebar-hover transition text-sm"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>View pricing plans</span>
+            </Link>
+            <button
+              onClick={onOpenSettings}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-sidebar-hover transition text-sm"
+            >
+              <Cog className="w-4 h-4" />
+              <span>Settings</span>
+            </button>
+            <button
+              onClick={onOpenHelp}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-sidebar-hover transition text-sm"
+            >
+              <HelpCircle className="w-4 h-4" />
+              <span>Help & FAQs</span>
+            </button>
+          </div>
         </div>
       </div>
 
