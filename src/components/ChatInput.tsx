@@ -1,4 +1,4 @@
-import { ArrowUp, Square, Mic, Plus, X } from "lucide-react";
+import { ArrowUp, Square, Mic, Plus, X, AudioLines } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createRecognition, sttSupported } from "@/lib/voice";
 import { tryUseUpload, DAILY_UPLOAD_LIMIT, getUsage } from "@/lib/limits";
@@ -19,6 +19,8 @@ export function ChatInput({
   mode,
   onModeChange,
   userTier = "free",
+  onOpenVoice,
+  placeholder,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -30,6 +32,8 @@ export function ChatInput({
   mode?: ModeId;
   onModeChange?: (m: ModeId) => void;
   userTier?: Tier;
+  onOpenVoice?: () => void;
+  placeholder?: string;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
