@@ -42,6 +42,12 @@ function prodAuthUrl(variant: "sign-in" | "sign-up") {
   return `${PROD_ORIGIN}/?${path}=1&redirect_url=${encodeURIComponent(redirect)}`;
 }
 
+function useClientOnly() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  return mounted;
+}
+
 function AuthButtonWrapper({
   children,
   variant,
@@ -49,14 +55,36 @@ function AuthButtonWrapper({
   children?: ReactNode;
   variant: "sign-in" | "sign-up";
 }) {
-  const clerk = useClerk();
-  const { isLoaded } = useClerkUser();
+  // SSR/prerender path: render the child unchanged. Clerk hooks are not
+  // safe to call on the server when the SDK script hasn't initialized,
+  // and the click handler is meaningless without a window anyway.
+  const mounted = useClientOnly();
+  if (!mounted) {
+    const child = Children.only(children);
+    return isValidElement(child) ? (child as React.ReactElement) : <>{child}</>;
+  }
+  return <AuthButtonClient variant={variant}>{children}</AuthButtonClient>;
+}
+
+function AuthButtonClient({
+  children,
+  variant,
+}: {
+  children?: ReactNode;
+  variant: "sign-in" | "sign-up";
+}) {
+  let clerk: ReturnType<typeof useClerk> | null = null;
+  let isLoaded = false;
+  try {
+    clerk = useClerk();
+    isLoaded = useClerkUser().isLoaded;
+  } catch {
+    /* Clerk provider not available — fall back to redirect. */
+  }
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // If Clerk is ready, open the modal. Otherwise fall back to the
-    // production hosted sign-in page so the button always works.
     if (isLoaded && clerk && (clerk as any).loaded !== false) {
       try {
         if (variant === "sign-in") clerk.openSignIn();
@@ -71,7 +99,6 @@ function AuthButtonWrapper({
     }
   };
 
-  // Mirror Clerk's API: wrap the single child element and attach onClick.
   const child = Children.only(children);
   if (isValidElement(child)) {
     return cloneElement(child as React.ReactElement<any>, { onClick: handleClick });
