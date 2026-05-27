@@ -7,6 +7,7 @@ export type Message = {
   role: Role;
   content: string;
   attachments?: Attachment[];
+  pendingImage?: boolean;
 };
 export type Conversation = {
   id: string;

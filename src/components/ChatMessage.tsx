@@ -1,6 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Copy, Check, User, Volume2, VolumeX } from "lucide-react";
+import { Copy, Check, User, Volume2, VolumeX, ImageIcon, Loader2 } from "lucide-react";
 import { memo, useState } from "react";
 import type { Message } from "@/lib/chat-store";
 import { NovaLogo } from "./NovaLogo";
@@ -52,11 +52,13 @@ function ChatMessageInner({
               <User className="w-4 h-4" />
             </div>
           ) : (
-            <NovaLogo className="w-8 h-8" />
+            <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center overflow-hidden">
+              <NovaLogo className="w-6 h-6" />
+            </div>
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-sm mb-1">{isUser ? "You" : "Nova GPT"}</div>
+          <div className="font-semibold text-sm mb-1">{isUser ? "You" : "NovaGPT"}</div>
           {message.attachments && message.attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-2">
               {message.attachments.map((a, i) => (
@@ -73,7 +75,15 @@ function ChatMessageInner({
             <div className="prose-chat whitespace-pre-wrap">{message.content}</div>
           ) : (
             <div className="prose-chat">
-              {streaming && !message.content ? (
+              {message.pendingImage && !message.content ? (
+                <div className="flex items-center gap-3 px-4 py-6 rounded-xl bg-accent/40 border border-border w-fit">
+                  <div className="relative">
+                    <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                    <Loader2 className="w-4 h-4 absolute -bottom-1 -right-1 animate-spin text-primary" />
+                  </div>
+                  <div className="text-sm text-muted-foreground">Generating image…</div>
+                </div>
+              ) : streaming && !message.content ? (
                 <div className="thinking-dots" aria-label="Thinking">
                   <span /><span /><span />
                 </div>

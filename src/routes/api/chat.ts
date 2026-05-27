@@ -17,57 +17,83 @@ function sseChunk(text: string) {
   return `data: ${JSON.stringify(payload)}\n\n`;
 }
 
+function sseEvent(obj: Record<string, unknown>) {
+  const payload = {
+    choices: [{ index: 0, delta: { role: "assistant", ...obj } }],
+  };
+  return `data: ${JSON.stringify(payload)}\n\n`;
+}
+
 function sseDone() {
   return `data: [DONE]\n\n`;
 }
 
 async function handleImageRequest(prompt: string, apiKey: string): Promise<Response> {
-  const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "google/gemini-3.1-flash-image-preview",
-      messages: [{ role: "user", content: prompt }],
-      modalities: ["image", "text"],
-    }),
-  });
-
-  if (!upstream.ok) {
-    const status = upstream.status;
-    const err =
-      status === 429
-        ? "Rate limit exceeded. Please wait a moment."
-        : status === 402
-          ? "AI credits exhausted."
-          : (await upstream.text()) || "Image generation failed";
-    return new Response(JSON.stringify({ error: err }), {
-      status,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  const data = await upstream.json();
-  const msg = data.choices?.[0]?.message;
-  let imageUrl: string | null = null;
-  if (msg?.images && Array.isArray(msg.images) && msg.images.length > 0) {
-    imageUrl = msg.images[0]?.image_url?.url ?? null;
-  }
-  if (!imageUrl && Array.isArray(msg?.content)) {
-    for (const p of msg.content) {
-      if (p.type === "image_url" && p.image_url?.url) {
-        imageUrl = p.image_url.url;
-        break;
-      }
-    }
-  }
-
   const stream = new ReadableStream({
-    start(controller) {
+    async start(controller) {
       const enc = new TextEncoder();
-      if (imageUrl) {
-        controller.enqueue(enc.encode(sseChunk(`Here's your image:\n\n![generated image](${imageUrl})`)));
-      } else {
-        controller.enqueue(enc.encode(sseChunk("Sorry — I couldn't generate that image. Try rephrasing the prompt.")));
+      // Tell client immediately: we're generating an image, not text
+      controller.enqueue(enc.encode(sseEvent({ kind: "image_pending" })));
+
+      try {
+        const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "google/gemini-3.1-flash-image-preview",
+            messages: [{ role: "user", content: prompt }],
+            modalities: ["image", "text"],
+          }),
+        });
+
+        if (!upstream.ok) {
+          const status = upstream.status;
+          const err =
+            status === 429
+              ? "Rate limit exceeded. Please wait a moment."
+              : status === 402
+                ? "AI credits exhausted."
+                : (await upstream.text()) || "Image generation failed";
+          controller.enqueue(enc.encode(sseChunk(`Sorry — ${err}`)));
+          controller.enqueue(enc.encode(sseDone()));
+          controller.close();
+          return;
+        }
+
+        const data = await upstream.json();
+        const msg = data.choices?.[0]?.message;
+        let imageUrl: string | null = null;
+        if (msg?.images && Array.isArray(msg.images) && msg.images.length > 0) {
+          imageUrl = msg.images[0]?.image_url?.url ?? msg.images[0]?.url ?? null;
+        }
+        if (!imageUrl && Array.isArray(msg?.content)) {
+          for (const p of msg.content) {
+            if (p.type === "image_url" && p.image_url?.url) {
+              imageUrl = p.image_url.url;
+              break;
+            }
+            if (p.type === "output_image" && p.image_url) {
+              imageUrl = typeof p.image_url === "string" ? p.image_url : p.image_url.url;
+              break;
+            }
+          }
+        }
+        if (!imageUrl && typeof msg?.content === "string") {
+          const m = msg.content.match(/!\[[^\]]*\]\(([^)]+)\)/);
+          if (m) imageUrl = m[1];
+        }
+
+        if (imageUrl) {
+          controller.enqueue(enc.encode(sseChunk(`![generated image](${imageUrl})`)));
+        } else {
+          controller.enqueue(
+            enc.encode(sseChunk("Sorry — I couldn't generate that image. Try rephrasing the prompt.")),
+          );
+        }
+      } catch (e) {
+        controller.enqueue(
+          enc.encode(sseChunk(`Sorry — ${e instanceof Error ? e.message : "image generation failed"}.`)),
+        );
       }
       controller.enqueue(enc.encode(sseDone()));
       controller.close();

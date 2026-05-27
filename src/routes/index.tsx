@@ -8,7 +8,7 @@ import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
 import { SettingsDialog, type Settings } from "@/components/SettingsDialog";
 import { VoiceMode } from "@/components/VoiceMode";
 import { NovaLogo } from "@/components/NovaLogo";
-import { useUser, SignInButton, clerkEnabled } from "@/components/auth/ClerkSafe";
+import { useUser, SignInButton, SignUpButton, SignedIn, SignedOut, UserButton, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { speak } from "@/lib/voice";
 import { type ModeId } from "@/lib/modes";
 import {
@@ -26,11 +26,11 @@ export const Route = createFileRoute("/")({
   component: NovaGPT,
   head: () => ({
     meta: [
-      { title: "Nova GPT — Your intelligent AI assistant" },
+      { title: "NovaGPT — Your intelligent AI assistant" },
       {
         name: "description",
         content:
-          "Nova GPT is an advanced multimodal AI assistant for chat, coding, research, voice, and image generation.",
+          "NovaGPT is an advanced multimodal AI assistant for chat, coding, research, voice, and image generation.",
       },
     ],
   }),
@@ -209,7 +209,21 @@ function NovaGPT() {
           prev.map((c) => {
             if (c.id !== nextConvId) return c;
             const messages = c.messages.map((m) =>
-              m.id === assistantMsg.id ? { ...m, content: m.content + chunk } : m,
+              m.id === assistantMsg.id
+                ? { ...m, content: m.content + chunk, pendingImage: false }
+                : m,
+            );
+            return { ...c, messages, updatedAt: Date.now() };
+          }),
+        );
+      };
+
+      const markPendingImage = () => {
+        setConversations((prev) =>
+          prev.map((c) => {
+            if (c.id !== nextConvId) return c;
+            const messages = c.messages.map((m) =>
+              m.id === assistantMsg.id ? { ...m, pendingImage: true } : m,
             );
             return { ...c, messages, updatedAt: Date.now() };
           }),
@@ -259,10 +273,13 @@ function NovaGPT() {
             }
             try {
               const parsed = JSON.parse(data);
-              const delta = parsed.choices?.[0]?.delta?.content;
-              if (delta) {
-                assembledReply += delta;
-                updateAssistant(delta);
+              const delta = parsed.choices?.[0]?.delta;
+              if (delta?.kind === "image_pending") {
+                markPendingImage();
+              }
+              if (delta?.content) {
+                assembledReply += delta.content;
+                updateAssistant(delta.content);
               }
             } catch {
               buffer = line + "\n" + buffer;
@@ -328,7 +345,7 @@ function NovaGPT() {
             </button>
           )}
           <div className="flex items-center gap-1.5 px-3 py-1.5 font-semibold">
-            <span>Nova GPT</span>
+            <span>NovaGPT</span>
           </div>
           <div className="ml-auto flex items-center gap-2">
             <button
@@ -339,11 +356,21 @@ function NovaGPT() {
               <AudioLines className="w-4 h-4" />
               <span className="hidden sm:inline">Voice</span>
             </button>
-            <SignInButton mode="modal">
-              <button className="text-sm px-3 py-1.5 rounded-lg border border-border hover:bg-accent transition md:hidden">
-                Sign in
-              </button>
-            </SignInButton>
+            <SignedOut>
+              <SignInButton mode="modal">
+                <button className="text-sm px-3 py-1.5 rounded-lg border border-border hover:bg-accent transition">
+                  Sign in
+                </button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <button className="text-sm px-3 py-1.5 rounded-lg bg-foreground text-background hover:opacity-90 transition">
+                  Sign up
+                </button>
+              </SignUpButton>
+            </SignedOut>
+            <SignedIn>
+              <UserButton afterSignOutUrl="/" />
+            </SignedIn>
           </div>
         </header>
 

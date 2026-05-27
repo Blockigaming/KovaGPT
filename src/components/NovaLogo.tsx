@@ -4,7 +4,7 @@ export function NovaLogo({ className = "w-6 h-6" }: { className?: string }) {
   return (
     <img
       src={logo}
-      alt="Nova GPT"
+      alt="NovaGPT"
       className={className}
       width={512}
       height={512}

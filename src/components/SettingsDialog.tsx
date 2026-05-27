@@ -6,7 +6,7 @@ import { Trash2, Play } from "lucide-react";
 import { useEffect, useState } from "react";
 import { clearConversations } from "@/lib/chat-store";
 import { getUsage, DAILY_IMAGE_LIMIT, DAILY_UPLOAD_LIMIT } from "@/lib/limits";
-import { getVoices, onVoicesChanged, speak, defaultVoiceName } from "@/lib/voice";
+import { getVoices, onVoicesChanged, speak, defaultVoiceName, friendlyVoiceLabel } from "@/lib/voice";
 
 export type Settings = {
   autoSpeak: boolean;
@@ -71,7 +71,7 @@ export function SettingsDialog({
                 >
                   {list.map((v) => (
                     <option key={v.name} value={v.name}>
-                      {v.name} ({v.lang})
+                      {friendlyVoiceLabel(v)}
                     </option>
                   ))}
                 </select>
