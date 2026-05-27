@@ -249,7 +249,18 @@ function NovaGPT() {
         const resp = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: payloadMessages, mode }),
+          body: JSON.stringify({
+            messages: payloadMessages,
+            mode,
+            user: {
+              name: settings.displayName,
+              phone: settings.phone,
+              extraFacts: settings.extraFacts,
+              customInstructions: settings.customInstructions,
+              mood: settings.mood,
+              rememberAcross: settings.rememberAcross,
+            },
+          }),
           signal: controller.signal,
         });
 
