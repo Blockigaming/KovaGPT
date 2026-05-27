@@ -119,10 +119,13 @@ export function Sidebar({
             <Search className="w-4 h-4" />
             <span>Search chats</span>
           </button>
-          <button className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left">
+          <Link
+            to="/images"
+            className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition"
+          >
             <ImageIcon className="w-4 h-4" />
             <span>Images</span>
-          </button>
+          </Link>
         </div>
 
         {/* Chats list (signed in) or flexible spacer (signed out) */}
