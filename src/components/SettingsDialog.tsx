@@ -91,7 +91,7 @@ export const DEFAULT_SETTINGS: Settings = {
   responseLength: "medium",
   language: "auto",
   rememberAcross: true,
-  webSearch: false,
+  webSearch: true,
   sendOnEnter: true,
   showTimestamps: false,
   theme: DEFAULT_THEME,
