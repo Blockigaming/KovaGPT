@@ -67,6 +67,28 @@ export function VoiceMode({
         const decoder = new TextDecoder();
         let buffer = "";
         let done = false;
+        let speakBuffer = "";
+        let started = false;
+        const flushSentence = (force = false) => {
+          // Match up through sentence end or comma/clause for snappier starts on first chunk
+          const re = force ? /(.+)/s : (started ? /([^.!?\n]+[.!?\n]+)/ : /([^,.!?\n]{12,}[,.!?\n])/);
+          let m: RegExpMatchArray | null;
+          while ((m = speakBuffer.match(re))) {
+            const sentence = m[1].trim();
+            speakBuffer = speakBuffer.slice(m[0].length);
+            if (!sentence) continue;
+            if (!started) {
+              started = true;
+              setStatus("speaking");
+              speakingRef.current = true;
+            }
+            speakChunk(sentence, {
+              voice: voiceName || defaultVoiceName(),
+              rate: voiceRate,
+            });
+            if (force) break;
+          }
+        };
         while (!done) {
           const { done: d, value } = await reader.read();
           if (d) break;
@@ -84,10 +106,25 @@ export function VoiceMode({
               const delta = parsed.choices?.[0]?.delta?.content;
               if (delta) {
                 assembled += delta;
+                speakBuffer += delta;
                 setReply((r) => r + delta);
+                flushSentence(false);
               }
             } catch { /* ignore */ }
           }
+        }
+        // Flush remainder
+        if (speakBuffer.trim()) {
+          if (!started) {
+            started = true;
+            setStatus("speaking");
+            speakingRef.current = true;
+          }
+          speakChunk(speakBuffer.trim(), {
+            voice: voiceName || defaultVoiceName(),
+            rate: voiceRate,
+          });
+          speakBuffer = "";
         }
       } catch (e) {
         if ((e as Error).name !== "AbortError") {
@@ -96,7 +133,6 @@ export function VoiceMode({
         setStatus("listening");
         return;
       }
-      // Update local history and notify parent
       messagesRef.current = [
         ...messagesRef.current,
         userMsg,
@@ -104,21 +140,17 @@ export function VoiceMode({
       ];
       onTurn?.(userText, assembled);
 
-      // Speak the reply
-      if (assembled.trim()) {
-        setStatus("speaking");
-        speakingRef.current = true;
-        speak(assembled, {
-          voice: voiceName || defaultVoiceName(),
-          rate: voiceRate,
-          onEnd: () => {
-            speakingRef.current = false;
-            setStatus("listening");
-          },
-        });
-      } else {
-        setStatus("listening");
-      }
+      // Poll for speech completion → return to listening
+      const checkDone = () => {
+        if (typeof window === "undefined") return;
+        if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+          setTimeout(checkDone, 200);
+        } else {
+          speakingRef.current = false;
+          setStatus("listening");
+        }
+      };
+      checkDone();
     },
     [onTurn, voiceName, voiceRate],
   );
