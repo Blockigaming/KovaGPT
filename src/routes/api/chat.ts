@@ -279,6 +279,7 @@ export const Route = createFileRoute("/api/chat")({
                 content:
                   m.systemPrompt +
                   TONE_INSTRUCTION +
+                  UNRESTRICTED_INSTRUCTION +
                   buildUserContextBlock(user) +
                   webBlock +
                   voiceInstruction +
