@@ -157,11 +157,15 @@ export function useUser() {
   return { user: adapted, isSignedIn: !!user, isLoaded };
 }
 
-// Compat with previous `useClerkSafe()?.openUserProfile()` callsites.
+// Compat with previous `useClerkSafe()?.openUserProfile()` / openSignIn /
+// signOut callsites.
 export function useClerkSafe() {
-  const { openAuth } = useAuthCtx();
+  const { openAuth, signOut } = useAuthCtx();
   return {
     openUserProfile: () => openAuth("sign-in"),
+    openSignIn: () => openAuth("sign-in"),
+    openSignUp: () => openAuth("sign-up"),
+    signOut: () => signOut(),
   };
 }
 
