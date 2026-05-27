@@ -273,10 +273,13 @@ function NovaGPT() {
             }
             try {
               const parsed = JSON.parse(data);
-              const delta = parsed.choices?.[0]?.delta?.content;
-              if (delta) {
-                assembledReply += delta;
-                updateAssistant(delta);
+              const delta = parsed.choices?.[0]?.delta;
+              if (delta?.kind === "image_pending") {
+                markPendingImage();
+              }
+              if (delta?.content) {
+                assembledReply += delta.content;
+                updateAssistant(delta.content);
               }
             } catch {
               buffer = line + "\n" + buffer;
