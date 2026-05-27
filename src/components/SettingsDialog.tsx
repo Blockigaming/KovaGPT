@@ -28,6 +28,7 @@ import {
   friendlyVoiceLabel,
 } from "@/lib/voice";
 import { useUser, clerkEnabled } from "@/components/auth/ClerkSafe";
+import { useClerk } from "@clerk/clerk-react";
 import { applyThemeColors, DEFAULT_THEME, type ThemeColors } from "@/lib/theme";
 
 export type Mood =
