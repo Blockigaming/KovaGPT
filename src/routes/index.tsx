@@ -39,12 +39,6 @@ export const Route = createFileRoute("/")({
   }),
 });
 
-const SUGGESTIONS = [
-  { title: "Generate an email", subtitle: "to reschedule a meeting" },
-  { title: "Write a website", subtitle: "landing page in React" },
-  { title: "Brainstorm ideas", subtitle: "for a weekend project" },
-  { title: "Explain a concept", subtitle: "like I'm five" },
-];
 
 const SETTINGS_KEY = "nova-gpt-settings-v1";
 
