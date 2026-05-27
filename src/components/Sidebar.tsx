@@ -1,7 +1,7 @@
-import { Plus, MessageSquare, Trash2, PanelLeft, Search, Sparkles, Settings as Cog, HelpCircle, ImageIcon, SquarePen } from "lucide-react";
+import { MessageSquare, Trash2, PanelLeft, Search, Sparkles, Settings as Cog, HelpCircle, ImageIcon, SquarePen } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
+import { SignInButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
 import type { Conversation } from "@/lib/chat-store";
 
 
