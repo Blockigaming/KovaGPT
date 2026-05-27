@@ -16,7 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trash2, Play, Palette, User2, ShieldCheck, Sparkles, MessageSquare } from "lucide-react";
+import { Trash2, Play, Palette, User2, ShieldCheck, Sparkles, MessageSquare, CreditCard, Globe2, ExternalLink } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { clearConversations } from "@/lib/chat-store";
 import { getUsage, DAILY_IMAGE_LIMIT, DAILY_UPLOAD_LIMIT } from "@/lib/limits";
