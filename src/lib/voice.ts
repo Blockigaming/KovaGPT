@@ -95,6 +95,23 @@ export function speak(text: string, opts?: SpeakOpts) {
   });
 }
 
+export function speakChunk(text: string, opts?: SpeakOpts) {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  const synth = window.speechSynthesis;
+  const voices = getVoices();
+  const voice = opts?.voice
+    ? voices.find((v) => v.name === opts.voice) ?? null
+    : voices.find((v) => v.name === defaultVoiceName()) ?? null;
+  const clean = text.replace(/```[\s\S]*?```/g, " code block ").replace(/[#*_`>]/g, "").replace(/\s+/g, " ").trim();
+  if (!clean) { opts?.onEnd?.(); return; }
+  const u = new SpeechSynthesisUtterance(clean);
+  u.rate = opts?.rate ?? 1;
+  u.pitch = opts?.pitch ?? 1;
+  if (voice) u.voice = voice;
+  if (opts?.onEnd) u.onend = () => opts.onEnd?.();
+  synth.speak(u);
+}
+
 export function stopSpeaking() {
   if (typeof window === "undefined") return;
   window.speechSynthesis?.cancel();
