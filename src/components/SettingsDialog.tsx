@@ -2,13 +2,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, Play } from "lucide-react";
+import { useEffect, useState } from "react";
 import { clearConversations } from "@/lib/chat-store";
 import { getUsage, DAILY_IMAGE_LIMIT, DAILY_UPLOAD_LIMIT } from "@/lib/limits";
+import { getVoices, onVoicesChanged, speak, defaultVoiceName } from "@/lib/voice";
 
 export type Settings = {
   autoSpeak: boolean;
   voiceRate: number;
+  voiceName: string;
 };
 
 export function SettingsDialog({
@@ -25,6 +28,17 @@ export function SettingsDialog({
   onClearAll: () => void;
 }) {
   const usage = open ? getUsage() : { images: 0, uploads: 0, date: "" };
+  const [voices, setVoices] = useState(() => getVoices());
+
+  useEffect(() => {
+    const unsub = onVoicesChanged(() => setVoices(getVoices()));
+    return unsub;
+  }, []);
+
+  // Filter to English voices for cleaner UX
+  const englishVoices = voices.filter((v) => v.lang?.toLowerCase().startsWith("en"));
+  const list = englishVoices.length > 0 ? englishVoices : voices;
+  const currentVoice = settings.voiceName || defaultVoiceName();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -46,6 +60,40 @@ export function SettingsDialog({
                 onCheckedChange={(v) => onChange({ ...settings, autoSpeak: v })}
               />
             </div>
+
+            <div className="mt-4">
+              <label className="text-sm mb-2 block">Voice</label>
+              <div className="flex gap-2">
+                <select
+                  className="flex-1 rounded-md border border-border bg-background px-2 py-2 text-sm"
+                  value={currentVoice}
+                  onChange={(e) => onChange({ ...settings, voiceName: e.target.value })}
+                >
+                  {list.map((v) => (
+                    <option key={v.name} value={v.name}>
+                      {v.name} ({v.lang})
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={() =>
+                    speak("Hi, I'm Nova. This is how I sound.", {
+                      voice: currentVoice,
+                      rate: settings.voiceRate,
+                    })
+                  }
+                  title="Preview"
+                >
+                  <Play className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                Default tries "Adam-like" voices (Daniel / Google UK Male).
+              </div>
+            </div>
+
             <div className="mt-4">
               <div className="text-sm mb-2">Speech rate: {settings.voiceRate.toFixed(1)}x</div>
               <Slider

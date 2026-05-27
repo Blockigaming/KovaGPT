@@ -1,8 +1,13 @@
 import { Plus, MessageSquare, Trash2, PanelLeft, Search, Sparkles, Settings as Cog } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
 import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
 import type { Conversation } from "@/lib/chat-store";
 import { NovaLogo } from "./NovaLogo";
+
+const MIN_W = 200;
+const MAX_W = 480;
+const WIDTH_KEY = "nova-gpt-sidebar-width";
 
 export function Sidebar({
   conversations,
@@ -24,14 +29,51 @@ export function Sidebar({
   onOpenSettings: () => void;
 }) {
   const { user } = useUser();
+  const [width, setWidth] = useState<number>(260);
+  const draggingRef = useRef(false);
+
+  useEffect(() => {
+    try {
+      const saved = parseInt(localStorage.getItem(WIDTH_KEY) || "", 10);
+      if (saved >= MIN_W && saved <= MAX_W) setWidth(saved);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!draggingRef.current) return;
+      const w = Math.max(MIN_W, Math.min(MAX_W, e.clientX));
+      setWidth(w);
+    };
+    const onUp = () => {
+      if (draggingRef.current) {
+        draggingRef.current = false;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        try { localStorage.setItem(WIDTH_KEY, String(width)); } catch { /* ignore */ }
+      }
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [width]);
+
+  const startDrag = (e: React.MouseEvent) => {
+    e.preventDefault();
+    draggingRef.current = true;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  };
 
   return (
     <aside
-      className={`${
-        open ? "w-64" : "w-0"
-      } shrink-0 overflow-hidden transition-all duration-200 bg-sidebar text-sidebar-foreground border-r border-border flex flex-col`}
+      style={{ width: open ? width : 0 }}
+      className="relative shrink-0 overflow-hidden transition-[width] duration-150 bg-sidebar text-sidebar-foreground border-r border-border flex flex-col"
     >
-      <div className="w-64 flex flex-col h-full">
+      <div style={{ width }} className="flex flex-col h-full">
         <div className="flex items-center justify-between p-3">
           <button
             onClick={onToggle}
@@ -141,6 +183,14 @@ export function Sidebar({
           </SignedOut>
         </div>
       </div>
+
+      {open && (
+        <div
+          onMouseDown={startDrag}
+          className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize hover:bg-border/80 active:bg-border transition-colors z-10"
+          title="Drag to resize"
+        />
+      )}
     </aside>
   );
 }
