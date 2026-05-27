@@ -48,11 +48,25 @@ export type Settings = {
   voiceName: string;
   // Personalization
   displayName: string;
+  preferredPronouns: string;
+  email: string;
   phone: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  region: string;
+  postalCode: string;
+  country: string;
   extraFacts: string;
   customInstructions: string;
   mood: Mood;
+  responseLength: "short" | "medium" | "long";
+  language: string;
   rememberAcross: boolean;
+  // Behavior
+  webSearch: boolean;
+  sendOnEnter: boolean;
+  showTimestamps: boolean;
   // Appearance
   theme: ThemeColors;
 };
@@ -62,11 +76,24 @@ export const DEFAULT_SETTINGS: Settings = {
   voiceRate: 1,
   voiceName: "",
   displayName: "",
+  preferredPronouns: "",
+  email: "",
   phone: "",
+  addressLine1: "",
+  addressLine2: "",
+  city: "",
+  region: "",
+  postalCode: "",
+  country: "",
   extraFacts: "",
   customInstructions: "",
   mood: "neutral",
+  responseLength: "medium",
+  language: "auto",
   rememberAcross: true,
+  webSearch: false,
+  sendOnEnter: true,
+  showTimestamps: false,
   theme: DEFAULT_THEME,
 };
 
