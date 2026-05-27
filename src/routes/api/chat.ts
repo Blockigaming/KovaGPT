@@ -234,17 +234,36 @@ export const Route = createFileRoute("/api/chat")({
                 ? "google/gemini-2.5-flash"
                 : "google/gemini-3.1-flash-lite-preview";
 
+          // Optional live web search — only when user enabled it and the
+          // question looks time-sensitive (or the user asked to "search").
+          let webBlock = "";
+          if (user?.webSearch && lastText && !hasImages) {
+            const explicitSearch = /\b(search|google|look up|find online)\b/i.test(lastText);
+            if (explicitSearch || SEARCH_TRIGGER.test(lastText)) {
+              const result = await runWebSearch(lastText);
+              if (result) webBlock = result;
+            }
+          }
+
           const body: Record<string, unknown> = {
             model,
             stream: true,
             messages: [
-              { role: "system", content: m.systemPrompt + buildUserContextBlock(user) + CURRENT_DATE_INSTRUCTION },
+              {
+                role: "system",
+                content:
+                  m.systemPrompt +
+                  buildUserContextBlock(user) +
+                  webBlock +
+                  CURRENT_DATE_INSTRUCTION,
+              },
               ...transformed,
             ],
           };
           if (m.reasoning) {
             body.reasoning = { effort: m.reasoning };
           }
+
 
           const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
