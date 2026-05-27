@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
-import { PanelLeft, AudioLines, Sparkles, Settings as Cog, HelpCircle } from "lucide-react";
+import { PanelLeft, AudioLines, ChevronDown } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatMessage } from "@/components/ChatMessage";
