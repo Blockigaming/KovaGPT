@@ -364,6 +364,7 @@ function NovaGPT() {
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={() => setSettingsOpen(true)}
+        onOpenHelp={() => setHelpOpen(true)}
       />
 
       <main className="flex-1 flex flex-col min-w-0">
