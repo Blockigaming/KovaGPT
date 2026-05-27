@@ -106,6 +106,12 @@ async function runWebSearch(query: string): Promise<string | null> {
   }
 }
 
+function shouldRunWebSearch(text: string, userWantsWebSearch?: boolean): boolean {
+  if (!text.trim()) return false;
+  if (userWantsWebSearch !== false) return true;
+  return /\b(search|google|look up|find online|browse)\b/i.test(text) || SEARCH_TRIGGER.test(text);
+}
+
 
 const IMAGE_INTENT =
   /\b(generate|make|create|draw|design|render|paint|produce|give\s+me)\b[^.?!]{0,40}\b(image|picture|photo|photograph|illustration|logo|drawing|artwork|painting|render|wallpaper|icon)\b/i;
@@ -261,14 +267,11 @@ export const Route = createFileRoute("/api/chat")({
                 ? "google/gemini-2.5-pro"
                 : "google/gemini-3.5-flash";
 
-          // Live web data: NovaGPT always runs a web search when the user
-          // asks about something time-sensitive (today, latest, news, prices,
-          // scores, weather, etc.) or explicitly asks to search. This keeps
-          // answers grounded in real-time data without the user toggling it.
+          // Live web data is on for everyone by default. Users can still opt
+          // out in settings except for explicit/time-sensitive search asks.
           let webBlock = "";
           if (lastText && !hasImages) {
-            const explicitSearch = /\b(search|google|look up|find online|browse)\b/i.test(lastText);
-            if (explicitSearch || SEARCH_TRIGGER.test(lastText) || user?.webSearch || voice) {
+            if (shouldRunWebSearch(lastText, user?.webSearch) || voice) {
               const result = await runWebSearch(lastText);
               if (result) webBlock = result;
             }
