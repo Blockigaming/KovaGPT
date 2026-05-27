@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { PanelLeft, ChevronDown, ChevronLeft, ChevronRight, ImageIcon, ArrowUp, Mic, Loader2, Download } from "lucide-react";
+import { useEffect, useState } from "react";
+import { PanelLeft, ChevronDown, ChevronLeft, ChevronRight, ImageIcon, ArrowUp, Mic, Loader2, Download, Trash2, History } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 import { HelpDialog } from "@/components/HelpDialog";
