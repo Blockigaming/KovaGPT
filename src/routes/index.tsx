@@ -396,6 +396,14 @@ function NovaGPT() {
               <AudioLines className="w-4 h-4" />
               <span className="hidden sm:inline">Voice</span>
             </button>
+            <button
+              onClick={() => setHelpOpen(true)}
+              className="p-2 rounded-full border border-border/70 hover:bg-accent transition"
+              title="Help & tips"
+              aria-label="Help"
+            >
+              <HelpCircle className="w-4 h-4" />
+            </button>
             <SignedOut>
               <SignInButton mode="modal">
                 <button className="text-sm font-medium px-4 py-1.5 rounded-full border border-border/70 hover:bg-accent transition">
