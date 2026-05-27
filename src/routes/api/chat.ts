@@ -345,7 +345,7 @@ export const Route = createFileRoute("/api/chat")({
           let webBlock = "";
           if (lastText && !hasImages) {
             if (shouldRunWebSearch(lastText, user?.webSearch) || voice) {
-              const result = await runWebSearch(lastText);
+              const result = await runWebSearch(lastText, NEWS_TRIGGER.test(lastText) || !!voice);
               if (result) webBlock = result;
             }
           }
