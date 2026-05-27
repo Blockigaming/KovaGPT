@@ -71,7 +71,13 @@ export function VoiceMode({
         let started = false;
         const flushSentence = (force = false) => {
           // Match up through sentence end or comma/clause for snappier starts on first chunk
-          const re = force ? /(.+)/s : (started ? /([^.!?\n]+[.!?\n]+)/ : /([^,.!?\n]{12,}[,.!?\n])/);
+          // Start speaking as soon as we have a few words. After the first chunk,
+          // wait for sentence boundaries so playback stays natural.
+          const re = force
+            ? /(.+)/s
+            : started
+              ? /([^.!?\n]+[.!?\n]+)/
+              : /([^,.!?\n]{4,}[\s,.!?\n])/;
           let m: RegExpMatchArray | null;
           while ((m = speakBuffer.match(re))) {
             const sentence = m[1].trim();
