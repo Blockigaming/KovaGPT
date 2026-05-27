@@ -375,18 +375,13 @@ export function SettingsDialog({
                     title="Password & two-factor"
                     body="Manage your password and turn on 2FA from your account page."
                     actionLabel="Open account"
-                    onAction={() => {
-                      // Clerk renders its own account modal; just route signed-in users there.
-                      window.dispatchEvent(new Event("novagpt:open-account"));
-                    }}
+                    onAction={() => clerk.openUserProfile()}
                   />
                   <SecurityRow
                     title="Active sessions"
                     body="Sign out of every device, or just this one."
-                    actionLabel="Sign out everywhere"
-                    onAction={() => {
-                      window.dispatchEvent(new Event("novagpt:sign-out-all"));
-                    }}
+                    actionLabel="Sign out"
+                    onAction={() => clerk.signOut()}
                   />
                 </div>
 
