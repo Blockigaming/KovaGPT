@@ -286,9 +286,6 @@ export function VoiceMode({
           </div>
         )}
 
-        <div className="text-xs text-muted-foreground text-center max-w-sm">
-          Just talk — Nova will reply out loud. Start talking again any time to interrupt.
-        </div>
       </div>
     </div>
   );
