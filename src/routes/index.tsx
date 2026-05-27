@@ -122,6 +122,21 @@ function NovaGPT() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [active?.messages.length, isStreaming]);
 
+  // After 5 user messages in this session while signed out, prompt to sign up.
+  useEffect(() => {
+    if (signupPromptShown) return;
+    if (clerkEnabled && isSignedIn) return;
+    const userMsgCount = conversations.reduce(
+      (sum, c) => sum + c.messages.filter((m) => m.role === "user").length,
+      0,
+    );
+    if (userMsgCount >= 5 && !isStreaming) {
+      setSignupPromptOpen(true);
+      setSignupPromptShown(true);
+    }
+  }, [conversations, isSignedIn, isStreaming, signupPromptShown]);
+
+
   const newChat = useCallback(() => {
     setActiveId(null);
     setInput("");
