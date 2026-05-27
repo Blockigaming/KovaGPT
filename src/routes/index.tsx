@@ -331,6 +331,14 @@ function NovaGPT() {
             <span>Nova GPT</span>
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={() => setVoiceModeOpen(true)}
+              className="text-sm px-3 py-1.5 rounded-lg border border-border hover:bg-accent transition flex items-center gap-1.5"
+              title="Voice mode"
+            >
+              <AudioLines className="w-4 h-4" />
+              <span className="hidden sm:inline">Voice</span>
+            </button>
             <SignInButton mode="modal">
               <button className="text-sm px-3 py-1.5 rounded-lg border border-border hover:bg-accent transition md:hidden">
                 Sign in
@@ -404,6 +412,41 @@ function NovaGPT() {
         settings={settings}
         onChange={setSettings}
         onClearAll={() => setConversations([])}
+      />
+
+      <VoiceMode
+        open={voiceModeOpen}
+        onClose={() => setVoiceModeOpen(false)}
+        initialMessages={active?.messages ?? []}
+        voiceName={settings.voiceName}
+        voiceRate={settings.voiceRate}
+        onTurn={(userText, assistantText) => {
+          // Append turn to active conversation (or create one)
+          const userMsg: Message = { id: newId(), role: "user", content: userText };
+          const aiMsg: Message = { id: newId(), role: "assistant", content: assistantText };
+          setConversations((prev) => {
+            if (activeId) {
+              return prev.map((c) =>
+                c.id === activeId
+                  ? { ...c, messages: [...c.messages, userMsg, aiMsg], updatedAt: Date.now() }
+                  : c,
+              );
+            }
+            const id = newId();
+            setActiveId(id);
+            return [
+              {
+                id,
+                title: deriveTitle(userText),
+                messages: [userMsg, aiMsg],
+                mode,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+              },
+              ...prev,
+            ];
+          });
+        }}
       />
     </div>
   );
