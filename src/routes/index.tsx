@@ -373,6 +373,30 @@ function NovaGPT() {
   return (
     <div className="flex h-screen w-full bg-background text-foreground">
       <Toaster />
+      <div className="fixed bottom-3 left-3 z-50 flex flex-col gap-1 rounded-xl border border-border/70 bg-background/95 backdrop-blur p-1.5 shadow-md">
+        <Link
+          to="/pricing"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-accent transition text-sm"
+          title="View pricing plans"
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>Pricing</span>
+        </Link>
+        <button
+          onClick={() => setSettingsOpen(true)}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-accent transition text-sm text-left"
+        >
+          <Cog className="w-4 h-4" />
+          <span>Settings</span>
+        </button>
+        <button
+          onClick={() => setHelpOpen(true)}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-accent transition text-sm text-left"
+        >
+          <HelpCircle className="w-4 h-4" />
+          <span>Help & FAQs</span>
+        </button>
+      </div>
       <Sidebar
         conversations={conversations}
         activeId={activeId}
