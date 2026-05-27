@@ -69,6 +69,8 @@ function NovaGPT() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [voiceModeOpen, setVoiceModeOpen] = useState(false);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [signupPromptOpen, setSignupPromptOpen] = useState(false);
+  const [signupPromptShown, setSignupPromptShown] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
