@@ -161,7 +161,9 @@ export function SettingsDialog({
 
 
           {/* GENERAL — voice + usage + data */}
-          <TabsContent value="general" className="overflow-y-auto pr-1 space-y-6 py-4">
+          {/* GENERAL — voice + usage + data (always available) */}
+          <TabsContent value="general" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+
             <section>
               <h3 className="text-sm font-semibold mb-3">Voice</h3>
               <div className="flex items-center justify-between">
@@ -319,13 +321,17 @@ export function SettingsDialog({
             </section>
           </TabsContent>
 
-          {/* PERSONALIZATION — only useful when signed in */}
-          <TabsContent value="personalization" className="overflow-y-auto pr-1 space-y-5 py-4">
-            {!loggedIn && (
-              <p className="text-sm text-muted-foreground">
-                Sign in to save personalization across devices. Settings are stored locally for now.
-              </p>
-            )}
+          {/* PERSONALIZATION — locked behind sign in */}
+          <TabsContent value="personalization" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+            {!loggedIn ? (
+              <LockedTab
+                title="Sign in to personalize NovaGPT"
+                body="Save your name, pronouns, contact info, and custom facts to your account so NovaGPT remembers them on every device."
+                onSignIn={() => clerk?.openSignIn()}
+              />
+            ) : (
+            <>
+
 
             <section className="space-y-4">
               <h3 className="text-sm font-semibold">How to address you</h3>
