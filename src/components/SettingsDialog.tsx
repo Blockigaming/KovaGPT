@@ -95,6 +95,7 @@ export function SettingsDialog({
   const usage = open ? getUsage() : { images: 0, uploads: 0, date: "" };
   const [voices, setVoices] = useState(() => getVoices());
   const { isSignedIn, user } = useUser();
+  const clerk = useClerk();
   const loggedIn = !clerkEnabled || isSignedIn;
 
   useEffect(() => {
