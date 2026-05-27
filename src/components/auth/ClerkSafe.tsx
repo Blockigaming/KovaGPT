@@ -29,9 +29,48 @@ export const clerkEnabled = true;
 export function ClerkProvider({ children }: { children: ReactNode }) {
   return (
     <RealClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY} afterSignOutUrl="/">
+      <AuthQueryParamHandler />
       {children}
     </RealClerkProvider>
   );
+}
+
+// When users land on the production origin with ?sign-in=1 or ?sign-up=1
+// (e.g. redirected from the preview app where Clerk can't render its modal),
+// open the corresponding Clerk modal automatically and strip the param.
+function AuthQueryParamHandler() {
+  const mounted = useClientOnly();
+  let clerk: ReturnType<typeof useClerk> | null = null;
+  let isLoaded = false;
+  try {
+    clerk = useClerk();
+    isLoaded = useClerkUser().isLoaded;
+  } catch {
+    /* provider not ready */
+  }
+  useEffect(() => {
+    if (!mounted || !isLoaded || !clerk) return;
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const wantsSignIn = params.get("sign-in") === "1";
+    const wantsSignUp = params.get("sign-up") === "1";
+    if (!wantsSignIn && !wantsSignUp) return;
+    const redirectUrl = params.get("redirect_url") || window.location.origin + "/";
+    try {
+      if (wantsSignIn) clerk.openSignIn({ redirectUrl, afterSignInUrl: redirectUrl });
+      else clerk.openSignUp({ redirectUrl, afterSignUpUrl: redirectUrl });
+    } catch {
+      /* ignore */
+    }
+    // Clean the URL so reloads don't reopen the modal.
+    params.delete("sign-in");
+    params.delete("sign-up");
+    params.delete("redirect_url");
+    const qs = params.toString();
+    const newUrl = window.location.pathname + (qs ? `?${qs}` : "") + window.location.hash;
+    window.history.replaceState({}, "", newUrl);
+  }, [mounted, isLoaded, clerk]);
+  return null;
 }
 
 export { SignedIn, SignedOut, UserButton };
