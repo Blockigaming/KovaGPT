@@ -59,7 +59,7 @@ export function VoiceMode({
         const resp = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: history, mode: "auto" }),
+          body: JSON.stringify({ messages: history, mode: "auto", voice: true }),
           signal: ctl.signal,
         });
         if (!resp.ok || !resp.body) throw new Error("Chat request failed");
@@ -70,14 +70,15 @@ export function VoiceMode({
         let speakBuffer = "";
         let started = false;
         const flushSentence = (force = false) => {
-          // Match up through sentence end or comma/clause for snappier starts on first chunk
-          // Start speaking as soon as we have a few words. After the first chunk,
-          // wait for sentence boundaries so playback stays natural.
+          // Only split on real sentence boundaries so speech is grammatical.
+          // For the very first chunk, allow a slightly shorter clause so we
+          // start speaking sooner without cutting words mid-phrase.
           const re = force
             ? /(.+)/s
             : started
               ? /([^.!?\n]+[.!?\n]+)/
-              : /([^,.!?\n]{4,}[\s,.!?\n])/;
+              : /([^.!?\n]{12,}[.!?\n]+)/;
+
           let m: RegExpMatchArray | null;
           while ((m = speakBuffer.match(re))) {
             const sentence = m[1].trim();
