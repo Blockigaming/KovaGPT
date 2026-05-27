@@ -210,7 +210,7 @@ export function Sidebar({
               </div>
             </div>
             <SignInButton mode="modal">
-              <button className="w-full flex items-center justify-center px-3 py-2 rounded-full border border-border bg-sidebar-hover hover:bg-accent text-sm font-medium transition">
+              <button className="w-full flex items-center justify-center px-3 py-2 rounded-full bg-foreground text-background hover:opacity-90 text-sm font-medium transition">
                 Log in
               </button>
             </SignInButton>
