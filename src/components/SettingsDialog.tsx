@@ -511,8 +511,75 @@ export function SettingsDialog({
             </Button>
           </TabsContent>
 
+          {/* BILLING */}
+          <TabsContent value="billing" className="overflow-y-auto pr-1 space-y-5 py-4">
+            <div className="rounded-lg border border-border p-4 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-medium">Current plan</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  You're on the Free plan. Upgrade for unlimited image generation, faster responses, and priority support.
+                </div>
+              </div>
+              <Link
+                to="/pricing"
+                onClick={() => onOpenChange(false)}
+                className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition whitespace-nowrap"
+              >
+                <Sparkles className="w-4 h-4" /> Upgrade
+              </Link>
+            </div>
+
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold">Payment method</h3>
+              <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+                No card on file. Add a card when you upgrade — payments are
+                securely handled by Stripe. We never see or store your card number.
+              </div>
+              <Link
+                to="/pricing"
+                onClick={() => onOpenChange(false)}
+                className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border border-border hover:bg-accent transition"
+              >
+                <CreditCard className="w-4 h-4" /> Add a payment method
+              </Link>
+            </section>
+
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold">Billing address</h3>
+              <p className="text-xs text-muted-foreground">
+                Used on receipts and invoices. Edit in <strong>You → Address</strong>.
+              </p>
+              <div className="rounded-lg border border-border p-4 text-sm space-y-0.5">
+                <div>{settings.displayName || "—"}</div>
+                <div>{settings.addressLine1 || <span className="text-muted-foreground">No street address</span>}</div>
+                {settings.addressLine2 && <div>{settings.addressLine2}</div>}
+                <div className="text-muted-foreground">
+                  {[settings.city, settings.region, settings.postalCode].filter(Boolean).join(", ") || "—"}
+                </div>
+                <div className="text-muted-foreground">{settings.country || ""}</div>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold">Receipts & invoices</h3>
+              <p className="text-xs text-muted-foreground">
+                After upgrading, receipts are emailed automatically and available
+                in the Stripe customer portal.
+              </p>
+              <a
+                href="https://billing.stripe.com/p/login"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border border-border hover:bg-accent transition"
+              >
+                <ExternalLink className="w-4 h-4" /> Open billing portal
+              </a>
+            </section>
+          </TabsContent>
+
           {/* SECURITY */}
           <TabsContent value="security" className="overflow-y-auto pr-1 space-y-5 py-4">
+
             {loggedIn ? (
               <>
                 <div className="rounded-lg border border-border p-4">
