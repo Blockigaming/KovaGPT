@@ -37,6 +37,41 @@ export function onVoicesChanged(cb: () => void) {
   return () => window.speechSynthesis.removeEventListener?.("voiceschanged", handler);
 }
 
+const LANG_LABELS: Record<string, string> = {
+  "en-us": "American",
+  "en-gb": "British",
+  "en-au": "Australian",
+  "en-ca": "Canadian",
+  "en-ie": "Irish",
+  "en-in": "Indian",
+  "en-za": "South African",
+  "en-nz": "New Zealand",
+};
+
+const FEMALE_HINTS = /female|woman|girl|samantha|victoria|karen|moira|tessa|fiona|allison|ava|susan|zira|hazel|catherine|amy|emma|joanna|kendra|kimberly|salli|joelle|nicole|aria|jenny|libby|natasha|sonia|clara|heather|michelle/i;
+const MALE_HINTS = /male|man|boy|adam|daniel|alex|fred|ryan|david|mark|guy|davis|james|oliver|aaron|matthew|brian|justin|joey|liam|tony|george|ethan|christopher/i;
+
+function guessGender(name: string): "Male" | "Female" | "" {
+  if (FEMALE_HINTS.test(name)) return "Female";
+  if (MALE_HINTS.test(name)) return "Male";
+  return "";
+}
+
+export function friendlyVoiceLabel(v: SpeechSynthesisVoice): string {
+  const lang = (v.lang || "").toLowerCase();
+  const region = LANG_LABELS[lang] || (lang.startsWith("en") ? "English" : v.lang || "Other");
+  const gender = guessGender(v.name);
+  // Strip vendor noise from the raw name for a cleaner secondary
+  const cleaned = v.name
+    .replace(/Microsoft\s+/i, "")
+    .replace(/\s+Online\s*\(Natural\)/i, "")
+    .replace(/\s+-\s+English.*/i, "")
+    .replace(/\s+\(.*?\)/g, "")
+    .trim();
+  const main = [region, gender].filter(Boolean).join(" ");
+  return `${main} — ${cleaned}`;
+}
+
 export function defaultVoiceName(): string {
   const voices = getVoices();
   for (const name of ADAM_LIKE) {
