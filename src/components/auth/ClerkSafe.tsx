@@ -97,7 +97,9 @@ function useClientOnly() {
 
 function callChildOnClick(child: ReactNode, event: MouseEvent<HTMLElement>) {
   if (!isValidElement(child)) return;
-  const props = (child as React.ReactElement<any>).props as { onClick?: (e: MouseEvent<HTMLElement>) => void };
+  const props = (child as React.ReactElement<any>).props as {
+    onClick?: (e: MouseEvent<HTMLElement>) => void;
+  };
   props.onClick?.(event);
 }
 
@@ -134,8 +136,7 @@ function AuthButtonClient({
     if (e.defaultPrevented) return;
     e.preventDefault();
     e.stopPropagation();
-    const onProd =
-      typeof window !== "undefined" && window.location.origin === PROD_ORIGIN;
+    const onProd = typeof window !== "undefined" && window.location.origin === PROD_ORIGIN;
     // The Clerk publishable key is bound to the production origin, so the
     // modal only works there. On preview / dev origins, always redirect.
     if (onProd && isLoaded && clerk && (clerk as any).loaded !== false) {
@@ -221,9 +222,7 @@ export function useUser() {
     isSignedIn,
     isLoaded,
     user: Object.assign(user, {
-      email:
-        user.primaryEmailAddress?.emailAddress ??
-        user.emailAddresses?.[0]?.emailAddress,
+      email: user.primaryEmailAddress?.emailAddress ?? user.emailAddresses?.[0]?.emailAddress,
     }),
   };
 }
@@ -241,4 +240,3 @@ export function useClerkSafe() {
   }
   return mounted ? clerk : null;
 }
-

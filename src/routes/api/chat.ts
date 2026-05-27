@@ -40,7 +40,9 @@ function buildUserContextBlock(u?: UserContext): string {
     lines.push("Provide thorough, detailed responses with examples where helpful.");
   }
   if (u.language && u.language !== "auto") {
-    lines.push(`Always reply in language code "${u.language}" unless the user clearly writes in another language.`);
+    lines.push(
+      `Always reply in language code "${u.language}" unless the user clearly writes in another language.`,
+    );
   }
   if (u.customInstructions) {
     lines.push(`User's custom response instructions (follow these): ${u.customInstructions}`);
@@ -91,8 +93,7 @@ async function runWebSearch(query: string): Promise<string | null> {
     });
     if (!r.ok) return null;
     const data: any = await r.json();
-    const results: any[] =
-      data?.data?.web ?? data?.data ?? data?.web ?? data?.results ?? [];
+    const results: any[] = data?.data?.web ?? data?.data ?? data?.web ?? data?.results ?? [];
     if (!Array.isArray(results) || results.length === 0) return null;
     const lines = results.slice(0, 5).map((res, i) => {
       const title = res.title || res.metadata?.title || "Untitled";
@@ -111,7 +112,6 @@ function shouldRunWebSearch(text: string, userWantsWebSearch?: boolean): boolean
   if (userWantsWebSearch !== false) return true;
   return /\b(search|google|look up|find online|browse)\b/i.test(text) || SEARCH_TRIGGER.test(text);
 }
-
 
 const IMAGE_INTENT =
   /\b(generate|make|create|draw|design|render|paint|produce|give\s+me)\b[^.?!]{0,40}\b(image|picture|photo|photograph|illustration|logo|drawing|artwork|painting|render|wallpaper|icon)\b/i;
@@ -193,12 +193,16 @@ async function handleImageRequest(prompt: string, apiKey: string): Promise<Respo
           controller.enqueue(enc.encode(sseChunk(`![generated image](${imageUrl})`)));
         } else {
           controller.enqueue(
-            enc.encode(sseChunk("Sorry — I couldn't generate that image. Try rephrasing the prompt.")),
+            enc.encode(
+              sseChunk("Sorry — I couldn't generate that image. Try rephrasing the prompt."),
+            ),
           );
         }
       } catch (e) {
         controller.enqueue(
-          enc.encode(sseChunk(`Sorry — ${e instanceof Error ? e.message : "image generation failed"}.`)),
+          enc.encode(
+            sseChunk(`Sorry — ${e instanceof Error ? e.message : "image generation failed"}.`),
+          ),
         );
       }
       controller.enqueue(enc.encode(sseDone()));
@@ -305,8 +309,6 @@ export const Route = createFileRoute("/api/chat")({
           if (m.reasoning && !voice && m.id === "reason") {
             body.reasoning = { effort: m.reasoning };
           }
-
-
 
           const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
