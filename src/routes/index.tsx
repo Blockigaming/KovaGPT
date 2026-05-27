@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
-import { PanelLeft, AudioLines, Sparkles, Settings as Cog, HelpCircle } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { PanelLeft, AudioLines, ChevronDown } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
@@ -11,7 +10,6 @@ import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/Se
 import { HelpDialog } from "@/components/HelpDialog";
 import { applyThemeColors } from "@/lib/theme";
 import { VoiceMode } from "@/components/VoiceMode";
-import { NovaLogo } from "@/components/NovaLogo";
 import { useUser, SignInButton, SignUpButton, SignedIn, UserButton, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { speak } from "@/lib/voice";
 import { type ModeId } from "@/lib/modes";
@@ -39,12 +37,6 @@ export const Route = createFileRoute("/")({
   }),
 });
 
-const SUGGESTIONS = [
-  { title: "Generate an email", subtitle: "to reschedule a meeting" },
-  { title: "Write a website", subtitle: "landing page in React" },
-  { title: "Brainstorm ideas", subtitle: "for a weekend project" },
-  { title: "Explain a concept", subtitle: "like I'm five" },
-];
 
 const SETTINGS_KEY = "nova-gpt-settings-v1";
 
@@ -396,9 +388,10 @@ function NovaGPT() {
               <PanelLeft className="w-5 h-5" />
             </button>
           )}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 font-semibold">
+          <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-accent transition font-semibold">
             <span>NovaGPT</span>
-          </div>
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          </button>
           <div className="ml-auto flex items-center gap-2">
             <button
               onClick={() => setVoiceModeOpen(true)}
@@ -408,22 +401,20 @@ function NovaGPT() {
               <AudioLines className="w-4 h-4" />
               <span className="hidden sm:inline">Voice</span>
             </button>
-            {!isLoaded ? (
-              <div className="w-8 h-8 rounded-full bg-accent/40 animate-pulse" aria-hidden />
-            ) : isSignedIn ? (
+            {isLoaded && isSignedIn ? (
               <SignedIn>
                 <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
               </SignedIn>
             ) : (
               <>
                 <SignInButton mode="modal">
-                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full border border-border hover:bg-accent transition">
-                    Sign in
+                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-lg hover:bg-accent transition">
+                    Log in
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition">
-                    Sign up
+                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition whitespace-nowrap">
+                    Sign up for free
                   </button>
                 </SignUpButton>
               </>
@@ -434,20 +425,7 @@ function NovaGPT() {
 
         {!active || active.messages.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4">
-            <NovaLogo className="w-14 h-14 mb-6" />
-            <h1 className="text-3xl font-semibold mb-8 text-center">What can I help with?</h1>
-            <div className="w-full max-w-3xl grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-              {SUGGESTIONS.map((s) => (
-                <button
-                  key={s.title}
-                  onClick={() => send(`${s.title} ${s.subtitle}`, [])}
-                  className="text-left rounded-2xl border border-border bg-card/50 hover:bg-card p-4 transition"
-                >
-                  <div className="font-medium text-sm">{s.title}</div>
-                  <div className="text-xs text-muted-foreground mt-1">{s.subtitle}</div>
-                </button>
-              ))}
-            </div>
+            <h1 className="text-2xl sm:text-3xl font-semibold mb-8 text-center">Ready when you are.</h1>
             <div className="w-full">
               <ChatInput
                 value={input}
