@@ -1,4 +1,4 @@
-import { Plus, MessageSquare, Trash2, PanelLeft, Search, Sparkles, Settings as Cog } from "lucide-react";
+import { Plus, MessageSquare, Trash2, PanelLeft, Search, Sparkles, Settings as Cog, HelpCircle } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
