@@ -8,10 +8,10 @@ import { LoginPromptDialog } from "@/components/LoginPromptDialog";
 import {
   SignInButton,
   SignUpButton,
-  SignedIn,
   UserButton,
   useUser,
 } from "@/components/auth/ClerkSafe";
+
 
 export const Route = createFileRoute("/images")({
   component: ImagesPage,
@@ -211,9 +211,8 @@ function ImagesPage() {
           </button>
           <div className="ml-auto flex items-center gap-2">
             {isSignedIn ? (
-              <SignedIn>
-                <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
-              </SignedIn>
+              <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
+
             ) : (
               <>
                 <SignInButton mode="modal">
