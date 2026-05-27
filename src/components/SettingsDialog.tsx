@@ -691,6 +691,9 @@ function LockedTab({
       </Button>
     </div>
   );
+}
+
+
 
 
 function ColorRow({
