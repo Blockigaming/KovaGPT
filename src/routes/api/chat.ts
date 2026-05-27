@@ -98,42 +98,88 @@ Accuracy still matters: if you don't know something, say so briefly and give you
 const SEARCH_TRIGGER =
   /\b(today|tonight|yesterday|tomorrow|this (week|month|year)|last (week|month|year)|latest|recent|recently|news|currently|right now|now|2024|2025|2026|price|prices|cost|stock|stocks|score|scores|weather|forecast|who won|who is winning|update|updates|breaking|release|released|launch|launched|version|trending|happening|live|election|results)\b/i;
 
-async function runWebSearch(query: string): Promise<string | null> {
-  const apiKey = process.env.FIRECRAWL_API_KEY;
-  if (!apiKey) return null;
+async function firecrawlSearch(
+  apiKey: string,
+  query: string,
+  opts: { limit?: number; tbs?: string } = {},
+): Promise<WebSearchResult[]> {
   try {
     const r = await fetch("https://api.firecrawl.dev/v2/search", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ query, limit: 5 }),
+      body: JSON.stringify({
+        query,
+        limit: opts.limit ?? 5,
+        ...(opts.tbs ? { tbs: opts.tbs } : {}),
+      }),
     });
-    if (!r.ok) return null;
+    if (!r.ok) return [];
     const data = (await r.json()) as {
-      data?: { web?: WebSearchResult[] } | WebSearchResult[];
+      data?: { web?: WebSearchResult[]; news?: WebSearchResult[] } | WebSearchResult[];
       web?: WebSearchResult[];
+      news?: WebSearchResult[];
       results?: WebSearchResult[];
     };
-    const nestedData = data?.data;
-    const results = Array.isArray(nestedData)
-      ? nestedData
-      : (nestedData?.web ?? data?.web ?? data?.results ?? []);
-    if (!Array.isArray(results) || results.length === 0) return null;
-    const lines = results.slice(0, 5).map((res, i) => {
-      const title = res.title || res.metadata?.title || "Untitled";
-      const url = res.url || res.metadata?.sourceURL || "";
-      const desc = res.description || res.snippet || res.markdown?.slice(0, 220) || "";
-      return `[${i + 1}] ${title}\n${url}\n${desc}`.trim();
-    });
-    return `\n\n--- Live web search results for "${query}" (today: ${new Date().toISOString().slice(0, 10)}) ---\n${lines.join("\n\n")}\n--- End web search ---\nUse these results to answer. Cite source numbers like [1], [2] when relevant.`;
+    const nested = data?.data;
+    if (Array.isArray(nested)) return nested;
+    return (
+      nested?.web ??
+      nested?.news ??
+      data?.web ??
+      data?.news ??
+      data?.results ??
+      []
+    );
   } catch {
-    return null;
+    return [];
   }
 }
 
+function formatResults(label: string, query: string, results: WebSearchResult[]): string {
+  if (results.length === 0) return "";
+  const lines = results.slice(0, 6).map((res, i) => {
+    const title = res.title || res.metadata?.title || "Untitled";
+    const url = res.url || res.metadata?.sourceURL || "";
+    const desc = res.description || res.snippet || res.markdown?.slice(0, 240) || "";
+    return `[${i + 1}] ${title}\n${url}\n${desc}`.trim();
+  });
+  return `\n\n--- ${label} for "${query}" (today: ${new Date().toISOString().slice(0, 10)}) ---\n${lines.join("\n\n")}\n--- End ${label.toLowerCase()} ---`;
+}
+
+async function runWebSearch(query: string, wantsNews: boolean): Promise<string | null> {
+  const apiKey = process.env.FIRECRAWL_API_KEY;
+  if (!apiKey) return null;
+  // Run a general search; also run a fresh news search in parallel for any
+  // time-sensitive or news-flavored query so the model always has the
+  // latest facts from real sources.
+  const [general, news] = await Promise.all([
+    firecrawlSearch(apiKey, query, { limit: 5 }),
+    wantsNews
+      ? firecrawlSearch(apiKey, `${query} latest news`, { limit: 5, tbs: "qdr:w" })
+      : Promise.resolve([] as WebSearchResult[]),
+  ]);
+  const blocks = [
+    formatResults("Live web search results", query, general),
+    formatResults("Fresh news (last 7 days)", query, news),
+  ].filter(Boolean);
+  if (blocks.length === 0) return null;
+  return blocks.join("") + `\nUse these results as ground truth. Cite source numbers like [1], [2] when you make factual claims.`;
+}
+
+// Detects "news-like" / time-sensitive intent so we also pull a fresh news feed.
+const NEWS_TRIGGER =
+  /\b(news|breaking|today|tonight|yesterday|this (week|month)|latest|recent|recently|currently|right now|update|updates|happened|happening|trending|election|stock|stocks|price|prices|score|scores|weather|launch|launched|release|released|announced|war|attack|crisis|earnings|inflation|rates?)\b/i;
+
 function shouldRunWebSearch(text: string, userWantsWebSearch?: boolean): boolean {
   if (!text.trim()) return false;
-  if (userWantsWebSearch !== false) return true;
-  return /\b(search|google|look up|find online|browse)\b/i.test(text) || SEARCH_TRIGGER.test(text);
+  // If the user has explicitly disabled web search, only run it on very
+  // clearly time-sensitive triggers.
+  if (userWantsWebSearch === false) return SEARCH_TRIGGER.test(text);
+  // Otherwise run web search on essentially any non-trivial factual ask
+  // so answers stay grounded in real sources.
+  const wordCount = text.trim().split(/\s+/).length;
+  if (wordCount >= 4) return true;
+  return SEARCH_TRIGGER.test(text);
 }
 
 const IMAGE_INTENT =
