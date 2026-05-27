@@ -8,7 +8,7 @@ import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
 import { SettingsDialog, type Settings } from "@/components/SettingsDialog";
 import { VoiceMode } from "@/components/VoiceMode";
 import { NovaLogo } from "@/components/NovaLogo";
-import { useUser, SignInButton, clerkEnabled } from "@/components/auth/ClerkSafe";
+import { useUser, SignInButton, SignUpButton, SignedIn, SignedOut, UserButton, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { speak } from "@/lib/voice";
 import { type ModeId } from "@/lib/modes";
 import {
