@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PanelLeft, AudioLines } from "lucide-react";
+import { PanelLeft, AudioLines, Sparkles } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
@@ -365,9 +365,17 @@ function NovaGPT() {
             <span>NovaGPT</span>
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <Link
+              to="/pricing"
+              className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full border border-border/70 hover:bg-accent transition"
+              title="Upgrade your plan"
+            >
+              <Sparkles className="w-4 h-4" />
+              Upgrade
+            </Link>
             <button
               onClick={() => setVoiceModeOpen(true)}
-              className="text-sm px-3 py-1.5 rounded-lg border border-border hover:bg-accent transition flex items-center gap-1.5"
+              className="text-sm px-3 py-1.5 rounded-full border border-border/70 hover:bg-accent transition flex items-center gap-1.5"
               title="Voice mode"
             >
               <AudioLines className="w-4 h-4" />
@@ -375,18 +383,18 @@ function NovaGPT() {
             </button>
             <SignedOut>
               <SignInButton mode="modal">
-                <button className="text-sm font-medium px-4 py-2 rounded-full border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground transition shadow-sm">
+                <button className="text-sm font-medium px-4 py-1.5 rounded-full border border-border/70 hover:bg-accent transition">
                   Sign in
                 </button>
               </SignInButton>
               <SignUpButton mode="modal">
-                <button className="text-sm font-semibold px-4 py-2 rounded-full bg-primary text-primary-foreground hover:opacity-90 transition shadow-lg shadow-primary/20 ring-2 ring-primary/40 ring-offset-2 ring-offset-background animate-pulse-slow">
-                  Sign up — it's free
+                <button className="text-sm font-medium px-4 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition">
+                  Sign up
                 </button>
               </SignUpButton>
             </SignedOut>
             <SignedIn>
-              <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-9 h-9 ring-2 ring-primary/40" } }} />
+              <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
             </SignedIn>
           </div>
         </header>
