@@ -40,17 +40,44 @@ export function AuthDialog({
     setLoading(true);
     try {
       if (mode === "sign-up") {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: { emailRedirectTo: `${window.location.origin}/` },
         });
         if (error) throw error;
-        toast.success("Check your email to confirm your account.");
+        // Supabase returns success with an empty identities array when the
+        // email is already registered but unconfirmed — no email is sent
+        // in that case. Explicitly trigger a resend so the user always
+        // gets a verification email.
+        const isRepeat = !!data.user && (data.user.identities?.length ?? 0) === 0;
+        if (isRepeat) {
+          const { error: resendErr } = await supabase.auth.resend({
+            type: "signup",
+            email,
+            options: { emailRedirectTo: `${window.location.origin}/` },
+          });
+          if (resendErr) throw resendErr;
+          toast.success("Already registered — we resent the verification link. Check your inbox & spam.");
+        } else {
+          toast.success("Verification email sent. Check your inbox & spam folder.");
+        }
         onOpenChange(false);
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        if (error) {
+          // If user hasn't confirmed yet, automatically resend the verification.
+          if (/confirm|not confirmed|email.*verif/i.test(error.message)) {
+            await supabase.auth.resend({
+              type: "signup",
+              email,
+              options: { emailRedirectTo: `${window.location.origin}/` },
+            });
+            toast.error("Please verify your email — we just resent the link.");
+            return;
+          }
+          throw error;
+        }
         toast.success("Signed in.");
         onOpenChange(false);
       }
