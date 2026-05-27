@@ -64,7 +64,7 @@ function loadSettings(userKey: string | null): Settings {
 
 function NovaGPT() {
   const { isSignedIn, isLoaded, user } = useUser();
-  const userKey = (user as any)?.id ?? null;
+  const userKey = user?.id ?? null;
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
@@ -97,7 +97,6 @@ function NovaGPT() {
     } else {
       setConversations(loadConversations());
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userKey, isSignedIn]);
 
   // Re-apply theme whenever it changes
