@@ -2,6 +2,8 @@
 
 // Adam-like deep male English voices, in order of preference
 const ADAM_LIKE = [
+  "Adam",
+  "Microsoft Adam Online (Natural) - English (United States)",
   "Daniel", // macOS / iOS — deep British male, closest to Adam
   "Google UK English Male",
   "Microsoft Guy Online (Natural) - English (United States)",
