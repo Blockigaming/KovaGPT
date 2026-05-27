@@ -16,7 +16,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Trash2, Play, Palette, User2, ShieldCheck, Sparkles, MessageSquare } from "lucide-react";
+import { Trash2, Play, Palette, User2, ShieldCheck, Sparkles, MessageSquare, CreditCard, Globe2, ExternalLink } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { clearConversations } from "@/lib/chat-store";
 import { getUsage, DAILY_IMAGE_LIMIT, DAILY_UPLOAD_LIMIT } from "@/lib/limits";
@@ -47,11 +48,25 @@ export type Settings = {
   voiceName: string;
   // Personalization
   displayName: string;
+  preferredPronouns: string;
+  email: string;
   phone: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  region: string;
+  postalCode: string;
+  country: string;
   extraFacts: string;
   customInstructions: string;
   mood: Mood;
+  responseLength: "short" | "medium" | "long";
+  language: string;
   rememberAcross: boolean;
+  // Behavior
+  webSearch: boolean;
+  sendOnEnter: boolean;
+  showTimestamps: boolean;
   // Appearance
   theme: ThemeColors;
 };
@@ -61,11 +76,24 @@ export const DEFAULT_SETTINGS: Settings = {
   voiceRate: 1,
   voiceName: "",
   displayName: "",
+  preferredPronouns: "",
+  email: "",
   phone: "",
+  addressLine1: "",
+  addressLine2: "",
+  city: "",
+  region: "",
+  postalCode: "",
+  country: "",
   extraFacts: "",
   customInstructions: "",
   mood: "neutral",
+  responseLength: "medium",
+  language: "auto",
   rememberAcross: true,
+  webSearch: false,
+  sendOnEnter: true,
+  showTimestamps: false,
   theme: DEFAULT_THEME,
 };
 
@@ -122,11 +150,12 @@ export function SettingsDialog({
         </DialogHeader>
 
         <Tabs defaultValue="general" className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="grid grid-cols-5 w-full">
+          <TabsList className="grid grid-cols-6 w-full">
             <TabsTrigger value="general"><Sparkles className="w-4 h-4 mr-1.5 hidden sm:inline" />General</TabsTrigger>
             <TabsTrigger value="personalization"><User2 className="w-4 h-4 mr-1.5 hidden sm:inline" />You</TabsTrigger>
             <TabsTrigger value="behavior"><MessageSquare className="w-4 h-4 mr-1.5 hidden sm:inline" />Behavior</TabsTrigger>
             <TabsTrigger value="appearance"><Palette className="w-4 h-4 mr-1.5 hidden sm:inline" />Appearance</TabsTrigger>
+            <TabsTrigger value="billing"><CreditCard className="w-4 h-4 mr-1.5 hidden sm:inline" />Billing</TabsTrigger>
             <TabsTrigger value="security"><ShieldCheck className="w-4 h-4 mr-1.5 hidden sm:inline" />Security</TabsTrigger>
           </TabsList>
 
@@ -194,6 +223,71 @@ export function SettingsDialog({
               </div>
             </section>
 
+            <section className="space-y-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Globe2 className="w-4 h-4" /> Knowledge & input
+              </h3>
+
+              <ToggleRow
+                title="Live web search"
+                hint="Fetch fresh results from the web for time-sensitive questions so answers stay up to date."
+                checked={settings.webSearch}
+                onCheckedChange={(v) => onChange({ ...settings, webSearch: v })}
+              />
+              <ToggleRow
+                title="Send on Enter"
+                hint="Enter sends. Shift + Enter for a new line. Turn off to require the send button."
+                checked={settings.sendOnEnter}
+                onCheckedChange={(v) => onChange({ ...settings, sendOnEnter: v })}
+              />
+              <ToggleRow
+                title="Show timestamps"
+                hint="Display a small timestamp under each message."
+                checked={settings.showTimestamps}
+                onCheckedChange={(v) => onChange({ ...settings, showTimestamps: v })}
+              />
+
+              <div>
+                <label className="text-sm mb-2 block">Preferred response length</label>
+                <Select
+                  value={settings.responseLength}
+                  onValueChange={(v) => onChange({ ...settings, responseLength: v as Settings["responseLength"] })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="short">Short — get to the point</SelectItem>
+                    <SelectItem value="medium">Medium — balanced (default)</SelectItem>
+                    <SelectItem value="long">Long — detailed, thorough</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-sm mb-2 block">Response language</label>
+                <Select
+                  value={settings.language}
+                  onValueChange={(v) => onChange({ ...settings, language: v })}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">Auto (match my message)</SelectItem>
+                    <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="es">Español</SelectItem>
+                    <SelectItem value="fr">Français</SelectItem>
+                    <SelectItem value="de">Deutsch</SelectItem>
+                    <SelectItem value="pt">Português</SelectItem>
+                    <SelectItem value="it">Italiano</SelectItem>
+                    <SelectItem value="nl">Nederlands</SelectItem>
+                    <SelectItem value="zh">中文</SelectItem>
+                    <SelectItem value="ja">日本語</SelectItem>
+                    <SelectItem value="ko">한국어</SelectItem>
+                    <SelectItem value="ar">العربية</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </section>
+
+
             <section>
               <h3 className="text-sm font-semibold mb-3">Daily Usage (Free)</h3>
               <div className="space-y-2 text-sm">
@@ -232,27 +326,90 @@ export function SettingsDialog({
               </p>
             )}
 
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">What should NovaGPT call you?</label>
-              <Input
-                placeholder={user?.firstName || "Your name"}
-                value={settings.displayName}
-                onChange={(e) => onChange({ ...settings, displayName: e.target.value })}
-              />
-            </div>
+            <section className="space-y-4">
+              <h3 className="text-sm font-semibold">How to address you</h3>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Preferred name</label>
+                  <Input
+                    placeholder={user?.firstName || "Your name"}
+                    value={settings.displayName}
+                    onChange={(e) => onChange({ ...settings, displayName: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Pronouns</label>
+                  <Input
+                    placeholder="e.g. she/her, he/him, they/them"
+                    value={settings.preferredPronouns}
+                    onChange={(e) => onChange({ ...settings, preferredPronouns: e.target.value })}
+                  />
+                </div>
+              </div>
+            </section>
 
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Phone number (optional)</label>
+            <section className="space-y-4">
+              <h3 className="text-sm font-semibold">Contact</h3>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Email</label>
+                  <Input
+                    type="email"
+                    placeholder={user?.primaryEmailAddress?.emailAddress || "you@example.com"}
+                    value={settings.email}
+                    onChange={(e) => onChange({ ...settings, email: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Phone</label>
+                  <Input
+                    type="tel"
+                    placeholder="+1 555 123 4567"
+                    value={settings.phone}
+                    onChange={(e) => onChange({ ...settings, phone: e.target.value })}
+                  />
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-4">
+              <h3 className="text-sm font-semibold">Address</h3>
               <Input
-                type="tel"
-                placeholder="+1 555 123 4567"
-                value={settings.phone}
-                onChange={(e) => onChange({ ...settings, phone: e.target.value })}
+                placeholder="Address line 1"
+                value={settings.addressLine1}
+                onChange={(e) => onChange({ ...settings, addressLine1: e.target.value })}
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                Used only as context for things like reminders or formatting.
+              <Input
+                placeholder="Address line 2 (optional)"
+                value={settings.addressLine2}
+                onChange={(e) => onChange({ ...settings, addressLine2: e.target.value })}
+              />
+              <div className="grid sm:grid-cols-3 gap-3">
+                <Input
+                  placeholder="City"
+                  value={settings.city}
+                  onChange={(e) => onChange({ ...settings, city: e.target.value })}
+                />
+                <Input
+                  placeholder="State / Region"
+                  value={settings.region}
+                  onChange={(e) => onChange({ ...settings, region: e.target.value })}
+                />
+                <Input
+                  placeholder="Postal code"
+                  value={settings.postalCode}
+                  onChange={(e) => onChange({ ...settings, postalCode: e.target.value })}
+                />
+              </div>
+              <Input
+                placeholder="Country"
+                value={settings.country}
+                onChange={(e) => onChange({ ...settings, country: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Used for billing receipts and to format addresses or local info correctly.
               </p>
-            </div>
+            </section>
 
             <div>
               <label className="text-sm font-medium mb-1.5 block">Extra facts about you</label>
@@ -265,18 +422,13 @@ export function SettingsDialog({
               />
             </div>
 
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-medium">Remember across conversations</div>
-                <div className="text-xs text-muted-foreground">
-                  Let NovaGPT use facts above + a short summary of past chats as context.
-                </div>
-              </div>
-              <Switch
-                checked={settings.rememberAcross}
-                onCheckedChange={(v) => onChange({ ...settings, rememberAcross: v })}
-              />
-            </div>
+            <ToggleRow
+              title="Remember across conversations"
+              hint="Let NovaGPT carry your profile, custom instructions, and a short summary of past chats into every new conversation."
+              checked={settings.rememberAcross}
+              onCheckedChange={(v) => onChange({ ...settings, rememberAcross: v })}
+            />
+
           </TabsContent>
 
           {/* BEHAVIOR — how it should respond */}
@@ -359,8 +511,75 @@ export function SettingsDialog({
             </Button>
           </TabsContent>
 
+          {/* BILLING */}
+          <TabsContent value="billing" className="overflow-y-auto pr-1 space-y-5 py-4">
+            <div className="rounded-lg border border-border p-4 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-medium">Current plan</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  You're on the Free plan. Upgrade for unlimited image generation, faster responses, and priority support.
+                </div>
+              </div>
+              <Link
+                to="/pricing"
+                onClick={() => onOpenChange(false)}
+                className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition whitespace-nowrap"
+              >
+                <Sparkles className="w-4 h-4" /> Upgrade
+              </Link>
+            </div>
+
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold">Payment method</h3>
+              <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+                No card on file. Add a card when you upgrade — payments are
+                securely handled by Stripe. We never see or store your card number.
+              </div>
+              <Link
+                to="/pricing"
+                onClick={() => onOpenChange(false)}
+                className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border border-border hover:bg-accent transition"
+              >
+                <CreditCard className="w-4 h-4" /> Add a payment method
+              </Link>
+            </section>
+
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold">Billing address</h3>
+              <p className="text-xs text-muted-foreground">
+                Used on receipts and invoices. Edit in <strong>You → Address</strong>.
+              </p>
+              <div className="rounded-lg border border-border p-4 text-sm space-y-0.5">
+                <div>{settings.displayName || "—"}</div>
+                <div>{settings.addressLine1 || <span className="text-muted-foreground">No street address</span>}</div>
+                {settings.addressLine2 && <div>{settings.addressLine2}</div>}
+                <div className="text-muted-foreground">
+                  {[settings.city, settings.region, settings.postalCode].filter(Boolean).join(", ") || "—"}
+                </div>
+                <div className="text-muted-foreground">{settings.country || ""}</div>
+              </div>
+            </section>
+
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold">Receipts & invoices</h3>
+              <p className="text-xs text-muted-foreground">
+                After upgrading, receipts are emailed automatically and available
+                in the Stripe customer portal.
+              </p>
+              <a
+                href="https://billing.stripe.com/p/login"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border border-border hover:bg-accent transition"
+              >
+                <ExternalLink className="w-4 h-4" /> Open billing portal
+              </a>
+            </section>
+          </TabsContent>
+
           {/* SECURITY */}
           <TabsContent value="security" className="overflow-y-auto pr-1 space-y-5 py-4">
+
             {loggedIn ? (
               <>
                 <div className="rounded-lg border border-border p-4">
@@ -450,6 +669,28 @@ function SecurityRow({
       <Button size="sm" variant="outline" onClick={onAction}>
         {actionLabel}
       </Button>
+    </div>
+  );
+}
+
+function ToggleRow({
+  title,
+  hint,
+  checked,
+  onCheckedChange,
+}: {
+  title: string;
+  hint?: string;
+  checked: boolean;
+  onCheckedChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <div className="text-sm font-medium">{title}</div>
+        {hint && <div className="text-xs text-muted-foreground mt-0.5">{hint}</div>}
+      </div>
+      <Switch checked={checked} onCheckedChange={onCheckedChange} />
     </div>
   );
 }

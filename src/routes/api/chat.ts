@@ -9,21 +9,38 @@ type IncomingMessage = {
 
 type UserContext = {
   name?: string;
+  pronouns?: string;
+  email?: string;
   phone?: string;
+  address?: string;
   extraFacts?: string;
   customInstructions?: string;
   mood?: string;
+  responseLength?: "short" | "medium" | "long";
+  language?: string;
   rememberAcross?: boolean;
+  webSearch?: boolean;
 };
 
 function buildUserContextBlock(u?: UserContext): string {
   if (!u) return "";
   const lines: string[] = [];
   if (u.name) lines.push(`The user prefers to be called "${u.name}".`);
-  if (u.phone) lines.push(`The user's phone (for formatting/context only): ${u.phone}.`);
+  if (u.pronouns) lines.push(`Use these pronouns when referring to the user: ${u.pronouns}.`);
+  if (u.email) lines.push(`User email (for context only): ${u.email}.`);
+  if (u.phone) lines.push(`User phone (for formatting/context only): ${u.phone}.`);
+  if (u.address) lines.push(`User location/address (for context only): ${u.address}.`);
   if (u.extraFacts) lines.push(`Facts the user shared about themselves: ${u.extraFacts}`);
   if (u.mood && u.mood !== "neutral") {
     lines.push(`Respond in a ${u.mood} tone.`);
+  }
+  if (u.responseLength === "short") {
+    lines.push("Keep responses short and to the point. Prefer concise answers.");
+  } else if (u.responseLength === "long") {
+    lines.push("Provide thorough, detailed responses with examples where helpful.");
+  }
+  if (u.language && u.language !== "auto") {
+    lines.push(`Always reply in language code "${u.language}" unless the user clearly writes in another language.`);
   }
   if (u.customInstructions) {
     lines.push(`User's custom response instructions (follow these): ${u.customInstructions}`);
@@ -35,7 +52,37 @@ function buildUserContextBlock(u?: UserContext): string {
   return `\n\n--- User profile & preferences ---\n${lines.join("\n")}\n--- End user profile ---`;
 }
 
-const CURRENT_DATE_INSTRUCTION = `\n\nIMPORTANT: Today's date is ${new Date().toISOString().slice(0, 10)}. When asked about recent events, news, prices, or anything that may have changed, clearly state that you don't have live web access and tell the user what year/cutoff you're confident in. Never invent recent facts.`;
+const CURRENT_DATE_INSTRUCTION = `\n\nIMPORTANT: Today's date is ${new Date().toISOString().slice(0, 10)}. When asked about recent events, news, prices, or anything that may have changed, clearly state what your training cutoff is unless live web search results are provided in this conversation. Never invent recent facts.`;
+
+const SEARCH_TRIGGER =
+  /\b(today|tonight|yesterday|tomorrow|this week|this month|this year|latest|recent|news|currently|right now|2024|2025|2026|price|stock|score|weather|who won|who is winning|update|breaking)\b/i;
+
+async function runWebSearch(query: string): Promise<string | null> {
+  const apiKey = process.env.FIRECRAWL_API_KEY;
+  if (!apiKey) return null;
+  try {
+    const r = await fetch("https://api.firecrawl.dev/v2/search", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ query, limit: 5 }),
+    });
+    if (!r.ok) return null;
+    const data: any = await r.json();
+    const results: any[] =
+      data?.data?.web ?? data?.data ?? data?.web ?? data?.results ?? [];
+    if (!Array.isArray(results) || results.length === 0) return null;
+    const lines = results.slice(0, 5).map((res, i) => {
+      const title = res.title || res.metadata?.title || "Untitled";
+      const url = res.url || res.metadata?.sourceURL || "";
+      const desc = res.description || res.snippet || res.markdown?.slice(0, 220) || "";
+      return `[${i + 1}] ${title}\n${url}\n${desc}`.trim();
+    });
+    return `\n\n--- Live web search results for "${query}" (today: ${new Date().toISOString().slice(0, 10)}) ---\n${lines.join("\n\n")}\n--- End web search ---\nUse these results to answer. Cite source numbers like [1], [2] when relevant.`;
+  } catch {
+    return null;
+  }
+}
+
 
 const IMAGE_INTENT =
   /\b(generate|make|create|draw|design|render|paint|produce|give\s+me)\b[^.?!]{0,40}\b(image|picture|photo|photograph|illustration|logo|drawing|artwork|painting|render|wallpaper|icon)\b/i;
@@ -187,17 +234,36 @@ export const Route = createFileRoute("/api/chat")({
                 ? "google/gemini-2.5-flash"
                 : "google/gemini-3.1-flash-lite-preview";
 
+          // Optional live web search — only when user enabled it and the
+          // question looks time-sensitive (or the user asked to "search").
+          let webBlock = "";
+          if (user?.webSearch && lastText && !hasImages) {
+            const explicitSearch = /\b(search|google|look up|find online)\b/i.test(lastText);
+            if (explicitSearch || SEARCH_TRIGGER.test(lastText)) {
+              const result = await runWebSearch(lastText);
+              if (result) webBlock = result;
+            }
+          }
+
           const body: Record<string, unknown> = {
             model,
             stream: true,
             messages: [
-              { role: "system", content: m.systemPrompt + buildUserContextBlock(user) + CURRENT_DATE_INSTRUCTION },
+              {
+                role: "system",
+                content:
+                  m.systemPrompt +
+                  buildUserContextBlock(user) +
+                  webBlock +
+                  CURRENT_DATE_INSTRUCTION,
+              },
               ...transformed,
             ],
           };
           if (m.reasoning) {
             body.reasoning = { effort: m.reasoning };
           }
+
 
           const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
