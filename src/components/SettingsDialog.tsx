@@ -615,10 +615,13 @@ export function SettingsDialog({
                 <ExternalLink className="w-4 h-4" /> Open billing portal
               </a>
             </section>
+            </>
+            )}
           </TabsContent>
 
           {/* SECURITY */}
-          <TabsContent value="security" className="overflow-y-auto pr-1 space-y-5 py-4">
+          <TabsContent value="security" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+
 
             {loggedIn ? (
               <>
