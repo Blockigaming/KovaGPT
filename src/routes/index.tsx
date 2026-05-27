@@ -1,15 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PanelLeft } from "lucide-react";
+import { PanelLeft, AudioLines } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
 
 import { SettingsDialog, type Settings } from "@/components/SettingsDialog";
+import { VoiceMode } from "@/components/VoiceMode";
 import { NovaLogo } from "@/components/NovaLogo";
 import { useUser, SignInButton, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { speak } from "@/lib/voice";
-import { tryUseImage, DAILY_IMAGE_LIMIT, getUsage } from "@/lib/limits";
 import { type ModeId } from "@/lib/modes";
 import {
   type Conversation,
@@ -44,13 +44,14 @@ const SUGGESTIONS = [
 ];
 
 const SETTINGS_KEY = "nova-gpt-settings-v1";
+const DEFAULT_SETTINGS: Settings = { autoSpeak: false, voiceRate: 1, voiceName: "" };
 
 function loadSettings(): Settings {
-  if (typeof window === "undefined") return { autoSpeak: false, voiceRate: 1 };
+  if (typeof window === "undefined") return DEFAULT_SETTINGS;
   try {
-    return { autoSpeak: false, voiceRate: 1, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") };
+    return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") };
   } catch {
-    return { autoSpeak: false, voiceRate: 1 };
+    return DEFAULT_SETTINGS;
   }
 }
 
@@ -64,7 +65,8 @@ function NovaGPT() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settings, setSettings] = useState<Settings>({ autoSpeak: false, voiceRate: 1 });
+  const [voiceModeOpen, setVoiceModeOpen] = useState(false);
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -276,10 +278,7 @@ function NovaGPT() {
 
         // Auto speak
         if (settings.autoSpeak && assembledReply) {
-          speak(
-            assembledReply.replace(/```[\s\S]*?```/g, " code block ").replace(/[#*_`>]/g, ""),
-            { rate: settings.voiceRate },
-          );
+          speak(assembledReply, { rate: settings.voiceRate, voice: settings.voiceName });
         }
       } catch (e: unknown) {
         if ((e as Error).name !== "AbortError") {
