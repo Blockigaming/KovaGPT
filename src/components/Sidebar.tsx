@@ -30,7 +30,7 @@ export function Sidebar({
   onOpenSettings: () => void;
   onOpenHelp: () => void;
 }) {
-  const { user } = useUser();
+  const { user, isSignedIn } = useUser();
   const [width, setWidth] = useState<number>(260);
   const draggingRef = useRef(false);
 
