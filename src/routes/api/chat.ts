@@ -229,17 +229,20 @@ export const Route = createFileRoute("/api/chat")({
             return { role: msg.role, content: msg.content };
           });
 
-          // Voice mode prioritizes latency — use the fastest streaming model.
+          // Default to the fastest streaming model. Only escalate to a
+          // bigger model when the user explicitly picks reasoning mode or
+          // when the conversation contains images that need vision.
           const model = voice
             ? "google/gemini-3.1-flash-lite-preview"
             : m.id === "reason"
               ? "google/gemini-2.5-pro"
               : hasImages
                 ? "google/gemini-2.5-flash"
-                : "google/gemini-3.5-flash";
+                : "google/gemini-3.1-flash-lite-preview";
 
           // Live web search: explicit user opt-in OR voice mode (so spoken
-          // answers about current events stay accurate).
+          // answers about current events stay accurate). Run in parallel
+          // with model warmup is not possible here, but keep it tight.
           let webBlock = "";
           if ((user?.webSearch || voice) && lastText && !hasImages) {
             const explicitSearch = /\b(search|google|look up|find online)\b/i.test(lastText);
@@ -269,7 +272,9 @@ export const Route = createFileRoute("/api/chat")({
               ...transformed,
             ],
           };
-          if (m.reasoning && !voice) {
+          // Only enable reasoning when the user explicitly chose the
+          // reason mode — reasoning adds significant latency.
+          if (m.reasoning && !voice && m.id === "reason") {
             body.reasoning = { effort: m.reasoning };
           }
 
