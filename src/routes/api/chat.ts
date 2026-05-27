@@ -252,16 +252,14 @@ export const Route = createFileRoute("/api/chat")({
             return { role: msg.role, content: msg.content };
           });
 
-          // Default to the fastest streaming model. Only escalate to a
-          // bigger model when the user explicitly picks reasoning mode or
-          // when the conversation contains images that need vision.
+          // Default to a smart, fast streaming model. Escalate when needed.
           const model = voice
             ? "google/gemini-3.1-flash-lite-preview"
             : m.id === "reason"
-              ? "google/gemini-2.5-pro"
+              ? "google/gemini-3.1-pro-preview"
               : hasImages
-                ? "google/gemini-2.5-flash"
-                : "google/gemini-3.1-flash-lite-preview";
+                ? "google/gemini-2.5-pro"
+                : "google/gemini-3.5-flash";
 
           // Live web data: NovaGPT always runs a web search when the user
           // asks about something time-sensitive (today, latest, news, prices,
@@ -289,6 +287,7 @@ export const Route = createFileRoute("/api/chat")({
                 content:
                   m.systemPrompt +
                   TONE_INSTRUCTION +
+                  ADAPTIVE_INSTRUCTION +
                   UNRESTRICTED_INSTRUCTION +
                   buildUserContextBlock(user) +
                   webBlock +
