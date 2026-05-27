@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { PanelLeft, ChevronDown, ChevronLeft, ChevronRight, ImageIcon, ArrowUp, Mic, Loader2, Download } from "lucide-react";
+import { useEffect, useState } from "react";
+import { PanelLeft, ChevronDown, ChevronLeft, ChevronRight, ImageIcon, ArrowUp, Mic, Loader2, Download, Trash2, History } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 import { HelpDialog } from "@/components/HelpDialog";
@@ -77,8 +77,35 @@ const EXAMPLES: { label: string; prompt: string; src: string }[] = [
   },
 ];
 
+type HistoryItem = { id: string; prompt: string; imageUrl: string; createdAt: number };
+
+const HISTORY_KEY_PREFIX = "novagpt-image-history-";
+const HISTORY_LIMIT = 50;
+
+function loadHistory(userKey: string | null): HistoryItem[] {
+  if (!userKey || typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY_PREFIX + userKey);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(userKey: string | null, items: HistoryItem[]) {
+  if (!userKey || typeof window === "undefined") return;
+  try {
+    localStorage.setItem(HISTORY_KEY_PREFIX + userKey, JSON.stringify(items.slice(0, HISTORY_LIMIT)));
+  } catch {
+    /* quota — ignore */
+  }
+}
+
 function ImagesPage() {
-  const { isSignedIn } = useUser();
+  const { isSignedIn, user } = useUser();
+  const userKey = (user as any)?.id ?? null;
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -87,6 +114,44 @@ function ImagesPage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
   const [loginOpen, setLoginOpen] = useState(false);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+
+  // Load per-user history when sign-in state resolves.
+  useEffect(() => {
+    if (isSignedIn && userKey) {
+      setHistory(loadHistory(userKey));
+    } else {
+      setHistory([]);
+    }
+  }, [isSignedIn, userKey]);
+
+  function addToHistory(p: string, imageUrl: string) {
+    if (!isSignedIn || !userKey) return;
+    const item: HistoryItem = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      prompt: p,
+      imageUrl,
+      createdAt: Date.now(),
+    };
+    setHistory((prev) => {
+      const next = [item, ...prev].slice(0, HISTORY_LIMIT);
+      saveHistory(userKey, next);
+      return next;
+    });
+  }
+
+  function removeFromHistory(id: string) {
+    setHistory((prev) => {
+      const next = prev.filter((h) => h.id !== id);
+      saveHistory(userKey, next);
+      return next;
+    });
+  }
+
+  function clearHistory() {
+    setHistory([]);
+    saveHistory(userKey, []);
+  }
 
   async function generate(p: string) {
     const trimmed = p.trim();
@@ -107,6 +172,7 @@ function ImagesPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to generate image");
       setResult(data.imageUrl);
+      addToHistory(trimmed, data.imageUrl);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to generate image");
     } finally {
@@ -228,6 +294,72 @@ function ImagesPage() {
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {isSignedIn && history.length > 0 && (
+              <div className="mt-10">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <History className="w-5 h-5" /> Your history
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {history.length} {history.length === 1 ? "image" : "images"}
+                    </span>
+                  </h2>
+                  <button
+                    onClick={clearHistory}
+                    className="text-xs text-muted-foreground hover:text-foreground transition"
+                  >
+                    Clear all
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  {history.map((h) => (
+                    <div
+                      key={h.id}
+                      className="group relative aspect-square rounded-2xl overflow-hidden bg-muted border border-border"
+                    >
+                      <img
+                        src={h.imageUrl}
+                        alt={h.prompt}
+                        loading="lazy"
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-gradient-to-t from-black/80 via-black/30 to-transparent flex flex-col justify-end p-2 gap-1">
+                        <p className="text-[11px] text-white line-clamp-2" title={h.prompt}>
+                          {h.prompt}
+                        </p>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => {
+                              setPrompt(h.prompt);
+                              setResult(h.imageUrl);
+                              setError(null);
+                            }}
+                            className="flex-1 text-[11px] px-2 py-1 rounded-full bg-white text-black font-medium hover:opacity-90"
+                          >
+                            Reuse
+                          </button>
+                          <a
+                            href={h.imageUrl}
+                            download={`novagpt-${h.id}.png`}
+                            className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white"
+                            aria-label="Download"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                          </a>
+                          <button
+                            onClick={() => removeFromHistory(h.id)}
+                            className="w-7 h-7 rounded-full bg-white/15 hover:bg-destructive flex items-center justify-center text-white"
+                            aria-label="Remove"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
