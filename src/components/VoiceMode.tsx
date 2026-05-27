@@ -197,7 +197,7 @@ export function VoiceMode({
               }
               return current;
             });
-          }, 700);
+          }, 350);
         } else {
           setPartial(text);
           lastInterim = text;
