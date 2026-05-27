@@ -1,6 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PanelLeft, AudioLines, Sparkles, HelpCircle } from "lucide-react";
+import { SignUpPrompt } from "@/components/SignUpPrompt";
+import { PanelLeft, AudioLines } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
@@ -68,6 +69,8 @@ function NovaGPT() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [voiceModeOpen, setVoiceModeOpen] = useState(false);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [signupPromptOpen, setSignupPromptOpen] = useState(false);
+  const [signupPromptShown, setSignupPromptShown] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -118,6 +121,21 @@ function NovaGPT() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [active?.messages.length, isStreaming]);
+
+  // After 5 user messages in this session while signed out, prompt to sign up.
+  useEffect(() => {
+    if (signupPromptShown) return;
+    if (clerkEnabled && isSignedIn) return;
+    const userMsgCount = conversations.reduce(
+      (sum, c) => sum + c.messages.filter((m) => m.role === "user").length,
+      0,
+    );
+    if (userMsgCount >= 5 && !isStreaming) {
+      setSignupPromptOpen(true);
+      setSignupPromptShown(true);
+    }
+  }, [conversations, isSignedIn, isStreaming, signupPromptShown]);
+
 
   const newChat = useCallback(() => {
     setActiveId(null);
@@ -363,6 +381,7 @@ function NovaGPT() {
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={() => setSettingsOpen(true)}
+        onOpenHelp={() => setHelpOpen(true)}
       />
 
       <main className="flex-1 flex flex-col min-w-0">
@@ -380,14 +399,6 @@ function NovaGPT() {
             <span>NovaGPT</span>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <Link
-              to="/pricing"
-              className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full border border-border/70 hover:bg-accent transition"
-              title="Upgrade your plan"
-            >
-              <Sparkles className="w-4 h-4" />
-              Upgrade
-            </Link>
             <button
               onClick={() => setVoiceModeOpen(true)}
               className="text-sm px-3 py-1.5 rounded-full border border-border/70 hover:bg-accent transition flex items-center gap-1.5"
@@ -395,14 +406,6 @@ function NovaGPT() {
             >
               <AudioLines className="w-4 h-4" />
               <span className="hidden sm:inline">Voice</span>
-            </button>
-            <button
-              onClick={() => setHelpOpen(true)}
-              className="p-2 rounded-full border border-border/70 hover:bg-accent transition"
-              title="Help & tips"
-              aria-label="Help"
-            >
-              <HelpCircle className="w-4 h-4" />
             </button>
             <SignedOut>
               <SignInButton mode="modal">
@@ -490,6 +493,8 @@ function NovaGPT() {
       />
 
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+
+      <SignUpPrompt open={signupPromptOpen} onOpenChange={setSignupPromptOpen} />
 
 
 

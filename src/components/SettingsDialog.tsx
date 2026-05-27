@@ -150,13 +150,13 @@ export function SettingsDialog({
         </DialogHeader>
 
         <Tabs defaultValue="general" className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="grid grid-cols-6 w-full">
-            <TabsTrigger value="general"><Sparkles className="w-4 h-4 mr-1.5 hidden sm:inline" />General</TabsTrigger>
-            <TabsTrigger value="personalization"><User2 className="w-4 h-4 mr-1.5 hidden sm:inline" />You</TabsTrigger>
-            <TabsTrigger value="behavior"><MessageSquare className="w-4 h-4 mr-1.5 hidden sm:inline" />Behavior</TabsTrigger>
-            <TabsTrigger value="appearance"><Palette className="w-4 h-4 mr-1.5 hidden sm:inline" />Appearance</TabsTrigger>
-            <TabsTrigger value="billing"><CreditCard className="w-4 h-4 mr-1.5 hidden sm:inline" />Billing</TabsTrigger>
-            <TabsTrigger value="security"><ShieldCheck className="w-4 h-4 mr-1.5 hidden sm:inline" />Security</TabsTrigger>
+          <TabsList className="flex w-full overflow-x-auto justify-start gap-1 h-auto p-1">
+            <TabsTrigger value="general" className="shrink-0"><Sparkles className="w-4 h-4 mr-1.5 hidden sm:inline" />General</TabsTrigger>
+            <TabsTrigger value="personalization" className="shrink-0"><User2 className="w-4 h-4 mr-1.5 hidden sm:inline" />You</TabsTrigger>
+            <TabsTrigger value="behavior" className="shrink-0"><MessageSquare className="w-4 h-4 mr-1.5 hidden sm:inline" />Behavior</TabsTrigger>
+            <TabsTrigger value="appearance" className="shrink-0"><Palette className="w-4 h-4 mr-1.5 hidden sm:inline" />Appearance</TabsTrigger>
+            <TabsTrigger value="billing" className="shrink-0"><CreditCard className="w-4 h-4 mr-1.5 hidden sm:inline" />Billing</TabsTrigger>
+            <TabsTrigger value="security" className="shrink-0"><ShieldCheck className="w-4 h-4 mr-1.5 hidden sm:inline" />Security</TabsTrigger>
           </TabsList>
 
           {/* GENERAL — voice + usage + data */}
