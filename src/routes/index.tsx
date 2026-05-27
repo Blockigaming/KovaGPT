@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PanelLeft, AudioLines, Sparkles } from "lucide-react";
+import { PanelLeft, AudioLines, Sparkles, HelpCircle } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
 
 import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
+import { HelpDialog } from "@/components/HelpDialog";
 import { applyThemeColors } from "@/lib/theme";
 import { VoiceMode } from "@/components/VoiceMode";
 import { NovaLogo } from "@/components/NovaLogo";
