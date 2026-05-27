@@ -5,7 +5,8 @@ import { Sidebar } from "@/components/Sidebar";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
 
-import { SettingsDialog, type Settings } from "@/components/SettingsDialog";
+import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
+import { applyThemeColors } from "@/lib/theme";
 import { VoiceMode } from "@/components/VoiceMode";
 import { NovaLogo } from "@/components/NovaLogo";
 import { useUser, SignInButton, SignUpButton, SignedIn, SignedOut, UserButton, clerkEnabled } from "@/components/auth/ClerkSafe";
