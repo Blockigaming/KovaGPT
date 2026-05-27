@@ -5,7 +5,8 @@ import { Sidebar } from "@/components/Sidebar";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
 
-import { SettingsDialog, type Settings } from "@/components/SettingsDialog";
+import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
+import { applyThemeColors } from "@/lib/theme";
 import { VoiceMode } from "@/components/VoiceMode";
 import { NovaLogo } from "@/components/NovaLogo";
 import { useUser, SignInButton, SignUpButton, SignedIn, SignedOut, UserButton, clerkEnabled } from "@/components/auth/ClerkSafe";
@@ -26,11 +27,10 @@ export const Route = createFileRoute("/")({
   component: NovaGPT,
   head: () => ({
     meta: [
-      { title: "NovaGPT — Your intelligent AI assistant" },
+      { title: "NovaGPT" },
       {
         name: "description",
-        content:
-          "NovaGPT is an advanced multimodal AI assistant for chat, coding, research, voice, and image generation.",
+        content: "NovaGPT — your intelligent AI assistant.",
       },
     ],
   }),
@@ -44,7 +44,6 @@ const SUGGESTIONS = [
 ];
 
 const SETTINGS_KEY = "nova-gpt-settings-v1";
-const DEFAULT_SETTINGS: Settings = { autoSpeak: false, voiceRate: 1, voiceName: "" };
 
 function loadSettings(): Settings {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
@@ -71,7 +70,9 @@ function NovaGPT() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setSettings(loadSettings());
+    const loaded = loadSettings();
+    setSettings(loaded);
+    applyThemeColors(loaded.theme);
     // When not signed in, wipe any previously stored chats on (re)load
     // so reloading the page clears history. Chats still persist in-session.
     if (clerkEnabled && !isSignedIn) {
@@ -82,6 +83,11 @@ function NovaGPT() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Re-apply theme whenever it changes
+  useEffect(() => {
+    applyThemeColors(settings.theme);
+  }, [settings.theme]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -242,7 +248,18 @@ function NovaGPT() {
         const resp = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: payloadMessages, mode }),
+          body: JSON.stringify({
+            messages: payloadMessages,
+            mode,
+            user: {
+              name: settings.displayName,
+              phone: settings.phone,
+              extraFacts: settings.extraFacts,
+              customInstructions: settings.customInstructions,
+              mood: settings.mood,
+              rememberAcross: settings.rememberAcross,
+            },
+          }),
           signal: controller.signal,
         });
 
@@ -308,7 +325,7 @@ function NovaGPT() {
         abortRef.current = null;
       }
     },
-    [activeId, isStreaming, mode, autoTitle, settings.autoSpeak, settings.voiceRate, settings.voiceName],
+    [activeId, isStreaming, mode, autoTitle, settings],
   );
 
   const stop = useCallback(() => {
@@ -358,18 +375,18 @@ function NovaGPT() {
             </button>
             <SignedOut>
               <SignInButton mode="modal">
-                <button className="text-sm px-3 py-1.5 rounded-lg border border-border hover:bg-accent transition">
+                <button className="text-sm font-medium px-4 py-2 rounded-full border-2 border-primary text-primary hover:bg-primary hover:text-primary-foreground transition shadow-sm">
                   Sign in
                 </button>
               </SignInButton>
               <SignUpButton mode="modal">
-                <button className="text-sm px-3 py-1.5 rounded-lg bg-foreground text-background hover:opacity-90 transition">
-                  Sign up
+                <button className="text-sm font-semibold px-4 py-2 rounded-full bg-primary text-primary-foreground hover:opacity-90 transition shadow-lg shadow-primary/20 ring-2 ring-primary/40 ring-offset-2 ring-offset-background animate-pulse-slow">
+                  Sign up — it's free
                 </button>
               </SignUpButton>
             </SignedOut>
             <SignedIn>
-              <UserButton afterSignOutUrl="/" />
+              <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-9 h-9 ring-2 ring-primary/40" } }} />
             </SignedIn>
           </div>
         </header>

@@ -52,9 +52,7 @@ function ChatMessageInner({
               <User className="w-4 h-4" />
             </div>
           ) : (
-            <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center overflow-hidden">
-              <NovaLogo className="w-6 h-6" />
-            </div>
+            <NovaLogo className="w-8 h-8" />
           )}
         </div>
         <div className="flex-1 min-w-0">

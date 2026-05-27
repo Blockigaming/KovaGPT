@@ -178,3 +178,12 @@
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: oklch(1 0 0 / 10%); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: oklch(1 0 0 / 20%); }
+
+/* Gentle attention pulse for primary CTAs */
+@keyframes pulse-slow {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-primary) 35%, transparent); }
+  50% { box-shadow: 0 0 0 8px color-mix(in oklab, var(--color-primary) 0%, transparent); }
+}
+.animate-pulse-slow {
+  animation: pulse-slow 2.4s ease-in-out infinite;
+}
