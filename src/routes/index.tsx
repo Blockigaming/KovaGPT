@@ -429,6 +429,8 @@ function NovaGPT() {
                 onAttachmentsChange={setAttachments}
                 mode={mode}
                 onModeChange={setMode}
+                onOpenVoice={() => setVoiceModeOpen(true)}
+                placeholder="Ask anything"
               />
             </div>
           </div>
@@ -456,6 +458,8 @@ function NovaGPT() {
               onAttachmentsChange={setAttachments}
               mode={mode}
               onModeChange={setMode}
+              onOpenVoice={() => setVoiceModeOpen(true)}
+              placeholder="Ask anything"
             />
           </>
         )}
