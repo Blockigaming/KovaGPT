@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
 import { PanelLeft, AudioLines, ChevronDown } from "lucide-react";
-import { Link } from "@tanstack/react-router";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
@@ -11,7 +10,6 @@ import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/Se
 import { HelpDialog } from "@/components/HelpDialog";
 import { applyThemeColors } from "@/lib/theme";
 import { VoiceMode } from "@/components/VoiceMode";
-import { NovaLogo } from "@/components/NovaLogo";
 import { useUser, SignInButton, SignUpButton, SignedIn, UserButton, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { speak } from "@/lib/voice";
 import { type ModeId } from "@/lib/modes";
