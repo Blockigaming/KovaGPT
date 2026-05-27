@@ -27,11 +27,10 @@ export const Route = createFileRoute("/")({
   component: NovaGPT,
   head: () => ({
     meta: [
-      { title: "NovaGPT — Your intelligent AI assistant" },
+      { title: "NovaGPT" },
       {
         name: "description",
-        content:
-          "NovaGPT is an advanced multimodal AI assistant for chat, coding, research, voice, and image generation.",
+        content: "NovaGPT — your intelligent AI assistant.",
       },
     ],
   }),
