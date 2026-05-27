@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
-import { PanelLeft, AudioLines, ChevronDown } from "lucide-react";
+import { PanelLeft, ChevronDown } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
@@ -393,14 +393,6 @@ function NovaGPT() {
             <ChevronDown className="w-4 h-4 text-muted-foreground" />
           </button>
           <div className="ml-auto flex items-center gap-2">
-            <button
-              onClick={() => setVoiceModeOpen(true)}
-              className="text-sm px-3 py-1.5 rounded-full border border-border hover:bg-accent transition flex items-center gap-1.5"
-              title="Voice mode"
-            >
-              <AudioLines className="w-4 h-4" />
-              <span className="hidden sm:inline">Voice</span>
-            </button>
             {isLoaded && isSignedIn ? (
               <SignedIn>
                 <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
@@ -408,12 +400,12 @@ function NovaGPT() {
             ) : (
               <>
                 <SignInButton mode="modal">
-                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-lg hover:bg-accent transition">
+                  <button className="text-sm font-medium px-4 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition">
                     Log in
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition whitespace-nowrap">
+                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full hover:bg-accent transition whitespace-nowrap">
                     Sign up for free
                   </button>
                 </SignUpButton>
@@ -437,6 +429,8 @@ function NovaGPT() {
                 onAttachmentsChange={setAttachments}
                 mode={mode}
                 onModeChange={setMode}
+                onOpenVoice={() => setVoiceModeOpen(true)}
+                placeholder="Ask anything"
               />
             </div>
           </div>
@@ -464,6 +458,8 @@ function NovaGPT() {
               onAttachmentsChange={setAttachments}
               mode={mode}
               onModeChange={setMode}
+              onOpenVoice={() => setVoiceModeOpen(true)}
+              placeholder="Ask anything"
             />
           </>
         )}
