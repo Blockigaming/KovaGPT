@@ -18,7 +18,7 @@ import {
   useUser as useClerkUser,
 } from "@clerk/clerk-react";
 import type { ReactNode } from "react";
-import { Children, cloneElement, isValidElement } from "react";
+import { Children, cloneElement, isValidElement, useEffect, useState } from "react";
 
 // Clerk publishable keys are public and safe to embed in client code.
 export const CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsubm92YS1haWdwdC5sb3ZhYmxlLmFwcCQ";
