@@ -33,13 +33,16 @@ const PRO_TIERS: Record<ProTier, { price: string; usage: string; cta: string; pr
 function PricingPage() {
   const [proTier, setProTier] = useState<ProTier>("5x");
   const pro = PRO_TIERS[proTier];
-  const { user, isSignedIn } = useUser();
+  const { user, isSignedIn, isLoaded } = useUser();
   const { openSignIn } = useClerk();
   const { openCheckout, closeCheckout, isOpen, checkoutElement } = useStripeCheckout();
 
   const startCheckout = (priceId: string) => {
-    if (!isSignedIn) {
-      openSignIn();
+    // If Clerk has loaded and the user isn't signed in, require auth.
+    // If Clerk hasn't loaded (e.g. preview/offline), fall back to guest
+    // checkout so payments are never blocked by auth issues.
+    if (isLoaded && !isSignedIn) {
+      try { openSignIn(); } catch { /* clerk not ready */ }
       return;
     }
     openCheckout({
