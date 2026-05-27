@@ -29,7 +29,7 @@ import {
   friendlyVoiceLabel,
 } from "@/lib/voice";
 import { useUser, clerkEnabled } from "@/components/auth/ClerkSafe";
-import { useClerk } from "@clerk/clerk-react";
+import { useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
 import { applyThemeColors, DEFAULT_THEME, type ThemeColors } from "@/lib/theme";
 
 export type Mood =
@@ -594,13 +594,13 @@ export function SettingsDialog({
                     title="Password & two-factor"
                     body="Manage your password and turn on 2FA from your account page."
                     actionLabel="Open account"
-                    onAction={() => clerk.openUserProfile()}
+                    onAction={() => clerk?.openUserProfile()}
                   />
                   <SecurityRow
                     title="Active sessions"
                     body="Sign out of every device, or just this one."
                     actionLabel="Sign out"
-                    onAction={() => clerk.signOut()}
+                    onAction={() => clerk?.signOut()}
                   />
                 </div>
 
