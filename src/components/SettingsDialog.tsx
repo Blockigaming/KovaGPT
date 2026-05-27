@@ -652,16 +652,46 @@ export function SettingsDialog({
                 </div>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                Sign in to manage your account, password, and active sessions.
-              </p>
+              <LockedTab
+                title="Sign in to manage your security"
+                body="Manage your password, two-factor authentication, and active sessions from your account."
+                onSignIn={() => clerk?.openSignIn()}
+              />
             )}
+
           </TabsContent>
         </Tabs>
       </DialogContent>
     </Dialog>
   );
 }
+
+function LockedTab({
+  title,
+  body,
+  onSignIn,
+}: {
+  title: string;
+  body: string;
+  onSignIn?: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center text-center py-12 px-6 rounded-xl border border-dashed border-border bg-muted/30">
+      <div className="w-12 h-12 rounded-full bg-foreground/10 flex items-center justify-center mb-4">
+        <Lock className="w-5 h-5 text-foreground/70" />
+      </div>
+      <h3 className="text-base font-semibold mb-1.5">{title}</h3>
+      <p className="text-sm text-muted-foreground max-w-sm mb-5">{body}</p>
+      <Button
+        size="sm"
+        onClick={() => onSignIn?.()}
+        className="rounded-full px-5"
+      >
+        Log in or sign up
+      </Button>
+    </div>
+  );
+
 
 function ColorRow({
   label,
