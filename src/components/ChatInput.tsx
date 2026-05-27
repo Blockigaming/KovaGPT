@@ -189,7 +189,7 @@ export function ChatInput({
           )}
         </div>
         <p className="text-center text-xs text-muted-foreground mt-2">
-          Nova GPT can make mistakes. Check important info.
+          NovaGPT can make mistakes. Check important info.
         </p>
       </div>
     </div>

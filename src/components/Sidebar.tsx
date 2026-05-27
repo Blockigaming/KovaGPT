@@ -54,7 +54,7 @@ export function Sidebar({
           onClick={onNew}
           className="mx-3 mb-2 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-sidebar-hover transition"
         >
-          <NovaLogo className="w-6 h-6" />
+          <NovaLogo className="w-9 h-9" />
           <span>New chat</span>
         </button>
 
