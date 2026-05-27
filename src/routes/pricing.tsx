@@ -4,8 +4,9 @@ import { useState } from "react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { useUser } from "@/components/auth/ClerkSafe";
-import { SignInButton } from "@clerk/clerk-react";
+import { useClerk } from "@clerk/clerk-react";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
+
 
 
 export const Route = createFileRoute("/pricing")({
