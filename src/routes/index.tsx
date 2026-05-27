@@ -494,6 +494,8 @@ function NovaGPT() {
 
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
 
+      <SignUpPrompt open={signupPromptOpen} onOpenChange={setSignupPromptOpen} />
+
 
 
       <VoiceMode
