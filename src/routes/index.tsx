@@ -71,7 +71,9 @@ function NovaGPT() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setSettings(loadSettings());
+    const loaded = loadSettings();
+    setSettings(loaded);
+    applyThemeColors(loaded.theme);
     // When not signed in, wipe any previously stored chats on (re)load
     // so reloading the page clears history. Chats still persist in-session.
     if (clerkEnabled && !isSignedIn) {
@@ -82,6 +84,11 @@ function NovaGPT() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Re-apply theme whenever it changes
+  useEffect(() => {
+    applyThemeColors(settings.theme);
+  }, [settings.theme]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
