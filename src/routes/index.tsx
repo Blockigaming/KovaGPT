@@ -428,20 +428,7 @@ function NovaGPT() {
 
         {!active || active.messages.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4">
-            <NovaLogo className="w-14 h-14 mb-6" />
-            <h1 className="text-3xl font-semibold mb-8 text-center">What can I help with?</h1>
-            <div className="w-full max-w-3xl grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-              {SUGGESTIONS.map((s) => (
-                <button
-                  key={s.title}
-                  onClick={() => send(`${s.title} ${s.subtitle}`, [])}
-                  className="text-left rounded-2xl border border-border bg-card/50 hover:bg-card p-4 transition"
-                >
-                  <div className="font-medium text-sm">{s.title}</div>
-                  <div className="text-xs text-muted-foreground mt-1">{s.subtitle}</div>
-                </button>
-              ))}
-            </div>
+            <h1 className="text-2xl sm:text-3xl font-semibold mb-8 text-center">Ready when you are.</h1>
             <div className="w-full">
               <ChatInput
                 value={input}
