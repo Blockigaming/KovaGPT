@@ -148,7 +148,7 @@ export function ChatInput({
               value={value}
               onChange={(e) => onChange(e.target.value)}
               onKeyDown={handleKey}
-              placeholder={listening ? "Listening…" : "Message NovaGPT…"}
+              placeholder={listening ? "Listening…" : (placeholder ?? "Message NovaGPT…")}
               rows={1}
               className="flex-1 resize-none bg-transparent px-3 py-4 outline-none text-foreground placeholder:text-muted-foreground max-h-[200px]"
             />
@@ -173,12 +173,31 @@ export function ChatInput({
                 >
                   <Square className="w-4 h-4 fill-current" />
                 </button>
-              ) : (
+              ) : value.trim() || attachments.length > 0 ? (
                 <button
                   type="button"
                   onClick={onSubmit}
-                  disabled={!value.trim() && attachments.length === 0}
-                  className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed hover:opacity-80 transition"
+                  className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center hover:opacity-80 transition"
+                  aria-label="Send"
+                >
+                  <ArrowUp className="w-5 h-5" />
+                </button>
+              ) : onOpenVoice ? (
+                <button
+                  type="button"
+                  onClick={onOpenVoice}
+                  className="h-9 px-3 rounded-full bg-foreground text-background flex items-center gap-1.5 text-sm font-medium hover:opacity-80 transition"
+                  aria-label="Voice mode"
+                  title="Voice mode"
+                >
+                  <AudioLines className="w-4 h-4" />
+                  <span>Voice</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center opacity-30 cursor-not-allowed"
                   aria-label="Send"
                 >
                   <ArrowUp className="w-5 h-5" />
