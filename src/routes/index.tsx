@@ -45,7 +45,6 @@ const SUGGESTIONS = [
 ];
 
 const SETTINGS_KEY = "nova-gpt-settings-v1";
-const DEFAULT_SETTINGS: Settings = { autoSpeak: false, voiceRate: 1, voiceName: "" };
 
 function loadSettings(): Settings {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
