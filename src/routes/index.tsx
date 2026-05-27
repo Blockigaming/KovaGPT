@@ -209,7 +209,21 @@ function NovaGPT() {
           prev.map((c) => {
             if (c.id !== nextConvId) return c;
             const messages = c.messages.map((m) =>
-              m.id === assistantMsg.id ? { ...m, content: m.content + chunk } : m,
+              m.id === assistantMsg.id
+                ? { ...m, content: m.content + chunk, pendingImage: false }
+                : m,
+            );
+            return { ...c, messages, updatedAt: Date.now() };
+          }),
+        );
+      };
+
+      const markPendingImage = () => {
+        setConversations((prev) =>
+          prev.map((c) => {
+            if (c.id !== nextConvId) return c;
+            const messages = c.messages.map((m) =>
+              m.id === assistantMsg.id ? { ...m, pendingImage: true } : m,
             );
             return { ...c, messages, updatedAt: Date.now() };
           }),
