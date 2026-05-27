@@ -1,6 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Copy, Check, User, Volume2, VolumeX } from "lucide-react";
+import { Copy, Check, User, Volume2, VolumeX, ImageIcon, Loader2 } from "lucide-react";
 import { memo, useState } from "react";
 import type { Message } from "@/lib/chat-store";
 import { NovaLogo } from "./NovaLogo";
