@@ -127,6 +127,7 @@ type UserShape = {
   firstName?: string | null;
   fullName?: string | null;
   imageUrl?: string | null;
+  username?: string | null;
   primaryEmailAddress?: { emailAddress?: string };
   emailAddresses?: Array<{ emailAddress?: string }>;
 } | null;
