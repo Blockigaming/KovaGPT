@@ -107,13 +107,6 @@ export function Sidebar({
           <span>Search chats</span>
         </div>
 
-        <Link
-          to="/pricing"
-          className="mx-3 mb-3 flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition"
-        >
-          <Sparkles className="w-4 h-4" />
-          <span>View pricing plans</span>
-        </Link>
 
         <SignedIn>
           <div className="px-3 pb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
