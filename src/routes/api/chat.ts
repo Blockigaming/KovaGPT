@@ -247,13 +247,14 @@ export const Route = createFileRoute("/api/chat")({
                 ? "google/gemini-2.5-flash"
                 : "google/gemini-3.1-flash-lite-preview";
 
-          // Live web search: explicit user opt-in OR voice mode (so spoken
-          // answers about current events stay accurate). Run in parallel
-          // with model warmup is not possible here, but keep it tight.
+          // Live web data: NovaGPT always runs a web search when the user
+          // asks about something time-sensitive (today, latest, news, prices,
+          // scores, weather, etc.) or explicitly asks to search. This keeps
+          // answers grounded in real-time data without the user toggling it.
           let webBlock = "";
-          if ((user?.webSearch || voice) && lastText && !hasImages) {
-            const explicitSearch = /\b(search|google|look up|find online)\b/i.test(lastText);
-            if (explicitSearch || SEARCH_TRIGGER.test(lastText)) {
+          if (lastText && !hasImages) {
+            const explicitSearch = /\b(search|google|look up|find online|browse)\b/i.test(lastText);
+            if (explicitSearch || SEARCH_TRIGGER.test(lastText) || user?.webSearch || voice) {
               const result = await runWebSearch(lastText);
               if (result) webBlock = result;
             }
@@ -271,6 +272,7 @@ export const Route = createFileRoute("/api/chat")({
                 role: "system",
                 content:
                   m.systemPrompt +
+                  TONE_INSTRUCTION +
                   buildUserContextBlock(user) +
                   webBlock +
                   voiceInstruction +
