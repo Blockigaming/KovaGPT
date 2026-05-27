@@ -18,6 +18,7 @@ export function Sidebar({
   open,
   onToggle,
   onOpenSettings,
+  onOpenHelp,
 }: {
   conversations: Conversation[];
   activeId: string | null;
@@ -27,6 +28,7 @@ export function Sidebar({
   open: boolean;
   onToggle: () => void;
   onOpenSettings: () => void;
+  onOpenHelp: () => void;
 }) {
   const { user } = useUser();
   const [width, setWidth] = useState<number>(260);
