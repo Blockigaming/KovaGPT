@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -24,10 +24,12 @@ export function AuthDialog({
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Sync incoming mode when re-opened.
-  if (open && initialMode !== mode && !loading) {
-    // no-op: only set on first render of a session; UI toggle below handles user switching
-  }
+  useEffect(() => {
+    if (!open || loading) return;
+    setMode(initialMode);
+    setEmail("");
+    setPassword("");
+  }, [initialMode, open, loading]);
 
   const handleEmail = async (e: React.FormEvent) => {
     e.preventDefault();
