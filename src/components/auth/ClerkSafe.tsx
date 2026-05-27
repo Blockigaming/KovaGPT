@@ -1,227 +1,256 @@
-// Clerk auth shim.
+// Auth shim backed by Lovable Cloud (Supabase) auth.
 //
-// Goals:
-// 1) Never block initial render on Clerk loading — the page must show
-//    Log in / Sign up buttons immediately even if Clerk's hosted JS is
-//    slow, blocked, or unreachable (which is the case on origins that
-//    aren't bound to the publishable key, e.g. preview / local dev).
-// 2) Always make those buttons functional. If Clerk loads → modal opens.
-//    If Clerk never loads → redirect to the production sign-in URL.
-// 3) Keep the React tree (provider, hooks) identical between SSR and
-//    client to avoid hydration mismatches.
-import {
-  ClerkProvider as RealClerkProvider,
-  SignedIn,
-  SignedOut,
-  UserButton,
-  useClerk,
-  useUser as useClerkUser,
-} from "@clerk/clerk-react";
-import type { MouseEvent, ReactElement, ReactNode } from "react";
-import { Children, cloneElement, isValidElement, useEffect, useState } from "react";
+// Historically this file wrapped Clerk; consumers across the app import
+// `useUser`, `SignInButton`, `SignUpButton`, `UserButton`, `SignedIn`,
+// `SignedOut`, `ClerkProvider`, and `useClerkSafe` from here. We preserve
+// those exports so the rest of the app keeps working unchanged, but the
+// underlying implementation now uses Supabase auth (email/password + Google)
+// and renders a local <AuthDialog> for sign in/up.
 
-// Clerk publishable keys are public and safe to embed in client code.
-export const CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsubm92YS1haWdwdC5sb3ZhYmxlLmFwcCQ";
-const PROD_ORIGIN = "https://nova-aigpt.lovable.app";
-const CLERK_JS_URL = "https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js";
+import type { ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
+import { AuthDialog } from "@/components/auth/AuthDialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { LogOut, User as UserIcon } from "lucide-react";
 
 export const clerkEnabled = true;
 
-export function ClerkProvider({ children }: { children: ReactNode }) {
-  return (
-    <RealClerkProvider
-      publishableKey={CLERK_PUBLISHABLE_KEY}
-      clerkJSUrl={CLERK_JS_URL}
-      afterSignOutUrl="/"
-    >
-      <AuthQueryParamHandler />
-      {children}
-    </RealClerkProvider>
-  );
-}
+type AuthDialogState = { open: boolean; mode: "sign-in" | "sign-up" };
 
-// When users land on the production origin with ?sign-in=1 or ?sign-up=1
-// (e.g. redirected from the preview app where Clerk can't render its modal),
-// open the corresponding Clerk modal automatically and strip the param.
-function AuthQueryParamHandler() {
-  const mounted = useClientOnly();
-  const clerk = useClerk();
-  const { isLoaded } = useClerkUser();
+type AuthCtx = {
+  session: Session | null;
+  user: SupabaseUser | null;
+  isLoaded: boolean;
+  openAuth: (mode: "sign-in" | "sign-up") => void;
+  signOut: () => Promise<void>;
+};
+
+const Ctx = createContext<AuthCtx | null>(null);
+
+export function ClerkProvider({ children }: { children: ReactNode }) {
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [dialog, setDialog] = useState<AuthDialogState>({ open: false, mode: "sign-in" });
+
   useEffect(() => {
-    if (!mounted || !isLoaded || !clerk) return;
+    // Register listener first to capture token refresh / sign in events.
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+      setIsLoaded(true);
+    });
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setIsLoaded(true);
+    });
+    return () => {
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  // Support ?sign-in=1 / ?sign-up=1 deep links (legacy behavior).
+  useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const wantsSignIn = params.get("sign-in") === "1";
     const wantsSignUp = params.get("sign-up") === "1";
     if (!wantsSignIn && !wantsSignUp) return;
-    const redirectUrl = params.get("redirect_url") || window.location.origin + "/";
-    try {
-      if (wantsSignIn) clerk.openSignIn({ redirectUrl, afterSignInUrl: redirectUrl });
-      else clerk.openSignUp({ redirectUrl, afterSignUpUrl: redirectUrl });
-    } catch {
-      /* ignore */
-    }
-    // Clean the URL so reloads don't reopen the modal.
+    setDialog({ open: true, mode: wantsSignUp ? "sign-up" : "sign-in" });
     params.delete("sign-in");
     params.delete("sign-up");
     params.delete("redirect_url");
     const qs = params.toString();
-    const newUrl = window.location.pathname + (qs ? `?${qs}` : "") + window.location.hash;
-    window.history.replaceState({}, "", newUrl);
-  }, [mounted, isLoaded, clerk]);
-  return null;
-}
+    window.history.replaceState(
+      {},
+      "",
+      window.location.pathname + (qs ? `?${qs}` : "") + window.location.hash,
+    );
+  }, []);
 
-export { SignedIn, SignedOut, UserButton };
+  const openAuth = useCallback((mode: "sign-in" | "sign-up") => {
+    setDialog({ open: true, mode });
+  }, []);
 
-function prodAuthUrl(variant: "sign-in" | "sign-up") {
-  const redirect =
-    typeof window !== "undefined" && window.location.origin === PROD_ORIGIN
-      ? window.location.href
-      : `${PROD_ORIGIN}/`;
-  const path = variant === "sign-in" ? "sign-in" : "sign-up";
-  return `${PROD_ORIGIN}/?${path}=1&redirect_url=${encodeURIComponent(redirect)}`;
-}
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
+  }, []);
 
-function useClientOnly() {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  return mounted;
-}
+  const value = useMemo<AuthCtx>(
+    () => ({
+      session,
+      user: session?.user ?? null,
+      isLoaded,
+      openAuth,
+      signOut,
+    }),
+    [session, isLoaded, openAuth, signOut],
+  );
 
-function callChildOnClick(child: ReactNode, event: MouseEvent<HTMLElement>) {
-  if (!isValidElement(child)) return;
-  const props = (child as ReactElement<{ onClick?: (e: MouseEvent<HTMLElement>) => void }>).props;
-  props.onClick?.(event);
-}
-
-type ButtonLikeProps = {
-  className?: string;
-  children?: ReactNode;
-  onClick?: (e: MouseEvent<HTMLElement>) => void;
-  "aria-label"?: string;
-};
-
-type AuthButtonElement = ReactElement<ButtonLikeProps>;
-
-function isButtonElement(element: AuthButtonElement) {
-  return typeof element.type === "string" && element.type === "button";
-}
-
-function AuthButtonClient({
-  children,
-  variant,
-}: {
-  children?: ReactNode;
-  variant: "sign-in" | "sign-up";
-}) {
-  const clerk = useClerk();
-  const { isLoaded } = useClerkUser();
-  const clerkLoaded =
-    typeof clerk === "object" && clerk !== null && "loaded" in clerk
-      ? clerk.loaded !== false
-      : true;
-
-  const href = prodAuthUrl(variant);
-
-  const handleClick = (e: React.MouseEvent<HTMLElement>) => {
-    callChildOnClick(children, e as MouseEvent<HTMLElement>);
-    if (e.defaultPrevented) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const onProd = typeof window !== "undefined" && window.location.origin === PROD_ORIGIN;
-    if (onProd && isLoaded && clerkLoaded) {
-      try {
-        if (variant === "sign-in") clerk.openSignIn();
-        else clerk.openSignUp();
-        return;
-      } catch {
-        /* fall through to redirect */
-      }
-    }
-    if (typeof window !== "undefined") {
-      window.location.assign(href);
-    }
-  };
-
-  const child = Children.only(children) as AuthButtonElement;
-  if (isValidElement(child)) {
-    if (isButtonElement(child)) {
-      return (
-        <a
-          href={href}
-          onClick={handleClick}
-          className={child.props.className}
-          role="button"
-          aria-label={child.props["aria-label"]}
-        >
-          {child.props.children}
-        </a>
-      );
-    }
-    return cloneElement(child, { ...child.props, onClick: handleClick });
-  }
   return (
-    <a href={href} onClick={handleClick}>
-      {child}
-    </a>
+    <Ctx.Provider value={value}>
+      {children}
+      <AuthDialog
+        open={dialog.open}
+        mode={dialog.mode}
+        onOpenChange={(open) => setDialog((d) => ({ ...d, open }))}
+      />
+    </Ctx.Provider>
   );
 }
 
-function AuthButtonWrapper({
+function useAuthCtx(): AuthCtx {
+  const ctx = useContext(Ctx);
+  if (ctx) return ctx;
+  // Safe fallback for SSR / out-of-provider usage.
+  return {
+    session: null,
+    user: null,
+    isLoaded: false,
+    openAuth: () => {},
+    signOut: async () => {},
+  };
+}
+
+// ---- Hook compat surface --------------------------------------------------
+
+type UserShape = {
+  id: string;
+  email?: string;
+  firstName?: string | null;
+  fullName?: string | null;
+  imageUrl?: string | null;
+  primaryEmailAddress?: { emailAddress?: string };
+  emailAddresses?: Array<{ emailAddress?: string }>;
+} | null;
+
+function adaptUser(u: SupabaseUser | null): UserShape {
+  if (!u) return null;
+  const email = u.email ?? undefined;
+  const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
+  const fullName =
+    (meta.full_name as string | undefined) ?? (meta.name as string | undefined) ?? null;
+  const firstName = fullName ? fullName.split(" ")[0] : null;
+  const imageUrl =
+    (meta.avatar_url as string | undefined) ?? (meta.picture as string | undefined) ?? null;
+  return {
+    id: u.id,
+    email,
+    firstName,
+    fullName,
+    imageUrl,
+    primaryEmailAddress: email ? { emailAddress: email } : undefined,
+    emailAddresses: email ? [{ emailAddress: email }] : [],
+  };
+}
+
+export function useUser() {
+  const { user, isLoaded } = useAuthCtx();
+  const adapted = adaptUser(user);
+  return { user: adapted, isSignedIn: !!user, isLoaded };
+}
+
+// Compat with previous `useClerkSafe()?.openUserProfile()` callsites.
+export function useClerkSafe() {
+  const { openAuth } = useAuthCtx();
+  return {
+    openUserProfile: () => openAuth("sign-in"),
+  };
+}
+
+// ---- Button / gate components --------------------------------------------
+
+export function SignedIn({ children }: { children: ReactNode }) {
+  const { user, isLoaded } = useAuthCtx();
+  if (!isLoaded || !user) return null;
+  return <>{children}</>;
+}
+
+export function SignedOut({ children }: { children: ReactNode }) {
+  const { user, isLoaded } = useAuthCtx();
+  if (!isLoaded || user) return null;
+  return <>{children}</>;
+}
+
+function AuthTrigger({
   children,
   variant,
 }: {
   children?: ReactNode;
   variant: "sign-in" | "sign-up";
 }) {
-  return <AuthButtonClient variant={variant}>{children}</AuthButtonClient>;
-}
-
-export function SignInButton({
-  children,
-  mode: _mode,
-}: {
-  children?: ReactNode;
-  mode?: "modal" | "redirect";
-}) {
-  return <AuthButtonWrapper variant="sign-in">{children}</AuthButtonWrapper>;
-}
-
-export function SignUpButton({
-  children,
-  mode: _mode,
-}: {
-  children?: ReactNode;
-  mode?: "modal" | "redirect";
-}) {
-  return <AuthButtonWrapper variant="sign-up">{children}</AuthButtonWrapper>;
-}
-
-export function useUser() {
-  // Always call the same hooks in the same order, but during SSR (no window)
-  // and any environment where Clerk's provider context isn't established,
-  // return a deterministic signed-out state instead of letting Clerk throw.
-  const mounted = useClientOnly();
-  const { user, isSignedIn, isLoaded } = useClerkUser();
-  if (!mounted) {
-    return { user: null, isSignedIn: false, isLoaded: false };
-  }
-  if (!user) return { user: null, isSignedIn, isLoaded };
-  return {
-    isSignedIn,
-    isLoaded,
-    user: Object.assign(user, {
-      email: user.primaryEmailAddress?.emailAddress ?? user.emailAddresses?.[0]?.emailAddress,
-    }),
+  const { openAuth } = useAuthCtx();
+  const handleClick = (e: React.MouseEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openAuth(variant);
   };
+  // Wrap arbitrary children (often a <button>) so onClick is intercepted.
+  return (
+    <span onClick={handleClick} className="contents">
+      {children}
+    </span>
+  );
 }
 
-// SSR-safe wrapper around Clerk's useClerk(). Returns null during SSR or
-// when Clerk's provider context isn't established, so callers can do
-// `useClerkSafe()?.openUserProfile()` without crashing the server render.
-export function useClerkSafe() {
-  const mounted = useClientOnly();
-  const clerk = useClerk();
-  return mounted ? clerk : null;
+export function SignInButton({ children }: { children?: ReactNode; mode?: "modal" | "redirect" }) {
+  return <AuthTrigger variant="sign-in">{children}</AuthTrigger>;
+}
+
+export function SignUpButton({ children }: { children?: ReactNode; mode?: "modal" | "redirect" }) {
+  return <AuthTrigger variant="sign-up">{children}</AuthTrigger>;
+}
+
+// ---- UserButton -----------------------------------------------------------
+
+export function UserButton(_props?: {
+  afterSignOutUrl?: string;
+  appearance?: { elements?: { avatarBox?: string } };
+}) {
+  const { user, signOut } = useAuthCtx();
+  const adapted = adaptUser(user);
+  const avatar = adapted?.imageUrl;
+  const label =
+    adapted?.fullName || adapted?.email || "Account";
+  const initial = (adapted?.fullName || adapted?.email || "?").trim().charAt(0).toUpperCase();
+
+  if (!user) return null;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className="inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-border bg-muted text-xs font-medium text-foreground hover:opacity-90"
+        aria-label="Account menu"
+      >
+        {avatar ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={avatar} alt={label} className="h-full w-full object-cover" />
+        ) : (
+          <span>{initial}</span>
+        )}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="truncate">{label}</DropdownMenuLabel>
+        {adapted?.email && adapted.email !== label && (
+          <DropdownMenuLabel className="truncate text-xs font-normal text-muted-foreground">
+            {adapted.email}
+          </DropdownMenuLabel>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem disabled>
+          <UserIcon className="mr-2 h-4 w-4" /> Profile
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => signOut()}>
+          <LogOut className="mr-2 h-4 w-4" /> Sign out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
