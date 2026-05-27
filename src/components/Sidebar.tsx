@@ -189,7 +189,7 @@ export function Sidebar({
         </div>
 
         {/* Bottom: signed-in user card OR signed-out promo */}
-        <SignedIn>
+        {isSignedIn ? (
           <div className="border-t border-border p-3">
             <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-sidebar-hover transition">
               <UserButton />
@@ -201,8 +201,7 @@ export function Sidebar({
               </div>
             </div>
           </div>
-        </SignedIn>
-        <SignedOut>
+        ) : (
           <div className="border-t border-border p-4 space-y-3">
             <div>
               <div className="text-sm font-semibold mb-1">Get responses tailored to you</div>
@@ -216,8 +215,7 @@ export function Sidebar({
               </button>
             </SignInButton>
           </div>
-        </SignedOut>
-      </div>
+        )}
 
       {open && (
         <div
