@@ -146,6 +146,7 @@ function adaptUser(u: SupabaseUser | null): UserShape {
     email,
     firstName,
     fullName,
+    username: (meta.user_name as string | undefined) ?? (meta.preferred_username as string | undefined) ?? null,
     imageUrl,
     primaryEmailAddress: email ? { emailAddress: email } : undefined,
     emailAddresses: email ? [{ emailAddress: email }] : [],
