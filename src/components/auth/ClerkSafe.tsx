@@ -76,7 +76,10 @@ function AuthQueryParamHandler() {
 export { SignedIn, SignedOut, UserButton };
 
 function prodAuthUrl(variant: "sign-in" | "sign-up") {
-  const redirect = typeof window !== "undefined" ? window.location.href : PROD_ORIGIN;
+  const redirect =
+    typeof window !== "undefined" && window.location.origin === PROD_ORIGIN
+      ? window.location.href
+      : `${PROD_ORIGIN}/`;
   const path = variant === "sign-in" ? "sign-in" : "sign-up";
   return `${PROD_ORIGIN}/?${path}=1&redirect_url=${encodeURIComponent(redirect)}`;
 }
@@ -94,14 +97,6 @@ function AuthButtonWrapper({
   children?: ReactNode;
   variant: "sign-in" | "sign-up";
 }) {
-  // SSR/prerender path: render the child unchanged. Clerk hooks are not
-  // safe to call on the server when the SDK script hasn't initialized,
-  // and the click handler is meaningless without a window anyway.
-  const mounted = useClientOnly();
-  if (!mounted) {
-    const child = Children.only(children);
-    return isValidElement(child) ? (child as React.ReactElement) : <>{child}</>;
-  }
   return <AuthButtonClient variant={variant}>{children}</AuthButtonClient>;
 }
 
@@ -121,6 +116,8 @@ function AuthButtonClient({
     /* Clerk provider not available — fall back to redirect. */
   }
 
+  const href = prodAuthUrl(variant);
+
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -138,18 +135,30 @@ function AuthButtonClient({
       }
     }
     if (typeof window !== "undefined") {
-      window.location.href = prodAuthUrl(variant);
+      window.location.assign(href);
     }
   };
 
   const child = Children.only(children);
   if (isValidElement(child)) {
+    if (typeof child.type === "string" && child.type === "button") {
+      return (
+        <a
+          href={href}
+          onClick={handleClick}
+          className={child.props.className}
+          role="button"
+        >
+          {child.props.children}
+        </a>
+      );
+    }
     return cloneElement(child as React.ReactElement<any>, { onClick: handleClick });
   }
   return (
-    <button type="button" onClick={handleClick}>
+    <a href={href} onClick={handleClick}>
       {child}
-    </button>
+    </a>
   );
 }
 
