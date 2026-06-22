@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 const CANONICAL = "https://nova-aigpt.lovable.app/blog/ai-market-research-guide";
-const TITLE = "How to Use AI for Market Research in 2026 — A Step-by-Step Guide";
+const TITLE = "How to Use AI for Market Research in 2026  -  A Step-by-Step Guide";
 const DESCRIPTION =
   "A practical workflow for using AI to run market research in 2026: sizing markets, mapping competitors, and synthesizing trends with NovaGPT's Research and Reasoning modes.";
 
@@ -50,7 +50,7 @@ function MarketResearchGuide() {
       </h1>
       <p className="mb-8 text-lg text-muted-foreground">
         A repeatable workflow that turns vague questions like "is this market big enough?" into
-        a structured competitor map, sizing model, and trend brief — using AI as the analyst
+        a structured competitor map, sizing model, and trend brief  -  using AI as the analyst
         and you as the editor.
       </p>
 
@@ -60,7 +60,7 @@ function MarketResearchGuide() {
           Traditional market research is slow: surveys, analyst reports, manual SERP scraping,
           and weeks of synthesis. Modern AI assistants compress that loop. The catch is that
           general chatbots hallucinate numbers and miss recent events. The fix is a structured
-          workflow plus a model that can actually search the live web — that's where
+          workflow plus a model that can actually search the live web  -  that's where
           NovaGPT's <strong>Research</strong> and <strong>Reasoning</strong> modes earn their
           keep.
         </p>
@@ -80,7 +80,7 @@ function MarketResearchGuide() {
             sources for each number; flag any estimate older than 18 months."</em>
           </li>
           <li>
-            <strong>Map competitors.</strong> Ask for 8–12 competitors with pricing, target
+            <strong>Map competitors.</strong> Ask for 8-12 competitors with pricing, target
             segment, distribution channel, and recent funding. Have NovaGPT output a comparison
             table you can paste into a spreadsheet.
           </li>
@@ -101,7 +101,7 @@ function MarketResearchGuide() {
         <h2 className="text-2xl font-semibold">Why mode-switching matters</h2>
         <p>
           One-size-fits-all chatbots blur retrieval, reasoning, and writing into a single
-          response — which is exactly why they hallucinate in research. NovaGPT exposes the
+          response  -  which is exactly why they hallucinate in research. NovaGPT exposes the
           modes separately so you can grade each step on its own:
         </p>
         <ul className="list-disc space-y-2 pl-5">
@@ -155,7 +155,7 @@ function MarketResearchGuide() {
             reliable.
           </li>
           <li>
-            Running the whole workflow in one chat. Switch modes — research and synthesis
+            Running the whole workflow in one chat. Switch modes  -  research and synthesis
             reward different settings.
           </li>
           <li>

@@ -3,9 +3,10 @@ import { authFetch } from "@/lib/auth-fetch";
 import { useEffect, useState } from "react";
 import { PanelLeft, ChevronDown, ChevronLeft, ChevronRight, ImageIcon, ArrowUp, Mic, Loader2, Download, Trash2, History } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
-import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
+import { SettingsDialog } from "@/components/SettingsDialog";
 import { HelpDialog } from "@/components/HelpDialog";
 import { LoginPromptDialog } from "@/components/LoginPromptDialog";
+import { useNovaSettings } from "@/lib/use-nova-settings";
 import {
   SignInButton,
   SignUpButton,
@@ -18,13 +19,13 @@ export const Route = createFileRoute("/images")({
   component: ImagesPage,
   head: () => ({
     meta: [
-      { title: "AI Image Generation — NovaGPT" },
+      { title: "AI Image Generation | NovaGPT" },
       {
         name: "description",
         content:
           "Create AI-generated images from text prompts with NovaGPT. Explore styles, save your history, and download results in seconds.",
       },
-      { property: "og:title", content: "AI Image Generation — NovaGPT" },
+      { property: "og:title", content: "AI Image Generation | NovaGPT" },
       {
         property: "og:description",
         content: "Create AI-generated images from text prompts with NovaGPT.",
@@ -113,13 +114,14 @@ function saveHistory(userKey: string | null, items: HistoryItem[]) {
   try {
     localStorage.setItem(HISTORY_KEY_PREFIX + userKey, JSON.stringify(items.slice(0, HISTORY_LIMIT)));
   } catch {
-    /* quota — ignore */
+    /* quota  -  ignore */
   }
 }
 
 function ImagesPage() {
   const { isSignedIn, user } = useUser();
   const userKey = (user as any)?.id ?? null;
+  const [settings, setSettings] = useNovaSettings(userKey);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -421,9 +423,18 @@ function ImagesPage() {
       <SettingsDialog
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
-        settings={DEFAULT_SETTINGS as Settings}
-        onChange={() => {}}
-        onClearAll={() => {}}
+        settings={settings}
+        onChange={setSettings}
+        onClearAll={() => {
+          try {
+            for (const k of Object.keys(localStorage)) {
+              if (k.startsWith("novagpt-image-history-") || k.startsWith("nova-gpt-conversations")) {
+                localStorage.removeItem(k);
+              }
+            }
+          } catch { /* ignore */ }
+          setHistory([]);
+        }}
       />
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
       <LoginPromptDialog open={loginOpen} onOpenChange={setLoginOpen} />

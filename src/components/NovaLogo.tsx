@@ -5,7 +5,7 @@ export function NovaLogo({
   bare = false,
 }: {
   className?: string;
-  /** Render without the white circle background (rare — usually leave default) */
+  /** Render without the white circle background (rare  -  usually leave default) */
   bare?: boolean;
 }) {
   if (bare) {

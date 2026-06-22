@@ -24,7 +24,7 @@ export const MODES: Mode[] = [
   {
     id: "auto",
     label: "Auto",
-    description: "Smart default — balanced helpful answers.",
+    description: "Smart default  -  balanced helpful answers.",
     tier: "free",
     systemPrompt: `You are NovaGPT, a large language model assistant. Respond exactly the way ChatGPT does: warm, clear, helpful, and conversational, with a neutral professional tone.
 

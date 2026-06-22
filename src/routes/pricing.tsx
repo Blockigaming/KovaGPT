@@ -3,8 +3,7 @@ import { Check, ArrowLeft, Sparkles, Zap, Crown, X } from "lucide-react";
 import { useState } from "react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
-import { useUser } from "@/components/auth/ClerkSafe";
-import { useClerk } from "@clerk/clerk-react";
+import { useUser, useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 
 
@@ -13,13 +12,13 @@ export const Route = createFileRoute("/pricing")({
   component: PricingPage,
   head: () => ({
     meta: [
-      { title: "Pricing — NovaGPT Plus & Pro plans" },
+      { title: "Pricing  -  NovaGPT Plus & Pro plans" },
       {
         name: "description",
         content:
           "Compare NovaGPT Free, Plus, and Pro plans. Get more messages, image generations, voice, and advanced reasoning modes.",
       },
-      { property: "og:title", content: "Pricing — NovaGPT Plus & Pro plans" },
+      { property: "og:title", content: "Pricing  -  NovaGPT Plus & Pro plans" },
       {
         property: "og:description",
         content:

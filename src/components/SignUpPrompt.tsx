@@ -20,7 +20,7 @@ export function SignUpPrompt({
           <DialogTitle className="text-center">Save your conversation</DialogTitle>
           <DialogDescription className="text-center">
             You've sent 5 messages. Create a free account or sign in to save this
-            chat and pick up where you left off — on any device.
+            chat and pick up where you left off  -  on any device.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2 mt-2">

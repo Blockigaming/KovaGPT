@@ -4,7 +4,7 @@
 const ADAM_LIKE = [
   "Adam",
   "Microsoft Adam Online (Natural) - English (United States)",
-  "Daniel", // macOS / iOS — deep British male, closest to Adam
+  "Daniel", // macOS / iOS  -  deep British male, closest to Adam
   "Google UK English Male",
   "Microsoft Guy Online (Natural) - English (United States)",
   "Microsoft Guy",
@@ -69,7 +69,7 @@ export function friendlyVoiceLabel(v: SpeechSynthesisVoice): string {
     .replace(/\s+\(.*?\)/g, "")
     .trim();
   const main = [region, gender].filter(Boolean).join(" ");
-  return `${main} — ${cleaned}`;
+  return `${main}  -  ${cleaned}`;
 }
 
 export function defaultVoiceName(): string {

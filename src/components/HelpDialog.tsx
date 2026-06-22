@@ -34,7 +34,7 @@ export function HelpDialog({
           </Section>
 
           <Section icon={<Mic className="w-4 h-4" />} title="Voice mode">
-            Tap the <strong>Voice</strong> button in the header. Just talk —
+            Tap the <strong>Voice</strong> button in the header. Just talk  - 
             NovaGPT replies out loud. Start speaking again to interrupt.
           </Section>
 
@@ -51,9 +51,9 @@ export function HelpDialog({
 
           <Section icon={<Keyboard className="w-4 h-4" />} title="Keyboard shortcuts">
             <ul className="mt-1 space-y-1 text-muted-foreground">
-              <li><kbd className="px-1.5 py-0.5 rounded border text-xs">Enter</kbd> — send message</li>
-              <li><kbd className="px-1.5 py-0.5 rounded border text-xs">Shift</kbd> + <kbd className="px-1.5 py-0.5 rounded border text-xs">Enter</kbd> — new line</li>
-              <li><kbd className="px-1.5 py-0.5 rounded border text-xs">Esc</kbd> — close dialogs</li>
+              <li><kbd className="px-1.5 py-0.5 rounded border text-xs">Enter</kbd>  -  send message</li>
+              <li><kbd className="px-1.5 py-0.5 rounded border text-xs">Shift</kbd> + <kbd className="px-1.5 py-0.5 rounded border text-xs">Enter</kbd>  -  new line</li>
+              <li><kbd className="px-1.5 py-0.5 rounded border text-xs">Esc</kbd>  -  close dialogs</li>
             </ul>
           </Section>
 

@@ -152,7 +152,7 @@
   to { visibility: hidden; }
 }
 
-/* Peaceful pulsing dots — shown before the first token arrives */
+/* Peaceful pulsing dots  -  shown before the first token arrives */
 .thinking-dots {
   display: inline-flex;
   align-items: center;

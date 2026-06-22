@@ -47,7 +47,7 @@ export function AuthDialog({
         });
         if (error) throw error;
         // Supabase returns success with an empty identities array when the
-        // email is already registered but unconfirmed — no email is sent
+        // email is already registered but unconfirmed  -  no email is sent
         // in that case. Explicitly trigger a resend so the user always
         // gets a verification email.
         const isRepeat = !!data.user && (data.user.identities?.length ?? 0) === 0;
@@ -58,7 +58,7 @@ export function AuthDialog({
             options: { emailRedirectTo: `${window.location.origin}/` },
           });
           if (resendErr) throw resendErr;
-          toast.success("Already registered — we resent the verification link. Check your inbox & spam.");
+          toast.success("Already registered  -  we resent the verification link. Check your inbox & spam.");
         } else {
           toast.success("Verification email sent. Check your inbox & spam folder.");
         }
@@ -73,7 +73,7 @@ export function AuthDialog({
               email,
               options: { emailRedirectTo: `${window.location.origin}/` },
             });
-            toast.error("Please verify your email — we just resent the link.");
+            toast.error("Please verify your email  -  we just resent the link.");
             return;
           }
           throw error;

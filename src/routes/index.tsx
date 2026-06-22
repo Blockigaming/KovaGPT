@@ -39,20 +39,20 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "NovaGPT is an advanced multimodal AI assistant for chat, coding, research, image generation, and voice — with specialized modes for focused work.",
+          "NovaGPT is an advanced multimodal AI assistant for chat, coding, research, image generation, and voice  -  with specialized modes for focused work.",
       },
       { property: "og:title", content: "NovaGPT" },
       {
         property: "og:description",
         content:
-          "Chat, code, research, generate images, and use voice — with specialized modes for focused work.",
+          "Chat, code, research, generate images, and use voice  -  with specialized modes for focused work.",
       },
       { property: "og:url", content: "https://nova-aigpt.lovable.app/" },
       { name: "twitter:title", content: "NovaGPT" },
       {
         name: "twitter:description",
         content:
-          "Chat, code, research, generate images, and use voice — with specialized modes for focused work.",
+          "Chat, code, research, generate images, and use voice  -  with specialized modes for focused work.",
       },
     ],
     links: [{ rel: "canonical", href: "https://nova-aigpt.lovable.app/" }],

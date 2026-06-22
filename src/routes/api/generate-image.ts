@@ -5,7 +5,7 @@ import { DAILY_IMAGE_LIMIT, enforceQuota, requireUser } from "@/lib/api-auth.ser
 // Falls back gracefully so a single model outage doesn't break the page.
 const MODELS = [
   "openai/gpt-image-2",
-  "google/gemini-3.1-flash-image-preview",
+  "google/gemini-3.1-flash-image",
   "google/gemini-2.5-flash-image",
 ] as const;
 
@@ -112,7 +112,7 @@ export const Route = createFileRoute("/api/generate-image")({
               );
             }
             // Stop early on rate-limit / payment so the user gets a clear signal.
-            if (result.status === 429) return jsonError("Rate limit — try again in a moment.", 429);
+            if (result.status === 429) return jsonError("Rate limit  -  try again in a moment.", 429);
             if (result.status === 402) return jsonError("AI credits exhausted.", 402);
             lastError = result.error ?? lastError;
             lastStatus = result.status;
