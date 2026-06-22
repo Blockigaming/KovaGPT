@@ -56,11 +56,6 @@ const EXAMPLES: { label: string; prompt: string; src: string }[] = [
     src: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=70",
   },
   {
-    label: "Astronaut on Mars",
-    prompt: "An astronaut walking on Mars at golden hour, dramatic shadows, hyperreal detail",
-    src: "https://images.unsplash.com/photo-1457364887197-9150188c107b?auto=format&fit=crop&w=600&q=70",
-  },
-  {
     label: "Watercolor mountains",
     prompt: "Soft watercolor painting of misty mountains and pine forest, pastel palette",
     src: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=600&q=70",
@@ -70,11 +65,7 @@ const EXAMPLES: { label: string; prompt: string; src: string }[] = [
     prompt: "Anime style girl on a rooftop watching a vivid sunset, Makoto Shinkai inspired",
     src: "https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=600&q=70",
   },
-  {
-    label: "Chibi sticker pack",
-    prompt: "Cute chibi sticker of a fox wizard, vector style, white background",
-    src: "https://images.unsplash.com/photo-1612392061787-2d078b3e573a?auto=format&fit=crop&w=600&q=70",
-  },
+
   {
     label: "Product render",
     prompt: "Studio product render of futuristic wireless headphones on a marble pedestal",
