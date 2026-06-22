@@ -6,6 +6,18 @@ import type { Message } from "@/lib/chat-store";
 import { NovaLogo } from "./NovaLogo";
 import { speak, stopSpeaking, isSpeaking } from "@/lib/voice";
 
+// Strip numbered citation markers like [1], [2], [3] that web-search-augmented
+// answers sometimes still inject, and normalize en/em dashes to a hyphen
+// so the assistant never shows them in the UI.
+function cleanAssistantText(text: string): string {
+  return text
+    .replace(/\s?\[\d+\](?:\[\d+\])*/g, "")
+    .replace(/\s?\[\d+(?:\s*,\s*\d+)+\]/g, "")
+    .replace(/[\u2013\u2014]/g, "-");
+}
+
+
+
 function ChatMessageInner({
   message,
   streaming,
