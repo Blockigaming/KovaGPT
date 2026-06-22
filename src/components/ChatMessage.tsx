@@ -86,8 +86,11 @@ function ChatMessageInner({
                   <span /><span /><span />
                 </div>
               ) : (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {cleanAssistantText(message.content)}
+                </ReactMarkdown>
               )}
+
               {streaming && message.content && <span className="cursor-blink" />}
             </div>
           )}
