@@ -9,13 +9,16 @@ export const Route = createFileRoute("/checkout/return")({
   component: CheckoutReturn,
   head: () => ({
     meta: [
-      { title: "Payment Successful  -  NovaGPT Subscription Active" },
+      { title: "Payment Successful - NovaGPT Subscription Active" },
       {
         name: "description",
         content:
-          "Your NovaGPT subscription is now active. Access advanced multimodal AI modes, web search, image generation, and priority models on every device.",
+          "Your NovaGPT subscription is now active. Access advanced AI modes, web search, image generation, and priority models on every device.",
       },
+      { name: "robots", content: "noindex, nofollow" },
+      { property: "og:url", content: "https://nova-aigpt.lovable.app/checkout/return" },
     ],
+    links: [{ rel: "canonical", href: "https://nova-aigpt.lovable.app/checkout/return" }],
   }),
 });
 

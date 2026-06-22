@@ -63,7 +63,7 @@ function ChatMessageInner({
                 <img
                   key={i}
                   src={a.dataUrl}
-                  alt="Message attachment"
+                  alt={message.content?.trim() ? `User-uploaded image: ${message.content.slice(0, 120)}` : "User-uploaded image attached to message"}
                   className="max-h-64 rounded-lg border border-border"
                 />
               ))}
