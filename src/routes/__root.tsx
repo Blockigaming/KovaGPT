@@ -68,7 +68,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "NovaGPT — Advanced Multimodal AI Assistant" },
+      { name: "application-name", content: "NovaGPT" },
       { name: "author", content: "NovaGPT" },
       { property: "og:site_name", content: "NovaGPT" },
       { property: "og:type", content: "website" },
