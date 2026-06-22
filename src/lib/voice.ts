@@ -1,20 +1,25 @@
 // Browser-native TTS and STT helpers (Web Speech API)
 
-// Adam-like deep male English voices, in order of preference
-const ADAM_LIKE = [
-  "Adam",
-  "Microsoft Adam Online (Natural) - English (United States)",
-  "Daniel", // macOS / iOS  -  deep British male, closest to Adam
-  "Google UK English Male",
+// Preferred voices for clarity. Natural/Neural voices first — they sound
+// much more like the actual text. Adam-like deep male English fallbacks.
+const PREFERRED_VOICES = [
+  // Highest-quality "natural" / "neural" voices first
   "Microsoft Guy Online (Natural) - English (United States)",
-  "Microsoft Guy",
   "Microsoft Davis Online (Natural) - English (United States)",
-  "Microsoft Davis",
+  "Microsoft Andrew Online (Natural) - English (United States)",
+  "Microsoft Brian Online (Natural) - English (United States)",
   "Microsoft Ryan Online (Natural) - English (United Kingdom)",
-  "Microsoft Ryan",
-  "Alex",
   "Google US English",
+  "Google UK English Male",
+  // macOS / iOS premium voices
+  "Daniel",
+  "Alex",
+  // Generic fallbacks
+  "Microsoft Guy",
+  "Microsoft Davis",
+  "Microsoft Ryan",
 ];
+
 
 let cachedVoices: SpeechSynthesisVoice[] = [];
 
