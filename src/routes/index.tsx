@@ -9,7 +9,10 @@ import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
 
 import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 import { HelpDialog } from "@/components/HelpDialog";
+import { LimitReachedDialog } from "@/components/LimitReachedDialog";
 import { applyThemeColors } from "@/lib/theme";
+import { getUsage } from "@/lib/limits";
+
 import { VoiceMode } from "@/components/VoiceMode";
 import {
   useUser,
