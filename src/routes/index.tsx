@@ -161,6 +161,45 @@ function NovaGPT() {
     [conversations, activeId],
   );
 
+  // Personalized greeting for the landing screen.
+  const firstName = useMemo(() => {
+    const candidate =
+      settings.displayName?.trim() ||
+      (user as any)?.firstName ||
+      (user as any)?.username ||
+      (user as any)?.fullName?.split(" ")[0] ||
+      "";
+    return typeof candidate === "string" ? candidate.split(" ")[0] : "";
+  }, [settings.displayName, user]);
+
+  const greeting = useMemo(() => {
+    if (clerkEnabled && !isSignedIn) return "NovaGPT";
+    const name = firstName;
+    const prompts = name
+      ? [
+          `What's on your mind today, ${name}?`,
+          `Ready when you are, ${name}.`,
+          `Where should we start, ${name}?`,
+          `Good to see you, ${name}. What are we building?`,
+          `Hey ${name}, what can I help you figure out?`,
+          `What's the plan, ${name}?`,
+          `Got an idea brewing, ${name}?`,
+          `What are you curious about today, ${name}?`,
+        ]
+      : [
+          "What's on your mind today?",
+          "Ready when you are.",
+          "Where should we start?",
+          "What can I help you with?",
+          "What are you working on?",
+          "Got something to figure out?",
+        ];
+    // Pick once per mount so it doesn't flicker on every render.
+    return prompts[Math.floor(Math.random() * prompts.length)];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firstName, isSignedIn]);
+
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [active?.messages.length, isStreaming]);
