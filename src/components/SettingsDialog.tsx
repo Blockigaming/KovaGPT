@@ -707,10 +707,12 @@ export function SettingsDialog({
             )}
           </TabsContent>
         </Tabs>
+        )}
       </DialogContent>
     </Dialog>
   );
 }
+
 
 function LockedTab({
   title,
