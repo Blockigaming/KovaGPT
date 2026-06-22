@@ -34,14 +34,30 @@ export const Route = createFileRoute("/")({
   component: NovaGPT,
   head: () => ({
     meta: [
-      { title: "NovaGPT" },
+      { title: "NovaGPT — Advanced Multimodal AI Assistant" },
       {
         name: "description",
-        content: "NovaGPT — your intelligent AI assistant.",
+        content:
+          "NovaGPT is an advanced multimodal AI assistant for chat, coding, research, image generation, and voice — with specialized modes for focused work.",
+      },
+      { property: "og:title", content: "NovaGPT — Advanced Multimodal AI Assistant" },
+      {
+        property: "og:description",
+        content:
+          "Chat, code, research, generate images, and use voice — with specialized modes for focused work.",
+      },
+      { property: "og:url", content: "https://nova-aigpt.lovable.app/" },
+      { name: "twitter:title", content: "NovaGPT — Advanced Multimodal AI Assistant" },
+      {
+        name: "twitter:description",
+        content:
+          "Chat, code, research, generate images, and use voice — with specialized modes for focused work.",
       },
     ],
+    links: [{ rel: "canonical", href: "https://nova-aigpt.lovable.app/" }],
   }),
 });
+
 
 const SETTINGS_KEY_BASE = "nova-gpt-settings-v1";
 function settingsKey(userKey: string | null) {

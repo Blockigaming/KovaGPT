@@ -17,11 +17,24 @@ export const Route = createFileRoute("/images")({
   component: ImagesPage,
   head: () => ({
     meta: [
-      { title: "Images — NovaGPT" },
-      { name: "description", content: "Create and explore AI-generated images with NovaGPT." },
+      { title: "AI Image Generation — NovaGPT" },
+      {
+        name: "description",
+        content:
+          "Create AI-generated images from text prompts with NovaGPT. Explore styles, save your history, and download results in seconds.",
+      },
+      { property: "og:title", content: "AI Image Generation — NovaGPT" },
+      {
+        property: "og:description",
+        content: "Create AI-generated images from text prompts with NovaGPT.",
+      },
+      { property: "og:url", content: "https://nova-aigpt.lovable.app/images" },
+      { property: "og:type", content: "website" },
     ],
+    links: [{ rel: "canonical", href: "https://nova-aigpt.lovable.app/images" }],
   }),
 });
+
 
 // Curated AI-art style example images (Unsplash, free to use).
 const EXAMPLES: { label: string; prompt: string; src: string }[] = [
@@ -281,7 +294,7 @@ function ImagesPage() {
                 )}
                 {result && (
                   <div className="p-3">
-                    <img src={result} alt="Generated" className="w-full max-w-md mx-auto rounded-xl" />
+                    <img src={result} alt="AI generated result" className="w-full max-w-md mx-auto rounded-xl" />
                     <div className="flex justify-center mt-3">
                       <a
                         href={result}
