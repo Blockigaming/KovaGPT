@@ -13,6 +13,7 @@ import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ImagesRouteImport } from './routes/images'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
+import { Route as BlogBestAiAssistantsRouteImport } from './routes/blog.best-ai-assistants'
 import { Route as ApiTitleRouteImport } from './routes/api/title'
 import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
@@ -35,6 +36,11 @@ const IndexRoute = IndexRouteImport.update({
 const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
   id: '/checkout/return',
   path: '/checkout/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogBestAiAssistantsRoute = BlogBestAiAssistantsRouteImport.update({
+  id: '/blog/best-ai-assistants',
+  path: '/blog/best-ai-assistants',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiTitleRoute = ApiTitleRouteImport.update({
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/title': typeof ApiTitleRoute
+  '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
   '/checkout/return': typeof CheckoutReturnRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/title': typeof ApiTitleRoute
+  '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
   '/checkout/return': typeof CheckoutReturnRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/title': typeof ApiTitleRoute
+  '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
   '/checkout/return': typeof CheckoutReturnRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/generate-image'
     | '/api/title'
+    | '/blog/best-ai-assistants'
     | '/checkout/return'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/generate-image'
     | '/api/title'
+    | '/blog/best-ai-assistants'
     | '/checkout/return'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/generate-image'
     | '/api/title'
+    | '/blog/best-ai-assistants'
     | '/checkout/return'
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +130,7 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRoute
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
   ApiTitleRoute: typeof ApiTitleRoute
+  BlogBestAiAssistantsRoute: typeof BlogBestAiAssistantsRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
 }
 
@@ -151,6 +164,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutReturnRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blog/best-ai-assistants': {
+      id: '/blog/best-ai-assistants'
+      path: '/blog/best-ai-assistants'
+      fullPath: '/blog/best-ai-assistants'
+      preLoaderRoute: typeof BlogBestAiAssistantsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/title': {
       id: '/api/title'
       path: '/api/title'
@@ -182,18 +202,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRoute,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
   ApiTitleRoute: ApiTitleRoute,
+  BlogBestAiAssistantsRoute: BlogBestAiAssistantsRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
