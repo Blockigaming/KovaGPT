@@ -119,6 +119,7 @@ function saveHistory(userKey: string | null, items: HistoryItem[]) {
 }
 
 function ImagesPage() {
+  const navigate = useNavigate();
   const { isSignedIn, user } = useUser();
   const userKey = (user as any)?.id ?? null;
   const [settings, setSettings] = useNovaSettings(userKey);
