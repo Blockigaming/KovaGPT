@@ -35,20 +35,20 @@ export const Route = createFileRoute("/")({
   component: NovaGPT,
   head: () => ({
     meta: [
-      { title: "NovaGPT — Advanced Multimodal AI Assistant" },
+      { title: "NovaGPT" },
       {
         name: "description",
         content:
           "NovaGPT is an advanced multimodal AI assistant for chat, coding, research, image generation, and voice — with specialized modes for focused work.",
       },
-      { property: "og:title", content: "NovaGPT — Advanced Multimodal AI Assistant" },
+      { property: "og:title", content: "NovaGPT" },
       {
         property: "og:description",
         content:
           "Chat, code, research, generate images, and use voice — with specialized modes for focused work.",
       },
       { property: "og:url", content: "https://nova-aigpt.lovable.app/" },
-      { name: "twitter:title", content: "NovaGPT — Advanced Multimodal AI Assistant" },
+      { name: "twitter:title", content: "NovaGPT" },
       {
         name: "twitter:description",
         content:
@@ -459,8 +459,7 @@ function NovaGPT() {
         {!active || active.messages.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4">
             <h1 className="text-2xl sm:text-3xl font-semibold mb-8 text-center">
-              NovaGPT — Advanced Multimodal AI Assistant
-
+              NovaGPT
             </h1>
             <div className="w-full">
               <ChatInput
