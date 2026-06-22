@@ -459,7 +459,8 @@ function NovaGPT() {
         {!active || active.messages.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4">
             <h1 className="text-2xl sm:text-3xl font-semibold mb-8 text-center">
-              Ready when you are.
+              NovaGPT — Advanced Multimodal AI Assistant
+
             </h1>
             <div className="w-full">
               <ChatInput
