@@ -212,7 +212,7 @@ function ImagesPage() {
         conversations={[]}
         activeId={null}
         onSelect={() => {}}
-        onNew={() => navigate({ to: "/", search: { new: Date.now() } as any })}
+        onNew={() => navigate({ to: "/" })}
         onDelete={() => {}}
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
