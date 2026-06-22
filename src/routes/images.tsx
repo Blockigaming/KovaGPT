@@ -123,6 +123,9 @@ function ImagesPage() {
   const [result, setResult] = useState<string | null>(null);
   const [resultPrompt, setResultPrompt] = useState<string>("");
   const [loginOpen, setLoginOpen] = useState(false);
+  const [limitOpen, setLimitOpen] = useState(false);
+  const [limitMessage, setLimitMessage] = useState<string | undefined>(undefined);
+
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [examplePage, setExamplePage] = useState(0);
   const EXAMPLES_PER_PAGE = 10;
