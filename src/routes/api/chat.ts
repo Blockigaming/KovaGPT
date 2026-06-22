@@ -373,21 +373,25 @@ export const Route = createFileRoute("/api/chat")({
           // Default to a smart, fast streaming model. Escalate when needed.
           const model = voice
             ? "google/gemini-3.1-flash-lite"
-            : m.id === "reason"
-              ? "google/gemini-3.1-pro-preview"
-              : hasImages
-                ? "google/gemini-2.5-pro"
-                : "google/gemini-3.5-flash";
+            : m.id === "fast"
+              ? "google/gemini-3.1-flash-lite"
+              : m.id === "reason"
+                ? "google/gemini-3.1-pro-preview"
+                : hasImages
+                  ? "google/gemini-2.5-pro"
+                  : "google/gemini-3.5-flash";
 
           // Live web data is on for everyone by default. Users can still opt
           // out in settings except for explicit/time-sensitive search asks.
+          // Fast mode skips web search entirely to stay instant.
           let webBlock = "";
-          if (lastText && !hasImages) {
+          if (lastText && !hasImages && m.id !== "fast") {
             if (shouldRunWebSearch(lastText, user?.webSearch) || voice) {
               const result = await runWebSearch(lastText, NEWS_TRIGGER.test(lastText) || !!voice);
               if (result) webBlock = result;
             }
           }
+
 
           const voiceInstruction = voice
             ? `\n\nVOICE MODE: Your reply will be spoken aloud by a text-to-speech engine. Reply in natural, conversational spoken English with complete grammatical sentences. Use proper punctuation so sentences flow. Do NOT use markdown, bullet points, headings, code blocks, emojis, URLs, or symbols. Keep answers concise  -  usually 1 to 3 sentences unless the user explicitly asks for detail.`

@@ -151,14 +151,29 @@ export function SettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[88vh] overflow-hidden flex flex-col gap-0 p-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
-          <DialogTitle className="text-lg font-semibold tracking-tight">Settings</DialogTitle>
-          <p className="text-xs text-muted-foreground mt-1">
-            {loggedIn
-              ? "Personalize NovaGPT. Changes save to your account automatically."
-              : "Sign in to view and change your settings."}
-          </p>
+      <DialogContent className="max-w-3xl max-h-[88vh] overflow-hidden flex flex-col gap-0 p-0 border border-border/60 shadow-2xl">
+        <DialogHeader className="relative px-6 pt-6 pb-5 border-b border-border overflow-hidden">
+          <div
+            aria-hidden
+            className="absolute inset-0 -z-10 opacity-90"
+            style={{
+              background:
+                "radial-gradient(120% 80% at 0% 0%, hsl(var(--primary) / 0.18), transparent 60%), radial-gradient(120% 80% at 100% 0%, hsl(var(--primary) / 0.10), transparent 55%)",
+            }}
+          />
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/40 flex items-center justify-center shadow-sm">
+              <Sparkles className="w-5 h-5 text-primary-foreground" />
+            </div>
+            <div className="min-w-0">
+              <DialogTitle className="text-xl font-semibold tracking-tight">Settings</DialogTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {loggedIn
+                  ? `Personalize NovaGPT${user?.firstName ? `, ${user.firstName}` : ""}. Changes save automatically.`
+                  : "Sign in to view and change your settings."}
+              </p>
+            </div>
+          </div>
         </DialogHeader>
 
         {!loggedIn ? (
@@ -171,32 +186,26 @@ export function SettingsDialog({
           </div>
         ) : (
         <Tabs defaultValue="general" className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="flex w-full overflow-x-auto justify-start gap-1 h-auto p-1 mx-6 mt-4 mb-2 max-w-[calc(100%-3rem)] bg-muted/60 rounded-lg">
-            <TabsTrigger value="general" className="shrink-0 gap-1.5 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <Sparkles className="w-4 h-4 hidden sm:inline" />
-              General
-            </TabsTrigger>
-            <TabsTrigger value="personalization" className="shrink-0 gap-1.5 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <User2 className="w-4 h-4 hidden sm:inline" />
-              You
-            </TabsTrigger>
-            <TabsTrigger value="behavior" className="shrink-0 gap-1.5 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <MessageSquare className="w-4 h-4 hidden sm:inline" />
-              Behavior
-            </TabsTrigger>
-            <TabsTrigger value="appearance" className="shrink-0 gap-1.5 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <Palette className="w-4 h-4 hidden sm:inline" />
-              Appearance
-            </TabsTrigger>
-            <TabsTrigger value="billing" className="shrink-0 gap-1.5 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <CreditCard className="w-4 h-4 hidden sm:inline" />
-              Billing
-            </TabsTrigger>
-            <TabsTrigger value="security" className="shrink-0 gap-1.5 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <ShieldCheck className="w-4 h-4 hidden sm:inline" />
-              Security
-            </TabsTrigger>
+          <TabsList className="flex w-full overflow-x-auto justify-start gap-1 h-auto p-1.5 mx-6 mt-4 mb-2 max-w-[calc(100%-3rem)] bg-muted/50 rounded-full border border-border/50">
+            {[
+              { v: "general", icon: Sparkles, label: "General" },
+              { v: "personalization", icon: User2, label: "You" },
+              { v: "behavior", icon: MessageSquare, label: "Behavior" },
+              { v: "appearance", icon: Palette, label: "Appearance" },
+              { v: "billing", icon: CreditCard, label: "Billing" },
+              { v: "security", icon: ShieldCheck, label: "Security" },
+            ].map(({ v, icon: Icon, label }) => (
+              <TabsTrigger
+                key={v}
+                value={v}
+                className="shrink-0 gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {label}
+              </TabsTrigger>
+            ))}
           </TabsList>
+
 
           {/* GENERAL  -  voice + usage + data */}
           {/* GENERAL  -  voice + usage + data (always available) */}

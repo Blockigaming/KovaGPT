@@ -1,20 +1,25 @@
 // Browser-native TTS and STT helpers (Web Speech API)
 
-// Adam-like deep male English voices, in order of preference
-const ADAM_LIKE = [
-  "Adam",
-  "Microsoft Adam Online (Natural) - English (United States)",
-  "Daniel", // macOS / iOS  -  deep British male, closest to Adam
-  "Google UK English Male",
+// Preferred voices for clarity. Natural/Neural voices first — they sound
+// much more like the actual text. Adam-like deep male English fallbacks.
+const PREFERRED_VOICES = [
+  // Highest-quality "natural" / "neural" voices first
   "Microsoft Guy Online (Natural) - English (United States)",
-  "Microsoft Guy",
   "Microsoft Davis Online (Natural) - English (United States)",
-  "Microsoft Davis",
+  "Microsoft Andrew Online (Natural) - English (United States)",
+  "Microsoft Brian Online (Natural) - English (United States)",
   "Microsoft Ryan Online (Natural) - English (United Kingdom)",
-  "Microsoft Ryan",
-  "Alex",
   "Google US English",
+  "Google UK English Male",
+  // macOS / iOS premium voices
+  "Daniel",
+  "Alex",
+  // Generic fallbacks
+  "Microsoft Guy",
+  "Microsoft Davis",
+  "Microsoft Ryan",
 ];
+
 
 let cachedVoices: SpeechSynthesisVoice[] = [];
 
@@ -74,30 +79,61 @@ export function friendlyVoiceLabel(v: SpeechSynthesisVoice): string {
 
 export function defaultVoiceName(): string {
   const voices = getVoices();
-  for (const name of ADAM_LIKE) {
+  for (const name of PREFERRED_VOICES) {
     const hit = voices.find((v) => v.name === name);
     if (hit) return hit.name;
   }
+  // Prefer any "Natural" / "Neural" voice for clarity
+  const natural = voices.find(
+    (v) => v.lang?.startsWith("en") && /natural|neural|online/i.test(v.name),
+  );
+  if (natural) return natural.name;
   // Any English male-ish fallback
   const enMale = voices.find(
-    (v) => v.lang?.startsWith("en") && /male|guy|david|daniel|alex|ryan/i.test(v.name),
+    (v) => v.lang?.startsWith("en") && /male|guy|david|daniel|alex|ryan|andrew|brian/i.test(v.name),
   );
   if (enMale) return enMale.name;
   const en = voices.find((v) => v.lang?.startsWith("en"));
   return en?.name ?? voices[0]?.name ?? "";
 }
 
-// Split long text into sentence-ish chunks so the synth queue can be flushed quickly on interrupt
-function chunkText(text: string): string[] {
-  const clean = text
-    .replace(/```[\s\S]*?```/g, " code block ")
-    .replace(/[#*_`>]/g, "")
+
+// Clean text so the TTS speaks what the user actually reads:
+// strip markdown syntax, code, URLs, emojis, and normalize whitespace.
+function cleanForSpeech(text: string): string {
+  return text
+    // Remove fenced code blocks entirely (they sound like noise)
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    // Markdown images → drop alt text & URL
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    // Markdown links → keep visible text only
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    // Bare URLs
+    .replace(/https?:\/\/\S+/g, " ")
+    // Headings, blockquotes, list bullets
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+    .replace(/^\s{0,3}>\s+/gm, "")
+    .replace(/^\s*[-*+]\s+/gm, "")
+    // Bold/italic/underline markers
+    .replace(/(\*\*|__|\*|_|~~)/g, "")
+    // Tables: drop pipes
+    .replace(/\|/g, " ")
+    // Emojis & most symbols (keep letters, numbers, punctuation, whitespace)
+    .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "")
+    .replace(/[#>`]/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+// Split long text into sentence-ish chunks so the synth queue can be flushed quickly on interrupt
+function chunkText(text: string): string[] {
+  const clean = cleanForSpeech(text);
   if (!clean) return [];
   const parts = clean.match(/[^.!?\n]+[.!?]?/g) ?? [clean];
   return parts.map((p) => p.trim()).filter(Boolean);
 }
+
 
 export type SpeakOpts = {
   rate?: number;
@@ -137,7 +173,7 @@ export function speakChunk(text: string, opts?: SpeakOpts) {
   const voice = opts?.voice
     ? voices.find((v) => v.name === opts.voice) ?? null
     : voices.find((v) => v.name === defaultVoiceName()) ?? null;
-  const clean = text.replace(/```[\s\S]*?```/g, " code block ").replace(/[#*_`>]/g, "").replace(/\s+/g, " ").trim();
+  const clean = cleanForSpeech(text);
   if (!clean) { opts?.onEnd?.(); return; }
   const u = new SpeechSynthesisUtterance(clean);
   u.rate = opts?.rate ?? 1;
