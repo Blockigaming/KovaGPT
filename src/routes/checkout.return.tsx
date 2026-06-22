@@ -7,7 +7,16 @@ export const Route = createFileRoute("/checkout/return")({
     session_id: typeof s.session_id === "string" ? s.session_id : undefined,
   }),
   component: CheckoutReturn,
-  head: () => ({ meta: [{ title: "Payment complete — NovaGPT" }] }),
+  head: () => ({
+    meta: [
+      { title: "Payment Successful — NovaGPT Subscription Active" },
+      {
+        name: "description",
+        content:
+          "Your NovaGPT subscription is now active. Access advanced multimodal AI modes, web search, image generation, and priority models on every device.",
+      },
+    ],
+  }),
 });
 
 function CheckoutReturn() {
