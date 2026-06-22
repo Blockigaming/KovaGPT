@@ -348,8 +348,14 @@ function NovaGPT() {
 
         if (!resp.ok || !resp.body) {
           const errJson = await resp.json().catch(() => ({ error: "Request failed" }));
-          throw new Error(errJson.error || `HTTP ${resp.status}`);
+          const errMsg = errJson.error || `HTTP ${resp.status}`;
+          if (resp.status === 429 && /limit/i.test(errMsg)) {
+            const kind: "image" | "chat" = /image/i.test(errMsg) ? "image" : "chat";
+            setLimitDialog({ open: true, kind, message: errMsg });
+          }
+          throw new Error(errMsg);
         }
+
 
         const reader = resp.body.getReader();
         const decoder = new TextDecoder();
