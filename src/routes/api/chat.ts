@@ -348,7 +348,7 @@ export const Route = createFileRoute("/api/chat")({
 
           // Default to a smart, fast streaming model. Escalate when needed.
           const model = voice
-            ? "google/gemini-3.1-flash-lite-preview"
+            ? "google/gemini-3.1-flash-lite"
             : m.id === "reason"
               ? "google/gemini-3.1-pro-preview"
               : hasImages
