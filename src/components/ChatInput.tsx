@@ -157,7 +157,7 @@ export function ChatInput({
               <input
                 ref={fileRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,text/*,.md,.markdown,.csv,.tsv,.json,.jsonl,.yml,.yaml,.toml,.xml,.html,.htm,.css,.scss,.less,.js,.jsx,.ts,.tsx,.mjs,.cjs,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cc,.cpp,.hpp,.cs,.php,.sql,.sh,.bash,.env,.log,.srt,.vtt"
                 multiple
                 className="hidden"
                 onChange={onFileChange}
