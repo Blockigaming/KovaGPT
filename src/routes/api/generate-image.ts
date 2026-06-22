@@ -5,7 +5,7 @@ import { DAILY_IMAGE_LIMIT, enforceQuota, requireUser } from "@/lib/api-auth.ser
 // Falls back gracefully so a single model outage doesn't break the page.
 const MODELS = [
   "openai/gpt-image-2",
-  "google/gemini-3.1-flash-image-preview",
+  "google/gemini-3.1-flash-image",
   "google/gemini-2.5-flash-image",
 ] as const;
 
