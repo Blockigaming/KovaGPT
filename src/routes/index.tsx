@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { authFetch } from "@/lib/auth-fetch";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
 import { PanelLeft, ChevronDown } from "lucide-react";
@@ -182,7 +183,7 @@ function NovaGPT() {
 
   const autoTitle = useCallback(async (convId: string, msgs: Message[]) => {
     try {
-      const resp = await fetch("/api/title", {
+      const resp = await authFetch("/api/title", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -300,7 +301,7 @@ function NovaGPT() {
           attachments: m.attachments,
         }));
 
-        const resp = await fetch("/api/chat", {
+        const resp = await authFetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

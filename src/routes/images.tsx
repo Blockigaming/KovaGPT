@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { authFetch } from "@/lib/auth-fetch";
 import { useEffect, useState } from "react";
 import { PanelLeft, ChevronDown, ChevronLeft, ChevronRight, ImageIcon, ArrowUp, Mic, Loader2, Download, Trash2, History } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
@@ -177,7 +178,7 @@ function ImagesPage() {
     setResult(null);
     setLoading(true);
     try {
-      const res = await fetch("/api/generate-image", {
+      const res = await authFetch("/api/generate-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: trimmed }),

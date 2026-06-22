@@ -1,10 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { requireUser } from "@/lib/api-auth.server";
 
 export const Route = createFileRoute("/api/title")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         try {
+          const auth = await requireUser(request);
+          if (auth instanceof Response) return auth;
           const { messages } = (await request.json()) as {
             messages: { role: string; content: string }[];
           };
