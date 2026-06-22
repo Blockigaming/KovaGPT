@@ -79,18 +79,24 @@ export function friendlyVoiceLabel(v: SpeechSynthesisVoice): string {
 
 export function defaultVoiceName(): string {
   const voices = getVoices();
-  for (const name of ADAM_LIKE) {
+  for (const name of PREFERRED_VOICES) {
     const hit = voices.find((v) => v.name === name);
     if (hit) return hit.name;
   }
+  // Prefer any "Natural" / "Neural" voice for clarity
+  const natural = voices.find(
+    (v) => v.lang?.startsWith("en") && /natural|neural|online/i.test(v.name),
+  );
+  if (natural) return natural.name;
   // Any English male-ish fallback
   const enMale = voices.find(
-    (v) => v.lang?.startsWith("en") && /male|guy|david|daniel|alex|ryan/i.test(v.name),
+    (v) => v.lang?.startsWith("en") && /male|guy|david|daniel|alex|ryan|andrew|brian/i.test(v.name),
   );
   if (enMale) return enMale.name;
   const en = voices.find((v) => v.lang?.startsWith("en"));
   return en?.name ?? voices[0]?.name ?? "";
 }
+
 
 // Split long text into sentence-ish chunks so the synth queue can be flushed quickly on interrupt
 function chunkText(text: string): string[] {
