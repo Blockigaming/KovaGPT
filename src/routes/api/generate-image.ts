@@ -88,6 +88,8 @@ export const Route = createFileRoute("/api/generate-image")({
     handlers: {
       POST: async ({ request }) => {
         try {
+          const auth = await requireUser(request);
+          if (auth instanceof Response) return auth;
           const { prompt } = (await request.json()) as { prompt?: string };
           if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
             return jsonError("Prompt required", 400);
