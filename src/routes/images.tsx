@@ -186,7 +186,14 @@ function ImagesPage() {
         body: JSON.stringify({ prompt: trimmed }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Failed to generate image");
+      if (!res.ok) {
+        const msg = data?.error || "Failed to generate image";
+        if (res.status === 429 && /limit/i.test(msg)) {
+          setLimitMessage(msg);
+          setLimitOpen(true);
+        }
+        throw new Error(msg);
+      }
       setResult(data.imageUrl);
       setResultPrompt(trimmed);
       addToHistory(trimmed, data.imageUrl);
@@ -196,6 +203,7 @@ function ImagesPage() {
       setLoading(false);
     }
   }
+
 
   return (
     <div className="flex h-screen w-full bg-background text-foreground">
