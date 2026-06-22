@@ -1,24 +1,28 @@
-const KEY = "nova-gpt-usage-v1";
+// 24-hour rolling usage window. The first action of the day starts the
+// window; everything resets exactly 24 hours later.
+const KEY = "nova-gpt-usage-v2";
+const WINDOW_MS = 24 * 60 * 60 * 1000;
 
-type Usage = { date: string; images: number; uploads: number };
+type Usage = { windowStart: number; images: number; uploads: number };
 
-export const DAILY_IMAGE_LIMIT = 3;
+// Free plan limits.
+export const DAILY_IMAGE_LIMIT = 1;
 export const DAILY_UPLOAD_LIMIT = 2;
 
-function today() {
-  return new Date().toISOString().slice(0, 10);
+function fresh(): Usage {
+  return { windowStart: Date.now(), images: 0, uploads: 0 };
 }
 
 function load(): Usage {
-  if (typeof window === "undefined") return { date: today(), images: 0, uploads: 0 };
+  if (typeof window === "undefined") return fresh();
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) return { date: today(), images: 0, uploads: 0 };
+    if (!raw) return fresh();
     const u = JSON.parse(raw) as Usage;
-    if (u.date !== today()) return { date: today(), images: 0, uploads: 0 };
+    if (!u.windowStart || Date.now() - u.windowStart >= WINDOW_MS) return fresh();
     return u;
   } catch {
-    return { date: today(), images: 0, uploads: 0 };
+    return fresh();
   }
 }
 
@@ -28,7 +32,20 @@ function save(u: Usage) {
 }
 
 export function getUsage() {
-  return load();
+  const u = load();
+  return {
+    images: u.images,
+    uploads: u.uploads,
+    windowStart: u.windowStart,
+    resetsAt: u.windowStart + WINDOW_MS,
+    // legacy field a few components still reference
+    date: new Date(u.windowStart).toISOString().slice(0, 10),
+  };
+}
+
+export function timeUntilReset(): number {
+  const u = load();
+  return Math.max(0, u.windowStart + WINDOW_MS - Date.now());
 }
 
 export function tryUseImage(): boolean {
