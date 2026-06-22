@@ -30,7 +30,7 @@ function CheckoutReturn() {
             <div className="w-14 h-14 rounded-full bg-green-500/20 text-green-500 mx-auto mb-4 grid place-items-center">
               <Check className="w-7 h-7" />
             </div>
-            <h1 className="text-2xl font-semibold mb-2">You're all set</h1>
+            <h1 className="text-2xl font-semibold mb-2">Subscription activated</h1>
             <p className="text-sm text-muted-foreground mb-6">
               Your subscription is active. Welcome to NovaGPT.
             </p>
