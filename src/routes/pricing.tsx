@@ -1,24 +1,21 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Check, ArrowLeft, Sparkles, Zap, Crown, X } from "lucide-react";
-import { useState } from "react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { useUser, useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 
-
-
 export const Route = createFileRoute("/pricing")({
   component: PricingPage,
   head: () => ({
     meta: [
-      { title: "Pricing  -  NovaGPT Plus & Pro plans" },
+      { title: "Pricing - NovaGPT Plus & Pro plans" },
       {
         name: "description",
         content:
           "Compare NovaGPT Free, Plus, and Pro plans. Get more messages, image generations, voice, and advanced reasoning modes.",
       },
-      { property: "og:title", content: "Pricing  -  NovaGPT Plus & Pro plans" },
+      { property: "og:title", content: "Pricing - NovaGPT Plus & Pro plans" },
       {
         property: "og:description",
         content:
@@ -54,7 +51,7 @@ export const Route = createFileRoute("/pricing")({
               brand: { "@type": "Brand", name: "NovaGPT" },
               offers: {
                 "@type": "Offer",
-                price: "20",
+                price: "14",
                 priceCurrency: "USD",
                 url: "https://nova-aigpt.lovable.app/pricing",
                 availability: "https://schema.org/InStock",
@@ -67,7 +64,7 @@ export const Route = createFileRoute("/pricing")({
               brand: { "@type": "Brand", name: "NovaGPT" },
               offers: {
                 "@type": "Offer",
-                price: "79",
+                price: "89",
                 priceCurrency: "USD",
                 url: "https://nova-aigpt.lovable.app/pricing",
                 availability: "https://schema.org/InStock",
@@ -80,25 +77,12 @@ export const Route = createFileRoute("/pricing")({
   }),
 });
 
-
-type ProTier = "5x" | "10x";
-
-const PRO_TIERS: Record<ProTier, { price: string; usage: string; cta: string; priceId: string }> = {
-  "5x": { price: "$79", usage: "5x more usage than Plus", cta: "Upgrade to Pro 5x", priceId: "pro_5x_monthly" },
-  "10x": { price: "$149", usage: "10x more usage than Plus", cta: "Upgrade to Pro 10x", priceId: "pro_10x_monthly" },
-};
-
 function PricingPage() {
-  const [proTier, setProTier] = useState<ProTier>("5x");
-  const pro = PRO_TIERS[proTier];
   const { user, isSignedIn, isLoaded } = useUser();
   const { openSignIn } = useClerk();
   const { openCheckout, closeCheckout, isOpen, checkoutElement } = useStripeCheckout();
 
   const startCheckout = (priceId: string) => {
-    // If Clerk has loaded and the user isn't signed in, require auth.
-    // If Clerk hasn't loaded (e.g. preview/offline), fall back to guest
-    // checkout so payments are never blocked by auth issues.
     if (isLoaded && !isSignedIn) {
       try { openSignIn(); } catch { /* clerk not ready */ }
       return;
@@ -110,8 +94,6 @@ function PricingPage() {
       returnUrl: `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
     });
   };
-
-
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -138,7 +120,6 @@ function PricingPage() {
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
-          {/* Free */}
           <PlanCard
             icon={Sparkles}
             name="Free"
@@ -156,7 +137,6 @@ function PricingPage() {
             ]}
           />
 
-          {/* Plus */}
           <PlanCard
             icon={Zap}
             name="Plus"
@@ -177,59 +157,24 @@ function PricingPage() {
             ]}
           />
 
-          {/* Pro */}
-          <div className="relative rounded-2xl border border-border bg-card/50 p-6 flex flex-col">
-            <div className="flex items-center gap-2 mb-2">
-              <Crown className="w-5 h-5" />
-              <h2 className="text-xl font-semibold">Pro</h2>
-            </div>
-            <div className="flex items-baseline gap-1 mb-3">
-              <span className="text-4xl font-bold">{pro.price}</span>
-              <span className="text-muted-foreground text-sm">/ month</span>
-            </div>
-
-            <div className="inline-flex p-1 rounded-lg bg-accent/50 border border-border mb-4 self-start">
-              {(["5x", "10x"] as ProTier[]).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setProTier(t)}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition ${
-                    proTier === t
-                      ? "bg-foreground text-background"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {t} usage
-                </button>
-              ))}
-            </div>
-
-            <p className="text-sm text-muted-foreground mb-6">
-              Maximum capability with exclusive Pro modes.
-            </p>
-            <button
-              onClick={() => startCheckout(pro.priceId)}
-              className="w-full py-2.5 rounded-lg font-medium text-sm transition mb-6 border border-border hover:bg-accent"
-            >
-              {pro.cta}
-            </button>
-            <ul className="space-y-3 text-sm">
-              {[
-                "Everything in Plus",
-                pro.usage,
-                "Reasoning, Research, Writer Pro & Tutor Pro modes",
-                "Generate emails, websites & components",
-                "Highest quality voice synthesis",
-                "Longer context for big documents",
-                "Early access to new features",
-              ].map((f) => (
-                <li key={f} className="flex items-start gap-2">
-                  <Check className="w-4 h-4 mt-0.5 text-foreground shrink-0" />
-                  <span>{f}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <PlanCard
+            icon={Crown}
+            name="Pro"
+            price="$89"
+            period="/ month"
+            description="Maximum capability with exclusive Pro modes."
+            cta="Upgrade to Pro"
+            onCta={() => startCheckout("pro_monthly")}
+            features={[
+              "Everything in Plus",
+              "10x more usage than Plus",
+              "Reasoning, Research, Writer Pro & Tutor Pro modes",
+              "Generate emails, websites & components",
+              "Highest quality voice synthesis",
+              "Longer context for big documents",
+              "Early access to new features",
+            ]}
+          />
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-10">
