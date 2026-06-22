@@ -97,6 +97,10 @@ export const Route = createFileRoute("/api/generate-image")({
           const apiKey = process.env.LOVABLE_API_KEY;
           if (!apiKey) return jsonError("AI service not configured", 500);
 
+          const quota = await enforceQuota(auth, "images", DAILY_IMAGE_LIMIT);
+          if (quota) return quota;
+
+
           let lastError = "Image generation failed";
           let lastStatus = 500;
           for (const model of MODELS) {
