@@ -56,7 +56,7 @@ function ChatMessageInner({
   };
 
   return (
-    <div className="w-full px-4 py-6 group">
+    <div className="w-full px-4 py-3 group">
       <div className="mx-auto max-w-3xl flex gap-4">
         <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center">
           {isUser ? (
