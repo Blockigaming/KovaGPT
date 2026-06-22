@@ -295,6 +295,9 @@ export const Route = createFileRoute("/api/chat")({
     handlers: {
       POST: async ({ request }) => {
         try {
+          const auth = await requireUser(request);
+          if (auth instanceof Response) return auth;
+
           const { messages, mode, user, voice } = (await request.json()) as {
             messages: IncomingMessage[];
             mode?: ModeId;
@@ -319,8 +322,14 @@ export const Route = createFileRoute("/api/chat")({
             IMAGE_INTENT.test(lastText);
 
           if (isImageRequest) {
+            const quota = await enforceQuota(auth, "images", DAILY_IMAGE_LIMIT);
+            if (quota) return quota;
             return handleImageRequest(lastText, apiKey);
           }
+
+          const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT);
+          if (quota) return quota;
+
 
           const m = getMode(mode ?? "auto");
           const hasImages = messages.some((msg) => (msg.attachments?.length ?? 0) > 0);
