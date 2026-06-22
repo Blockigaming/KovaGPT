@@ -423,9 +423,18 @@ function ImagesPage() {
       <SettingsDialog
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
-        settings={DEFAULT_SETTINGS as Settings}
-        onChange={() => {}}
-        onClearAll={() => {}}
+        settings={settings}
+        onChange={setSettings}
+        onClearAll={() => {
+          try {
+            for (const k of Object.keys(localStorage)) {
+              if (k.startsWith("novagpt-image-history-") || k.startsWith("nova-gpt-conversations")) {
+                localStorage.removeItem(k);
+              }
+            }
+          } catch { /* ignore */ }
+          setHistory([]);
+        }}
       />
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
       <LoginPromptDialog open={loginOpen} onOpenChange={setLoginOpen} />
