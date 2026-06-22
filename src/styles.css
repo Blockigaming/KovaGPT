@@ -139,6 +139,17 @@
   text-align: left;
 }
 .prose-chat th { background: var(--color-muted); font-weight: 600; }
+.prose-chat img {
+  display: block;
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  margin: 0.75em 0;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border);
+  background: var(--color-muted);
+}
+
 
 /* Blinking cursor while streaming text */
 .cursor-blink::after {

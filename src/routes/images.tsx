@@ -6,6 +6,9 @@ import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { HelpDialog } from "@/components/HelpDialog";
 import { LoginPromptDialog } from "@/components/LoginPromptDialog";
+import { LimitReachedDialog } from "@/components/LimitReachedDialog";
+import { getUsage } from "@/lib/limits";
+
 import { useNovaSettings } from "@/lib/use-nova-settings";
 import {
   SignInButton,
@@ -123,6 +126,9 @@ function ImagesPage() {
   const [result, setResult] = useState<string | null>(null);
   const [resultPrompt, setResultPrompt] = useState<string>("");
   const [loginOpen, setLoginOpen] = useState(false);
+  const [limitOpen, setLimitOpen] = useState(false);
+  const [limitMessage, setLimitMessage] = useState<string | undefined>(undefined);
+
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [examplePage, setExamplePage] = useState(0);
   const EXAMPLES_PER_PAGE = 10;
@@ -186,7 +192,14 @@ function ImagesPage() {
         body: JSON.stringify({ prompt: trimmed }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Failed to generate image");
+      if (!res.ok) {
+        const msg = data?.error || "Failed to generate image";
+        if (res.status === 429 && /limit/i.test(msg)) {
+          setLimitMessage(msg);
+          setLimitOpen(true);
+        }
+        throw new Error(msg);
+      }
       setResult(data.imageUrl);
       setResultPrompt(trimmed);
       addToHistory(trimmed, data.imageUrl);
@@ -196,6 +209,7 @@ function ImagesPage() {
       setLoading(false);
     }
   }
+
 
   return (
     <div className="flex h-screen w-full bg-background text-foreground">
@@ -459,6 +473,14 @@ function ImagesPage() {
       />
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
       <LoginPromptDialog open={loginOpen} onOpenChange={setLoginOpen} />
+      <LimitReachedDialog
+        open={limitOpen}
+        onOpenChange={setLimitOpen}
+        kind="image"
+        message={limitMessage}
+        resetsAt={getUsage().resetsAt}
+      />
+
     </div>
   );
 }

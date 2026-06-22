@@ -76,7 +76,7 @@ function buildUserContextBlock(u?: UserContext): string {
   return `\n\n--- User profile & preferences ---\n${lines.join("\n")}\n--- End user profile ---`;
 }
 
-const CURRENT_DATE_INSTRUCTION = `\n\nIMPORTANT: Today's date is ${new Date().toISOString().slice(0, 10)}. When live web search results are provided below, trust them as up-to-date ground truth and answer directly. Do NOT mention a training cutoff and do NOT hedge with "as of my last update". When no live results are present and the question is time-sensitive, give your best current understanding and briefly note it could have changed. Never invent recent facts, prices, scores, or news.\n\nFACTUAL ACCURACY (HIGHEST PRIORITY):\n- Treat any live search block below as the single source of truth and prefer it over your internal memory whenever they conflict.\n- Cite sources inline as [1], [2] etc. for any specific factual claim (numbers, dates, names, quotes, prices, scores, recent events).\n- If sources disagree, say so briefly and prefer the most recent, most authoritative one (official sites, major newsrooms, primary documents).\n- If a claim is not supported by the provided sources and you are not highly confident, say "I'm not certain" or "I don't know". Never fabricate.\n- Never invent URLs, citations, statistics, court cases, papers, quotes, or product specs.\n- Distinguish clearly between established fact, current consensus, and speculation.`;
+const CURRENT_DATE_INSTRUCTION = `\n\nIMPORTANT: Today's date is ${new Date().toISOString().slice(0, 10)}. When live web search results are provided below, trust them as up-to-date ground truth and answer directly. Do NOT mention a training cutoff and do NOT hedge with "as of my last update". When no live results are present and the question is time-sensitive, give your best current understanding and briefly note it could have changed. Never invent recent facts, prices, scores, or news.\n\nFACTUAL ACCURACY (HIGHEST PRIORITY):\n- Treat any live search block below as the single source of truth and prefer it over your internal memory whenever they conflict.\n- Do NOT insert numbered citation markers like [1], [2], or footnote-style references in your reply. Just answer naturally; never show source numbers in the text.\n- If sources disagree, say so briefly and prefer the most recent, most authoritative one (official sites, major newsrooms, primary documents).\n- If a claim is not supported by the provided sources and you are not highly confident, say "I'm not certain" or "I don't know". Never fabricate.\n- Never invent URLs, citations, statistics, court cases, papers, quotes, or product specs.\n- Distinguish clearly between established fact, current consensus, and speculation.\n- Never use en dashes or em dashes anywhere. Use a regular hyphen or rephrase the sentence.`;
 
 // NovaGPT should feel like talking to ChatGPT: helpful, kind, accurate,
 // and natural. Warm without being saccharine, precise without being cold.
@@ -172,7 +172,7 @@ async function runWebSearch(query: string, wantsNews: boolean): Promise<string |
     formatResults("Fresh news (last 7 days)", query, news),
   ].filter(Boolean);
   if (blocks.length === 0) return null;
-  return blocks.join("") + `\nUse these results as ground truth. Cite source numbers like [1], [2] when you make factual claims.`;
+  return blocks.join("") + `\nUse these results as ground truth, but answer naturally. Do NOT include numbered source markers like [1] or [2] in the reply.`;
 }
 
 // Detects "news-like" / time-sensitive intent so we also pull a fresh news feed.

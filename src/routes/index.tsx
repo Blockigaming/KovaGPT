@@ -9,7 +9,10 @@ import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
 
 import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 import { HelpDialog } from "@/components/HelpDialog";
+import { LimitReachedDialog } from "@/components/LimitReachedDialog";
 import { applyThemeColors } from "@/lib/theme";
+import { getUsage } from "@/lib/limits";
+
 import { VoiceMode } from "@/components/VoiceMode";
 import {
   useUser,
@@ -95,8 +98,14 @@ function NovaGPT() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [signupPromptOpen, setSignupPromptOpen] = useState(false);
   const [signupPromptShown, setSignupPromptShown] = useState(false);
+  const [limitDialog, setLimitDialog] = useState<{
+    open: boolean;
+    kind: "image" | "chat" | "upload";
+    message?: string;
+  }>({ open: false, kind: "image" });
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
 
   // Load (or reload) settings whenever the signed-in user changes so each
   // account gets its own personalization, behavior, appearance, etc.
@@ -121,7 +130,7 @@ function NovaGPT() {
     applyThemeColors(settings.theme);
   }, [settings.theme]);
 
-  // Debounced persistence — avoid JSON.stringify on every keystroke / stream token,
+  // Debounced persistence - avoid JSON.stringify on every keystroke / stream token,
   // which was the main source of typing/streaming lag.
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -151,6 +160,45 @@ function NovaGPT() {
     () => conversations.find((c) => c.id === activeId) ?? null,
     [conversations, activeId],
   );
+
+  // Personalized greeting for the landing screen.
+  const firstName = useMemo(() => {
+    const candidate =
+      settings.displayName?.trim() ||
+      (user as any)?.firstName ||
+      (user as any)?.username ||
+      (user as any)?.fullName?.split(" ")[0] ||
+      "";
+    return typeof candidate === "string" ? candidate.split(" ")[0] : "";
+  }, [settings.displayName, user]);
+
+  const greeting = useMemo(() => {
+    if (clerkEnabled && !isSignedIn) return "NovaGPT";
+    const name = firstName;
+    const prompts = name
+      ? [
+          `What's on your mind today, ${name}?`,
+          `Ready when you are, ${name}.`,
+          `Where should we start, ${name}?`,
+          `Good to see you, ${name}. What are we building?`,
+          `Hey ${name}, what can I help you figure out?`,
+          `What's the plan, ${name}?`,
+          `Got an idea brewing, ${name}?`,
+          `What are you curious about today, ${name}?`,
+        ]
+      : [
+          "What's on your mind today?",
+          "Ready when you are.",
+          "Where should we start?",
+          "What can I help you with?",
+          "What are you working on?",
+          "Got something to figure out?",
+        ];
+    // Pick once per mount so it doesn't flicker on every render.
+    return prompts[Math.floor(Math.random() * prompts.length)];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [firstName, isSignedIn]);
+
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -339,8 +387,14 @@ function NovaGPT() {
 
         if (!resp.ok || !resp.body) {
           const errJson = await resp.json().catch(() => ({ error: "Request failed" }));
-          throw new Error(errJson.error || `HTTP ${resp.status}`);
+          const errMsg = errJson.error || `HTTP ${resp.status}`;
+          if (resp.status === 429 && /limit/i.test(errMsg)) {
+            const kind: "image" | "chat" = /image/i.test(errMsg) ? "image" : "chat";
+            setLimitDialog({ open: true, kind, message: errMsg });
+          }
+          throw new Error(errMsg);
         }
+
 
         const reader = resp.body.getReader();
         const decoder = new TextDecoder();
@@ -467,7 +521,7 @@ function NovaGPT() {
         {!active || active.messages.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4">
             <h1 className="text-2xl sm:text-3xl font-semibold mb-8 text-center">
-              NovaGPT
+              {greeting}
             </h1>
             <div className="w-full">
               <ChatInput
@@ -481,6 +535,9 @@ function NovaGPT() {
                 mode={mode}
                 onModeChange={setMode}
                 onOpenVoice={() => setVoiceModeOpen(true)}
+                onUploadLimit={() =>
+                  setLimitDialog({ open: true, kind: "upload" })
+                }
                 placeholder="Ask anything"
               />
             </div>
@@ -510,11 +567,15 @@ function NovaGPT() {
               mode={mode}
               onModeChange={setMode}
               onOpenVoice={() => setVoiceModeOpen(true)}
+              onUploadLimit={() =>
+                setLimitDialog({ open: true, kind: "upload" })
+              }
               placeholder="Ask anything"
             />
           </>
         )}
       </main>
+
 
       <SettingsDialog
         open={settingsOpen}
@@ -527,6 +588,15 @@ function NovaGPT() {
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
 
       <SignUpPrompt open={signupPromptOpen} onOpenChange={setSignupPromptOpen} />
+
+      <LimitReachedDialog
+        open={limitDialog.open}
+        onOpenChange={(v) => setLimitDialog((d) => ({ ...d, open: v }))}
+        kind={limitDialog.kind}
+        message={limitDialog.message}
+        resetsAt={getUsage().resetsAt}
+      />
+
 
       <VoiceMode
         open={voiceModeOpen}

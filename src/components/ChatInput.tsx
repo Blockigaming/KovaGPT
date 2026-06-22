@@ -8,6 +8,9 @@ import type { ModeId, Tier } from "@/lib/modes";
 
 export type PendingAttachment = { kind: "image"; dataUrl: string; name: string };
 
+const TEXT_LIKE_EXT = /\.(txt|md|markdown|csv|tsv|json|jsonl|ya?ml|toml|xml|html?|css|scss|less|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|h|cc|cpp|hpp|cs|php|sql|sh|bash|zsh|fish|env|ini|conf|log|srt|vtt)$/i;
+const MAX_TEXT_FILE_BYTES = 256 * 1024; // 256 KB inline cap to keep prompts reasonable
+
 export function ChatInput({
   value,
   onChange,
@@ -20,6 +23,7 @@ export function ChatInput({
   onModeChange,
   userTier = "free",
   onOpenVoice,
+  onUploadLimit,
   placeholder,
 }: {
   value: string;
@@ -33,8 +37,11 @@ export function ChatInput({
   onModeChange?: (m: ModeId) => void;
   userTier?: Tier;
   onOpenVoice?: () => void;
+  /** Called when the user hits their daily upload quota. */
+  onUploadLimit?: () => void;
   placeholder?: string;
 }) {
+
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const recRef = useRef<any>(null);
@@ -79,29 +86,51 @@ export function ChatInput({
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     e.target.value = "";
+    let nextValue = value;
     for (const f of files) {
-      if (!f.type.startsWith("image/")) {
-        toast.error("Only images can be attached.");
+      const isImage = f.type.startsWith("image/");
+      const isTextLike =
+        f.type.startsWith("text/") ||
+        f.type === "application/json" ||
+        TEXT_LIKE_EXT.test(f.name);
+
+      if (!isImage && !isTextLike) {
+        toast.error(`${f.name}: unsupported file type. Attach an image or a text file.`);
         continue;
       }
+
       const u = getUsage();
       if (u.uploads >= DAILY_UPLOAD_LIMIT) {
-        toast.error(`Daily upload limit reached (${DAILY_UPLOAD_LIMIT}/day on Free).`);
+        onUploadLimit?.();
         return;
       }
       if (!tryUseUpload()) {
-        toast.error("Daily upload limit reached.");
+        onUploadLimit?.();
         return;
       }
-      const dataUrl = await new Promise<string>((res, rej) => {
-        const r = new FileReader();
-        r.onload = () => res(r.result as string);
-        r.onerror = rej;
-        r.readAsDataURL(f);
-      });
-      onAttachmentsChange([...attachments, { kind: "image", dataUrl, name: f.name }]);
+
+      if (isImage) {
+        const dataUrl = await new Promise<string>((res, rej) => {
+          const r = new FileReader();
+          r.onload = () => res(r.result as string);
+          r.onerror = rej;
+          r.readAsDataURL(f);
+        });
+        onAttachmentsChange([...attachments, { kind: "image", dataUrl, name: f.name }]);
+      } else {
+        if (f.size > MAX_TEXT_FILE_BYTES) {
+          toast.error(`${f.name} is too large (max 256 KB for text files).`);
+          continue;
+        }
+        const text = await f.text();
+        const lang = (f.name.split(".").pop() || "").toLowerCase();
+        const block = `\n\nAttached file: ${f.name}\n\`\`\`${lang}\n${text}\n\`\`\`\n`;
+        nextValue = (nextValue ? nextValue : "") + block;
+      }
     }
+    if (nextValue !== value) onChange(nextValue);
   };
+
 
   return (
     <div className="w-full px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background to-transparent">
@@ -128,7 +157,7 @@ export function ChatInput({
               <input
                 ref={fileRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,text/*,.md,.markdown,.csv,.tsv,.json,.jsonl,.yml,.yaml,.toml,.xml,.html,.htm,.css,.scss,.less,.js,.jsx,.ts,.tsx,.mjs,.cjs,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cc,.cpp,.hpp,.cs,.php,.sql,.sh,.bash,.env,.log,.srt,.vtt"
                 multiple
                 className="hidden"
                 onChange={onFileChange}
@@ -137,8 +166,9 @@ export function ChatInput({
                 type="button"
                 onClick={() => fileRef.current?.click()}
                 className="w-9 h-9 rounded-full hover:bg-accent flex items-center justify-center transition"
-                aria-label="Attach image"
-                title="Attach image"
+                aria-label="Attach file"
+                title="Attach image or text file"
+
               >
                 <Plus className="w-5 h-5" />
               </button>

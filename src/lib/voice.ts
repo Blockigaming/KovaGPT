@@ -1,6 +1,6 @@
 // Browser-native TTS and STT helpers (Web Speech API)
 
-// Preferred voices for clarity. Natural/Neural voices first — they sound
+// Preferred voices for clarity. Natural/Neural voices first - they sound
 // much more like the actual text. Adam-like deep male English fallbacks.
 const PREFERRED_VOICES = [
   // Highest-quality "natural" / "neural" voices first

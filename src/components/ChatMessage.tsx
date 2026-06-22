@@ -6,6 +6,18 @@ import type { Message } from "@/lib/chat-store";
 import { NovaLogo } from "./NovaLogo";
 import { speak, stopSpeaking, isSpeaking } from "@/lib/voice";
 
+// Strip numbered citation markers like [1], [2], [3] that web-search-augmented
+// answers sometimes still inject, and normalize en/em dashes to a hyphen
+// so the assistant never shows them in the UI.
+function cleanAssistantText(text: string): string {
+  return text
+    .replace(/\s?\[\d+\](?:\[\d+\])*/g, "")
+    .replace(/\s?\[\d+(?:\s*,\s*\d+)+\]/g, "")
+    .replace(/[\u2013\u2014]/g, "-");
+}
+
+
+
 function ChatMessageInner({
   message,
   streaming,
@@ -44,7 +56,7 @@ function ChatMessageInner({
   };
 
   return (
-    <div className="w-full px-4 py-6 group">
+    <div className="w-full px-4 py-3 group">
       <div className="mx-auto max-w-3xl flex gap-4">
         <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center">
           {isUser ? (
@@ -86,8 +98,11 @@ function ChatMessageInner({
                   <span /><span /><span />
                 </div>
               ) : (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {cleanAssistantText(message.content)}
+                </ReactMarkdown>
               )}
+
               {streaming && message.content && <span className="cursor-blink" />}
             </div>
           )}
