@@ -121,7 +121,7 @@ function NovaGPT() {
     applyThemeColors(settings.theme);
   }, [settings.theme]);
 
-  // Debounced persistence — avoid JSON.stringify on every keystroke / stream token,
+  // Debounced persistence - avoid JSON.stringify on every keystroke / stream token,
   // which was the main source of typing/streaming lag.
   useEffect(() => {
     if (typeof window === "undefined") return;
