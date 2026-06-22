@@ -182,7 +182,7 @@ function NovaGPT() {
 
   const autoTitle = useCallback(async (convId: string, msgs: Message[]) => {
     try {
-      const resp = await fetch("/api/title", {
+      const resp = await authFetch("/api/title", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -300,7 +300,7 @@ function NovaGPT() {
           attachments: m.attachments,
         }));
 
-        const resp = await fetch("/api/chat", {
+        const resp = await authFetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

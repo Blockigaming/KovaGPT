@@ -56,7 +56,7 @@ export function VoiceMode({
       inflightAbortRef.current = ctl;
       let assembled = "";
       try {
-        const resp = await fetch("/api/chat", {
+        const resp = await authFetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ messages: history, mode: "auto", voice: true }),
