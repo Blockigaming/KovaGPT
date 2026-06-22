@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { authFetch } from "@/lib/auth-fetch";
 import { X } from "lucide-react";
 import {
   createRecognition,
