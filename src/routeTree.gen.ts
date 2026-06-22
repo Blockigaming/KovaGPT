@@ -15,6 +15,7 @@ import { Route as ImagesRouteImport } from './routes/images'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as BlogBestAiAssistantsRouteImport } from './routes/blog.best-ai-assistants'
+import { Route as BlogAiMarketResearchGuideRouteImport } from './routes/blog.ai-market-research-guide'
 import { Route as ApiTitleRouteImport } from './routes/api/title'
 import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
@@ -49,6 +50,12 @@ const BlogBestAiAssistantsRoute = BlogBestAiAssistantsRouteImport.update({
   path: '/blog/best-ai-assistants',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogAiMarketResearchGuideRoute =
+  BlogAiMarketResearchGuideRouteImport.update({
+    id: '/blog/ai-market-research-guide',
+    path: '/blog/ai-market-research-guide',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiTitleRoute = ApiTitleRouteImport.update({
   id: '/api/title',
   path: '/api/title',
@@ -73,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/title': typeof ApiTitleRoute
+  '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
   '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
   '/checkout/return': typeof CheckoutReturnRoute
 }
@@ -84,6 +92,7 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/title': typeof ApiTitleRoute
+  '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
   '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
   '/checkout/return': typeof CheckoutReturnRoute
 }
@@ -96,6 +105,7 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/title': typeof ApiTitleRoute
+  '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
   '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
   '/checkout/return': typeof CheckoutReturnRoute
 }
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/generate-image'
     | '/api/title'
+    | '/blog/ai-market-research-guide'
     | '/blog/best-ai-assistants'
     | '/checkout/return'
   fileRoutesByTo: FileRoutesByTo
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/generate-image'
     | '/api/title'
+    | '/blog/ai-market-research-guide'
     | '/blog/best-ai-assistants'
     | '/checkout/return'
   id:
@@ -131,6 +143,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/generate-image'
     | '/api/title'
+    | '/blog/ai-market-research-guide'
     | '/blog/best-ai-assistants'
     | '/checkout/return'
   fileRoutesById: FileRoutesById
@@ -143,6 +156,7 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRoute
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
   ApiTitleRoute: typeof ApiTitleRoute
+  BlogAiMarketResearchGuideRoute: typeof BlogAiMarketResearchGuideRoute
   BlogBestAiAssistantsRoute: typeof BlogBestAiAssistantsRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
 }
@@ -191,6 +205,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogBestAiAssistantsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blog/ai-market-research-guide': {
+      id: '/blog/ai-market-research-guide'
+      path: '/blog/ai-market-research-guide'
+      fullPath: '/blog/ai-market-research-guide'
+      preLoaderRoute: typeof BlogAiMarketResearchGuideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/title': {
       id: '/api/title'
       path: '/api/title'
@@ -223,6 +244,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRoute,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
   ApiTitleRoute: ApiTitleRoute,
+  BlogAiMarketResearchGuideRoute: BlogAiMarketResearchGuideRoute,
   BlogBestAiAssistantsRoute: BlogBestAiAssistantsRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
 }
