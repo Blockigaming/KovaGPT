@@ -9,7 +9,7 @@ export const Route = createFileRoute("/checkout/return")({
   component: CheckoutReturn,
   head: () => ({
     meta: [
-      { title: "Payment Successful — NovaGPT Subscription Active" },
+      { title: "Payment Successful  -  NovaGPT Subscription Active" },
       {
         name: "description",
         content:

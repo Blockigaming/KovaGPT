@@ -12,13 +12,13 @@ export const Route = createFileRoute("/pricing")({
   component: PricingPage,
   head: () => ({
     meta: [
-      { title: "Pricing — NovaGPT Plus & Pro plans" },
+      { title: "Pricing  -  NovaGPT Plus & Pro plans" },
       {
         name: "description",
         content:
           "Compare NovaGPT Free, Plus, and Pro plans. Get more messages, image generations, voice, and advanced reasoning modes.",
       },
-      { property: "og:title", content: "Pricing — NovaGPT Plus & Pro plans" },
+      { property: "og:title", content: "Pricing  -  NovaGPT Plus & Pro plans" },
       {
         property: "og:description",
         content:

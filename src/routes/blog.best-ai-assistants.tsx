@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 const CANONICAL = "https://nova-aigpt.lovable.app/blog/best-ai-assistants";
 const TITLE = "Best AI Assistants for Productivity in 2026 (Compared)";
 const DESCRIPTION =
-  "We compared the best AI assistants for productivity — NovaGPT, ChatGPT, Claude, Gemini, Copilot, and Perplexity — on modes, accuracy, coding, research, and price.";
+  "We compared the best AI assistants for productivity  -  NovaGPT, ChatGPT, Claude, Gemini, Copilot, and Perplexity  -  on modes, accuracy, coding, research, and price.";
 
 export const Route = createFileRoute("/blog/best-ai-assistants")({
   head: () => ({
@@ -119,7 +119,7 @@ function BestAiAssistantsPage() {
         <p className="mt-6 text-lg leading-relaxed">
           The "best AI assistant" depends on what you're actually trying to get done.
           Answering email, debugging code, summarizing a 60-page PDF, and researching a
-          new market are different jobs — and the assistants below are tuned for
+          new market are different jobs  -  and the assistants below are tuned for
           different ones. Below is a head-to-head comparison of the most popular options
           in 2026, with a focus on where each one earns its place in a real workflow.
         </p>
@@ -152,7 +152,7 @@ function BestAiAssistantsPage() {
           </table>
         </div>
 
-        <h2 className="mt-12 text-2xl font-semibold">1. NovaGPT — best for focused, mode-based work</h2>
+        <h2 className="mt-12 text-2xl font-semibold">1. NovaGPT  -  best for focused, mode-based work</h2>
         <p>
           NovaGPT's distinguishing feature is its <strong>specialized modes</strong>: instead of one
           generic chatbot, you pick the mindset that matches the task. <em>Code</em> mode writes
@@ -163,36 +163,36 @@ function BestAiAssistantsPage() {
           events stay current. Image generation is built in. Free to start.
         </p>
 
-        <h2 className="mt-10 text-2xl font-semibold">2. ChatGPT — best general-purpose default</h2>
+        <h2 className="mt-10 text-2xl font-semibold">2. ChatGPT  -  best general-purpose default</h2>
         <p>
           The most familiar option, with a huge custom GPT ecosystem. Strong at conversational
           tasks and broadly capable across writing, coding, and analysis. The free tier is more
           limited than it used to be, and the best models sit behind paid plans.
         </p>
 
-        <h2 className="mt-10 text-2xl font-semibold">3. Claude — best for long documents</h2>
+        <h2 className="mt-10 text-2xl font-semibold">3. Claude  -  best for long documents</h2>
         <p>
           Claude handles very long context windows well, which makes it a favorite for
           summarizing contracts, reading codebases, and drafting long-form writing. Artifacts
           and Projects help organize ongoing work. Web search is more limited than rivals.
         </p>
 
-        <h2 className="mt-10 text-2xl font-semibold">4. Gemini — best inside Google Workspace</h2>
+        <h2 className="mt-10 text-2xl font-semibold">4. Gemini  -  best inside Google Workspace</h2>
         <p>
           If you live in Gmail, Docs, and Sheets, Gemini's integrations are the differentiator.
           It can read your calendar, draft replies in context, and pull from Drive.
         </p>
 
-        <h2 className="mt-10 text-2xl font-semibold">5. Microsoft Copilot — best inside Microsoft 365</h2>
+        <h2 className="mt-10 text-2xl font-semibold">5. Microsoft Copilot  -  best inside Microsoft 365</h2>
         <p>
           The same idea on the Microsoft side: deep hooks into Word, Excel, Outlook, and Teams,
           with Bing-powered web answers and image generation in the free tier.
         </p>
 
-        <h2 className="mt-10 text-2xl font-semibold">6. Perplexity — best for cited research</h2>
+        <h2 className="mt-10 text-2xl font-semibold">6. Perplexity  -  best for cited research</h2>
         <p>
           Perplexity leads with sources. Every answer is a small research brief with numbered
-          citations, which makes it the right tool when you need to trust — and link to — where
+          citations, which makes it the right tool when you need to trust  -  and link to  -  where
           a claim came from.
         </p>
 
@@ -208,7 +208,7 @@ function BestAiAssistantsPage() {
 
         <h2 className="mt-12 text-2xl font-semibold">Try NovaGPT free</h2>
         <p>
-          NovaGPT's free tier includes Auto mode, live web search, and image generation — no
+          NovaGPT's free tier includes Auto mode, live web search, and image generation  -  no
           credit card required.
         </p>
         <p className="mt-6">

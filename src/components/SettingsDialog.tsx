@@ -184,8 +184,8 @@ export function SettingsDialog({
             </TabsTrigger>
           </TabsList>
 
-          {/* GENERAL — voice + usage + data */}
-          {/* GENERAL — voice + usage + data (always available) */}
+          {/* GENERAL  -  voice + usage + data */}
+          {/* GENERAL  -  voice + usage + data (always available) */}
           <TabsContent value="general" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
             <section>
               <h3 className="text-sm font-semibold mb-3">Voice</h3>
@@ -287,9 +287,9 @@ export function SettingsDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="short">Short — get to the point</SelectItem>
-                    <SelectItem value="medium">Medium — balanced (default)</SelectItem>
-                    <SelectItem value="long">Long — detailed, thorough</SelectItem>
+                    <SelectItem value="short">Short  -  get to the point</SelectItem>
+                    <SelectItem value="medium">Medium  -  balanced (default)</SelectItem>
+                    <SelectItem value="long">Long  -  detailed, thorough</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -355,7 +355,7 @@ export function SettingsDialog({
             </section>
           </TabsContent>
 
-          {/* PERSONALIZATION — locked behind sign in */}
+          {/* PERSONALIZATION  -  locked behind sign in */}
           <TabsContent value="personalization" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
             {!loggedIn ? (
               <LockedTab
@@ -475,7 +475,7 @@ export function SettingsDialog({
             )}
           </TabsContent>
 
-          {/* BEHAVIOR — how it should respond */}
+          {/* BEHAVIOR  -  how it should respond */}
           <TabsContent value="behavior" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
             {!loggedIn ? (
               <LockedTab
@@ -524,7 +524,7 @@ export function SettingsDialog({
             )}
           </TabsContent>
 
-          {/* APPEARANCE — color customization */}
+          {/* APPEARANCE  -  color customization */}
           <TabsContent value="appearance" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
             {!loggedIn ? (
               <LockedTab
@@ -601,7 +601,7 @@ export function SettingsDialog({
                 <section className="space-y-3">
                   <h3 className="text-sm font-semibold">Payment method</h3>
                   <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-                    No card on file. Add a card when you upgrade — payments are securely handled by
+                    No card on file. Add a card when you upgrade  -  payments are securely handled by
                     Stripe. We never see or store your card number.
                   </div>
                   <Link
@@ -619,7 +619,7 @@ export function SettingsDialog({
                     Used on receipts and invoices. Edit in <strong>You → Address</strong>.
                   </p>
                   <div className="rounded-lg border border-border p-4 text-sm space-y-0.5">
-                    <div>{settings.displayName || "—"}</div>
+                    <div>{settings.displayName || " - "}</div>
                     <div>
                       {settings.addressLine1 || (
                         <span className="text-muted-foreground">No street address</span>
@@ -629,7 +629,7 @@ export function SettingsDialog({
                     <div className="text-muted-foreground">
                       {[settings.city, settings.region, settings.postalCode]
                         .filter(Boolean)
-                        .join(", ") || "—"}
+                        .join(", ") || " - "}
                     </div>
                     <div className="text-muted-foreground">{settings.country || ""}</div>
                   </div>

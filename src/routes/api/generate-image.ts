@@ -112,7 +112,7 @@ export const Route = createFileRoute("/api/generate-image")({
               );
             }
             // Stop early on rate-limit / payment so the user gets a clear signal.
-            if (result.status === 429) return jsonError("Rate limit — try again in a moment.", 429);
+            if (result.status === 429) return jsonError("Rate limit  -  try again in a moment.", 429);
             if (result.status === 402) return jsonError("AI credits exhausted.", 402);
             lastError = result.error ?? lastError;
             lastStatus = result.status;

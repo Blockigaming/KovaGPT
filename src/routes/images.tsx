@@ -114,7 +114,7 @@ function saveHistory(userKey: string | null, items: HistoryItem[]) {
   try {
     localStorage.setItem(HISTORY_KEY_PREFIX + userKey, JSON.stringify(items.slice(0, HISTORY_LIMIT)));
   } catch {
-    /* quota — ignore */
+    /* quota  -  ignore */
   }
 }
 
