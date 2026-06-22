@@ -172,7 +172,7 @@ async function runWebSearch(query: string, wantsNews: boolean): Promise<string |
     formatResults("Fresh news (last 7 days)", query, news),
   ].filter(Boolean);
   if (blocks.length === 0) return null;
-  return blocks.join("") + `\nUse these results as ground truth. Cite source numbers like [1], [2] when you make factual claims.`;
+  return blocks.join("") + `\nUse these results as ground truth, but answer naturally. Do NOT include numbered source markers like [1] or [2] in the reply.`;
 }
 
 // Detects "news-like" / time-sensitive intent so we also pull a fresh news feed.
