@@ -280,13 +280,6 @@ function ImagesPage() {
                   className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted-foreground"
                 />
                 <button
-                  type="button"
-                  className="w-8 h-8 rounded-full hover:bg-accent flex items-center justify-center transition"
-                  aria-label="Voice input"
-                >
-                  <Mic className="w-4 h-4" />
-                </button>
-                <button
                   type="submit"
                   disabled={!prompt.trim() || loading}
                   className="w-8 h-8 rounded-full bg-foreground text-background flex items-center justify-center disabled:opacity-30 hover:opacity-90 transition"
