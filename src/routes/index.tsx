@@ -98,8 +98,14 @@ function NovaGPT() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [signupPromptOpen, setSignupPromptOpen] = useState(false);
   const [signupPromptShown, setSignupPromptShown] = useState(false);
+  const [limitDialog, setLimitDialog] = useState<{
+    open: boolean;
+    kind: "image" | "chat" | "upload";
+    message?: string;
+  }>({ open: false, kind: "image" });
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
 
   // Load (or reload) settings whenever the signed-in user changes so each
   // account gets its own personalization, behavior, appearance, etc.
