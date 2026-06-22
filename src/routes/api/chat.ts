@@ -1,5 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getMode, type ModeId } from "@/lib/modes";
+import {
+  DAILY_CHAT_LIMIT,
+  DAILY_IMAGE_LIMIT,
+  enforceQuota,
+  requireUser,
+} from "@/lib/api-auth.server";
 
 type IncomingMessage = {
   role: "user" | "assistant" | "system";
