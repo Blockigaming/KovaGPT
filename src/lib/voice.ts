@@ -98,17 +98,42 @@ export function defaultVoiceName(): string {
 }
 
 
-// Split long text into sentence-ish chunks so the synth queue can be flushed quickly on interrupt
-function chunkText(text: string): string[] {
-  const clean = text
-    .replace(/```[\s\S]*?```/g, " code block ")
-    .replace(/[#*_`>]/g, "")
+// Clean text so the TTS speaks what the user actually reads:
+// strip markdown syntax, code, URLs, emojis, and normalize whitespace.
+function cleanForSpeech(text: string): string {
+  return text
+    // Remove fenced code blocks entirely (they sound like noise)
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    // Markdown images → drop alt text & URL
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    // Markdown links → keep visible text only
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    // Bare URLs
+    .replace(/https?:\/\/\S+/g, " ")
+    // Headings, blockquotes, list bullets
+    .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+    .replace(/^\s{0,3}>\s+/gm, "")
+    .replace(/^\s*[-*+]\s+/gm, "")
+    // Bold/italic/underline markers
+    .replace(/(\*\*|__|\*|_|~~)/g, "")
+    // Tables: drop pipes
+    .replace(/\|/g, " ")
+    // Emojis & most symbols (keep letters, numbers, punctuation, whitespace)
+    .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, "")
+    .replace(/[#>`]/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+// Split long text into sentence-ish chunks so the synth queue can be flushed quickly on interrupt
+function chunkText(text: string): string[] {
+  const clean = cleanForSpeech(text);
   if (!clean) return [];
   const parts = clean.match(/[^.!?\n]+[.!?]?/g) ?? [clean];
   return parts.map((p) => p.trim()).filter(Boolean);
 }
+
 
 export type SpeakOpts = {
   rate?: number;
