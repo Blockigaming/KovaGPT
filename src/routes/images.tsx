@@ -214,9 +214,10 @@ function ImagesPage() {
         <header className="h-14 flex items-center px-3 border-b border-border">
           {!sidebarOpen && (
             <button
-              onClick={() => setSidebarOpen(true)}
+              onClick={() => setSidebarOpen((v) => !v)}
               className="p-2 rounded-lg hover:bg-accent transition mr-1"
-              aria-label="Open sidebar"
+              aria-label="Toggle sidebar"
+              title="Toggle sidebar"
             >
               <PanelLeft className="w-5 h-5" />
             </button>
