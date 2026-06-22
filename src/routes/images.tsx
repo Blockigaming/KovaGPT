@@ -121,6 +121,7 @@ function saveHistory(userKey: string | null, items: HistoryItem[]) {
 function ImagesPage() {
   const { isSignedIn, user } = useUser();
   const userKey = (user as any)?.id ?? null;
+  const [settings, setSettings] = useNovaSettings(userKey);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
