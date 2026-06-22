@@ -121,16 +121,19 @@ function NovaGPT() {
     applyThemeColors(settings.theme);
   }, [settings.theme]);
 
+  // Debounced persistence — avoid JSON.stringify on every keystroke / stream token,
+  // which was the main source of typing/streaming lag.
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window === "undefined") return;
+    const t = setTimeout(() => {
       localStorage.setItem(settingsKey(userKey), JSON.stringify(settings));
-    }
+    }, 400);
+    return () => clearTimeout(t);
   }, [settings, userKey]);
 
-  // Persist conversations across in-session navigation. When not signed in,
-  // they're wiped on the next reload by the mount effect above.
   useEffect(() => {
-    saveConversations(conversations);
+    const t = setTimeout(() => saveConversations(conversations), 400);
+    return () => clearTimeout(t);
   }, [conversations]);
 
   // If the user signs out mid-session, clear stored chats immediately.
