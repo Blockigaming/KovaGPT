@@ -3,9 +3,10 @@ import { authFetch } from "@/lib/auth-fetch";
 import { useEffect, useState } from "react";
 import { PanelLeft, ChevronDown, ChevronLeft, ChevronRight, ImageIcon, ArrowUp, Mic, Loader2, Download, Trash2, History } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
-import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
+import { SettingsDialog } from "@/components/SettingsDialog";
 import { HelpDialog } from "@/components/HelpDialog";
 import { LoginPromptDialog } from "@/components/LoginPromptDialog";
+import { useNovaSettings } from "@/lib/use-nova-settings";
 import {
   SignInButton,
   SignUpButton,
@@ -18,13 +19,13 @@ export const Route = createFileRoute("/images")({
   component: ImagesPage,
   head: () => ({
     meta: [
-      { title: "AI Image Generation — NovaGPT" },
+      { title: "AI Image Generation | NovaGPT" },
       {
         name: "description",
         content:
           "Create AI-generated images from text prompts with NovaGPT. Explore styles, save your history, and download results in seconds.",
       },
-      { property: "og:title", content: "AI Image Generation — NovaGPT" },
+      { property: "og:title", content: "AI Image Generation | NovaGPT" },
       {
         property: "og:description",
         content: "Create AI-generated images from text prompts with NovaGPT.",
