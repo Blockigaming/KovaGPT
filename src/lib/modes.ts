@@ -1,5 +1,6 @@
 export type ModeId =
   | "auto"
+  | "fast"
   | "creative"
   | "precise"
   | "code"
@@ -8,6 +9,7 @@ export type ModeId =
   | "research"
   | "writer"
   | "tutor";
+
 
 export type Tier = "free" | "plus" | "pro";
 
