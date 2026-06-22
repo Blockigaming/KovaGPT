@@ -26,10 +26,6 @@ export function tooMany(message = "Daily limit reached") {
   return jsonError(message, 429);
 }
 
-/**
- * Verify the Supabase bearer token on a Request. Returns { userId } on
- * success, or a Response (401) on failure that the caller should return.
- */
 export async function requireUser(
   request: Request,
 ): Promise<AuthedCaller | Response> {
@@ -57,75 +53,41 @@ export async function requireUser(
   return { userId, supabaseAdmin };
 }
 
-/**
- * Atomically increment the given counter for today and return the new value.
- * Uses an upsert + RPC-free pattern that's safe under concurrent calls.
- */
-async function incrementCounter(
-  caller: AuthedCaller,
-  column: "images" | "chats",
-): Promise<number> {
-  const today = new Date().toISOString().slice(0, 10);
-  // Try update first.
-  const { data: updated, error: upErr } = await caller.supabaseAdmin
-    .from("daily_usage")
-    .update({
-      [column]: (await readCurrent(caller, today, column)) + 1,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("user_id", caller.userId)
-    .eq("usage_date", today)
-    .select(column)
-    .maybeSingle();
-  if (!upErr && updated && typeof (updated as Record<string, number>)[column] === "number") {
-    return (updated as Record<string, number>)[column];
-  }
-  // Row doesn't exist yet — insert with 1.
-  const { data: inserted, error: insErr } = await caller.supabaseAdmin
-    .from("daily_usage")
-    .insert({
-      user_id: caller.userId,
-      usage_date: today,
-      [column]: 1,
-    })
-    .select(column)
-    .single();
-  if (insErr || !inserted) return 1;
-  return (inserted as Record<string, number>)[column] ?? 1;
-}
-
 async function readCurrent(
   caller: AuthedCaller,
   date: string,
-  column: "images" | "chats",
-): Promise<number> {
+): Promise<{ images: number; chats: number }> {
   const { data } = await caller.supabaseAdmin
     .from("daily_usage")
-    .select(column)
+    .select("images, chats")
     .eq("user_id", caller.userId)
     .eq("usage_date", date)
     .maybeSingle();
-  if (!data) return 0;
-  return (data as Record<string, number>)[column] ?? 0;
+  return { images: data?.images ?? 0, chats: data?.chats ?? 0 };
 }
 
-/**
- * Check + reserve quota. Returns null on success, or a 429 Response.
- */
 export async function enforceQuota(
   caller: AuthedCaller,
   kind: "images" | "chats",
   limit: number,
 ): Promise<Response | null> {
   const today = new Date().toISOString().slice(0, 10);
-  const current = await readCurrent(caller, today, kind);
-  if (current >= limit) {
+  const current = await readCurrent(caller, today);
+  const used = current[kind];
+  if (used >= limit) {
     return tooMany(
       kind === "images"
         ? `Daily image limit reached (${limit}/day). Try again tomorrow or upgrade.`
         : `Daily message limit reached (${limit}/day). Try again tomorrow or upgrade.`,
     );
   }
-  await incrementCounter(caller, kind);
+  const next = used + 1;
+  const row =
+    kind === "images"
+      ? { user_id: caller.userId, usage_date: today, images: next, chats: current.chats, updated_at: new Date().toISOString() }
+      : { user_id: caller.userId, usage_date: today, chats: next, images: current.images, updated_at: new Date().toISOString() };
+  await caller.supabaseAdmin
+    .from("daily_usage")
+    .upsert(row, { onConflict: "user_id,usage_date" });
   return null;
 }
