@@ -433,7 +433,11 @@ function NovaGPT() {
               <PanelLeft className="w-5 h-5" />
             </button>
           )}
-          <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-accent transition font-semibold">
+          <button
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-accent transition font-semibold"
+            aria-label="NovaGPT model selector"
+            title="NovaGPT"
+          >
             <span>NovaGPT</span>
             <ChevronDown className="w-4 h-4 text-muted-foreground" />
           </button>

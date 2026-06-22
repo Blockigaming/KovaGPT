@@ -333,9 +333,30 @@ export const Route = createFileRoute("/api/chat")({
           const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT);
           if (quota) return quota;
 
+          // SECURITY: Server-side tier enforcement. Without a subscription
+          // record on the server we treat every caller as the free tier and
+          // silently downgrade any Plus/Pro mode to "auto". Prevents tier
+          // bypass via a forged `mode` value from the client.
+          const requested = getMode(mode ?? "auto");
+          const m = requested.tier === "free" ? requested : getMode("auto");
 
-          const m = getMode(mode ?? "auto");
-          const hasImages = messages.some((msg) => (msg.attachments?.length ?? 0) > 0);
+          // SECURITY: Hard cap image attachments per request to stop free
+          // users from bypassing the client-side daily upload limit by
+          // calling /api/chat directly with many attachments.
+          const MAX_ATTACHMENTS_PER_REQUEST = 2;
+          const totalAttachments = messages.reduce(
+            (n, msg) => n + (msg.attachments?.length ?? 0),
+            0,
+          );
+          if (totalAttachments > MAX_ATTACHMENTS_PER_REQUEST) {
+            return new Response(
+              JSON.stringify({
+                error: `Too many image attachments in this request (max ${MAX_ATTACHMENTS_PER_REQUEST}).`,
+              }),
+              { status: 429, headers: { "Content-Type": "application/json" } },
+            );
+          }
+          const hasImages = totalAttachments > 0;
 
           const transformed = messages.map((msg) => {
             if (msg.role === "user" && msg.attachments && msg.attachments.length > 0) {
