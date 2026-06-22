@@ -304,7 +304,11 @@ function ImagesPage() {
                 )}
                 {result && (
                   <div className="p-3">
-                    <img src={result} alt="AI generated result" className="w-full max-w-md mx-auto rounded-xl" />
+                    <img
+                      src={result}
+                      alt={resultPrompt ? `AI-generated image of ${resultPrompt}` : "AI generated image"}
+                      className="w-full max-w-md mx-auto rounded-xl"
+                    />
                     <div className="flex justify-center mt-3">
                       <a
                         href={result}
@@ -387,12 +391,29 @@ function ImagesPage() {
 
             <div className="mt-10">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Explore AI image examples</h2>
+                <h2 className="text-lg font-semibold">
+                  Explore AI image examples
+                  <span className="ml-2 text-xs font-normal text-muted-foreground">
+                    Page {examplePage + 1} of {exampleTotalPages}
+                  </span>
+                </h2>
                 <div className="flex items-center gap-1">
-                  <button className="w-8 h-8 rounded-full border border-border hover:bg-accent flex items-center justify-center" aria-label="Previous">
+                  <button
+                    type="button"
+                    onClick={() => setExamplePage((p) => Math.max(0, p - 1))}
+                    disabled={examplePage === 0}
+                    className="w-8 h-8 rounded-full border border-border hover:bg-accent flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                    aria-label="Previous examples page"
+                  >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <button className="w-8 h-8 rounded-full border border-border hover:bg-accent flex items-center justify-center" aria-label="Next">
+                  <button
+                    type="button"
+                    onClick={() => setExamplePage((p) => Math.min(exampleTotalPages - 1, p + 1))}
+                    disabled={examplePage >= exampleTotalPages - 1}
+                    className="w-8 h-8 rounded-full border border-border hover:bg-accent flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                    aria-label="Next examples page"
+                  >
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -401,7 +422,7 @@ function ImagesPage() {
                 Click any example to use it as your prompt.
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                {EXAMPLES.map((ex) => (
+                {visibleExamples.map((ex) => (
                   <button
                     key={ex.label}
                     onClick={() => {
@@ -409,6 +430,7 @@ function ImagesPage() {
                       generate(ex.prompt);
                     }}
                     className="group relative aspect-[3/4] rounded-2xl overflow-hidden bg-muted hover:scale-[1.02] transition-transform text-left"
+                    aria-label={`Use example: ${ex.label}`}
                   >
                     <img
                       src={ex.src}
