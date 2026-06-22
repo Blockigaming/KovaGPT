@@ -166,8 +166,9 @@ export function ChatInput({
                 type="button"
                 onClick={() => fileRef.current?.click()}
                 className="w-9 h-9 rounded-full hover:bg-accent flex items-center justify-center transition"
-                aria-label="Attach image"
-                title="Attach image"
+                aria-label="Attach file"
+                title="Attach image or text file"
+
               >
                 <Plus className="w-5 h-5" />
               </button>
