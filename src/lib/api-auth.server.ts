@@ -55,17 +55,31 @@ export async function requireUser(
   return { userId, supabaseAdmin };
 }
 
-async function readCurrent(
+// Rolling 24h window: the most recent row tracks the current window.
+// If its updated_at is older than 24h, the window has expired and we start
+// fresh; otherwise we keep incrementing it.
+async function readWindow(
   caller: AuthedCaller,
-  date: string,
-): Promise<{ images: number; chats: number }> {
+): Promise<{ images: number; chats: number; date: string; expired: boolean }> {
   const { data } = await caller.supabaseAdmin
     .from("daily_usage")
-    .select("images, chats")
+    .select("images, chats, usage_date, updated_at")
     .eq("user_id", caller.userId)
-    .eq("usage_date", date)
+    .order("updated_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
-  return { images: data?.images ?? 0, chats: data?.chats ?? 0 };
+  const today = new Date().toISOString().slice(0, 10);
+  if (!data) return { images: 0, chats: 0, date: today, expired: true };
+  const ageMs = Date.now() - new Date(data.updated_at as string).getTime();
+  if (ageMs >= WINDOW_MS) {
+    return { images: 0, chats: 0, date: today, expired: true };
+  }
+  return {
+    images: data.images ?? 0,
+    chats: data.chats ?? 0,
+    date: data.usage_date as string,
+    expired: false,
+  };
 }
 
 export async function enforceQuota(
@@ -73,23 +87,26 @@ export async function enforceQuota(
   kind: "images" | "chats",
   limit: number,
 ): Promise<Response | null> {
-  const today = new Date().toISOString().slice(0, 10);
-  const current = await readCurrent(caller, today);
+  const current = await readWindow(caller);
   const used = current[kind];
   if (used >= limit) {
     return tooMany(
       kind === "images"
-        ? `Daily image limit reached (${limit}/day). Try again tomorrow or upgrade.`
-        : `Daily message limit reached (${limit}/day). Try again tomorrow or upgrade.`,
+        ? `Daily image limit reached (${limit}/day). Resets in 24 hours or upgrade for more.`
+        : `Daily message limit reached (${limit}/day). Resets in 24 hours or upgrade for more.`,
     );
   }
   const next = used + 1;
+  // When the window expired, start a new row keyed by today's date so the
+  // upsert doesn't collide with the previous expired row.
+  const dateKey = current.expired ? new Date().toISOString().slice(0, 10) : current.date;
   const row =
     kind === "images"
-      ? { user_id: caller.userId, usage_date: today, images: next, chats: current.chats, updated_at: new Date().toISOString() }
-      : { user_id: caller.userId, usage_date: today, chats: next, images: current.images, updated_at: new Date().toISOString() };
+      ? { user_id: caller.userId, usage_date: dateKey, images: next, chats: current.chats, updated_at: new Date().toISOString() }
+      : { user_id: caller.userId, usage_date: dateKey, chats: next, images: current.images, updated_at: new Date().toISOString() };
   await caller.supabaseAdmin
     .from("daily_usage")
     .upsert(row, { onConflict: "user_id,usage_date" });
   return null;
 }
+
