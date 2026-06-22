@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
 import { useEffect, useState } from "react";
-import { PanelLeft, ChevronDown, ChevronLeft, ChevronRight, ImageIcon, ArrowUp, Mic, Loader2, Download, Trash2, History } from "lucide-react";
+import { PanelLeft, ChevronDown, ChevronLeft, ChevronRight, ImageIcon, ArrowUp, Loader2, Download, Trash2, History } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { HelpDialog } from "@/components/HelpDialog";
@@ -129,8 +129,16 @@ function ImagesPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
+  const [resultPrompt, setResultPrompt] = useState<string>("");
   const [loginOpen, setLoginOpen] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [examplePage, setExamplePage] = useState(0);
+  const EXAMPLES_PER_PAGE = 10;
+  const exampleTotalPages = Math.max(1, Math.ceil(EXAMPLES.length / EXAMPLES_PER_PAGE));
+  const visibleExamples = EXAMPLES.slice(
+    examplePage * EXAMPLES_PER_PAGE,
+    examplePage * EXAMPLES_PER_PAGE + EXAMPLES_PER_PAGE,
+  );
 
   // Load per-user history when sign-in state resolves.
   useEffect(() => {
@@ -188,6 +196,7 @@ function ImagesPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Failed to generate image");
       setResult(data.imageUrl);
+      setResultPrompt(trimmed);
       addToHistory(trimmed, data.imageUrl);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to generate image");
@@ -222,7 +231,11 @@ function ImagesPage() {
               <PanelLeft className="w-5 h-5" />
             </button>
           )}
-          <button className="flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-accent transition font-semibold">
+          <button
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-accent transition font-semibold"
+            aria-label="NovaGPT model selector"
+            title="NovaGPT"
+          >
             <span>NovaGPT</span>
             <ChevronDown className="w-4 h-4 text-muted-foreground" />
           </button>
