@@ -473,6 +473,14 @@ function ImagesPage() {
       />
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
       <LoginPromptDialog open={loginOpen} onOpenChange={setLoginOpen} />
+      <LimitReachedDialog
+        open={limitOpen}
+        onOpenChange={setLimitOpen}
+        kind="image"
+        message={limitMessage}
+        resetsAt={getUsage().resetsAt}
+      />
+
     </div>
   );
 }
