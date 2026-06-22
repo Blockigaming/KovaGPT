@@ -13,15 +13,74 @@ export const Route = createFileRoute("/pricing")({
   component: PricingPage,
   head: () => ({
     meta: [
-      { title: "NovaGPT Pricing — Plus & Pro plans" },
+      { title: "Pricing — NovaGPT Plus & Pro plans" },
       {
         name: "description",
         content:
-          "Compare NovaGPT Free, Plus, and Pro plans. Get more messages, image generations, voice, and advanced reasoning.",
+          "Compare NovaGPT Free, Plus, and Pro plans. Get more messages, image generations, voice, and advanced reasoning modes.",
+      },
+      { property: "og:title", content: "Pricing — NovaGPT Plus & Pro plans" },
+      {
+        property: "og:description",
+        content:
+          "Compare NovaGPT Free, Plus, and Pro plans. More messages, image generation, voice, and advanced reasoning.",
+      },
+      { property: "og:url", content: "https://nova-aigpt.lovable.app/pricing" },
+      { property: "og:type", content: "website" },
+    ],
+    links: [{ rel: "canonical", href: "https://nova-aigpt.lovable.app/pricing" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "Product",
+              name: "NovaGPT Free",
+              description: "Free plan with Auto mode, live web search, and image generation.",
+              brand: { "@type": "Brand", name: "NovaGPT" },
+              offers: {
+                "@type": "Offer",
+                price: "0",
+                priceCurrency: "USD",
+                url: "https://nova-aigpt.lovable.app/pricing",
+                availability: "https://schema.org/InStock",
+              },
+            },
+            {
+              "@type": "Product",
+              name: "NovaGPT Plus",
+              description: "Plus plan with Creative, Precise, Code, and Study modes plus higher usage.",
+              brand: { "@type": "Brand", name: "NovaGPT" },
+              offers: {
+                "@type": "Offer",
+                price: "20",
+                priceCurrency: "USD",
+                url: "https://nova-aigpt.lovable.app/pricing",
+                availability: "https://schema.org/InStock",
+              },
+            },
+            {
+              "@type": "Product",
+              name: "NovaGPT Pro",
+              description: "Pro plan with Reasoning, Research, Writer Pro, and Tutor Pro modes and top usage limits.",
+              brand: { "@type": "Brand", name: "NovaGPT" },
+              offers: {
+                "@type": "Offer",
+                price: "79",
+                priceCurrency: "USD",
+                url: "https://nova-aigpt.lovable.app/pricing",
+                availability: "https://schema.org/InStock",
+              },
+            },
+          ],
+        }),
       },
     ],
   }),
 });
+
 
 type ProTier = "5x" | "10x";
 

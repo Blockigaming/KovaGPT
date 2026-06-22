@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ImagesRouteImport } from './routes/images'
 import { Route as IndexRouteImport } from './routes/index'
@@ -18,6 +19,11 @@ import { Route as ApiTitleRouteImport } from './routes/api/title'
 import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
@@ -63,6 +69,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/images': typeof ImagesRoute
   '/pricing': typeof PricingRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/api/chat': typeof ApiChatRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/title': typeof ApiTitleRoute
@@ -73,6 +80,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/images': typeof ImagesRoute
   '/pricing': typeof PricingRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/api/chat': typeof ApiChatRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/title': typeof ApiTitleRoute
@@ -84,6 +92,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/images': typeof ImagesRoute
   '/pricing': typeof PricingRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/api/chat': typeof ApiChatRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/title': typeof ApiTitleRoute
@@ -96,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/images'
     | '/pricing'
+    | '/sitemap.xml'
     | '/api/chat'
     | '/api/generate-image'
     | '/api/title'
@@ -106,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/images'
     | '/pricing'
+    | '/sitemap.xml'
     | '/api/chat'
     | '/api/generate-image'
     | '/api/title'
@@ -116,6 +127,7 @@ export interface FileRouteTypes {
     | '/'
     | '/images'
     | '/pricing'
+    | '/sitemap.xml'
     | '/api/chat'
     | '/api/generate-image'
     | '/api/title'
@@ -127,6 +139,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ImagesRoute: typeof ImagesRoute
   PricingRoute: typeof PricingRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
   ApiTitleRoute: typeof ApiTitleRoute
@@ -136,6 +149,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pricing': {
       id: '/pricing'
       path: '/pricing'
@@ -199,6 +219,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ImagesRoute: ImagesRoute,
   PricingRoute: PricingRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiChatRoute: ApiChatRoute,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
   ApiTitleRoute: ApiTitleRoute,

@@ -68,24 +68,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "NovaGPT" },
-      {
-        name: "description",
-        content:
-          "NovaGPT is an advanced multimodal AI assistant for chat, coding, research, image generation, and voice.",
-      },
+      { title: "NovaGPT — Advanced Multimodal AI Assistant" },
       { name: "author", content: "NovaGPT" },
-      { property: "og:title", content: "NovaGPT" },
-      {
-        property: "og:description",
-        content: "Advanced multimodal AI assistant — chat, code, voice, and images.",
-      },
+      { property: "og:site_name", content: "NovaGPT" },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:title", content: "NovaGPT" },
-      { name: "description", content: "NovaGPT is an advanced multimodal AI assistant for intelligent conversations and task execution." },
-      { property: "og:description", content: "NovaGPT is an advanced multimodal AI assistant for intelligent conversations and task execution." },
-      { name: "twitter:description", content: "NovaGPT is an advanced multimodal AI assistant for intelligent conversations and task execution." },
+      { name: "twitter:card", content: "summary_large_image" },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/76515f16-9fc9-45ce-8a2c-17466d934b0f/id-preview-a1c26dfe--f86a4255-1c71-43d2-8f9e-91a2136b5eab.lovable.app-1779823025967.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/76515f16-9fc9-45ce-8a2c-17466d934b0f/id-preview-a1c26dfe--f86a4255-1c71-43d2-8f9e-91a2136b5eab.lovable.app-1779823025967.png" },
     ],
@@ -94,7 +81,29 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", type: "image/png", href: "/favicon.png" },
       { rel: "apple-touch-icon", href: "/favicon.png" },
     ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "Organization",
+              name: "NovaGPT",
+              url: "https://nova-aigpt.lovable.app",
+              logo: "https://nova-aigpt.lovable.app/favicon.png",
+            },
+            {
+              "@type": "WebSite",
+              name: "NovaGPT",
+              url: "https://nova-aigpt.lovable.app",
+            },
+          ],
+        }),
+      },
+    ],
   }),
+
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,

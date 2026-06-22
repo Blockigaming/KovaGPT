@@ -111,7 +111,7 @@ export function ChatInput({
             <div className="flex flex-wrap gap-2 p-3 pb-0">
               {attachments.map((a, i) => (
                 <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border">
-                  <img src={a.dataUrl} alt={a.name} className="w-full h-full object-cover" />
+                  <img src={a.dataUrl} alt="Uploaded image preview" className="w-full h-full object-cover" />
                   <button
                     type="button"
                     onClick={() => onAttachmentsChange(attachments.filter((_, j) => j !== i))}

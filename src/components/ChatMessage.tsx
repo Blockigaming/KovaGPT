@@ -63,7 +63,7 @@ function ChatMessageInner({
                 <img
                   key={i}
                   src={a.dataUrl}
-                  alt="attachment"
+                  alt="Message attachment"
                   className="max-h-64 rounded-lg border border-border"
                 />
               ))}

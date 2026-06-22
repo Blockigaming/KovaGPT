@@ -12,7 +12,7 @@ export function NovaLogo({
     return (
       <img
         src={logo}
-        alt="NovaGPT"
+        alt="NovaGPT Logo"
         className={className}
         width={512}
         height={512}
@@ -27,7 +27,7 @@ export function NovaLogo({
     >
       <img
         src={logo}
-        alt="NovaGPT"
+        alt="NovaGPT Logo"
         className="absolute inset-0 w-full h-full rounded-full"
         width={512}
         height={512}
