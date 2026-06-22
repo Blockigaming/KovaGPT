@@ -173,7 +173,7 @@ export function speakChunk(text: string, opts?: SpeakOpts) {
   const voice = opts?.voice
     ? voices.find((v) => v.name === opts.voice) ?? null
     : voices.find((v) => v.name === defaultVoiceName()) ?? null;
-  const clean = text.replace(/```[\s\S]*?```/g, " code block ").replace(/[#*_`>]/g, "").replace(/\s+/g, " ").trim();
+  const clean = cleanForSpeech(text);
   if (!clean) { opts?.onEnd?.(); return; }
   const u = new SpeechSynthesisUtterance(clean);
   u.rate = opts?.rate ?? 1;
