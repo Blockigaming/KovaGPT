@@ -153,34 +153,48 @@ export function SettingsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[88vh] overflow-hidden flex flex-col gap-0 p-0">
         <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
-          <DialogTitle className="text-lg">Settings</DialogTitle>
+          <DialogTitle className="text-lg font-semibold tracking-tight">Settings</DialogTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            {loggedIn
+              ? "Personalize NovaGPT. Changes save to your account automatically."
+              : "Sign in to view and change your settings."}
+          </p>
         </DialogHeader>
 
+        {!loggedIn ? (
+          <div className="p-6">
+            <LockedTab
+              title="Sign in to access settings"
+              body="Your preferences, personalization, appearance, billing, and security are tied to your NovaGPT account. Sign in or create a free account to continue."
+              onSignIn={() => clerk?.openSignIn()}
+            />
+          </div>
+        ) : (
         <Tabs defaultValue="general" className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="flex w-full overflow-x-auto justify-start gap-1 h-auto p-1.5 mx-6 mt-4 mb-2 max-w-[calc(100%-3rem)]">
-            <TabsTrigger value="general" className="shrink-0 gap-1.5">
+          <TabsList className="flex w-full overflow-x-auto justify-start gap-1 h-auto p-1 mx-6 mt-4 mb-2 max-w-[calc(100%-3rem)] bg-muted/60 rounded-lg">
+            <TabsTrigger value="general" className="shrink-0 gap-1.5 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Sparkles className="w-4 h-4 hidden sm:inline" />
               General
             </TabsTrigger>
-            <TabsTrigger value="personalization" className="shrink-0 gap-1.5">
+            <TabsTrigger value="personalization" className="shrink-0 gap-1.5 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <User2 className="w-4 h-4 hidden sm:inline" />
-              You {!loggedIn && <Lock className="w-3 h-3 opacity-60" />}
+              You
             </TabsTrigger>
-            <TabsTrigger value="behavior" className="shrink-0 gap-1.5">
+            <TabsTrigger value="behavior" className="shrink-0 gap-1.5 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <MessageSquare className="w-4 h-4 hidden sm:inline" />
-              Behavior {!loggedIn && <Lock className="w-3 h-3 opacity-60" />}
+              Behavior
             </TabsTrigger>
-            <TabsTrigger value="appearance" className="shrink-0 gap-1.5">
+            <TabsTrigger value="appearance" className="shrink-0 gap-1.5 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Palette className="w-4 h-4 hidden sm:inline" />
-              Appearance {!loggedIn && <Lock className="w-3 h-3 opacity-60" />}
+              Appearance
             </TabsTrigger>
-            <TabsTrigger value="billing" className="shrink-0 gap-1.5">
+            <TabsTrigger value="billing" className="shrink-0 gap-1.5 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <CreditCard className="w-4 h-4 hidden sm:inline" />
-              Billing {!loggedIn && <Lock className="w-3 h-3 opacity-60" />}
+              Billing
             </TabsTrigger>
-            <TabsTrigger value="security" className="shrink-0 gap-1.5">
+            <TabsTrigger value="security" className="shrink-0 gap-1.5 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <ShieldCheck className="w-4 h-4 hidden sm:inline" />
-              Security {!loggedIn && <Lock className="w-3 h-3 opacity-60" />}
+              Security
             </TabsTrigger>
           </TabsList>
 
