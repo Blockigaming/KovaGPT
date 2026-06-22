@@ -3,8 +3,7 @@ import { Check, ArrowLeft, Sparkles, Zap, Crown, X } from "lucide-react";
 import { useState } from "react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
-import { useUser } from "@/components/auth/ClerkSafe";
-import { useClerk } from "@clerk/clerk-react";
+import { useUser, useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 
 
