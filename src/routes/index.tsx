@@ -589,6 +589,15 @@ function NovaGPT() {
 
       <SignUpPrompt open={signupPromptOpen} onOpenChange={setSignupPromptOpen} />
 
+      <LimitReachedDialog
+        open={limitDialog.open}
+        onOpenChange={(v) => setLimitDialog((d) => ({ ...d, open: v }))}
+        kind={limitDialog.kind}
+        message={limitDialog.message}
+        resetsAt={getUsage().resetsAt}
+      />
+
+
       <VoiceMode
         open={voiceModeOpen}
         onClose={() => setVoiceModeOpen(false)}
