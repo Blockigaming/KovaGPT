@@ -1,5 +1,5 @@
 import { MessageSquare, Trash2, PanelLeft, Search, Sparkles, Settings as Cog, HelpCircle, ImageIcon, SquarePen } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { SignInButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
 import type { Conversation } from "@/lib/chat-store";
