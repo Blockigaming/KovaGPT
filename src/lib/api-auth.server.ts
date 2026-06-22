@@ -3,8 +3,10 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 
-export const DAILY_IMAGE_LIMIT = 3;
+export const DAILY_IMAGE_LIMIT = 1;
 export const DAILY_CHAT_LIMIT = 50;
+const WINDOW_MS = 24 * 60 * 60 * 1000;
+
 
 export type AuthedCaller = {
   userId: string;
