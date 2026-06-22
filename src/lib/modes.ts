@@ -47,6 +47,19 @@ Knowledge:
 - Otherwise, note your knowledge may be out of date for very recent events.`,
   },
   {
+    id: "fast",
+    label: "Fast",
+    description: "Instant, snappy answers. Free plan, optimized for speed.",
+    tier: "free",
+    systemPrompt: `You are NovaGPT in Fast mode. Optimize for speed and brevity.
+- Reply instantly with the shortest correct answer.
+- Default to 1-3 sentences or a tight bullet list.
+- Skip preambles, disclaimers, and filler.
+- Only expand if the user clearly asks for more detail.
+- Stay accurate; if unsure, say so briefly.`,
+  },
+
+  {
     id: "creative",
     label: "Creative",
     description: "Imaginative writing, brainstorming, ideation.",
