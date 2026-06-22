@@ -482,7 +482,7 @@ function NovaGPT() {
         {!active || active.messages.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4">
             <h1 className="text-2xl sm:text-3xl font-semibold mb-8 text-center">
-              NovaGPT
+              {greeting}
             </h1>
             <div className="w-full">
               <ChatInput
@@ -496,6 +496,9 @@ function NovaGPT() {
                 mode={mode}
                 onModeChange={setMode}
                 onOpenVoice={() => setVoiceModeOpen(true)}
+                onUploadLimit={() =>
+                  setLimitDialog({ open: true, kind: "upload" })
+                }
                 placeholder="Ask anything"
               />
             </div>
@@ -525,11 +528,15 @@ function NovaGPT() {
               mode={mode}
               onModeChange={setMode}
               onOpenVoice={() => setVoiceModeOpen(true)}
+              onUploadLimit={() =>
+                setLimitDialog({ open: true, kind: "upload" })
+              }
               placeholder="Ask anything"
             />
           </>
         )}
       </main>
+
 
       <SettingsDialog
         open={settingsOpen}
