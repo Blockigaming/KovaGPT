@@ -68,10 +68,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "NovaGPT" },
-      { name: "application-name", content: "NovaGPT" },
-      { name: "author", content: "NovaGPT" },
-      { property: "og:site_name", content: "NovaGPT" },
+      { title: "KovaGPT" },
+      { name: "application-name", content: "KovaGPT" },
+      { name: "author", content: "KovaGPT" },
+      { property: "og:site_name", content: "KovaGPT" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -89,13 +89,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "@graph": [
             {
               "@type": "Organization",
-              name: "NovaGPT",
+              name: "KovaGPT",
               url: "https://nova-aigpt.lovable.app",
               logo: "https://nova-aigpt.lovable.app/favicon.png",
             },
             {
               "@type": "WebSite",
-              name: "NovaGPT",
+              name: "KovaGPT",
               url: "https://nova-aigpt.lovable.app",
             },
           ],

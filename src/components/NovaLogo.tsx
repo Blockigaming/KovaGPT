@@ -1,5 +1,5 @@
 /**
- * NovaGPT logo: refined compass star inside a thin ring with inner cross detail.
+ * KovaGPT logo: refined compass star inside a thin ring with inner cross detail.
  * Pure SVG so it stays sharp at any size and adds zero network/image cost.
  */
 export function NovaLogo({
@@ -13,7 +13,7 @@ export function NovaLogo({
     <svg
       viewBox="0 0 48 48"
       className={className}
-      aria-label="NovaGPT logo"
+      aria-label="KovaGPT logo"
       role="img"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"

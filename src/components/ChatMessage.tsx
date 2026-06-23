@@ -68,7 +68,7 @@ function ChatMessageInner({
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-sm mb-1">{isUser ? "You" : "NovaGPT"}</div>
+          <div className="font-semibold text-sm mb-1">{isUser ? "You" : "KovaGPT"}</div>
           {message.attachments && message.attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-2">
               {message.attachments.map((a, i) => (

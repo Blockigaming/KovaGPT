@@ -38,7 +38,7 @@ export function EnterpriseContactDialog({
       needs,
     ].join("\n");
     const href = `mailto:${SALES_EMAIL}?subject=${encodeURIComponent(
-      "NovaGPT Enterprise inquiry",
+      "KovaGPT Enterprise inquiry",
     )}&body=${encodeURIComponent(body)}`;
     window.location.href = href;
     onOpenChange(false);

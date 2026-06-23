@@ -35,23 +35,23 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createFileRoute("/")({
-  component: NovaGPT,
+  component: KovaGPT,
   head: () => ({
     meta: [
-      { title: "NovaGPT" },
+      { title: "KovaGPT" },
       {
         name: "description",
         content:
-          "NovaGPT is an advanced multimodal AI assistant for chat, coding, research, image generation, and voice  -  with specialized modes for focused work.",
+          "KovaGPT is an advanced multimodal AI assistant for chat, coding, research, image generation, and voice  -  with specialized modes for focused work.",
       },
-      { property: "og:title", content: "NovaGPT" },
+      { property: "og:title", content: "KovaGPT" },
       {
         property: "og:description",
         content:
           "Chat, code, research, generate images, and use voice  -  with specialized modes for focused work.",
       },
       { property: "og:url", content: "https://nova-aigpt.lovable.app/" },
-      { name: "twitter:title", content: "NovaGPT" },
+      { name: "twitter:title", content: "KovaGPT" },
       {
         name: "twitter:description",
         content:
@@ -82,7 +82,7 @@ function loadSettings(userKey: string | null): Settings {
   }
 }
 
-function NovaGPT() {
+function KovaGPT() {
   const { isSignedIn, isLoaded, user } = useUser();
   const userKey = user?.id ?? null;
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -173,7 +173,7 @@ function NovaGPT() {
   }, [settings.displayName, user]);
 
   const greeting = useMemo(() => {
-    if (clerkEnabled && !isSignedIn) return "NovaGPT";
+    if (clerkEnabled && !isSignedIn) return "KovaGPT";
     const name = firstName;
     const prompts = name
       ? [
@@ -494,10 +494,10 @@ function NovaGPT() {
           )}
           <button
             className="flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-accent transition font-semibold"
-            aria-label="NovaGPT model selector"
-            title="NovaGPT"
+            aria-label="KovaGPT model selector"
+            title="KovaGPT"
           >
-            <span>NovaGPT</span>
+            <span>KovaGPT</span>
             <ChevronDown className="w-4 h-4 text-muted-foreground" />
           </button>
           <div className="ml-auto flex items-center gap-2">

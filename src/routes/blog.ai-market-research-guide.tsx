@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 const CANONICAL = "https://nova-aigpt.lovable.app/blog/ai-market-research-guide";
 const TITLE = "How to Use AI for Market Research in 2026";
 const DESCRIPTION =
-  "A practical workflow for using AI for market research: size markets, map competitors, and synthesize trends with NovaGPT's Research and Reasoning modes.";
+  "A practical workflow for using AI for market research: size markets, map competitors, and synthesize trends with KovaGPT's Research and Reasoning modes.";
 
 export const Route = createFileRoute("/blog/ai-market-research-guide")({
   head: () => ({
@@ -29,8 +29,8 @@ export const Route = createFileRoute("/blog/ai-market-research-guide")({
           description: DESCRIPTION,
           datePublished: "2026-06-22",
           dateModified: "2026-06-22",
-          author: { "@type": "Organization", name: "NovaGPT" },
-          publisher: { "@type": "Organization", name: "NovaGPT" },
+          author: { "@type": "Organization", name: "KovaGPT" },
+          publisher: { "@type": "Organization", name: "KovaGPT" },
           mainEntityOfPage: CANONICAL,
         }),
       },
@@ -61,7 +61,7 @@ function MarketResearchGuide() {
           and weeks of synthesis. Modern AI assistants compress that loop. The catch is that
           general chatbots hallucinate numbers and miss recent events. The fix is a structured
           workflow plus a model that can actually search the live web  -  that's where
-          NovaGPT's <strong>Research</strong> and <strong>Reasoning</strong> modes earn their
+          KovaGPT's <strong>Research</strong> and <strong>Reasoning</strong> modes earn their
           keep.
         </p>
       </section>
@@ -75,13 +75,13 @@ function MarketResearchGuide() {
             Q3?") Vague questions produce vague AI output.
           </li>
           <li>
-            <strong>Size the market.</strong> Switch NovaGPT to <em>Research</em> mode and ask
+            <strong>Size the market.</strong> Switch KovaGPT to <em>Research</em> mode and ask
             for TAM / SAM / SOM with sources. Force citations: <em>"give me three independent
             sources for each number; flag any estimate older than 18 months."</em>
           </li>
           <li>
             <strong>Map competitors.</strong> Ask for 8-12 competitors with pricing, target
-            segment, distribution channel, and recent funding. Have NovaGPT output a comparison
+            segment, distribution channel, and recent funding. Have KovaGPT output a comparison
             table you can paste into a spreadsheet.
           </li>
           <li>
@@ -101,7 +101,7 @@ function MarketResearchGuide() {
         <h2 className="text-2xl font-semibold">Why mode-switching matters</h2>
         <p>
           One-size-fits-all chatbots blur retrieval, reasoning, and writing into a single
-          response  -  which is exactly why they hallucinate in research. NovaGPT exposes the
+          response  -  which is exactly why they hallucinate in research. KovaGPT exposes the
           modes separately so you can grade each step on its own:
         </p>
         <ul className="list-disc space-y-2 pl-5">
@@ -166,7 +166,7 @@ function MarketResearchGuide() {
       </section>
 
       <section className="rounded-xl border border-border bg-card p-6">
-        <h2 className="mb-2 text-xl font-semibold">Try this workflow in NovaGPT</h2>
+        <h2 className="mb-2 text-xl font-semibold">Try this workflow in KovaGPT</h2>
         <p className="mb-4 text-sm text-muted-foreground">
           Research and Reasoning modes are available on the free tier. Sign in and run the
           first sizing prompt in under a minute.
@@ -175,7 +175,7 @@ function MarketResearchGuide() {
           to="/"
           className="inline-flex items-center justify-center rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background transition hover:opacity-90"
         >
-          Open NovaGPT
+          Open KovaGPT
         </Link>
       </section>
     </article>

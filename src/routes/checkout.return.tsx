@@ -9,11 +9,11 @@ export const Route = createFileRoute("/checkout/return")({
   component: CheckoutReturn,
   head: () => ({
     meta: [
-      { title: "Payment Successful - NovaGPT Subscription Active" },
+      { title: "Payment Successful - KovaGPT Subscription Active" },
       {
         name: "description",
         content:
-          "Your NovaGPT subscription is now active. Access advanced AI modes, web search, image generation, and priority models on every device.",
+          "Your KovaGPT subscription is now active. Access advanced AI modes, web search, image generation, and priority models on every device.",
       },
       { name: "robots", content: "noindex, nofollow" },
       { property: "og:url", content: "https://nova-aigpt.lovable.app/checkout/return" },
@@ -35,7 +35,7 @@ function CheckoutReturn() {
             </div>
             <h1 className="text-2xl font-semibold mb-2">Subscription activated</h1>
             <p className="text-sm text-muted-foreground mb-6">
-              Your subscription is active. Welcome to NovaGPT.
+              Your subscription is active. Welcome to KovaGPT.
             </p>
           </>
         ) : (
@@ -51,7 +51,7 @@ function CheckoutReturn() {
           to="/"
           className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-foreground text-background text-sm font-medium hover:opacity-90 transition"
         >
-          Back to NovaGPT
+          Back to KovaGPT
         </Link>
       </div>
     </div>
