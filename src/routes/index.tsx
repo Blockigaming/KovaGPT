@@ -523,9 +523,7 @@ function KovaGPT() {
 
         {!active || active.messages.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4">
-            <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-foreground text-background mb-5 shadow-sm">
-              <NovaLogo className="w-9 h-9" />
-            </div>
+            <NovaLogo className="w-14 h-14 mb-5 text-foreground" />
             <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight mb-2 text-center">
               {greeting}
             </h1>
