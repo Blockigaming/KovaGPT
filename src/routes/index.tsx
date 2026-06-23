@@ -96,7 +96,7 @@ function KovaGPT() {
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
-  const [bugOpen, setBugOpen] = useState(false);
+  
   const [voiceModeOpen, setVoiceModeOpen] = useState(false);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [signupPromptOpen, setSignupPromptOpen] = useState(false);
@@ -481,7 +481,7 @@ function KovaGPT() {
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenHelp={() => setHelpOpen(true)}
-        onOpenBug={() => setBugOpen(true)}
+        
       />
 
       <main className="flex-1 flex flex-col min-w-0">
@@ -595,7 +595,7 @@ function KovaGPT() {
       />
 
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
-      <HelpDialog open={bugOpen} onOpenChange={setBugOpen} variant="bug" />
+      
 
       <SignUpPrompt open={signupPromptOpen} onOpenChange={setSignupPromptOpen} />
 

@@ -133,20 +133,20 @@ export function Sidebar({
         </div>
 
         {/* Compact nav row */}
-        <div className="px-3 pb-2 flex items-center gap-2">
+        <div className="px-3 pb-2 flex flex-col gap-1">
           <Link
             to="/images"
-            className="flex-1 flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition"
           >
             <ImageIcon className="w-4 h-4" />
-            <span>Images</span>
+            <span>Image Generation</span>
           </Link>
           <Link
             to="/pricing"
-            className="flex-1 flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition"
           >
             <Sparkles className="w-4 h-4" />
-            <span>Plans</span>
+            <span>Subscriptions</span>
           </Link>
         </div>
 
