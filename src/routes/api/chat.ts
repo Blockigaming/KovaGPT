@@ -471,28 +471,41 @@ export const Route = createFileRoute("/api/chat")({
             }
           }
 
+          // Banned-user + maintenance + tier checks for signed-in callers.
+          let callerTier: "free" | "plus" | "pro" = "free";
+          if (auth) {
+            const banned = await assertNotBanned(auth);
+            if (banned) return banned;
+            if (!isOwner) callerTier = await getCallerTier(auth);
+          }
+
           // Image generation requires an account.
           if (isImageRequest) {
             if (!auth) return unauthorized("Sign in to generate images.");
             if (!isOwner) {
+              const maint = await assertFeatureEnabled(auth, "images");
+              if (maint) return maint;
               const quota = await enforceQuota(auth, "images", DAILY_IMAGE_LIMIT);
               if (quota) return quota;
             }
             return handleImageRequest(lastText, apiKey);
           }
 
-          // Anonymous chat is allowed; signed-in users get per-user daily quotas.
+          // Anonymous chat is allowed; signed-in users get per-user daily quotas + maintenance check.
           if (auth && !isOwner) {
+            const maint = await assertFeatureEnabled(auth, "chat");
+            if (maint) return maint;
             const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT);
             if (quota) return quota;
           }
 
-          // SECURITY: Server-side tier enforcement. Without a subscription
-          // record on the server we treat every caller as the free tier and
-          // silently downgrade any Plus/Pro mode to "auto". The owner account
-          // bypasses this and can use any mode.
+          // SECURITY: Server-side tier enforcement. Client-supplied `mode` is
+          // only honored if the user's resolved tier permits it; anything
+          // above their tier is silently downgraded to "auto". Owner bypasses.
+          const TIER_RANK: Record<"free" | "plus" | "pro", number> = { free: 0, plus: 1, pro: 2 };
           const requested = getMode(mode ?? "auto");
-          const m = isOwner || requested.tier === "free" ? requested : getMode("auto");
+          const allowed = isOwner || TIER_RANK[requested.tier] <= TIER_RANK[callerTier];
+          const m = allowed ? requested : getMode("auto");
           const MAX_ATTACHMENTS_PER_REQUEST = 2;
           const totalAttachments = messages.reduce(
             (n, msg) => n + (msg.attachments?.length ?? 0),
