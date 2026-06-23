@@ -31,6 +31,20 @@ export function tooMany(message = "Daily limit reached") {
 export async function requireUser(
   request: Request,
 ): Promise<AuthedCaller | Response> {
+  const result = await optionalUser(request);
+  if (!result) return unauthorized();
+  if (result instanceof Response) return result;
+  return result;
+}
+
+/**
+ * Returns the authed caller if the request carries a valid bearer token,
+ * `null` if the request is anonymous (no token at all), or a Response when
+ * the token is present but invalid/expired.
+ */
+export async function optionalUser(
+  request: Request,
+): Promise<AuthedCaller | null | Response> {
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
   const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -38,9 +52,9 @@ export async function requireUser(
     return jsonError("Auth backend not configured", 500);
   }
   const header = request.headers.get("authorization") ?? "";
-  if (!header.toLowerCase().startsWith("bearer ")) return unauthorized();
+  if (!header.toLowerCase().startsWith("bearer ")) return null;
   const token = header.slice(7).trim();
-  if (!token) return unauthorized();
+  if (!token) return null;
 
   const verifier = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
