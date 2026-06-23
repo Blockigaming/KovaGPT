@@ -70,65 +70,32 @@ export async function optionalUser(
   return { userId, supabaseAdmin };
 }
 
-// Rolling 24h window: the most recent row tracks the current window.
-// If its updated_at is older than 24h, the window has expired and we start
-// fresh; otherwise we keep incrementing it.
-async function readWindow(
-  caller: AuthedCaller,
-): Promise<{ images: number; chats: number; uploads: number; date: string; expired: boolean }> {
-  const { data } = await caller.supabaseAdmin
-    .from("daily_usage")
-    .select("images, chats, uploads, usage_date, updated_at")
-    .eq("user_id", caller.userId)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const today = new Date().toISOString().slice(0, 10);
-  if (!data) return { images: 0, chats: 0, uploads: 0, date: today, expired: true };
-  const ageMs = Date.now() - new Date(data.updated_at as string).getTime();
-  if (ageMs >= WINDOW_MS) {
-    return { images: 0, chats: 0, uploads: 0, date: today, expired: true };
-  }
-  return {
-    images: data.images ?? 0,
-    chats: data.chats ?? 0,
-    uploads: (data as { uploads?: number }).uploads ?? 0,
-    date: data.usage_date as string,
-    expired: false,
-  };
-}
-
 export async function enforceQuota(
   caller: AuthedCaller,
   kind: "images" | "chats" | "uploads",
   limit: number,
   increment = 1,
 ): Promise<Response | null> {
-  const current = await readWindow(caller);
-  const used = current[kind];
-  if (used + increment > limit) {
+  // Atomic check-and-increment via SECURITY DEFINER RPC. Row-level locking
+  // inside the function prevents TOCTOU races where concurrent requests all
+  // pass the limit check before any increment lands.
+  const { data, error } = await caller.supabaseAdmin.rpc("try_increment_daily_usage", {
+    _user_id: caller.userId,
+    _kind: kind,
+    _increment: increment,
+    _limit: limit,
+  });
+  if (error) {
+    console.error("[enforceQuota] rpc error", error);
+    return jsonError("Quota check failed", 500);
+  }
+  if (data === false) {
     const label =
       kind === "images" ? "image" : kind === "uploads" ? "file upload" : "message";
     return tooMany(
       `Daily ${label} limit reached (${limit}/day). Resets in 24 hours or upgrade for more.`,
     );
   }
-  const next = used + increment;
-  // When the window expired, start a new row keyed by today's date so the
-  // upsert doesn't collide with the previous expired row.
-  const dateKey = current.expired ? new Date().toISOString().slice(0, 10) : current.date;
-  const row: Record<string, unknown> = {
-    user_id: caller.userId,
-    usage_date: dateKey,
-    images: current.images,
-    chats: current.chats,
-    uploads: current.uploads,
-    updated_at: new Date().toISOString(),
-  };
-  row[kind] = next;
-  await caller.supabaseAdmin
-    .from("daily_usage")
-    .upsert(row as never, { onConflict: "user_id,usage_date" });
   return null;
 }
 
