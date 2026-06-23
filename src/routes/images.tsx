@@ -22,16 +22,16 @@ export const Route = createFileRoute("/images")({
   component: ImagesPage,
   head: () => ({
     meta: [
-      { title: "AI Image Generation | NovaGPT" },
+      { title: "AI Image Generation | KovaGPT" },
       {
         name: "description",
         content:
-          "Create AI-generated images from text prompts with NovaGPT. Explore styles, save your history, and download results in seconds.",
+          "Create AI-generated images from text prompts with KovaGPT. Explore styles, save your history, and download results in seconds.",
       },
-      { property: "og:title", content: "AI Image Generation | NovaGPT" },
+      { property: "og:title", content: "AI Image Generation | KovaGPT" },
       {
         property: "og:description",
-        content: "Create AI-generated images from text prompts with NovaGPT.",
+        content: "Create AI-generated images from text prompts with KovaGPT.",
       },
       { property: "og:url", content: "https://nova-aigpt.lovable.app/images" },
       { property: "og:type", content: "website" },
@@ -239,10 +239,10 @@ function ImagesPage() {
           )}
           <button
             className="flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-accent transition font-semibold"
-            aria-label="NovaGPT model selector"
-            title="NovaGPT"
+            aria-label="KovaGPT model selector"
+            title="KovaGPT"
           >
-            <span>NovaGPT</span>
+            <span>KovaGPT</span>
             <ChevronDown className="w-4 h-4 text-muted-foreground" />
           </button>
           <div className="ml-auto flex items-center gap-2">

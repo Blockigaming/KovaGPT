@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 const CANONICAL = "https://nova-aigpt.lovable.app/blog/best-ai-assistants";
 const TITLE = "Best AI Assistants for Productivity in 2026 (Compared)";
 const DESCRIPTION =
-  "We compared the best AI assistants for productivity - NovaGPT, ChatGPT, Claude, Gemini, Copilot, and Perplexity - on modes, accuracy, coding, research, and price.";
+  "We compared the best AI assistants for productivity - KovaGPT, ChatGPT, Claude, Gemini, Copilot, and Perplexity - on modes, accuracy, coding, research, and price.";
 
 export const Route = createFileRoute("/blog/best-ai-assistants")({
   head: () => ({
@@ -29,8 +29,8 @@ export const Route = createFileRoute("/blog/best-ai-assistants")({
           description: DESCRIPTION,
           datePublished: "2026-06-22",
           dateModified: "2026-06-22",
-          author: { "@type": "Organization", name: "NovaGPT" },
-          publisher: { "@type": "Organization", name: "NovaGPT" },
+          author: { "@type": "Organization", name: "KovaGPT" },
+          publisher: { "@type": "Organization", name: "KovaGPT" },
           mainEntityOfPage: CANONICAL,
         }),
       },
@@ -50,7 +50,7 @@ type Row = {
 
 const ROWS: Row[] = [
   {
-    name: "NovaGPT",
+    name: "KovaGPT",
     best: "Specialized modes for focused work",
     modes: "Auto, Creative, Precise, Code, Study, Reasoning, Research, Writer, Tutor",
     search: "Live web + fresh news",
@@ -152,9 +152,9 @@ function BestAiAssistantsPage() {
           </table>
         </div>
 
-        <h2 className="mt-12 text-2xl font-semibold">1. NovaGPT  -  best for focused, mode-based work</h2>
+        <h2 className="mt-12 text-2xl font-semibold">1. KovaGPT  -  best for focused, mode-based work</h2>
         <p>
-          NovaGPT's distinguishing feature is its <strong>specialized modes</strong>: instead of one
+          KovaGPT's distinguishing feature is its <strong>specialized modes</strong>: instead of one
           generic chatbot, you pick the mindset that matches the task. <em>Code</em> mode writes
           production-quality code with explanations, <em>Precise</em> mode is rigorous and
           source-aware, <em>Study</em> mode teaches step by step with quizzes, <em>Research</em> mode
@@ -198,7 +198,7 @@ function BestAiAssistantsPage() {
 
         <h2 className="mt-12 text-2xl font-semibold">How to choose</h2>
         <ul>
-          <li><strong>You switch between very different tasks</strong> (coding, studying, writing, research): NovaGPT's modes are the fastest way to get a tuned answer without prompt gymnastics.</li>
+          <li><strong>You switch between very different tasks</strong> (coding, studying, writing, research): KovaGPT's modes are the fastest way to get a tuned answer without prompt gymnastics.</li>
           <li><strong>You mostly summarize long documents:</strong> Claude.</li>
           <li><strong>You live in Google Workspace:</strong> Gemini.</li>
           <li><strong>You live in Microsoft 365:</strong> Copilot.</li>
@@ -206,9 +206,9 @@ function BestAiAssistantsPage() {
           <li><strong>You want the most familiar default:</strong> ChatGPT.</li>
         </ul>
 
-        <h2 className="mt-12 text-2xl font-semibold">Try NovaGPT free</h2>
+        <h2 className="mt-12 text-2xl font-semibold">Try KovaGPT free</h2>
         <p>
-          NovaGPT's free tier includes Auto mode, live web search, and image generation  -  no
+          KovaGPT's free tier includes Auto mode, live web search, and image generation  -  no
           credit card required.
         </p>
         <p className="mt-6">
@@ -216,7 +216,7 @@ function BestAiAssistantsPage() {
             to="/"
             className="inline-flex items-center justify-center rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
-            Start chatting with NovaGPT
+            Start chatting with KovaGPT
           </Link>
         </p>
       </article>

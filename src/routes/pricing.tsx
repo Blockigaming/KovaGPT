@@ -11,17 +11,17 @@ export const Route = createFileRoute("/pricing")({
   component: PricingPage,
   head: () => ({
     meta: [
-      { title: "Pricing - NovaGPT Plus & Pro plans" },
+      { title: "Pricing - KovaGPT Plus & Pro plans" },
       {
         name: "description",
         content:
-          "Compare NovaGPT Free, Plus, and Pro plans. Get more messages, image generations, voice, and advanced reasoning modes.",
+          "Compare KovaGPT Free, Plus, and Pro plans. Get more messages, image generations, voice, and advanced reasoning modes.",
       },
-      { property: "og:title", content: "Pricing - NovaGPT Plus & Pro plans" },
+      { property: "og:title", content: "Pricing - KovaGPT Plus & Pro plans" },
       {
         property: "og:description",
         content:
-          "Compare NovaGPT Free, Plus, and Pro plans. More messages, image generation, voice, and advanced reasoning.",
+          "Compare KovaGPT Free, Plus, and Pro plans. More messages, image generation, voice, and advanced reasoning.",
       },
       { property: "og:url", content: "https://nova-aigpt.lovable.app/pricing" },
       { property: "og:type", content: "website" },
@@ -35,9 +35,9 @@ export const Route = createFileRoute("/pricing")({
           "@graph": [
             {
               "@type": "Product",
-              name: "NovaGPT Free",
+              name: "KovaGPT Free",
               description: "Free plan with Auto mode, live web search, and image generation.",
-              brand: { "@type": "Brand", name: "NovaGPT" },
+              brand: { "@type": "Brand", name: "KovaGPT" },
               offers: {
                 "@type": "Offer",
                 price: "0",
@@ -48,9 +48,9 @@ export const Route = createFileRoute("/pricing")({
             },
             {
               "@type": "Product",
-              name: "NovaGPT Plus",
+              name: "KovaGPT Plus",
               description: "Plus plan with Creative, Precise, Code, and Study modes plus higher usage.",
-              brand: { "@type": "Brand", name: "NovaGPT" },
+              brand: { "@type": "Brand", name: "KovaGPT" },
               offers: {
                 "@type": "Offer",
                 price: "14",
@@ -61,9 +61,9 @@ export const Route = createFileRoute("/pricing")({
             },
             {
               "@type": "Product",
-              name: "NovaGPT Pro",
+              name: "KovaGPT Pro",
               description: "Pro plan with Reasoning, Research, Writer Pro, and Tutor Pro modes and top usage limits.",
-              brand: { "@type": "Brand", name: "NovaGPT" },
+              brand: { "@type": "Brand", name: "KovaGPT" },
               offers: {
                 "@type": "Offer",
                 price: "89",
@@ -105,11 +105,11 @@ function PricingPage() {
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-sm hover:opacity-80">
             <ArrowLeft className="w-4 h-4" />
-            Back to NovaGPT
+            Back to KovaGPT
           </Link>
           <div className="flex items-center gap-2">
             <NovaLogo className="w-6 h-6" />
-            <span className="font-semibold">NovaGPT</span>
+            <span className="font-semibold">KovaGPT</span>
           </div>
         </div>
       </header>
@@ -128,11 +128,11 @@ function PricingPage() {
             name="Free"
             price="$0"
             period="forever"
-            description="Get started with NovaGPT."
+            description="Get started with KovaGPT."
             cta="Current plan"
             ctaDisabled
             features={[
-              "Access to NovaGPT",
+              "Access to KovaGPT",
               "Basic Mode",
               "Small Image Generation Limits",
               "Minimal Upload Limits",

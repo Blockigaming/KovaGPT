@@ -20,7 +20,7 @@ export function LoginPromptDialog({
             Log in or Sign up for Free to Start Generating for Free
           </DialogTitle>
           <DialogDescription className="text-center">
-            Create stunning AI images in seconds with NovaGPT.
+            Create stunning AI images in seconds with KovaGPT.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2 mt-2">

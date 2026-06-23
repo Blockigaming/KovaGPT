@@ -36,7 +36,7 @@ export function HelpDialog({
       message,
     ].join("\n");
     const href = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
-      `NovaGPT help: ${topic || "general"}`,
+      `KovaGPT help: ${topic || "general"}`,
     )}&body=${encodeURIComponent(body)}`;
     window.location.href = href;
     onOpenChange(false);

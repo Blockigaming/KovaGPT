@@ -169,7 +169,7 @@ export function SettingsDialog({
               <DialogTitle className="text-xl font-semibold tracking-tight">Settings</DialogTitle>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {loggedIn
-                  ? `Personalize NovaGPT${user?.firstName ? `, ${user.firstName}` : ""}. Changes save automatically.`
+                  ? `Personalize KovaGPT${user?.firstName ? `, ${user.firstName}` : ""}. Changes save automatically.`
                   : "Sign in to view and change your settings."}
               </p>
             </div>
@@ -180,7 +180,7 @@ export function SettingsDialog({
           <div className="p-6">
             <LockedTab
               title="Sign in to access settings"
-              body="Your preferences, personalization, appearance, billing, and security are tied to your NovaGPT account. Sign in or create a free account to continue."
+              body="Your preferences, personalization, appearance, billing, and security are tied to your KovaGPT account. Sign in or create a free account to continue."
               onSignIn={() => clerk?.openSignIn()}
             />
           </div>
@@ -247,7 +247,7 @@ export function SettingsDialog({
                     size="icon"
                     variant="outline"
                     onClick={() =>
-                      speak("Hi, I'm NovaGPT. This is how I sound.", {
+                      speak("Hi, I'm KovaGPT. This is how I sound.", {
                         voice: currentVoice,
                         rate: settings.voiceRate,
                       })
@@ -382,8 +382,8 @@ export function SettingsDialog({
           <TabsContent value="personalization" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
             {!loggedIn ? (
               <LockedTab
-                title="Sign in to personalize NovaGPT"
-                body="Save your name, pronouns, contact info, and custom facts to your account so NovaGPT remembers them on every device."
+                title="Sign in to personalize KovaGPT"
+                body="Save your name, pronouns, contact info, and custom facts to your account so KovaGPT remembers them on every device."
                 onSignIn={() => clerk?.openSignIn()}
               />
             ) : (
@@ -490,7 +490,7 @@ export function SettingsDialog({
 
                 <ToggleRow
                   title="Remember across conversations"
-                  hint="Let NovaGPT carry your profile, custom instructions, and a short summary of past chats into every new conversation."
+                  hint="Let KovaGPT carry your profile, custom instructions, and a short summary of past chats into every new conversation."
                   checked={settings.rememberAcross}
                   onCheckedChange={(v) => onChange({ ...settings, rememberAcross: v })}
                 />
@@ -502,8 +502,8 @@ export function SettingsDialog({
           <TabsContent value="behavior" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
             {!loggedIn ? (
               <LockedTab
-                title="Sign in to fine-tune NovaGPT"
-                body="Mood and custom response instructions are saved per account so NovaGPT acts the same on every device."
+                title="Sign in to fine-tune KovaGPT"
+                body="Mood and custom response instructions are saved per account so KovaGPT acts the same on every device."
                 onSignIn={() => clerk?.openSignIn()}
               />
             ) : (
@@ -532,7 +532,7 @@ export function SettingsDialog({
 
                 <div>
                   <label className="text-sm font-medium mb-1.5 block">
-                    How should NovaGPT respond?
+                    How should KovaGPT respond?
                   </label>
                   <textarea
                     rows={5}

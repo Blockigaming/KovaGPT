@@ -1,15 +1,15 @@
-# NovaGPT
+# KovaGPT
 
-> NovaGPT is an advanced multimodal AI assistant for chat, coding, research, image generation, and voice  -  with specialized modes for focused work.
+> KovaGPT is an advanced multimodal AI assistant for chat, coding, research, image generation, and voice  -  with specialized modes for focused work.
 
-NovaGPT combines a fast general-purpose chat assistant with specialized modes (Creative, Precise, Code, Study, Reasoning, Research, Writer Pro, Tutor Pro), live web search with fresh news, image generation, and voice input. Free to start, with Plus and Pro plans for higher usage.
+KovaGPT combines a fast general-purpose chat assistant with specialized modes (Creative, Precise, Code, Study, Reasoning, Research, Writer Pro, Tutor Pro), live web search with fresh news, image generation, and voice input. Free to start, with Plus and Pro plans for higher usage.
 
 ## Pages
 
-- [Home](/): Chat with NovaGPT, pick a mode, attach files, generate images, and use voice.
+- [Home](/): Chat with KovaGPT, pick a mode, attach files, generate images, and use voice.
 - [Images](/images): Generate AI images from text prompts and explore example styles.
 - [Pricing](/pricing): Compare Free, Plus, and Pro plans.
 
 ## Blog
 
-- [Best AI assistants for productivity in 2026](/blog/best-ai-assistants): Comparison of NovaGPT, ChatGPT, Claude, Gemini, Copilot, and Perplexity.
+- [Best AI assistants for productivity in 2026](/blog/best-ai-assistants): Comparison of KovaGPT, ChatGPT, Claude, Gemini, Copilot, and Perplexity.

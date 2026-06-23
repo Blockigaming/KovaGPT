@@ -178,7 +178,7 @@ export function ChatInput({
               value={value}
               onChange={(e) => onChange(e.target.value)}
               onKeyDown={handleKey}
-              placeholder={listening ? "Listening…" : (placeholder ?? "Message NovaGPT…")}
+              placeholder={listening ? "Listening…" : (placeholder ?? "Message KovaGPT…")}
               rows={1}
               className="flex-1 resize-none bg-transparent px-3 py-4 outline-none text-foreground placeholder:text-muted-foreground max-h-[200px]"
             />
@@ -242,7 +242,7 @@ export function ChatInput({
           )}
         </div>
         <p className="text-center text-xs text-muted-foreground mt-2">
-          NovaGPT can make mistakes. Check important info.
+          KovaGPT can make mistakes. Check important info.
         </p>
       </div>
     </div>
