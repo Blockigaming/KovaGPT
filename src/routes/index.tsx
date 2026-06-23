@@ -113,7 +113,7 @@ function KovaGPT() {
   useEffect(() => {
     const loaded = loadSettings(userKey);
     setSettings(loaded);
-    applyThemeColors(loaded.theme);
+    applyThemeMode(loaded.mode ?? "system");
     if (clerkEnabled && !isSignedIn) {
       try {
         localStorage.removeItem("nova-gpt-conversations-v2");
@@ -126,10 +126,10 @@ function KovaGPT() {
     }
   }, [userKey, isSignedIn]);
 
-  // Re-apply theme whenever it changes
+  // Re-apply theme mode whenever it changes
   useEffect(() => {
-    applyThemeColors(settings.theme);
-  }, [settings.theme]);
+    applyThemeMode(settings.mode ?? "system");
+  }, [settings.mode]);
 
   // Debounced persistence - avoid JSON.stringify on every keystroke / stream token,
   // which was the main source of typing/streaming lag.
