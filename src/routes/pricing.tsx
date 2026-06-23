@@ -80,6 +80,7 @@ export const Route = createFileRoute("/pricing")({
 });
 
 function PricingPage() {
+  const [enterpriseOpen, setEnterpriseOpen] = useState(false);
   const { user, isSignedIn, isLoaded } = useUser();
   const { openSignIn } = useClerk();
   const { openCheckout, closeCheckout, isOpen, checkoutElement } = useStripeCheckout();
