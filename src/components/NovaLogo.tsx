@@ -22,6 +22,13 @@ export function NovaLogo({
       <circle
         cx="24"
         cy="24"
+        r="22"
+        stroke="black"
+        strokeWidth="1.5"
+      />
+      <circle
+        cx="24"
+        cy="24"
         r="21"
         stroke="white"
         strokeWidth="1.5"
