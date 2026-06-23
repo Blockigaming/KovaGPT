@@ -10,7 +10,8 @@ import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
 import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 import { HelpDialog } from "@/components/HelpDialog";
 import { LimitReachedDialog } from "@/components/LimitReachedDialog";
-import { applyThemeColors } from "@/lib/theme";
+import { applyThemeMode } from "@/lib/theme";
+import { NovaLogo } from "@/components/NovaLogo";
 import { getUsage } from "@/lib/limits";
 
 import { VoiceMode } from "@/components/VoiceMode";
@@ -112,7 +113,7 @@ function KovaGPT() {
   useEffect(() => {
     const loaded = loadSettings(userKey);
     setSettings(loaded);
-    applyThemeColors(loaded.theme);
+    applyThemeMode(loaded.mode ?? "system");
     if (clerkEnabled && !isSignedIn) {
       try {
         localStorage.removeItem("nova-gpt-conversations-v2");
@@ -125,10 +126,10 @@ function KovaGPT() {
     }
   }, [userKey, isSignedIn]);
 
-  // Re-apply theme whenever it changes
+  // Re-apply theme mode whenever it changes
   useEffect(() => {
-    applyThemeColors(settings.theme);
-  }, [settings.theme]);
+    applyThemeMode(settings.mode ?? "system");
+  }, [settings.mode]);
 
   // Debounced persistence - avoid JSON.stringify on every keystroke / stream token,
   // which was the main source of typing/streaming lag.
@@ -522,9 +523,13 @@ function KovaGPT() {
 
         {!active || active.messages.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4">
-            <h1 className="text-2xl sm:text-3xl font-semibold mb-8 text-center">
+            <NovaLogo className="w-14 h-14 mb-5 text-foreground" />
+            <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight mb-2 text-center">
               {greeting}
             </h1>
+            <p className="text-sm text-muted-foreground mb-8 text-center max-w-md">
+              See AI at its highest potential — chat, code, research, create images, and speak out loud.
+            </p>
             <div className="w-full">
               <ChatInput
                 value={input}

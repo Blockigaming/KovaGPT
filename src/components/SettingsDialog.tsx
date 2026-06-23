@@ -18,11 +18,12 @@ import {
   User2,
   ShieldCheck,
   Sparkles,
-  MessageSquare,
   CreditCard,
-  Globe2,
   ExternalLink,
   Lock,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -37,16 +38,14 @@ import {
 } from "@/lib/voice";
 import { useUser, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
-import { applyThemeColors, DEFAULT_THEME, type ThemeColors } from "@/lib/theme";
+import {
+  applyThemeMode,
+  DEFAULT_THEME,
+  type ThemeColors,
+  type ThemeMode,
+} from "@/lib/theme";
 
-export type Mood =
-  | "neutral"
-  | "friendly"
-  | "professional"
-  | "playful"
-  | "concise"
-  | "encouraging"
-  | "witty";
+export type Mood = "neutral" | "friendly" | "professional" | "concise";
 
 export type Settings = {
   // Voice
@@ -55,27 +54,29 @@ export type Settings = {
   voiceName: string;
   // Personalization
   displayName: string;
-  preferredPronouns: string;
   email: string;
-  phone: string;
-  addressLine1: string;
-  addressLine2: string;
-  city: string;
-  region: string;
-  postalCode: string;
-  country: string;
   extraFacts: string;
   customInstructions: string;
   mood: Mood;
   responseLength: "short" | "medium" | "long";
-  language: string;
   rememberAcross: boolean;
   // Behavior
   webSearch: boolean;
   sendOnEnter: boolean;
-  showTimestamps: boolean;
   // Appearance
-  theme: ThemeColors;
+  mode: ThemeMode;
+  // ----- deprecated, retained so old localStorage payloads still load -----
+  preferredPronouns?: string;
+  phone?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  region?: string;
+  postalCode?: string;
+  country?: string;
+  language?: string;
+  showTimestamps?: boolean;
+  theme?: ThemeColors;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -83,24 +84,15 @@ export const DEFAULT_SETTINGS: Settings = {
   voiceRate: 1,
   voiceName: "",
   displayName: "",
-  preferredPronouns: "",
   email: "",
-  phone: "",
-  addressLine1: "",
-  addressLine2: "",
-  city: "",
-  region: "",
-  postalCode: "",
-  country: "",
   extraFacts: "",
   customInstructions: "",
   mood: "neutral",
   responseLength: "medium",
-  language: "auto",
   rememberAcross: true,
   webSearch: true,
   sendOnEnter: true,
-  showTimestamps: false,
+  mode: "system",
   theme: DEFAULT_THEME,
 };
 
@@ -108,10 +100,7 @@ const MOODS: { value: Mood; label: string; hint: string }[] = [
   { value: "neutral", label: "Neutral", hint: "Balanced and helpful" },
   { value: "friendly", label: "Friendly", hint: "Warm and approachable" },
   { value: "professional", label: "Professional", hint: "Polished and formal" },
-  { value: "playful", label: "Playful", hint: "Light, fun, casual" },
   { value: "concise", label: "Concise", hint: "Short, direct answers" },
-  { value: "encouraging", label: "Encouraging", hint: "Motivating, supportive" },
-  { value: "witty", label: "Witty", hint: "Clever and a little cheeky" },
 ];
 
 export function SettingsDialog({
@@ -143,57 +132,42 @@ export function SettingsDialog({
   const list = englishVoices.length > 0 ? englishVoices : voices;
   const currentVoice = settings.voiceName || defaultVoiceName();
 
-  const updateTheme = (patch: Partial<ThemeColors>) => {
-    const next = { ...settings.theme, ...patch };
-    applyThemeColors(next);
-    onChange({ ...settings, theme: next });
+  const setMode = (m: ThemeMode) => {
+    applyThemeMode(m);
+    onChange({ ...settings, mode: m });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[88vh] overflow-hidden flex flex-col gap-0 p-0 border border-border/60 shadow-2xl">
-        <DialogHeader className="relative px-6 pt-6 pb-5 border-b border-border overflow-hidden">
-          <div
-            aria-hidden
-            className="absolute inset-0 -z-10 opacity-90"
-            style={{
-              background:
-                "radial-gradient(120% 80% at 0% 0%, hsl(var(--primary) / 0.18), transparent 60%), radial-gradient(120% 80% at 100% 0%, hsl(var(--primary) / 0.10), transparent 55%)",
-            }}
-          />
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/40 flex items-center justify-center shadow-sm">
-              <Sparkles className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <div className="min-w-0">
-              <DialogTitle className="text-xl font-semibold tracking-tight">Settings</DialogTitle>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {loggedIn
-                  ? `Personalize KovaGPT${user?.firstName ? `, ${user.firstName}` : ""}. Changes save automatically.`
-                  : "Sign in to view and change your settings."}
-              </p>
-            </div>
-          </div>
+      <DialogContent className="max-w-2xl max-h-[88vh] overflow-hidden flex flex-col gap-0 p-0 border border-border/60 shadow-2xl">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
+          <DialogTitle className="text-xl font-semibold tracking-tight font-display">
+            Settings
+          </DialogTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            {loggedIn
+              ? "Changes save automatically."
+              : "Sign in to view and change your settings."}
+          </p>
         </DialogHeader>
 
         {!loggedIn ? (
           <div className="p-6">
             <LockedTab
               title="Sign in to access settings"
-              body="Your preferences, personalization, appearance, billing, and security are tied to your KovaGPT account. Sign in or create a free account to continue."
+              body="Your preferences are tied to your KovaGPT account. Sign in or create a free account to continue."
               onSignIn={() => clerk?.openSignIn()}
             />
           </div>
         ) : (
         <Tabs defaultValue="general" className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="flex w-full overflow-x-auto justify-start gap-1 h-auto p-1.5 mx-6 mt-4 mb-2 max-w-[calc(100%-3rem)] bg-muted/50 rounded-full border border-border/50">
+          <TabsList className="flex w-full overflow-x-auto justify-start gap-1 h-auto p-1 mx-6 mt-4 mb-2 max-w-[calc(100%-3rem)] bg-muted rounded-full">
             {[
               { v: "general", icon: Sparkles, label: "General" },
-              { v: "personalization", icon: User2, label: "You" },
-              { v: "behavior", icon: MessageSquare, label: "Behavior" },
-              { v: "appearance", icon: Palette, label: "Appearance" },
+              { v: "you", icon: User2, label: "You" },
+              { v: "appearance", icon: Palette, label: "Theme" },
               { v: "billing", icon: CreditCard, label: "Billing" },
-              { v: "security", icon: ShieldCheck, label: "Security" },
+              { v: "security", icon: ShieldCheck, label: "Account" },
             ].map(({ v, icon: Icon, label }) => (
               <TabsTrigger
                 key={v}
@@ -206,27 +180,18 @@ export function SettingsDialog({
             ))}
           </TabsList>
 
-
-          {/* GENERAL  -  voice + usage + data */}
-          {/* GENERAL  -  voice + usage + data (always available) */}
+          {/* GENERAL — voice, behavior, usage, data */}
           <TabsContent value="general" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
-            <section>
-              <h3 className="text-sm font-semibold mb-3">Voice</h3>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm">Auto-read responses</div>
-                  <div className="text-xs text-muted-foreground">
-                    Speak replies out loud automatically
-                  </div>
-                </div>
-                <Switch
-                  checked={settings.autoSpeak}
-                  onCheckedChange={(v) => onChange({ ...settings, autoSpeak: v })}
-                />
-              </div>
-
-              <div className="mt-4">
-                <label className="text-sm mb-2 block">Voice</label>
+            <section className="space-y-4">
+              <h3 className="text-sm font-semibold">Voice</h3>
+              <ToggleRow
+                title="Auto-read responses"
+                hint="Speak replies out loud automatically."
+                checked={settings.autoSpeak}
+                onCheckedChange={(v) => onChange({ ...settings, autoSpeak: v })}
+              />
+              <div>
+                <label className="text-xs text-muted-foreground mb-1.5 block">Voice</label>
                 <div className="flex gap-2">
                   <Select
                     value={currentVoice}
@@ -257,13 +222,11 @@ export function SettingsDialog({
                     <Play className="w-4 h-4" />
                   </Button>
                 </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Default tries an Adam-like deep male voice (Daniel / Google UK Male).
-                </div>
               </div>
-
-              <div className="mt-4">
-                <div className="text-sm mb-2">Speech rate: {settings.voiceRate.toFixed(1)}x</div>
+              <div>
+                <div className="text-xs text-muted-foreground mb-1.5">
+                  Speech rate: {settings.voiceRate.toFixed(1)}x
+                </div>
                 <Slider
                   min={0.5}
                   max={2}
@@ -275,31 +238,23 @@ export function SettingsDialog({
             </section>
 
             <section className="space-y-4">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <Globe2 className="w-4 h-4" /> Knowledge & input
-              </h3>
-
+              <h3 className="text-sm font-semibold">Behavior</h3>
               <ToggleRow
                 title="Live web search"
-                hint="Fetch fresh results from the web for time-sensitive questions so answers stay up to date."
+                hint="Fetch fresh results for time-sensitive questions."
                 checked={settings.webSearch}
                 onCheckedChange={(v) => onChange({ ...settings, webSearch: v })}
               />
               <ToggleRow
                 title="Send on Enter"
-                hint="Enter sends. Shift + Enter for a new line. Turn off to require the send button."
+                hint="Enter sends; Shift+Enter for a new line."
                 checked={settings.sendOnEnter}
                 onCheckedChange={(v) => onChange({ ...settings, sendOnEnter: v })}
               />
-              <ToggleRow
-                title="Show timestamps"
-                hint="Display a small timestamp under each message."
-                checked={settings.showTimestamps}
-                onCheckedChange={(v) => onChange({ ...settings, showTimestamps: v })}
-              />
-
               <div>
-                <label className="text-sm mb-2 block">Preferred response length</label>
+                <label className="text-xs text-muted-foreground mb-1.5 block">
+                  Preferred response length
+                </label>
                 <Select
                   value={settings.responseLength}
                   onValueChange={(v) =>
@@ -310,62 +265,31 @@ export function SettingsDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="short">Short  -  get to the point</SelectItem>
-                    <SelectItem value="medium">Medium  -  balanced (default)</SelectItem>
-                    <SelectItem value="long">Long  -  detailed, thorough</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-sm mb-2 block">Response language</label>
-                <Select
-                  value={settings.language}
-                  onValueChange={(v) => onChange({ ...settings, language: v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="auto">Auto (match my message)</SelectItem>
-                    <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="es">Español</SelectItem>
-                    <SelectItem value="fr">Français</SelectItem>
-                    <SelectItem value="de">Deutsch</SelectItem>
-                    <SelectItem value="pt">Português</SelectItem>
-                    <SelectItem value="it">Italiano</SelectItem>
-                    <SelectItem value="nl">Nederlands</SelectItem>
-                    <SelectItem value="zh">中文</SelectItem>
-                    <SelectItem value="ja">日本語</SelectItem>
-                    <SelectItem value="ko">한국어</SelectItem>
-                    <SelectItem value="ar">العربية</SelectItem>
+                    <SelectItem value="short">Short — get to the point</SelectItem>
+                    <SelectItem value="medium">Medium — balanced</SelectItem>
+                    <SelectItem value="long">Long — detailed</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </section>
 
-            <section>
-              <h3 className="text-sm font-semibold mb-3">Daily Usage (Free)</h3>
-              <div className="space-y-2 text-sm">
+            <section className="space-y-2">
+              <h3 className="text-sm font-semibold">Today's usage</h3>
+              <div className="space-y-1.5 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Images generated</span>
-                  <span>
-                    {usage.images} / {DAILY_IMAGE_LIMIT}
-                  </span>
+                  <span>{usage.images} / {DAILY_IMAGE_LIMIT}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Images uploaded</span>
-                  <span>
-                    {usage.uploads} / {DAILY_UPLOAD_LIMIT}
-                  </span>
+                  <span>{usage.uploads} / {DAILY_UPLOAD_LIMIT}</span>
                 </div>
               </div>
             </section>
 
             <section>
-              <h3 className="text-sm font-semibold mb-3">Data</h3>
               <Button
-                variant="destructive"
+                variant="outline"
                 size="sm"
                 onClick={() => {
                   clearConversations();
@@ -378,342 +302,161 @@ export function SettingsDialog({
             </section>
           </TabsContent>
 
-          {/* PERSONALIZATION  -  locked behind sign in */}
-          <TabsContent value="personalization" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
-            {!loggedIn ? (
-              <LockedTab
-                title="Sign in to personalize KovaGPT"
-                body="Save your name, pronouns, contact info, and custom facts to your account so KovaGPT remembers them on every device."
-                onSignIn={() => clerk?.openSignIn()}
-              />
-            ) : (
-              <>
-                <section className="space-y-4">
-                  <h3 className="text-sm font-semibold">How to address you</h3>
-                  <div className="grid sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">
-                        Preferred name
-                      </label>
-                      <Input
-                        placeholder={user?.firstName || "Your name"}
-                        value={settings.displayName}
-                        onChange={(e) => onChange({ ...settings, displayName: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">Pronouns</label>
-                      <Input
-                        placeholder="e.g. she/her, he/him, they/them"
-                        value={settings.preferredPronouns}
-                        onChange={(e) =>
-                          onChange({ ...settings, preferredPronouns: e.target.value })
-                        }
-                      />
-                    </div>
-                  </div>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-sm font-semibold">Contact</h3>
-                  <div className="grid sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">Email</label>
-                      <Input
-                        type="email"
-                        placeholder={user?.primaryEmailAddress?.emailAddress || "you@example.com"}
-                        value={settings.email}
-                        onChange={(e) => onChange({ ...settings, email: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">Phone</label>
-                      <Input
-                        type="tel"
-                        placeholder="+1 555 123 4567"
-                        value={settings.phone}
-                        onChange={(e) => onChange({ ...settings, phone: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                </section>
-
-                <section className="space-y-4">
-                  <h3 className="text-sm font-semibold">Address</h3>
-                  <Input
-                    placeholder="Address line 1"
-                    value={settings.addressLine1}
-                    onChange={(e) => onChange({ ...settings, addressLine1: e.target.value })}
-                  />
-                  <Input
-                    placeholder="Address line 2 (optional)"
-                    value={settings.addressLine2}
-                    onChange={(e) => onChange({ ...settings, addressLine2: e.target.value })}
-                  />
-                  <div className="grid sm:grid-cols-3 gap-3">
-                    <Input
-                      placeholder="City"
-                      value={settings.city}
-                      onChange={(e) => onChange({ ...settings, city: e.target.value })}
-                    />
-                    <Input
-                      placeholder="State / Region"
-                      value={settings.region}
-                      onChange={(e) => onChange({ ...settings, region: e.target.value })}
-                    />
-                    <Input
-                      placeholder="Postal code"
-                      value={settings.postalCode}
-                      onChange={(e) => onChange({ ...settings, postalCode: e.target.value })}
-                    />
-                  </div>
-                  <Input
-                    placeholder="Country"
-                    value={settings.country}
-                    onChange={(e) => onChange({ ...settings, country: e.target.value })}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Used for billing receipts and to format addresses or local info correctly.
-                  </p>
-                </section>
-
-                <div>
-                  <label className="text-sm font-medium mb-1.5 block">Extra facts about you</label>
-                  <textarea
-                    rows={4}
-                    placeholder="e.g. I'm a high school student in Chicago. I prefer answers in metric. I'm learning Python."
-                    value={settings.extraFacts}
-                    onChange={(e) => onChange({ ...settings, extraFacts: e.target.value })}
-                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm resize-y min-h-[100px]"
-                  />
-                </div>
-
-                <ToggleRow
-                  title="Remember across conversations"
-                  hint="Let KovaGPT carry your profile, custom instructions, and a short summary of past chats into every new conversation."
-                  checked={settings.rememberAcross}
-                  onCheckedChange={(v) => onChange({ ...settings, rememberAcross: v })}
+          {/* YOU — personalization */}
+          <TabsContent value="you" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold">About you</h3>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Preferred name</label>
+                <Input
+                  placeholder={user?.firstName || "Your name"}
+                  value={settings.displayName}
+                  onChange={(e) => onChange({ ...settings, displayName: e.target.value })}
                 />
-              </>
-            )}
-          </TabsContent>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">
+                  Anything KovaGPT should know about you
+                </label>
+                <textarea
+                  rows={4}
+                  placeholder="e.g. I'm a student in Chicago. I prefer metric. I'm learning Python."
+                  value={settings.extraFacts}
+                  onChange={(e) => onChange({ ...settings, extraFacts: e.target.value })}
+                  className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm resize-y min-h-[90px]"
+                />
+              </div>
+            </section>
 
-          {/* BEHAVIOR  -  how it should respond */}
-          <TabsContent value="behavior" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
-            {!loggedIn ? (
-              <LockedTab
-                title="Sign in to fine-tune KovaGPT"
-                body="Mood and custom response instructions are saved per account so KovaGPT acts the same on every device."
-                onSignIn={() => clerk?.openSignIn()}
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold">How KovaGPT should respond</h3>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Tone</label>
+                <Select
+                  value={settings.mood}
+                  onValueChange={(v) => onChange({ ...settings, mood: v as Mood })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MOODS.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        <div className="flex flex-col">
+                          <span>{m.label}</span>
+                          <span className="text-xs text-muted-foreground">{m.hint}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">
+                  Custom instructions
+                </label>
+                <textarea
+                  rows={4}
+                  placeholder="e.g. Answer in clear bullets. Use simple language. Skip disclaimers."
+                  value={settings.customInstructions}
+                  onChange={(e) => onChange({ ...settings, customInstructions: e.target.value })}
+                  className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm resize-y min-h-[90px]"
+                />
+              </div>
+              <ToggleRow
+                title="Remember across conversations"
+                hint="Carry your profile and instructions into every new chat."
+                checked={settings.rememberAcross}
+                onCheckedChange={(v) => onChange({ ...settings, rememberAcross: v })}
               />
-            ) : (
-              <>
-                <div>
-                  <label className="text-sm font-medium mb-1.5 block">Mood</label>
-                  <Select
-                    value={settings.mood}
-                    onValueChange={(v) => onChange({ ...settings, mood: v as Mood })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {MOODS.map((m) => (
-                        <SelectItem key={m.value} value={m.value}>
-                          <div className="flex flex-col">
-                            <span>{m.label}</span>
-                            <span className="text-xs text-muted-foreground">{m.hint}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-1.5 block">
-                    How should KovaGPT respond?
-                  </label>
-                  <textarea
-                    rows={5}
-                    placeholder="e.g. Always answer in clear bullet points. Use simple language. Show code in TypeScript when possible. Skip disclaimers."
-                    value={settings.customInstructions}
-                    onChange={(e) => onChange({ ...settings, customInstructions: e.target.value })}
-                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm resize-y min-h-[120px]"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">Applied to every response.</p>
-                </div>
-              </>
-            )}
+            </section>
           </TabsContent>
 
-          {/* APPEARANCE  -  color customization */}
+          {/* APPEARANCE — light/dark mode toggle only */}
           <TabsContent value="appearance" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
-            {!loggedIn ? (
-              <LockedTab
-                title="Sign in to customize the look"
-                body="Theme colors are saved to your account so the app looks the same on every device."
-                onSignIn={() => clerk?.openSignIn()}
-              />
-            ) : (
-              <>
-                <p className="text-sm text-muted-foreground">
-                  Customize app colors. Changes apply instantly and are saved to your account.
-                </p>
-
-                <ColorRow
-                  label="Background"
-                  value={settings.theme.background}
-                  onChange={(v) => updateTheme({ background: v })}
-                />
-                <ColorRow
-                  label="Card / Surface"
-                  value={settings.theme.card}
-                  onChange={(v) => updateTheme({ card: v })}
-                />
-                <ColorRow
-                  label="Primary (Send button, accents)"
-                  value={settings.theme.primary}
-                  onChange={(v) => updateTheme({ primary: v })}
-                />
-                <ColorRow
-                  label="Primary text"
-                  value={settings.theme.primaryForeground}
-                  onChange={(v) => updateTheme({ primaryForeground: v })}
-                />
-                <ColorRow
-                  label="Accent / Hover"
-                  value={settings.theme.accent}
-                  onChange={(v) => updateTheme({ accent: v })}
-                />
-
-                <Button variant="outline" size="sm" onClick={() => updateTheme(DEFAULT_THEME)}>
-                  Reset to defaults
-                </Button>
-              </>
-            )}
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold">Appearance</h3>
+              <p className="text-xs text-muted-foreground">
+                Choose how KovaGPT looks. System follows your device.
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { v: "light", label: "Light", Icon: Sun },
+                  { v: "dark", label: "Dark", Icon: Moon },
+                  { v: "system", label: "System", Icon: Monitor },
+                ] as const).map(({ v, label, Icon }) => {
+                  const active = (settings.mode ?? "system") === v;
+                  return (
+                    <button
+                      key={v}
+                      onClick={() => setMode(v)}
+                      className={`flex flex-col items-center justify-center gap-2 rounded-xl border px-4 py-5 text-sm font-medium transition ${
+                        active
+                          ? "border-foreground bg-accent text-foreground shadow-sm"
+                          : "border-border hover:bg-accent/60 text-muted-foreground"
+                      }`}
+                    >
+                      <Icon className="w-5 h-5" />
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
           </TabsContent>
 
           {/* BILLING */}
           <TabsContent value="billing" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
-            {!loggedIn ? (
-              <LockedTab
-                title="Sign in to manage billing"
-                body="View your plan, payment methods, and receipts once you're signed in to your account."
-                onSignIn={() => clerk?.openSignIn()}
-              />
-            ) : (
-              <>
-                <div className="rounded-lg border border-border p-4 flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-medium">Current plan</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      You're on the Free plan. Upgrade for unlimited image generation, faster
-                      responses, and priority support.
-                    </div>
-                  </div>
-                  <Link
-                    to="/pricing"
-                    onClick={() => onOpenChange(false)}
-                    className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition whitespace-nowrap"
-                  >
-                    <Sparkles className="w-4 h-4" /> Upgrade
-                  </Link>
+            <div className="rounded-lg border border-border p-4 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-medium">Current plan</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  You're on the Free plan. Upgrade for more usage and advanced modes.
                 </div>
-
-                <section className="space-y-3">
-                  <h3 className="text-sm font-semibold">Payment method</h3>
-                  <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-                    No card on file. Add a card when you upgrade  -  payments are securely handled by
-                    Stripe. We never see or store your card number.
-                  </div>
-                  <Link
-                    to="/pricing"
-                    onClick={() => onOpenChange(false)}
-                    className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border border-border hover:bg-accent transition"
-                  >
-                    <CreditCard className="w-4 h-4" /> Add a payment method
-                  </Link>
-                </section>
-
-                <section className="space-y-3">
-                  <h3 className="text-sm font-semibold">Billing address</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Used on receipts and invoices. Edit in <strong>You → Address</strong>.
-                  </p>
-                  <div className="rounded-lg border border-border p-4 text-sm space-y-0.5">
-                    <div>{settings.displayName || " - "}</div>
-                    <div>
-                      {settings.addressLine1 || (
-                        <span className="text-muted-foreground">No street address</span>
-                      )}
-                    </div>
-                    {settings.addressLine2 && <div>{settings.addressLine2}</div>}
-                    <div className="text-muted-foreground">
-                      {[settings.city, settings.region, settings.postalCode]
-                        .filter(Boolean)
-                        .join(", ") || " - "}
-                    </div>
-                    <div className="text-muted-foreground">{settings.country || ""}</div>
-                  </div>
-                </section>
-
-                <section className="space-y-3">
-                  <h3 className="text-sm font-semibold">Receipts & invoices</h3>
-                  <p className="text-xs text-muted-foreground">
-                    After upgrading, receipts are emailed automatically and available in the Stripe
-                    customer portal.
-                  </p>
-                  <a
-                    href="https://billing.stripe.com/p/login"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border border-border hover:bg-accent transition"
-                  >
-                    <ExternalLink className="w-4 h-4" /> Open billing portal
-                  </a>
-                </section>
-              </>
-            )}
+              </div>
+              <Link
+                to="/pricing"
+                onClick={() => onOpenChange(false)}
+                className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition whitespace-nowrap"
+              >
+                <Sparkles className="w-4 h-4" /> Upgrade
+              </Link>
+            </div>
+            <a
+              href="https://billing.stripe.com/p/login"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border border-border hover:bg-accent transition"
+            >
+              <ExternalLink className="w-4 h-4" /> Open billing portal
+            </a>
+            <p className="text-xs text-muted-foreground">
+              Payments are securely handled by Stripe. We never see or store your card number.
+            </p>
           </TabsContent>
 
-          {/* SECURITY */}
+          {/* ACCOUNT / SECURITY */}
           <TabsContent value="security" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
-            {loggedIn ? (
-              <>
-                <div className="rounded-lg border border-border p-4">
-                  <div className="text-sm font-medium">Signed in as</div>
-                  <div className="text-sm text-muted-foreground mt-1">
-                    {user?.primaryEmailAddress?.emailAddress ?? user?.firstName ?? "your account"}
-                  </div>
-                </div>
-
-                <div className="space-y-3 text-sm">
-                  <SecurityRow
-                    title="Password & two-factor"
-                    body="Manage your password and turn on 2FA from your account page."
-                    actionLabel="Open account"
-                    onAction={() => clerk?.openUserProfile()}
-                  />
-                  <SecurityRow
-                    title="Active sessions"
-                    body="Sign out of every device, or just this one."
-                    actionLabel="Sign out"
-                    onAction={() => clerk?.signOut()}
-                  />
-                </div>
-
-                <div className="text-xs text-muted-foreground">
-                  Authentication and email security are handled by our authentication provider.
-                </div>
-              </>
-            ) : (
-              <LockedTab
-                title="Sign in to manage your security"
-                body="Manage your password, two-factor authentication, and active sessions from your account."
-                onSignIn={() => clerk?.openSignIn()}
+            <div className="rounded-lg border border-border p-4">
+              <div className="text-sm font-medium">Signed in as</div>
+              <div className="text-sm text-muted-foreground mt-1">
+                {user?.primaryEmailAddress?.emailAddress ?? user?.firstName ?? "your account"}
+              </div>
+            </div>
+            <div className="space-y-3 text-sm">
+              <SecurityRow
+                title="Password & two-factor"
+                body="Manage your password and turn on 2FA."
+                actionLabel="Open account"
+                onAction={() => clerk?.openUserProfile()}
               />
-            )}
+              <SecurityRow
+                title="Sign out"
+                body="Sign out of this device."
+                actionLabel="Sign out"
+                onAction={() => clerk?.signOut()}
+              />
+            </div>
           </TabsContent>
         </Tabs>
         )}
@@ -746,34 +489,6 @@ function LockedTab({
   );
 }
 
-function ColorRow({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <label className="text-sm">{label}</label>
-      <div className="flex items-center gap-2">
-        <input
-          type="color"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-10 h-9 rounded-md border border-border bg-transparent cursor-pointer"
-        />
-        <Input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-28 font-mono text-xs"
-        />
-      </div>
-    </div>
-  );
-}
 
 function SecurityRow({
   title,
