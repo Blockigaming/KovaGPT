@@ -3,6 +3,7 @@ import { getMode, type ModeId } from "@/lib/modes";
 import {
   DAILY_CHAT_LIMIT,
   DAILY_IMAGE_LIMIT,
+  DAILY_UPLOAD_LIMIT,
   enforceQuota,
   optionalUser,
   unauthorized,
@@ -450,6 +451,17 @@ export const Route = createFileRoute("/api/chat")({
               { status: 429, headers: { "Content-Type": "application/json" } },
             );
           }
+          // Server-side daily upload quota. The localStorage counter is only
+          // a UX hint; this is the real enforcement.
+          if (auth && !isOwner && totalAttachments > 0) {
+            const quota = await enforceQuota(
+              auth,
+              "uploads",
+              DAILY_UPLOAD_LIMIT,
+              totalAttachments,
+            );
+            if (quota) return quota;
+          }
           const hasImages = totalAttachments > 0;
 
           const transformed = messages.map((msg) => {
@@ -539,19 +551,21 @@ export const Route = createFileRoute("/api/chat")({
                 headers: { "Content-Type": "application/json" },
               });
             }
-            const txt = await upstream.text();
-            return new Response(JSON.stringify({ error: txt || "AI gateway error" }), {
-              status: 500,
-              headers: { "Content-Type": "application/json" },
-            });
+            const txt = await upstream.text().catch(() => "");
+            console.error("[chat] upstream error", upstream.status, txt);
+            return new Response(
+              JSON.stringify({ error: "AI service is temporarily unavailable. Please try again." }),
+              { status: 502, headers: { "Content-Type": "application/json" } },
+            );
           }
 
           return new Response(upstream.body, {
             headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
           });
         } catch (e) {
+          console.error("[chat] handler error", e);
           return new Response(
-            JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+            JSON.stringify({ error: "An unexpected error occurred. Please try again." }),
             { status: 500, headers: { "Content-Type": "application/json" } },
           );
         }

@@ -19,6 +19,7 @@ export type Database = {
           chats: number
           images: number
           updated_at: string
+          uploads: number
           usage_date: string
           user_id: string
         }
@@ -26,6 +27,7 @@ export type Database = {
           chats?: number
           images?: number
           updated_at?: string
+          uploads?: number
           usage_date?: string
           user_id: string
         }
@@ -33,6 +35,7 @@ export type Database = {
           chats?: number
           images?: number
           updated_at?: string
+          uploads?: number
           usage_date?: string
           user_id?: string
         }
