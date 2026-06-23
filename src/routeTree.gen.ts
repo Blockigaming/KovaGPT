@@ -14,6 +14,7 @@ import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ImagesRouteImport } from './routes/images'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
+import { Route as BlogBestAiMarketResearchToolsRouteImport } from './routes/blog.best-ai-market-research-tools'
 import { Route as BlogBestAiAssistantsRouteImport } from './routes/blog.best-ai-assistants'
 import { Route as BlogAiMarketResearchGuideRouteImport } from './routes/blog.ai-market-research-guide'
 import { Route as ApiTitleRouteImport } from './routes/api/title'
@@ -46,6 +47,12 @@ const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
   path: '/checkout/return',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogBestAiMarketResearchToolsRoute =
+  BlogBestAiMarketResearchToolsRouteImport.update({
+    id: '/blog/best-ai-market-research-tools',
+    path: '/blog/best-ai-market-research-tools',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const BlogBestAiAssistantsRoute = BlogBestAiAssistantsRouteImport.update({
   id: '/blog/best-ai-assistants',
   path: '/blog/best-ai-assistants',
@@ -89,6 +96,7 @@ export interface FileRoutesByFullPath {
   '/api/title': typeof ApiTitleRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
   '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
+  '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -102,6 +110,7 @@ export interface FileRoutesByTo {
   '/api/title': typeof ApiTitleRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
   '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
+  '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -116,6 +125,7 @@ export interface FileRoutesById {
   '/api/title': typeof ApiTitleRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
   '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
+  '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -131,6 +141,7 @@ export interface FileRouteTypes {
     | '/api/title'
     | '/blog/ai-market-research-guide'
     | '/blog/best-ai-assistants'
+    | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -144,6 +155,7 @@ export interface FileRouteTypes {
     | '/api/title'
     | '/blog/ai-market-research-guide'
     | '/blog/best-ai-assistants'
+    | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
     | '/api/public/payments/webhook'
   id:
@@ -157,6 +169,7 @@ export interface FileRouteTypes {
     | '/api/title'
     | '/blog/ai-market-research-guide'
     | '/blog/best-ai-assistants'
+    | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
@@ -171,6 +184,7 @@ export interface RootRouteChildren {
   ApiTitleRoute: typeof ApiTitleRoute
   BlogAiMarketResearchGuideRoute: typeof BlogAiMarketResearchGuideRoute
   BlogBestAiAssistantsRoute: typeof BlogBestAiAssistantsRoute
+  BlogBestAiMarketResearchToolsRoute: typeof BlogBestAiMarketResearchToolsRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
@@ -210,6 +224,13 @@ declare module '@tanstack/react-router' {
       path: '/checkout/return'
       fullPath: '/checkout/return'
       preLoaderRoute: typeof CheckoutReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/best-ai-market-research-tools': {
+      id: '/blog/best-ai-market-research-tools'
+      path: '/blog/best-ai-market-research-tools'
+      fullPath: '/blog/best-ai-market-research-tools'
+      preLoaderRoute: typeof BlogBestAiMarketResearchToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/blog/best-ai-assistants': {
@@ -267,6 +288,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTitleRoute: ApiTitleRoute,
   BlogAiMarketResearchGuideRoute: BlogAiMarketResearchGuideRoute,
   BlogBestAiAssistantsRoute: BlogBestAiAssistantsRoute,
+  BlogBestAiMarketResearchToolsRoute: BlogBestAiMarketResearchToolsRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
