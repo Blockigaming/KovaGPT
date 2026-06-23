@@ -8,7 +8,22 @@ export const Route = createFileRoute("/api/title")({
         try {
           const auth = await requireUser(request);
           if (auth instanceof Response) return auth;
-          const { messages } = (await request.json()) as {
+          const MAX_BODY = 1 * 1024 * 1024;
+          const contentLength = Number(request.headers.get("content-length") ?? "0");
+          if (contentLength > MAX_BODY) {
+            return new Response(JSON.stringify({ error: "Request too large." }), {
+              status: 413,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+          const raw = await request.text();
+          if (raw.length > MAX_BODY) {
+            return new Response(JSON.stringify({ error: "Request too large." }), {
+              status: 413,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+          const { messages } = JSON.parse(raw) as {
             messages: { role: string; content: string }[];
           };
           const apiKey = process.env.LOVABLE_API_KEY;

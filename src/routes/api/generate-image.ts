@@ -90,7 +90,12 @@ export const Route = createFileRoute("/api/generate-image")({
         try {
           const auth = await requireUser(request);
           if (auth instanceof Response) return auth;
-          const { prompt } = (await request.json()) as { prompt?: string };
+          const MAX_BODY = 1 * 1024 * 1024;
+          const contentLength = Number(request.headers.get("content-length") ?? "0");
+          if (contentLength > MAX_BODY) return jsonError("Request too large.", 413);
+          const raw = await request.text();
+          if (raw.length > MAX_BODY) return jsonError("Request too large.", 413);
+          const { prompt } = JSON.parse(raw) as { prompt?: string };
           if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
             return jsonError("Prompt required", 400);
           }

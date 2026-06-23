@@ -296,10 +296,9 @@ async function handleImageRequest(prompt: string, apiKey: string): Promise<Respo
           );
         }
       } catch (e) {
+        console.error("[handleImageRequest] fetch error", e);
         controller.enqueue(
-          enc.encode(
-            sseChunk(`Sorry  -  ${e instanceof Error ? e.message : "image generation failed"}.`),
-          ),
+          enc.encode(sseChunk("Sorry  -  image generation failed. Please try again.")),
         );
       }
       controller.enqueue(enc.encode(sseDone()));
