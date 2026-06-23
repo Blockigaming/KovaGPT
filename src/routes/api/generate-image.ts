@@ -101,7 +101,6 @@ export const Route = createFileRoute("/api/generate-image")({
           if (quota) return quota;
 
 
-          let lastError = "Image generation failed";
           let lastStatus = 500;
           for (const model of MODELS) {
             const result = await tryModel(model, prompt.trim(), apiKey);
@@ -114,15 +113,13 @@ export const Route = createFileRoute("/api/generate-image")({
             // Stop early on rate-limit / payment so the user gets a clear signal.
             if (result.status === 429) return jsonError("Rate limit  -  try again in a moment.", 429);
             if (result.status === 402) return jsonError("AI credits exhausted.", 402);
-            lastError = result.error ?? lastError;
+            if (result.error) console.error("[generate-image] model error", model, result.status, result.error);
             lastStatus = result.status;
           }
-          return jsonError(lastError, lastStatus);
+          return jsonError("Image service is temporarily unavailable. Please try again.", lastStatus);
         } catch (e) {
-          return jsonError(
-            e instanceof Error ? e.message : "Unknown error",
-            500,
-          );
+          console.error("[generate-image] handler error", e);
+          return jsonError("An unexpected error occurred. Please try again.", 500);
         }
       },
     },
