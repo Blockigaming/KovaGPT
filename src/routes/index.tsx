@@ -45,13 +45,13 @@ export const Route = createFileRoute("/")({
         name: "description",
         content: "See AI at its highest potential — chat, code, research, create images, and speak out loud.",
       },
-      { property: "og:title", content: "KovaGPT — Multimodal AI for Chat, Code, and Research" },
+      { property: "og:title", content: "KovaGPT" },
       {
         property: "og:description",
         content: "See AI at its highest potential — chat, code, research, create images, and speak out loud.",
       },
       { property: "og:url", content: "https://kovagpt.com/" },
-      { name: "twitter:title", content: "KovaGPT — Multimodal AI for Chat, Code, and Research" },
+      { name: "twitter:title", content: "KovaGPT" },
       {
         name: "twitter:description",
         content: "See AI at its highest potential — chat, code, research, create images, and speak out loud.",
@@ -176,7 +176,7 @@ function KovaGPT() {
   }, [settings.displayName, user]);
 
   const greeting = useMemo(() => {
-    if (clerkEnabled && !isSignedIn) return "KovaGPT — Multimodal AI for Chat, Code & Research";
+    if (clerkEnabled && !isSignedIn) return "KovaGPT";
     const name = firstName;
     const prompts = name
       ? [
