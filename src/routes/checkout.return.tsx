@@ -16,6 +16,8 @@ export const Route = createFileRoute("/checkout/return")({
           "Your KovaGPT subscription is now active. Access advanced AI modes, web search, image generation, and priority models on every device.",
       },
       { name: "robots", content: "noindex, nofollow" },
+      { property: "og:title", content: "Payment Successful - KovaGPT" },
+      { property: "og:description", content: "Your subscription is now active." },
       { property: "og:url", content: "https://kovagpt.com/checkout/return" },
     ],
     links: [{ rel: "canonical", href: "https://kovagpt.com/checkout/return" }],
