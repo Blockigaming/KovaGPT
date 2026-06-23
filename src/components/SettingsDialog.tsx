@@ -24,7 +24,20 @@ import {
   Sun,
   Moon,
   Monitor,
+  Link2,
+  Brain,
+  Check,
 } from "lucide-react";
+import { useTier, tierRank } from "@/hooks/useTier";
+import {
+  ALL_LINKED_PROVIDERS,
+  connectProvider,
+  disconnectProvider,
+  getLinkedAccounts,
+  getProviderMeta,
+  type LinkedProvider,
+} from "@/lib/linked-accounts";
+import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { clearConversations } from "@/lib/chat-store";
@@ -121,6 +134,15 @@ export function SettingsDialog({
   const { isSignedIn, user } = useUser();
   const clerk = useClerk();
   const loggedIn = !clerkEnabled || isSignedIn;
+  const { tier } = useTier();
+  const adaptiveMemoryUnlocked = tierRank(tier) >= 1;
+  const [linked, setLinked] = useState<LinkedProvider[]>(() =>
+    user?.id ? getLinkedAccounts(user.id) : [],
+  );
+  useEffect(() => {
+    if (!open) return;
+    setLinked(user?.id ? getLinkedAccounts(user.id) : []);
+  }, [open, user?.id]);
 
   useEffect(() => {
     const unsub = onVoicesChanged(() => setVoices(getVoices()));
@@ -165,6 +187,7 @@ export function SettingsDialog({
             {[
               { v: "general", icon: Sparkles, label: "General" },
               { v: "you", icon: User2, label: "You" },
+              { v: "connections", icon: Link2, label: "Connections" },
               { v: "appearance", icon: Palette, label: "Theme" },
               { v: "billing", icon: CreditCard, label: "Billing" },
               { v: "security", icon: ShieldCheck, label: "Account" },
@@ -370,6 +393,112 @@ export function SettingsDialog({
                 onCheckedChange={(v) => onChange({ ...settings, rememberAcross: v })}
               />
             </section>
+
+            <section className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Brain className="w-4 h-4" />
+                <h3 className="text-sm font-semibold">Adaptive Memory</h3>
+                <span className="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-full bg-foreground/10 text-foreground">
+                  Plus
+                </span>
+              </div>
+              {adaptiveMemoryUnlocked ? (
+                <ToggleRow
+                  title="Use Adaptive Memory"
+                  hint="KovaGPT continually learns your preferences, style, and recurring context across chats — and adapts replies to fit."
+                  checked={settings.rememberAcross}
+                  onCheckedChange={(v) => onChange({ ...settings, rememberAcross: v })}
+                />
+              ) : (
+                <div className="rounded-lg border border-border p-4 flex items-start gap-3">
+                  <Lock className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+                  <div className="flex-1 text-sm">
+                    <div className="font-medium">Available on Kova Plus and Pro</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Adaptive Memory remembers what matters to you across conversations and refines KovaGPT's responses over time.
+                    </div>
+                    <Link
+                      to="/pricing"
+                      onClick={() => onOpenChange(false)}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium mt-3 px-3 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" /> Upgrade to unlock
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </section>
+          </TabsContent>
+
+          {/* CONNECTIONS — linked accounts */}
+          <TabsContent value="connections" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+            <section className="space-y-1">
+              <h3 className="text-sm font-semibold">Linked accounts</h3>
+              <p className="text-xs text-muted-foreground">
+                Connect external accounts so KovaGPT can use them in your chats. You can disconnect any time.
+              </p>
+            </section>
+            <div className="space-y-2">
+              {ALL_LINKED_PROVIDERS.map((p) => {
+                const meta = getProviderMeta(p);
+                const connected = linked.includes(p);
+                return (
+                  <div
+                    key={p}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-border p-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <ProviderIcon provider={p} />
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium truncate">{meta.label}</div>
+                        <div className="text-xs text-muted-foreground truncate">{meta.description}</div>
+                      </div>
+                    </div>
+                    {connected ? (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="inline-flex items-center gap-1 text-xs text-foreground">
+                          <Check className="w-3.5 h-3.5" /> Connected
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+                          onClick={() => {
+                            if (!user?.id) return;
+                            disconnectProvider(user.id, p);
+                            setLinked(getLinkedAccounts(user.id));
+                            toast.success(`${meta.label} disconnected.`);
+                          }}
+                        >
+                          Disconnect
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 shrink-0"
+                        onClick={async () => {
+                          if (!user?.id) return;
+                          const res = await connectProvider(user.id, p);
+                          if (res.error) {
+                            toast.error(res.error);
+                            return;
+                          }
+                          setLinked(getLinkedAccounts(user.id));
+                          if (!res.redirected) toast.success(`${meta.label} connected.`);
+                        }}
+                      >
+                        Connect
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Connecting opens a secure sign-in window from the provider. KovaGPT never stores your provider password.
+            </p>
           </TabsContent>
 
           {/* APPEARANCE — light/dark mode toggle only */}
@@ -465,6 +594,62 @@ export function SettingsDialog({
   );
 }
 
+
+function ProviderIcon({ provider }: { provider: LinkedProvider }) {
+  const base = "w-9 h-9 rounded-lg flex items-center justify-center shrink-0";
+  if (provider === "apple") {
+    return (
+      <div className={base + " bg-foreground text-background"}>
+        <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor" aria-hidden="true">
+          <path d="M16.365 1.43c0 1.14-.456 2.227-1.197 3.02-.79.85-2.07 1.51-3.12 1.43-.13-1.1.43-2.26 1.16-3.04.82-.88 2.2-1.54 3.16-1.4zM20.5 17.27c-.55 1.27-.82 1.84-1.53 2.97-.99 1.57-2.39 3.53-4.12 3.55-1.54.01-1.94-1-4.04-1-2.1.01-2.54 1.02-4.08 1-1.73-.02-3.06-1.78-4.05-3.35C-.06 16.66-.34 11.5 2.27 8.84c1.42-1.44 3.44-2.27 5.36-2.27 1.94 0 3.16 1.07 4.76 1.07 1.55 0 2.5-1.07 4.74-1.07 1.71 0 3.52.93 4.81 2.54-4.23 2.32-3.54 8.37 1.06 9.18z" />
+        </svg>
+      </div>
+    );
+  }
+  if (provider === "youtube") {
+    return (
+      <div className={base + " bg-[#FF0000] text-white"}>
+        <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor" aria-hidden="true">
+          <path d="M23.5 6.2a3.02 3.02 0 0 0-2.13-2.14C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.37.56A3.02 3.02 0 0 0 .5 6.2C0 8.07 0 12 0 12s0 3.93.5 5.8a3.02 3.02 0 0 0 2.13 2.14C4.5 20.5 12 20.5 12 20.5s7.5 0 9.37-.56a3.02 3.02 0 0 0 2.13-2.14C24 15.93 24 12 24 12s0-3.93-.5-5.8zM9.6 15.6V8.4l6.4 3.6-6.4 3.6z" />
+        </svg>
+      </div>
+    );
+  }
+  if (provider === "gmail") {
+    return (
+      <div className={base + " bg-white border border-border"}>
+        <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
+          <path fill="#EA4335" d="M12 13.065L1.5 5.4V18a1.5 1.5 0 0 0 1.5 1.5h3V11l6 4.5 6-4.5v8.5h3a1.5 1.5 0 0 0 1.5-1.5V5.4L12 13.065z" />
+          <path fill="#4285F4" d="M22.5 5.4V18a1.5 1.5 0 0 1-1.5 1.5h-3V11l-6 4.5V13l10.5-7.6z" />
+          <path fill="#34A853" d="M1.5 5.4V18a1.5 1.5 0 0 0 1.5 1.5h3V11L1.5 5.4z" />
+          <path fill="#FBBC05" d="M22.5 5.4L12 13.065 1.5 5.4l10.5 7.6 10.5-7.6z" />
+        </svg>
+      </div>
+    );
+  }
+  if (provider === "google-drive") {
+    return (
+      <div className={base + " bg-white border border-border"}>
+        <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
+          <path fill="#0F9D58" d="M7.71 21l4.29-7.43L7.7 6.14h8.6L20.6 13.57 16.29 21H7.71z" />
+          <path fill="#F4B400" d="M2 13.57L7.71 21h8.58L10.57 11l-4.28-7.43L2 13.57z" opacity=".85" />
+          <path fill="#4285F4" d="M22 13.57L16.29 21H7.71L13.43 11l4.28-7.43L22 13.57z" opacity=".7" />
+        </svg>
+      </div>
+    );
+  }
+  // google
+  return (
+    <div className={base + " bg-white border border-border"}>
+      <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.25 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.07H2.18A10.97 10.97 0 0 0 1 12c0 1.77.42 3.45 1.18 4.93l3.66-2.83z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/>
+      </svg>
+    </div>
+  );
+}
 
 function LockedTab({
   title,

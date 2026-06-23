@@ -22,6 +22,8 @@ export function AuthDialog({
   const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -29,6 +31,8 @@ export function AuthDialog({
     setMode(initialMode);
     setEmail("");
     setPassword("");
+    setFullName("");
+    setPhone("");
   }, [initialMode, open, loading]);
 
   const isSignUp = mode === "sign-up";
@@ -42,10 +46,16 @@ export function AuthDialog({
     setLoading(true);
     try {
       if (isSignUp) {
+        const metadata: Record<string, string> = {};
+        if (fullName.trim()) metadata.full_name = fullName.trim();
+        if (phone.trim()) metadata.phone = phone.trim();
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: `${window.location.origin}/` },
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+            data: metadata,
+          },
         });
         if (error) throw error;
         const isRepeat = !!data.user && (data.user.identities?.length ?? 0) === 0;
@@ -89,21 +99,23 @@ export function AuthDialog({
   const handleGoogle = async () => {
     setLoading(true);
     try {
-      // Use Supabase Google provider directly so the consent screen shows
-      // KovaGPT (the Supabase project) instead of the Lovable OAuth proxy.
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: `${window.location.origin}/` },
+      const { lovable } = await import("@/integrations/lovable");
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
       });
-      if (error) {
-        toast.error(error.message);
+      if (result.error) {
+        const msg = result.error instanceof Error ? result.error.message : String(result.error);
+        toast.error(msg);
         setLoading(false);
         return;
       }
-      // Browser redirects to Google; nothing else to do.
+      if (result.redirected) return;
+      toast.success("Signed in.");
+      onOpenChange(false);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       toast.error(msg);
+    } finally {
       setLoading(false);
     }
   };
@@ -113,23 +125,11 @@ export function AuthDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex justify-center mb-3">
-            <div
-              className={
-                "relative w-14 h-14 rounded-2xl flex items-center justify-center " +
-                (isSignUp
-                  ? "bg-gradient-to-br from-emerald-500/15 to-emerald-500/5 ring-1 ring-emerald-500/30"
-                  : "bg-foreground/5 ring-1 ring-border")
-              }
-            >
+            <div className="relative w-14 h-14 rounded-2xl bg-foreground/5 ring-1 ring-border flex items-center justify-center">
               <NovaLogo className="w-8 h-8" />
-              <span
-                className={
-                  "absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-white shadow-sm " +
-                  (isSignUp ? "bg-emerald-600" : "bg-foreground")
-                }
-              >
+              <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-foreground flex items-center justify-center shadow-sm">
                 {isSignUp ? (
-                  <UserPlus className="w-3.5 h-3.5" />
+                  <UserPlus className="w-3.5 h-3.5 text-background" />
                 ) : (
                   <LogIn className="w-3.5 h-3.5 text-background" />
                 )}
@@ -137,14 +137,7 @@ export function AuthDialog({
             </div>
           </div>
           <div className="flex justify-center mb-1">
-            <span
-              className={
-                "text-[10px] uppercase tracking-[0.18em] font-semibold px-2 py-0.5 rounded-full " +
-                (isSignUp
-                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                  : "bg-foreground/5 text-muted-foreground")
-              }
-            >
+            <span className="text-[10px] uppercase tracking-[0.18em] font-semibold px-2 py-0.5 rounded-full bg-foreground/5 text-muted-foreground">
               {isSignUp ? "Create account" : "Sign in"}
             </span>
           </div>
@@ -182,6 +175,40 @@ export function AuthDialog({
         </div>
 
         <form onSubmit={handleEmail} className="space-y-3">
+          {isSignUp && (
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="auth-name" className="flex items-center justify-between">
+                  <span>Name</span>
+                  <span className="text-xs font-normal text-muted-foreground">Optional</span>
+                </Label>
+                <Input
+                  id="auth-name"
+                  type="text"
+                  autoComplete="name"
+                  placeholder="What should we call you?"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  maxLength={80}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="auth-phone" className="flex items-center justify-between">
+                  <span>Phone number</span>
+                  <span className="text-xs font-normal text-muted-foreground">Optional</span>
+                </Label>
+                <Input
+                  id="auth-phone"
+                  type="tel"
+                  autoComplete="tel"
+                  placeholder="+1 555 555 5555"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  maxLength={32}
+                />
+              </div>
+            </>
+          )}
           <div className="space-y-1.5">
             <Label htmlFor="auth-email">Email</Label>
             <Input
@@ -208,16 +235,7 @@ export function AuthDialog({
               required
             />
           </div>
-          <Button
-            type="submit"
-            className={
-              "w-full " +
-              (isSignUp
-                ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                : "")
-            }
-            disabled={loading}
-          >
+          <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isSignUp ? (
               <>
@@ -244,7 +262,7 @@ export function AuthDialog({
           ) : (
             <>
               New to KovaGPT?{" "}
-              <button type="button" className="text-emerald-600 dark:text-emerald-400 font-medium underline" onClick={() => setMode("sign-up")}>
+              <button type="button" className="text-foreground font-medium underline" onClick={() => setMode("sign-up")}>
                 Create a free account
               </button>
             </>
