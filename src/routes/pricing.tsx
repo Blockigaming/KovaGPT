@@ -155,7 +155,7 @@ function PricingPage() {
               "Auto Mode (adapts to your unlocked modes)",
               "Higher usage limits",
               "More image generations",
-              "Unlimited file uploads",
+              "More daily file uploads",
               "Creative, Precise, Code & Study modes",
               "Faster response times",
               "Priority access during peak hours",
