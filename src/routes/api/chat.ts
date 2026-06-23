@@ -387,7 +387,7 @@ export const Route = createFileRoute("/api/chat")({
           if (totalAttachments > 0 && !auth) {
             return unauthorized("Sign in to upload files or photos.");
           }
-          if (totalAttachments > MAX_ATTACHMENTS_PER_REQUEST) {
+          if (!isOwner && totalAttachments > MAX_ATTACHMENTS_PER_REQUEST) {
             return new Response(
               JSON.stringify({
                 error: `Too many image attachments in this request (max ${MAX_ATTACHMENTS_PER_REQUEST}).`,
