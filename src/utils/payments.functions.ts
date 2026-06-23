@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { type StripeEnv, createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 type CheckoutSessionResult = { clientSecret: string } | { error: string };
 
@@ -37,12 +38,11 @@ async function resolveOrCreateCustomer(
 }
 
 export const createCheckoutSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator(
     (data: {
       priceId: string;
       quantity?: number;
-      customerEmail?: string;
-      userId?: string;
       returnUrl: string;
       environment: StripeEnv;
     }) => {
@@ -50,21 +50,21 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       return data;
     },
   )
-  .handler(async ({ data }): Promise<CheckoutSessionResult> => {
+  .handler(async ({ data, context }): Promise<CheckoutSessionResult> => {
     try {
+      const userId = context.userId;
+      const customerEmail =
+        typeof context.claims.email === "string" ? context.claims.email : undefined;
       const stripe = createStripeClient(data.environment);
       const prices = await stripe.prices.list({ lookup_keys: [data.priceId] });
       if (!prices.data.length) throw new Error("Price not found");
       const stripePrice = prices.data[0];
       const isRecurring = stripePrice.type === "recurring";
 
-      const customerId =
-        data.customerEmail || data.userId
-          ? await resolveOrCreateCustomer(stripe, {
-              email: data.customerEmail,
-              userId: data.userId,
-            })
-          : undefined;
+      const customerId = await resolveOrCreateCustomer(stripe, {
+        email: customerEmail,
+        userId,
+      });
 
       const sessionParams: Record<string, unknown> = {
         line_items: [{ price: stripePrice.id, quantity: data.quantity || 1 }],
@@ -72,11 +72,9 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         ui_mode: "embedded_page",
         return_url: data.returnUrl,
         managed_payments: { enabled: true },
-        ...(customerId && { customer: customerId }),
-        ...(data.userId && {
-          metadata: { userId: data.userId },
-          ...(isRecurring && { subscription_data: { metadata: { userId: data.userId } } }),
-        }),
+        customer: customerId,
+        metadata: { userId },
+        ...(isRecurring && { subscription_data: { metadata: { userId } } }),
       };
       const session = await stripe.checkout.sessions.create(
         sessionParams as Parameters<typeof stripe.checkout.sessions.create>[0],
