@@ -25,7 +25,7 @@ export function LoginPromptDialog({
         </DialogHeader>
         <div className="flex flex-col gap-2 mt-2">
           <SignUpButton mode="modal">
-            <button className="w-full h-11 rounded-full bg-neutral-500 text-white font-medium hover:bg-neutral-600 transition">
+            <button className="w-full h-11 rounded-full bg-neutral-300 text-neutral-900 hover:bg-neutral-400 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700 font-medium transition">
               Sign up for free
             </button>
           </SignUpButton>
