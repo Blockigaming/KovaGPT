@@ -18,11 +18,12 @@ import {
   User2,
   ShieldCheck,
   Sparkles,
-  MessageSquare,
   CreditCard,
-  Globe2,
   ExternalLink,
   Lock,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -37,16 +38,14 @@ import {
 } from "@/lib/voice";
 import { useUser, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
-import { applyThemeColors, DEFAULT_THEME, type ThemeColors } from "@/lib/theme";
+import {
+  applyThemeMode,
+  DEFAULT_THEME,
+  type ThemeColors,
+  type ThemeMode,
+} from "@/lib/theme";
 
-export type Mood =
-  | "neutral"
-  | "friendly"
-  | "professional"
-  | "playful"
-  | "concise"
-  | "encouraging"
-  | "witty";
+export type Mood = "neutral" | "friendly" | "professional" | "concise";
 
 export type Settings = {
   // Voice
@@ -55,27 +54,29 @@ export type Settings = {
   voiceName: string;
   // Personalization
   displayName: string;
-  preferredPronouns: string;
   email: string;
-  phone: string;
-  addressLine1: string;
-  addressLine2: string;
-  city: string;
-  region: string;
-  postalCode: string;
-  country: string;
   extraFacts: string;
   customInstructions: string;
   mood: Mood;
   responseLength: "short" | "medium" | "long";
-  language: string;
   rememberAcross: boolean;
   // Behavior
   webSearch: boolean;
   sendOnEnter: boolean;
-  showTimestamps: boolean;
   // Appearance
-  theme: ThemeColors;
+  mode: ThemeMode;
+  // ----- deprecated, retained so old localStorage payloads still load -----
+  preferredPronouns?: string;
+  phone?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  region?: string;
+  postalCode?: string;
+  country?: string;
+  language?: string;
+  showTimestamps?: boolean;
+  theme?: ThemeColors;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -83,24 +84,15 @@ export const DEFAULT_SETTINGS: Settings = {
   voiceRate: 1,
   voiceName: "",
   displayName: "",
-  preferredPronouns: "",
   email: "",
-  phone: "",
-  addressLine1: "",
-  addressLine2: "",
-  city: "",
-  region: "",
-  postalCode: "",
-  country: "",
   extraFacts: "",
   customInstructions: "",
   mood: "neutral",
   responseLength: "medium",
-  language: "auto",
   rememberAcross: true,
   webSearch: true,
   sendOnEnter: true,
-  showTimestamps: false,
+  mode: "system",
   theme: DEFAULT_THEME,
 };
 
@@ -108,10 +100,7 @@ const MOODS: { value: Mood; label: string; hint: string }[] = [
   { value: "neutral", label: "Neutral", hint: "Balanced and helpful" },
   { value: "friendly", label: "Friendly", hint: "Warm and approachable" },
   { value: "professional", label: "Professional", hint: "Polished and formal" },
-  { value: "playful", label: "Playful", hint: "Light, fun, casual" },
   { value: "concise", label: "Concise", hint: "Short, direct answers" },
-  { value: "encouraging", label: "Encouraging", hint: "Motivating, supportive" },
-  { value: "witty", label: "Witty", hint: "Clever and a little cheeky" },
 ];
 
 export function SettingsDialog({
