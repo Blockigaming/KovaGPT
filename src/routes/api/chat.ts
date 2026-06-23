@@ -3,6 +3,7 @@ import { getMode, type ModeId } from "@/lib/modes";
 import {
   DAILY_CHAT_LIMIT,
   DAILY_IMAGE_LIMIT,
+  DAILY_UPLOAD_LIMIT,
   enforceQuota,
   optionalUser,
   unauthorized,
