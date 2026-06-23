@@ -451,6 +451,17 @@ export const Route = createFileRoute("/api/chat")({
               { status: 429, headers: { "Content-Type": "application/json" } },
             );
           }
+          // Server-side daily upload quota. The localStorage counter is only
+          // a UX hint; this is the real enforcement.
+          if (auth && !isOwner && totalAttachments > 0) {
+            const quota = await enforceQuota(
+              auth,
+              "uploads",
+              DAILY_UPLOAD_LIMIT,
+              totalAttachments,
+            );
+            if (quota) return quota;
+          }
           const hasImages = totalAttachments > 0;
 
           const transformed = messages.map((msg) => {
