@@ -1,5 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DAILY_IMAGE_LIMIT, enforceQuota, requireVerifiedUser } from "@/lib/api-auth.server";
+import {
+  DAILY_IMAGE_LIMIT,
+  assertFeatureEnabled,
+  assertNotBanned,
+  enforceQuota,
+  requireVerifiedUser,
+} from "@/lib/api-auth.server";
 
 // Tries a list of image models in order. Returns the first successful image.
 // Falls back gracefully so a single model outage doesn't break the page.
