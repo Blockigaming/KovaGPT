@@ -511,7 +511,7 @@ function NovaGPT() {
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full hover:bg-accent transition whitespace-nowrap">
+                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full bg-[#111] text-white hover:bg-[#222] transition whitespace-nowrap">
                     Sign up for free
                   </button>
                 </SignUpButton>
