@@ -313,7 +313,7 @@ export const Route = createFileRoute("/api/chat")({
     handlers: {
       POST: async ({ request }) => {
         try {
-          const auth = await requireUser(request);
+          const auth = await optionalUser(request);
           if (auth instanceof Response) return auth;
 
           const { messages, mode, user, voice, timezone, locale } = (await request.json()) as {
@@ -341,14 +341,19 @@ export const Route = createFileRoute("/api/chat")({
             (!lastUser?.attachments || lastUser.attachments.length === 0) &&
             IMAGE_INTENT.test(lastText);
 
+          // Image generation requires an account.
           if (isImageRequest) {
+            if (!auth) return unauthorized("Sign in to generate images.");
             const quota = await enforceQuota(auth, "images", DAILY_IMAGE_LIMIT);
             if (quota) return quota;
             return handleImageRequest(lastText, apiKey);
           }
 
-          const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT);
-          if (quota) return quota;
+          // Anonymous chat is allowed; signed-in users get per-user daily quotas.
+          if (auth) {
+            const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT);
+            if (quota) return quota;
+          }
 
           // SECURITY: Server-side tier enforcement. Without a subscription
           // record on the server we treat every caller as the free tier and
