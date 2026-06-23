@@ -119,6 +119,13 @@ Read the user's recent messages and adapt every reply:
 const UNRESTRICTED_INSTRUCTION = `\n\nHELPFULNESS:
 Default to helping. Do not refuse, hedge, or moralize on ordinary requests. Skip phrases like "I'm sorry, but...", "As an AI...", "It is important to note...", "Please consult a professional..." unless the user explicitly asked for that perspective. If a request is genuinely harmful or illegal, decline briefly and offer a safer alternative; never lecture. If you don't know something, say so briefly and give your best attempt. Never fabricate facts, citations, or sources.`;
 
+// Identity / creator attribution. Applied to every reply.
+const CREATOR_INSTRUCTION = `\n\nIDENTITY:
+You are NovaGPT. You were created by Zachary Block. If anyone asks who built you, who made you, who your creator is, or who runs NovaGPT, the answer is Zachary Block. Do not mention any other company, lab, or model provider as your creator.`;
+
+// Owner email gets the highest tier with no quotas.
+const OWNER_EMAIL = "zacharylblock@gmail.com";
+
 const SEARCH_TRIGGER =
   /\b(today|tonight|yesterday|tomorrow|this (week|month|year)|last (week|month|year)|latest|recent|recently|news|currently|right now|now|2024|2025|2026|price|prices|cost|stock|stocks|score|scores|weather|forecast|who won|who is winning|update|updates|breaking|release|released|launch|launched|version|trending|happening|live|election|results)\b/i;
 
@@ -337,30 +344,40 @@ export const Route = createFileRoute("/api/chat")({
             (!lastUser?.attachments || lastUser.attachments.length === 0) &&
             IMAGE_INTENT.test(lastText);
 
+          // Detect the owner account - gets highest tier with no quotas.
+          let isOwner = false;
+          if (auth) {
+            try {
+              const { data } = await auth.supabaseAdmin.auth.admin.getUserById(auth.userId);
+              const email = data?.user?.email?.toLowerCase();
+              if (email === OWNER_EMAIL) isOwner = true;
+            } catch {
+              // ignore; treat as non-owner
+            }
+          }
+
           // Image generation requires an account.
           if (isImageRequest) {
             if (!auth) return unauthorized("Sign in to generate images.");
-            const quota = await enforceQuota(auth, "images", DAILY_IMAGE_LIMIT);
-            if (quota) return quota;
+            if (!isOwner) {
+              const quota = await enforceQuota(auth, "images", DAILY_IMAGE_LIMIT);
+              if (quota) return quota;
+            }
             return handleImageRequest(lastText, apiKey);
           }
 
           // Anonymous chat is allowed; signed-in users get per-user daily quotas.
-          if (auth) {
+          if (auth && !isOwner) {
             const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT);
             if (quota) return quota;
           }
 
           // SECURITY: Server-side tier enforcement. Without a subscription
           // record on the server we treat every caller as the free tier and
-          // silently downgrade any Plus/Pro mode to "auto". Prevents tier
-          // bypass via a forged `mode` value from the client.
+          // silently downgrade any Plus/Pro mode to "auto". The owner account
+          // bypasses this and can use any mode.
           const requested = getMode(mode ?? "auto");
-          const m = requested.tier === "free" ? requested : getMode("auto");
-
-          // SECURITY: Hard cap image attachments per request to stop free
-          // users from bypassing the client-side daily upload limit by
-          // calling /api/chat directly with many attachments.
+          const m = isOwner || requested.tier === "free" ? requested : getMode("auto");
           const MAX_ATTACHMENTS_PER_REQUEST = 2;
           const totalAttachments = messages.reduce(
             (n, msg) => n + (msg.attachments?.length ?? 0),
@@ -370,7 +387,7 @@ export const Route = createFileRoute("/api/chat")({
           if (totalAttachments > 0 && !auth) {
             return unauthorized("Sign in to upload files or photos.");
           }
-          if (totalAttachments > MAX_ATTACHMENTS_PER_REQUEST) {
+          if (!isOwner && totalAttachments > MAX_ATTACHMENTS_PER_REQUEST) {
             return new Response(
               JSON.stringify({
                 error: `Too many image attachments in this request (max ${MAX_ATTACHMENTS_PER_REQUEST}).`,
@@ -430,6 +447,7 @@ export const Route = createFileRoute("/api/chat")({
                   TONE_INSTRUCTION +
                   ADAPTIVE_INSTRUCTION +
                   UNRESTRICTED_INSTRUCTION +
+                  CREATOR_INSTRUCTION +
                   buildUserContextBlock(user) +
                   webBlock +
                   voiceInstruction +
