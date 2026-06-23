@@ -15,14 +15,17 @@ const SUPPORT_EMAIL = "zacharylblock@gmail.com";
 export function HelpDialog({
   open,
   onOpenChange,
+  variant = "help",
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  variant?: "help" | "bug";
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [topic, setTopic] = useState("");
   const [message, setMessage] = useState("");
+  const isBug = variant === "bug";
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
