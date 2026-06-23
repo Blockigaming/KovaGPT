@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Check, ArrowLeft, Sparkles, Zap, Crown, X } from "lucide-react";
+import { Check, ArrowLeft, Sparkles, Zap, Crown, X, Building2 } from "lucide-react";
+import { useState } from "react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { useUser, useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
+import { EnterpriseContactDialog } from "@/components/EnterpriseContactDialog";
 
 export const Route = createFileRoute("/pricing")({
   component: PricingPage,
