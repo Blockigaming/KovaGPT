@@ -40,7 +40,7 @@ export const Route = createFileRoute("/")({
   component: KovaGPT,
   head: () => ({
     meta: [
-      { title: "KovaGPT — Multimodal AI for Chat, Code, and Research" },
+      { title: "KovaGPT" },
       {
         name: "description",
         content: "See AI at its highest potential — chat, code, research, create images, and speak out loud.",
