@@ -23,21 +23,21 @@ export function NovaLogo({
         cx="24"
         cy="24"
         r="21"
-        stroke="white"
+        stroke="#e6e6e6"
         strokeWidth="1.5"
         strokeOpacity="0.9"
       />
-      {/* Refined compass star */}
+      {/* Refined compass star — softer white, more breathing room */}
       <path
-        d="M24 10.5L27 21L37.5 24L27 27L24 37.5L21 27L10.5 24L21 21L24 10.5Z"
-        fill="white"
-        stroke="white"
+        d="M24 13L26.5 21.5L35 24L26.5 26.5L24 35L21.5 26.5L13 24L21.5 21.5L24 13Z"
+        fill="#e6e6e6"
+        stroke="#e6e6e6"
         strokeWidth="1"
         strokeLinejoin="round"
       />
       {/* Inner detail cross */}
       <path
-        d="M24 17V31M17 24H31"
+        d="M24 18V30M18 24H30"
         stroke="#0a0a0a"
         strokeWidth="1"
         strokeLinecap="round"
