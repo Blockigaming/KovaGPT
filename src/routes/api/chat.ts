@@ -315,11 +315,13 @@ export const Route = createFileRoute("/api/chat")({
           const auth = await requireUser(request);
           if (auth instanceof Response) return auth;
 
-          const { messages, mode, user, voice } = (await request.json()) as {
+          const { messages, mode, user, voice, timezone, locale } = (await request.json()) as {
             messages: IncomingMessage[];
             mode?: ModeId;
             user?: UserContext;
             voice?: boolean;
+            timezone?: string;
+            locale?: string;
           };
           const apiKey = process.env.LOVABLE_API_KEY;
           if (!apiKey) {
