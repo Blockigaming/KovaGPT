@@ -98,6 +98,15 @@ export type Database = {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean
       }
+      try_increment_daily_usage: {
+        Args: {
+          _increment: number
+          _kind: string
+          _limit: number
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
