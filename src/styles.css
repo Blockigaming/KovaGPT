@@ -191,8 +191,11 @@
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { background: oklch(1 0 0 / 10%); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: oklch(1 0 0 / 20%); }
+::-webkit-scrollbar-thumb { background: oklch(0 0 0 / 14%); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: oklch(0 0 0 / 26%); }
+
+/* Display font helper */
+.font-display { font-family: var(--font-display); letter-spacing: -0.01em; }
 
 /* Gentle attention pulse for primary CTAs */
 @keyframes pulse-slow {
