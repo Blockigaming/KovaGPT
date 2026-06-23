@@ -480,25 +480,35 @@ function KovaGPT() {
       />
 
       <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 flex items-center px-3 border-b border-border">
-          {!sidebarOpen && (
+        <header className="h-14 flex items-center px-3 border-b border-border relative">
+          <div className="flex items-center gap-2">
+            {!sidebarOpen && (
+              <button
+                onClick={() => setSidebarOpen((v) => !v)}
+                className="p-2 rounded-lg hover:bg-accent transition"
+                aria-label="Toggle sidebar"
+                title="Toggle sidebar"
+              >
+                <PanelLeft className="w-5 h-5" />
+              </button>
+            )}
+            <div className="flex items-center gap-2 px-1">
+              <NovaLogo className="w-6 h-6" />
+              <span className="font-display font-semibold tracking-tight hidden sm:inline">KovaGPT</span>
+            </div>
+          </div>
+
+          <div className="absolute left-1/2 -translate-x-1/2">
             <button
-              onClick={() => setSidebarOpen((v) => !v)}
-              className="p-2 rounded-lg hover:bg-accent transition mr-1"
-              aria-label="Toggle sidebar"
-              title="Toggle sidebar"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full border border-border bg-card/60 hover:bg-accent transition text-sm font-medium"
+              aria-label="KovaGPT model selector"
+              title="KovaGPT"
             >
-              <PanelLeft className="w-5 h-5" />
+              <span>KovaGPT</span>
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
             </button>
-          )}
-          <button
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-accent transition font-semibold"
-            aria-label="KovaGPT model selector"
-            title="KovaGPT"
-          >
-            <span>KovaGPT</span>
-            <ChevronDown className="w-4 h-4 text-muted-foreground" />
-          </button>
+          </div>
+
           <div className="ml-auto flex items-center gap-2">
             {isLoaded && isSignedIn ? (
               <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
@@ -510,7 +520,7 @@ function KovaGPT() {
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full bg-neutral-500 text-white hover:bg-neutral-600 transition whitespace-nowrap">
+                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full bg-neutral-300 text-neutral-900 hover:bg-neutral-400 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700 transition whitespace-nowrap">
                     Sign up for free
                   </button>
                 </SignUpButton>
@@ -518,6 +528,7 @@ function KovaGPT() {
             )}
           </div>
         </header>
+
 
         {!active || active.messages.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4">
