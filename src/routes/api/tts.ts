@@ -13,6 +13,10 @@ export const Route = createFileRoute("/api/tts")({
       POST: async ({ request }) => {
         const auth = await requireVerifiedUser(request);
         if (auth instanceof Response) return auth;
+        const banned = await assertNotBanned(auth);
+        if (banned) return banned;
+        const maint = await assertFeatureEnabled(auth, "voice");
+        if (maint) return maint;
 
         const apiKey = process.env.LOVABLE_API_KEY;
         if (!apiKey) {
