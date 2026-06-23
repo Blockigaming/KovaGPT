@@ -465,7 +465,7 @@ function KovaGPT() {
   // Image generation removed; can be reintroduced when user explicitly asks.
 
   return (
-    <div className="flex h-screen w-full bg-background text-foreground">
+    <div className="flex h-screen w-full bg-background text-foreground" style={{ height: "100dvh" }}>
       <Toaster />
       <Sidebar
         conversations={conversations}
@@ -493,7 +493,9 @@ function KovaGPT() {
               </button>
             )}
             <div className="flex items-center gap-2 px-1">
-              <NovaLogo className="w-6 h-6" />
+              <span className="inline-flex rounded-full dark:bg-black dark:p-[2px] dark:ring-1 dark:ring-black">
+                <NovaLogo className="w-6 h-6" />
+              </span>
               <span className="font-display font-semibold tracking-tight hidden sm:inline">KovaGPT</span>
             </div>
           </div>
