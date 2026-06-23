@@ -427,7 +427,7 @@ export const Route = createFileRoute("/api/chat")({
                   buildUserContextBlock(user) +
                   webBlock +
                   voiceInstruction +
-                  CURRENT_DATE_INSTRUCTION,
+                  buildCurrentDateInstruction(timezone, locale),
               },
               ...transformed,
             ],
