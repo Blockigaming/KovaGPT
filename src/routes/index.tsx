@@ -11,7 +11,7 @@ import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/Se
 import { HelpDialog } from "@/components/HelpDialog";
 import { LimitReachedDialog } from "@/components/LimitReachedDialog";
 import { applyThemeMode } from "@/lib/theme";
-import { NovaLogo } from "@/components/NovaLogo";
+
 import { getUsage } from "@/lib/limits";
 
 import { VoiceMode } from "@/components/VoiceMode";
@@ -42,21 +42,18 @@ export const Route = createFileRoute("/")({
       { title: "KovaGPT" },
       {
         name: "description",
-        content:
-          "Try the official NovaGPT and see AI at it's highest potential. Available for everyone. Make all the images you desire!",
+        content: "See AI at its highest potential — chat, code, research, create images, and speak out loud.",
       },
       { property: "og:title", content: "KovaGPT" },
       {
         property: "og:description",
-        content:
-          "Try the official NovaGPT and see AI at it's highest potential. Available for everyone. Make all the images you desire!",
+        content: "See AI at its highest potential — chat, code, research, create images, and speak out loud.",
       },
       { property: "og:url", content: "https://nova-aigpt.lovable.app/" },
       { name: "twitter:title", content: "KovaGPT" },
       {
         name: "twitter:description",
-        content:
-          "Try the official NovaGPT and see AI at it's highest potential. Available for everyone. Make all the images you desire!",
+        content: "See AI at its highest potential — chat, code, research, create images, and speak out loud.",
       },
     ],
     links: [{ rel: "canonical", href: "https://nova-aigpt.lovable.app/" }],
@@ -512,7 +509,7 @@ function KovaGPT() {
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full bg-[#111] text-white hover:bg-[#222] transition whitespace-nowrap">
+                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full bg-neutral-500 text-white hover:bg-neutral-600 transition whitespace-nowrap">
                     Sign up for free
                   </button>
                 </SignUpButton>
@@ -523,13 +520,9 @@ function KovaGPT() {
 
         {!active || active.messages.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4">
-            <NovaLogo className="w-14 h-14 mb-5 text-foreground" />
-            <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight mb-2 text-center">
+            <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight mb-6 text-center">
               {greeting}
             </h1>
-            <p className="text-sm text-muted-foreground mb-8 text-center max-w-md">
-              See AI at its highest potential — chat, code, research, create images, and speak out loud.
-            </p>
             <div className="w-full">
               <ChatInput
                 value={input}
