@@ -17,7 +17,7 @@ export const Route = createFileRoute("/checkout/return")({
       },
       { name: "robots", content: "noindex, nofollow" },
       { property: "og:title", content: "Payment Successful - KovaGPT" },
-      { property: "og:description", content: "Your subscription is now active." },
+      { property: "og:description", content: "Your KovaGPT subscription is now active. Access all advanced AI modes and priority features." },
       { property: "og:url", content: "https://kovagpt.com/checkout/return" },
     ],
     links: [{ rel: "canonical", href: "https://kovagpt.com/checkout/return" }],
