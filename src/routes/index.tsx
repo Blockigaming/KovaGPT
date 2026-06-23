@@ -176,7 +176,7 @@ function KovaGPT() {
   }, [settings.displayName, user]);
 
   const greeting = useMemo(() => {
-    if (clerkEnabled && !isSignedIn) return "KovaGPT — Multimodal AI for Chat, Code & Research";
+    if (clerkEnabled && !isSignedIn) return "KovaGPT";
     const name = firstName;
     const prompts = name
       ? [
