@@ -381,6 +381,8 @@ function NovaGPT() {
               rememberAcross: settings.rememberAcross,
               webSearch: settings.webSearch,
             },
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            locale: typeof navigator !== "undefined" ? navigator.language : "en-US",
           }),
           signal: controller.signal,
         });
