@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://nova-aigpt.lovable.app/sitemap.xml
+Sitemap: https://kovagpt.com/sitemap.xml

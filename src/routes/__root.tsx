@@ -98,13 +98,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
             {
               "@type": "Organization",
               name: "KovaGPT",
-              url: "https://nova-aigpt.lovable.app",
-              logo: "https://nova-aigpt.lovable.app/favicon.png",
+              url: "https://kovagpt.com",
+              logo: "https://kovagpt.com/favicon.png",
             },
             {
               "@type": "WebSite",
               name: "KovaGPT",
-              url: "https://nova-aigpt.lovable.app",
+              url: "https://kovagpt.com",
             },
           ],
         }),

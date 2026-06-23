@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-const CANONICAL = "https://nova-aigpt.lovable.app/blog/best-ai-assistants";
+const CANONICAL = "https://kovagpt.com/blog/best-ai-assistants";
 const TITLE = "Best AI Assistants for Productivity in 2026 (Compared)";
 const DESCRIPTION =
   "We compared the best AI assistants for productivity - KovaGPT, ChatGPT, Claude, Gemini, Copilot, and Perplexity - on modes, accuracy, coding, research, and price.";

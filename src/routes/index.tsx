@@ -50,14 +50,14 @@ export const Route = createFileRoute("/")({
         property: "og:description",
         content: "See AI at its highest potential — chat, code, research, create images, and speak out loud.",
       },
-      { property: "og:url", content: "https://nova-aigpt.lovable.app/" },
+      { property: "og:url", content: "https://kovagpt.com/" },
       { name: "twitter:title", content: "KovaGPT" },
       {
         name: "twitter:description",
         content: "See AI at its highest potential — chat, code, research, create images, and speak out loud.",
       },
     ],
-    links: [{ rel: "canonical", href: "https://nova-aigpt.lovable.app/" }],
+    links: [{ rel: "canonical", href: "https://kovagpt.com/" }],
   }),
 });
 

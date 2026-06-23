@@ -33,10 +33,10 @@ export const Route = createFileRoute("/images")({
         property: "og:description",
         content: "Create AI-generated images from text prompts with KovaGPT.",
       },
-      { property: "og:url", content: "https://nova-aigpt.lovable.app/images" },
+      { property: "og:url", content: "https://kovagpt.com/images" },
       { property: "og:type", content: "website" },
     ],
-    links: [{ rel: "canonical", href: "https://nova-aigpt.lovable.app/images" }],
+    links: [{ rel: "canonical", href: "https://kovagpt.com/images" }],
   }),
 });
 
