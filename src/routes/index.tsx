@@ -481,6 +481,7 @@ function KovaGPT() {
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenHelp={() => setHelpOpen(true)}
+        onOpenBug={() => setBugOpen(true)}
       />
 
       <main className="flex-1 flex flex-col min-w-0">
