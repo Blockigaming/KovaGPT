@@ -186,11 +186,88 @@ export function speakChunk(text: string, opts?: SpeakOpts) {
 export function stopSpeaking() {
   if (typeof window === "undefined") return;
   window.speechSynthesis?.cancel();
+  stopRemoteSpeaking();
 }
 
 export function isSpeaking() {
   if (typeof window === "undefined") return false;
-  return window.speechSynthesis?.speaking ?? false;
+  return (window.speechSynthesis?.speaking ?? false) || remoteSpeaking;
+}
+
+// --- Remote (Lovable AI) TTS queue ----------------------------------------
+// Streams MP3 from /api/tts and plays sequentially. Sounds dramatically more
+// natural than the browser's SpeechSynthesis voices.
+
+import { authFetch } from "@/lib/auth-fetch";
+
+type RemoteJob = { text: string; voice?: string; speed?: number; onEnd?: () => void };
+let remoteQueue: RemoteJob[] = [];
+let remoteAudio: HTMLAudioElement | null = null;
+let remoteAbort: AbortController | null = null;
+let remoteSpeaking = false;
+let remoteUrl: string | null = null;
+
+async function processRemoteQueue() {
+  if (remoteSpeaking) return;
+  const job = remoteQueue.shift();
+  if (!job) return;
+  remoteSpeaking = true;
+  try {
+    remoteAbort = new AbortController();
+    const resp = await authFetch("/api/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: job.text, voice: job.voice, speed: job.speed }),
+      signal: remoteAbort.signal,
+    });
+    if (!resp.ok) throw new Error(`TTS ${resp.status}`);
+    const blob = await resp.blob();
+    if (remoteUrl) URL.revokeObjectURL(remoteUrl);
+    remoteUrl = URL.createObjectURL(blob);
+    const audio = new Audio(remoteUrl);
+    remoteAudio = audio;
+    await new Promise<void>((resolve) => {
+      audio.onended = () => resolve();
+      audio.onerror = () => resolve();
+      audio.play().catch(() => resolve());
+    });
+    job.onEnd?.();
+  } catch {
+    // swallow — likely aborted
+  } finally {
+    remoteSpeaking = false;
+    remoteAudio = null;
+    remoteAbort = null;
+    if (remoteQueue.length) void processRemoteQueue();
+  }
+}
+
+export function speakRemoteChunk(text: string, opts?: SpeakOpts & { voiceId?: string }) {
+  const clean = cleanForSpeech(text);
+  if (!clean) { opts?.onEnd?.(); return; }
+  remoteQueue.push({
+    text: clean,
+    voice: opts?.voiceId,
+    speed: opts?.rate,
+    onEnd: opts?.onEnd,
+  });
+  void processRemoteQueue();
+}
+
+export function stopRemoteSpeaking() {
+  remoteQueue = [];
+  try { remoteAbort?.abort(); } catch { /* ignore */ }
+  if (remoteAudio) {
+    try { remoteAudio.pause(); } catch { /* ignore */ }
+    remoteAudio.src = "";
+    remoteAudio = null;
+  }
+  if (remoteUrl) { URL.revokeObjectURL(remoteUrl); remoteUrl = null; }
+  remoteSpeaking = false;
+}
+
+export function isRemoteSpeaking() {
+  return remoteSpeaking || remoteQueue.length > 0;
 }
 
 // SpeechRecognition (webkit prefix in Chromium)
