@@ -121,7 +121,7 @@ function PricingPage() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           <PlanCard
             icon={Sparkles}
             name="Free"
@@ -131,9 +131,10 @@ function PricingPage() {
             cta="Current plan"
             ctaDisabled
             features={[
-              "Access to NovaGPT (Auto mode)",
-              "Up to 3 image generations / day",
-              "Up to 2 image uploads / day",
+              "Access to NovaGPT",
+              "Basic Mode",
+              "Small Image Generation Limits",
+              "Minimal Upload Limits",
               "Voice input & read-aloud",
               "Conversation history saved when signed in",
             ]}
@@ -150,9 +151,10 @@ function PricingPage() {
             onCta={() => startCheckout("plus_monthly")}
             features={[
               "Everything in Free",
-              "5x more usage per day",
-              "Up to 5x more image generations / day",
-              "Unlimited image uploads",
+              "Auto Mode (adapts to your unlocked modes)",
+              "Higher usage limits",
+              "More image generations",
+              "Unlimited file uploads",
               "Creative, Precise, Code & Study modes",
               "Faster response times",
               "Priority access during peak hours",
@@ -169,7 +171,7 @@ function PricingPage() {
             onCta={() => startCheckout("pro_monthly")}
             features={[
               "Everything in Plus",
-              "10x more usage than Plus",
+              "More usage than Plus",
               "Reasoning, Research, Writer Pro & Tutor Pro modes",
               "Generate emails, websites & components",
               "Highest quality voice synthesis",
@@ -177,12 +179,32 @@ function PricingPage() {
               "Early access to new features",
             ]}
           />
+
+          <PlanCard
+            icon={Building2}
+            name="Enterprise"
+            price="Custom"
+            period="contact us"
+            description="Built around your team's needs."
+            cta="Contact sales"
+            onCta={() => setEnterpriseOpen(true)}
+            features={[
+              "Everything in Pro",
+              "Estimated $500 - $5,000 / month (depends on needs)",
+              "Custom usage limits & SLAs",
+              "Dedicated support contact",
+              "Team accounts & billing",
+              "Final pricing tailored to your use case",
+            ]}
+          />
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-10">
-          Secured by Stripe. Cancel anytime from your account.
+          Secured by Stripe. Cancel anytime from your account. Enterprise plans are billed manually.
         </p>
       </main>
+
+      <EnterpriseContactDialog open={enterpriseOpen} onOpenChange={setEnterpriseOpen} />
 
       {isOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center overflow-y-auto py-10 px-4">
