@@ -595,6 +595,7 @@ function KovaGPT() {
       />
 
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+      <HelpDialog open={bugOpen} onOpenChange={setBugOpen} variant="bug" />
 
       <SignUpPrompt open={signupPromptOpen} onOpenChange={setSignupPromptOpen} />
 
