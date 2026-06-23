@@ -245,6 +245,7 @@ export function Sidebar({
           title="Drag to resize"
         />
       )}
-    </aside>
+      </aside>
+    </>
   );
 }
