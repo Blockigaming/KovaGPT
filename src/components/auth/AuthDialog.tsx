@@ -4,9 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, LogIn, UserPlus } from "lucide-react";
+import { NovaLogo } from "@/components/NovaLogo";
 
 type Mode = "sign-in" | "sign-up";
 
@@ -31,6 +31,8 @@ export function AuthDialog({
     setPassword("");
   }, [initialMode, open, loading]);
 
+  const isSignUp = mode === "sign-up";
+
   const handleEmail = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
@@ -39,17 +41,13 @@ export function AuthDialog({
     }
     setLoading(true);
     try {
-      if (mode === "sign-up") {
+      if (isSignUp) {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: { emailRedirectTo: `${window.location.origin}/` },
         });
         if (error) throw error;
-        // Supabase returns success with an empty identities array when the
-        // email is already registered but unconfirmed  -  no email is sent
-        // in that case. Explicitly trigger a resend so the user always
-        // gets a verification email.
         const isRepeat = !!data.user && (data.user.identities?.length ?? 0) === 0;
         if (isRepeat) {
           const { error: resendErr } = await supabase.auth.resend({
@@ -58,7 +56,7 @@ export function AuthDialog({
             options: { emailRedirectTo: `${window.location.origin}/` },
           });
           if (resendErr) throw resendErr;
-          toast.success("Already registered  -  we resent the verification link. Check your inbox & spam.");
+          toast.success("Already registered — we resent the verification link. Check your inbox & spam.");
         } else {
           toast.success("Verification email sent. Check your inbox & spam folder.");
         }
@@ -66,19 +64,18 @@ export function AuthDialog({
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
-          // If user hasn't confirmed yet, automatically resend the verification.
           if (/confirm|not confirmed|email.*verif/i.test(error.message)) {
             await supabase.auth.resend({
               type: "signup",
               email,
               options: { emailRedirectTo: `${window.location.origin}/` },
             });
-            toast.error("Please verify your email  -  we just resent the link.");
+            toast.error("Please verify your email — we just resent the link.");
             return;
           }
           throw error;
         }
-        toast.success("Signed in.");
+        toast.success("Welcome back!");
         onOpenChange(false);
       }
     } catch (err) {
@@ -92,22 +89,21 @@ export function AuthDialog({
   const handleGoogle = async () => {
     setLoading(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+      // Use Supabase Google provider directly so the consent screen shows
+      // KovaGPT (the Supabase project) instead of the Lovable OAuth proxy.
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/` },
       });
-      if (result.error) {
-        const msg = result.error instanceof Error ? result.error.message : String(result.error);
-        toast.error(msg);
+      if (error) {
+        toast.error(error.message);
         setLoading(false);
         return;
       }
-      if (result.redirected) return; // browser redirects
-      toast.success("Signed in.");
-      onOpenChange(false);
+      // Browser redirects to Google; nothing else to do.
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       toast.error(msg);
-    } finally {
       setLoading(false);
     }
   };
@@ -116,11 +112,49 @@ export function AuthDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{mode === "sign-up" ? "Create your account" : "Welcome back"}</DialogTitle>
-          <DialogDescription>
-            {mode === "sign-up"
-              ? "Sign up to save your chats, settings, and history."
-              : "Sign in to continue where you left off."}
+          <div className="flex justify-center mb-3">
+            <div
+              className={
+                "relative w-14 h-14 rounded-2xl flex items-center justify-center " +
+                (isSignUp
+                  ? "bg-gradient-to-br from-emerald-500/15 to-emerald-500/5 ring-1 ring-emerald-500/30"
+                  : "bg-foreground/5 ring-1 ring-border")
+              }
+            >
+              <NovaLogo className="w-8 h-8" />
+              <span
+                className={
+                  "absolute -bottom-1 -right-1 w-6 h-6 rounded-full flex items-center justify-center text-white shadow-sm " +
+                  (isSignUp ? "bg-emerald-600" : "bg-foreground")
+                }
+              >
+                {isSignUp ? (
+                  <UserPlus className="w-3.5 h-3.5" />
+                ) : (
+                  <LogIn className="w-3.5 h-3.5 text-background" />
+                )}
+              </span>
+            </div>
+          </div>
+          <div className="flex justify-center mb-1">
+            <span
+              className={
+                "text-[10px] uppercase tracking-[0.18em] font-semibold px-2 py-0.5 rounded-full " +
+                (isSignUp
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                  : "bg-foreground/5 text-muted-foreground")
+              }
+            >
+              {isSignUp ? "Create account" : "Sign in"}
+            </span>
+          </div>
+          <DialogTitle className="text-center text-xl">
+            {isSignUp ? "Join KovaGPT" : "Welcome back to KovaGPT"}
+          </DialogTitle>
+          <DialogDescription className="text-center">
+            {isSignUp
+              ? "Create your free KovaGPT account to save chats, settings, and history."
+              : "Sign in to your KovaGPT account to continue where you left off."}
           </DialogDescription>
         </DialogHeader>
 
@@ -137,13 +171,13 @@ export function AuthDialog({
             <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.07H2.18A10.97 10.97 0 0 0 1 12c0 1.77.42 3.45 1.18 4.93l3.66-2.83z"/>
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/>
           </svg>
-          Continue with Google
+          {isSignUp ? "Sign up with Google" : "Continue with Google"}
         </Button>
 
         <div className="relative my-2">
           <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">or</span>
+            <span className="bg-background px-2 text-muted-foreground">or use email</span>
           </div>
         </div>
 
@@ -160,36 +194,58 @@ export function AuthDialog({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="auth-password">Password</Label>
+            <Label htmlFor="auth-password">
+              {isSignUp ? "Create a password" : "Password"}
+            </Label>
             <Input
               id="auth-password"
               type="password"
-              autoComplete={mode === "sign-up" ? "new-password" : "current-password"}
+              autoComplete={isSignUp ? "new-password" : "current-password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               minLength={6}
+              placeholder={isSignUp ? "At least 6 characters" : undefined}
               required
             />
           </div>
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button
+            type="submit"
+            className={
+              "w-full " +
+              (isSignUp
+                ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                : "")
+            }
+            disabled={loading}
+          >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {mode === "sign-up" ? "Sign up" : "Sign in"}
+            {isSignUp ? (
+              <>
+                <UserPlus className="mr-2 h-4 w-4" />
+                Create my KovaGPT account
+              </>
+            ) : (
+              <>
+                <LogIn className="mr-2 h-4 w-4" />
+                Sign in to KovaGPT
+              </>
+            )}
           </Button>
         </form>
 
         <div className="text-center text-sm text-muted-foreground">
-          {mode === "sign-up" ? (
+          {isSignUp ? (
             <>
               Already have an account?{" "}
-              <button type="button" className="text-foreground underline" onClick={() => setMode("sign-in")}>
-                Sign in
+              <button type="button" className="text-foreground font-medium underline" onClick={() => setMode("sign-in")}>
+                Sign in instead
               </button>
             </>
           ) : (
             <>
-              New here?{" "}
-              <button type="button" className="text-foreground underline" onClick={() => setMode("sign-up")}>
-                Create an account
+              New to KovaGPT?{" "}
+              <button type="button" className="text-emerald-600 dark:text-emerald-400 font-medium underline" onClick={() => setMode("sign-up")}>
+                Create a free account
               </button>
             </>
           )}
