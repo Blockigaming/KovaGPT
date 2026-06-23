@@ -474,6 +474,7 @@ function ImagesPage() {
         }}
       />
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+      <HelpDialog open={bugOpen} onOpenChange={setBugOpen} variant="bug" />
       <LoginPromptDialog open={loginOpen} onOpenChange={setLoginOpen} />
       <LimitReachedDialog
         open={limitOpen}
