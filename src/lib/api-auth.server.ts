@@ -12,6 +12,7 @@ export const DAILY_UPLOAD_LIMIT = 2;
 export type AuthedCaller = {
   userId: string;
   supabaseAdmin: SupabaseClient<Database>;
+  emailVerified: boolean;
 };
 
 function jsonError(message: string, status: number) {
@@ -67,7 +68,27 @@ export async function optionalUser(
   const supabaseAdmin = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
   });
-  return { userId, supabaseAdmin };
+  const emailVerified =
+    (data?.claims as { email_verified?: boolean } | undefined)?.email_verified === true;
+  return { userId, supabaseAdmin, emailVerified };
+}
+
+/**
+ * Like requireUser, but additionally requires a verified email address.
+ * Use for high-cost / abuse-prone actions (image gen, voice, uploads).
+ */
+export async function requireVerifiedUser(
+  request: Request,
+): Promise<AuthedCaller | Response> {
+  const auth = await requireUser(request);
+  if (auth instanceof Response) return auth;
+  if (!auth.emailVerified) {
+    return jsonError(
+      "Please verify your email address before using this feature. Check your inbox for the confirmation link.",
+      403,
+    );
+  }
+  return auth;
 }
 
 export async function enforceQuota(

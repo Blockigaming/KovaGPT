@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { requireUser } from "@/lib/api-auth.server";
+import { requireVerifiedUser } from "@/lib/api-auth.server";
 
 // Streams MP3 from Lovable AI text-to-speech (openai/gpt-4o-mini-tts).
 // Server-side proxy — keeps LOVABLE_API_KEY off the client.
@@ -7,7 +7,7 @@ export const Route = createFileRoute("/api/tts")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const auth = await requireUser(request);
+        const auth = await requireVerifiedUser(request);
         if (auth instanceof Response) return auth;
 
         const apiKey = process.env.LOVABLE_API_KEY;

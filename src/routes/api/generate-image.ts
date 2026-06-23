@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DAILY_IMAGE_LIMIT, enforceQuota, requireUser } from "@/lib/api-auth.server";
+import { DAILY_IMAGE_LIMIT, enforceQuota, requireVerifiedUser } from "@/lib/api-auth.server";
 
 // Tries a list of image models in order. Returns the first successful image.
 // Falls back gracefully so a single model outage doesn't break the page.
@@ -88,7 +88,7 @@ export const Route = createFileRoute("/api/generate-image")({
     handlers: {
       POST: async ({ request }) => {
         try {
-          const auth = await requireUser(request);
+          const auth = await requireVerifiedUser(request);
           if (auth instanceof Response) return auth;
           const MAX_BODY = 1 * 1024 * 1024;
           const contentLength = Number(request.headers.get("content-length") ?? "0");

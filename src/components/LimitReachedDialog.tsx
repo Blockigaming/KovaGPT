@@ -47,10 +47,10 @@ export function LimitReachedDialog({
   const body =
     message ??
     (kind === "image"
-      ? "The Free plan includes 1 AI image per day. Upgrade to Pro to generate unlimited images, or wait for your quota to reset."
+      ? "The Free plan includes 1 AI image per day. Upgrade for higher daily limits (subject to fair use), or wait for your quota to reset."
       : kind === "upload"
-        ? "You've reached the daily upload cap on the Free plan. Upgrade to Pro for higher limits, or wait for your quota to reset."
-        : "You've used your daily messages on the Free plan. Upgrade to Pro for unlimited chats, or wait for your quota to reset.");
+        ? "You've reached the daily upload cap on the Free plan. Upgrade for higher limits (subject to fair use), or wait for your quota to reset."
+        : "You've used your daily messages on the Free plan. Upgrade for higher daily limits (subject to fair use), or wait for your quota to reset.");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
