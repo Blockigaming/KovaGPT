@@ -521,7 +521,12 @@ export const Route = createFileRoute("/api/chat")({
           const hasImages = totalAttachments > 0;
 
           const transformed = messages.map((msg) => {
-            if (msg.role === "user" && msg.attachments && msg.attachments.length > 0) {
+            // SECURITY: client-supplied "system" messages would otherwise sit
+            // next to the server's authoritative system prompt and could
+            // override it. Demote any non-assistant/non-user role to "user".
+            const safeRole: "user" | "assistant" =
+              msg.role === "assistant" ? "assistant" : "user";
+            if (safeRole === "user" && msg.attachments && msg.attachments.length > 0) {
               const parts: ChatContentPart[] = [];
               if (msg.content) parts.push({ type: "text", text: msg.content });
               for (const att of msg.attachments) {
@@ -529,7 +534,7 @@ export const Route = createFileRoute("/api/chat")({
               }
               return { role: "user", content: parts };
             }
-            return { role: msg.role, content: msg.content };
+            return { role: safeRole, content: msg.content };
           });
 
           // Default to a smart, fast streaming model. Escalate when needed.
