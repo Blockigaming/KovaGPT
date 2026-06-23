@@ -187,6 +187,7 @@ export function SettingsDialog({
             {[
               { v: "general", icon: Sparkles, label: "General" },
               { v: "you", icon: User2, label: "You" },
+              { v: "connections", icon: Link2, label: "Connections" },
               { v: "appearance", icon: Palette, label: "Theme" },
               { v: "billing", icon: CreditCard, label: "Billing" },
               { v: "security", icon: ShieldCheck, label: "Account" },
