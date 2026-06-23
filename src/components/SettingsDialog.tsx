@@ -595,6 +595,62 @@ export function SettingsDialog({
 }
 
 
+function ProviderIcon({ provider }: { provider: LinkedProvider }) {
+  const base = "w-9 h-9 rounded-lg flex items-center justify-center shrink-0";
+  if (provider === "apple") {
+    return (
+      <div className={base + " bg-foreground text-background"}>
+        <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor" aria-hidden="true">
+          <path d="M16.365 1.43c0 1.14-.456 2.227-1.197 3.02-.79.85-2.07 1.51-3.12 1.43-.13-1.1.43-2.26 1.16-3.04.82-.88 2.2-1.54 3.16-1.4zM20.5 17.27c-.55 1.27-.82 1.84-1.53 2.97-.99 1.57-2.39 3.53-4.12 3.55-1.54.01-1.94-1-4.04-1-2.1.01-2.54 1.02-4.08 1-1.73-.02-3.06-1.78-4.05-3.35C-.06 16.66-.34 11.5 2.27 8.84c1.42-1.44 3.44-2.27 5.36-2.27 1.94 0 3.16 1.07 4.76 1.07 1.55 0 2.5-1.07 4.74-1.07 1.71 0 3.52.93 4.81 2.54-4.23 2.32-3.54 8.37 1.06 9.18z" />
+        </svg>
+      </div>
+    );
+  }
+  if (provider === "youtube") {
+    return (
+      <div className={base + " bg-[#FF0000] text-white"}>
+        <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor" aria-hidden="true">
+          <path d="M23.5 6.2a3.02 3.02 0 0 0-2.13-2.14C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.37.56A3.02 3.02 0 0 0 .5 6.2C0 8.07 0 12 0 12s0 3.93.5 5.8a3.02 3.02 0 0 0 2.13 2.14C4.5 20.5 12 20.5 12 20.5s7.5 0 9.37-.56a3.02 3.02 0 0 0 2.13-2.14C24 15.93 24 12 24 12s0-3.93-.5-5.8zM9.6 15.6V8.4l6.4 3.6-6.4 3.6z" />
+        </svg>
+      </div>
+    );
+  }
+  if (provider === "gmail") {
+    return (
+      <div className={base + " bg-white border border-border"}>
+        <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
+          <path fill="#EA4335" d="M12 13.065L1.5 5.4V18a1.5 1.5 0 0 0 1.5 1.5h3V11l6 4.5 6-4.5v8.5h3a1.5 1.5 0 0 0 1.5-1.5V5.4L12 13.065z" />
+          <path fill="#4285F4" d="M22.5 5.4V18a1.5 1.5 0 0 1-1.5 1.5h-3V11l-6 4.5V13l10.5-7.6z" />
+          <path fill="#34A853" d="M1.5 5.4V18a1.5 1.5 0 0 0 1.5 1.5h3V11L1.5 5.4z" />
+          <path fill="#FBBC05" d="M22.5 5.4L12 13.065 1.5 5.4l10.5 7.6 10.5-7.6z" />
+        </svg>
+      </div>
+    );
+  }
+  if (provider === "google-drive") {
+    return (
+      <div className={base + " bg-white border border-border"}>
+        <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
+          <path fill="#0F9D58" d="M7.71 21l4.29-7.43L7.7 6.14h8.6L20.6 13.57 16.29 21H7.71z" />
+          <path fill="#F4B400" d="M2 13.57L7.71 21h8.58L10.57 11l-4.28-7.43L2 13.57z" opacity=".85" />
+          <path fill="#4285F4" d="M22 13.57L16.29 21H7.71L13.43 11l4.28-7.43L22 13.57z" opacity=".7" />
+        </svg>
+      </div>
+    );
+  }
+  // google
+  return (
+    <div className={base + " bg-white border border-border"}>
+      <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.25 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.07H2.18A10.97 10.97 0 0 0 1 12c0 1.77.42 3.45 1.18 4.93l3.66-2.83z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/>
+      </svg>
+    </div>
+  );
+}
+
 function LockedTab({
   title,
   body,
