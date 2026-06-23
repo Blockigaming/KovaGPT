@@ -24,7 +24,20 @@ import {
   Sun,
   Moon,
   Monitor,
+  Link2,
+  Brain,
+  Check,
 } from "lucide-react";
+import { useTier, tierRank } from "@/hooks/useTier";
+import {
+  ALL_LINKED_PROVIDERS,
+  connectProvider,
+  disconnectProvider,
+  getLinkedAccounts,
+  getProviderMeta,
+  type LinkedProvider,
+} from "@/lib/linked-accounts";
+import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { clearConversations } from "@/lib/chat-store";
