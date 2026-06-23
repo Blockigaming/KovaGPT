@@ -1,4 +1,5 @@
-import { MessageSquare, Trash2, PanelLeft, Search, Sparkles, Settings as Cog, HelpCircle, ImageIcon, SquarePen } from "lucide-react";
+import { MessageSquare, Trash2, PanelLeft, Search, Sparkles, Settings as Cog, HelpCircle, ImageIcon, Plus } from "lucide-react";
+import { NovaLogo } from "@/components/NovaLogo";
 import { Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { SignInButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
@@ -87,44 +88,57 @@ export function Sidebar({
       className="relative shrink-0 overflow-hidden transition-[width] duration-150 bg-sidebar text-sidebar-foreground border-r border-border flex flex-col"
     >
       <div style={{ width }} className="flex flex-col h-full">
-        {/* Top: toggle + new chat icon */}
-        <div className="flex items-center justify-between p-2">
+        {/* Brand row */}
+        <div className="flex items-center justify-between px-3 pt-3 pb-2">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex rounded-full dark:bg-black dark:p-[2px] dark:ring-1 dark:ring-black">
+              <NovaLogo className="w-6 h-6" />
+            </span>
+            <span className="font-display font-semibold tracking-tight text-[15px]">KovaGPT</span>
+          </div>
           <button
             onClick={onToggle}
-            className="p-2 rounded-lg hover:bg-sidebar-hover transition"
+            className="p-1.5 rounded-md hover:bg-sidebar-hover transition"
             aria-label="Toggle sidebar"
           >
-            <PanelLeft className="w-5 h-5" />
-          </button>
-          <button
-            onClick={onNew}
-            className="p-2 rounded-lg hover:bg-sidebar-hover transition"
-            aria-label="New chat"
-            title="New chat"
-          >
-            <SquarePen className="w-5 h-5" />
+            <PanelLeft className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Primary nav */}
-        <div className="px-2 space-y-0.5">
+        {/* Prominent New chat pill */}
+        <div className="px-3 pb-3">
           <button
             onClick={onNew}
-            className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium bg-sidebar-hover transition text-left"
+            className="w-full flex items-center justify-center gap-2 rounded-full border border-border bg-background hover:bg-sidebar-hover px-3 py-2 text-sm font-medium transition"
           >
-            <SquarePen className="w-4 h-4" />
+            <Plus className="w-4 h-4" />
             <span>New chat</span>
           </button>
-          <button className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left">
+        </div>
+
+        {/* Search as input-style */}
+        <div className="px-3 pb-2">
+          <div className="flex items-center gap-2 rounded-lg bg-sidebar-hover/60 hover:bg-sidebar-hover px-3 py-2 text-sm text-muted-foreground cursor-pointer transition">
             <Search className="w-4 h-4" />
             <span>Search chats</span>
-          </button>
+          </div>
+        </div>
+
+        {/* Compact nav row */}
+        <div className="px-3 pb-2 flex items-center gap-2">
           <Link
             to="/images"
-            className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition"
+            className="flex-1 flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition"
           >
             <ImageIcon className="w-4 h-4" />
             <span>Images</span>
+          </Link>
+          <Link
+            to="/pricing"
+            className="flex-1 flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Plans</span>
           </Link>
         </div>
 
@@ -166,28 +180,22 @@ export function Sidebar({
           <div className="flex-1 min-h-0" />
         )}
 
-        {/* Secondary nav: plans, settings, help */}
-        <div className="px-2 pb-2 space-y-0.5">
-          <Link
-            to="/pricing"
-            className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>See plans and pricing</span>
-          </Link>
+        {/* Secondary nav: settings, help (row layout) */}
+        <div className="px-3 pb-2 pt-1 border-t border-border/60 flex items-center gap-1">
           <button
             onClick={onOpenSettings}
-            className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
+            className="flex-1 flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-sidebar-hover transition text-left"
           >
             <Cog className="w-4 h-4" />
             <span>Settings</span>
           </button>
           <button
             onClick={onOpenHelp}
-            className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
+            className="p-2 rounded-lg hover:bg-sidebar-hover transition"
+            aria-label="Help"
+            title="Help"
           >
             <HelpCircle className="w-4 h-4" />
-            <span>Help</span>
           </button>
         </div>
 
