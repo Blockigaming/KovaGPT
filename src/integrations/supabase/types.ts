@@ -77,6 +77,27 @@ export type Database = {
         }
         Relationships: []
       }
+      processed_stripe_events: {
+        Row: {
+          environment: string
+          event_id: string
+          processed_at: string
+          type: string
+        }
+        Insert: {
+          environment: string
+          event_id: string
+          processed_at?: string
+          type: string
+        }
+        Update: {
+          environment?: string
+          event_id?: string
+          processed_at?: string
+          type?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null
