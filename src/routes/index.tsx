@@ -523,9 +523,15 @@ function KovaGPT() {
 
         {!active || active.messages.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center px-4">
-            <h1 className="text-2xl sm:text-3xl font-semibold mb-8 text-center">
+            <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-foreground text-background mb-5 shadow-sm">
+              <NovaLogo className="w-9 h-9" />
+            </div>
+            <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight mb-2 text-center">
               {greeting}
             </h1>
+            <p className="text-sm text-muted-foreground mb-8 text-center max-w-md">
+              See AI at its highest potential — chat, code, research, create images, and speak out loud.
+            </p>
             <div className="w-full">
               <ChatInput
                 value={input}
