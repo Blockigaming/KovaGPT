@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      banned_users: {
+        Row: {
+          banned_at: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          banned_at?: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          banned_at?: string
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       daily_usage: {
         Row: {
           chats: number
@@ -38,6 +56,24 @@ export type Database = {
           uploads?: number
           usage_date?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      feature_flags: {
+        Row: {
+          enabled: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          enabled?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          enabled?: boolean
+          name?: string
+          updated_at?: string
         }
         Relationships: []
       }
