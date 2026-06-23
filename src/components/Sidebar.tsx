@@ -200,6 +200,14 @@ export function Sidebar({
             <span>Settings</span>
           </button>
           <button
+            onClick={onOpenBug}
+            className="p-2 rounded-lg hover:bg-sidebar-hover transition"
+            aria-label="Report a bug"
+            title="Report a bug"
+          >
+            <Bug className="w-4 h-4" />
+          </button>
+          <button
             onClick={onOpenHelp}
             className="p-2 rounded-lg hover:bg-sidebar-hover transition"
             aria-label="Help"
