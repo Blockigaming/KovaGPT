@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-const CANONICAL = "https://nova-aigpt.lovable.app/blog/ai-market-research-guide";
+const CANONICAL = "https://kovagpt.com/blog/ai-market-research-guide";
 const TITLE = "How to Use AI for Market Research in 2026";
 const DESCRIPTION =
   "A practical workflow for using AI for market research: size markets, map competitors, and synthesize trends with KovaGPT's Research and Reasoning modes.";
@@ -14,7 +14,6 @@ export const Route = createFileRoute("/blog/ai-market-research-guide")({
       { property: "og:description", content: DESCRIPTION },
       { property: "og:type", content: "article" },
       { property: "og:url", content: CANONICAL },
-      { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: TITLE },
       { name: "twitter:description", content: DESCRIPTION },
     ],

@@ -1,9 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-const CANONICAL = "https://nova-aigpt.lovable.app/blog/best-ai-assistants";
+const CANONICAL = "https://kovagpt.com/blog/best-ai-assistants";
 const TITLE = "Best AI Assistants for Productivity in 2026 (Compared)";
 const DESCRIPTION =
-  "We compared the best AI assistants for productivity - KovaGPT, ChatGPT, Claude, Gemini, Copilot, and Perplexity - on modes, accuracy, coding, research, and price.";
+  "Compare the best AI assistants for productivity - KovaGPT, ChatGPT, Claude, Gemini, Copilot, Perplexity - on modes, accuracy, coding, and price.";
 
 export const Route = createFileRoute("/blog/best-ai-assistants")({
   head: () => ({
@@ -14,7 +14,6 @@ export const Route = createFileRoute("/blog/best-ai-assistants")({
       { property: "og:description", content: DESCRIPTION },
       { property: "og:type", content: "article" },
       { property: "og:url", content: CANONICAL },
-      { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: TITLE },
       { name: "twitter:description", content: DESCRIPTION },
     ],
