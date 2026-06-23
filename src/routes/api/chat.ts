@@ -133,7 +133,7 @@ async function firecrawlSearch(
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         query,
-        limit: opts.limit ?? 5,
+        limit: opts.limit ?? 3,
         ...(opts.tbs ? { tbs: opts.tbs } : {}),
       }),
     });
