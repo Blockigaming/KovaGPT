@@ -344,30 +344,40 @@ export const Route = createFileRoute("/api/chat")({
             (!lastUser?.attachments || lastUser.attachments.length === 0) &&
             IMAGE_INTENT.test(lastText);
 
+          // Detect the owner account - gets highest tier with no quotas.
+          let isOwner = false;
+          if (auth) {
+            try {
+              const { data } = await auth.supabaseAdmin.auth.admin.getUserById(auth.userId);
+              const email = data?.user?.email?.toLowerCase();
+              if (email === OWNER_EMAIL) isOwner = true;
+            } catch {
+              // ignore; treat as non-owner
+            }
+          }
+
           // Image generation requires an account.
           if (isImageRequest) {
             if (!auth) return unauthorized("Sign in to generate images.");
-            const quota = await enforceQuota(auth, "images", DAILY_IMAGE_LIMIT);
-            if (quota) return quota;
+            if (!isOwner) {
+              const quota = await enforceQuota(auth, "images", DAILY_IMAGE_LIMIT);
+              if (quota) return quota;
+            }
             return handleImageRequest(lastText, apiKey);
           }
 
           // Anonymous chat is allowed; signed-in users get per-user daily quotas.
-          if (auth) {
+          if (auth && !isOwner) {
             const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT);
             if (quota) return quota;
           }
 
           // SECURITY: Server-side tier enforcement. Without a subscription
           // record on the server we treat every caller as the free tier and
-          // silently downgrade any Plus/Pro mode to "auto". Prevents tier
-          // bypass via a forged `mode` value from the client.
+          // silently downgrade any Plus/Pro mode to "auto". The owner account
+          // bypasses this and can use any mode.
           const requested = getMode(mode ?? "auto");
-          const m = requested.tier === "free" ? requested : getMode("auto");
-
-          // SECURITY: Hard cap image attachments per request to stop free
-          // users from bypassing the client-side daily upload limit by
-          // calling /api/chat directly with many attachments.
+          const m = isOwner || requested.tier === "free" ? requested : getMode("auto");
           const MAX_ATTACHMENTS_PER_REQUEST = 2;
           const totalAttachments = messages.reduce(
             (n, msg) => n + (msg.attachments?.length ?? 0),
