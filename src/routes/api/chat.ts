@@ -370,6 +370,10 @@ export const Route = createFileRoute("/api/chat")({
             (n, msg) => n + (msg.attachments?.length ?? 0),
             0,
           );
+          // File / photo uploads require an account.
+          if (totalAttachments > 0 && !auth) {
+            return unauthorized("Sign in to upload files or photos.");
+          }
           if (totalAttachments > MAX_ATTACHMENTS_PER_REQUEST) {
             return new Response(
               JSON.stringify({
