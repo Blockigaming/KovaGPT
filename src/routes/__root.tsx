@@ -75,6 +75,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:site_name", content: "KovaGPT" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "google-site-verification", content: "VTjXtk11HpoepIygAjJgPmMXb6NZ8iCBzFyJE0IP1zM" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
