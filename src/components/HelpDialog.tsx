@@ -55,9 +55,11 @@ export function HelpDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Help & contact</DialogTitle>
+          <DialogTitle>{isBug ? "Report a bug" : "Help & contact"}</DialogTitle>
           <DialogDescription>
-            Send us a quick note and we'll reply by email.
+            {isBug
+              ? "Tell us what went wrong. We'll include your browser info automatically."
+              : "Send us a quick note and we'll reply by email."}
           </DialogDescription>
         </DialogHeader>
 
@@ -71,13 +73,13 @@ export function HelpDialog({
             onChange={(e) => setEmail(e.target.value)}
           />
           <Input
-            placeholder="What do you need help with?"
+            placeholder={isBug ? "Short summary (e.g. page reloads on iPad)" : "What do you need help with?"}
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
           />
           <Textarea
             required
-            placeholder="Describe the issue or question"
+            placeholder={isBug ? "Steps to reproduce, what you expected, what actually happened" : "Describe the issue or question"}
             rows={5}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
