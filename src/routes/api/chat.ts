@@ -177,9 +177,9 @@ async function runWebSearch(query: string, wantsNews: boolean): Promise<string |
   // time-sensitive or news-flavored query so the model always has the
   // latest facts from real sources.
   const [general, news] = await Promise.all([
-    firecrawlSearch(apiKey, query, { limit: 5 }),
+    firecrawlSearch(apiKey, query),
     wantsNews
-      ? firecrawlSearch(apiKey, `${query} latest news`, { limit: 5, tbs: "qdr:w" })
+      ? firecrawlSearch(apiKey, `${query} latest news`, { tbs: "qdr:w" })
       : Promise.resolve([] as WebSearchResult[]),
   ]);
   const blocks = [
