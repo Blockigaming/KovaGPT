@@ -1,5 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DAILY_IMAGE_LIMIT, enforceQuota, requireVerifiedUser } from "@/lib/api-auth.server";
+import {
+  DAILY_IMAGE_LIMIT,
+  assertFeatureEnabled,
+  assertNotBanned,
+  enforceQuota,
+  requireVerifiedUser,
+} from "@/lib/api-auth.server";
 
 // Tries a list of image models in order. Returns the first successful image.
 // Falls back gracefully so a single model outage doesn't break the page.
@@ -101,6 +107,11 @@ export const Route = createFileRoute("/api/generate-image")({
           }
           const apiKey = process.env.LOVABLE_API_KEY;
           if (!apiKey) return jsonError("AI service not configured", 500);
+
+          const banned = await assertNotBanned(auth);
+          if (banned) return banned;
+          const maint = await assertFeatureEnabled(auth, "images");
+          if (maint) return maint;
 
           const quota = await enforceQuota(auth, "images", DAILY_IMAGE_LIMIT);
           if (quota) return quota;

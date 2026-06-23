@@ -120,4 +120,78 @@ export async function enforceQuota(
   return null;
 }
 
+/**
+ * Returns the tier the user is currently entitled to, derived from the
+ * latest active subscription row. Never trust the client's `mode` choice
+ * without checking this — the client can be edited.
+ */
+export type CallerTier = "free" | "plus" | "pro";
+
+export async function getCallerTier(caller: AuthedCaller): Promise<CallerTier> {
+  const { data } = await caller.supabaseAdmin
+    .from("subscriptions")
+    .select("price_id, status, current_period_end")
+    .eq("user_id", caller.userId)
+    .order("created_at", { ascending: false })
+    .limit(5);
+  if (!data || data.length === 0) return "free";
+  const now = Date.now();
+  for (const row of data) {
+    const end = row.current_period_end ? new Date(row.current_period_end).getTime() : 0;
+    const active =
+      (["active", "trialing", "past_due"].includes(row.status) && (!row.current_period_end || end > now)) ||
+      (row.status === "canceled" && end > now);
+    if (!active) continue;
+    const id = (row.price_id ?? "").toLowerCase();
+    if (id.includes("pro")) return "pro";
+    if (id.includes("plus")) return "plus";
+  }
+  return "free";
+}
+
+/**
+ * Returns 403 if the caller is banned. Banned rows are written by ops/admin only.
+ */
+export async function assertNotBanned(caller: AuthedCaller): Promise<Response | null> {
+  const { data, error } = await caller.supabaseAdmin
+    .from("banned_users")
+    .select("user_id")
+    .eq("user_id", caller.userId)
+    .maybeSingle();
+  if (error) {
+    console.error("[assertNotBanned] lookup error", error);
+    return null; // fail-open on transient errors; logged for ops
+  }
+  if (data) {
+    return jsonError(
+      "Your account has been suspended. Contact support@kovagpt.com if you believe this is a mistake.",
+      403,
+    );
+  }
+  return null;
+}
+
+/**
+ * Returns 503 if the named maintenance flag has been turned off by ops.
+ * Flags: 'chat' | 'images' | 'uploads' | 'voice' | 'signups'
+ */
+export async function assertFeatureEnabled(
+  caller: AuthedCaller,
+  feature: "chat" | "images" | "uploads" | "voice" | "signups",
+): Promise<Response | null> {
+  const { data } = await caller.supabaseAdmin
+    .from("feature_flags")
+    .select("enabled")
+    .eq("name", feature)
+    .maybeSingle();
+  if (data && data.enabled === false) {
+    return jsonError(
+      `${feature[0].toUpperCase() + feature.slice(1)} is temporarily unavailable for maintenance. Please try again shortly.`,
+      503,
+    );
+  }
+  return null;
+}
+
+
 

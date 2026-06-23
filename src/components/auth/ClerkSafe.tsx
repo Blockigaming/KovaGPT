@@ -81,6 +81,20 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
+    // Clear any cached private user data from the device on sign-out.
+    try {
+      const keep = new Set(["nova-gpt-theme"]);
+      const toRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && !keep.has(k) && (k.startsWith("nova-") || k.startsWith("kova") || k.startsWith("sb-"))) {
+          toRemove.push(k);
+        }
+      }
+      toRemove.forEach((k) => localStorage.removeItem(k));
+    } catch {}
+    // Hard reload drops any in-memory React-Query / router caches too.
+    if (typeof window !== "undefined") window.location.assign("/");
   }, []);
 
   const value = useMemo<AuthCtx>(
