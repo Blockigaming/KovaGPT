@@ -180,28 +180,22 @@ export function Sidebar({
           <div className="flex-1 min-h-0" />
         )}
 
-        {/* Secondary nav: plans, settings, help */}
-        <div className="px-2 pb-2 space-y-0.5">
-          <Link
-            to="/pricing"
-            className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>See plans and pricing</span>
-          </Link>
+        {/* Secondary nav: settings, help (row layout) */}
+        <div className="px-3 pb-2 pt-1 border-t border-border/60 flex items-center gap-1">
           <button
             onClick={onOpenSettings}
-            className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
+            className="flex-1 flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-sidebar-hover transition text-left"
           >
             <Cog className="w-4 h-4" />
             <span>Settings</span>
           </button>
           <button
             onClick={onOpenHelp}
-            className="w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
+            className="p-2 rounded-lg hover:bg-sidebar-hover transition"
+            aria-label="Help"
+            title="Help"
           >
             <HelpCircle className="w-4 h-4" />
-            <span>Help</span>
           </button>
         </div>
 
