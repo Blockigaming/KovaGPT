@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { authFetch } from "@/lib/auth-fetch";
-import { X } from "lucide-react";
+import { X, Mic, Plus } from "lucide-react";
 import {
   createRecognition,
   sttSupported,
-  speakChunk,
+  speakRemoteChunk,
   stopSpeaking,
-  defaultVoiceName,
+  isRemoteSpeaking,
 } from "@/lib/voice";
 import { NovaLogo } from "@/components/NovaLogo";
 import type { Message } from "@/lib/chat-store";
@@ -25,6 +25,7 @@ export function VoiceMode({
   open: boolean;
   onClose: () => void;
   initialMessages: Message[];
+  /** Optional voice id (alloy, echo, sage, ...). */
   voiceName: string;
   voiceRate: number;
   /** Called when a full user/assistant turn completes so the parent can persist it. */
@@ -42,6 +43,12 @@ export function VoiceMode({
   useEffect(() => {
     messagesRef.current = initialMessages;
   }, [initialMessages]);
+
+  // Map any legacy browser-voice setting to a Lovable AI voice id.
+  const ttsVoice = (() => {
+    const allowed = ["alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse", "marin", "cedar"];
+    return allowed.includes(voiceName) ? voiceName : "alloy";
+  })();
 
   const sendToAI = useCallback(
     async (userText: string) => {
@@ -72,8 +79,6 @@ export function VoiceMode({
         let started = false;
         const flushSentence = (force = false) => {
           // Only split on real sentence boundaries so speech is grammatical.
-          // For the very first chunk, allow a slightly shorter clause so we
-          // start speaking sooner without cutting words mid-phrase.
           const re = force
             ? /(.+)/s
             : started
@@ -90,10 +95,7 @@ export function VoiceMode({
               setStatus("speaking");
               speakingRef.current = true;
             }
-            speakChunk(sentence, {
-              voice: voiceName || defaultVoiceName(),
-              rate: voiceRate,
-            });
+            speakRemoteChunk(sentence, { voiceId: ttsVoice, rate: voiceRate });
             if (force) break;
           }
         };
@@ -121,17 +123,13 @@ export function VoiceMode({
             } catch { /* ignore */ }
           }
         }
-        // Flush remainder
         if (speakBuffer.trim()) {
           if (!started) {
             started = true;
             setStatus("speaking");
             speakingRef.current = true;
           }
-          speakChunk(speakBuffer.trim(), {
-            voice: voiceName || defaultVoiceName(),
-            rate: voiceRate,
-          });
+          speakRemoteChunk(speakBuffer.trim(), { voiceId: ttsVoice, rate: voiceRate });
           speakBuffer = "";
         }
       } catch (e) {
@@ -148,10 +146,8 @@ export function VoiceMode({
       ];
       onTurn?.(userText, assembled);
 
-      // Poll for speech completion → return to listening
       const checkDone = () => {
-        if (typeof window === "undefined") return;
-        if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+        if (isRemoteSpeaking()) {
           setTimeout(checkDone, 200);
         } else {
           speakingRef.current = false;
@@ -160,7 +156,7 @@ export function VoiceMode({
       };
       checkDone();
     },
-    [onTurn, voiceName, voiceRate],
+    [onTurn, ttsVoice, voiceRate],
   );
 
   // Start/stop recognition with open state
@@ -178,11 +174,9 @@ export function VoiceMode({
     setStatus("listening");
 
     let silenceTimer: ReturnType<typeof setTimeout> | null = null;
-    let lastInterim = "";
 
     const rec = createRecognition(
       (text, isFinal) => {
-        // If AI is speaking and user starts talking → interrupt
         if (speakingRef.current && text.trim().length > 0) {
           stopSpeaking();
           speakingRef.current = false;
@@ -195,7 +189,6 @@ export function VoiceMode({
           setTranscript((t) => (t ? t + " " : "") + finalText);
           setPartial("");
           if (silenceTimer) clearTimeout(silenceTimer);
-          // Wait a brief moment for any continuation, then send
           silenceTimer = setTimeout(() => {
             setTranscript((current) => {
               const toSend = current.trim();
@@ -208,8 +201,6 @@ export function VoiceMode({
           }, 200);
         } else {
           setPartial(text);
-          lastInterim = text;
-          // Don't auto-send on interim, but reset the silence timer if user keeps talking
           if (silenceTimer) {
             clearTimeout(silenceTimer);
             silenceTimer = null;
@@ -217,7 +208,6 @@ export function VoiceMode({
         }
       },
       () => {
-        // Auto-restart if voice mode is still open (continuous mode can stop on its own)
         if (recRef.current === rec && open) {
           try { rec.start(); } catch { /* ignore */ }
         }
@@ -238,8 +228,6 @@ export function VoiceMode({
       stopSpeaking();
       inflightAbortRef.current?.abort();
       if (silenceTimer) clearTimeout(silenceTimer);
-      // suppress unused warning
-      void lastInterim;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -252,48 +240,55 @@ export function VoiceMode({
     status === "speaking" ? "Speaking…" : "";
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center p-6">
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 p-2 rounded-full hover:bg-accent transition"
-        aria-label="Close voice mode"
-      >
-        <X className="w-6 h-6" />
-      </button>
-
-      <div className="flex flex-col items-center gap-8 max-w-xl w-full">
-        <div className="relative">
-          <div
-            className={`w-40 h-40 rounded-full bg-gradient-to-br from-primary to-primary/40 flex items-center justify-center ${
-              status === "speaking" ? "animate-pulse" : status === "listening" ? "animate-[pulse_2s_ease-in-out_infinite]" : ""
-            }`}
-            style={{
-              boxShadow:
-                status === "speaking"
-                  ? "0 0 60px 10px hsl(var(--primary) / 0.4)"
-                  : status === "listening"
-                  ? "0 0 40px 4px hsl(var(--primary) / 0.25)"
-                  : "none",
-            }}
-          >
-            <NovaLogo className="w-20 h-20" />
-          </div>
-        </div>
-
-        <div className="text-sm text-muted-foreground font-medium">{label}</div>
-
-        {(partial || transcript) && (
-          <div className="text-center text-foreground/90 text-lg max-w-md">
-            {transcript} <span className="text-muted-foreground">{partial}</span>
-          </div>
-        )}
-
+    <div className="fixed inset-0 z-50 bg-black text-white flex flex-col">
+      {/* Transcript / reply area — fills the empty space above the logo */}
+      <div className="flex-1 overflow-y-auto px-6 pt-6 pb-2 flex flex-col items-center justify-end gap-4">
         {reply && (
-          <div className="text-center text-muted-foreground text-sm max-w-md max-h-32 overflow-y-auto">
+          <div className="text-center text-white/70 text-sm max-w-md max-h-40 overflow-y-auto">
             {reply}
           </div>
         )}
+        {(partial || transcript) && (
+          <div className="text-center text-white text-lg max-w-md">
+            {transcript} <span className="text-white/50">{partial}</span>
+          </div>
+        )}
+        {label && (
+          <div className="text-xs uppercase tracking-widest text-white/40">{label}</div>
+        )}
+      </div>
 
+      {/* Logo circle sits right above the chat bar */}
+      <div className="flex justify-center pb-4">
+        <div
+          className={`w-16 h-16 rounded-full overflow-hidden flex items-center justify-center bg-gradient-to-br from-sky-300 via-sky-400 to-blue-600 shadow-[0_0_40px_rgba(56,189,248,0.35)] ${
+            status === "speaking" ? "animate-pulse" : ""
+          }`}
+        >
+          <NovaLogo className="w-10 h-10" />
+        </div>
+      </div>
+
+      {/* Bottom chat-bar row */}
+      <div className="px-3 pb-6 pt-2 flex items-center gap-3">
+        <div className="flex-1 flex items-center gap-2 rounded-full bg-white/10 px-4 py-3">
+          <Plus className="w-5 h-5 text-white/70 shrink-0" />
+          <span className="flex-1 text-white/50 text-base truncate">Ask KovaGPT</span>
+          <button
+            type="button"
+            className="p-1 rounded-full hover:bg-white/10 transition"
+            aria-label="Microphone"
+          >
+            <Mic className="w-5 h-5 text-white/80" />
+          </button>
+        </div>
+        <button
+          onClick={onClose}
+          className="w-11 h-11 rounded-full bg-white text-black flex items-center justify-center shrink-0 hover:bg-white/90 transition"
+          aria-label="Close voice mode"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
     </div>
   );
