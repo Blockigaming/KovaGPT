@@ -29,7 +29,7 @@ export function NovaLogo({
       />
       {/* Refined compass star */}
       <path
-        d="M24 8L27.5 20.5L40 24L27.5 27.5L24 40L20.5 27.5L8 24L20.5 20.5L24 8Z"
+        d="M24 10.5L27 21L37.5 24L27 27L24 37.5L21 27L10.5 24L21 21L24 10.5Z"
         fill="white"
         stroke="white"
         strokeWidth="1"
@@ -37,7 +37,7 @@ export function NovaLogo({
       />
       {/* Inner detail cross */}
       <path
-        d="M24 16V32M16 24H32"
+        d="M24 17V31M17 24H31"
         stroke="#0a0a0a"
         strokeWidth="1"
         strokeLinecap="round"
