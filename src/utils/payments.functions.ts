@@ -56,6 +56,32 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       const customerEmail =
         typeof context.claims.email === "string" ? context.claims.email : undefined;
       const stripe = createStripeClient(data.environment);
+
+      // Prevent duplicate active subscriptions for the same user in this env.
+      const { data: existing } = await context.supabase
+        .from("subscriptions")
+        .select("status, current_period_end, cancel_at_period_end")
+        .eq("user_id", userId)
+        .eq("environment", data.environment)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (existing) {
+        const periodEnd = existing.current_period_end
+          ? new Date(existing.current_period_end).getTime()
+          : 0;
+        const stillActive =
+          (["active", "trialing", "past_due"].includes(existing.status) &&
+            (!existing.current_period_end || periodEnd > Date.now())) ||
+          (existing.status === "canceled" && periodEnd > Date.now());
+        if (stillActive && !existing.cancel_at_period_end) {
+          return {
+            error:
+              "You already have an active subscription. Manage your plan from the billing portal before starting a new one.",
+          };
+        }
+      }
+
       const prices = await stripe.prices.list({ lookup_keys: [data.priceId] });
       if (!prices.data.length) throw new Error("Price not found");
       const stripePrice = prices.data[0];
