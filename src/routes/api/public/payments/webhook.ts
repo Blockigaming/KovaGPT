@@ -82,6 +82,24 @@ async function handleSubscriptionDeleted(subscription: any, env: StripeEnv) {
 
 async function handleWebhook(req: Request, env: StripeEnv) {
   const event = await verifyWebhook(req, env);
+
+  // Idempotency: skip if this Stripe event id has already been processed.
+  const eventId = (event as any).id as string | undefined;
+  if (eventId) {
+    const { error: insertErr } = await getSupabase()
+      .from("processed_stripe_events" as any)
+      .insert({ event_id: eventId, type: event.type, environment: env });
+    if (insertErr) {
+      // Unique-violation => already processed; any other error => log and bail safely.
+      if ((insertErr as any).code === "23505") {
+        console.log("Duplicate Stripe event ignored:", eventId);
+        return;
+      }
+      console.error("Failed to record Stripe event:", insertErr);
+      return;
+    }
+  }
+
   switch (event.type) {
     case "customer.subscription.created":
       await handleSubscriptionCreated(event.data.object, env);
