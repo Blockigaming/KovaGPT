@@ -1,5 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { requireVerifiedUser } from "@/lib/api-auth.server";
+import {
+  assertFeatureEnabled,
+  assertNotBanned,
+  requireVerifiedUser,
+} from "@/lib/api-auth.server";
 
 // Streams MP3 from Lovable AI text-to-speech (openai/gpt-4o-mini-tts).
 // Server-side proxy — keeps LOVABLE_API_KEY off the client.
