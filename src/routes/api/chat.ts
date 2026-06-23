@@ -4,7 +4,8 @@ import {
   DAILY_CHAT_LIMIT,
   DAILY_IMAGE_LIMIT,
   enforceQuota,
-  requireUser,
+  optionalUser,
+  unauthorized,
 } from "@/lib/api-auth.server";
 
 type IncomingMessage = {
