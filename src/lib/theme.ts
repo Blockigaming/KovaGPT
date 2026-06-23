@@ -10,11 +10,11 @@ export type ThemeColors = {
 };
 
 export const DEFAULT_THEME: ThemeColors = {
-  background: "#1a1a1f",
-  card: "#23232a",
-  primary: "#f5f5f5",
-  primaryForeground: "#171717",
-  accent: "#2f2f38",
+  background: "#ffffff",
+  card: "#f7f7f8",
+  primary: "#0a0a0a",
+  primaryForeground: "#ffffff",
+  accent: "#ececef",
 };
 
 const VAR_MAP: Record<keyof ThemeColors, string> = {
