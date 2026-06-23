@@ -120,7 +120,7 @@ function ImagesPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
-  const [bugOpen, setBugOpen] = useState(false);
+  
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -224,7 +224,7 @@ function ImagesPage() {
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenHelp={() => setHelpOpen(true)}
-        onOpenBug={() => setBugOpen(true)}
+        
       />
 
       <main className="flex-1 flex flex-col min-w-0">
@@ -474,7 +474,7 @@ function ImagesPage() {
         }}
       />
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
-      <HelpDialog open={bugOpen} onOpenChange={setBugOpen} variant="bug" />
+      
       <LoginPromptDialog open={loginOpen} onOpenChange={setLoginOpen} />
       <LimitReachedDialog
         open={limitOpen}

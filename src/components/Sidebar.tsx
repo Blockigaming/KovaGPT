@@ -1,4 +1,4 @@
-import { MessageSquare, Trash2, PanelLeft, Search, Sparkles, Settings as Cog, HelpCircle, ImageIcon, Plus, Bug } from "lucide-react";
+import { MessageSquare, Trash2, PanelLeft, Search, Sparkles, Settings as Cog, HelpCircle, ImageIcon, Plus } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
@@ -20,7 +20,6 @@ export function Sidebar({
   onToggle,
   onOpenSettings,
   onOpenHelp,
-  onOpenBug,
 }: {
   conversations: Conversation[];
   activeId: string | null;
@@ -31,7 +30,6 @@ export function Sidebar({
   onToggle: () => void;
   onOpenSettings: () => void;
   onOpenHelp: () => void;
-  onOpenBug: () => void;
 }) {
   const { user, isSignedIn } = useUser();
   const [width, setWidth] = useState<number>(260);
@@ -135,20 +133,20 @@ export function Sidebar({
         </div>
 
         {/* Compact nav row */}
-        <div className="px-3 pb-2 flex items-center gap-2">
+        <div className="px-3 pb-2 flex flex-col gap-1">
           <Link
             to="/images"
-            className="flex-1 flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition"
           >
             <ImageIcon className="w-4 h-4" />
-            <span>Images</span>
+            <span>Image Generation</span>
           </Link>
           <Link
             to="/pricing"
-            className="flex-1 flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition"
           >
             <Sparkles className="w-4 h-4" />
-            <span>Plans</span>
+            <span>Subscriptions</span>
           </Link>
         </div>
 
@@ -198,14 +196,6 @@ export function Sidebar({
           >
             <Cog className="w-4 h-4" />
             <span>Settings</span>
-          </button>
-          <button
-            onClick={onOpenBug}
-            className="p-2 rounded-lg hover:bg-sidebar-hover transition"
-            aria-label="Report a bug"
-            title="Report a bug"
-          >
-            <Bug className="w-4 h-4" />
           </button>
           <button
             onClick={onOpenHelp}
