@@ -42,20 +42,20 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "KovaGPT is an advanced multimodal AI assistant for chat, coding, research, image generation, and voice  -  with specialized modes for focused work.",
+          "Try the official NovaGPT and see AI at it's highest potential. Available for everyone. Make all the images you desire!",
       },
       { property: "og:title", content: "KovaGPT" },
       {
         property: "og:description",
         content:
-          "Chat, code, research, generate images, and use voice  -  with specialized modes for focused work.",
+          "Try the official NovaGPT and see AI at it's highest potential. Available for everyone. Make all the images you desire!",
       },
       { property: "og:url", content: "https://nova-aigpt.lovable.app/" },
       { name: "twitter:title", content: "KovaGPT" },
       {
         name: "twitter:description",
         content:
-          "Chat, code, research, generate images, and use voice  -  with specialized modes for focused work.",
+          "Try the official NovaGPT and see AI at it's highest potential. Available for everyone. Make all the images you desire!",
       },
     ],
     links: [{ rel: "canonical", href: "https://nova-aigpt.lovable.app/" }],
