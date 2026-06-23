@@ -96,6 +96,7 @@ function KovaGPT() {
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [bugOpen, setBugOpen] = useState(false);
   const [voiceModeOpen, setVoiceModeOpen] = useState(false);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [signupPromptOpen, setSignupPromptOpen] = useState(false);
