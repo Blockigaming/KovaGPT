@@ -319,7 +319,24 @@ export const Route = createFileRoute("/api/chat")({
           const auth = await optionalUser(request);
           if (auth instanceof Response) return auth;
 
-          const { messages, mode, user, voice, timezone, locale } = (await request.json()) as {
+          // Reject oversized request bodies before parsing JSON to avoid
+          // memory/cost amplification attacks against the AI gateway.
+          const MAX_BODY_BYTES = 8 * 1024 * 1024; // 8 MB total request body
+          const contentLength = Number(request.headers.get("content-length") ?? "0");
+          if (contentLength && contentLength > MAX_BODY_BYTES) {
+            return new Response(
+              JSON.stringify({ error: "Request too large." }),
+              { status: 413, headers: { "Content-Type": "application/json" } },
+            );
+          }
+          const rawBody = await request.text();
+          if (rawBody.length > MAX_BODY_BYTES) {
+            return new Response(
+              JSON.stringify({ error: "Request too large." }),
+              { status: 413, headers: { "Content-Type": "application/json" } },
+            );
+          }
+          const { messages, mode, user, voice, timezone, locale } = JSON.parse(rawBody) as {
             messages: IncomingMessage[];
             mode?: ModeId;
             user?: UserContext;
@@ -327,6 +344,44 @@ export const Route = createFileRoute("/api/chat")({
             timezone?: string;
             locale?: string;
           };
+
+          // Hard caps on message volume and per-message size. Anonymous
+          // callers and signed-in callers both run through this; signed-in
+          // callers also have a daily quota enforced below.
+          const MAX_MESSAGES = 100;
+          const MAX_MESSAGE_CHARS = 32 * 1024; // 32 KB per text message
+          const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024; // 5 MB per image data URL
+          if (!Array.isArray(messages) || messages.length === 0) {
+            return new Response(
+              JSON.stringify({ error: "messages must be a non-empty array." }),
+              { status: 400, headers: { "Content-Type": "application/json" } },
+            );
+          }
+          if (messages.length > MAX_MESSAGES) {
+            return new Response(
+              JSON.stringify({ error: `Too many messages (max ${MAX_MESSAGES}).` }),
+              { status: 413, headers: { "Content-Type": "application/json" } },
+            );
+          }
+          for (const m of messages) {
+            if (typeof m?.content === "string" && m.content.length > MAX_MESSAGE_CHARS) {
+              return new Response(
+                JSON.stringify({ error: "A message exceeds the maximum allowed length." }),
+                { status: 413, headers: { "Content-Type": "application/json" } },
+              );
+            }
+            if (m?.attachments) {
+              for (const a of m.attachments) {
+                if (typeof a?.dataUrl === "string" && a.dataUrl.length > MAX_ATTACHMENT_BYTES) {
+                  return new Response(
+                    JSON.stringify({ error: "An attachment exceeds the 5 MB limit." }),
+                    { status: 413, headers: { "Content-Type": "application/json" } },
+                  );
+                }
+              }
+            }
+          }
+
           const apiKey = process.env.LOVABLE_API_KEY;
           if (!apiKey) {
             return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
