@@ -1,4 +1,4 @@
-import { MessageSquare, Trash2, PanelLeft, Search, Sparkles, Settings as Cog, HelpCircle, ImageIcon, Plus } from "lucide-react";
+import { MessageSquare, Trash2, PanelLeft, Search, Sparkles, Settings as Cog, HelpCircle, ImageIcon, Plus, Bug } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
@@ -20,6 +20,7 @@ export function Sidebar({
   onToggle,
   onOpenSettings,
   onOpenHelp,
+  onOpenBug,
 }: {
   conversations: Conversation[];
   activeId: string | null;
@@ -30,6 +31,7 @@ export function Sidebar({
   onToggle: () => void;
   onOpenSettings: () => void;
   onOpenHelp: () => void;
+  onOpenBug: () => void;
 }) {
   const { user, isSignedIn } = useUser();
   const [width, setWidth] = useState<number>(260);
@@ -83,10 +85,18 @@ export function Sidebar({
   };
 
   return (
-    <aside
-      style={{ width: open ? width : 0 }}
-      className="relative shrink-0 overflow-hidden transition-[width] duration-150 bg-sidebar text-sidebar-foreground border-r border-border flex flex-col"
-    >
+    <>
+      {open && (
+        <div
+          onClick={onToggle}
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          aria-hidden="true"
+        />
+      )}
+      <aside
+        style={{ width: open ? width : 0 }}
+        className="relative shrink-0 overflow-hidden transition-[width] duration-150 bg-sidebar text-sidebar-foreground border-r border-border flex flex-col max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:h-[100dvh]"
+      >
       <div style={{ width }} className="flex flex-col h-full">
         {/* Brand row */}
         <div className="flex items-center justify-between px-3 pt-3 pb-2">
@@ -190,6 +200,14 @@ export function Sidebar({
             <span>Settings</span>
           </button>
           <button
+            onClick={onOpenBug}
+            className="p-2 rounded-lg hover:bg-sidebar-hover transition"
+            aria-label="Report a bug"
+            title="Report a bug"
+          >
+            <Bug className="w-4 h-4" />
+          </button>
+          <button
             onClick={onOpenHelp}
             className="p-2 rounded-lg hover:bg-sidebar-hover transition"
             aria-label="Help"
@@ -237,6 +255,7 @@ export function Sidebar({
           title="Drag to resize"
         />
       )}
-    </aside>
+      </aside>
+    </>
   );
 }
