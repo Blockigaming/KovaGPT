@@ -1,4 +1,4 @@
-import { MessageSquare, Trash2, PanelLeft, Search, Sparkles, Settings as Cog, HelpCircle, ImageIcon, Plus, Bug } from "lucide-react";
+import { MessageSquare, Trash2, PanelLeft, Search, Sparkles, Settings as Cog, HelpCircle, ImageIcon, Plus } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
