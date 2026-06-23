@@ -489,34 +489,6 @@ function LockedTab({
   );
 }
 
-function ColorRow({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <label className="text-sm">{label}</label>
-      <div className="flex items-center gap-2">
-        <input
-          type="color"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-10 h-9 rounded-md border border-border bg-transparent cursor-pointer"
-        />
-        <Input
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-28 font-mono text-xs"
-        />
-      </div>
-    </div>
-  );
-}
 
 function SecurityRow({
   title,
