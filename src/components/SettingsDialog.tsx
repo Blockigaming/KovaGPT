@@ -134,6 +134,15 @@ export function SettingsDialog({
   const { isSignedIn, user } = useUser();
   const clerk = useClerk();
   const loggedIn = !clerkEnabled || isSignedIn;
+  const { tier } = useTier();
+  const adaptiveMemoryUnlocked = tierRank(tier) >= 1;
+  const [linked, setLinked] = useState<LinkedProvider[]>(() =>
+    user?.id ? getLinkedAccounts(user.id) : [],
+  );
+  useEffect(() => {
+    if (!open) return;
+    setLinked(user?.id ? getLinkedAccounts(user.id) : []);
+  }, [open, user?.id]);
 
   useEffect(() => {
     const unsub = onVoicesChanged(() => setVoices(getVoices()));
