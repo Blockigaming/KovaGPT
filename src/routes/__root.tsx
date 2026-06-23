@@ -70,7 +70,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "format-detection", content: "telephone=no" },
       { name: "theme-color", content: "#ffffff" },
-      { title: "KovaGPT" },
       { name: "application-name", content: "KovaGPT" },
       { name: "author", content: "KovaGPT" },
       { property: "og:site_name", content: "KovaGPT" },
