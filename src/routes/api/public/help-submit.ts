@@ -1,9 +1,10 @@
 import * as React from 'react'
 import { render } from '@react-email/components'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 import { TEMPLATES } from '@/lib/email-templates/registry'
+import type { Database } from '@/integrations/supabase/types'
 
 const SITE_NAME = 'KovaGPT'
 const SENDER_DOMAIN = 'notify.kovagpt.com'
@@ -29,7 +30,7 @@ function randomToken(): string {
 }
 
 async function enqueue(args: {
-  supabase: ReturnType<typeof createClient>
+  supabase: SupabaseClient<Database>
   templateName: string
   to: string
   data: Record<string, unknown>

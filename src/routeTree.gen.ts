@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as PrivacyRouteImport } from './routes/privacy'
@@ -25,11 +26,17 @@ import { Route as ApiTitleRouteImport } from './routes/api/title'
 import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
+import { Route as ApiPublicHelpSubmitRouteImport } from './routes/api/public/help-submit'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 
+const UnsubscribeRoute = UnsubscribeRouteImport.update({
+  id: '/unsubscribe',
+  path: '/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -112,6 +119,11 @@ const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   path: '/lovable/email/suppression',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHelpSubmitRoute = ApiPublicHelpSubmitRouteImport.update({
+  id: '/api/public/help-submit',
+  path: '/api/public/help-submit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailTransactionalSendRoute =
   LovableEmailTransactionalSendRouteImport.update({
     id: '/lovable/email/transactional/send',
@@ -144,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/unsubscribe': typeof UnsubscribeRoute
   '/api/chat': typeof ApiChatRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/title': typeof ApiTitleRoute
@@ -153,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -166,6 +180,7 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/unsubscribe': typeof UnsubscribeRoute
   '/api/chat': typeof ApiChatRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/title': typeof ApiTitleRoute
@@ -175,6 +190,7 @@ export interface FileRoutesByTo {
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -189,6 +205,7 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/unsubscribe': typeof UnsubscribeRoute
   '/api/chat': typeof ApiChatRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/title': typeof ApiTitleRoute
@@ -198,6 +215,7 @@ export interface FileRoutesById {
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -213,6 +231,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/sitemap.xml'
     | '/terms'
+    | '/unsubscribe'
     | '/api/chat'
     | '/api/generate-image'
     | '/api/title'
@@ -222,6 +241,7 @@ export interface FileRouteTypes {
     | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
     | '/email/unsubscribe'
+    | '/api/public/help-submit'
     | '/lovable/email/suppression'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
@@ -235,6 +255,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/sitemap.xml'
     | '/terms'
+    | '/unsubscribe'
     | '/api/chat'
     | '/api/generate-image'
     | '/api/title'
@@ -244,6 +265,7 @@ export interface FileRouteTypes {
     | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
     | '/email/unsubscribe'
+    | '/api/public/help-submit'
     | '/lovable/email/suppression'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
@@ -257,6 +279,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/sitemap.xml'
     | '/terms'
+    | '/unsubscribe'
     | '/api/chat'
     | '/api/generate-image'
     | '/api/title'
@@ -266,6 +289,7 @@ export interface FileRouteTypes {
     | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
     | '/email/unsubscribe'
+    | '/api/public/help-submit'
     | '/lovable/email/suppression'
     | '/api/public/payments/webhook'
     | '/lovable/email/queue/process'
@@ -280,6 +304,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
+  UnsubscribeRoute: typeof UnsubscribeRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
   ApiTitleRoute: typeof ApiTitleRoute
@@ -289,6 +314,7 @@ export interface RootRouteChildren {
   BlogBestAiMarketResearchToolsRoute: typeof BlogBestAiMarketResearchToolsRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
+  ApiPublicHelpSubmitRoute: typeof ApiPublicHelpSubmitRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
@@ -298,6 +324,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/unsubscribe': {
+      id: '/unsubscribe'
+      path: '/unsubscribe'
+      fullPath: '/unsubscribe'
+      preLoaderRoute: typeof UnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -410,6 +443,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailSuppressionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/help-submit': {
+      id: '/api/public/help-submit'
+      path: '/api/public/help-submit'
+      fullPath: '/api/public/help-submit'
+      preLoaderRoute: typeof ApiPublicHelpSubmitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/transactional/send': {
       id: '/lovable/email/transactional/send'
       path: '/lovable/email/transactional/send'
@@ -448,6 +488,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
+  UnsubscribeRoute: UnsubscribeRoute,
   ApiChatRoute: ApiChatRoute,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
   ApiTitleRoute: ApiTitleRoute,
@@ -457,6 +498,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogBestAiMarketResearchToolsRoute: BlogBestAiMarketResearchToolsRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
+  ApiPublicHelpSubmitRoute: ApiPublicHelpSubmitRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
