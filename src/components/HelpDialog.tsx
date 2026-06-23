@@ -30,16 +30,22 @@ export function HelpDialog({
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
+    const subjectPrefix = isBug ? "KovaGPT bug report" : "KovaGPT help";
+    const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+    const url = typeof window !== "undefined" ? window.location.href : "";
     const body = [
       `Name: ${name}`,
       `Email: ${email}`,
       `Topic: ${topic}`,
       "",
-      "Message:",
+      isBug ? "Bug description:" : "Message:",
       message,
+      "",
+      `URL: ${url}`,
+      `User agent: ${ua}`,
     ].join("\n");
     const href = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
-      `KovaGPT help: ${topic || "general"}`,
+      `${subjectPrefix}: ${topic || "general"}`,
     )}&body=${encodeURIComponent(body)}`;
     window.location.href = href;
     onOpenChange(false);
