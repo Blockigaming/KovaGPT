@@ -32,36 +32,37 @@
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-hover: var(--sidebar-hover);
   --color-user-bubble: var(--user-bubble);
-  --font-sans: "Söhne", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Space Grotesk", "DM Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
 :root {
-  --radius: 0.75rem;
-  /* ChatGPT-like dark theme by default */
-  --background: oklch(0.21 0.006 285);
-  --foreground: oklch(0.96 0 0);
-  --card: oklch(0.24 0.006 285);
-  --card-foreground: oklch(0.96 0 0);
-  --popover: oklch(0.24 0.006 285);
-  --popover-foreground: oklch(0.96 0 0);
-  --primary: oklch(0.96 0 0);
-  --primary-foreground: oklch(0.18 0 0);
-  --secondary: oklch(0.28 0.006 285);
-  --secondary-foreground: oklch(0.96 0 0);
-  --muted: oklch(0.28 0.006 285);
-  --muted-foreground: oklch(0.7 0.01 285);
-  --accent: oklch(0.32 0.006 285);
-  --accent-foreground: oklch(0.96 0 0);
-  --destructive: oklch(0.6 0.22 25);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(1 0 0 / 14%);
-  --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.7 0.04 256);
+  --radius: 0.875rem;
+  /* KovaGPT light theme — refined white/grey/black */
+  --background: oklch(0.995 0 0);
+  --foreground: oklch(0.18 0 0);
+  --card: oklch(0.975 0 0);
+  --card-foreground: oklch(0.18 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0 0);
+  --primary: oklch(0.18 0 0);
+  --primary-foreground: oklch(0.995 0 0);
+  --secondary: oklch(0.96 0 0);
+  --secondary-foreground: oklch(0.18 0 0);
+  --muted: oklch(0.955 0 0);
+  --muted-foreground: oklch(0.46 0 0);
+  --accent: oklch(0.94 0 0);
+  --accent-foreground: oklch(0.18 0 0);
+  --destructive: oklch(0.58 0.22 25);
+  --destructive-foreground: oklch(0.995 0 0);
+  --border: oklch(0 0 0 / 9%);
+  --input: oklch(0 0 0 / 11%);
+  --ring: oklch(0.4 0 0);
 
-  --sidebar: oklch(0.17 0.005 285);
-  --sidebar-foreground: oklch(0.92 0 0);
-  --sidebar-hover: oklch(0.24 0.006 285);
-  --user-bubble: oklch(0.32 0.008 285);
+  --sidebar: oklch(0.965 0 0);
+  --sidebar-foreground: oklch(0.22 0 0);
+  --sidebar-hover: oklch(0.93 0 0);
+  --user-bubble: oklch(0.93 0 0);
 }
 
 @layer base {
