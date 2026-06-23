@@ -3,9 +3,14 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
-import { Link } from "@tanstack/react-router";
-import { Keyboard, MessageCircleQuestion, Sparkles, ShieldCheck, Mic, Image as ImageIcon, Globe2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+
+const SUPPORT_EMAIL = "zacharylblock@gmail.com";
 
 export function HelpDialog({
   open,
@@ -14,78 +19,68 @@ export function HelpDialog({
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [topic, setTopic] = useState("");
+  const [message, setMessage] = useState("");
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    const body = [
+      `Name: ${name}`,
+      `Email: ${email}`,
+      `Topic: ${topic}`,
+      "",
+      "Message:",
+      message,
+    ].join("\n");
+    const href = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
+      `NovaGPT help: ${topic || "general"}`,
+    )}&body=${encodeURIComponent(body)}`;
+    window.location.href = href;
+    onOpenChange(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Help & tips</DialogTitle>
+          <DialogTitle>Help & contact</DialogTitle>
+          <DialogDescription>
+            Send us a quick note and we'll reply by email.
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-5 text-sm">
-          <Section icon={<Sparkles className="w-4 h-4" />} title="Getting started">
-            Ask anything in the message box. NovaGPT can write, brainstorm, code,
-            translate, explain, and more. Switch <strong>Mode</strong> to "Reason"
-            for harder problems.
-          </Section>
-
-          <Section icon={<ImageIcon className="w-4 h-4" />} title="Generate images">
-            Say "generate an image of…", "draw…", "create a picture of…" and
-            NovaGPT will produce an image instead of text.
-          </Section>
-
-          <Section icon={<Mic className="w-4 h-4" />} title="Voice mode">
-            Tap the <strong>Voice</strong> button in the header. Just talk  - 
-            NovaGPT replies out loud. Start speaking again to interrupt.
-          </Section>
-
-          <Section icon={<Globe2 className="w-4 h-4" />} title="Live web search">
-            Turn on <strong>Live web search</strong> in Settings → General to
-            have NovaGPT fetch fresh results from the web before answering
-            time-sensitive questions.
-          </Section>
-
-          <Section icon={<ShieldCheck className="w-4 h-4" />} title="Privacy & security">
-            Manage password, 2FA, and active sessions in Settings → Security.
-            You can clear all conversations from Settings → General.
-          </Section>
-
-          <Section icon={<Keyboard className="w-4 h-4" />} title="Keyboard shortcuts">
-            <ul className="mt-1 space-y-1 text-muted-foreground">
-              <li><kbd className="px-1.5 py-0.5 rounded border text-xs">Enter</kbd>  -  send message</li>
-              <li><kbd className="px-1.5 py-0.5 rounded border text-xs">Shift</kbd> + <kbd className="px-1.5 py-0.5 rounded border text-xs">Enter</kbd>  -  new line</li>
-              <li><kbd className="px-1.5 py-0.5 rounded border text-xs">Esc</kbd>  -  close dialogs</li>
-            </ul>
-          </Section>
-
-          <Section icon={<MessageCircleQuestion className="w-4 h-4" />} title="Plans & billing">
-            See plans and upgrade on the{" "}
-            <Link to="/pricing" className="underline" onClick={() => onOpenChange(false)}>
-              pricing page
-            </Link>
-            . Manage payment methods and billing address in Settings → Billing.
-          </Section>
-        </div>
+        <form onSubmit={submit} className="space-y-3 text-sm">
+          <Input placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input
+            type="email"
+            required
+            placeholder="Email address (required, so we can reply)"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <Input
+            placeholder="What do you need help with?"
+            value={topic}
+            onChange={(e) => setTopic(e.target.value)}
+          />
+          <Textarea
+            required
+            placeholder="Describe the issue or question"
+            rows={5}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+          />
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">Send</Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function Section({
-  icon,
-  title,
-  children,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-lg border border-border p-4">
-      <div className="flex items-center gap-2 font-medium mb-1">
-        {icon}
-        {title}
-      </div>
-      <div className="text-muted-foreground text-sm">{children}</div>
-    </div>
   );
 }
