@@ -418,7 +418,7 @@ export const Route = createFileRoute("/api/chat")({
                 ? "google/gemini-3.1-pro-preview"
                 : hasImages
                   ? "google/gemini-2.5-pro"
-                  : "google/gemini-3.5-flash";
+                  : "google/gemini-3.1-flash-lite";
 
           // Live web data is on for everyone by default. Users can still opt
           // out in settings except for explicit/time-sensitive search asks.
