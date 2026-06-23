@@ -393,6 +393,112 @@ export function SettingsDialog({
                 onCheckedChange={(v) => onChange({ ...settings, rememberAcross: v })}
               />
             </section>
+
+            <section className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Brain className="w-4 h-4" />
+                <h3 className="text-sm font-semibold">Adaptive Memory</h3>
+                <span className="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-full bg-foreground/10 text-foreground">
+                  Plus
+                </span>
+              </div>
+              {adaptiveMemoryUnlocked ? (
+                <ToggleRow
+                  title="Use Adaptive Memory"
+                  hint="KovaGPT continually learns your preferences, style, and recurring context across chats — and adapts replies to fit."
+                  checked={settings.rememberAcross}
+                  onCheckedChange={(v) => onChange({ ...settings, rememberAcross: v })}
+                />
+              ) : (
+                <div className="rounded-lg border border-border p-4 flex items-start gap-3">
+                  <Lock className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+                  <div className="flex-1 text-sm">
+                    <div className="font-medium">Available on Kova Plus and Pro</div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Adaptive Memory remembers what matters to you across conversations and refines KovaGPT's responses over time.
+                    </div>
+                    <Link
+                      to="/pricing"
+                      onClick={() => onOpenChange(false)}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium mt-3 px-3 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" /> Upgrade to unlock
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </section>
+          </TabsContent>
+
+          {/* CONNECTIONS — linked accounts */}
+          <TabsContent value="connections" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+            <section className="space-y-1">
+              <h3 className="text-sm font-semibold">Linked accounts</h3>
+              <p className="text-xs text-muted-foreground">
+                Connect external accounts so KovaGPT can use them in your chats. You can disconnect any time.
+              </p>
+            </section>
+            <div className="space-y-2">
+              {ALL_LINKED_PROVIDERS.map((p) => {
+                const meta = getProviderMeta(p);
+                const connected = linked.includes(p);
+                return (
+                  <div
+                    key={p}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-border p-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <ProviderIcon provider={p} />
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium truncate">{meta.label}</div>
+                        <div className="text-xs text-muted-foreground truncate">{meta.description}</div>
+                      </div>
+                    </div>
+                    {connected ? (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="inline-flex items-center gap-1 text-xs text-foreground">
+                          <Check className="w-3.5 h-3.5" /> Connected
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+                          onClick={() => {
+                            if (!user?.id) return;
+                            disconnectProvider(user.id, p);
+                            setLinked(getLinkedAccounts(user.id));
+                            toast.success(`${meta.label} disconnected.`);
+                          }}
+                        >
+                          Disconnect
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 shrink-0"
+                        onClick={async () => {
+                          if (!user?.id) return;
+                          const res = await connectProvider(user.id, p);
+                          if (res.error) {
+                            toast.error(res.error);
+                            return;
+                          }
+                          setLinked(getLinkedAccounts(user.id));
+                          if (!res.redirected) toast.success(`${meta.label} connected.`);
+                        }}
+                      >
+                        Connect
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Connecting opens a secure sign-in window from the provider. KovaGPT never stores your provider password.
+            </p>
           </TabsContent>
 
           {/* APPEARANCE — light/dark mode toggle only */}
