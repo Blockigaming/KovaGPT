@@ -196,13 +196,9 @@ const NEWS_TRIGGER =
 
 function shouldRunWebSearch(text: string, userWantsWebSearch?: boolean): boolean {
   if (!text.trim()) return false;
-  // If the user has explicitly disabled web search, only run it on very
-  // clearly time-sensitive triggers.
-  if (userWantsWebSearch === false) return SEARCH_TRIGGER.test(text);
-  // Otherwise run web search on essentially any non-trivial factual ask
-  // so answers stay grounded in real sources.
-  const wordCount = text.trim().split(/\s+/).length;
-  if (wordCount >= 4) return true;
+  // Only run web search for time-sensitive / current-events queries to keep
+  // responses fast. Users can still toggle it on explicitly in settings.
+  if (userWantsWebSearch === false) return false;
   return SEARCH_TRIGGER.test(text);
 }
 
