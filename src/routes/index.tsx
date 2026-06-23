@@ -498,16 +498,6 @@ function KovaGPT() {
             </div>
           </div>
 
-          <div className="absolute left-1/2 -translate-x-1/2">
-            <button
-              className="flex items-center gap-1 px-3 py-1.5 rounded-full border border-border bg-card/60 hover:bg-accent transition text-sm font-medium"
-              aria-label="KovaGPT model selector"
-              title="KovaGPT"
-            >
-              <span>KovaGPT</span>
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
-            </button>
-          </div>
 
           <div className="ml-auto flex items-center gap-2">
             {isLoaded && isSignedIn ? (
