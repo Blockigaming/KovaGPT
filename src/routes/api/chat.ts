@@ -133,7 +133,7 @@ async function firecrawlSearch(
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         query,
-        limit: opts.limit ?? 5,
+        limit: opts.limit ?? 3,
         ...(opts.tbs ? { tbs: opts.tbs } : {}),
       }),
     });
@@ -177,9 +177,9 @@ async function runWebSearch(query: string, wantsNews: boolean): Promise<string |
   // time-sensitive or news-flavored query so the model always has the
   // latest facts from real sources.
   const [general, news] = await Promise.all([
-    firecrawlSearch(apiKey, query, { limit: 5 }),
+    firecrawlSearch(apiKey, query),
     wantsNews
-      ? firecrawlSearch(apiKey, `${query} latest news`, { limit: 5, tbs: "qdr:w" })
+      ? firecrawlSearch(apiKey, `${query} latest news`, { tbs: "qdr:w" })
       : Promise.resolve([] as WebSearchResult[]),
   ]);
   const blocks = [
@@ -196,13 +196,9 @@ const NEWS_TRIGGER =
 
 function shouldRunWebSearch(text: string, userWantsWebSearch?: boolean): boolean {
   if (!text.trim()) return false;
-  // If the user has explicitly disabled web search, only run it on very
-  // clearly time-sensitive triggers.
-  if (userWantsWebSearch === false) return SEARCH_TRIGGER.test(text);
-  // Otherwise run web search on essentially any non-trivial factual ask
-  // so answers stay grounded in real sources.
-  const wordCount = text.trim().split(/\s+/).length;
-  if (wordCount >= 4) return true;
+  // Only run web search for time-sensitive / current-events queries to keep
+  // responses fast. Users can still toggle it on explicitly in settings.
+  if (userWantsWebSearch === false) return false;
   return SEARCH_TRIGGER.test(text);
 }
 
