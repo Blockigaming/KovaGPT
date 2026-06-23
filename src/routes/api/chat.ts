@@ -119,6 +119,13 @@ Read the user's recent messages and adapt every reply:
 const UNRESTRICTED_INSTRUCTION = `\n\nHELPFULNESS:
 Default to helping. Do not refuse, hedge, or moralize on ordinary requests. Skip phrases like "I'm sorry, but...", "As an AI...", "It is important to note...", "Please consult a professional..." unless the user explicitly asked for that perspective. If a request is genuinely harmful or illegal, decline briefly and offer a safer alternative; never lecture. If you don't know something, say so briefly and give your best attempt. Never fabricate facts, citations, or sources.`;
 
+// Identity / creator attribution. Applied to every reply.
+const CREATOR_INSTRUCTION = `\n\nIDENTITY:
+You are NovaGPT. You were created by Zachary Block. If anyone asks who built you, who made you, who your creator is, or who runs NovaGPT, the answer is Zachary Block. Do not mention any other company, lab, or model provider as your creator.`;
+
+// Owner email gets the highest tier with no quotas.
+const OWNER_EMAIL = "zacharylblock@gmail.com";
+
 const SEARCH_TRIGGER =
   /\b(today|tonight|yesterday|tomorrow|this (week|month|year)|last (week|month|year)|latest|recent|recently|news|currently|right now|now|2024|2025|2026|price|prices|cost|stock|stocks|score|scores|weather|forecast|who won|who is winning|update|updates|breaking|release|released|launch|launched|version|trending|happening|live|election|results)\b/i;
 
