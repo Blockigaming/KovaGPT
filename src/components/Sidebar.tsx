@@ -83,10 +83,18 @@ export function Sidebar({
   };
 
   return (
-    <aside
-      style={{ width: open ? width : 0 }}
-      className="relative shrink-0 overflow-hidden transition-[width] duration-150 bg-sidebar text-sidebar-foreground border-r border-border flex flex-col"
-    >
+    <>
+      {open && (
+        <div
+          onClick={onToggle}
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          aria-hidden="true"
+        />
+      )}
+      <aside
+        style={{ width: open ? width : 0 }}
+        className="relative shrink-0 overflow-hidden transition-[width] duration-150 bg-sidebar text-sidebar-foreground border-r border-border flex flex-col max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:h-[100dvh]"
+      >
       <div style={{ width }} className="flex flex-col h-full">
         {/* Brand row */}
         <div className="flex items-center justify-between px-3 pt-3 pb-2">
