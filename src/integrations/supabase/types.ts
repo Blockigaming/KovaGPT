@@ -40,6 +40,7 @@ export type Database = {
           uploads: number
           usage_date: string
           user_id: string
+          voice: number
         }
         Insert: {
           chats?: number
@@ -48,6 +49,7 @@ export type Database = {
           uploads?: number
           usage_date?: string
           user_id: string
+          voice?: number
         }
         Update: {
           chats?: number
@@ -56,6 +58,7 @@ export type Database = {
           uploads?: number
           usage_date?: string
           user_id?: string
+          voice?: number
         }
         Relationships: []
       }
@@ -257,6 +260,24 @@ export type Database = {
         }
         Relationships: []
       }
+      user_storage: {
+        Row: {
+          bytes_used: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bytes_used?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bytes_used?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -290,6 +311,10 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      try_add_storage_bytes: {
+        Args: { _bytes: number; _limit: number; _user_id: string }
+        Returns: boolean
       }
       try_increment_daily_usage: {
         Args: {
