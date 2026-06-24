@@ -42,11 +42,9 @@ import {
 } from "lucide-react";
 import { useTier, tierRank } from "@/hooks/useTier";
 import {
-  ALL_LINKED_PROVIDERS,
   connectProvider,
   disconnectProvider,
   getLinkedAccounts,
-  getProviderMeta,
   type LinkedProvider,
 } from "@/lib/linked-accounts";
 import {
