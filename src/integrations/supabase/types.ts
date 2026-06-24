@@ -32,6 +32,39 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_memories: {
+        Row: {
+          chat_id: string
+          created_at: string
+          id: string
+          message_count: number
+          summary: string
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chat_id: string
+          created_at?: string
+          id?: string
+          message_count?: number
+          summary: string
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chat_id?: string
+          created_at?: string
+          id?: string
+          message_count?: number
+          summary?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       daily_usage: {
         Row: {
           chats: number
