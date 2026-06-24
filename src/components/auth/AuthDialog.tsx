@@ -66,7 +66,7 @@ export function AuthDialog({
             options: { emailRedirectTo: `${window.location.origin}/` },
           });
           if (resendErr) throw resendErr;
-          toast.success("Already registered — we resent the verification link. Check your inbox & spam.");
+          toast.success("Already registered - we resent the verification link. Check your inbox & spam.");
         } else {
           toast.success("Verification email sent. Check your inbox & spam folder.");
         }
@@ -80,7 +80,7 @@ export function AuthDialog({
               email,
               options: { emailRedirectTo: `${window.location.origin}/` },
             });
-            toast.error("Please verify your email — we just resent the link.");
+            toast.error("Please verify your email - we just resent the link.");
             return;
           }
           throw error;

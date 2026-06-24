@@ -45,7 +45,7 @@ export function VoiceMode({
   }, [initialMessages]);
 
   // Map any legacy browser-voice setting to a Lovable AI voice id.
-  // Default to "marin" — the newest expressive voice; sounds far more
+  // Default to "marin" - the newest expressive voice; sounds far more
   // natural and human than the legacy "alloy".
   const ttsVoice = (() => {
     const allowed = ["alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse", "marin", "cedar"];
@@ -243,7 +243,7 @@ export function VoiceMode({
 
   return (
     <div className="fixed inset-0 z-50 bg-black text-white flex flex-col">
-      {/* Transcript / reply area — fills the empty space above the logo */}
+      {/* Transcript / reply area - fills the empty space above the logo */}
       <div className="flex-1 overflow-y-auto px-6 pt-6 pb-2 flex flex-col items-center justify-end gap-4">
         {reply && (
           <div className="text-center text-white/70 text-sm max-w-md max-h-40 overflow-y-auto">
@@ -260,7 +260,7 @@ export function VoiceMode({
         )}
       </div>
 
-      {/* Big logo circle — KovaGPT mark fills the entire circle */}
+      {/* Big logo circle - KovaGPT mark fills the entire circle */}
       <div className="flex justify-center pb-6">
         <div
           className={`w-56 h-56 sm:w-64 sm:h-64 rounded-full overflow-hidden flex items-center justify-center bg-white shadow-[0_0_80px_rgba(255,255,255,0.25)] ring-1 ring-white/20 transition-transform ${

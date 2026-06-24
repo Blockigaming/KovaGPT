@@ -1,4 +1,4 @@
-import { MessageSquare, Trash2, PanelLeft, Search, Sparkles, Settings as Cog, HelpCircle, ImageIcon, Plus } from "lucide-react";
+import { MessageSquare, Trash2, PanelLeft, Search, Sparkles, HelpCircle, ImageIcon, Plus } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
@@ -188,37 +188,36 @@ export function Sidebar({
           <div className="flex-1 min-h-0" />
         )}
 
-        {/* Secondary nav: settings, help (row layout) */}
-        <div className="px-3 pb-2 pt-1 border-t border-border/60 flex items-center gap-1">
-          <button
-            onClick={onOpenSettings}
-            className="flex-1 flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-sidebar-hover transition text-left"
-          >
-            <Cog className="w-4 h-4" />
-            <span>Settings</span>
-          </button>
+        {/* Secondary nav: help only (settings live behind profile click) */}
+        <div className="px-3 pb-2 pt-1 border-t border-border/60">
           <button
             onClick={onOpenHelp}
-            className="p-2 rounded-lg hover:bg-sidebar-hover transition"
-            aria-label="Help"
-            title="Help"
+            className="w-full flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-sidebar-hover transition text-left"
           >
             <HelpCircle className="w-4 h-4" />
+            <span>Help</span>
           </button>
         </div>
 
         {/* Bottom: signed-in user card OR signed-out promo */}
         {isSignedIn ? (
           <div className="border-t border-border p-3">
-            <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-sidebar-hover transition">
-              <UserButton />
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-sidebar-hover transition text-left"
+              aria-label="Open settings"
+            >
+              <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                <UserButton />
+              </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium truncate">
                   {user?.firstName || user?.username || user?.emailAddresses?.[0]?.emailAddress}
                 </div>
                 <div className="text-xs text-muted-foreground">Free plan</div>
               </div>
-            </div>
+            </button>
           </div>
         ) : (
           <div className="border-t border-border p-4 space-y-3">

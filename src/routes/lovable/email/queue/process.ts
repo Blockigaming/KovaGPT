@@ -286,7 +286,7 @@ export const Route = createFileRoute("/lovable/email/queue/process")({
                   })
                   .eq('id', 1)
 
-                // Stop processing — remaining messages stay in queue (VT expires, retried next cycle)
+                // Stop processing - remaining messages stay in queue (VT expires, retried next cycle)
                 return Response.json({ processed: totalProcessed, stopped: 'rate_limited' })
               }
 

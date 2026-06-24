@@ -20,13 +20,13 @@ interface Props {
 const Email = ({ name, topic, variant = 'help' }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Thanks for reaching out to KovaGPT — we'll get back to you soon.</Preview>
+    <Preview>Thanks for reaching out to KovaGPT - we'll get back to you soon.</Preview>
     <Body style={main}>
       <Container style={container}>
         <Heading style={h1}>Thanks{name ? `, ${name}` : ''} 👋</Heading>
         <Text style={p}>
           We received your {variant === 'bug' ? 'bug report' : 'message'} and someone from the
-          KovaGPT team will get back to you as soon as possible — usually within one business day.
+          KovaGPT team will get back to you as soon as possible - usually within one business day.
         </Text>
         {topic ? (
           <Section style={card}>
@@ -38,7 +38,7 @@ const Email = ({ name, topic, variant = 'help' }: Props) => (
           If you remember anything else that might help us, just reply to this email and it will be
           attached to your ticket.
         </Text>
-        <Text style={signoff}>— The KovaGPT team</Text>
+        <Text style={signoff}>- The KovaGPT team</Text>
       </Container>
     </Body>
   </Html>
@@ -48,9 +48,9 @@ export const template = {
   component: Email,
   subject: (data: Record<string, any>) =>
     data.variant === 'bug'
-      ? "We got your bug report — KovaGPT support"
-      : "We got your message — KovaGPT support",
-  displayName: 'Help / bug — auto-reply to user',
+      ? "We got your bug report - KovaGPT support"
+      : "We got your message - KovaGPT support",
+  displayName: 'Help / bug - auto-reply to user',
   previewData: { name: 'Jane', topic: 'Issue with image generation', variant: 'help' },
 } satisfies TemplateEntry
 

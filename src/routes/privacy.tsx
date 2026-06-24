@@ -3,9 +3,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 export const Route = createFileRoute("/privacy")({
   head: () => ({
     meta: [
-      { title: "Privacy Policy — KovaGPT" },
+      { title: "Privacy Policy - KovaGPT" },
       { name: "description", content: "How KovaGPT collects, uses, stores, and protects your data." },
-      { property: "og:title", content: "Privacy Policy — KovaGPT" },
+      { property: "og:title", content: "Privacy Policy - KovaGPT" },
       { property: "og:description", content: "How KovaGPT collects, uses, stores, and protects your data." },
     ],
   }),

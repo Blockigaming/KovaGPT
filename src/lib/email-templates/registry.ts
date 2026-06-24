@@ -7,7 +7,7 @@ export interface TemplateEntry {
   subject: string | ((data: Record<string, any>) => string)
   displayName?: string
   previewData?: Record<string, any>
-  /** Fixed recipient — overrides caller-provided recipientEmail when set. */
+  /** Fixed recipient - overrides caller-provided recipientEmail when set. */
   to?: string
 }
 

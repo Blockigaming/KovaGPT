@@ -6,7 +6,7 @@ import {
 } from "@/lib/api-auth.server";
 
 // Streams MP3 from Lovable AI text-to-speech (openai/gpt-4o-mini-tts).
-// Server-side proxy — keeps LOVABLE_API_KEY off the client.
+// Server-side proxy - keeps LOVABLE_API_KEY off the client.
 export const Route = createFileRoute("/api/tts")({
   server: {
     handlers: {

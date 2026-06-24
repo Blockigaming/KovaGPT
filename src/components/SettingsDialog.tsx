@@ -27,6 +27,18 @@ import {
   Link2,
   Brain,
   Check,
+  Mail,
+  Bell,
+  Baby,
+  Mic,
+  Database,
+  HardDrive,
+  Bug,
+  LifeBuoy,
+  Info,
+  LogOut,
+  RefreshCw,
+  Settings as Cog,
 } from "lucide-react";
 import { useTier, tierRank } from "@/hooks/useTier";
 import {
@@ -61,11 +73,9 @@ import {
 export type Mood = "neutral" | "friendly" | "professional" | "concise";
 
 export type Settings = {
-  // Voice
   autoSpeak: boolean;
   voiceRate: number;
   voiceName: string;
-  // Personalization
   displayName: string;
   email: string;
   extraFacts: string;
@@ -73,12 +83,17 @@ export type Settings = {
   mood: Mood;
   responseLength: "short" | "medium" | "long";
   rememberAcross: boolean;
-  // Behavior
   webSearch: boolean;
   sendOnEnter: boolean;
-  // Appearance
   mode: ThemeMode;
-  // ----- deprecated, retained so old localStorage payloads still load -----
+  // Notifications
+  notifyEmail?: boolean;
+  notifyProduct?: boolean;
+  // Parental controls
+  parentalMode?: boolean;
+  // Data control
+  trainingOptOut?: boolean;
+  // deprecated fields kept so old localStorage payloads still load
   preferredPronouns?: string;
   phone?: string;
   addressLine1?: string;
@@ -106,6 +121,10 @@ export const DEFAULT_SETTINGS: Settings = {
   webSearch: true,
   sendOnEnter: true,
   mode: "system",
+  notifyEmail: true,
+  notifyProduct: true,
+  parentalMode: false,
+  trainingOptOut: false,
   theme: DEFAULT_THEME,
 };
 
@@ -116,18 +135,44 @@ const MOODS: { value: Mood; label: string; hint: string }[] = [
   { value: "concise", label: "Concise", hint: "Short, direct answers" },
 ];
 
+type TabDef = { v: string; label: string; icon: typeof Cog };
+
+const TAB_ORDER: TabDef[] = [
+  { v: "general", label: "General", icon: Cog },
+  { v: "personalization", label: "Personalization", icon: User2 },
+  { v: "memory", label: "Memory", icon: Brain },
+  { v: "linked", label: "Linked apps", icon: Link2 },
+  { v: "email", label: "Email", icon: Mail },
+  { v: "subscription", label: "Subscription", icon: CreditCard },
+  { v: "appearance", label: "Appearance", icon: Palette },
+  { v: "notifications", label: "Notifications", icon: Bell },
+  { v: "parental", label: "Parental controls", icon: Baby },
+  { v: "voice", label: "Voice", icon: Mic },
+  { v: "security", label: "Safety & security", icon: ShieldCheck },
+  { v: "data", label: "Data control", icon: Database },
+  { v: "storage", label: "Storage", icon: HardDrive },
+  { v: "report", label: "Report an issue", icon: Bug },
+  { v: "help", label: "Help center", icon: LifeBuoy },
+  { v: "about", label: "About", icon: Info },
+  { v: "logout", label: "Log out", icon: LogOut },
+];
+
 export function SettingsDialog({
   open,
   onOpenChange,
   settings,
   onChange,
   onClearAll,
+  initialTab,
+  onOpenHelp,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   settings: Settings;
   onChange: (s: Settings) => void;
   onClearAll: () => void;
+  initialTab?: string;
+  onOpenHelp?: () => void;
 }) {
   const usage = open ? getUsage() : { images: 0, uploads: 0, date: "" };
   const [voices, setVoices] = useState(() => getVoices());
@@ -139,6 +184,12 @@ export function SettingsDialog({
   const [linked, setLinked] = useState<LinkedProvider[]>(() =>
     user?.id ? getLinkedAccounts(user.id) : [],
   );
+  const [tab, setTab] = useState<string>(initialTab ?? "general");
+
+  useEffect(() => {
+    if (open && initialTab) setTab(initialTab);
+  }, [open, initialTab]);
+
   useEffect(() => {
     if (!open) return;
     setLinked(user?.id ? getLinkedAccounts(user.id) : []);
@@ -149,7 +200,6 @@ export function SettingsDialog({
     return unsub;
   }, []);
 
-  // Filter to English voices for cleaner UX
   const englishVoices = voices.filter((v) => v.lang?.toLowerCase().startsWith("en"));
   const list = englishVoices.length > 0 ? englishVoices : voices;
   const currentVoice = settings.voiceName || defaultVoiceName();
@@ -159,9 +209,24 @@ export function SettingsDialog({
     onChange({ ...settings, mode: m });
   };
 
+  const handleLogout = async () => {
+    try {
+      await clerk?.signOut();
+      onOpenChange(false);
+    } catch (e) {
+      toast.error("Couldn't sign out. Try again.");
+    }
+  };
+
+  const handleRestore = () => {
+    toast.message("Checking for previous purchases...", {
+      description: "If we find an active subscription on your account, it will be restored automatically.",
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[88vh] overflow-hidden flex flex-col gap-0 p-0 border border-border/60 shadow-2xl">
+      <DialogContent className="max-w-4xl max-h-[88vh] overflow-hidden flex flex-col gap-0 p-0 border border-border/60 shadow-2xl">
         <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
           <DialogTitle className="text-xl font-semibold tracking-tight font-display">
             Settings
@@ -182,84 +247,23 @@ export function SettingsDialog({
             />
           </div>
         ) : (
-        <Tabs defaultValue="general" className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="flex w-full overflow-x-auto justify-start gap-1 h-auto p-1 mx-6 mt-4 mb-2 max-w-[calc(100%-3rem)] bg-muted rounded-full">
-            {[
-              { v: "general", icon: Sparkles, label: "General" },
-              { v: "you", icon: User2, label: "You" },
-              { v: "connections", icon: Link2, label: "Connections" },
-              { v: "appearance", icon: Palette, label: "Theme" },
-              { v: "billing", icon: CreditCard, label: "Billing" },
-              { v: "security", icon: ShieldCheck, label: "Account" },
-            ].map(({ v, icon: Icon, label }) => (
+        <Tabs value={tab} onValueChange={setTab} orientation="vertical" className="flex-1 overflow-hidden flex flex-row">
+          <TabsList className="flex flex-col h-full w-56 shrink-0 overflow-y-auto items-stretch justify-start gap-0.5 p-2 bg-muted/40 border-r border-border rounded-none">
+            {TAB_ORDER.map(({ v, icon: Icon, label }) => (
               <TabsTrigger
                 key={v}
                 value={v}
-                className="shrink-0 gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
+                className="w-full justify-start gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
               >
-                <Icon className="w-3.5 h-3.5" />
-                {label}
+                <Icon className="w-4 h-4 shrink-0" />
+                <span className="truncate text-left">{label}</span>
               </TabsTrigger>
             ))}
           </TabsList>
 
-          {/* GENERAL — voice, behavior, usage, data */}
+          <div className="flex-1 overflow-hidden flex flex-col">
+          {/* GENERAL */}
           <TabsContent value="general" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
-            <section className="space-y-4">
-              <h3 className="text-sm font-semibold">Voice</h3>
-              <ToggleRow
-                title="Auto-read responses"
-                hint="Speak replies out loud automatically."
-                checked={settings.autoSpeak}
-                onCheckedChange={(v) => onChange({ ...settings, autoSpeak: v })}
-              />
-              <div>
-                <label className="text-xs text-muted-foreground mb-1.5 block">Voice</label>
-                <div className="flex gap-2">
-                  <Select
-                    value={currentVoice}
-                    onValueChange={(v) => onChange({ ...settings, voiceName: v })}
-                  >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Select a voice" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-72">
-                      {list.map((v) => (
-                        <SelectItem key={v.name} value={v.name}>
-                          {friendlyVoiceLabel(v)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    size="icon"
-                    variant="outline"
-                    onClick={() =>
-                      speak("Hi, I'm KovaGPT. This is how I sound.", {
-                        voice: currentVoice,
-                        rate: settings.voiceRate,
-                      })
-                    }
-                    title="Preview"
-                  >
-                    <Play className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground mb-1.5">
-                  Speech rate: {settings.voiceRate.toFixed(1)}x
-                </div>
-                <Slider
-                  min={0.5}
-                  max={2}
-                  step={0.1}
-                  value={[settings.voiceRate]}
-                  onValueChange={(v) => onChange({ ...settings, voiceRate: v[0] })}
-                />
-              </div>
-            </section>
-
             <section className="space-y-4">
               <h3 className="text-sm font-semibold">Behavior</h3>
               <ToggleRow
@@ -288,9 +292,9 @@ export function SettingsDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="short">Short — get to the point</SelectItem>
-                    <SelectItem value="medium">Medium — balanced</SelectItem>
-                    <SelectItem value="long">Long — detailed</SelectItem>
+                    <SelectItem value="short">Short - get to the point</SelectItem>
+                    <SelectItem value="medium">Medium - balanced</SelectItem>
+                    <SelectItem value="long">Long - detailed</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -309,24 +313,10 @@ export function SettingsDialog({
                 </div>
               </div>
             </section>
-
-            <section>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  clearConversations();
-                  onClearAll();
-                }}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Clear all conversations
-              </Button>
-            </section>
           </TabsContent>
 
-          {/* YOU — personalization */}
-          <TabsContent value="you" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+          {/* PERSONALIZATION */}
+          <TabsContent value="personalization" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
             <section className="space-y-3">
               <h3 className="text-sm font-semibold">About you</h3>
               <div>
@@ -386,6 +376,16 @@ export function SettingsDialog({
                   className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm resize-y min-h-[90px]"
                 />
               </div>
+            </section>
+          </TabsContent>
+
+          {/* MEMORY */}
+          <TabsContent value="memory" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+            <section className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Brain className="w-4 h-4" />
+                <h3 className="text-sm font-semibold">Memory</h3>
+              </div>
               <ToggleRow
                 title="Remember across conversations"
                 hint="Carry your profile and instructions into every new chat."
@@ -396,26 +396,23 @@ export function SettingsDialog({
 
             <section className="space-y-3">
               <div className="flex items-center gap-2">
-                <Brain className="w-4 h-4" />
+                <Sparkles className="w-4 h-4" />
                 <h3 className="text-sm font-semibold">Adaptive Memory</h3>
                 <span className="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-full bg-foreground/10 text-foreground">
                   Plus
                 </span>
               </div>
               {adaptiveMemoryUnlocked ? (
-                <ToggleRow
-                  title="Use Adaptive Memory"
-                  hint="KovaGPT continually learns your preferences, style, and recurring context across chats — and adapts replies to fit."
-                  checked={settings.rememberAcross}
-                  onCheckedChange={(v) => onChange({ ...settings, rememberAcross: v })}
-                />
+                <p className="text-xs text-muted-foreground">
+                  Adaptive Memory is active. KovaGPT continually learns your preferences and adapts replies.
+                </p>
               ) : (
                 <div className="rounded-lg border border-border p-4 flex items-start gap-3">
                   <Lock className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
                   <div className="flex-1 text-sm">
                     <div className="font-medium">Available on Kova Plus and Pro</div>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Adaptive Memory remembers what matters to you across conversations and refines KovaGPT's responses over time.
+                      Adaptive Memory remembers what matters to you across conversations.
                     </div>
                     <Link
                       to="/pricing"
@@ -428,12 +425,27 @@ export function SettingsDialog({
                 </div>
               )}
             </section>
+
+            <section>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  clearConversations();
+                  onClearAll();
+                  toast.success("All conversation memory cleared.");
+                }}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Clear all conversations
+              </Button>
+            </section>
           </TabsContent>
 
-          {/* CONNECTIONS — linked accounts */}
-          <TabsContent value="connections" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+          {/* LINKED APPS */}
+          <TabsContent value="linked" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
             <section className="space-y-1">
-              <h3 className="text-sm font-semibold">Linked accounts</h3>
+              <h3 className="text-sm font-semibold">Linked apps</h3>
               <p className="text-xs text-muted-foreground">
                 Connect external accounts so KovaGPT can use them in your chats. You can disconnect any time.
               </p>
@@ -496,12 +508,62 @@ export function SettingsDialog({
                 );
               })}
             </div>
-            <p className="text-[11px] text-muted-foreground">
-              Connecting opens a secure sign-in window from the provider. KovaGPT never stores your provider password.
+          </TabsContent>
+
+          {/* EMAIL */}
+          <TabsContent value="email" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+            <h3 className="text-sm font-semibold">Email address</h3>
+            <div className="rounded-lg border border-border p-4">
+              <div className="text-sm font-medium">Primary email</div>
+              <div className="text-sm text-muted-foreground mt-1">
+                {user?.primaryEmailAddress?.emailAddress ?? "No email on file"}
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => clerk?.openUserProfile()}>
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Manage email addresses
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Verification emails are sent here when you sign in or create an account.
             </p>
           </TabsContent>
 
-          {/* APPEARANCE — light/dark mode toggle only */}
+          {/* SUBSCRIPTION */}
+          <TabsContent value="subscription" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+            <div className="rounded-lg border border-border p-4 flex items-center justify-between gap-3">
+              <div>
+                <div className="text-sm font-medium">Current plan</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  You're on the {tier === "free" ? "Free" : tier === "plus" ? "Plus" : "Pro"} plan.
+                </div>
+              </div>
+              <Link
+                to="/pricing"
+                onClick={() => onOpenChange(false)}
+                className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition whitespace-nowrap"
+              >
+                <Sparkles className="w-4 h-4" /> Upgrade
+              </Link>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <a
+                href="https://billing.stripe.com/p/login"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border border-border hover:bg-accent transition"
+              >
+                <ExternalLink className="w-4 h-4" /> Open billing portal
+              </a>
+              <Button variant="outline" size="sm" onClick={handleRestore}>
+                <RefreshCw className="w-4 h-4 mr-2" /> Restore purchases
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Payments are securely handled by Stripe. We never see or store your card number.
+            </p>
+          </TabsContent>
+
+          {/* APPEARANCE */}
           <TabsContent value="appearance" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
             <section className="space-y-3">
               <h3 className="text-sm font-semibold">Appearance</h3>
@@ -534,37 +596,100 @@ export function SettingsDialog({
             </section>
           </TabsContent>
 
-          {/* BILLING */}
-          <TabsContent value="billing" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
-            <div className="rounded-lg border border-border p-4 flex items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-medium">Current plan</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  You're on the Free plan. Upgrade for more usage and advanced modes.
-                </div>
-              </div>
-              <Link
-                to="/pricing"
-                onClick={() => onOpenChange(false)}
-                className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition whitespace-nowrap"
-              >
-                <Sparkles className="w-4 h-4" /> Upgrade
-              </Link>
-            </div>
-            <a
-              href="https://billing.stripe.com/p/login"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border border-border hover:bg-accent transition"
-            >
-              <ExternalLink className="w-4 h-4" /> Open billing portal
-            </a>
+          {/* NOTIFICATIONS */}
+          <TabsContent value="notifications" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+            <h3 className="text-sm font-semibold">Notifications</h3>
+            <ToggleRow
+              title="Account & security emails"
+              hint="Sign-in alerts, verification, and important account changes. Cannot be turned off for security."
+              checked={true}
+              onCheckedChange={() => toast.message("Security emails are always on.")}
+            />
+            <ToggleRow
+              title="Product updates"
+              hint="Occasional emails about new features and improvements."
+              checked={settings.notifyProduct ?? true}
+              onCheckedChange={(v) => onChange({ ...settings, notifyProduct: v })}
+            />
+            <ToggleRow
+              title="Tips & guides"
+              hint="Helpful tips on getting more out of KovaGPT."
+              checked={settings.notifyEmail ?? true}
+              onCheckedChange={(v) => onChange({ ...settings, notifyEmail: v })}
+            />
+          </TabsContent>
+
+          {/* PARENTAL */}
+          <TabsContent value="parental" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+            <h3 className="text-sm font-semibold">Parental controls</h3>
+            <ToggleRow
+              title="Family-safe mode"
+              hint="Filters mature content and enforces stricter safety guidelines."
+              checked={settings.parentalMode ?? false}
+              onCheckedChange={(v) => onChange({ ...settings, parentalMode: v })}
+            />
             <p className="text-xs text-muted-foreground">
-              Payments are securely handled by Stripe. We never see or store your card number.
+              For full account-level parental controls (screen time, app restrictions), use your device's built-in settings.
             </p>
           </TabsContent>
 
-          {/* ACCOUNT / SECURITY */}
+          {/* VOICE */}
+          <TabsContent value="voice" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+            <h3 className="text-sm font-semibold">Voice</h3>
+            <ToggleRow
+              title="Auto-read responses"
+              hint="Speak replies out loud automatically."
+              checked={settings.autoSpeak}
+              onCheckedChange={(v) => onChange({ ...settings, autoSpeak: v })}
+            />
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block">Voice</label>
+              <div className="flex gap-2">
+                <Select
+                  value={currentVoice}
+                  onValueChange={(v) => onChange({ ...settings, voiceName: v })}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Select a voice" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {list.map((v) => (
+                      <SelectItem key={v.name} value={v.name}>
+                        {friendlyVoiceLabel(v)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={() =>
+                    speak("Hi, I'm KovaGPT. This is how I sound.", {
+                      voice: currentVoice,
+                      rate: settings.voiceRate,
+                    })
+                  }
+                  title="Preview"
+                >
+                  <Play className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground mb-1.5">
+                Speech rate: {settings.voiceRate.toFixed(1)}x
+              </div>
+              <Slider
+                min={0.5}
+                max={2}
+                step={0.1}
+                value={[settings.voiceRate]}
+                onValueChange={(v) => onChange({ ...settings, voiceRate: v[0] })}
+              />
+            </div>
+          </TabsContent>
+
+          {/* SAFETY & SECURITY */}
           <TabsContent value="security" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
             <div className="rounded-lg border border-border p-4">
               <div className="text-sm font-medium">Signed in as</div>
@@ -580,13 +705,125 @@ export function SettingsDialog({
                 onAction={() => clerk?.openUserProfile()}
               />
               <SecurityRow
-                title="Sign out"
-                body="Sign out of this device."
-                actionLabel="Sign out"
-                onAction={() => clerk?.signOut()}
+                title="Active sessions"
+                body="See devices currently signed into your account."
+                actionLabel="Manage"
+                onAction={() => clerk?.openUserProfile()}
               />
             </div>
           </TabsContent>
+
+          {/* DATA CONTROL */}
+          <TabsContent value="data" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+            <h3 className="text-sm font-semibold">Data controls</h3>
+            <ToggleRow
+              title="Improve the model for everyone"
+              hint="Allow KovaGPT to use your conversations to improve quality. Turn off to opt out."
+              checked={!(settings.trainingOptOut ?? false)}
+              onCheckedChange={(v) => onChange({ ...settings, trainingOptOut: !v })}
+            />
+            <SecurityRow
+              title="Export your data"
+              body="Download a copy of your account data."
+              actionLabel="Request export"
+              onAction={() => toast.message("Export request received. We'll email you when it's ready.")}
+            />
+            <SecurityRow
+              title="Delete account"
+              body="Permanently delete your account and all data."
+              actionLabel="Delete"
+              onAction={() => clerk?.openUserProfile()}
+            />
+          </TabsContent>
+
+          {/* STORAGE */}
+          <TabsContent value="storage" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+            <h3 className="text-sm font-semibold">Storage</h3>
+            <p className="text-xs text-muted-foreground">
+              Conversations and preferences are stored locally on this device and synced to your account.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                clearConversations();
+                onClearAll();
+                toast.success("Local storage cleared.");
+              }}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Clear local storage
+            </Button>
+          </TabsContent>
+
+          {/* REPORT ISSUE */}
+          <TabsContent value="report" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+            <h3 className="text-sm font-semibold">Report an issue</h3>
+            <p className="text-xs text-muted-foreground">
+              Found a bug or something off? Send it to our team and we'll take a look.
+            </p>
+            <Button
+              size="sm"
+              onClick={() => {
+                onOpenChange(false);
+                onOpenHelp?.();
+              }}
+            >
+              <Bug className="w-4 h-4 mr-2" />
+              Open bug report form
+            </Button>
+          </TabsContent>
+
+          {/* HELP CENTER */}
+          <TabsContent value="help" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+            <h3 className="text-sm font-semibold">Help center</h3>
+            <p className="text-xs text-muted-foreground">
+              Get help, contact support, or browse common questions.
+            </p>
+            <Button
+              size="sm"
+              onClick={() => {
+                onOpenChange(false);
+                onOpenHelp?.();
+              }}
+            >
+              <LifeBuoy className="w-4 h-4 mr-2" />
+              Open help center
+            </Button>
+          </TabsContent>
+
+          {/* ABOUT */}
+          <TabsContent value="about" className="overflow-y-auto px-6 pb-6 space-y-3 py-4">
+            <h3 className="text-sm font-semibold">About KovaGPT</h3>
+            <p className="text-sm text-muted-foreground">
+              KovaGPT is built by Zachary Block. Our mission is to make a helpful, kind, and trustworthy AI available to everyone.
+            </p>
+            <div className="text-xs text-muted-foreground space-y-1 pt-2">
+              <div>Version 1.0</div>
+              <div>
+                <Link to="/privacy" onClick={() => onOpenChange(false)} className="underline">
+                  Privacy policy
+                </Link>
+                {" • "}
+                <Link to="/terms" onClick={() => onOpenChange(false)} className="underline">
+                  Terms of service
+                </Link>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* LOG OUT */}
+          <TabsContent value="logout" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+            <h3 className="text-sm font-semibold">Log out</h3>
+            <p className="text-sm text-muted-foreground">
+              You'll be signed out of KovaGPT on this device.
+            </p>
+            <Button variant="destructive" size="sm" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Log out
+            </Button>
+          </TabsContent>
+          </div>
         </Tabs>
         )}
       </DialogContent>
@@ -638,7 +875,6 @@ function ProviderIcon({ provider }: { provider: LinkedProvider }) {
       </div>
     );
   }
-  // google
   return (
     <div className={base + " bg-white border border-border"}>
       <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
@@ -673,7 +909,6 @@ function LockedTab({
     </div>
   );
 }
-
 
 function SecurityRow({
   title,

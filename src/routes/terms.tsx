@@ -3,9 +3,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 export const Route = createFileRoute("/terms")({
   head: () => ({
     meta: [
-      { title: "Terms of Service — KovaGPT" },
+      { title: "Terms of Service - KovaGPT" },
       { name: "description", content: "The rules for using KovaGPT, including payments, acceptable use, and AI accuracy." },
-      { property: "og:title", content: "Terms of Service — KovaGPT" },
+      { property: "og:title", content: "Terms of Service - KovaGPT" },
       { property: "og:description", content: "The rules for using KovaGPT, including payments, acceptable use, and AI accuracy." },
     ],
   }),
