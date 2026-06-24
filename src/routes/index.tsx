@@ -602,6 +602,7 @@ function KovaGPT() {
         settings={settings}
         onChange={setSettings}
         onClearAll={() => setConversations([])}
+        onOpenHelp={() => setHelpOpen(true)}
       />
 
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
