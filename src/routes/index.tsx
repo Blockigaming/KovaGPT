@@ -217,6 +217,28 @@ function KovaGPT() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [active?.messages.length, isStreaming]);
 
+  // Cross-chat memory: when an active conversation has been updated and
+  // we're not mid-stream, debounce a summary save server-side. The
+  // endpoint silently no-ops for free users.
+  useEffect(() => {
+    if (!isSignedIn || isStreaming) return;
+    if (!active || active.messages.length < 4) return;
+    const handle = setTimeout(() => {
+      const payload = {
+        chatId: active.id,
+        title: active.title,
+        messages: active.messages.map((m) => ({ role: m.role, content: m.content })),
+      };
+      authFetch("/api/memory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).catch(() => { /* best-effort */ });
+    }, 4000);
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active?.id, active?.messages.length, isStreaming, isSignedIn]);
+
   // After 3 user messages in this session while signed out, prompt to sign up.
   useEffect(() => {
     if (signupPromptShown) return;
