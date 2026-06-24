@@ -94,7 +94,7 @@ export async function requireVerifiedUser(
 
 export async function enforceQuota(
   caller: AuthedCaller,
-  kind: "images" | "chats" | "uploads",
+  kind: "images" | "chats" | "uploads" | "voice",
   limit: number,
   increment = 1,
 ): Promise<Response | null> {
@@ -113,9 +113,44 @@ export async function enforceQuota(
   }
   if (data === false) {
     const label =
-      kind === "images" ? "image" : kind === "uploads" ? "file upload" : "message";
+      kind === "images"
+        ? "image"
+        : kind === "uploads"
+        ? "file upload"
+        : kind === "voice"
+        ? "voice"
+        : "message";
     return tooMany(
       `Daily ${label} limit reached (${limit}/day). Resets in 24 hours or upgrade for more.`,
+    );
+  }
+  return null;
+}
+
+/**
+ * Atomically charge bytes against the user's cumulative storage budget.
+ * Returns a 413 response when the upload would exceed the cap.
+ */
+export async function enforceStorage(
+  caller: AuthedCaller,
+  bytes: number,
+  limitBytes: number,
+): Promise<Response | null> {
+  if (bytes <= 0) return null;
+  const { data, error } = await caller.supabaseAdmin.rpc("try_add_storage_bytes" as never, {
+    _user_id: caller.userId,
+    _bytes: bytes,
+    _limit: limitBytes,
+  } as never);
+  if (error) {
+    console.error("[enforceStorage] rpc error", error);
+    return jsonError("Storage check failed", 500);
+  }
+  if (data === false) {
+    const gb = (limitBytes / (1024 ** 3)).toFixed(0);
+    return jsonError(
+      `Storage limit reached (${gb} GB). Delete some files or upgrade for more.`,
+      413,
     );
   }
   return null;
