@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getMode, type ModeId, STORAGE_LIMITS_BYTES } from "@/lib/modes";
+import { getMode, type ModeId, STORAGE_LIMITS_BYTES, DAILY_IMAGE_LIMIT_BY_TIER } from "@/lib/modes";
 import {
   DAILY_CHAT_LIMIT,
-  DAILY_IMAGE_LIMIT,
   DAILY_UPLOAD_LIMIT,
   assertFeatureEnabled,
   assertNotBanned,
@@ -304,7 +303,7 @@ async function handleImageRequest(prompt: string, apiKey: string): Promise<Respo
           method: "POST",
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "google/gemini-3.1-flash-image-preview",
+            model: "google/gemini-3.1-flash-image",
             messages: [{ role: "user", content: prompt }],
             modalities: ["image", "text"],
           }),
@@ -486,7 +485,8 @@ export const Route = createFileRoute("/api/chat")({
             if (!isOwner) {
               const maint = await assertFeatureEnabled(auth, "images");
               if (maint) return maint;
-              const quota = await enforceQuota(auth, "images", DAILY_IMAGE_LIMIT);
+              const imgLimit = DAILY_IMAGE_LIMIT_BY_TIER[callerTier];
+              const quota = await enforceQuota(auth, "images", imgLimit);
               if (quota) return quota;
             }
             return handleImageRequest(lastText, apiKey);
