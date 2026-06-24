@@ -280,6 +280,7 @@ export function AuthDialog({
           )}
         </div>
       </DialogContent>
+      <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} />
     </Dialog>
   );
 }
