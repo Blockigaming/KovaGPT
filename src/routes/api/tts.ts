@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  DAILY_TTS_LIMIT,
   assertFeatureEnabled,
   assertNotBanned,
+  enforceQuota,
   requireVerifiedUser,
 } from "@/lib/api-auth.server";
 
@@ -17,6 +19,8 @@ export const Route = createFileRoute("/api/tts")({
         if (banned) return banned;
         const maint = await assertFeatureEnabled(auth, "voice");
         if (maint) return maint;
+        const quota = await enforceQuota(auth, "voice", DAILY_TTS_LIMIT);
+        if (quota) return quota;
 
         const apiKey = process.env.LOVABLE_API_KEY;
         if (!apiKey) {
