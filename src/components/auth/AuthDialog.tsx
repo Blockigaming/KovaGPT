@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, LogIn, UserPlus } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
+import { ForgotPasswordDialog } from "@/components/auth/ForgotPasswordDialog";
 
 type Mode = "sign-in" | "sign-up";
 
