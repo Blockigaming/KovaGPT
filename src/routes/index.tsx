@@ -18,6 +18,7 @@ import { getUsage } from "@/lib/limits";
 import { VoiceMode } from "@/components/VoiceMode";
 import {
   useUser,
+  useClerkSafe,
   SignInButton,
   SignUpButton,
   UserButton,
@@ -83,7 +84,16 @@ function loadSettings(userKey: string | null): Settings {
 
 function KovaGPT() {
   const { isSignedIn, isLoaded, user } = useUser();
+  const { openSignUp } = useClerkSafe();
   const userKey = user?.id ?? null;
+  const tryOpenVoice = useCallback(() => {
+    if (!isSignedIn) {
+      toast.message("Sign up free to use voice mode");
+      openSignUp();
+      return;
+    }
+    setVoiceModeOpen(true);
+  }, [isSignedIn, openSignUp]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
@@ -543,13 +553,7 @@ function KovaGPT() {
                 onAttachmentsChange={setAttachments}
                 mode={mode}
                 onModeChange={setMode}
-                onOpenVoice={() => {
-                  if (clerkEnabled && !isSignedIn) {
-                    setSignupPromptOpen(true);
-                    return;
-                  }
-                  setVoiceModeOpen(true);
-                }}
+                onOpenVoice={tryOpenVoice}
                 onUploadLimit={() =>
                   setLimitDialog({ open: true, kind: "upload" })
                 }
@@ -581,13 +585,7 @@ function KovaGPT() {
               onAttachmentsChange={setAttachments}
               mode={mode}
               onModeChange={setMode}
-              onOpenVoice={() => {
-                if (clerkEnabled && !isSignedIn) {
-                  setSignupPromptOpen(true);
-                  return;
-                }
-                setVoiceModeOpen(true);
-              }}
+              onOpenVoice={tryOpenVoice}
               onUploadLimit={() =>
                 setLimitDialog({ open: true, kind: "upload" })
               }
