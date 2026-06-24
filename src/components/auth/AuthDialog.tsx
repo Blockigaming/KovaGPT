@@ -24,7 +24,7 @@ export function AuthDialog({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone] = useState("");
   const [loading, setLoading] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
 
@@ -34,7 +34,7 @@ export function AuthDialog({
     setEmail("");
     setPassword("");
     setFullName("");
-    setPhone("");
+    // phone intentionally not reset; field removed from signup
   }, [initialMode, open, loading]);
 
   const isSignUp = mode === "sign-up";
