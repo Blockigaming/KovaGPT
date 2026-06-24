@@ -447,55 +447,35 @@ export function SettingsDialog({
             </section>
           </TabsContent>
 
-          {/* LINKED APPS */}
-          <TabsContent value="linked" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+          <TabsContent value="linked" className="overflow-y-auto px-6 pb-6 space-y-5 py-4">
             <section className="space-y-1">
               <h3 className="text-sm font-semibold">Linked apps</h3>
               <p className="text-xs text-muted-foreground">
-                Connect external accounts so KovaGPT can use them in your chats. You can disconnect any time.
+                Connect external accounts so KovaGPT can use them in your chats. Live integrations work today; others are on the roadmap.
               </p>
+              {tier === "free" && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 pt-1">
+                  Linked apps are a Plus feature. Upgrade to connect external accounts.
+                </p>
+              )}
             </section>
-            <div className="space-y-2">
-              {ALL_LINKED_PROVIDERS.map((p) => {
-                const meta = getProviderMeta(p);
-                const connected = linked.includes(p);
-                return (
-                  <div
-                    key={p}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-border p-3"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <ProviderIcon provider={p} />
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium truncate">{meta.label}</div>
-                        <div className="text-xs text-muted-foreground truncate">{meta.description}</div>
-                      </div>
-                    </div>
-                    {connected ? (
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="inline-flex items-center gap-1 text-xs text-foreground">
-                          <Check className="w-3.5 h-3.5" /> Connected
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
-                          onClick={() => {
-                            if (!user?.id) return;
-                            disconnectProvider(user.id, p);
-                            setLinked(getLinkedAccounts(user.id));
-                            toast.success(`${meta.label} disconnected.`);
-                          }}
-                        >
-                          Disconnect
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 shrink-0"
-                        onClick={async () => {
+
+            {CONNECTOR_CATEGORIES.map((cat) => {
+              const items = CONNECTOR_CATALOG.filter((c) => c.category === cat);
+              if (items.length === 0) return null;
+              return (
+                <section key={cat} className="space-y-2">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {cat}
+                  </h4>
+                  <div className="space-y-2">
+                    {items.map((item) => (
+                      <ConnectorRow
+                        key={item.id}
+                        item={item}
+                        linked={linked}
+                        canConnect={tier !== "free"}
+                        onConnect={async (p) => {
                           if (!user?.id) return;
                           const res = await connectProvider(user.id, p);
                           if (res.error) {
@@ -503,17 +483,22 @@ export function SettingsDialog({
                             return;
                           }
                           setLinked(getLinkedAccounts(user.id));
-                          if (!res.redirected) toast.success(`${meta.label} connected.`);
+                          if (!res.redirected) toast.success(`Connected.`);
                         }}
-                      >
-                        Connect
-                      </Button>
-                    )}
+                        onDisconnect={(p) => {
+                          if (!user?.id) return;
+                          disconnectProvider(user.id, p);
+                          setLinked(getLinkedAccounts(user.id));
+                          toast.success(`Disconnected.`);
+                        }}
+                      />
+                    ))}
                   </div>
-                );
-              })}
-            </div>
+                </section>
+              );
+            })}
           </TabsContent>
+
 
           {/* EMAIL */}
           <TabsContent value="email" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
