@@ -6,6 +6,7 @@ import type { Database } from "@/integrations/supabase/types";
 export const DAILY_IMAGE_LIMIT = 1;
 export const DAILY_CHAT_LIMIT = 50;
 export const DAILY_UPLOAD_LIMIT = 2;
+export const DAILY_TTS_LIMIT = 50;
 
 
 
