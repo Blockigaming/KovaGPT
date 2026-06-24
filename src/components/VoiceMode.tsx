@@ -45,9 +45,11 @@ export function VoiceMode({
   }, [initialMessages]);
 
   // Map any legacy browser-voice setting to a Lovable AI voice id.
+  // Default to "marin" — the newest expressive voice; sounds far more
+  // natural and human than the legacy "alloy".
   const ttsVoice = (() => {
     const allowed = ["alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse", "marin", "cedar"];
-    return allowed.includes(voiceName) ? voiceName : "alloy";
+    return allowed.includes(voiceName) ? voiceName : "marin";
   })();
 
   const sendToAI = useCallback(
@@ -258,14 +260,14 @@ export function VoiceMode({
         )}
       </div>
 
-      {/* Logo circle sits right above the chat bar */}
-      <div className="flex justify-center pb-4">
+      {/* Big logo circle — KovaGPT mark fills the entire circle */}
+      <div className="flex justify-center pb-6">
         <div
-          className={`w-16 h-16 rounded-full overflow-hidden flex items-center justify-center bg-gradient-to-br from-sky-300 via-sky-400 to-blue-600 shadow-[0_0_40px_rgba(56,189,248,0.35)] ${
-            status === "speaking" ? "animate-pulse" : ""
+          className={`w-56 h-56 sm:w-64 sm:h-64 rounded-full overflow-hidden flex items-center justify-center bg-white shadow-[0_0_80px_rgba(255,255,255,0.25)] ring-1 ring-white/20 transition-transform ${
+            status === "speaking" ? "animate-pulse scale-105" : ""
           }`}
         >
-          <NovaLogo className="w-10 h-10" />
+          <NovaLogo className="w-full h-full" />
         </div>
       </div>
 

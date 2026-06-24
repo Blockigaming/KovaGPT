@@ -543,7 +543,13 @@ function KovaGPT() {
                 onAttachmentsChange={setAttachments}
                 mode={mode}
                 onModeChange={setMode}
-                onOpenVoice={() => setVoiceModeOpen(true)}
+                onOpenVoice={() => {
+                  if (clerkEnabled && !isSignedIn) {
+                    setSignupPromptOpen(true);
+                    return;
+                  }
+                  setVoiceModeOpen(true);
+                }}
                 onUploadLimit={() =>
                   setLimitDialog({ open: true, kind: "upload" })
                 }
@@ -575,7 +581,13 @@ function KovaGPT() {
               onAttachmentsChange={setAttachments}
               mode={mode}
               onModeChange={setMode}
-              onOpenVoice={() => setVoiceModeOpen(true)}
+              onOpenVoice={() => {
+                if (clerkEnabled && !isSignedIn) {
+                  setSignupPromptOpen(true);
+                  return;
+                }
+                setVoiceModeOpen(true);
+              }}
               onUploadLimit={() =>
                 setLimitDialog({ open: true, kind: "upload" })
               }
