@@ -182,34 +182,3 @@ export const Route = createFileRoute('/api/public/help-submit')({
     },
   },
 })
-
-        try {
-          // 1) Notify support inbox
-          await enqueue({
-            supabase,
-            templateName: 'help-contact-notification',
-            to: SUPPORT_INBOX,
-            data: body,
-            idempotencyKey: `help-notify-${idem}`,
-          })
-          // 2) Auto-reply to the user
-          await enqueue({
-            supabase,
-            templateName: 'help-contact-autoreply',
-            to: body.email,
-            data: { name: body.name, topic: body.topic, variant: body.variant },
-            idempotencyKey: `help-autoreply-${idem}`,
-          })
-        } catch (err) {
-          console.error('help-submit enqueue failed', err)
-          return Response.json(
-            { error: "We couldn't send your message. Please try again in a moment." },
-            { status: 500 },
-          )
-        }
-
-        return Response.json({ success: true })
-      },
-    },
-  },
-})
