@@ -70,6 +70,41 @@ async function enqueue(args: {
   if (error) throw new Error(error.message)
 }
 
+// Simple in-memory IP rate limiter: max 5 submissions per hour per IP.
+// In-memory state is per-worker-instance, so this is a best-effort guard
+// rather than a global hard limit, but defeats trivial scripted abuse.
+const RATE_WINDOW_MS = 60 * 60 * 1000
+const RATE_LIMIT = 5
+const ipHits = new Map<string, number[]>()
+function rateLimited(ip: string): boolean {
+  const now = Date.now()
+  const arr = (ipHits.get(ip) ?? []).filter((t) => now - t < RATE_WINDOW_MS)
+  if (arr.length >= RATE_LIMIT) {
+    ipHits.set(ip, arr)
+    return true
+  }
+  arr.push(now)
+  ipHits.set(ip, arr)
+  // Opportunistic cleanup so the map doesn't grow unbounded.
+  if (ipHits.size > 5000) {
+    for (const [k, v] of ipHits) {
+      const fresh = v.filter((t) => now - t < RATE_WINDOW_MS)
+      if (fresh.length === 0) ipHits.delete(k)
+      else ipHits.set(k, fresh)
+    }
+  }
+  return false
+}
+
+function clientIp(request: Request): string {
+  return (
+    request.headers.get('cf-connecting-ip') ||
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip') ||
+    'unknown'
+  )
+}
+
 export const Route = createFileRoute('/api/public/help-submit')({
   server: {
     handlers: {
@@ -78,6 +113,14 @@ export const Route = createFileRoute('/api/public/help-submit')({
         const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
         if (!supabaseUrl || !supabaseServiceKey) {
           return Response.json({ error: 'Server not configured' }, { status: 500 })
+        }
+
+        const ip = clientIp(request)
+        if (rateLimited(ip)) {
+          return Response.json(
+            { error: 'Too many requests. Please try again later.' },
+            { status: 429 },
+          )
         }
 
         let raw: unknown
@@ -99,8 +142,16 @@ export const Route = createFileRoute('/api/public/help-submit')({
         const supabase = createClient(supabaseUrl, supabaseServiceKey)
         const idem = randomToken()
 
+        // Suppression check: never autoreply to bounced/complained/unsubscribed addresses.
+        const recipientEmail = body.email.toLowerCase()
+        const { data: suppressed } = await supabase
+          .from('suppressed_emails')
+          .select('email')
+          .eq('email', recipientEmail)
+          .maybeSingle()
+
         try {
-          // 1) Notify support inbox
+          // 1) Notify support inbox (always - support needs to see the message)
           await enqueue({
             supabase,
             templateName: 'help-contact-notification',
@@ -108,14 +159,16 @@ export const Route = createFileRoute('/api/public/help-submit')({
             data: body,
             idempotencyKey: `help-notify-${idem}`,
           })
-          // 2) Auto-reply to the user
-          await enqueue({
-            supabase,
-            templateName: 'help-contact-autoreply',
-            to: body.email,
-            data: { name: body.name, topic: body.topic, variant: body.variant },
-            idempotencyKey: `help-autoreply-${idem}`,
-          })
+          // 2) Auto-reply to the user, unless their address is suppressed.
+          if (!suppressed) {
+            await enqueue({
+              supabase,
+              templateName: 'help-contact-autoreply',
+              to: body.email,
+              data: { name: body.name, topic: body.topic, variant: body.variant },
+              idempotencyKey: `help-autoreply-${idem}`,
+            })
+          }
         } catch (err) {
           console.error('help-submit enqueue failed', err)
           return Response.json(
