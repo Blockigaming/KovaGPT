@@ -6,7 +6,7 @@ const WINDOW_MS = 24 * 60 * 60 * 1000;
 type Usage = { windowStart: number; images: number; uploads: number };
 
 // Free plan limits.
-export const DAILY_IMAGE_LIMIT = 1;
+export const DAILY_IMAGE_LIMIT = 3;
 export const DAILY_UPLOAD_LIMIT = 2;
 
 function fresh(): Usage {
