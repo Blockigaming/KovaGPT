@@ -13,7 +13,7 @@ export const Route = createFileRoute("/unsubscribe")({
   component: UnsubscribePage,
   head: () => ({
     meta: [
-      { title: "Unsubscribe — KovaGPT" },
+      { title: "Unsubscribe - KovaGPT" },
       { name: "robots", content: "noindex" },
     ],
   }),

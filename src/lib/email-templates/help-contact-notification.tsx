@@ -51,8 +51,8 @@ const Email = ({
         </Section>
         <Hr style={hr} />
         <Section>
-          <Text style={small}>URL: {url || '—'}</Text>
-          <Text style={small}>User agent: {userAgent || '—'}</Text>
+          <Text style={small}>URL: {url || '-'}</Text>
+          <Text style={small}>User agent: {userAgent || '-'}</Text>
         </Section>
       </Container>
     </Body>
@@ -63,7 +63,7 @@ export const template = {
   component: Email,
   subject: (data: Record<string, any>) =>
     `${data.variant === 'bug' ? '[KovaGPT bug]' : '[KovaGPT help]'} ${data.topic || 'New request'}`,
-  displayName: 'Help / bug — internal notification',
+  displayName: 'Help / bug - internal notification',
   to: 'help@kovagpt.com',
   previewData: {
     name: 'Jane Doe',

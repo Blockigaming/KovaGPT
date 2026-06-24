@@ -77,7 +77,7 @@ export function HelpDialog({
           <DialogDescription>
             {isBug
               ? "Tell us what went wrong. We'll include your browser info automatically and reply by email."
-              : "Send us a quick note and we'll reply by email — usually within one business day."}
+              : "Send us a quick note and we'll reply by email - usually within one business day."}
           </DialogDescription>
         </DialogHeader>
 
@@ -110,7 +110,7 @@ export function HelpDialog({
             onChange={(e) => setMessage(e.target.value)}
             maxLength={4000}
           />
-          {/* Honeypot field — hidden from humans */}
+          {/* Honeypot field - hidden from humans */}
           <input
             type="text"
             tabIndex={-1}

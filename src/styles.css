@@ -38,7 +38,7 @@
 
 :root {
   --radius: 0.875rem;
-  /* KovaGPT light theme — refined white/grey/black */
+  /* KovaGPT light theme - refined white/grey/black */
   --background: oklch(0.995 0 0);
   --foreground: oklch(0.18 0 0);
   --card: oklch(0.975 0 0);
@@ -73,7 +73,7 @@
 }
 
 .dark {
-  /* KovaGPT dark theme — warm-tinted slate, distinct from ChatGPT neutral */
+  /* KovaGPT dark theme - warm-tinted slate, distinct from ChatGPT neutral */
   --background: oklch(0.17 0.008 280);
   --foreground: oklch(0.97 0 0);
   --card: oklch(0.22 0.008 280);

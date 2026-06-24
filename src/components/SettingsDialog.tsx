@@ -203,7 +203,7 @@ export function SettingsDialog({
             ))}
           </TabsList>
 
-          {/* GENERAL — voice, behavior, usage, data */}
+          {/* GENERAL - voice, behavior, usage, data */}
           <TabsContent value="general" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
             <section className="space-y-4">
               <h3 className="text-sm font-semibold">Voice</h3>
@@ -288,9 +288,9 @@ export function SettingsDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="short">Short — get to the point</SelectItem>
-                    <SelectItem value="medium">Medium — balanced</SelectItem>
-                    <SelectItem value="long">Long — detailed</SelectItem>
+                    <SelectItem value="short">Short - get to the point</SelectItem>
+                    <SelectItem value="medium">Medium - balanced</SelectItem>
+                    <SelectItem value="long">Long - detailed</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -325,7 +325,7 @@ export function SettingsDialog({
             </section>
           </TabsContent>
 
-          {/* YOU — personalization */}
+          {/* YOU - personalization */}
           <TabsContent value="you" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
             <section className="space-y-3">
               <h3 className="text-sm font-semibold">About you</h3>
@@ -405,7 +405,7 @@ export function SettingsDialog({
               {adaptiveMemoryUnlocked ? (
                 <ToggleRow
                   title="Use Adaptive Memory"
-                  hint="KovaGPT continually learns your preferences, style, and recurring context across chats — and adapts replies to fit."
+                  hint="KovaGPT continually learns your preferences, style, and recurring context across chats - and adapts replies to fit."
                   checked={settings.rememberAcross}
                   onCheckedChange={(v) => onChange({ ...settings, rememberAcross: v })}
                 />
@@ -430,7 +430,7 @@ export function SettingsDialog({
             </section>
           </TabsContent>
 
-          {/* CONNECTIONS — linked accounts */}
+          {/* CONNECTIONS - linked accounts */}
           <TabsContent value="connections" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
             <section className="space-y-1">
               <h3 className="text-sm font-semibold">Linked accounts</h3>
@@ -501,7 +501,7 @@ export function SettingsDialog({
             </p>
           </TabsContent>
 
-          {/* APPEARANCE — light/dark mode toggle only */}
+          {/* APPEARANCE - light/dark mode toggle only */}
           <TabsContent value="appearance" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
             <section className="space-y-3">
               <h3 className="text-sm font-semibold">Appearance</h3>

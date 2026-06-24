@@ -19,7 +19,7 @@ const BodySchema = z.object({
   variant: z.enum(['help', 'bug']).optional().default('help'),
   url: z.string().trim().max(500).optional().default(''),
   userAgent: z.string().trim().max(500).optional().default(''),
-  // Honeypot — bots fill hidden fields; humans don't.
+  // Honeypot - bots fill hidden fields; humans don't.
   website: z.string().max(0).optional().default(''),
 })
 
@@ -92,7 +92,7 @@ export const Route = createFileRoute('/api/public/help-submit')({
         }
         const body = parsed.data
         if (body.website) {
-          // Honeypot tripped — pretend success so bots don't probe.
+          // Honeypot tripped - pretend success so bots don't probe.
           return Response.json({ success: true })
         }
 

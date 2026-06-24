@@ -123,7 +123,7 @@ export async function enforceQuota(
 /**
  * Returns the tier the user is currently entitled to, derived from the
  * latest active subscription row. Never trust the client's `mode` choice
- * without checking this — the client can be edited.
+ * without checking this - the client can be edited.
  */
 export type CallerTier = "free" | "plus" | "pro";
 

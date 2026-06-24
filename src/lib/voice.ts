@@ -233,7 +233,7 @@ async function processRemoteQueue() {
     });
     job.onEnd?.();
   } catch {
-    // swallow — likely aborted
+    // swallow - likely aborted
   } finally {
     remoteSpeaking = false;
     remoteAudio = null;
