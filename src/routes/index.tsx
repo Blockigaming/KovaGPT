@@ -217,7 +217,7 @@ function KovaGPT() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [active?.messages.length, isStreaming]);
 
-  // After 5 user messages in this session while signed out, prompt to sign up.
+  // After 3 user messages in this session while signed out, prompt to sign up.
   useEffect(() => {
     if (signupPromptShown) return;
     if (clerkEnabled && isSignedIn) return;
@@ -225,7 +225,7 @@ function KovaGPT() {
       (sum, c) => sum + c.messages.filter((m) => m.role === "user").length,
       0,
     );
-    if (userMsgCount >= 5 && !isStreaming) {
+    if (userMsgCount >= 3 && !isStreaming) {
       setSignupPromptOpen(true);
       setSignupPromptShown(true);
     }
