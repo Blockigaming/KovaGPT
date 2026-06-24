@@ -49,6 +49,11 @@ import {
   getProviderMeta,
   type LinkedProvider,
 } from "@/lib/linked-accounts";
+import {
+  CONNECTOR_CATALOG,
+  CONNECTOR_CATEGORIES,
+  type ConnectorItem,
+} from "@/lib/connectors-catalog";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
