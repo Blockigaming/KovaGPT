@@ -645,6 +645,7 @@ export const Route = createFileRoute("/api/chat")({
                   UNRESTRICTED_INSTRUCTION +
                   CREATOR_INSTRUCTION +
                   buildUserContextBlock(user) +
+                  memoryBlock +
                   webBlock +
                   voiceInstruction +
                   buildCurrentDateInstruction(timezone, locale),
