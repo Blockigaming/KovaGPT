@@ -98,7 +98,7 @@ function KovaGPT() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
-  const [mode, setMode] = useState<ModeId>("auto");
+  const [mode, setMode] = useState<ModeId>("default");
   const [isStreaming, setIsStreaming] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     if (typeof window === "undefined") return true;
