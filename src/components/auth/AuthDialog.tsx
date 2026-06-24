@@ -223,8 +223,17 @@ export function AuthDialog({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="auth-password">
-              {isSignUp ? "Create a password" : "Password"}
+            <Label htmlFor="auth-password" className="flex items-center justify-between">
+              <span>{isSignUp ? "Create a password" : "Password"}</span>
+              {!isSignUp && (
+                <button
+                  type="button"
+                  onClick={() => setForgotOpen(true)}
+                  className="text-xs font-medium text-muted-foreground hover:text-foreground underline"
+                >
+                  Forgot password?
+                </button>
+              )}
             </Label>
             <Input
               id="auth-password"
