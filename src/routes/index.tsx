@@ -18,6 +18,7 @@ import { getUsage } from "@/lib/limits";
 import { VoiceMode } from "@/components/VoiceMode";
 import {
   useUser,
+  useClerkSafe,
   SignInButton,
   SignUpButton,
   UserButton,
