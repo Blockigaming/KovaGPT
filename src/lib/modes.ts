@@ -162,7 +162,13 @@ export function getMode(id: ModeId): Mode {
 }
 
 export const STORAGE_LIMITS_BYTES: Record<Tier, number> = {
-  free: 5 * 1024 * 1024 * 1024,
-  plus: 25 * 1024 * 1024 * 1024,
-  pro: 50 * 1024 * 1024 * 1024,
+  free: 500 * 1024 * 1024, // 500 MB
+  plus: 25 * 1024 * 1024 * 1024, // 25 GB
+  pro: 25 * 1024 * 1024 * 1024, // 25 GB
+};
+
+export const DAILY_IMAGE_LIMIT_BY_TIER: Record<Tier, number> = {
+  free: 3,
+  plus: 40,
+  pro: 200,
 };
