@@ -84,7 +84,16 @@ function loadSettings(userKey: string | null): Settings {
 
 function KovaGPT() {
   const { isSignedIn, isLoaded, user } = useUser();
+  const { openSignUp } = useClerkSafe();
   const userKey = user?.id ?? null;
+  const tryOpenVoice = useCallback(() => {
+    if (!isSignedIn) {
+      toast.message("Sign up free to use voice mode");
+      openSignUp();
+      return;
+    }
+    setVoiceModeOpen(true);
+  }, [isSignedIn, openSignUp]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
