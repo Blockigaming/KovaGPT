@@ -553,13 +553,7 @@ function KovaGPT() {
                 onAttachmentsChange={setAttachments}
                 mode={mode}
                 onModeChange={setMode}
-                onOpenVoice={() => {
-                  if (clerkEnabled && !isSignedIn) {
-                    setSignupPromptOpen(true);
-                    return;
-                  }
-                  setVoiceModeOpen(true);
-                }}
+                onOpenVoice={tryOpenVoice}
                 onUploadLimit={() =>
                   setLimitDialog({ open: true, kind: "upload" })
                 }
