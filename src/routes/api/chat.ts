@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getMode, type ModeId } from "@/lib/modes";
+import { getMode, type ModeId, STORAGE_LIMITS_BYTES } from "@/lib/modes";
 import {
   DAILY_CHAT_LIMIT,
   DAILY_IMAGE_LIMIT,
@@ -7,6 +7,7 @@ import {
   assertFeatureEnabled,
   assertNotBanned,
   enforceQuota,
+  enforceStorage,
   getCallerTier,
   optionalUser,
   unauthorized,
