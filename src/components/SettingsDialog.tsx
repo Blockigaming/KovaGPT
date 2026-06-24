@@ -821,6 +821,73 @@ export function SettingsDialog({
   );
 }
 
+function ConnectorRow({
+  item,
+  linked,
+  canConnect,
+  onConnect,
+  onDisconnect,
+}: {
+  item: ConnectorItem;
+  linked: LinkedProvider[];
+  canConnect: boolean;
+  onConnect: (p: LinkedProvider) => void;
+  onDisconnect: (p: LinkedProvider) => void;
+}) {
+  const isLive = item.status === "live" && !!item.legacyProvider;
+  const connected = isLive && linked.includes(item.legacyProvider as LinkedProvider);
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="w-9 h-9 rounded-lg bg-muted text-foreground flex items-center justify-center text-xs font-semibold shrink-0">
+          {item.label.slice(0, 2).toUpperCase()}
+        </div>
+        <div className="min-w-0">
+          <div className="text-sm font-medium truncate flex items-center gap-2">
+            {item.label}
+            {item.status === "coming-soon" && (
+              <span className="text-[10px] uppercase tracking-wider rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
+                Coming soon
+              </span>
+            )}
+          </div>
+          <div className="text-xs text-muted-foreground truncate">{item.description}</div>
+        </div>
+      </div>
+      {!isLive ? (
+        <Button variant="outline" size="sm" className="h-8 shrink-0" disabled>
+          Notify me
+        </Button>
+      ) : connected ? (
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="inline-flex items-center gap-1 text-xs text-foreground">
+            <Check className="w-3.5 h-3.5" /> Connected
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => onDisconnect(item.legacyProvider as LinkedProvider)}
+          >
+            Disconnect
+          </Button>
+        </div>
+      ) : (
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-8 shrink-0"
+          disabled={!canConnect}
+          onClick={() => onConnect(item.legacyProvider as LinkedProvider)}
+        >
+          Connect
+        </Button>
+      )}
+    </div>
+  );
+}
+
+
 
 function ProviderIcon({ provider }: { provider: LinkedProvider }) {
   const base = "w-9 h-9 rounded-lg flex items-center justify-center shrink-0";
