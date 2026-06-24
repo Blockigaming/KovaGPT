@@ -8,9 +8,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, LifeBuoy, Bug, Mail, MessageSquareText } from "lucide-react";
 
 export function HelpDialog({
   open,
@@ -56,7 +57,7 @@ export function HelpDialog({
         toast.error(data.error || "Something went wrong. Please try again.");
         return;
       }
-      toast.success("Message sent! We'll be in touch by email shortly.");
+      toast.success("Message sent. We'll reply by email shortly.");
       setName("");
       setEmail("");
       setTopic("");
@@ -71,45 +72,99 @@ export function HelpDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{isBug ? "Report a bug" : "Help & contact"}</DialogTitle>
-          <DialogDescription>
-            {isBug
-              ? "Tell us what went wrong. We'll include your browser info automatically and reply by email."
-              : "Send us a quick note and we'll reply by email - usually within one business day."}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-lg p-0 overflow-hidden">
+        <div className="bg-gradient-to-br from-foreground/[0.04] to-transparent px-6 pt-6 pb-4 border-b border-border">
+          <DialogHeader className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-foreground text-background flex items-center justify-center">
+                {isBug ? <Bug className="w-5 h-5" /> : <LifeBuoy className="w-5 h-5" />}
+              </div>
+              <div className="flex-1">
+                <DialogTitle className="text-lg">
+                  {isBug ? "Report a bug" : "Help & contact"}
+                </DialogTitle>
+                <DialogDescription className="text-sm mt-0.5">
+                  {isBug
+                    ? "Tell us what went wrong and we'll take a look."
+                    : "We read every message. Usually a reply within one business day."}
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+        </div>
 
-        <form onSubmit={submit} className="space-y-3 text-sm">
-          <Input
-            placeholder="Your name (optional)"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={120}
-          />
-          <Input
-            type="email"
-            required
-            placeholder="Email address (required, so we can reply)"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            maxLength={254}
-          />
-          <Input
-            placeholder={isBug ? "Short summary (e.g. page reloads on iPad)" : "What do you need help with?"}
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            maxLength={200}
-          />
-          <Textarea
-            required
-            placeholder={isBug ? "Steps to reproduce, what you expected, what actually happened" : "Describe the issue or question"}
-            rows={5}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            maxLength={4000}
-          />
+        <form onSubmit={submit} className="px-6 py-5 space-y-4 text-sm">
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="help-name" className="flex items-center justify-between text-xs font-medium">
+                <span>Your name</span>
+                <span className="text-muted-foreground font-normal">Optional</span>
+              </Label>
+              <Input
+                id="help-name"
+                placeholder="Jamie"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={120}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="help-email" className="text-xs font-medium">
+                Email <span className="text-muted-foreground font-normal">(required)</span>
+              </Label>
+              <div className="relative">
+                <Mail className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                <Input
+                  id="help-email"
+                  type="email"
+                  required
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  maxLength={254}
+                  className="pl-8"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="help-topic" className="text-xs font-medium">
+              {isBug ? "Short summary" : "What's this about?"}
+            </Label>
+            <Input
+              id="help-topic"
+              placeholder={isBug ? "Voice mode keeps cutting out on iPad" : "Billing question, feedback, feature request..."}
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              maxLength={200}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="help-message" className="text-xs font-medium flex items-center gap-1.5">
+              <MessageSquareText className="w-3.5 h-3.5" />
+              {isBug ? "What happened?" : "Your message"}
+            </Label>
+            <Textarea
+              id="help-message"
+              required
+              placeholder={
+                isBug
+                  ? "Steps to reproduce, what you expected, what actually happened. Screenshots welcome - paste a link."
+                  : "Tell us as much or as little as you'd like."
+              }
+              rows={5}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              maxLength={4000}
+              className="resize-none"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              {message.length}/4000 characters
+            </p>
+          </div>
+
           {/* Honeypot field - hidden from humans */}
           <input
             type="text"
@@ -120,14 +175,20 @@ export function HelpDialog({
             style={{ position: "absolute", left: "-9999px", width: 1, height: 1 }}
             aria-hidden="true"
           />
-          <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={submitting}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Send
-            </Button>
+
+          <div className="flex items-center justify-between pt-1">
+            <p className="text-[11px] text-muted-foreground">
+              By sending, you agree to our reply at the email above.
+            </p>
+            <div className="flex gap-2">
+              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={submitting}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={submitting}>
+                {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Send message
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>

@@ -101,10 +101,30 @@ export const Route = createFileRoute("/lovable/email/transactional/send")({
           )
         }
 
-        // Resolve effective recipient: template-level `to` takes precedence over
-        // the caller-provided recipientEmail. This allows notification templates
-        // to always send to a fixed address (e.g., site owner from env var).
-        const effectiveRecipient = template.to || recipientEmail
+        // SECURITY: When a template has no fixed `to`, the caller can otherwise
+        // pick any recipient and turn this into an authenticated email relay
+        // (spam / phishing under our sending domain). Restrict caller-chosen
+        // recipients to the authenticated user's own verified email address.
+        let effectiveRecipient: string
+        if (template.to) {
+          effectiveRecipient = template.to
+        } else {
+          const ownEmail = (user.email ?? '').toLowerCase().trim()
+          const requested = (recipientEmail ?? '').toLowerCase().trim()
+          if (!ownEmail) {
+            return Response.json(
+              { error: 'Your account has no verified email on file.' },
+              { status: 403 },
+            )
+          }
+          if (requested && requested !== ownEmail) {
+            return Response.json(
+              { error: 'You can only send this template to your own email address.' },
+              { status: 403 },
+            )
+          }
+          effectiveRecipient = ownEmail
+        }
 
         if (!effectiveRecipient) {
           return Response.json(

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getMode, type ModeId } from "@/lib/modes";
+import { getMode, type ModeId, STORAGE_LIMITS_BYTES } from "@/lib/modes";
 import {
   DAILY_CHAT_LIMIT,
   DAILY_IMAGE_LIMIT,
@@ -7,6 +7,7 @@ import {
   assertFeatureEnabled,
   assertNotBanned,
   enforceQuota,
+  enforceStorage,
   getCallerTier,
   optionalUser,
   unauthorized,
@@ -535,6 +536,27 @@ export const Route = createFileRoute("/api/chat")({
               totalAttachments,
             );
             if (quota) return quota;
+            // Enforce cumulative storage cap per tier (5 / 25 / 50 GB).
+            let totalBytes = 0;
+            for (const msg of messages) {
+              for (const att of msg.attachments ?? []) {
+                const url = att.dataUrl ?? "";
+                const commaIdx = url.indexOf(",");
+                if (commaIdx > -1) {
+                  // base64 length * 3/4 approx. raw byte size
+                  totalBytes += Math.floor(((url.length - commaIdx - 1) * 3) / 4);
+                } else {
+                  totalBytes += url.length;
+                }
+              }
+            }
+            const tier = await getCallerTier(auth);
+            const storage = await enforceStorage(
+              auth,
+              totalBytes,
+              STORAGE_LIMITS_BYTES[tier],
+            );
+            if (storage) return storage;
           }
           const hasImages = totalAttachments > 0;
 

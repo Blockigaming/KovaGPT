@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, LogIn, UserPlus } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
+import { ForgotPasswordDialog } from "@/components/auth/ForgotPasswordDialog";
 
 type Mode = "sign-in" | "sign-up";
 
@@ -25,6 +26,7 @@ export function AuthDialog({
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
 
   useEffect(() => {
     if (!open || loading) return;
@@ -221,8 +223,17 @@ export function AuthDialog({
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="auth-password">
-              {isSignUp ? "Create a password" : "Password"}
+            <Label htmlFor="auth-password" className="flex items-center justify-between">
+              <span>{isSignUp ? "Create a password" : "Password"}</span>
+              {!isSignUp && (
+                <button
+                  type="button"
+                  onClick={() => setForgotOpen(true)}
+                  className="text-xs font-medium text-muted-foreground hover:text-foreground underline"
+                >
+                  Forgot password?
+                </button>
+              )}
             </Label>
             <Input
               id="auth-password"
@@ -269,6 +280,7 @@ export function AuthDialog({
           )}
         </div>
       </DialogContent>
+      <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} />
     </Dialog>
   );
 }
