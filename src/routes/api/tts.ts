@@ -78,9 +78,22 @@ export const Route = createFileRoute("/api/tts")({
 
         if (!upstream.ok) {
           const msg = await upstream.text().catch(() => "");
+          console.error("[tts] upstream error", upstream.status, msg);
+          if (upstream.status === 429) {
+            return new Response(
+              JSON.stringify({ error: "Rate limit reached. Please try again in a moment." }),
+              { status: 429, headers: { "Content-Type": "application/json" } },
+            );
+          }
+          if (upstream.status === 402) {
+            return new Response(
+              JSON.stringify({ error: "AI credits exhausted." }),
+              { status: 402, headers: { "Content-Type": "application/json" } },
+            );
+          }
           return new Response(
-            JSON.stringify({ error: msg || `TTS failed (${upstream.status})` }),
-            { status: upstream.status, headers: { "Content-Type": "application/json" } },
+            JSON.stringify({ error: "Voice is temporarily unavailable. Please try again." }),
+            { status: 502, headers: { "Content-Type": "application/json" } },
           );
         }
 
