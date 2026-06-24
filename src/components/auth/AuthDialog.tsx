@@ -24,7 +24,7 @@ export function AuthDialog({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone] = useState("");
   const [loading, setLoading] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
 
@@ -34,7 +34,7 @@ export function AuthDialog({
     setEmail("");
     setPassword("");
     setFullName("");
-    setPhone("");
+    // phone intentionally not reset; field removed from signup
   }, [initialMode, open, loading]);
 
   const isSignUp = mode === "sign-up";
@@ -192,21 +192,6 @@ export function AuthDialog({
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   maxLength={80}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="auth-phone" className="flex items-center justify-between">
-                  <span>Phone number</span>
-                  <span className="text-xs font-normal text-muted-foreground">Optional</span>
-                </Label>
-                <Input
-                  id="auth-phone"
-                  type="tel"
-                  autoComplete="tel"
-                  placeholder="+1 555 555 5555"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  maxLength={32}
                 />
               </div>
             </>
