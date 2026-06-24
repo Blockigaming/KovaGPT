@@ -24,6 +24,8 @@ import { Route as BlogBestAiAssistantsRouteImport } from './routes/blog.best-ai-
 import { Route as BlogAiMarketResearchGuideRouteImport } from './routes/blog.ai-market-research-guide'
 import { Route as ApiTtsRouteImport } from './routes/api/tts'
 import { Route as ApiTitleRouteImport } from './routes/api/title'
+import { Route as ApiRealtimeSessionRouteImport } from './routes/api/realtime-session'
+import { Route as ApiMemoryRouteImport } from './routes/api/memory'
 import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
@@ -110,6 +112,16 @@ const ApiTitleRoute = ApiTitleRouteImport.update({
   path: '/api/title',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiRealtimeSessionRoute = ApiRealtimeSessionRouteImport.update({
+  id: '/api/realtime-session',
+  path: '/api/realtime-session',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMemoryRoute = ApiMemoryRouteImport.update({
+  id: '/api/memory',
+  path: '/api/memory',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiGenerateImageRoute = ApiGenerateImageRouteImport.update({
   id: '/api/generate-image',
   path: '/api/generate-image',
@@ -166,6 +178,8 @@ export interface FileRoutesByFullPath {
   '/unsubscribe': typeof UnsubscribeRoute
   '/api/chat': typeof ApiChatRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
+  '/api/memory': typeof ApiMemoryRoute
+  '/api/realtime-session': typeof ApiRealtimeSessionRoute
   '/api/title': typeof ApiTitleRoute
   '/api/tts': typeof ApiTtsRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
@@ -191,6 +205,8 @@ export interface FileRoutesByTo {
   '/unsubscribe': typeof UnsubscribeRoute
   '/api/chat': typeof ApiChatRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
+  '/api/memory': typeof ApiMemoryRoute
+  '/api/realtime-session': typeof ApiRealtimeSessionRoute
   '/api/title': typeof ApiTitleRoute
   '/api/tts': typeof ApiTtsRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
@@ -217,6 +233,8 @@ export interface FileRoutesById {
   '/unsubscribe': typeof UnsubscribeRoute
   '/api/chat': typeof ApiChatRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
+  '/api/memory': typeof ApiMemoryRoute
+  '/api/realtime-session': typeof ApiRealtimeSessionRoute
   '/api/title': typeof ApiTitleRoute
   '/api/tts': typeof ApiTtsRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
@@ -244,6 +262,8 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/api/chat'
     | '/api/generate-image'
+    | '/api/memory'
+    | '/api/realtime-session'
     | '/api/title'
     | '/api/tts'
     | '/blog/ai-market-research-guide'
@@ -269,6 +289,8 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/api/chat'
     | '/api/generate-image'
+    | '/api/memory'
+    | '/api/realtime-session'
     | '/api/title'
     | '/api/tts'
     | '/blog/ai-market-research-guide'
@@ -294,6 +316,8 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/api/chat'
     | '/api/generate-image'
+    | '/api/memory'
+    | '/api/realtime-session'
     | '/api/title'
     | '/api/tts'
     | '/blog/ai-market-research-guide'
@@ -320,6 +344,8 @@ export interface RootRouteChildren {
   UnsubscribeRoute: typeof UnsubscribeRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
+  ApiMemoryRoute: typeof ApiMemoryRoute
+  ApiRealtimeSessionRoute: typeof ApiRealtimeSessionRoute
   ApiTitleRoute: typeof ApiTitleRoute
   ApiTtsRoute: typeof ApiTtsRoute
   BlogAiMarketResearchGuideRoute: typeof BlogAiMarketResearchGuideRoute
@@ -442,6 +468,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTitleRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/realtime-session': {
+      id: '/api/realtime-session'
+      path: '/api/realtime-session'
+      fullPath: '/api/realtime-session'
+      preLoaderRoute: typeof ApiRealtimeSessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/memory': {
+      id: '/api/memory'
+      path: '/api/memory'
+      fullPath: '/api/memory'
+      preLoaderRoute: typeof ApiMemoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/generate-image': {
       id: '/api/generate-image'
       path: '/api/generate-image'
@@ -512,6 +552,8 @@ const rootRouteChildren: RootRouteChildren = {
   UnsubscribeRoute: UnsubscribeRoute,
   ApiChatRoute: ApiChatRoute,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
+  ApiMemoryRoute: ApiMemoryRoute,
+  ApiRealtimeSessionRoute: ApiRealtimeSessionRoute,
   ApiTitleRoute: ApiTitleRoute,
   ApiTtsRoute: ApiTtsRoute,
   BlogAiMarketResearchGuideRoute: BlogAiMarketResearchGuideRoute,
@@ -529,13 +571,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
