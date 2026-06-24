@@ -45,9 +45,11 @@ export function VoiceMode({
   }, [initialMessages]);
 
   // Map any legacy browser-voice setting to a Lovable AI voice id.
+  // Default to "marin" — the newest expressive voice; sounds far more
+  // natural and human than the legacy "alloy".
   const ttsVoice = (() => {
     const allowed = ["alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse", "marin", "cedar"];
-    return allowed.includes(voiceName) ? voiceName : "alloy";
+    return allowed.includes(voiceName) ? voiceName : "marin";
   })();
 
   const sendToAI = useCallback(
