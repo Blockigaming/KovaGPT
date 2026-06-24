@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
-  DAILY_IMAGE_LIMIT,
   assertFeatureEnabled,
   assertNotBanned,
   enforceQuota,
+  getCallerTier,
   requireVerifiedUser,
 } from "@/lib/api-auth.server";
+import { DAILY_IMAGE_LIMIT_BY_TIER } from "@/lib/modes";
 
 // Tries a list of image models in order. Returns the first successful image.
 // Falls back gracefully so a single model outage doesn't break the page.
@@ -113,7 +114,8 @@ export const Route = createFileRoute("/api/generate-image")({
           const maint = await assertFeatureEnabled(auth, "images");
           if (maint) return maint;
 
-          const quota = await enforceQuota(auth, "images", DAILY_IMAGE_LIMIT);
+          const tier = await getCallerTier(auth);
+          const quota = await enforceQuota(auth, "images", DAILY_IMAGE_LIMIT_BY_TIER[tier]);
           if (quota) return quota;
 
 

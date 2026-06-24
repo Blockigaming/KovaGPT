@@ -194,21 +194,6 @@ export function AuthDialog({
                   maxLength={80}
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="auth-phone" className="flex items-center justify-between">
-                  <span>Phone number</span>
-                  <span className="text-xs font-normal text-muted-foreground">Optional</span>
-                </Label>
-                <Input
-                  id="auth-phone"
-                  type="tel"
-                  autoComplete="tel"
-                  placeholder="+1 555 555 5555"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  maxLength={32}
-                />
-              </div>
             </>
           )}
           <div className="space-y-1.5">
