@@ -396,13 +396,14 @@ export const Route = createFileRoute("/api/chat")({
               { status: 413, headers: { "Content-Type": "application/json" } },
             );
           }
-          const { messages, mode, user, voice, timezone, locale } = JSON.parse(rawBody) as {
+          const { messages, mode, user, voice, timezone, locale, chatId } = JSON.parse(rawBody) as {
             messages: IncomingMessage[];
             mode?: ModeId;
             user?: UserContext;
             voice?: boolean;
             timezone?: string;
             locale?: string;
+            chatId?: string;
           };
 
           // Hard caps on message volume and per-message size. Anonymous
