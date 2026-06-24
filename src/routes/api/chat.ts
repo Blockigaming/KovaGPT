@@ -396,13 +396,14 @@ export const Route = createFileRoute("/api/chat")({
               { status: 413, headers: { "Content-Type": "application/json" } },
             );
           }
-          const { messages, mode, user, voice, timezone, locale } = JSON.parse(rawBody) as {
+          const { messages, mode, user, voice, timezone, locale, chatId } = JSON.parse(rawBody) as {
             messages: IncomingMessage[];
             mode?: ModeId;
             user?: UserContext;
             voice?: boolean;
             timezone?: string;
             locale?: string;
+            chatId?: string;
           };
 
           // Hard caps on message volume and per-message size. Anonymous
@@ -600,6 +601,33 @@ export const Route = createFileRoute("/api/chat")({
           }
 
 
+          // Cross-chat memory: for Plus+ signed-in users, inject short
+          // summaries of their recent past chats so KovaGPT can recall
+          // context across conversations. Respects user.rememberAcross.
+          let memoryBlock = "";
+          if (auth && (callerTier === "plus" || callerTier === "pro" || isOwner) && user?.rememberAcross !== false) {
+            try {
+              const { data: memRows } = await (auth.supabaseAdmin as unknown as {
+                from: (t: string) => any;
+              })
+                .from("chat_memories")
+                .select("title, summary, updated_at")
+                .eq("user_id", auth.userId)
+                .order("updated_at", { ascending: false })
+                .limit(8);
+              if (Array.isArray(memRows) && memRows.length > 0) {
+                const lines = memRows
+                  .map((r: { title?: string | null; summary: string }, i: number) =>
+                    `[${i + 1}]${r.title ? ` ${r.title}: ` : " "}${r.summary}`,
+                  )
+                  .join("\n");
+                memoryBlock = `\n\n--- Cross-chat memory (your prior conversations with this user) ---\n${lines}\n--- End memory. Use only when relevant; never quote verbatim. ---`;
+              }
+            } catch (e) {
+              console.warn("[chat] memory fetch failed", e);
+            }
+          }
+
           const voiceInstruction = voice
             ? `\n\nVOICE MODE: Your reply will be spoken aloud by a text-to-speech engine. Reply in natural, conversational spoken English with complete grammatical sentences. Use proper punctuation so sentences flow. Do NOT use markdown, bullet points, headings, code blocks, emojis, URLs, or symbols. Keep answers concise  -  usually 1 to 3 sentences unless the user explicitly asks for detail.`
             : "";
@@ -617,6 +645,7 @@ export const Route = createFileRoute("/api/chat")({
                   UNRESTRICTED_INSTRUCTION +
                   CREATOR_INSTRUCTION +
                   buildUserContextBlock(user) +
+                  memoryBlock +
                   webBlock +
                   voiceInstruction +
                   buildCurrentDateInstruction(timezone, locale),

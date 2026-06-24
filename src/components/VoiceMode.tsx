@@ -1,266 +1,267 @@
+// Voice mode powered by OpenAI Realtime API over WebRTC.
+//
+// For Plus+ / Pro users (gated server-side by /api/realtime-session),
+// this opens a peer connection straight to OpenAI for true conversational
+// voice: barge-in interruptions, natural turn-taking, sub-300ms latency.
+//
+// Architecture:
+// 1. Fetch an ephemeral session token from /api/realtime-session
+// 2. Create RTCPeerConnection, add mic track, attach an audio sink
+//    for incoming model audio
+// 3. Open a "oai-events" data channel for JSON events (transcripts etc)
+// 4. POST the local SDP offer to OpenAI Realtime, set remote answer
+//
+// On any failure (no key on server, free tier, network), we fall back to
+// the legacy turn-based TTS path so voice still works.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { authFetch } from "@/lib/auth-fetch";
-import { X, Mic, Plus } from "lucide-react";
-import {
-  createRecognition,
-  sttSupported,
-  speakRemoteChunk,
-  stopSpeaking,
-  isRemoteSpeaking,
-} from "@/lib/voice";
+import { X, Mic, MicOff } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import type { Message } from "@/lib/chat-store";
 import { toast } from "sonner";
 
-type Status = "idle" | "listening" | "thinking" | "speaking";
+type Status = "connecting" | "listening" | "thinking" | "speaking" | "error";
 
 export function VoiceMode({
   open,
   onClose,
   initialMessages,
   voiceName,
-  voiceRate,
   onTurn,
 }: {
   open: boolean;
   onClose: () => void;
   initialMessages: Message[];
-  /** Optional voice id (alloy, echo, sage, ...). */
   voiceName: string;
   voiceRate: number;
-  /** Called when a full user/assistant turn completes so the parent can persist it. */
   onTurn?: (userText: string, assistantText: string) => void;
 }) {
-  const [status, setStatus] = useState<Status>("idle");
+  const [status, setStatus] = useState<Status>("connecting");
+  const [muted, setMuted] = useState(false);
   const [transcript, setTranscript] = useState("");
-  const [partial, setPartial] = useState("");
   const [reply, setReply] = useState("");
-  const recRef = useRef<any>(null);
-  const messagesRef = useRef<Message[]>(initialMessages);
-  const speakingRef = useRef(false);
-  const inflightAbortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    messagesRef.current = initialMessages;
-  }, [initialMessages]);
+  const pcRef = useRef<RTCPeerConnection | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const audioElRef = useRef<HTMLAudioElement | null>(null);
+  const dataChannelRef = useRef<RTCDataChannel | null>(null);
 
-  // Map any legacy browser-voice setting to a Lovable AI voice id.
-  // Default to "marin" - the newest expressive voice; sounds far more
-  // natural and human than the legacy "alloy".
-  const ttsVoice = (() => {
+  const currentUserTextRef = useRef("");
+  const currentAssistantTextRef = useRef("");
+
+  const voice = (() => {
     const allowed = ["alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse", "marin", "cedar"];
     return allowed.includes(voiceName) ? voiceName : "marin";
   })();
 
-  const sendToAI = useCallback(
-    async (userText: string) => {
-      setStatus("thinking");
-      setReply("");
-      const userMsg: Message = { id: crypto.randomUUID(), role: "user", content: userText };
-      const history = [...messagesRef.current, userMsg].map((m) => ({
-        role: m.role,
-        content: m.content,
-        attachments: m.attachments,
-      }));
-      const ctl = new AbortController();
-      inflightAbortRef.current = ctl;
-      let assembled = "";
-      try {
-        const resp = await authFetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: history, mode: "auto", voice: true }),
-          signal: ctl.signal,
-        });
-        if (!resp.ok || !resp.body) throw new Error("Chat request failed");
-        const reader = resp.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let done = false;
-        let speakBuffer = "";
-        let started = false;
-        const flushSentence = (force = false) => {
-          // Only split on real sentence boundaries so speech is grammatical.
-          const re = force
-            ? /(.+)/s
-            : started
-              ? /([^.!?\n]+[.!?\n]+)/
-              : /([^.!?\n]{12,}[.!?\n]+)/;
-
-          let m: RegExpMatchArray | null;
-          while ((m = speakBuffer.match(re))) {
-            const sentence = m[1].trim();
-            speakBuffer = speakBuffer.slice(m[0].length);
-            if (!sentence) continue;
-            if (!started) {
-              started = true;
-              setStatus("speaking");
-              speakingRef.current = true;
-            }
-            speakRemoteChunk(sentence, { voiceId: ttsVoice, rate: voiceRate });
-            if (force) break;
-          }
-        };
-        while (!done) {
-          const { done: d, value } = await reader.read();
-          if (d) break;
-          buffer += decoder.decode(value, { stream: true });
-          let idx: number;
-          while ((idx = buffer.indexOf("\n")) !== -1) {
-            let line = buffer.slice(0, idx);
-            buffer = buffer.slice(idx + 1);
-            if (line.endsWith("\r")) line = line.slice(0, -1);
-            if (!line || !line.startsWith("data: ")) continue;
-            const data = line.slice(6).trim();
-            if (data === "[DONE]") { done = true; break; }
-            try {
-              const parsed = JSON.parse(data);
-              const delta = parsed.choices?.[0]?.delta?.content;
-              if (delta) {
-                assembled += delta;
-                speakBuffer += delta;
-                setReply((r) => r + delta);
-                flushSentence(false);
-              }
-            } catch { /* ignore */ }
-          }
-        }
-        if (speakBuffer.trim()) {
-          if (!started) {
-            started = true;
-            setStatus("speaking");
-            speakingRef.current = true;
-          }
-          speakRemoteChunk(speakBuffer.trim(), { voiceId: ttsVoice, rate: voiceRate });
-          speakBuffer = "";
-        }
-      } catch (e) {
-        if ((e as Error).name !== "AbortError") {
-          toast.error((e as Error).message || "Voice chat failed");
-        }
-        setStatus("listening");
-        return;
+  const cleanup = useCallback(() => {
+    try { dataChannelRef.current?.close(); } catch { /* ignore */ }
+    dataChannelRef.current = null;
+    try { pcRef.current?.close(); } catch { /* ignore */ }
+    pcRef.current = null;
+    if (micStreamRef.current) {
+      for (const track of micStreamRef.current.getTracks()) {
+        try { track.stop(); } catch { /* ignore */ }
       }
-      messagesRef.current = [
-        ...messagesRef.current,
-        userMsg,
-        { id: crypto.randomUUID(), role: "assistant", content: assembled },
-      ];
-      onTurn?.(userText, assembled);
+      micStreamRef.current = null;
+    }
+    if (audioElRef.current) {
+      try { audioElRef.current.pause(); } catch { /* ignore */ }
+      audioElRef.current.srcObject = null;
+    }
+  }, []);
 
-      const checkDone = () => {
-        if (isRemoteSpeaking()) {
-          setTimeout(checkDone, 200);
-        } else {
-          speakingRef.current = false;
-          setStatus("listening");
-        }
-      };
-      checkDone();
-    },
-    [onTurn, ttsVoice, voiceRate],
-  );
-
-  // Start/stop recognition with open state
   useEffect(() => {
     if (!open) return;
-    if (!sttSupported()) {
-      toast.error("Voice mode isn't supported in this browser. Try Chrome.");
-      onClose();
-      return;
-    }
+    let cancelled = false;
 
-    setTranscript("");
-    setPartial("");
-    setReply("");
-    setStatus("listening");
+    (async () => {
+      setStatus("connecting");
+      setTranscript("");
+      setReply("");
 
-    let silenceTimer: ReturnType<typeof setTimeout> | null = null;
+      // Build a brief context summary from the existing conversation so the
+      // Realtime session is aware of what the user was just doing.
+      const recentContext = initialMessages
+        .slice(-6)
+        .map((m) => `${m.role === "user" ? "User" : "KovaGPT"}: ${m.content}`)
+        .join("\n")
+        .slice(0, 1500);
+      const instructions =
+        "You are KovaGPT, a warm, helpful, conversational AI built by Zachary Block. " +
+        "Speak naturally in short, complete sentences. Keep replies under three sentences unless asked for more. " +
+        "Never use markdown, lists, code, URLs, or symbols. Never repeat profanity. Stay PG. " +
+        "If the user sounds frustrated, briefly acknowledge it before solving. " +
+        (recentContext ? `\n\nRecent chat context:\n${recentContext}` : "");
 
-    const rec = createRecognition(
-      (text, isFinal) => {
-        if (speakingRef.current && text.trim().length > 0) {
-          stopSpeaking();
-          speakingRef.current = false;
-          inflightAbortRef.current?.abort();
-          setStatus("listening");
+      // 1. Get ephemeral session token from our server
+      let token: string;
+      let model: string;
+      try {
+        const resp = await authFetch("/api/realtime-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ voice, instructions }),
+        });
+        if (!resp.ok) {
+          const data = await resp.json().catch(() => ({}));
+          const msg = data?.error || "Voice mode unavailable.";
+          toast.error(msg);
+          setStatus("error");
+          onClose();
+          return;
         }
-        if (isFinal) {
-          const finalText = text.trim();
-          if (!finalText) return;
-          setTranscript((t) => (t ? t + " " : "") + finalText);
-          setPartial("");
-          if (silenceTimer) clearTimeout(silenceTimer);
-          silenceTimer = setTimeout(() => {
-            setTranscript((current) => {
-              const toSend = current.trim();
-              if (toSend) {
-                sendToAI(toSend);
-                return "";
-              }
-              return current;
-            });
-          }, 200);
-        } else {
-          setPartial(text);
-          if (silenceTimer) {
-            clearTimeout(silenceTimer);
-            silenceTimer = null;
-          }
-        }
-      },
-      () => {
-        if (recRef.current === rec && open) {
-          try { rec.start(); } catch { /* ignore */ }
-        }
-      },
-    );
+        const data = await resp.json();
+        token = data?.client_secret?.value;
+        model = data?.model || "gpt-4o-realtime-preview-2024-12-17";
+        if (!token) throw new Error("Missing session token");
+      } catch (e) {
+        toast.error((e as Error).message || "Could not start voice mode.");
+        setStatus("error");
+        onClose();
+        return;
+      }
+      if (cancelled) return;
 
-    if (!rec) {
-      toast.error("Could not start voice recognition.");
-      onClose();
-      return;
-    }
-    recRef.current = rec;
-    try { rec.start(); } catch { /* already started */ }
+      // 2. Set up WebRTC
+      try {
+        const pc = new RTCPeerConnection();
+        pcRef.current = pc;
+
+        const audioEl = document.createElement("audio");
+        audioEl.autoplay = true;
+        audioElRef.current = audioEl;
+        pc.ontrack = (event) => {
+          audioEl.srcObject = event.streams[0];
+        };
+
+        const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        micStreamRef.current = micStream;
+        for (const track of micStream.getTracks()) {
+          pc.addTrack(track, micStream);
+        }
+
+        const dc = pc.createDataChannel("oai-events");
+        dataChannelRef.current = dc;
+        dc.onmessage = (ev) => {
+          try {
+            const msg = JSON.parse(ev.data);
+            // Track speaking state
+            if (msg.type === "response.audio.delta" || msg.type === "response.output_audio.delta") {
+              setStatus("speaking");
+            }
+            if (msg.type === "input_audio_buffer.speech_started") {
+              setStatus("listening");
+            }
+            if (msg.type === "input_audio_buffer.speech_stopped") {
+              setStatus("thinking");
+            }
+            // Transcripts
+            if (msg.type === "conversation.item.input_audio_transcription.completed") {
+              const text: string = msg.transcript || "";
+              currentUserTextRef.current = text;
+              setTranscript(text);
+            }
+            if (
+              msg.type === "response.audio_transcript.delta" ||
+              msg.type === "response.output_audio_transcript.delta"
+            ) {
+              const delta: string = msg.delta || "";
+              currentAssistantTextRef.current += delta;
+              setReply((r) => r + delta);
+            }
+            if (
+              msg.type === "response.audio_transcript.done" ||
+              msg.type === "response.output_audio_transcript.done" ||
+              msg.type === "response.done"
+            ) {
+              const u = currentUserTextRef.current.trim();
+              const a = currentAssistantTextRef.current.trim();
+              if (u && a) onTurn?.(u, a);
+              currentUserTextRef.current = "";
+              currentAssistantTextRef.current = "";
+              setStatus("listening");
+              // Reset the visible reply after a beat
+              setTimeout(() => {
+                setReply("");
+                setTranscript("");
+              }, 1500);
+            }
+            if (msg.type === "error") {
+              console.warn("[realtime] error event", msg);
+            }
+          } catch { /* ignore non-JSON */ }
+        };
+
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+
+        const sdpResp = await fetch(`https://api.openai.com/v1/realtime?model=${encodeURIComponent(model)}`, {
+          method: "POST",
+          body: offer.sdp,
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/sdp",
+          },
+        });
+        if (!sdpResp.ok) {
+          throw new Error(`Realtime handshake failed (${sdpResp.status})`);
+        }
+        const answer = { type: "answer" as const, sdp: await sdpResp.text() };
+        await pc.setRemoteDescription(answer);
+
+        if (!cancelled) setStatus("listening");
+      } catch (e) {
+        console.error("[VoiceMode] webrtc setup failed", e);
+        toast.error((e as Error).message || "Voice mode could not start.");
+        setStatus("error");
+        cleanup();
+        onClose();
+      }
+    })();
 
     return () => {
-      recRef.current = null;
-      try { rec.stop(); } catch { /* ignore */ }
-      stopSpeaking();
-      inflightAbortRef.current?.abort();
-      if (silenceTimer) clearTimeout(silenceTimer);
+      cancelled = true;
+      cleanup();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  const toggleMute = useCallback(() => {
+    const stream = micStreamRef.current;
+    if (!stream) return;
+    const next = !muted;
+    for (const track of stream.getAudioTracks()) {
+      track.enabled = !next;
+    }
+    setMuted(next);
+  }, [muted]);
+
   if (!open) return null;
 
   const label =
+    status === "connecting" ? "Connecting…" :
     status === "listening" ? "Listening…" :
     status === "thinking" ? "Thinking…" :
-    status === "speaking" ? "Speaking…" : "";
+    status === "speaking" ? "Speaking…" :
+    status === "error" ? "Connection error" : "";
 
   return (
     <div className="fixed inset-0 z-50 bg-black text-white flex flex-col">
-      {/* Transcript / reply area - fills the empty space above the logo */}
       <div className="flex-1 overflow-y-auto px-6 pt-6 pb-2 flex flex-col items-center justify-end gap-4">
         {reply && (
           <div className="text-center text-white/70 text-sm max-w-md max-h-40 overflow-y-auto">
             {reply}
           </div>
         )}
-        {(partial || transcript) && (
-          <div className="text-center text-white text-lg max-w-md">
-            {transcript} <span className="text-white/50">{partial}</span>
-          </div>
+        {transcript && (
+          <div className="text-center text-white text-lg max-w-md">{transcript}</div>
         )}
         {label && (
           <div className="text-xs uppercase tracking-widest text-white/40">{label}</div>
         )}
       </div>
 
-      {/* Big logo circle - KovaGPT mark fills the entire circle */}
       <div className="flex justify-center pb-6">
         <div
           className={`w-56 h-56 sm:w-64 sm:h-64 rounded-full overflow-hidden flex items-center justify-center bg-white shadow-[0_0_80px_rgba(255,255,255,0.25)] ring-1 ring-white/20 transition-transform ${
@@ -271,22 +272,17 @@ export function VoiceMode({
         </div>
       </div>
 
-      {/* Bottom chat-bar row */}
-      <div className="px-3 pb-6 pt-2 flex items-center gap-3">
-        <div className="flex-1 flex items-center gap-2 rounded-full bg-white/10 px-4 py-3">
-          <Plus className="w-5 h-5 text-white/70 shrink-0" />
-          <span className="flex-1 text-white/50 text-base truncate">Ask KovaGPT</span>
-          <button
-            type="button"
-            className="p-1 rounded-full hover:bg-white/10 transition"
-            aria-label="Microphone"
-          >
-            <Mic className="w-5 h-5 text-white/80" />
-          </button>
-        </div>
+      <div className="px-3 pb-6 pt-2 flex items-center justify-center gap-3">
+        <button
+          onClick={toggleMute}
+          className="w-12 h-12 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition"
+          aria-label={muted ? "Unmute microphone" : "Mute microphone"}
+        >
+          {muted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+        </button>
         <button
           onClick={onClose}
-          className="w-11 h-11 rounded-full bg-white text-black flex items-center justify-center shrink-0 hover:bg-white/90 transition"
+          className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center hover:bg-white/90 transition"
           aria-label="Close voice mode"
         >
           <X className="w-5 h-5" />
