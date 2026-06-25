@@ -247,3 +247,22 @@
 .animate-pulse-slow {
   animation: pulse-slow 2.4s ease-in-out infinite;
 }
+
+/* Global button hover/click feedback. Buttons keep their existing
+   hover utilities; this just ensures every button visibly reacts to
+   pointer + active states, even those without hover classes set. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  transition: transform 120ms ease, background-color 150ms ease, color 150ms ease, opacity 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+button:not(:disabled):hover,
+[role="button"]:not([aria-disabled="true"]):hover {
+  cursor: pointer;
+}
+button:not(:disabled):active,
+[role="button"]:not([aria-disabled="true"]):active {
+  transform: scale(0.97);
+}
+a {
+  transition: color 150ms ease, opacity 150ms ease, background-color 150ms ease;
+}

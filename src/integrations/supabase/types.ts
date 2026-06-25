@@ -200,6 +200,92 @@ export type Database = {
         }
         Relationships: []
       }
+      financial_accounts: {
+        Row: {
+          account_name: string
+          account_subtype: string | null
+          account_type: string | null
+          available_balance: number | null
+          currency: string | null
+          current_balance: number | null
+          id: string
+          institution_name: string | null
+          mask: string | null
+          plaid_item_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_name: string
+          account_subtype?: string | null
+          account_type?: string | null
+          available_balance?: number | null
+          currency?: string | null
+          current_balance?: number | null
+          id?: string
+          institution_name?: string | null
+          mask?: string | null
+          plaid_item_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_name?: string
+          account_subtype?: string | null
+          account_type?: string | null
+          available_balance?: number | null
+          currency?: string | null
+          current_balance?: number | null
+          id?: string
+          institution_name?: string | null
+          mask?: string | null
+          plaid_item_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_accounts_plaid_item_id_fkey"
+            columns: ["plaid_item_id"]
+            isOneToOne: false
+            referencedRelation: "plaid_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plaid_items: {
+        Row: {
+          access_token_encrypted: string | null
+          created_at: string
+          id: string
+          institution_name: string | null
+          plaid_item_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token_encrypted?: string | null
+          created_at?: string
+          id?: string
+          institution_name?: string | null
+          plaid_item_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token_encrypted?: string | null
+          created_at?: string
+          id?: string
+          institution_name?: string | null
+          plaid_item_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       processed_stripe_events: {
         Row: {
           environment: string
@@ -218,6 +304,48 @@ export type Database = {
           event_id?: string
           processed_at?: string
           type?: string
+        }
+        Relationships: []
+      }
+      shared_chats: {
+        Row: {
+          created_at: string
+          id: string
+          local_chat_reference: string | null
+          owner_user_id: string
+          permission: string
+          recipient_email: string
+          recipient_user_id: string | null
+          snapshot: Json
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          local_chat_reference?: string | null
+          owner_user_id: string
+          permission?: string
+          recipient_email: string
+          recipient_user_id?: string | null
+          snapshot: Json
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          local_chat_reference?: string | null
+          owner_user_id?: string
+          permission?: string
+          recipient_email?: string
+          recipient_user_id?: string | null
+          snapshot?: Json
+          status?: string
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -290,6 +418,54 @@ export type Database = {
           id?: string
           metadata?: Json | null
           reason?: string
+        }
+        Relationships: []
+      }
+      user_library_items: {
+        Row: {
+          content_text: string | null
+          created_at: string
+          file_name: string | null
+          file_size: number | null
+          file_type: string | null
+          file_url: string | null
+          id: string
+          item_type: string
+          metadata: Json | null
+          source: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content_text?: string | null
+          created_at?: string
+          file_name?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          item_type: string
+          metadata?: Json | null
+          source?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content_text?: string | null
+          created_at?: string
+          file_name?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          item_type?: string
+          metadata?: Json | null
+          source?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

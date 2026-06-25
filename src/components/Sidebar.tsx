@@ -1,4 +1,4 @@
-import { MessageSquare, Trash2, PanelLeft, Search, Sparkles, HelpCircle, ImageIcon, Plus } from "lucide-react";
+import { MessageSquare, Trash2, PanelLeft, Search, Sparkles, HelpCircle, ImageIcon, Plus, Share2 } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
@@ -16,6 +16,7 @@ export function Sidebar({
   onSelect,
   onNew,
   onDelete,
+  onShare,
   open,
   onToggle,
   onOpenSettings,
@@ -26,6 +27,7 @@ export function Sidebar({
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
+  onShare?: (id: string) => void;
   open: boolean;
   onToggle: () => void;
   onOpenSettings: () => void;
@@ -170,12 +172,25 @@ export function Sidebar({
                 >
                   <MessageSquare className="w-4 h-4 shrink-0 text-muted-foreground" />
                   <span className="flex-1 truncate">{c.title}</span>
+                  {onShare && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onShare(c.id);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-background/40 transition active:scale-95"
+                      aria-label="Share chat"
+                      title="Share chat"
+                    >
+                      <Share2 className="w-3.5 h-3.5 text-muted-foreground" />
+                    </button>
+                  )}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       onDelete(c.id);
                     }}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-background/40 transition"
+                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-background/40 transition active:scale-95"
                     aria-label="Delete chat"
                   >
                     <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />

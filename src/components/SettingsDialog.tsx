@@ -534,18 +534,7 @@ export function SettingsDialog({
             {!loggedIn ? (
               <SignInGate label="Library" />
             ) : (
-              <section className="space-y-3">
-                <h3 className="text-sm font-semibold">Library</h3>
-                <p className="text-xs text-muted-foreground">
-                  Files you upload to KovaGPT will appear here so you can find them later.
-                </p>
-                <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                  No uploaded files yet. Attach a file in any chat to add it to your library.
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Full upload history with previews, search, and re-attach is coming soon.
-                </p>
-              </section>
+              <LibraryPanel />
             )}
           </TabsContent>
 
@@ -554,22 +543,10 @@ export function SettingsDialog({
             {!loggedIn ? (
               <SignInGate label="Finances" />
             ) : (
-              <section className="space-y-3">
-                <h3 className="text-sm font-semibold">Finances</h3>
-                <p className="text-xs text-muted-foreground">
-                  Link your bank, brokerage, and credit cards so KovaGPT can help you understand
-                  spending, budgets, and net worth.
-                </p>
-                <div className="rounded-lg border border-dashed border-border p-6 text-sm">
-                  <div className="font-medium mb-1">Coming soon</div>
-                  <p className="text-xs text-muted-foreground">
-                    Secure account linking via Plaid (banks, Fidelity, brokerages) is on the
-                    roadmap. We are not collecting financial data yet.
-                  </p>
-                </div>
-              </section>
+              <FinancesPanel />
             )}
           </TabsContent>
+
 
 
           {/* EMAIL */}
@@ -1154,5 +1131,241 @@ function ToggleRow({
       </div>
       <Switch checked={checked} onCheckedChange={onCheckedChange} />
     </div>
+  );
+}
+
+function LibraryPanel() {
+  const [items, setItems] = useState<import("@/lib/library.functions").LibraryItem[]>([]);
+  const [shared, setShared] = useState<import("@/lib/shared-chats.functions").SharedChatInbox[]>([]);
+  const [mine, setMine] = useState<import("@/lib/shared-chats.functions").SharedChatSummary[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [lib, inbox, mineShares] = await Promise.all([
+        (await import("@/lib/library.functions")).listMyLibrary(),
+        (await import("@/lib/shared-chats.functions")).listSharedWithMe(),
+        (await import("@/lib/shared-chats.functions")).listMySharedChats(),
+      ]);
+      setItems(lib);
+      setShared(inbox);
+      setMine(mineShares);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    load();
+  }, []);
+
+  const remove = async (id: string) => {
+    try {
+      const { deleteLibraryItem } = await import("@/lib/library.functions");
+      await deleteLibraryItem({ data: { id } });
+      setItems((prev) => prev.filter((i) => i.id !== id));
+      toast.success("Deleted.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not delete.");
+    }
+  };
+
+  const revoke = async (id: string) => {
+    try {
+      const { revokeSharedChat } = await import("@/lib/shared-chats.functions");
+      await revokeSharedChat({ data: { id } });
+      setMine((prev) => prev.map((m) => (m.id === id ? { ...m, status: "revoked" } : m)));
+      toast.success("Share revoked.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not revoke.");
+    }
+  };
+
+  return (
+    <section className="space-y-6">
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold">My library</h3>
+          <Button size="sm" variant="ghost" onClick={load} disabled={loading}>
+            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground mb-3">
+          Your saved files, drafts, and generated items will appear here.
+        </p>
+        {items.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+            {loading ? "Loading…" : "Nothing saved yet. Use the Save button on any AI response to add it here."}
+          </div>
+        ) : (
+          <ul className="divide-y divide-border rounded-lg border border-border">
+            {items.map((it) => (
+              <li key={it.id} className="p-3 flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{it.title}</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    {it.item_type} · {new Date(it.created_at).toLocaleDateString()}
+                  </div>
+                  {it.content_text && (
+                    <div className="text-xs text-muted-foreground mt-1 line-clamp-2 whitespace-pre-wrap">
+                      {it.content_text.slice(0, 240)}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {it.content_text && (
+                    <button
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(it.content_text ?? "");
+                        toast.success("Copied.");
+                      }}
+                      className="p-1.5 rounded hover:bg-accent transition active:scale-95"
+                      title="Copy"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => remove(it.id)}
+                    className="p-1.5 rounded hover:bg-accent transition active:scale-95"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div>
+        <h3 className="text-sm font-semibold mb-2">Shared with me</h3>
+        {shared.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+            No chats shared with you yet.
+          </div>
+        ) : (
+          <ul className="divide-y divide-border rounded-lg border border-border">
+            {shared.map((s) => (
+              <li key={s.id} className="p-3">
+                <div className="text-sm font-medium">{s.title}</div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">
+                  Shared {new Date(s.created_at).toLocaleDateString()} · {s.snapshot.messages.length} messages
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div>
+        <h3 className="text-sm font-semibold mb-2">Chats I've shared</h3>
+        {mine.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+            You haven't shared any chats yet. Use the Share button next to any chat in the sidebar.
+          </div>
+        ) : (
+          <ul className="divide-y divide-border rounded-lg border border-border">
+            {mine.map((s) => (
+              <li key={s.id} className="p-3 flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{s.title}</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    To {s.recipient_email} · {s.status} · {new Date(s.created_at).toLocaleDateString()}
+                  </div>
+                </div>
+                {s.status !== "revoked" && (
+                  <Button size="sm" variant="ghost" onClick={() => revoke(s.id)}>
+                    Revoke
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function FinancesPanel() {
+  const [status, setStatus] = useState<import("@/lib/finance.functions").FinanceStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { getMyFinanceStatus } = await import("@/lib/finance.functions");
+        setStatus(await getMyFinanceStatus());
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  return (
+    <section className="space-y-4">
+      <div>
+        <h3 className="text-sm font-semibold">Finances</h3>
+        <p className="text-xs text-muted-foreground mt-1">
+          Connect accounts to view balances and organize financial context for KovaGPT.
+        </p>
+      </div>
+
+      {loading ? (
+        <div className="text-sm text-muted-foreground">Loading…</div>
+      ) : status?.plaidConfigured ? (
+        <Button size="sm" onClick={() => toast.info("Plaid Link will open here once the client SDK is added.")}>
+          Connect account
+        </Button>
+      ) : (
+        <div className="rounded-lg border border-dashed border-border p-4 text-sm space-y-2">
+          <div className="font-medium">Bank linking is not configured yet</div>
+          <p className="text-xs text-muted-foreground">
+            To enable secure bank, brokerage, and credit-card linking, an admin must add Plaid
+            credentials (PLAID_CLIENT_ID, PLAID_SECRET, PLAID_ENV) and an access-token encryption
+            key on the server.
+          </p>
+          <Button size="sm" disabled className="opacity-60 cursor-not-allowed">
+            Connect account
+          </Button>
+        </div>
+      )}
+
+      {status && status.accounts.length > 0 && (
+        <ul className="divide-y divide-border rounded-lg border border-border">
+          {status.accounts.map((a) => (
+            <li key={a.id} className="p-3 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-sm font-medium truncate">{a.account_name}</div>
+                <div className="text-[11px] text-muted-foreground">
+                  {[a.institution_name, a.account_type, a.account_subtype, a.mask && `••${a.mask}`]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </div>
+              </div>
+              <div className="text-sm font-medium tabular-nums">
+                {a.current_balance != null
+                  ? `${a.currency ?? "USD"} ${a.current_balance.toFixed(2)}`
+                  : "—"}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <p className="text-[11px] text-muted-foreground leading-relaxed">
+        KovaGPT is not a financial advisor. Financial information may be incomplete or delayed.
+        Always verify important decisions with your bank, brokerage, parent, or a qualified
+        professional. Brokerage support (including Fidelity) depends on the connected account
+        provider; availability may vary.
+      </p>
+    </section>
   );
 }
