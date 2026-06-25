@@ -18,7 +18,7 @@ export const Route = createFileRoute("/contact-support")({
 function ContactSupportPage() {
   return (
     <>
-      <main className="mx-auto max-w-3xl px-6 py-16 prose prose-invert">
+      <main className="mx-auto max-w-3xl px-6 py-16 prose prose-invert prose-lg leading-relaxed prose-headings:mt-10 prose-p:my-5">
         <h1>Contact Support</h1>
         <p>Need help with KovaGPT? We're here to help.</p>
         <p>For account issues, billing questions, subscription problems, technical bugs, feature requests, or general support, email us at <a href="mailto:support@kovagpt.com">support@kovagpt.com</a>.</p>

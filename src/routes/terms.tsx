@@ -18,7 +18,7 @@ export const Route = createFileRoute("/terms")({
 function TermsPage() {
   return (
     <>
-      <main className="mx-auto max-w-3xl px-6 py-16 prose prose-invert">
+      <main className="mx-auto max-w-3xl px-6 py-16 prose prose-invert prose-lg leading-relaxed prose-headings:mt-10 prose-p:my-5">
         <h1>Terms of Service</h1>
         <p>By using KovaGPT, you agree to use the service responsibly and follow these terms.</p>
 
