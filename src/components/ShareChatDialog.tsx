@@ -32,6 +32,11 @@ export function ShareChatDialog({
       toast.error("Enter a valid email address.");
       return;
     }
+    if (myEmail && trimmed === myEmail) {
+      toast.error("You can't share a chat with yourself.");
+      return;
+    }
+
     setBusy(true);
     try {
       const messages = conversation.messages
