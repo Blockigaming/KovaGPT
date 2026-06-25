@@ -145,7 +145,7 @@ function PricingPage() {
           <PlanCard
             icon={Zap}
             name="Plus"
-            price="$14"
+            price="$16"
             period="/ month"
             description="More of everything, plus advanced modes."
             cta="Upgrade to Plus"
