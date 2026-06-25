@@ -243,13 +243,14 @@ export function ArtifactEditor({
               </div>
             )}
             <iframe
-              key={preview.doc.length}
               title="Website preview"
               srcDoc={preview.doc}
               sandbox=""
               referrerPolicy="no-referrer"
+              loading="lazy"
               className="flex-1 w-full bg-white"
             />
+
           </div>
         ) : (
           <textarea
