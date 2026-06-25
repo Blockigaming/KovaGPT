@@ -55,6 +55,7 @@ import {
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { getMyDailyUsage, type DailyUsageDto } from "@/utils/usage.functions";
 import { clearConversations } from "@/lib/chat-store";
 import { getUsage, DAILY_IMAGE_LIMIT, DAILY_UPLOAD_LIMIT } from "@/lib/limits";
 import {
@@ -177,7 +178,7 @@ export function SettingsDialog({
   initialTab?: string;
   onOpenHelp?: () => void;
 }) {
-  const usage = open ? getUsage() : { images: 0, uploads: 0, date: "" };
+  const localUsage = open ? getUsage() : { images: 0, uploads: 0, date: "" };
   const [voices, setVoices] = useState(() => getVoices());
   const { isSignedIn, user } = useUser();
   const clerk = useClerk();
@@ -188,6 +189,27 @@ export function SettingsDialog({
     user?.id ? getLinkedAccounts(user.id) : [],
   );
   const [tab, setTab] = useState<string>(initialTab ?? "general");
+  const [usage, setUsage] = useState<DailyUsageDto | null>(null);
+  const [usageLoading, setUsageLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open || tab !== "subscription" || !loggedIn) return;
+    let cancelled = false;
+    setUsageLoading(true);
+    getMyDailyUsage()
+      .then((u) => {
+        if (!cancelled) setUsage(u);
+      })
+      .catch(() => {
+        if (!cancelled) setUsage(null);
+      })
+      .finally(() => {
+        if (!cancelled) setUsageLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, tab, loggedIn]);
 
   useEffect(() => {
     if (open && initialTab) setTab(initialTab);
@@ -308,11 +330,11 @@ export function SettingsDialog({
               <div className="space-y-1.5 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Images generated</span>
-                  <span>{usage.images} / {DAILY_IMAGE_LIMIT}</span>
+                  <span>{localUsage.images} / {DAILY_IMAGE_LIMIT}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Images uploaded</span>
-                  <span>{usage.uploads} / {DAILY_UPLOAD_LIMIT}</span>
+                  <span>{localUsage.uploads} / {DAILY_UPLOAD_LIMIT}</span>
                 </div>
               </div>
             </section>
@@ -534,12 +556,40 @@ export function SettingsDialog({
               </Link>
             </div>
 
-            <div className="rounded-lg border border-border p-4 space-y-2">
-              <div className="text-sm font-medium">Usage</div>
-              <p className="text-xs text-muted-foreground">
-                Your current plan and usage limits may vary by feature. If you need help understanding your limits, contact{" "}
-                <a href="mailto:support@kovagpt.com" className="underline hover:text-foreground">support@kovagpt.com</a>.
-              </p>
+            <div className="rounded-lg border border-border p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium">Usage today</div>
+                {usage && (
+                  <span className="text-[11px] text-muted-foreground">
+                    Resets {new Date(usage.resetsAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                  </span>
+                )}
+              </div>
+              {!loggedIn ? (
+                <p className="text-xs text-muted-foreground">Sign in to see your usage.</p>
+              ) : usageLoading && !usage ? (
+                <p className="text-xs text-muted-foreground">Loading usage…</p>
+              ) : usage ? (
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Messages used</span>
+                    <span>{usage.chats}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Images used</span>
+                    <span>{usage.images}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">File uploads used</span>
+                    <span>{usage.uploads}</span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Usage data isn't available right now. If you need help understanding your limits, contact{" "}
+                  <a href="mailto:support@kovagpt.com" className="underline hover:text-foreground">support@kovagpt.com</a>.
+                </p>
+              )}
             </div>
 
             <div className="flex flex-wrap gap-2">

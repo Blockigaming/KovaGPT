@@ -17,19 +17,18 @@ export function SignUpPrompt({
           <div className="flex justify-center mb-2">
             <NovaLogo className="w-14 h-14" />
           </div>
-          <DialogTitle className="text-center">Save your conversation</DialogTitle>
+          <DialogTitle className="text-center">Sign in to continue</DialogTitle>
           <DialogDescription className="text-center">
-            You've sent 5 messages. Create a free account or sign in to save this
-            chat and pick up where you left off  -  on any device.
+            Sign in or create an account to continue working, access smarter agents, and save your work.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2 mt-2">
-          <SignUpButton mode="modal">
-            <Button className="w-full">Create a free account</Button>
-          </SignUpButton>
           <SignInButton mode="modal">
-            <Button variant="outline" className="w-full">Sign in</Button>
+            <Button className="w-full">Sign in</Button>
           </SignInButton>
+          <SignUpButton mode="modal">
+            <Button variant="outline" className="w-full">Create account</Button>
+          </SignUpButton>
           <button
             onClick={() => onOpenChange(false)}
             className="text-xs text-muted-foreground hover:underline mt-1"
