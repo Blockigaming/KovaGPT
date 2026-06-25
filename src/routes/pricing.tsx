@@ -6,6 +6,7 @@ import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { useUser, useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 import { EnterpriseContactDialog } from "@/components/EnterpriseContactDialog";
+import { PublicFooter } from "@/components/PublicFooter";
 
 export const Route = createFileRoute("/pricing")({
   component: PricingPage,
