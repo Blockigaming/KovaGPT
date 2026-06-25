@@ -54,17 +54,46 @@ function ChatMessageInner({
       clerk?.openSignIn();
       return;
     }
+    // Duplicate-safe: stable per-message id stored in localStorage avoids re-saves.
+    const dedupKey = "kovagpt:savedMessageIds";
+    let savedIds: string[] = [];
+    try {
+      savedIds = JSON.parse(localStorage.getItem(dedupKey) || "[]");
+    } catch { savedIds = []; }
+    if (message.id && savedIds.includes(message.id)) {
+      setSaved(true);
+      toast.info("Already in your Library.");
+      setTimeout(() => setSaved(false), 2000);
+      return;
+    }
     setSaving(true);
     try {
-      const firstLine = message.content.trim().split("\n")[0]?.slice(0, 80) ?? "Saved chat response";
+      const content = message.content.trim();
+      const codeRatio = (content.match(/```/g)?.length ?? 0) >= 2;
+      let title: string;
+      if (codeRatio) {
+        title = "Saved code response";
+      } else if (content.length > 1200) {
+        title = "Saved writing draft";
+      } else {
+        const firstSentence = content.split(/(?<=[.!?])\s+/)[0] ?? content;
+        const words = firstSentence.replace(/\s+/g, " ").split(" ").slice(0, 10).join(" ");
+        title = words ? words.slice(0, 120) : "Saved chat response";
+      }
       await saveFn({
         data: {
-          title: firstLine || "Saved chat response",
-          item_type: "chat_artifact",
+          title,
+          item_type: codeRatio ? "code" : "chat_artifact",
           source: "chat",
           content_text: message.content.slice(0, 100_000),
         },
       });
+      if (message.id) {
+        try {
+          savedIds.push(message.id);
+          localStorage.setItem(dedupKey, JSON.stringify(savedIds.slice(-500)));
+        } catch { /* ignore */ }
+      }
       setSaved(true);
       toast.success("Saved to Library");
       setTimeout(() => setSaved(false), 2000);

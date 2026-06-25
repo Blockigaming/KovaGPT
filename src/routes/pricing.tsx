@@ -226,7 +226,7 @@ function PricingPage() {
         Exact usage limits may vary by plan and feature. You can view your current limits from your account when signed in.
       </p>
 
-      <section className="max-w-3xl px-6 mt-16 mr-auto">
+      <section className="max-w-3xl px-6 mt-16 mx-auto">
         <h2 className="text-2xl font-semibold mb-6 text-left">Pricing FAQ</h2>
         <div className="space-y-5 text-sm">
           <div>
