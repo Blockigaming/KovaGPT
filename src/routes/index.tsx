@@ -637,16 +637,23 @@ function KovaGPT() {
         ) : (
           <>
             <div ref={scrollRef} className="flex-1 overflow-y-auto">
-              {active.messages.map((m, i) => (
-                <ChatMessage
-                  key={m.id}
-                  message={m}
-                  streaming={
-                    isStreaming && i === active.messages.length - 1 && m.role === "assistant"
-                  }
-                  voiceRate={settings.voiceRate}
-                />
-              ))}
+              {active.messages.map((m, i) => {
+                const isLastAssistant =
+                  m.role === "assistant" && i === active.messages.length - 1;
+                return (
+                  <ChatMessage
+                    key={m.id}
+                    message={m}
+                    streaming={isStreaming && isLastAssistant}
+                    voiceRate={settings.voiceRate}
+                    onFollowUp={
+                      isLastAssistant && !isStreaming
+                        ? (prompt) => send(prompt, [])
+                        : undefined
+                    }
+                  />
+                );
+              })}
             </div>
             <ChatInput
               value={input}
