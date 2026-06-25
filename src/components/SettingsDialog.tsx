@@ -472,8 +472,12 @@ export function SettingsDialog({
           </TabsContent>
 
           <TabsContent value="linked" className="overflow-y-auto px-6 pb-6 space-y-5 py-4">
+            {!loggedIn ? (
+              <SignInGate label="Apps" />
+            ) : (
+              <>
             <section className="space-y-1">
-              <h3 className="text-sm font-semibold">Linked apps</h3>
+              <h3 className="text-sm font-semibold">Apps</h3>
               <p className="text-xs text-muted-foreground">
                 Connect external accounts so KovaGPT can use them in your chats. Live integrations work today; others are on the roadmap.
               </p>
