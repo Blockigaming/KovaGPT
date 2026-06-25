@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Loader2, LifeBuoy, Bug, Mail, MessageSquareText } from "lucide-react";
+import { Loader2, Bug, Mail, MessageSquareText } from "lucide-react";
+import { NovaLogo } from "@/components/NovaLogo";
 
 export function HelpDialog({
   open,
