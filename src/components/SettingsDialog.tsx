@@ -1145,6 +1145,24 @@ function LibraryItemViewer({
   onClose: () => void;
   onDelete: (id: string) => void;
 }) {
+  const [imgUrl, setImgUrl] = useState<string | null>(null);
+  const [imgErr, setImgErr] = useState<string | null>(null);
+  useEffect(() => {
+    setImgUrl(null);
+    setImgErr(null);
+    if (!item || item.item_type !== "image") return;
+    (async () => {
+      try {
+        const { getLibraryImageUrl } = await import("@/lib/library-images.functions");
+        const { url } = await getLibraryImageUrl({ data: { id: item.id } });
+        setImgUrl(url);
+      } catch (e) {
+        setImgErr(e instanceof Error ? e.message : "Could not load image");
+      }
+    })();
+  }, [item?.id]);
+
+  const isImage = item?.item_type === "image";
   return (
     <Dialog open={!!item} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-2xl p-0 overflow-hidden">
@@ -1155,7 +1173,15 @@ function LibraryItemViewer({
           </div>
         </DialogHeader>
         <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
-          {item?.content_text ? (
+          {isImage ? (
+            imgErr ? (
+              <div className="text-sm text-destructive">{imgErr}</div>
+            ) : imgUrl ? (
+              <img src={imgUrl} alt={item?.title ?? ""} className="max-h-[55vh] mx-auto rounded-lg" />
+            ) : (
+              <div className="text-sm text-muted-foreground">Loading image…</div>
+            )
+          ) : item?.content_text ? (
             <pre className="whitespace-pre-wrap text-sm font-sans">{item.content_text}</pre>
           ) : (
             <div className="text-sm text-muted-foreground">No text content for this item.</div>
@@ -1166,11 +1192,16 @@ function LibraryItemViewer({
             variant="ghost"
             size="sm"
             onClick={async () => {
+              if (isImage && imgUrl) {
+                await navigator.clipboard.writeText(imgUrl);
+                toast.success("Short-lived link copied (expires in ~1 min).");
+                return;
+              }
               if (!item?.content_text) return;
               await navigator.clipboard.writeText(item.content_text);
               toast.success("Copied.");
             }}
-            disabled={!item?.content_text}
+            disabled={isImage ? !imgUrl : !item?.content_text}
           >
             Copy
           </Button>
