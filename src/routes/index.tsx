@@ -560,85 +560,79 @@ function KovaGPT() {
 
 
         {!active || active.messages.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center overflow-y-auto px-4 pt-10 pb-6">
-            <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight mb-4 text-center">
-              {greeting}
-            </h1>
+          <div className="flex-1 flex flex-col overflow-y-auto px-4">
+            <div className="flex-1 flex flex-col items-center justify-center w-full py-10">
+              <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight mb-4 text-center">
+                {greeting}
+              </h1>
 
-            <div className="flex flex-wrap gap-2 justify-center mb-5">
-              <SignUpButton mode="modal">
-                <button className="text-sm font-medium px-4 py-2 rounded-full bg-foreground text-background hover:opacity-90 transition">
-                  Start Free
-                </button>
-              </SignUpButton>
-              <Link to="/pricing">
-                <button className="text-sm font-medium px-4 py-2 rounded-full border border-border hover:bg-accent transition">
-                  View Pricing
-                </button>
-              </Link>
-              <Link to="/images">
-                <button className="text-sm font-medium px-4 py-2 rounded-full border border-border hover:bg-accent transition">
-                  Generate Images
-                </button>
-              </Link>
+              <div className="flex flex-wrap gap-2 justify-center mb-5">
+                <SignUpButton mode="modal">
+                  <button className="text-sm font-medium px-4 py-2 rounded-full bg-foreground text-background hover:opacity-90 transition">
+                    Start Free
+                  </button>
+                </SignUpButton>
+                <Link to="/pricing">
+                  <button className="text-sm font-medium px-4 py-2 rounded-full border border-border hover:bg-accent transition">
+                    View Pricing
+                  </button>
+                </Link>
+                <Link to="/images">
+                  <button className="text-sm font-medium px-4 py-2 rounded-full border border-border hover:bg-accent transition">
+                    Generate Images
+                  </button>
+                </Link>
+              </div>
+
+              <div className="w-full max-w-3xl mx-auto">
+                <ChatInput
+                  value={input}
+                  onChange={setInput}
+                  onSubmit={() => send(input, attachments)}
+                  onStop={stop}
+                  isStreaming={isStreaming}
+                  attachments={attachments}
+                  onAttachmentsChange={setAttachments}
+                  mode={mode}
+                  onModeChange={setMode}
+                  onOpenVoice={tryOpenVoice}
+                  onUploadLimit={() =>
+                    setLimitDialog({ open: true, kind: "upload" })
+                  }
+                  placeholder="Ask anything"
+                />
+              </div>
+              <div className="w-full max-w-3xl mx-auto mt-4 flex flex-wrap gap-2 justify-center px-2">
+                {[
+                  "Explain this homework problem",
+                  "Write a better email",
+                  "Help me study",
+                  "Fix my code",
+                  "Generate an image prompt",
+                  "Summarize a file",
+                  "Research a topic",
+                  "Brainstorm ideas",
+                  "Make a study plan",
+                  "Create a quiz",
+                ].map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setInput(s)}
+                    className="text-xs sm:text-sm px-3 py-1.5 rounded-full border border-border hover:bg-accent transition text-muted-foreground hover:text-foreground"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="w-full max-w-3xl mx-auto">
-              <ChatInput
-                value={input}
-                onChange={setInput}
-                onSubmit={() => send(input, attachments)}
-                onStop={stop}
-                isStreaming={isStreaming}
-                attachments={attachments}
-                onAttachmentsChange={setAttachments}
-                mode={mode}
-                onModeChange={setMode}
-                onOpenVoice={tryOpenVoice}
-                onUploadLimit={() =>
-                  setLimitDialog({ open: true, kind: "upload" })
-                }
-                placeholder="Ask anything"
-              />
-            </div>
-            <div className="w-full max-w-3xl mx-auto mt-4 flex flex-wrap gap-2 justify-center px-2">
-              {[
-                "Explain this homework problem",
-                "Write a better email",
-                "Help me study",
-                "Fix my code",
-                "Generate an image prompt",
-                "Summarize a file",
-                "Research a topic",
-                "Brainstorm ideas",
-                "Make a study plan",
-                "Create a quiz",
-              ].map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setInput(s)}
-                  className="text-xs sm:text-sm px-3 py-1.5 rounded-full border border-border hover:bg-accent transition text-muted-foreground hover:text-foreground"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-
-            <div className="w-full max-w-3xl mx-auto mt-8 space-y-6 pb-6">
-
-
-              <nav className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
-                <Link to="/pricing" className="text-muted-foreground hover:text-foreground underline underline-offset-2">Pricing</Link>
-                <Link to="/images" className="text-muted-foreground hover:text-foreground underline underline-offset-2">Images</Link>
-                <Link to="/modes" className="text-muted-foreground hover:text-foreground underline underline-offset-2">Modes</Link>
-                <Link to="/contact-support" className="text-muted-foreground hover:text-foreground underline underline-offset-2">Contact Support</Link>
-              </nav>
-
-              <p className="text-xs text-muted-foreground text-center">
-                KovaGPT can make mistakes. Always check important information.
-              </p>
-            </div>
+            <nav className="w-full max-w-3xl mx-auto py-4 flex flex-wrap gap-x-4 gap-y-1 text-sm justify-center">
+              <Link to="/pricing" className="text-muted-foreground hover:text-foreground underline underline-offset-2">Pricing</Link>
+              <Link to="/images" className="text-muted-foreground hover:text-foreground underline underline-offset-2">Images</Link>
+              <Link to="/modes" className="text-muted-foreground hover:text-foreground underline underline-offset-2">Modes</Link>
+              <Link to="/contact-support" className="text-muted-foreground hover:text-foreground underline underline-offset-2">Contact Support</Link>
+            </nav>
           </div>
         ) : (
           <>
