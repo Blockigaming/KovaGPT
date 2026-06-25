@@ -311,17 +311,23 @@ async function handleImageRequest(prompt: string, apiKey: string): Promise<Respo
 
         if (!upstream.ok) {
           const status = upstream.status;
+          const rawErr = await upstream.text().catch(() => "");
+          console.error("[handleImageRequest] upstream error", status, rawErr);
           const err =
             status === 429
               ? "Rate limit exceeded. Please wait a moment."
               : status === 402
                 ? "AI credits exhausted."
-                : (await upstream.text()) || "Image generation failed";
-          controller.enqueue(enc.encode(sseChunk(`Sorry  -  ${err}`)));
+                : "Image generation failed. Please try a different prompt or try again later.";
+          controller.enqueue(enc.encode(sseChunk(`Sorry - ${err}`)));
           controller.enqueue(enc.encode(sseDone()));
           controller.close();
           return;
         }
+        // TODO(storage-cleanup): If/when uploaded files are persisted to a storage
+        // bucket (currently attachments live inline in message records), the file
+        // delete flow must also remove the stored object via supabaseAdmin.storage
+        // .from(<bucket>).remove([path]) with a server-side ownership check.
 
         const data = await upstream.json();
         const msg = data.choices?.[0]?.message;

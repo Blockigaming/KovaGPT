@@ -533,6 +533,15 @@ export function SettingsDialog({
                 <Sparkles className="w-4 h-4" /> Upgrade
               </Link>
             </div>
+
+            <div className="rounded-lg border border-border p-4 space-y-2">
+              <div className="text-sm font-medium">Usage</div>
+              <p className="text-xs text-muted-foreground">
+                Your current plan and usage limits may vary by feature. If you need help understanding your limits, contact{" "}
+                <a href="mailto:support@kovagpt.com" className="underline hover:text-foreground">support@kovagpt.com</a>.
+              </p>
+            </div>
+
             <div className="flex flex-wrap gap-2">
               <a
                 href="https://billing.stripe.com/p/login"
@@ -540,12 +549,37 @@ export function SettingsDialog({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border border-border hover:bg-accent transition"
               >
-                <ExternalLink className="w-4 h-4" /> Open billing portal
+                <ExternalLink className="w-4 h-4" /> Manage subscription / billing portal
               </a>
               <Button variant="outline" size="sm" onClick={handleRestore}>
                 <RefreshCw className="w-4 h-4 mr-2" /> Restore purchases
               </Button>
             </div>
+
+            <div className="rounded-lg border border-border p-4 space-y-2">
+              <div className="text-sm font-medium">Cancel subscription</div>
+              <p className="text-xs text-muted-foreground">
+                You can cancel anytime from the billing portal above. After canceling, you'll keep access to your current plan until the end of the billing period.
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-border p-4 space-y-2">
+              <div className="text-sm font-medium">Account and data deletion</div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                If you want to delete your KovaGPT account or request deletion of your data, contact{" "}
+                <a href="mailto:support@kovagpt.com" className="underline hover:text-foreground">support@kovagpt.com</a>{" "}
+                from the email connected to your account. Please include "Account Deletion Request" in the subject line.
+                After receiving your request, we may ask for confirmation to make sure the request is coming from the correct account owner.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground pt-1">
+              <Link to="/contact-support" onClick={() => onOpenChange(false)} className="underline hover:text-foreground">Contact support</Link>
+              <Link to="/privacy" onClick={() => onOpenChange(false)} className="underline hover:text-foreground">Privacy policy</Link>
+              <Link to="/terms" onClick={() => onOpenChange(false)} className="underline hover:text-foreground">Terms of service</Link>
+              <Link to="/refund" onClick={() => onOpenChange(false)} className="underline hover:text-foreground">Refund policy</Link>
+            </div>
+
             <p className="text-xs text-muted-foreground">
               Payments are securely handled by Stripe. We never see or store your card number.
             </p>
