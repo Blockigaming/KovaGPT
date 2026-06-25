@@ -22,10 +22,12 @@ function ChatMessageInner({
   message,
   streaming,
   voiceRate,
+  onFollowUp,
 }: {
   message: Message;
   streaming?: boolean;
   voiceRate?: number;
+  onFollowUp?: (prompt: string) => void;
 }) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
@@ -107,7 +109,7 @@ function ChatMessageInner({
             </div>
           )}
           {!streaming && !isUser && message.content && (
-            <div className="mt-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="mt-2 flex flex-wrap items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
               <button
                 onClick={copy}
                 className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent"
@@ -124,6 +126,26 @@ function ChatMessageInner({
                 {playing ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
                 {playing ? "Stop" : "Read aloud"}
               </button>
+              {onFollowUp && (
+                <>
+                  <span className="mx-1 h-3 w-px bg-border" aria-hidden />
+                  {[
+                    { label: "Continue", prompt: "Continue from where you left off." },
+                    { label: "Shorter", prompt: "Rewrite your last response to be shorter, keeping the key points." },
+                    { label: "Longer", prompt: "Expand your last response with more detail and examples." },
+                    { label: "Improve", prompt: "Improve the wording and clarity of your last response." },
+                  ].map((a) => (
+                    <button
+                      key={a.label}
+                      onClick={() => onFollowUp(a.prompt)}
+                      className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent"
+                      title={a.label}
+                    >
+                      {a.label}
+                    </button>
+                  ))}
+                </>
+              )}
             </div>
           )}
         </div>

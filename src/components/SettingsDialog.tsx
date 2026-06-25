@@ -38,6 +38,8 @@ import {
   Info,
   LogOut,
   RefreshCw,
+  FolderOpen,
+  Wallet,
   Settings as Cog,
 } from "lucide-react";
 import { useTier, tierRank } from "@/hooks/useTier";
@@ -145,7 +147,9 @@ const TAB_ORDER: TabDef[] = [
   { v: "general", label: "General", icon: Cog },
   { v: "personalization", label: "Personalization", icon: User2 },
   { v: "memory", label: "Memory", icon: Brain },
-  { v: "linked", label: "Linked apps", icon: Link2 },
+  { v: "linked", label: "Apps", icon: Link2 },
+  { v: "library", label: "Library", icon: FolderOpen },
+  { v: "finances", label: "Finances", icon: Wallet },
   { v: "email", label: "Email", icon: Mail },
   { v: "subscription", label: "Subscription", icon: CreditCard },
   { v: "appearance", label: "Appearance", icon: Palette },
@@ -468,8 +472,12 @@ export function SettingsDialog({
           </TabsContent>
 
           <TabsContent value="linked" className="overflow-y-auto px-6 pb-6 space-y-5 py-4">
+            {!loggedIn ? (
+              <SignInGate label="Apps" />
+            ) : (
+              <>
             <section className="space-y-1">
-              <h3 className="text-sm font-semibold">Linked apps</h3>
+              <h3 className="text-sm font-semibold">Apps</h3>
               <p className="text-xs text-muted-foreground">
                 Connect external accounts so KovaGPT can use them in your chats. Live integrations work today; others are on the roadmap.
               </p>
@@ -517,6 +525,50 @@ export function SettingsDialog({
                 </section>
               );
             })}
+              </>
+            )}
+          </TabsContent>
+
+          {/* LIBRARY */}
+          <TabsContent value="library" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+            {!loggedIn ? (
+              <SignInGate label="Library" />
+            ) : (
+              <section className="space-y-3">
+                <h3 className="text-sm font-semibold">Library</h3>
+                <p className="text-xs text-muted-foreground">
+                  Files you upload to KovaGPT will appear here so you can find them later.
+                </p>
+                <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                  No uploaded files yet. Attach a file in any chat to add it to your library.
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Full upload history with previews, search, and re-attach is coming soon.
+                </p>
+              </section>
+            )}
+          </TabsContent>
+
+          {/* FINANCES */}
+          <TabsContent value="finances" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+            {!loggedIn ? (
+              <SignInGate label="Finances" />
+            ) : (
+              <section className="space-y-3">
+                <h3 className="text-sm font-semibold">Finances</h3>
+                <p className="text-xs text-muted-foreground">
+                  Link your bank, brokerage, and credit cards so KovaGPT can help you understand
+                  spending, budgets, and net worth.
+                </p>
+                <div className="rounded-lg border border-dashed border-border p-6 text-sm">
+                  <div className="font-medium mb-1">Coming soon</div>
+                  <p className="text-xs text-muted-foreground">
+                    Secure account linking via Plaid (banks, Fidelity, brokerages) is on the
+                    roadmap. We are not collecting financial data yet.
+                  </p>
+                </div>
+              </section>
+            )}
           </TabsContent>
 
 
@@ -901,6 +953,15 @@ export function SettingsDialog({
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function SignInGate({ label }: { label: string }) {
+  return (
+    <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+      <Lock className="w-5 h-5 mx-auto mb-2 opacity-60" />
+      Sign in to use {label}.
+    </div>
   );
 }
 
