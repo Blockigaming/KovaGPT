@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { shareChat } from "@/lib/shared-chats.functions";
 import type { Conversation } from "@/lib/chat-store";
+import { useUser } from "@/components/auth/ClerkSafe";
+
 
 export function ShareChatDialog({
   open,
@@ -19,6 +21,9 @@ export function ShareChatDialog({
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const share = useServerFn(shareChat);
+  const { user } = useUser();
+  const myEmail = (user?.primaryEmailAddress?.emailAddress ?? "").trim().toLowerCase();
+
 
   const submit = async () => {
     if (!conversation) return;
@@ -27,6 +32,11 @@ export function ShareChatDialog({
       toast.error("Enter a valid email address.");
       return;
     }
+    if (myEmail && trimmed === myEmail) {
+      toast.error("You can't share a chat with yourself.");
+      return;
+    }
+
     setBusy(true);
     try {
       const messages = conversation.messages

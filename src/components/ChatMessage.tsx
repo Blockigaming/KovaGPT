@@ -1,10 +1,10 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Copy, Check, User, Volume2, VolumeX, ImageIcon, Loader2, Bookmark, FileEdit, Code2, Eye } from "lucide-react";
-import { memo, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import type { Message } from "@/lib/chat-store";
 import { NovaLogo } from "./NovaLogo";
-import { speak, stopSpeaking, isSpeaking } from "@/lib/voice";
+import { speak, stopSpeaking, isSpeaking, ttsSupported } from "@/lib/voice";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { saveToLibrary } from "@/lib/library.functions";
@@ -37,6 +37,8 @@ function ChatMessageInner({
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const [ttsOk, setTtsOk] = useState(false);
+
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -45,6 +47,8 @@ function ChatMessageInner({
   const { isSignedIn } = useUser();
   const clerk = useClerkSafe();
   const saveFn = useServerFn(saveToLibrary);
+  useEffect(() => { setTtsOk(ttsSupported()); }, []);
+
 
   const artifactKind = useMemo(
     () => (isUser ? null : detectArtifactKind(message.content || "")),
@@ -199,14 +203,17 @@ function ChatMessageInner({
                 {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                 {copied ? "Copied" : "Copy"}
               </button>
-              <button
-                onClick={toggleSpeak}
-                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent"
-                title="Read aloud"
-              >
-                {playing ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                {playing ? "Stop" : "Read aloud"}
-              </button>
+              {ttsOk && (
+                <button
+                  onClick={toggleSpeak}
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent"
+                  title="Read aloud"
+                >
+                  {playing ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                  {playing ? "Stop" : "Read aloud"}
+                </button>
+              )}
+
               <button
                 onClick={saveItem}
                 disabled={saving}
