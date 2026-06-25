@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { PublicFooter } from "@/components/PublicFooter";
 
 const CANONICAL = "https://kovagpt.com/blog/ai-market-research-guide";
 const TITLE = "How to Use AI for Market Research in 2026";
