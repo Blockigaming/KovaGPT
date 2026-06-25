@@ -1,10 +1,14 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Copy, Check, User, Volume2, VolumeX, ImageIcon, Loader2 } from "lucide-react";
+import { Copy, Check, User, Volume2, VolumeX, ImageIcon, Loader2, Bookmark } from "lucide-react";
 import { memo, useState } from "react";
 import type { Message } from "@/lib/chat-store";
 import { NovaLogo } from "./NovaLogo";
 import { speak, stopSpeaking, isSpeaking } from "@/lib/voice";
+import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
+import { saveToLibrary } from "@/lib/library.functions";
+import { useUser, useClerkSafe } from "@/components/auth/ClerkSafe";
 
 // Strip numbered citation markers like [1], [2], [3] that web-search-augmented
 // answers sometimes still inject, and normalize en/em dashes to a hyphen
@@ -33,10 +37,42 @@ function ChatMessageInner({
   const [copied, setCopied] = useState(false);
   const [playing, setPlaying] = useState(false);
 
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const { isSignedIn } = useUser();
+  const clerk = useClerkSafe();
+  const saveFn = useServerFn(saveToLibrary);
+
   const copy = async () => {
     await navigator.clipboard.writeText(message.content);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  };
+
+  const saveItem = async () => {
+    if (!isSignedIn) {
+      clerk?.openSignIn();
+      return;
+    }
+    setSaving(true);
+    try {
+      const firstLine = message.content.trim().split("\n")[0]?.slice(0, 80) ?? "Saved chat response";
+      await saveFn({
+        data: {
+          title: firstLine || "Saved chat response",
+          item_type: "chat_artifact",
+          source: "chat",
+          content_text: message.content.slice(0, 100_000),
+        },
+      });
+      setSaved(true);
+      toast.success("Saved to Library");
+      setTimeout(() => setSaved(false), 2000);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const toggleSpeak = () => {
@@ -125,6 +161,15 @@ function ChatMessageInner({
               >
                 {playing ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
                 {playing ? "Stop" : "Read aloud"}
+              </button>
+              <button
+                onClick={saveItem}
+                disabled={saving}
+                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent disabled:opacity-50"
+                title="Save to Library"
+              >
+                <Bookmark className={`w-3.5 h-3.5 ${saved ? "fill-current" : ""}`} />
+                {saved ? "Saved" : saving ? "Saving…" : "Save"}
               </button>
               {onFollowUp && (
                 <>

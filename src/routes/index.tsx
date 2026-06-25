@@ -11,6 +11,7 @@ import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
 import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 import { HelpDialog } from "@/components/HelpDialog";
 import { LimitReachedDialog } from "@/components/LimitReachedDialog";
+import { ShareChatDialog } from "@/components/ShareChatDialog";
 import { applyThemeMode } from "@/lib/theme";
 
 import { getUsage } from "@/lib/limits";
@@ -106,6 +107,7 @@ function KovaGPT() {
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [shareChatId, setShareChatId] = useState<string | null>(null);
   
   const [voiceModeOpen, setVoiceModeOpen] = useState(false);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
@@ -513,7 +515,14 @@ function KovaGPT() {
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenHelp={() => setHelpOpen(true)}
-        
+        onShare={(id) => {
+          if (!isSignedIn) {
+            toast.message("Sign in to share chats");
+            openSignUp();
+            return;
+          }
+          setShareChatId(id);
+        }}
       />
 
       <main className="flex-1 flex flex-col min-w-0">
