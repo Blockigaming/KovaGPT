@@ -218,11 +218,14 @@ function ChatMessageInner({
               </button>
               {artifactKind && (
                 <button
-                  onClick={() => setEditorOpen(true)}
+                  onClick={() => {
+                    setEditorMode("edit");
+                    setEditorOpen(true);
+                  }}
                   className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent"
                   title={
                     artifactKind === "website"
-                      ? "Open website draft"
+                      ? "Edit website code"
                       : artifactKind === "code"
                         ? "Open code in editor"
                         : "Open in editor"
@@ -234,10 +237,23 @@ function ChatMessageInner({
                     <Code2 className="w-3.5 h-3.5" />
                   )}
                   {artifactKind === "website"
-                    ? "Website draft"
+                    ? "Edit code"
                     : artifactKind === "code"
                       ? "Open code"
                       : "Open in editor"}
+                </button>
+              )}
+              {artifactKind === "website" && (
+                <button
+                  onClick={() => {
+                    setEditorMode("preview");
+                    setEditorOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent"
+                  title="Preview website (static HTML/CSS only)"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  Preview website
                 </button>
               )}
               {onFollowUp && (
