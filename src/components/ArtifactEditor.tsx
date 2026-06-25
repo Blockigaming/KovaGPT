@@ -202,9 +202,22 @@ export function ArtifactEditor({
               {label}
             </span>
             {kind === "website" && (
-              <span className="text-[10px] text-muted-foreground bg-accent rounded px-1.5 py-0.5">
-                preview disabled
-              </span>
+              <div className="ml-2 inline-flex rounded border border-border overflow-hidden">
+                <button
+                  onClick={() => setMode("edit")}
+                  className={`text-xs px-2 py-1 inline-flex items-center gap-1 ${mode === "edit" ? "bg-accent" : "hover:bg-accent"}`}
+                  aria-pressed={mode === "edit"}
+                >
+                  <Pencil className="w-3 h-3" /> Edit
+                </button>
+                <button
+                  onClick={() => setMode("preview")}
+                  className={`text-xs px-2 py-1 inline-flex items-center gap-1 ${mode === "preview" ? "bg-accent" : "hover:bg-accent"}`}
+                  aria-pressed={mode === "preview"}
+                >
+                  <Eye className="w-3 h-3" /> Preview
+                </button>
+              </div>
             )}
           </div>
           <button
@@ -216,15 +229,36 @@ export function ArtifactEditor({
           </button>
         </div>
 
-        <textarea
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          spellCheck={!isCode}
-          className={`flex-1 w-full resize-none bg-background outline-none p-4 text-sm leading-relaxed ${
-            isCode ? "font-mono" : ""
-          }`}
-          aria-label={`${label} content`}
-        />
+        {kind === "website" && mode === "preview" ? (
+          <div className="flex-1 flex flex-col min-h-0 bg-white">
+            {preview.hadScripts && (
+              <div className="flex items-start gap-2 px-3 py-2 text-xs bg-yellow-50 text-yellow-900 border-b border-yellow-200">
+                <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                <span>
+                  Preview only supports static HTML/CSS. JavaScript is not run for safety.
+                </span>
+              </div>
+            )}
+            <iframe
+              key={preview.doc.length}
+              title="Website preview"
+              srcDoc={preview.doc}
+              sandbox=""
+              referrerPolicy="no-referrer"
+              className="flex-1 w-full bg-white"
+            />
+          </div>
+        ) : (
+          <textarea
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            spellCheck={!isCode}
+            className={`flex-1 w-full resize-none bg-background outline-none p-4 text-sm leading-relaxed ${
+              isCode ? "font-mono" : ""
+            }`}
+            aria-label={`${label} content`}
+          />
+        )}
 
         <div className="flex flex-wrap items-center gap-2 px-3 py-3 border-t border-border">
           <button
