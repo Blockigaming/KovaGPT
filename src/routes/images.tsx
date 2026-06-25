@@ -129,6 +129,9 @@ function ImagesPage() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [limitOpen, setLimitOpen] = useState(false);
   const [limitMessage, setLimitMessage] = useState<string | undefined>(undefined);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
 
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [examplePage, setExamplePage] = useState(0);
