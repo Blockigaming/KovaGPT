@@ -270,7 +270,10 @@ function ImagesPage() {
 
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-5xl mx-auto px-6 py-8">
-            <h1 className="text-3xl font-semibold mb-6">Images</h1>
+            <h1 className="text-3xl font-semibold mb-2">Images</h1>
+            <p className="text-sm text-muted-foreground mb-6">
+              {isSignedIn ? "Generate Image" : "Sign in to generate images."}
+            </p>
 
             <form
               onSubmit={(e) => {
@@ -297,6 +300,35 @@ function ImagesPage() {
                 </button>
               </div>
             </form>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {[
+                "Realistic Images",
+                "Anime & Illustration",
+                "Logos & Icons",
+                "Gaming Avatars",
+                "Product Renders",
+                "Wallpapers",
+                "Social Media Posts",
+                "Website Graphics",
+                "Fantasy Art",
+                "Interior Design",
+                "Cyberpunk",
+                "Nature & Landscapes",
+              ].map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setPrompt((p) => (p ? `${p}, ${cat.toLowerCase()}` : cat))}
+                  className="text-xs px-3 py-1.5 rounded-full border border-border hover:bg-accent transition text-muted-foreground hover:text-foreground"
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              AI-generated images may not always match your prompt perfectly. Review generated images before using them publicly or commercially.
+            </p>
 
             {error && (
               <div className="mt-4 text-sm text-destructive">{error}</div>
