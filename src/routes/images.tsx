@@ -84,6 +84,126 @@ const EXAMPLES: { label: string; prompt: string; src: string }[] = [
     prompt: "Cozy reading nook with warm lamp light, plants, rainy window, 3D render",
     src: "https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=600&q=70",
   },
+  {
+    label: "Abstract gradient",
+    prompt: "Abstract liquid gradient art, vibrant magenta and teal, smooth flowing shapes",
+    src: "https://images.unsplash.com/photo-1557672172-298e090bd0f1?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Forest path",
+    prompt: "Sunlit misty forest path in autumn, golden leaves, cinematic depth",
+    src: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Ocean wave",
+    prompt: "Macro photo of a cresting turquoise ocean wave at golden hour",
+    src: "https://images.unsplash.com/photo-1505144808419-1957a94ca61e?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Mountain lake",
+    prompt: "Crystal clear alpine lake reflecting snow-capped mountains, ultra realistic",
+    src: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Desert dunes",
+    prompt: "Endless rolling Sahara desert dunes at sunset, long shadows, photo realistic",
+    src: "https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Astronaut",
+    prompt: "Lone astronaut floating above Earth, dramatic lighting, NASA style photography",
+    src: "https://images.unsplash.com/photo-1457364887197-9150188c107b?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Northern lights",
+    prompt: "Aurora borealis dancing above a snowy lakeside cabin, long exposure",
+    src: "https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Coffee art",
+    prompt: "Top-down latte art with steam, on a rustic wood table, warm light",
+    src: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Vintage car",
+    prompt: "Glossy red 1960s convertible parked on Pacific coast highway at golden hour",
+    src: "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "City skyline",
+    prompt: "Modern Manhattan skyline at dusk, glowing windows, ultra-detailed",
+    src: "https://images.unsplash.com/photo-1496588152823-86ff7695e68f?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Galaxy nebula",
+    prompt: "Vibrant deep-space nebula with swirling cosmic dust, hubble telescope style",
+    src: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Macro flower",
+    prompt: "Extreme close-up of a dewy red rose petal, photo realistic, soft focus",
+    src: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Snowy village",
+    prompt: "Cozy Christmas village under heavy snowfall at night, warm window lights",
+    src: "https://images.unsplash.com/photo-1482517967863-00e15c9b44be?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Tropical beach",
+    prompt: "Aerial drone shot of a tropical island with turquoise water and palm trees",
+    src: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Steampunk gear",
+    prompt: "Intricate brass steampunk pocket watch with exposed gears, studio lighting",
+    src: "https://images.unsplash.com/photo-1509048191080-d2984bad6ae5?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Misty bridge",
+    prompt: "Stone arch bridge over a foggy river at dawn, moody atmosphere",
+    src: "https://images.unsplash.com/photo-1500964757637-c85e8a162699?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Studio portrait",
+    prompt: "Black and white studio portrait of an elderly man, soft Rembrandt lighting",
+    src: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Hot air balloons",
+    prompt: "Dozens of colorful hot air balloons over Cappadocia at sunrise",
+    src: "https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Underwater coral",
+    prompt: "Vivid coral reef with tropical fish, sunbeams piercing the surface",
+    src: "https://images.unsplash.com/photo-1497436072909-60f360e1d4b1?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Neon arcade",
+    prompt: "1980s arcade hallway with neon signs and CRT glow, synthwave aesthetic",
+    src: "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Geometric art",
+    prompt: "Minimal geometric pastel composition, soft shadows, design poster style",
+    src: "https://images.unsplash.com/photo-1558865869-c93f6f8482af?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Library aisle",
+    prompt: "Endless old library with tall bookshelves, warm reading lamps, cinematic",
+    src: "https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Foggy forest",
+    prompt: "Dark misty pine forest at dawn, volumetric fog, atmospheric photography",
+    src: "https://images.unsplash.com/photo-1418065460487-3e41a6c84dc5?auto=format&fit=crop&w=600&q=70",
+  },
+  {
+    label: "Northern fjord",
+    prompt: "Aerial of Norwegian fjord with tiny village by the water, dramatic cliffs",
+    src: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=600&q=70",
+  },
 ];
 
 type HistoryItem = { id: string; prompt: string; imageUrl: string; createdAt: number };
@@ -119,6 +239,19 @@ function ImagesPage() {
   const [settings, setSettings] = useNovaSettings(userKey);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
+  const openSettings = (tab?: string) => {
+    setSettingsTab(tab);
+    setSettingsOpen(true);
+  };
+  useEffect(() => {
+    const h = (e: Event) => {
+      const tab = (e as CustomEvent<{ tab?: string }>).detail?.tab;
+      openSettings(tab);
+    };
+    window.addEventListener("kova-open-settings", h);
+    return () => window.removeEventListener("kova-open-settings", h);
+  }, []);
   const [helpOpen, setHelpOpen] = useState(false);
   
   const [prompt, setPrompt] = useState("");
@@ -226,7 +359,7 @@ function ImagesPage() {
         onDelete={() => {}}
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSettings={openSettings}
         onOpenHelp={() => setHelpOpen(true)}
         
       />
@@ -525,6 +658,7 @@ function ImagesPage() {
         onOpenChange={setSettingsOpen}
         settings={settings}
         onChange={setSettings}
+        initialTab={settingsTab}
         onClearAll={() => {
           try {
             for (const k of Object.keys(localStorage)) {
