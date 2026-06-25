@@ -560,7 +560,7 @@ function KovaGPT() {
 
 
         {!active || active.messages.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center overflow-y-auto px-4 py-6">
+          <div className="flex-1 flex flex-col items-center overflow-y-auto px-4 pt-10 pb-6">
             <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight mb-4 text-center">
               {greeting}
             </h1>
