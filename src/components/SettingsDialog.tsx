@@ -956,6 +956,15 @@ export function SettingsDialog({
   );
 }
 
+function SignInGate({ label }: { label: string }) {
+  return (
+    <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+      <Lock className="w-5 h-5 mx-auto mb-2 opacity-60" />
+      Sign in to use {label}.
+    </div>
+  );
+}
+
 function ConnectorRow({
   item,
   linked,
