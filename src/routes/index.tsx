@@ -564,6 +564,9 @@ function KovaGPT() {
             <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight mb-6 text-center">
               {greeting}
             </h1>
+            <p className="text-sm sm:text-base text-muted-foreground mb-6 text-center max-w-xl">
+              What do you want to build, learn, or create today?
+            </p>
             <div className="w-full">
               <ChatInput
                 value={input}
@@ -581,6 +584,29 @@ function KovaGPT() {
                 }
                 placeholder="Ask anything"
               />
+            </div>
+            <div className="w-full max-w-3xl mx-auto mt-5 flex flex-wrap gap-2 justify-center px-2">
+              {[
+                "Explain this homework problem",
+                "Write a better email",
+                "Help me study",
+                "Fix my code",
+                "Generate an image prompt",
+                "Summarize a file",
+                "Research a topic",
+                "Brainstorm ideas",
+                "Make a study plan",
+                "Create a quiz",
+              ].map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setInput(s)}
+                  className="text-xs sm:text-sm px-3 py-1.5 rounded-full border border-border hover:bg-accent transition text-muted-foreground hover:text-foreground"
+                >
+                  {s}
+                </button>
+              ))}
             </div>
           </div>
         ) : (

@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { PublicFooter } from "@/components/PublicFooter";
 
 const CANONICAL = "https://kovagpt.com/blog/best-ai-assistants";
 const TITLE = "Best AI Assistants for Productivity in 2026 (Compared)";
@@ -113,7 +114,10 @@ function BestAiAssistantsPage() {
         <h1 className="text-4xl font-bold tracking-tight">
           Best AI Assistants for Productivity in 2026
         </h1>
-        <p className="mt-3 text-sm text-muted-foreground">Updated June 22, 2026 · 8 min read</p>
+        <p className="mt-3 text-sm text-muted-foreground">Updated June 25, 2026 · By the KovaGPT team · 8 min read</p>
+        <p className="mt-4 text-sm italic text-muted-foreground border-l-2 border-border pl-3">
+          Disclosure: This article is published by KovaGPT, so it highlights where KovaGPT fits best while also comparing other popular AI assistants.
+        </p>
 
         <p className="mt-6 text-lg leading-relaxed">
           The "best AI assistant" depends on what you're actually trying to get done.
@@ -210,15 +214,33 @@ function BestAiAssistantsPage() {
           KovaGPT's free tier includes Auto mode, live web search, and image generation  -  no
           credit card required.
         </p>
-        <p className="mt-6">
+        <p className="mt-6 flex flex-wrap gap-3">
           <Link
             to="/"
             className="inline-flex items-center justify-center rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             Start chatting with KovaGPT
           </Link>
+          <Link to="/pricing" className="inline-flex items-center justify-center rounded-md border border-border px-5 py-2.5 text-sm font-medium hover:bg-accent">
+            See pricing
+          </Link>
+          <Link to="/images" className="inline-flex items-center justify-center rounded-md border border-border px-5 py-2.5 text-sm font-medium hover:bg-accent">
+            Image generation
+          </Link>
+          <Link to="/contact-support" className="inline-flex items-center justify-center rounded-md border border-border px-5 py-2.5 text-sm font-medium hover:bg-accent">
+            Contact support
+          </Link>
         </p>
+
+        <h2 className="mt-12 text-2xl font-semibold">FAQ</h2>
+        <h3 className="mt-4 text-lg font-medium">Which AI assistant is best for students?</h3>
+        <p>KovaGPT's Study mode explains topics step by step and can create quizzes, which works well for studying.</p>
+        <h3 className="mt-4 text-lg font-medium">Which is best for coding?</h3>
+        <p>KovaGPT's Code mode and ChatGPT are both strong; Copilot is great inside the editor.</p>
+        <h3 className="mt-4 text-lg font-medium">Are these tools accurate?</h3>
+        <p>All AI assistants can make mistakes. Always verify important information from primary sources.</p>
       </article>
+      <PublicFooter />
     </main>
   );
 }

@@ -11,13 +11,16 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as StatusRouteImport } from './routes/status'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as RefundRouteImport } from './routes/refund'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as ModesRouteImport } from './routes/modes'
 import { Route as ImagesRouteImport } from './routes/images'
 import { Route as ContactSupportRouteImport } from './routes/contact-support'
+import { Route as ChangelogRouteImport } from './routes/changelog'
 import { Route as AiSafetyRouteImport } from './routes/ai-safety'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
@@ -48,6 +51,11 @@ const TermsRoute = TermsRouteImport.update({
   path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StatusRoute = StatusRouteImport.update({
+  id: '/status',
+  path: '/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
@@ -73,6 +81,11 @@ const PricingRoute = PricingRouteImport.update({
   path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ModesRoute = ModesRouteImport.update({
+  id: '/modes',
+  path: '/modes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ImagesRoute = ImagesRouteImport.update({
   id: '/images',
   path: '/images',
@@ -81,6 +94,11 @@ const ImagesRoute = ImagesRouteImport.update({
 const ContactSupportRoute = ContactSupportRouteImport.update({
   id: '/contact-support',
   path: '/contact-support',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChangelogRoute = ChangelogRouteImport.update({
+  id: '/changelog',
+  path: '/changelog',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AiSafetyRoute = AiSafetyRouteImport.update({
@@ -188,13 +206,16 @@ const ApiPublicPaymentsWebhookRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ai-safety': typeof AiSafetyRoute
+  '/changelog': typeof ChangelogRoute
   '/contact-support': typeof ContactSupportRoute
   '/images': typeof ImagesRoute
+  '/modes': typeof ModesRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/refund': typeof RefundRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/status': typeof StatusRoute
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/api/chat': typeof ApiChatRoute
@@ -218,13 +239,16 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ai-safety': typeof AiSafetyRoute
+  '/changelog': typeof ChangelogRoute
   '/contact-support': typeof ContactSupportRoute
   '/images': typeof ImagesRoute
+  '/modes': typeof ModesRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/refund': typeof RefundRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/status': typeof StatusRoute
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/api/chat': typeof ApiChatRoute
@@ -249,13 +273,16 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/ai-safety': typeof AiSafetyRoute
+  '/changelog': typeof ChangelogRoute
   '/contact-support': typeof ContactSupportRoute
   '/images': typeof ImagesRoute
+  '/modes': typeof ModesRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/refund': typeof RefundRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/status': typeof StatusRoute
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/api/chat': typeof ApiChatRoute
@@ -281,13 +308,16 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/ai-safety'
+    | '/changelog'
     | '/contact-support'
     | '/images'
+    | '/modes'
     | '/pricing'
     | '/privacy'
     | '/refund'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/status'
     | '/terms'
     | '/unsubscribe'
     | '/api/chat'
@@ -311,13 +341,16 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/ai-safety'
+    | '/changelog'
     | '/contact-support'
     | '/images'
+    | '/modes'
     | '/pricing'
     | '/privacy'
     | '/refund'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/status'
     | '/terms'
     | '/unsubscribe'
     | '/api/chat'
@@ -341,13 +374,16 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/ai-safety'
+    | '/changelog'
     | '/contact-support'
     | '/images'
+    | '/modes'
     | '/pricing'
     | '/privacy'
     | '/refund'
     | '/reset-password'
     | '/sitemap.xml'
+    | '/status'
     | '/terms'
     | '/unsubscribe'
     | '/api/chat'
@@ -372,13 +408,16 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AiSafetyRoute: typeof AiSafetyRoute
+  ChangelogRoute: typeof ChangelogRoute
   ContactSupportRoute: typeof ContactSupportRoute
   ImagesRoute: typeof ImagesRoute
+  ModesRoute: typeof ModesRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   RefundRoute: typeof RefundRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  StatusRoute: typeof StatusRoute
   TermsRoute: typeof TermsRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
   ApiChatRoute: typeof ApiChatRoute
@@ -416,6 +455,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/status': {
+      id: '/status'
+      path: '/status'
+      fullPath: '/status'
+      preLoaderRoute: typeof StatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
@@ -451,6 +497,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PricingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/modes': {
+      id: '/modes'
+      path: '/modes'
+      fullPath: '/modes'
+      preLoaderRoute: typeof ModesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/images': {
       id: '/images'
       path: '/images'
@@ -463,6 +516,13 @@ declare module '@tanstack/react-router' {
       path: '/contact-support'
       fullPath: '/contact-support'
       preLoaderRoute: typeof ContactSupportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/changelog': {
+      id: '/changelog'
+      path: '/changelog'
+      fullPath: '/changelog'
+      preLoaderRoute: typeof ChangelogRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ai-safety': {
@@ -604,13 +664,16 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AiSafetyRoute: AiSafetyRoute,
+  ChangelogRoute: ChangelogRoute,
   ContactSupportRoute: ContactSupportRoute,
   ImagesRoute: ImagesRoute,
+  ModesRoute: ModesRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   RefundRoute: RefundRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  StatusRoute: StatusRoute,
   TermsRoute: TermsRoute,
   UnsubscribeRoute: UnsubscribeRoute,
   ApiChatRoute: ApiChatRoute,
