@@ -40,9 +40,23 @@ function ChatMessageInner({
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
   const { isSignedIn } = useUser();
   const clerk = useClerkSafe();
   const saveFn = useServerFn(saveToLibrary);
+
+  const artifactKind = useMemo(
+    () => (isUser ? null : detectArtifactKind(message.content || "")),
+    [isUser, message.content],
+  );
+  const editorContent = useMemo(() => {
+    if (!artifactKind) return message.content;
+    if (artifactKind === "writing") return message.content;
+    const blocks = extractCodeBlocks(message.content);
+    return blocks.length > 1
+      ? blocks.map((b, i) => `// --- Block ${i + 1} ---\n${b}`).join("\n\n")
+      : (blocks[0] ?? message.content);
+  }, [artifactKind, message.content]);
 
   const copy = async () => {
     await navigator.clipboard.writeText(message.content);
