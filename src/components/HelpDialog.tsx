@@ -77,8 +77,8 @@ export function HelpDialog({
         <div className="bg-gradient-to-br from-foreground/[0.04] to-transparent px-6 pt-6 pb-4 border-b border-border">
           <DialogHeader className="space-y-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-foreground text-background flex items-center justify-center">
-                {isBug ? <Bug className="w-5 h-5" /> : <LifeBuoy className="w-5 h-5" />}
+              <div className="w-10 h-10 rounded-xl bg-foreground text-background flex items-center justify-center overflow-hidden">
+                {isBug ? <Bug className="w-5 h-5" /> : <NovaLogo className="w-7 h-7" />}
               </div>
               <div className="flex-1">
                 <DialogTitle className="text-lg">
