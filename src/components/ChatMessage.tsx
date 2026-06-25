@@ -1,6 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Copy, Check, User, Volume2, VolumeX, ImageIcon, Loader2, Bookmark, FileEdit, Code2 } from "lucide-react";
+import { Copy, Check, User, Volume2, VolumeX, ImageIcon, Loader2, Bookmark, FileEdit, Code2, Eye } from "lucide-react";
 import { memo, useMemo, useState } from "react";
 import type { Message } from "@/lib/chat-store";
 import { NovaLogo } from "./NovaLogo";
@@ -41,6 +41,7 @@ function ChatMessageInner({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [editorMode, setEditorMode] = useState<"edit" | "preview">("edit");
   const { isSignedIn } = useUser();
   const clerk = useClerkSafe();
   const saveFn = useServerFn(saveToLibrary);
@@ -217,11 +218,14 @@ function ChatMessageInner({
               </button>
               {artifactKind && (
                 <button
-                  onClick={() => setEditorOpen(true)}
+                  onClick={() => {
+                    setEditorMode("edit");
+                    setEditorOpen(true);
+                  }}
                   className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent"
                   title={
                     artifactKind === "website"
-                      ? "Open website draft"
+                      ? "Edit website code"
                       : artifactKind === "code"
                         ? "Open code in editor"
                         : "Open in editor"
@@ -233,10 +237,23 @@ function ChatMessageInner({
                     <Code2 className="w-3.5 h-3.5" />
                   )}
                   {artifactKind === "website"
-                    ? "Website draft"
+                    ? "Edit code"
                     : artifactKind === "code"
                       ? "Open code"
                       : "Open in editor"}
+                </button>
+              )}
+              {artifactKind === "website" && (
+                <button
+                  onClick={() => {
+                    setEditorMode("preview");
+                    setEditorOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent"
+                  title="Preview website (static HTML/CSS only)"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  Preview website
                 </button>
               )}
               {onFollowUp && (
@@ -270,6 +287,7 @@ function ChatMessageInner({
           initialContent={editorContent}
           kind={artifactKind}
           onImprove={onFollowUp}
+          initialMode={editorMode}
         />
       )}
     </div>
