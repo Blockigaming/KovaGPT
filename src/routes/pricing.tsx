@@ -54,7 +54,7 @@ export const Route = createFileRoute("/pricing")({
               brand: { "@type": "Brand", name: "KovaGPT" },
               offers: {
                 "@type": "Offer",
-                price: "14",
+                price: "16",
                 priceCurrency: "USD",
                 url: "https://kovagpt.com/pricing",
                 availability: "https://schema.org/InStock",
@@ -145,7 +145,7 @@ function PricingPage() {
           <PlanCard
             icon={Zap}
             name="Plus"
-            price="$14"
+            price="$16"
             period="/ month"
             description="More of everything, plus advanced modes."
             cta="Upgrade to Plus"
