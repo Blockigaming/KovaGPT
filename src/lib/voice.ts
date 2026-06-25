@@ -307,3 +307,9 @@ export function sttSupported() {
   const w = window as any;
   return !!(w.SpeechRecognition || w.webkitSpeechRecognition);
 }
+
+export function ttsSupported() {
+  if (typeof window === "undefined") return false;
+  return "speechSynthesis" in window && typeof window.SpeechSynthesisUtterance !== "undefined";
+}
+
