@@ -243,6 +243,7 @@ function BestAiMarketResearchToolsPage() {
           </Link>
         </p>
       </article>
+      <PublicFooter />
     </main>
   );
 }
