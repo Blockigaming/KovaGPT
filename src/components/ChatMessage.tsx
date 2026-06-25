@@ -1,7 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Copy, Check, User, Volume2, VolumeX, ImageIcon, Loader2, Bookmark } from "lucide-react";
-import { memo, useState } from "react";
+import { Copy, Check, User, Volume2, VolumeX, ImageIcon, Loader2, Bookmark, FileEdit, Code2 } from "lucide-react";
+import { memo, useMemo, useState } from "react";
 import type { Message } from "@/lib/chat-store";
 import { NovaLogo } from "./NovaLogo";
 import { speak, stopSpeaking, isSpeaking } from "@/lib/voice";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { saveToLibrary } from "@/lib/library.functions";
 import { useUser, useClerkSafe } from "@/components/auth/ClerkSafe";
+import { ArtifactEditor, detectArtifactKind, extractCodeBlocks } from "./ArtifactEditor";
 
 // Strip numbered citation markers like [1], [2], [3] that web-search-augmented
 // answers sometimes still inject, and normalize en/em dashes to a hyphen
@@ -39,9 +40,23 @@ function ChatMessageInner({
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
   const { isSignedIn } = useUser();
   const clerk = useClerkSafe();
   const saveFn = useServerFn(saveToLibrary);
+
+  const artifactKind = useMemo(
+    () => (isUser ? null : detectArtifactKind(message.content || "")),
+    [isUser, message.content],
+  );
+  const editorContent = useMemo(() => {
+    if (!artifactKind) return message.content;
+    if (artifactKind === "writing") return message.content;
+    const blocks = extractCodeBlocks(message.content);
+    return blocks.length > 1
+      ? blocks.map((b, i) => `// --- Block ${i + 1} ---\n${b}`).join("\n\n")
+      : (blocks[0] ?? message.content);
+  }, [artifactKind, message.content]);
 
   const copy = async () => {
     await navigator.clipboard.writeText(message.content);
@@ -200,6 +215,30 @@ function ChatMessageInner({
                 <Bookmark className={`w-3.5 h-3.5 ${saved ? "fill-current" : ""}`} />
                 {saved ? "Saved" : saving ? "Saving…" : "Save"}
               </button>
+              {artifactKind && (
+                <button
+                  onClick={() => setEditorOpen(true)}
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent"
+                  title={
+                    artifactKind === "website"
+                      ? "Open website draft"
+                      : artifactKind === "code"
+                        ? "Open code in editor"
+                        : "Open in editor"
+                  }
+                >
+                  {artifactKind === "writing" ? (
+                    <FileEdit className="w-3.5 h-3.5" />
+                  ) : (
+                    <Code2 className="w-3.5 h-3.5" />
+                  )}
+                  {artifactKind === "website"
+                    ? "Website draft"
+                    : artifactKind === "code"
+                      ? "Open code"
+                      : "Open in editor"}
+                </button>
+              )}
               {onFollowUp && (
                 <>
                   <span className="mx-1 h-3 w-px bg-border" aria-hidden />
@@ -224,6 +263,15 @@ function ChatMessageInner({
           )}
         </div>
       </div>
+      {artifactKind && (
+        <ArtifactEditor
+          open={editorOpen}
+          onClose={() => setEditorOpen(false)}
+          initialContent={editorContent}
+          kind={artifactKind}
+          onImprove={onFollowUp}
+        />
+      )}
     </div>
   );
 }
