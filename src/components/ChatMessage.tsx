@@ -263,6 +263,15 @@ function ChatMessageInner({
           )}
         </div>
       </div>
+      {artifactKind && (
+        <ArtifactEditor
+          open={editorOpen}
+          onClose={() => setEditorOpen(false)}
+          initialContent={editorContent}
+          kind={artifactKind}
+          onImprove={onFollowUp}
+        />
+      )}
     </div>
   );
 }
