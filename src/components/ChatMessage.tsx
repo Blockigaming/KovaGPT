@@ -201,14 +201,17 @@ function ChatMessageInner({
                 {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                 {copied ? "Copied" : "Copy"}
               </button>
-              <button
-                onClick={toggleSpeak}
-                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent"
-                title="Read aloud"
-              >
-                {playing ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                {playing ? "Stop" : "Read aloud"}
-              </button>
+              {ttsOk && (
+                <button
+                  onClick={toggleSpeak}
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent"
+                  title="Read aloud"
+                >
+                  {playing ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                  {playing ? "Stop" : "Read aloud"}
+                </button>
+              )}
+
               <button
                 onClick={saveItem}
                 disabled={saving}
