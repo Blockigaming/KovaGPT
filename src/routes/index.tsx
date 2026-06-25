@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
@@ -560,14 +560,36 @@ function KovaGPT() {
 
 
         {!active || active.messages.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center px-4">
-            <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight mb-6 text-center">
+          <div className="flex-1 flex flex-col items-center overflow-y-auto px-4 pt-10 pb-6">
+            <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight mb-4 text-center">
               {greeting}
             </h1>
-            <p className="text-sm sm:text-base text-muted-foreground mb-6 text-center max-w-xl">
-              What do you want to build, learn, or create today?
+            <p className="text-base sm:text-lg text-foreground mb-2 text-center max-w-2xl leading-relaxed">
+              KovaGPT helps you write, study, code, research, and create images with focused AI modes.
             </p>
-            <div className="w-full">
+            <p className="text-sm text-muted-foreground mb-5 text-center max-w-xl leading-relaxed">
+              Choose the right mode for the task, ask better questions, upload files, generate images, and keep your work saved in one place.
+            </p>
+
+            <div className="flex flex-wrap gap-2 justify-center mb-5">
+              <SignUpButton mode="modal">
+                <button className="text-sm font-medium px-4 py-2 rounded-full bg-foreground text-background hover:opacity-90 transition">
+                  Start Free
+                </button>
+              </SignUpButton>
+              <Link to="/pricing">
+                <button className="text-sm font-medium px-4 py-2 rounded-full border border-border hover:bg-accent transition">
+                  View Pricing
+                </button>
+              </Link>
+              <Link to="/images">
+                <button className="text-sm font-medium px-4 py-2 rounded-full border border-border hover:bg-accent transition">
+                  Generate Images
+                </button>
+              </Link>
+            </div>
+
+            <div className="w-full max-w-3xl mx-auto">
               <ChatInput
                 value={input}
                 onChange={setInput}
@@ -585,7 +607,7 @@ function KovaGPT() {
                 placeholder="Ask anything"
               />
             </div>
-            <div className="w-full max-w-3xl mx-auto mt-5 flex flex-wrap gap-2 justify-center px-2">
+            <div className="w-full max-w-3xl mx-auto mt-4 flex flex-wrap gap-2 justify-center px-2">
               {[
                 "Explain this homework problem",
                 "Write a better email",
@@ -607,6 +629,45 @@ function KovaGPT() {
                   {s}
                 </button>
               ))}
+            </div>
+
+            <div className="w-full max-w-3xl mx-auto mt-8 space-y-6 pb-6">
+              <section>
+                <h2 className="text-base sm:text-lg font-semibold mb-2">What can KovaGPT do?</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
+                  <div>• Study smarter with step-by-step explanations</div>
+                  <div>• Write better emails, essays, posts, and scripts</div>
+                  <div>• Debug and understand code faster</div>
+                  <div>• Research topics with clearer structure</div>
+                  <div>• Generate creative image prompts and images</div>
+                  <div>• Upload files for summaries and analysis</div>
+                  <div>• Save chats and continue your work later</div>
+                  <div>• Choose focused modes for better results</div>
+                </div>
+              </section>
+
+              <section>
+                <h2 className="text-base sm:text-lg font-semibold mb-2">Why KovaGPT?</h2>
+                <p className="text-sm text-muted-foreground leading-relaxed mb-2">
+                  KovaGPT is built around focused AI modes, so you can choose the kind of help you need instead of writing the perfect prompt every time. Use it for school, writing, coding, research, images, and everyday work.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm text-muted-foreground">
+                  <div>• Focused modes for different tasks</div>
+                  <div>• Saved chats when signed in</div>
+                  <div>• Clear pricing, support, and safety pages</div>
+                </div>
+              </section>
+
+              <nav className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                <Link to="/pricing" className="text-muted-foreground hover:text-foreground underline underline-offset-2">Pricing</Link>
+                <Link to="/images" className="text-muted-foreground hover:text-foreground underline underline-offset-2">Images</Link>
+                <Link to="/modes" className="text-muted-foreground hover:text-foreground underline underline-offset-2">Modes</Link>
+                <Link to="/contact-support" className="text-muted-foreground hover:text-foreground underline underline-offset-2">Contact Support</Link>
+              </nav>
+
+              <p className="text-xs text-muted-foreground text-center">
+                KovaGPT can make mistakes. Always check important information.
+              </p>
             </div>
           </div>
         ) : (
