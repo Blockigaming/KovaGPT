@@ -6,6 +6,7 @@ import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { useUser, useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 import { EnterpriseContactDialog } from "@/components/EnterpriseContactDialog";
+import { PublicFooter } from "@/components/PublicFooter";
 
 export const Route = createFileRoute("/pricing")({
   component: PricingPage,
@@ -221,6 +222,10 @@ function PricingPage() {
           </div>
         </div>
       )}
+      <p className="mx-auto max-w-5xl px-6 mt-10 text-xs text-muted-foreground">
+        Exact usage limits may vary by plan and feature. You can view your current limits from your account when signed in.
+      </p>
+      <PublicFooter />
     </div>
   );
 }

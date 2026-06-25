@@ -13,9 +13,12 @@ import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as RefundRouteImport } from './routes/refund'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ImagesRouteImport } from './routes/images'
+import { Route as ContactSupportRouteImport } from './routes/contact-support'
+import { Route as AiSafetyRouteImport } from './routes/ai-safety'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
@@ -55,6 +58,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RefundRoute = RefundRouteImport.update({
+  id: '/refund',
+  path: '/refund',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
@@ -68,6 +76,16 @@ const PricingRoute = PricingRouteImport.update({
 const ImagesRoute = ImagesRouteImport.update({
   id: '/images',
   path: '/images',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactSupportRoute = ContactSupportRouteImport.update({
+  id: '/contact-support',
+  path: '/contact-support',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AiSafetyRoute = AiSafetyRouteImport.update({
+  id: '/ai-safety',
+  path: '/ai-safety',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -169,9 +187,12 @@ const ApiPublicPaymentsWebhookRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/ai-safety': typeof AiSafetyRoute
+  '/contact-support': typeof ContactSupportRoute
   '/images': typeof ImagesRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/refund': typeof RefundRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
@@ -196,9 +217,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/ai-safety': typeof AiSafetyRoute
+  '/contact-support': typeof ContactSupportRoute
   '/images': typeof ImagesRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/refund': typeof RefundRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
@@ -224,9 +248,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/ai-safety': typeof AiSafetyRoute
+  '/contact-support': typeof ContactSupportRoute
   '/images': typeof ImagesRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/refund': typeof RefundRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
@@ -253,9 +280,12 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/ai-safety'
+    | '/contact-support'
     | '/images'
     | '/pricing'
     | '/privacy'
+    | '/refund'
     | '/reset-password'
     | '/sitemap.xml'
     | '/terms'
@@ -280,9 +310,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/ai-safety'
+    | '/contact-support'
     | '/images'
     | '/pricing'
     | '/privacy'
+    | '/refund'
     | '/reset-password'
     | '/sitemap.xml'
     | '/terms'
@@ -307,9 +340,12 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/ai-safety'
+    | '/contact-support'
     | '/images'
     | '/pricing'
     | '/privacy'
+    | '/refund'
     | '/reset-password'
     | '/sitemap.xml'
     | '/terms'
@@ -335,9 +371,12 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AiSafetyRoute: typeof AiSafetyRoute
+  ContactSupportRoute: typeof ContactSupportRoute
   ImagesRoute: typeof ImagesRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
+  RefundRoute: typeof RefundRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
@@ -391,6 +430,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/refund': {
+      id: '/refund'
+      path: '/refund'
+      fullPath: '/refund'
+      preLoaderRoute: typeof RefundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/privacy': {
       id: '/privacy'
       path: '/privacy'
@@ -410,6 +456,20 @@ declare module '@tanstack/react-router' {
       path: '/images'
       fullPath: '/images'
       preLoaderRoute: typeof ImagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact-support': {
+      id: '/contact-support'
+      path: '/contact-support'
+      fullPath: '/contact-support'
+      preLoaderRoute: typeof ContactSupportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ai-safety': {
+      id: '/ai-safety'
+      path: '/ai-safety'
+      fullPath: '/ai-safety'
+      preLoaderRoute: typeof AiSafetyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -543,9 +603,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AiSafetyRoute: AiSafetyRoute,
+  ContactSupportRoute: ContactSupportRoute,
   ImagesRoute: ImagesRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
+  RefundRoute: RefundRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
