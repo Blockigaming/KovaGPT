@@ -215,6 +215,30 @@ function ChatMessageInner({
                 <Bookmark className={`w-3.5 h-3.5 ${saved ? "fill-current" : ""}`} />
                 {saved ? "Saved" : saving ? "Saving…" : "Save"}
               </button>
+              {artifactKind && (
+                <button
+                  onClick={() => setEditorOpen(true)}
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent"
+                  title={
+                    artifactKind === "website"
+                      ? "Open website draft"
+                      : artifactKind === "code"
+                        ? "Open code in editor"
+                        : "Open in editor"
+                  }
+                >
+                  {artifactKind === "writing" ? (
+                    <FileEdit className="w-3.5 h-3.5" />
+                  ) : (
+                    <Code2 className="w-3.5 h-3.5" />
+                  )}
+                  {artifactKind === "website"
+                    ? "Website draft"
+                    : artifactKind === "code"
+                      ? "Open code"
+                      : "Open in editor"}
+                </button>
+              )}
               {onFollowUp && (
                 <>
                   <span className="mx-1 h-3 w-px bg-border" aria-hidden />
