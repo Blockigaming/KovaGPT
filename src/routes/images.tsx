@@ -129,6 +129,9 @@ function ImagesPage() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [limitOpen, setLimitOpen] = useState(false);
   const [limitMessage, setLimitMessage] = useState<string | undefined>(undefined);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
 
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [examplePage, setExamplePage] = useState(0);
@@ -185,6 +188,7 @@ function ImagesPage() {
     }
     setError(null);
     setResult(null);
+    setSaved(false);
     setLoading(true);
     try {
       const res = await authFetch("/api/generate-image", {
@@ -349,14 +353,41 @@ function ImagesPage() {
                       alt={resultPrompt ? `AI-generated image of ${resultPrompt}` : "AI generated image"}
                       className="w-full max-w-md mx-auto rounded-xl"
                     />
-                    <div className="flex justify-center mt-3">
+                    <div className="flex justify-center mt-3 gap-2 flex-wrap">
                       <a
                         href={result}
-                        download="novagpt-image.png"
+                        download="kovagpt-image.png"
                         className="inline-flex items-center gap-2 text-sm px-4 py-1.5 rounded-full border border-border hover:bg-accent transition"
                       >
                         <Download className="w-4 h-4" /> Download
                       </a>
+                      <button
+                        type="button"
+                        disabled={saving || saved}
+                        onClick={async () => {
+                          if (!isSignedIn) { setLoginOpen(true); return; }
+                          if (!result) return;
+                          setSaving(true);
+                          try {
+                            const { saveImageToLibrary } = await import("@/lib/library-images.functions");
+                            await saveImageToLibrary({
+                              data: {
+                                imageUrl: result,
+                                title: resultPrompt.slice(0, 120) || "Generated image",
+                                prompt: resultPrompt,
+                              },
+                            });
+                            setSaved(true);
+                          } catch (err) {
+                            setError(err instanceof Error ? err.message : "Could not save image");
+                          } finally {
+                            setSaving(false);
+                          }
+                        }}
+                        className="inline-flex items-center gap-2 text-sm px-4 py-1.5 rounded-full border border-border hover:bg-accent transition disabled:opacity-60"
+                      >
+                        {saved ? "Saved to Library" : saving ? "Saving…" : "Save to Library"}
+                      </button>
                     </div>
                   </div>
                 )}

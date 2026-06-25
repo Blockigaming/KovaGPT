@@ -90,6 +90,16 @@ export const deleteLibraryItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
+    // If the item is an image with a stored object, remove it from the private bucket first.
+    const { data: row } = await context.supabase
+      .from("user_library_items")
+      .select("item_type, file_url")
+      .eq("id", data.id)
+      .eq("user_id", context.userId)
+      .single();
+    if (row?.item_type === "image" && row.file_url) {
+      await context.supabase.storage.from("library-images").remove([row.file_url]);
+    }
     const { error } = await context.supabase
       .from("user_library_items")
       .delete()
