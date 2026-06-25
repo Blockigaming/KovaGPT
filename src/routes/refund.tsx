@@ -18,7 +18,7 @@ export const Route = createFileRoute("/refund")({
 function RefundPage() {
   return (
     <>
-      <main className="mx-auto max-w-3xl px-6 py-16 prose prose-invert">
+      <main className="mx-auto max-w-3xl px-6 py-16 prose prose-invert prose-lg leading-relaxed prose-headings:mt-10 prose-p:my-5">
         <h1>Refund Policy</h1>
         <p>KovaGPT subscriptions help provide access to AI tools, usage limits, image generation, file uploads, and other premium features.</p>
         <p>Subscriptions can be canceled from your account settings. Canceling a subscription stops future renewals but does not automatically refund past payments.</p>

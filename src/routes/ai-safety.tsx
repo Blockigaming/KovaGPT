@@ -18,7 +18,7 @@ export const Route = createFileRoute("/ai-safety")({
 function AISafetyPage() {
   return (
     <>
-      <main className="mx-auto max-w-3xl px-6 py-16 prose prose-invert">
+      <main className="mx-auto max-w-3xl px-6 py-16 prose prose-invert prose-lg leading-relaxed prose-headings:mt-10 prose-p:my-5">
         <h1>AI Safety</h1>
         <p>KovaGPT is designed to help with writing, learning, coding, research, brainstorming, and image generation. Because AI can make mistakes, users should always review and verify important information.</p>
         <p>KovaGPT should not be used as the only source for medical, legal, financial, emergency, or safety decisions. For serious or time-sensitive situations, contact a qualified professional or trusted source.</p>

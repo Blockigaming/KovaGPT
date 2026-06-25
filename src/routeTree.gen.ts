@@ -11,9 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as StudyAssistantRouteImport } from './routes/study-assistant'
 import { Route as StatusRouteImport } from './routes/status'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as ResearchAssistantRouteImport } from './routes/research-assistant'
 import { Route as RefundRouteImport } from './routes/refund'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
@@ -21,8 +23,12 @@ import { Route as ModesRouteImport } from './routes/modes'
 import { Route as ImagesRouteImport } from './routes/images'
 import { Route as GettingStartedRouteImport } from './routes/getting-started'
 import { Route as ContactSupportRouteImport } from './routes/contact-support'
+import { Route as CodeHelperRouteImport } from './routes/code-helper'
+import { Route as ChatgptAlternativeRouteImport } from './routes/chatgpt-alternative'
 import { Route as ChangelogRouteImport } from './routes/changelog'
+import { Route as AiWriterRouteImport } from './routes/ai-writer'
 import { Route as AiSafetyRouteImport } from './routes/ai-safety'
+import { Route as AiImageGeneratorRouteImport } from './routes/ai-image-generator'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
@@ -52,6 +58,11 @@ const TermsRoute = TermsRouteImport.update({
   path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StudyAssistantRoute = StudyAssistantRouteImport.update({
+  id: '/study-assistant',
+  path: '/study-assistant',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StatusRoute = StatusRouteImport.update({
   id: '/status',
   path: '/status',
@@ -65,6 +76,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResearchAssistantRoute = ResearchAssistantRouteImport.update({
+  id: '/research-assistant',
+  path: '/research-assistant',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RefundRoute = RefundRouteImport.update({
@@ -102,14 +118,34 @@ const ContactSupportRoute = ContactSupportRouteImport.update({
   path: '/contact-support',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CodeHelperRoute = CodeHelperRouteImport.update({
+  id: '/code-helper',
+  path: '/code-helper',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatgptAlternativeRoute = ChatgptAlternativeRouteImport.update({
+  id: '/chatgpt-alternative',
+  path: '/chatgpt-alternative',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ChangelogRoute = ChangelogRouteImport.update({
   id: '/changelog',
   path: '/changelog',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AiWriterRoute = AiWriterRouteImport.update({
+  id: '/ai-writer',
+  path: '/ai-writer',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AiSafetyRoute = AiSafetyRouteImport.update({
   id: '/ai-safety',
   path: '/ai-safety',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AiImageGeneratorRoute = AiImageGeneratorRouteImport.update({
+  id: '/ai-image-generator',
+  path: '/ai-image-generator',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -211,8 +247,12 @@ const ApiPublicPaymentsWebhookRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/ai-image-generator': typeof AiImageGeneratorRoute
   '/ai-safety': typeof AiSafetyRoute
+  '/ai-writer': typeof AiWriterRoute
   '/changelog': typeof ChangelogRoute
+  '/chatgpt-alternative': typeof ChatgptAlternativeRoute
+  '/code-helper': typeof CodeHelperRoute
   '/contact-support': typeof ContactSupportRoute
   '/getting-started': typeof GettingStartedRoute
   '/images': typeof ImagesRoute
@@ -220,9 +260,11 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/refund': typeof RefundRoute
+  '/research-assistant': typeof ResearchAssistantRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/status': typeof StatusRoute
+  '/study-assistant': typeof StudyAssistantRoute
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/api/chat': typeof ApiChatRoute
@@ -245,8 +287,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/ai-image-generator': typeof AiImageGeneratorRoute
   '/ai-safety': typeof AiSafetyRoute
+  '/ai-writer': typeof AiWriterRoute
   '/changelog': typeof ChangelogRoute
+  '/chatgpt-alternative': typeof ChatgptAlternativeRoute
+  '/code-helper': typeof CodeHelperRoute
   '/contact-support': typeof ContactSupportRoute
   '/getting-started': typeof GettingStartedRoute
   '/images': typeof ImagesRoute
@@ -254,9 +300,11 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/refund': typeof RefundRoute
+  '/research-assistant': typeof ResearchAssistantRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/status': typeof StatusRoute
+  '/study-assistant': typeof StudyAssistantRoute
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/api/chat': typeof ApiChatRoute
@@ -280,8 +328,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/ai-image-generator': typeof AiImageGeneratorRoute
   '/ai-safety': typeof AiSafetyRoute
+  '/ai-writer': typeof AiWriterRoute
   '/changelog': typeof ChangelogRoute
+  '/chatgpt-alternative': typeof ChatgptAlternativeRoute
+  '/code-helper': typeof CodeHelperRoute
   '/contact-support': typeof ContactSupportRoute
   '/getting-started': typeof GettingStartedRoute
   '/images': typeof ImagesRoute
@@ -289,9 +341,11 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/refund': typeof RefundRoute
+  '/research-assistant': typeof ResearchAssistantRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/status': typeof StatusRoute
+  '/study-assistant': typeof StudyAssistantRoute
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/api/chat': typeof ApiChatRoute
@@ -316,8 +370,12 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/ai-image-generator'
     | '/ai-safety'
+    | '/ai-writer'
     | '/changelog'
+    | '/chatgpt-alternative'
+    | '/code-helper'
     | '/contact-support'
     | '/getting-started'
     | '/images'
@@ -325,9 +383,11 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/refund'
+    | '/research-assistant'
     | '/reset-password'
     | '/sitemap.xml'
     | '/status'
+    | '/study-assistant'
     | '/terms'
     | '/unsubscribe'
     | '/api/chat'
@@ -350,8 +410,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/ai-image-generator'
     | '/ai-safety'
+    | '/ai-writer'
     | '/changelog'
+    | '/chatgpt-alternative'
+    | '/code-helper'
     | '/contact-support'
     | '/getting-started'
     | '/images'
@@ -359,9 +423,11 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/refund'
+    | '/research-assistant'
     | '/reset-password'
     | '/sitemap.xml'
     | '/status'
+    | '/study-assistant'
     | '/terms'
     | '/unsubscribe'
     | '/api/chat'
@@ -384,8 +450,12 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/ai-image-generator'
     | '/ai-safety'
+    | '/ai-writer'
     | '/changelog'
+    | '/chatgpt-alternative'
+    | '/code-helper'
     | '/contact-support'
     | '/getting-started'
     | '/images'
@@ -393,9 +463,11 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/refund'
+    | '/research-assistant'
     | '/reset-password'
     | '/sitemap.xml'
     | '/status'
+    | '/study-assistant'
     | '/terms'
     | '/unsubscribe'
     | '/api/chat'
@@ -419,8 +491,12 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AiImageGeneratorRoute: typeof AiImageGeneratorRoute
   AiSafetyRoute: typeof AiSafetyRoute
+  AiWriterRoute: typeof AiWriterRoute
   ChangelogRoute: typeof ChangelogRoute
+  ChatgptAlternativeRoute: typeof ChatgptAlternativeRoute
+  CodeHelperRoute: typeof CodeHelperRoute
   ContactSupportRoute: typeof ContactSupportRoute
   GettingStartedRoute: typeof GettingStartedRoute
   ImagesRoute: typeof ImagesRoute
@@ -428,9 +504,11 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   RefundRoute: typeof RefundRoute
+  ResearchAssistantRoute: typeof ResearchAssistantRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StatusRoute: typeof StatusRoute
+  StudyAssistantRoute: typeof StudyAssistantRoute
   TermsRoute: typeof TermsRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
   ApiChatRoute: typeof ApiChatRoute
@@ -468,6 +546,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/study-assistant': {
+      id: '/study-assistant'
+      path: '/study-assistant'
+      fullPath: '/study-assistant'
+      preLoaderRoute: typeof StudyAssistantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/status': {
       id: '/status'
       path: '/status'
@@ -487,6 +572,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/research-assistant': {
+      id: '/research-assistant'
+      path: '/research-assistant'
+      fullPath: '/research-assistant'
+      preLoaderRoute: typeof ResearchAssistantRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/refund': {
@@ -538,6 +630,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContactSupportRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/code-helper': {
+      id: '/code-helper'
+      path: '/code-helper'
+      fullPath: '/code-helper'
+      preLoaderRoute: typeof CodeHelperRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chatgpt-alternative': {
+      id: '/chatgpt-alternative'
+      path: '/chatgpt-alternative'
+      fullPath: '/chatgpt-alternative'
+      preLoaderRoute: typeof ChatgptAlternativeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/changelog': {
       id: '/changelog'
       path: '/changelog'
@@ -545,11 +651,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChangelogRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ai-writer': {
+      id: '/ai-writer'
+      path: '/ai-writer'
+      fullPath: '/ai-writer'
+      preLoaderRoute: typeof AiWriterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ai-safety': {
       id: '/ai-safety'
       path: '/ai-safety'
       fullPath: '/ai-safety'
       preLoaderRoute: typeof AiSafetyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ai-image-generator': {
+      id: '/ai-image-generator'
+      path: '/ai-image-generator'
+      fullPath: '/ai-image-generator'
+      preLoaderRoute: typeof AiImageGeneratorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -683,8 +803,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AiImageGeneratorRoute: AiImageGeneratorRoute,
   AiSafetyRoute: AiSafetyRoute,
+  AiWriterRoute: AiWriterRoute,
   ChangelogRoute: ChangelogRoute,
+  ChatgptAlternativeRoute: ChatgptAlternativeRoute,
+  CodeHelperRoute: CodeHelperRoute,
   ContactSupportRoute: ContactSupportRoute,
   GettingStartedRoute: GettingStartedRoute,
   ImagesRoute: ImagesRoute,
@@ -692,9 +816,11 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   RefundRoute: RefundRoute,
+  ResearchAssistantRoute: ResearchAssistantRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StatusRoute: StatusRoute,
+  StudyAssistantRoute: StudyAssistantRoute,
   TermsRoute: TermsRoute,
   UnsubscribeRoute: UnsubscribeRoute,
   ApiChatRoute: ApiChatRoute,
@@ -718,13 +844,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

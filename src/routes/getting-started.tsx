@@ -48,6 +48,13 @@ function GettingStartedPage() {
           <Link to="/pricing" className="underline hover:text-foreground">View pricing</Link>
           <Link to="/contact-support" className="underline hover:text-foreground">Contact support</Link>
         </div>
+        <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+          <Link to="/ai-writer" className="underline hover:text-foreground">AI Writer</Link>
+          <Link to="/study-assistant" className="underline hover:text-foreground">Study Assistant</Link>
+          <Link to="/code-helper" className="underline hover:text-foreground">Code Helper</Link>
+          <Link to="/research-assistant" className="underline hover:text-foreground">Research Assistant</Link>
+          <Link to="/ai-image-generator" className="underline hover:text-foreground">AI Image Generator</Link>
+        </div>
 
         <p className="mt-8 text-sm">
           <Link to="/" className="underline hover:text-foreground">← Back to KovaGPT</Link>

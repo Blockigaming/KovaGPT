@@ -18,7 +18,7 @@ export const Route = createFileRoute("/privacy")({
 function PrivacyPage() {
   return (
     <>
-      <main className="mx-auto max-w-3xl px-6 py-16 prose prose-invert">
+      <main className="mx-auto max-w-3xl px-6 py-16 prose prose-invert prose-lg leading-relaxed prose-headings:mt-10 prose-p:my-5">
         <h1>Privacy Policy</h1>
         <p>KovaGPT respects your privacy. This Privacy Policy explains what information we collect, how we use it, and how you can contact us.</p>
 

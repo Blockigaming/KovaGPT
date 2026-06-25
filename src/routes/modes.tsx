@@ -48,6 +48,12 @@ function ModesPage() {
         <p className="mt-10 text-sm">
           <Link to="/pricing" className="underline hover:text-foreground">See which modes are included in each plan →</Link>
         </p>
+        <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+          <Link to="/study-assistant" className="underline hover:text-foreground">Study Assistant</Link>
+          <Link to="/code-helper" className="underline hover:text-foreground">Code Helper</Link>
+          <Link to="/ai-writer" className="underline hover:text-foreground">AI Writer</Link>
+          <Link to="/research-assistant" className="underline hover:text-foreground">Research Assistant</Link>
+        </div>
       </main>
       <PublicFooter />
     </>
