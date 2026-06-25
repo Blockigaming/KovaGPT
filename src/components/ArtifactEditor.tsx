@@ -98,9 +98,15 @@ export function ArtifactEditor({
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [mode, setMode] = useState<"edit" | "preview">("edit");
   const { isSignedIn } = useUser();
   const clerk = useClerkSafe();
   const saveFn = useServerFn(saveToLibrary);
+
+  const preview = useMemo(
+    () => (kind === "website" ? buildPreviewDoc(value) : { doc: "", hadScripts: false }),
+    [kind, value],
+  );
 
   useEffect(() => {
     if (open) {
