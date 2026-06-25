@@ -21,6 +21,9 @@ export function ShareChatDialog({
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const share = useServerFn(shareChat);
+  const { user } = useUser();
+  const myEmail = (user?.primaryEmailAddress?.emailAddress ?? "").trim().toLowerCase();
+
 
   const submit = async () => {
     if (!conversation) return;
