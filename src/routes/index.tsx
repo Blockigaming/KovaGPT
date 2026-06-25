@@ -88,8 +88,10 @@ function KovaGPT() {
   const { openSignUp } = useClerkSafe();
   const userKey = user?.id ?? null;
   const tryOpenVoice = useCallback(() => {
+    // Voice mode is free for all users. Sign-in is requested only so we can
+    // enforce per-user quotas server-side.
     if (!isSignedIn) {
-      toast.message("Sign up free to use voice mode");
+      toast.message("Sign in (free) to use voice mode");
       openSignUp();
       return;
     }
@@ -106,6 +108,20 @@ function KovaGPT() {
     return window.innerWidth >= 768;
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
+  const openSettings = useCallback((tab?: string) => {
+    setSettingsTab(tab);
+    setSettingsOpen(true);
+  }, []);
+  // Listen for global open-settings events (fired from UserButton profile click).
+  useEffect(() => {
+    const h = (e: Event) => {
+      const tab = (e as CustomEvent<{ tab?: string }>).detail?.tab;
+      openSettings(tab);
+    };
+    window.addEventListener("kova-open-settings", h);
+    return () => window.removeEventListener("kova-open-settings", h);
+  }, [openSettings]);
   const [helpOpen, setHelpOpen] = useState(false);
   const [shareChatId, setShareChatId] = useState<string | null>(null);
   
@@ -513,7 +529,7 @@ function KovaGPT() {
         onDelete={deleteChat}
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSettings={openSettings}
         onOpenHelp={() => setHelpOpen(true)}
         onShare={(id) => {
           if (!isSignedIn) {
@@ -613,16 +629,12 @@ function KovaGPT() {
               </div>
               <div className="w-full max-w-3xl mx-auto mt-4 flex flex-wrap gap-2 justify-center px-2">
                 {[
-                  "Explain this homework problem",
-                  "Write a better email",
-                  "Help me study",
+                  "Draft an email",
                   "Fix my code",
                   "Generate an image prompt",
                   "Summarize a file",
                   "Research a topic",
-                  "Brainstorm ideas",
                   "Make a study plan",
-                  "Create a quiz",
                 ].map((s) => (
                   <button
                     key={s}
@@ -692,6 +704,7 @@ function KovaGPT() {
         onChange={setSettings}
         onClearAll={() => setConversations([])}
         onOpenHelp={() => setHelpOpen(true)}
+        initialTab={settingsTab}
       />
 
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />

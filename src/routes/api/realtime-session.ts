@@ -29,15 +29,9 @@ export const Route = createFileRoute("/api/realtime-session")({
         const maint = await assertFeatureEnabled(auth, "voice");
         if (maint) return maint;
 
-        const tier = await getCallerTier(auth);
-        if (tier === "free") {
-          return new Response(
-            JSON.stringify({
-              error: "Realtime voice is a Plus feature. Upgrade to chat with KovaGPT in real time.",
-            }),
-            { status: 402, headers: { "Content-Type": "application/json" } },
-          );
-        }
+        // Voice mode is free for all signed-in users (per-user daily quota
+        // below keeps costs bounded).
+        void getCallerTier;
 
         const quota = await enforceQuota(auth, "voice", REALTIME_DAILY_LIMIT);
         if (quota) return quota;

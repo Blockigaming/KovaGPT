@@ -276,8 +276,14 @@ export function UserButton(_props?: {
           </DropdownMenuLabel>
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem disabled>
-          <UserIcon className="mr-2 h-4 w-4" /> Profile
+        <DropdownMenuItem
+          onClick={() => {
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("kova-open-settings", { detail: { tab: "general" } }));
+            }
+          }}
+        >
+          <UserIcon className="mr-2 h-4 w-4" /> Profile &amp; settings
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => signOut()}>
           <LogOut className="mr-2 h-4 w-4" /> Sign out
