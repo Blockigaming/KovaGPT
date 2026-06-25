@@ -38,6 +38,8 @@ import {
   Info,
   LogOut,
   RefreshCw,
+  FolderOpen,
+  Wallet,
   Settings as Cog,
 } from "lucide-react";
 import { useTier, tierRank } from "@/hooks/useTier";
