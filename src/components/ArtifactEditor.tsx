@@ -115,8 +115,9 @@ export function ArtifactEditor({
       setValue(initialContent);
       setCopied(false);
       setSaved(false);
+      setMode(initialMode);
     }
-  }, [open, initialContent]);
+  }, [open, initialContent, initialMode]);
 
   useEffect(() => {
     if (!open) return;
