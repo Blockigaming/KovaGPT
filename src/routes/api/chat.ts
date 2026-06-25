@@ -587,16 +587,18 @@ export const Route = createFileRoute("/api/chat")({
             return { role: safeRole, content: msg.content };
           });
 
-          // Default to a smart, fast streaming model. Escalate when needed.
+          // Default to a smart, fast streaming model with strong instruction-
+          // following and in-context memory. Free users get the same smart
+          // brain; "fast" mode opts into the lighter/cheaper model.
           const model = voice
-            ? "google/gemini-3.1-flash-lite"
+            ? "google/gemini-3.5-flash"
             : m.id === "fast"
               ? "google/gemini-3.1-flash-lite"
               : m.id === "reason"
                 ? "google/gemini-3.1-pro-preview"
                 : hasImages
                   ? "google/gemini-2.5-pro"
-                  : "google/gemini-3.1-flash-lite";
+                  : "google/gemini-3.5-flash";
 
           // Live web data is on for everyone by default. Users can still opt
           // out in settings except for explicit/time-sensitive search asks.
