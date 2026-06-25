@@ -180,5 +180,7 @@ function MarketResearchGuide() {
         </Link>
       </section>
     </article>
+    <PublicFooter />
+    </>
   );
 }
