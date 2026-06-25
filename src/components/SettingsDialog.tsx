@@ -178,7 +178,7 @@ export function SettingsDialog({
   initialTab?: string;
   onOpenHelp?: () => void;
 }) {
-  const usage = open ? getUsage() : { images: 0, uploads: 0, date: "" };
+  const localUsage = open ? getUsage() : { images: 0, uploads: 0, date: "" };
   const [voices, setVoices] = useState(() => getVoices());
   const { isSignedIn, user } = useUser();
   const clerk = useClerk();
