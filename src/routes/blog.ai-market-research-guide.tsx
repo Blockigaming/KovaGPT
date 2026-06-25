@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { PublicFooter } from "@/components/PublicFooter";
 
 const CANONICAL = "https://kovagpt.com/blog/ai-market-research-guide";
 const TITLE = "How to Use AI for Market Research in 2026";
@@ -40,6 +41,7 @@ export const Route = createFileRoute("/blog/ai-market-research-guide")({
 
 function MarketResearchGuide() {
   return (
+    <>
     <article className="mx-auto max-w-3xl px-4 py-12 text-foreground">
       <p className="mb-2 text-sm uppercase tracking-wide text-muted-foreground">
         Guide · Market research
@@ -178,5 +180,7 @@ function MarketResearchGuide() {
         </Link>
       </section>
     </article>
+    <PublicFooter />
+    </>
   );
 }
