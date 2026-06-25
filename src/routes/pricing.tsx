@@ -221,6 +221,10 @@ function PricingPage() {
           </div>
         </div>
       )}
+      <p className="mx-auto max-w-5xl px-6 mt-10 text-xs text-muted-foreground">
+        Exact usage limits may vary by plan and feature. You can view your current limits from your account when signed in.
+      </p>
+      <PublicFooter />
     </div>
   );
 }
