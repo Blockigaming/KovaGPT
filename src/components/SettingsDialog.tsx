@@ -189,6 +189,27 @@ export function SettingsDialog({
     user?.id ? getLinkedAccounts(user.id) : [],
   );
   const [tab, setTab] = useState<string>(initialTab ?? "general");
+  const [usage, setUsage] = useState<DailyUsageDto | null>(null);
+  const [usageLoading, setUsageLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open || tab !== "subscription" || !loggedIn) return;
+    let cancelled = false;
+    setUsageLoading(true);
+    getMyDailyUsage()
+      .then((u) => {
+        if (!cancelled) setUsage(u);
+      })
+      .catch(() => {
+        if (!cancelled) setUsage(null);
+      })
+      .finally(() => {
+        if (!cancelled) setUsageLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, tab, loggedIn]);
 
   useEffect(() => {
     if (open && initialTab) setTab(initialTab);
