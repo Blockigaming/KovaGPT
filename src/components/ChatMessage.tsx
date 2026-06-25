@@ -47,6 +47,8 @@ function ChatMessageInner({
   const { isSignedIn } = useUser();
   const clerk = useClerkSafe();
   const saveFn = useServerFn(saveToLibrary);
+  useEffect(() => { setTtsOk(ttsSupported()); }, []);
+
 
   const artifactKind = useMemo(
     () => (isUser ? null : detectArtifactKind(message.content || "")),
