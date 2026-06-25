@@ -624,6 +624,7 @@ export function SettingsDialog({
             </div>
 
             <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground pt-1">
+              <Link to="/getting-started" onClick={() => onOpenChange(false)} className="underline hover:text-foreground">Getting started</Link>
               <Link to="/contact-support" onClick={() => onOpenChange(false)} className="underline hover:text-foreground">Contact support</Link>
               <Link to="/privacy" onClick={() => onOpenChange(false)} className="underline hover:text-foreground">Privacy policy</Link>
               <Link to="/terms" onClick={() => onOpenChange(false)} className="underline hover:text-foreground">Terms of service</Link>

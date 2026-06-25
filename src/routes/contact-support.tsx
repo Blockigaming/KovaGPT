@@ -36,7 +36,23 @@ function ContactSupportPage() {
         <h2>Account and Data Deletion</h2>
         <p>If you want to delete your KovaGPT account or request deletion of your data, contact <a href="mailto:support@kovagpt.com">support@kovagpt.com</a> from the email connected to your account. Please include "Account Deletion Request" in the subject line. After receiving your request, we may ask for confirmation to make sure the request is coming from the correct account owner.</p>
 
-        <p className="mt-8"><Link to="/">← Back to KovaGPT</Link></p>
+        <h2>Frequently Asked Questions</h2>
+
+        <h3>How do I get help with billing?</h3>
+        <p>Email <a href="mailto:support@kovagpt.com">support@kovagpt.com</a> with the email connected to your KovaGPT account and a short explanation of the issue.</p>
+
+        <h3>How do I report a bug?</h3>
+        <p>Email <a href="mailto:support@kovagpt.com">support@kovagpt.com</a> and include what page you were on, what happened, what you expected, and a screenshot if possible.</p>
+
+        <h3>How do I request account deletion?</h3>
+        <p>Email <a href="mailto:support@kovagpt.com">support@kovagpt.com</a> from the email connected to your account and include "Account Deletion Request" in the subject line.</p>
+
+        <h3>How do I request a feature?</h3>
+        <p>Email <a href="mailto:support@kovagpt.com">support@kovagpt.com</a> with your idea. We review suggestions as KovaGPT improves.</p>
+
+        <p className="mt-8">New to KovaGPT? <Link to="/getting-started">Read the Getting Started guide →</Link></p>
+
+        <p className="mt-4"><Link to="/">← Back to KovaGPT</Link></p>
       </main>
       <PublicFooter />
     </>
