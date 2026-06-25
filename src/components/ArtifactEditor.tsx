@@ -87,18 +87,20 @@ export function ArtifactEditor({
   initialContent,
   kind,
   onImprove,
+  initialMode = "edit",
 }: {
   open: boolean;
   onClose: () => void;
   initialContent: string;
   kind: ArtifactKind;
   onImprove?: (prompt: string) => void;
+  initialMode?: "edit" | "preview";
 }) {
   const [value, setValue] = useState(initialContent);
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [mode, setMode] = useState<"edit" | "preview">("edit");
+  const [mode, setMode] = useState<"edit" | "preview">(initialMode);
   const { isSignedIn } = useUser();
   const clerk = useClerkSafe();
   const saveFn = useServerFn(saveToLibrary);
