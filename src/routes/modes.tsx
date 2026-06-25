@@ -15,17 +15,17 @@ export const Route = createFileRoute("/modes")({
   component: ModesPage,
 });
 
-const MODES: { name: string; copy: string }[] = [
-  { name: "Basic Mode", copy: "Simple everyday AI help for quick questions, writing, summaries, and general tasks." },
-  { name: "Auto Mode", copy: "Automatically chooses the best style of response based on what you ask." },
-  { name: "Creative Mode", copy: "Best for brainstorming, stories, ideas, names, captions, designs, and creative writing." },
-  { name: "Precise Mode", copy: "Best for careful, direct answers when accuracy and clarity matter." },
-  { name: "Code Mode", copy: "Helps write, debug, explain, and improve code." },
-  { name: "Study Mode", copy: "Explains topics step by step, helps with studying, and can create practice questions." },
-  { name: "Reasoning Mode", copy: "Built for harder problems that need deeper thinking, planning, or logic." },
-  { name: "Research Mode", copy: "Helps organize information, compare sources, and create structured research summaries." },
-  { name: "Writer Pro", copy: "Helps improve essays, emails, scripts, posts, and professional writing." },
-  { name: "Tutor Pro", copy: "Gives more detailed explanations, guided learning, and personalized study help." },
+const MODES: { name: string; copy: string; bestFor: string }[] = [
+  { name: "Basic Mode", copy: "Simple everyday AI help for quick questions, writing, summaries, and general tasks.", bestFor: "Everyday questions" },
+  { name: "Auto Mode", copy: "Automatically chooses the best style of response based on what you ask.", bestFor: "Choosing the right style automatically" },
+  { name: "Creative Mode", copy: "Best for brainstorming, stories, ideas, names, captions, designs, and creative writing.", bestFor: "Ideas and brainstorming" },
+  { name: "Precise Mode", copy: "Best for careful, direct answers when accuracy and clarity matter.", bestFor: "Clear and careful answers" },
+  { name: "Code Mode", copy: "Helps write, debug, explain, and improve code.", bestFor: "Coding and debugging" },
+  { name: "Study Mode", copy: "Explains topics step by step, helps with studying, and can create practice questions.", bestFor: "Learning and practice" },
+  { name: "Reasoning Mode", copy: "Built for harder problems that need deeper thinking, planning, or logic.", bestFor: "Harder thinking tasks" },
+  { name: "Research Mode", copy: "Helps organize information, compare sources, and create structured research summaries.", bestFor: "Structured research help" },
+  { name: "Writer Pro", copy: "Helps improve essays, emails, scripts, posts, and professional writing.", bestFor: "Polished writing" },
+  { name: "Tutor Pro", copy: "Gives more detailed explanations, guided learning, and personalized study help.", bestFor: "Guided learning" },
 ];
 
 function ModesPage() {
@@ -41,6 +41,7 @@ function ModesPage() {
             <div key={m.name} className="rounded-xl border border-border p-4 bg-card">
               <h2 className="font-semibold mb-1">{m.name}</h2>
               <p className="text-sm text-muted-foreground">{m.copy}</p>
+              <p className="text-xs text-muted-foreground mt-2"><span className="font-medium text-foreground">Best for:</span> {m.bestFor}</p>
             </div>
           ))}
         </div>

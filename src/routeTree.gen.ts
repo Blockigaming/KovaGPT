@@ -19,6 +19,7 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ModesRouteImport } from './routes/modes'
 import { Route as ImagesRouteImport } from './routes/images'
+import { Route as GettingStartedRouteImport } from './routes/getting-started'
 import { Route as ContactSupportRouteImport } from './routes/contact-support'
 import { Route as ChangelogRouteImport } from './routes/changelog'
 import { Route as AiSafetyRouteImport } from './routes/ai-safety'
@@ -89,6 +90,11 @@ const ModesRoute = ModesRouteImport.update({
 const ImagesRoute = ImagesRouteImport.update({
   id: '/images',
   path: '/images',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GettingStartedRoute = GettingStartedRouteImport.update({
+  id: '/getting-started',
+  path: '/getting-started',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactSupportRoute = ContactSupportRouteImport.update({
@@ -208,6 +214,7 @@ export interface FileRoutesByFullPath {
   '/ai-safety': typeof AiSafetyRoute
   '/changelog': typeof ChangelogRoute
   '/contact-support': typeof ContactSupportRoute
+  '/getting-started': typeof GettingStartedRoute
   '/images': typeof ImagesRoute
   '/modes': typeof ModesRoute
   '/pricing': typeof PricingRoute
@@ -241,6 +248,7 @@ export interface FileRoutesByTo {
   '/ai-safety': typeof AiSafetyRoute
   '/changelog': typeof ChangelogRoute
   '/contact-support': typeof ContactSupportRoute
+  '/getting-started': typeof GettingStartedRoute
   '/images': typeof ImagesRoute
   '/modes': typeof ModesRoute
   '/pricing': typeof PricingRoute
@@ -275,6 +283,7 @@ export interface FileRoutesById {
   '/ai-safety': typeof AiSafetyRoute
   '/changelog': typeof ChangelogRoute
   '/contact-support': typeof ContactSupportRoute
+  '/getting-started': typeof GettingStartedRoute
   '/images': typeof ImagesRoute
   '/modes': typeof ModesRoute
   '/pricing': typeof PricingRoute
@@ -310,6 +319,7 @@ export interface FileRouteTypes {
     | '/ai-safety'
     | '/changelog'
     | '/contact-support'
+    | '/getting-started'
     | '/images'
     | '/modes'
     | '/pricing'
@@ -343,6 +353,7 @@ export interface FileRouteTypes {
     | '/ai-safety'
     | '/changelog'
     | '/contact-support'
+    | '/getting-started'
     | '/images'
     | '/modes'
     | '/pricing'
@@ -376,6 +387,7 @@ export interface FileRouteTypes {
     | '/ai-safety'
     | '/changelog'
     | '/contact-support'
+    | '/getting-started'
     | '/images'
     | '/modes'
     | '/pricing'
@@ -410,6 +422,7 @@ export interface RootRouteChildren {
   AiSafetyRoute: typeof AiSafetyRoute
   ChangelogRoute: typeof ChangelogRoute
   ContactSupportRoute: typeof ContactSupportRoute
+  GettingStartedRoute: typeof GettingStartedRoute
   ImagesRoute: typeof ImagesRoute
   ModesRoute: typeof ModesRoute
   PricingRoute: typeof PricingRoute
@@ -509,6 +522,13 @@ declare module '@tanstack/react-router' {
       path: '/images'
       fullPath: '/images'
       preLoaderRoute: typeof ImagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/getting-started': {
+      id: '/getting-started'
+      path: '/getting-started'
+      fullPath: '/getting-started'
+      preLoaderRoute: typeof GettingStartedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact-support': {
@@ -666,6 +686,7 @@ const rootRouteChildren: RootRouteChildren = {
   AiSafetyRoute: AiSafetyRoute,
   ChangelogRoute: ChangelogRoute,
   ContactSupportRoute: ContactSupportRoute,
+  GettingStartedRoute: GettingStartedRoute,
   ImagesRoute: ImagesRoute,
   ModesRoute: ModesRoute,
   PricingRoute: PricingRoute,
