@@ -37,6 +37,8 @@ function ChatMessageInner({
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const [ttsOk, setTtsOk] = useState(false);
+
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
