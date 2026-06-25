@@ -188,6 +188,7 @@ function ImagesPage() {
     }
     setError(null);
     setResult(null);
+    setSaved(false);
     setLoading(true);
     try {
       const res = await authFetch("/api/generate-image", {
