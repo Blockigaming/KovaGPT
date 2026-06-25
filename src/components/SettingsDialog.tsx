@@ -1134,11 +1134,70 @@ function ToggleRow({
   );
 }
 
+type LibItem = import("@/lib/library.functions").LibraryItem;
+
+function LibraryItemViewer({
+  item,
+  onClose,
+  onDelete,
+}: {
+  item: LibItem | null;
+  onClose: () => void;
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <Dialog open={!!item} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-2xl p-0 overflow-hidden">
+        <DialogHeader className="px-6 pt-5 pb-3 border-b border-border">
+          <DialogTitle className="text-base truncate">{item?.title ?? ""}</DialogTitle>
+          <div className="text-[11px] text-muted-foreground">
+            {item ? `${item.item_type} · ${new Date(item.created_at).toLocaleString()}` : ""}
+          </div>
+        </DialogHeader>
+        <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
+          {item?.content_text ? (
+            <pre className="whitespace-pre-wrap text-sm font-sans">{item.content_text}</pre>
+          ) : (
+            <div className="text-sm text-muted-foreground">No text content for this item.</div>
+          )}
+        </div>
+        <div className="px-6 py-3 border-t border-border flex items-center justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={async () => {
+              if (!item?.content_text) return;
+              await navigator.clipboard.writeText(item.content_text);
+              toast.success("Copied.");
+            }}
+            disabled={!item?.content_text}
+          >
+            Copy
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (item) onDelete(item.id);
+            }}
+          >
+            Delete
+          </Button>
+          <Button size="sm" onClick={onClose}>Close</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function LibraryPanel() {
-  const [items, setItems] = useState<import("@/lib/library.functions").LibraryItem[]>([]);
+  const [items, setItems] = useState<LibItem[]>([]);
   const [shared, setShared] = useState<import("@/lib/shared-chats.functions").SharedChatInbox[]>([]);
   const [mine, setMine] = useState<import("@/lib/shared-chats.functions").SharedChatSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [viewing, setViewing] = useState<LibItem | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -1166,6 +1225,7 @@ function LibraryPanel() {
       const { deleteLibraryItem } = await import("@/lib/library.functions");
       await deleteLibraryItem({ data: { id } });
       setItems((prev) => prev.filter((i) => i.id !== id));
+      setViewing((v) => (v?.id === id ? null : v));
       toast.success("Deleted.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not delete.");
@@ -1183,6 +1243,22 @@ function LibraryPanel() {
     }
   };
 
+  const filtered = items.filter((it) => {
+    if (typeFilter !== "all") {
+      if (typeFilter === "chat" && !(it.item_type === "chat_artifact")) return false;
+      if (typeFilter === "document" && it.item_type !== "document") return false;
+      if (typeFilter === "code" && it.item_type !== "code") return false;
+      if (typeFilter === "image" && it.item_type !== "image") return false;
+      if (typeFilter === "other" && ["chat_artifact","document","code","image"].includes(it.item_type)) return false;
+    }
+    if (!query.trim()) return true;
+    const q = query.toLowerCase();
+    return (
+      it.title.toLowerCase().includes(q) ||
+      (it.content_text ?? "").toLowerCase().includes(q)
+    );
+  });
+
   return (
     <section className="space-y-6">
       <div>
@@ -1196,13 +1272,40 @@ function LibraryPanel() {
         <p className="text-xs text-muted-foreground mb-3">
           Your saved files, drafts, and generated items will appear here.
         </p>
-        {items.length === 0 ? (
+
+        <div className="flex flex-col sm:flex-row gap-2 mb-3">
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search title or content..."
+            className="h-8 text-xs"
+          />
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="h-8 text-xs sm:w-44">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All types</SelectItem>
+              <SelectItem value="chat">Chat artifacts</SelectItem>
+              <SelectItem value="document">Documents</SelectItem>
+              <SelectItem value="code">Code</SelectItem>
+              <SelectItem value="image">Images</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {filtered.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            {loading ? "Loading…" : "Nothing saved yet. Use the Save button on any AI response to add it here."}
+            {loading
+              ? "Loading…"
+              : items.length === 0
+                ? "Nothing saved yet. Use the Save button on any AI response to add it here."
+                : "No items match your search."}
           </div>
         ) : (
           <ul className="divide-y divide-border rounded-lg border border-border">
-            {items.map((it) => (
+            {filtered.map((it) => (
               <li key={it.id} className="p-3 flex items-start gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">{it.title}</div>
@@ -1216,6 +1319,9 @@ function LibraryPanel() {
                   )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
+                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setViewing(it)}>
+                    Open
+                  </Button>
                   {it.content_text && (
                     <button
                       onClick={async () => {
@@ -1240,7 +1346,10 @@ function LibraryPanel() {
             ))}
           </ul>
         )}
+
+        <LibraryItemViewer item={viewing} onClose={() => setViewing(null)} onDelete={remove} />
       </div>
+
 
       <div>
         <h3 className="text-sm font-semibold mb-2">Shared with me</h3>
