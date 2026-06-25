@@ -556,12 +556,40 @@ export function SettingsDialog({
               </Link>
             </div>
 
-            <div className="rounded-lg border border-border p-4 space-y-2">
-              <div className="text-sm font-medium">Usage</div>
-              <p className="text-xs text-muted-foreground">
-                Your current plan and usage limits may vary by feature. If you need help understanding your limits, contact{" "}
-                <a href="mailto:support@kovagpt.com" className="underline hover:text-foreground">support@kovagpt.com</a>.
-              </p>
+            <div className="rounded-lg border border-border p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-medium">Usage today</div>
+                {usage && (
+                  <span className="text-[11px] text-muted-foreground">
+                    Resets {new Date(usage.resetsAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                  </span>
+                )}
+              </div>
+              {!loggedIn ? (
+                <p className="text-xs text-muted-foreground">Sign in to see your usage.</p>
+              ) : usageLoading && !usage ? (
+                <p className="text-xs text-muted-foreground">Loading usage…</p>
+              ) : usage ? (
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Messages used</span>
+                    <span>{usage.chats}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Images used</span>
+                    <span>{usage.images}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">File uploads used</span>
+                    <span>{usage.uploads}</span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Usage data isn't available right now. If you need help understanding your limits, contact{" "}
+                  <a href="mailto:support@kovagpt.com" className="underline hover:text-foreground">support@kovagpt.com</a>.
+                </p>
+              )}
             </div>
 
             <div className="flex flex-wrap gap-2">
