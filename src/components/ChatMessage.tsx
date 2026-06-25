@@ -22,10 +22,12 @@ function ChatMessageInner({
   message,
   streaming,
   voiceRate,
+  onFollowUp,
 }: {
   message: Message;
   streaming?: boolean;
   voiceRate?: number;
+  onFollowUp?: (prompt: string) => void;
 }) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
