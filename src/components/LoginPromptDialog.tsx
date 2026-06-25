@@ -17,10 +17,10 @@ export function LoginPromptDialog({
             <Sparkles className="w-6 h-6" />
           </div>
           <DialogTitle className="text-center text-xl">
-            Log in or Sign up for Free to Start Generating for Free
+            Sign in to continue
           </DialogTitle>
           <DialogDescription className="text-center">
-            Create stunning AI images in seconds with KovaGPT.
+            Create a free account to save your chats, access more features, and continue working across devices.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2 mt-2">
