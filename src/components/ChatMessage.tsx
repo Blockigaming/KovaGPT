@@ -4,7 +4,7 @@ import { Copy, Check, User, Volume2, VolumeX, ImageIcon, Loader2, Bookmark, File
 import { memo, useMemo, useState } from "react";
 import type { Message } from "@/lib/chat-store";
 import { NovaLogo } from "./NovaLogo";
-import { speak, stopSpeaking, isSpeaking } from "@/lib/voice";
+import { speak, stopSpeaking, isSpeaking, ttsSupported } from "@/lib/voice";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { saveToLibrary } from "@/lib/library.functions";
