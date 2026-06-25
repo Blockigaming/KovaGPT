@@ -263,7 +263,7 @@ function ImagesPage() {
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full hover:bg-accent transition whitespace-nowrap">
+                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full bg-neutral-300 text-neutral-900 hover:bg-neutral-400 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700 transition whitespace-nowrap">
                     Sign up for free
                   </button>
                 </SignUpButton>

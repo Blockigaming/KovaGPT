@@ -1,4 +1,4 @@
-import { MessageSquare, Trash2, PanelLeft, Search, Sparkles, HelpCircle, ImageIcon, Plus, Share2 } from "lucide-react";
+import { MessageSquare, Trash2, PanelLeft, Search, Sparkles, HelpCircle, ImageIcon, Plus, Share2, Settings as SettingsIcon, FolderOpen, Wallet, Link2 } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { Link, useRouter } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
@@ -30,7 +30,7 @@ export function Sidebar({
   onShare?: (id: string) => void;
   open: boolean;
   onToggle: () => void;
-  onOpenSettings: () => void;
+  onOpenSettings: (tab?: string) => void;
   onOpenHelp: () => void;
 }) {
   const { user, isSignedIn } = useUser();
@@ -150,6 +150,38 @@ export function Sidebar({
             <Sparkles className="w-4 h-4" />
             <span>Subscriptions</span>
           </Link>
+          {isSignedIn && (
+            <>
+              <button
+                onClick={() => onOpenSettings("library")}
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
+              >
+                <FolderOpen className="w-4 h-4" />
+                <span>Library</span>
+              </button>
+              <button
+                onClick={() => onOpenSettings("linked")}
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
+              >
+                <Link2 className="w-4 h-4" />
+                <span>Apps</span>
+              </button>
+              <button
+                onClick={() => onOpenSettings("finances")}
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
+              >
+                <Wallet className="w-4 h-4" />
+                <span>Finances</span>
+              </button>
+              <button
+                onClick={() => onOpenSettings("general")}
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
+              >
+                <SettingsIcon className="w-4 h-4" />
+                <span>Settings</span>
+              </button>
+            </>
+          )}
         </div>
 
         {/* Chats list (signed in) or flexible spacer (signed out) */}
@@ -219,7 +251,7 @@ export function Sidebar({
           <div className="border-t border-border p-3">
             <button
               type="button"
-              onClick={onOpenSettings}
+              onClick={() => onOpenSettings()}
               className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-sidebar-hover transition text-left"
               aria-label="Open settings"
             >
