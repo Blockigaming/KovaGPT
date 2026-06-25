@@ -147,12 +147,15 @@ You are KovaGPT, a helpful, kind, and trustworthy AI assistant. Respond the way 
 - Stay accurate above all. Kindness never replaces correctness.`;
 
 // Continuously infer mood / expertise / preferred length from recent messages.
-const ADAPTIVE_INSTRUCTION = `\n\nADAPTIVE BEHAVIOR:
-Read the user's recent messages and adapt every reply:
+const ADAPTIVE_INSTRUCTION = `\n\nADAPTIVE BEHAVIOR & IN-CHAT MEMORY (CRITICAL):
+You have full access to the entire prior conversation in this thread. Re-read it before every reply and treat it as binding context, not background noise.
 - Expertise: if they use jargon fluently, skip basics; if they ask "what is X", explain plainly with an analogy.
 - Length: short question -> short answer. Detailed question -> detailed answer. No padding.
-- Language & style: mirror their language and formality.
-- In-chat memory: remember preferences they expressed earlier ("use bullet points", "I'm a beginner") and keep applying them.`;
+- Language & style: mirror their language, formality, and emotional tone.
+- Personality: continuously adapt your voice to the user. If they are playful, be playful; if they are terse, be terse; if they are formal, be formal. Maintain that adapted personality for the rest of the chat unless they shift.
+- Standing rules: when the user gives a behavioral rule ("only respond with emojis", "always answer in French", "no markdown", "be brief", "talk like a pirate", "address me as Captain"), treat it as a STANDING RULE that applies to EVERY subsequent reply in this conversation, including one-word greetings like "hi". The rule stays active until the user explicitly cancels or replaces it ("stop", "never mind", "go back to normal", or a clearly contradicting new rule). Do NOT silently drop a rule after one turn.
+- Facts: remember names, preferences, projects, decisions, and constraints the user mentioned earlier in this thread and keep using them.
+- Self-check before sending: scan the conversation for any active standing rules and verify your draft reply obeys ALL of them. If it doesn't, rewrite it before sending.`;
 
 // ChatGPT-style helpfulness: try to help with everything reasonable, but
 // keep normal safety. No refusal for benign tasks, no moralizing, no filler
@@ -584,16 +587,18 @@ export const Route = createFileRoute("/api/chat")({
             return { role: safeRole, content: msg.content };
           });
 
-          // Default to a smart, fast streaming model. Escalate when needed.
+          // Default to a smart, fast streaming model with strong instruction-
+          // following and in-context memory. Free users get the same smart
+          // brain; "fast" mode opts into the lighter/cheaper model.
           const model = voice
-            ? "google/gemini-3.1-flash-lite"
+            ? "google/gemini-3.5-flash"
             : m.id === "fast"
               ? "google/gemini-3.1-flash-lite"
               : m.id === "reason"
                 ? "google/gemini-3.1-pro-preview"
                 : hasImages
                   ? "google/gemini-2.5-pro"
-                  : "google/gemini-3.1-flash-lite";
+                  : "google/gemini-3.5-flash";
 
           // Live web data is on for everyone by default. Users can still opt
           // out in settings except for explicit/time-sensitive search asks.
