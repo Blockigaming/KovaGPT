@@ -287,6 +287,7 @@ function ChatMessageInner({
           initialContent={editorContent}
           kind={artifactKind}
           onImprove={onFollowUp}
+          initialMode={editorMode}
         />
       )}
     </div>
