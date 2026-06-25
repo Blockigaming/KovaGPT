@@ -96,7 +96,10 @@ export function ArtifactEditor({
   onImprove?: (prompt: string) => void;
   initialMode?: "edit" | "preview";
 }) {
+  const LONG_THRESHOLD = 50_000;
+  const canTruncate = kind === "writing" && initialContent.length > LONG_THRESHOLD;
   const [value, setValue] = useState(initialContent);
+  const [truncated, setTruncated] = useState(false);
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -112,12 +115,19 @@ export function ArtifactEditor({
 
   useEffect(() => {
     if (open) {
-      setValue(initialContent);
+      if (canTruncate) {
+        setValue(initialContent.slice(0, LONG_THRESHOLD));
+        setTruncated(true);
+      } else {
+        setValue(initialContent);
+        setTruncated(false);
+      }
       setCopied(false);
       setSaved(false);
       setMode(initialMode);
     }
-  }, [open, initialContent, initialMode]);
+  }, [open, initialContent, initialMode, canTruncate]);
+
 
   useEffect(() => {
     if (!open) return;
