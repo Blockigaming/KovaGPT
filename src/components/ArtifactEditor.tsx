@@ -263,16 +263,32 @@ export function ArtifactEditor({
 
           </div>
         ) : (
-          <textarea
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            spellCheck={!isCode}
-            className={`flex-1 w-full resize-none bg-background outline-none p-4 text-sm leading-relaxed ${
-              isCode ? "font-mono" : ""
-            }`}
-            aria-label={`${label} content`}
-          />
+          <div className="flex-1 flex flex-col min-h-0">
+            {truncated && (
+              <div className="flex items-center justify-between gap-2 px-3 py-2 text-xs bg-yellow-50 text-yellow-900 border-b border-yellow-200">
+                <span>
+                  Showing the first {LONG_THRESHOLD.toLocaleString()} characters for performance. Full content is preserved.
+                </span>
+                <button
+                  onClick={() => { setValue(initialContent); setTruncated(false); }}
+                  className="px-2 py-1 rounded border border-yellow-300 hover:bg-yellow-100 whitespace-nowrap"
+                >
+                  Load full content
+                </button>
+              </div>
+            )}
+            <textarea
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              spellCheck={!isCode}
+              className={`flex-1 w-full resize-none bg-background outline-none p-4 text-sm leading-relaxed ${
+                isCode ? "font-mono" : ""
+              }`}
+              aria-label={`${label} content`}
+            />
+          </div>
         )}
+
 
         <div className="flex flex-wrap items-center gap-2 px-3 py-3 border-t border-border">
           <button
