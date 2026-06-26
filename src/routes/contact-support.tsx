@@ -51,10 +51,10 @@ function ContactSupportPage() {
         <h3>How do I request a feature?</h3>
         <p>Email <a href="mailto:support@kovagpt.com">support@kovagpt.com</a> with your idea. We review suggestions as KovaGPT improves.</p>
 
-        <p className="mt-8">New to KovaGPT? <Link to="/getting-started">Read the Getting Started guide →</Link></p>
+        <p className="mt-12">New to KovaGPT? <Link to="/getting-started">Read the Getting Started guide →</Link></p>
 
         <p className="mt-4"><Link to="/">← Back to KovaGPT</Link></p>
-      </main>
+      </LegalArticle>
       <PublicFooter />
     </>
   );
