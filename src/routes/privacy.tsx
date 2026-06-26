@@ -50,8 +50,8 @@ function PrivacyPage() {
         <h2>Contact</h2>
         <p>For privacy questions, contact <a href="mailto:support@kovagpt.com">support@kovagpt.com</a>.</p>
 
-        <p className="mt-8"><Link to="/">← Back to KovaGPT</Link> · <Link to="/terms">Terms of Service</Link></p>
-      </main>
+        <p className="mt-12"><Link to="/">← Back to KovaGPT</Link> · <Link to="/terms">Terms of Service</Link></p>
+      </LegalArticle>
       <PublicFooter />
     </>
   );
