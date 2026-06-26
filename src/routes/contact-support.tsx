@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PublicFooter } from "@/components/PublicFooter";
+import { LegalArticle } from "@/components/LegalArticle";
 
 export const Route = createFileRoute("/contact-support")({
   head: () => ({
@@ -18,7 +19,7 @@ export const Route = createFileRoute("/contact-support")({
 function ContactSupportPage() {
   return (
     <>
-      <main className="mx-auto max-w-3xl px-6 py-16 prose prose-invert prose-lg leading-relaxed prose-headings:mt-10 prose-p:my-5">
+      <LegalArticle>
         <h1>Contact Support</h1>
         <p>Need help with KovaGPT? We're here to help.</p>
         <p>For account issues, billing questions, subscription problems, technical bugs, feature requests, or general support, email us at <a href="mailto:support@kovagpt.com">support@kovagpt.com</a>.</p>
@@ -50,10 +51,10 @@ function ContactSupportPage() {
         <h3>How do I request a feature?</h3>
         <p>Email <a href="mailto:support@kovagpt.com">support@kovagpt.com</a> with your idea. We review suggestions as KovaGPT improves.</p>
 
-        <p className="mt-8">New to KovaGPT? <Link to="/getting-started">Read the Getting Started guide →</Link></p>
+        <p className="mt-12">New to KovaGPT? <Link to="/getting-started">Read the Getting Started guide →</Link></p>
 
         <p className="mt-4"><Link to="/">← Back to KovaGPT</Link></p>
-      </main>
+      </LegalArticle>
       <PublicFooter />
     </>
   );

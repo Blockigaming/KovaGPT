@@ -627,31 +627,50 @@ function KovaGPT() {
                   placeholder="Ask anything"
                 />
               </div>
-              <div className="w-full max-w-3xl mx-auto mt-4 flex flex-wrap gap-2 justify-center px-2">
-                {[
-                  "Draft an email",
-                  "Fix my code",
-                  "Generate an image prompt",
-                  "Summarize a file",
-                  "Research a topic",
-                  "Make a study plan",
-                ].map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setInput(s)}
-                    className="text-xs sm:text-sm px-3 py-1.5 rounded-full border border-border hover:bg-accent transition text-muted-foreground hover:text-foreground"
-                  >
+              {(() => {
+                const chipClass =
+                  "text-xs sm:text-sm px-3 py-1.5 rounded-full border border-border hover:bg-accent transition text-muted-foreground hover:text-foreground whitespace-nowrap";
+                const Chip = (s: string) => (
+                  <button key={s} type="button" onClick={() => setInput(s)} className={chipClass}>
                     {s}
                   </button>
-                ))}
-              </div>
+                );
+                // Ordered shortest -> longest so each row pyramid looks balanced.
+                const mobileRows = [
+                  ["Fix my code", "Draft an email", "Research a topic"],
+                  ["Summarize a file", "Make a study plan"],
+                  ["Generate an image prompt"],
+                ];
+                const wideRows = [
+                  ["Fix my code", "Draft an email", "Research a topic", "Summarize a file"],
+                  ["Make a study plan", "Generate an image prompt"],
+                ];
+                return (
+                  <div className="w-full max-w-3xl mx-auto mt-4 px-2">
+                    <div className="flex flex-col gap-2 sm:hidden">
+                      {mobileRows.map((row, i) => (
+                        <div key={i} className="flex flex-wrap gap-2 justify-center">
+                          {row.map(Chip)}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="hidden sm:flex flex-col gap-2">
+                      {wideRows.map((row, i) => (
+                        <div key={i} className="flex flex-wrap gap-2 justify-center">
+                          {row.map(Chip)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             <nav className="w-full max-w-3xl mx-auto py-4 flex flex-wrap gap-x-4 gap-y-1 text-sm justify-center">
               <Link to="/pricing" className="text-muted-foreground hover:text-foreground underline underline-offset-2">Pricing</Link>
               <Link to="/images" className="text-muted-foreground hover:text-foreground underline underline-offset-2">Images</Link>
               <Link to="/modes" className="text-muted-foreground hover:text-foreground underline underline-offset-2">Modes</Link>
+              <Link to="/privacy" className="text-muted-foreground hover:text-foreground underline underline-offset-2">Privacy Policy</Link>
               <Link to="/contact-support" className="text-muted-foreground hover:text-foreground underline underline-offset-2">Contact Support</Link>
             </nav>
           </div>

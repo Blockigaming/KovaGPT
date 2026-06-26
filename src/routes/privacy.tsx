@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PublicFooter } from "@/components/PublicFooter";
+import { LegalArticle } from "@/components/LegalArticle";
 
 export const Route = createFileRoute("/privacy")({
   head: () => ({
@@ -18,7 +19,7 @@ export const Route = createFileRoute("/privacy")({
 function PrivacyPage() {
   return (
     <>
-      <main className="mx-auto max-w-3xl px-6 py-16 prose prose-invert prose-lg leading-relaxed prose-headings:mt-10 prose-p:my-5">
+      <LegalArticle>
         <h1>Privacy Policy</h1>
         <p>KovaGPT respects your privacy. This Privacy Policy explains what information we collect, how we use it, and how you can contact us.</p>
 
@@ -49,8 +50,8 @@ function PrivacyPage() {
         <h2>Contact</h2>
         <p>For privacy questions, contact <a href="mailto:support@kovagpt.com">support@kovagpt.com</a>.</p>
 
-        <p className="mt-8"><Link to="/">← Back to KovaGPT</Link> · <Link to="/terms">Terms of Service</Link></p>
-      </main>
+        <p className="mt-12"><Link to="/">← Back to KovaGPT</Link> · <Link to="/terms">Terms of Service</Link></p>
+      </LegalArticle>
       <PublicFooter />
     </>
   );
