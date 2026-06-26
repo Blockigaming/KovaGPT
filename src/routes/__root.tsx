@@ -129,6 +129,12 @@ function RootShell({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
+        {/* Apply theme before hydration to avoid flash + match system on every route. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var m=localStorage.getItem('kova-theme-mode')||'system';var d=m==='dark'||(m==='system'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);if(m==='system'&&window.matchMedia){var mq=window.matchMedia('(prefers-color-scheme: dark)');mq.addEventListener&&mq.addEventListener('change',function(e){if((localStorage.getItem('kova-theme-mode')||'system')==='system')document.documentElement.classList.toggle('dark',e.matches);});}}catch(e){}})();`,
+          }}
+        />
         {children}
         <Scripts />
       </body>
