@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PublicFooter } from "@/components/PublicFooter";
+import { LegalArticle } from "@/components/LegalArticle";
 
 export const Route = createFileRoute("/contact-support")({
   head: () => ({
