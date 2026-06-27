@@ -19,14 +19,14 @@ function getHashParams(url: URL): URLSearchParams {
 }
 
 export function getOAuthRedirectUri(): string {
-  if (typeof window === "undefined") return `https://kovagpt.com${OAUTH_CALLBACK_PATH}`;
+  if (typeof window === "undefined") return "https://kovagpt.com/";
 
   const host = window.location.hostname.toLowerCase();
   if (host === "kovagpt.com" || host === "www.kovagpt.com") {
-    return `https://kovagpt.com${OAUTH_CALLBACK_PATH}`;
+    return "https://kovagpt.com/";
   }
 
-  return `${window.location.origin}${OAUTH_CALLBACK_PATH}`;
+  return `${window.location.origin}/`;
 }
 
 export function rememberPostAuthRedirect() {
