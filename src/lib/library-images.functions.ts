@@ -21,11 +21,33 @@ function decodeDataUrl(dataUrl: string): { bytes: Uint8Array; contentType: strin
   }
 }
 
+// Allowlisted hosts the library can save images from. These are the only
+// domains we expect (AI gateway CDN, Supabase storage, OpenAI image CDN).
+// User-supplied URLs to anything else are rejected to prevent SSRF against
+// internal/cloud-metadata endpoints.
+const ALLOWED_IMAGE_HOST_SUFFIXES = [
+  ".lovable.dev",
+  ".lovable.app",
+  ".supabase.co",
+  ".supabase.in",
+  ".oaiusercontent.com",
+  ".openai.com",
+  ".googleusercontent.com",
+];
+
+function isHostAllowed(hostname: string): boolean {
+  const h = hostname.toLowerCase();
+  if (/^(\d{1,3}\.){3}\d{1,3}$/.test(h)) return false; // raw IPv4 - reject
+  if (h.includes(":")) return false; // raw IPv6 - reject
+  return ALLOWED_IMAGE_HOST_SUFFIXES.some((s) => h === s.slice(1) || h.endsWith(s));
+}
+
 async function fetchRemoteImage(url: string): Promise<{ bytes: Uint8Array; contentType: string } | null> {
   try {
     const u = new URL(url);
-    if (u.protocol !== "https:" && u.protocol !== "http:") return null;
-    const res = await fetch(url);
+    if (u.protocol !== "https:") return null; // require TLS
+    if (!isHostAllowed(u.hostname)) return null;
+    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
     if (!res.ok) return null;
     const contentType = res.headers.get("content-type") ?? "image/png";
     if (!/^image\//i.test(contentType)) return null;
