@@ -143,13 +143,14 @@ const MOODS: { value: Mood; label: string; hint: string }[] = [
 
 type TabDef = { v: string; label: string; icon: typeof Cog };
 
+// Library lives in the left sidebar as a primary nav item. Finances is removed
+// from Settings entirely per product spec. Keeping a single flat list keeps the
+// sidebar readable without grouping headers (deferred to a future polish pass).
 const TAB_ORDER: TabDef[] = [
   { v: "general", label: "General", icon: Cog },
   { v: "personalization", label: "Personalization", icon: User2 },
   { v: "memory", label: "Memory", icon: Brain },
   { v: "linked", label: "Apps", icon: Link2 },
-  { v: "library", label: "Library", icon: FolderOpen },
-  { v: "finances", label: "Finances", icon: Wallet },
   { v: "email", label: "Email", icon: Mail },
   { v: "subscription", label: "Subscription", icon: CreditCard },
   { v: "appearance", label: "Appearance", icon: Palette },
@@ -163,6 +164,12 @@ const TAB_ORDER: TabDef[] = [
   { v: "help", label: "Help center", icon: LifeBuoy },
   { v: "about", label: "About", icon: Info },
   { v: "logout", label: "Log out", icon: LogOut },
+];
+
+// Limited tabs shown to signed-out users (privacy preferences + appearance + language).
+const SIGNED_OUT_TABS: TabDef[] = [
+  { v: "appearance", label: "Appearance", icon: Palette },
+  { v: "data", label: "Privacy & data", icon: Database },
 ];
 
 export function SettingsDialog({
@@ -268,13 +275,12 @@ export function SettingsDialog({
         </DialogHeader>
 
         {!loggedIn ? (
-          <div className="p-6">
-            <LockedTab
-              title="Sign in to access settings"
-              body="Your preferences are tied to your KovaGPT account. Sign in or create a free account to continue."
-              onSignIn={() => clerk?.openSignIn()}
-            />
-          </div>
+          <SignedOutSettings
+            settings={settings}
+            onChange={onChange}
+            setMode={setMode}
+            onSignIn={() => clerk?.openSignIn()}
+          />
         ) : (
         <Tabs value={tab} onValueChange={setTab} orientation="vertical" className="flex-1 overflow-hidden flex flex-row">
           <TabsList className="flex flex-col h-full w-56 shrink-0 overflow-y-auto items-stretch justify-start gap-0.5 p-2 bg-muted/40 border-r border-border rounded-none">
@@ -1509,3 +1515,105 @@ function FinancesPanel() {
     </section>
   );
 }
+
+// Limited settings panel shown to signed-out visitors. Includes only privacy
+// preferences, appearance, and language. All copy is KovaGPT-branded (not
+// copied from any other provider).
+function SignedOutSettings({
+  settings,
+  onChange,
+  setMode,
+  onSignIn,
+}: {
+  settings: Settings;
+  onChange: (s: Settings) => void;
+  setMode: (m: ThemeMode) => void;
+  onSignIn: () => void;
+}) {
+  return (
+    <div className="overflow-y-auto px-6 py-5 space-y-6 max-h-[78vh]">
+      <div className="rounded-lg border border-border bg-muted/30 p-4 flex items-start gap-3">
+        <Lock className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+        <div className="flex-1 text-sm">
+          <div className="font-medium">You're browsing as a guest</div>
+          <div className="text-xs text-muted-foreground mt-1">
+            Sign in for your full settings, saved chats, Library, and Apps.
+          </div>
+          <Button size="sm" className="mt-3" onClick={onSignIn}>Sign in</Button>
+        </div>
+      </div>
+
+      <section className="space-y-4">
+        <h3 className="text-sm font-semibold">Privacy</h3>
+        <ToggleRow
+          title="Help Improve Kova"
+          hint="Allow your content to help improve Kova's models and overall experience. We apply privacy protections to help keep your data safe."
+          checked={settings.trainingOptOut !== true}
+          onCheckedChange={(v) => onChange({ ...settings, trainingOptOut: !v })}
+        />
+        <ToggleRow
+          title="Campaign Measurement"
+          hint="Allow cookies that help Kova measure how well our marketing campaigns are performing."
+          checked={false}
+          onCheckedChange={() => {}}
+        />
+        <ToggleRow
+          title="Personalized Marketing"
+          hint="Allow Kova to personalize and measure our marketing on third-party platforms."
+          checked={false}
+          onCheckedChange={() => {}}
+        />
+        <ToggleRow
+          title="Ad Personalization"
+          hint="Use relevant activity, interests, and conversation context to make ads more useful to you."
+          checked={false}
+          onCheckedChange={() => {}}
+        />
+        <ToggleRow
+          title="Past Chat Relevance"
+          hint="Use past conversations and memory to improve ad relevance. Your chats and memories are not shared with advertisers."
+          checked={false}
+          onCheckedChange={() => {}}
+        />
+        {/* TODO(guest-privacy): persist guest privacy toggles in localStorage and
+            wire them into analytics/consent logic. Currently UI-only. */}
+      </section>
+
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold">Appearance</h3>
+        <div className="grid grid-cols-3 gap-2">
+          {(["system", "light", "dark"] as ThemeMode[]).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm capitalize transition ${
+                settings.mode === m
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border hover:bg-muted"
+              }`}
+            >
+              {m === "system" ? <Monitor className="w-4 h-4" /> : m === "light" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              {m}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold">Language</h3>
+        <Select value="auto" onValueChange={() => {}}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="auto">Auto-detect</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          KovaGPT replies in the language you write in.
+        </p>
+      </section>
+    </div>
+  );
+}
+
