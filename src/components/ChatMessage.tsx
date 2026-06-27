@@ -8,7 +8,7 @@ import { speak, stopSpeaking, isSpeaking, ttsSupported } from "@/lib/voice";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { saveToLibrary } from "@/lib/library.functions";
-import { useUser, useClerkSafe } from "@/components/auth/ClerkSafe";
+import { useUser } from "@/components/auth/ClerkSafe";
 import { ArtifactEditor, detectArtifactKind, extractCodeBlocks } from "./ArtifactEditor";
 
 // Strip numbered citation markers like [1], [2], [3] that web-search-augmented
