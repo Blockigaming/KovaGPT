@@ -22,6 +22,7 @@ export function Sidebar({
   onDuplicate,
   onArchive,
   onTogglePin,
+  onAddMembers,
   open,
   onToggle,
   onOpenSettings,
@@ -36,6 +37,7 @@ export function Sidebar({
   onDuplicate?: (id: string) => void;
   onArchive?: (id: string) => void;
   onTogglePin?: (id: string) => void;
+  onAddMembers?: (id: string) => void;
   open: boolean;
   onToggle: () => void;
   onOpenSettings: (tab?: string) => void;
