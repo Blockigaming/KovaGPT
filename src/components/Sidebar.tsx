@@ -203,9 +203,11 @@ export function Sidebar({
                 <Link to="/images" className="rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition">
                   Image Generation
                 </Link>
-                <Link to="/scheduled-tasks" className="rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition">
-                  Scheduled Tasks
-                </Link>
+                {showSignedIn && (
+                  <Link to="/scheduled-tasks" className="rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition">
+                    Scheduled Tasks
+                  </Link>
+                )}
                 <Link to="/pricing" className="rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition">
                   Subscriptions
                 </Link>
