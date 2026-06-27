@@ -117,7 +117,7 @@ export const Route = createFileRoute("/email/unsubscribe")({
           .maybeSingle()
 
         if (updateError) {
-          console.error('Failed to mark token as used', { error: updateError, token })
+          console.error('Failed to mark token as used', { error: updateError, token_prefix: token.slice(0, 8) + '…' })
           return Response.json({ error: 'Failed to process unsubscribe' }, { status: 500 })
         }
 
