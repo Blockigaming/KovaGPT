@@ -628,15 +628,12 @@ function KovaGPT() {
                     {s}
                   </button>
                 );
-                // Ordered shortest -> longest so each row pyramid looks balanced.
                 const mobileRows = [
-                  ["Fix my code", "Draft an email", "Research a topic"],
-                  ["Summarize a file", "Make a study plan"],
-                  ["Generate an image prompt"],
+                  ["Generate an image", "Look something up"],
+                  ["Write or Edit"],
                 ];
                 const wideRows = [
-                  ["Fix my code", "Draft an email", "Research a topic", "Summarize a file"],
-                  ["Make a study plan", "Generate an image prompt"],
+                  ["Generate an image", "Look something up", "Write or Edit"],
                 ];
                 return (
                   <div className="w-full max-w-3xl mx-auto mt-4 px-2">
