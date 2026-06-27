@@ -186,56 +186,50 @@ export function Sidebar({
 
         </div>
 
-        {/* Chats list (signed in) or flexible spacer (signed out) */}
-        {isSignedIn ? (
-          <>
-            <div className="px-3 pt-4 pb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-              Chats
-            </div>
-            <nav className="flex-1 overflow-y-auto px-2 pb-2 min-h-0">
-              {conversations.length === 0 && (
-                <div className="px-3 py-2 text-sm text-muted-foreground">No chats yet</div>
-              )}
-              {conversations.map((c) => (
-                <div
-                  key={c.id}
-                  className={`group flex items-center gap-2 rounded-lg px-3 py-2 text-sm cursor-pointer transition ${
-                    activeId === c.id ? "bg-sidebar-hover" : "hover:bg-sidebar-hover"
-                  }`}
-                  onClick={() => onSelect(c.id)}
+        {/* Chats list stays available on every page, including guests on Apps and Library. */}
+        <div className="px-3 pt-4 pb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          Chats
+        </div>
+        <nav className="flex-1 overflow-y-auto px-2 pb-2 min-h-0">
+          {conversations.length === 0 && (
+            <div className="px-3 py-2 text-sm text-muted-foreground">No chats yet</div>
+          )}
+          {conversations.map((c) => (
+            <div
+              key={c.id}
+              className={`group flex items-center gap-2 rounded-lg px-3 py-2 text-sm cursor-pointer transition ${
+                activeId === c.id ? "bg-sidebar-hover" : "hover:bg-sidebar-hover"
+              }`}
+              onClick={() => onSelect(c.id)}
+            >
+              <MessageSquare className="w-4 h-4 shrink-0 text-muted-foreground" />
+              <span className="flex-1 truncate">{c.title}</span>
+              {onShare && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onShare(c.id);
+                  }}
+                  className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-background/40 transition active:scale-95"
+                  aria-label="Share chat"
+                  title="Share chat"
                 >
-                  <MessageSquare className="w-4 h-4 shrink-0 text-muted-foreground" />
-                  <span className="flex-1 truncate">{c.title}</span>
-                  {onShare && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onShare(c.id);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-background/40 transition active:scale-95"
-                      aria-label="Share chat"
-                      title="Share chat"
-                    >
-                      <Share2 className="w-3.5 h-3.5 text-muted-foreground" />
-                    </button>
-                  )}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(c.id);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-background/40 transition active:scale-95"
-                    aria-label="Delete chat"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
-                  </button>
-                </div>
-              ))}
-            </nav>
-          </>
-        ) : (
-          <div className="flex-1 min-h-0" />
-        )}
+                  <Share2 className="w-3.5 h-3.5 text-muted-foreground" />
+                </button>
+              )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(c.id);
+                }}
+                className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-background/40 transition active:scale-95"
+                aria-label="Delete chat"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
+              </button>
+            </div>
+          ))}
+        </nav>
 
         {/* Secondary nav: settings then help, just above the user card */}
         <div className="px-3 pb-2 pt-1 border-t border-border/60 flex flex-col gap-1">

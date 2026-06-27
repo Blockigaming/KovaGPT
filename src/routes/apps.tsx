@@ -74,6 +74,9 @@ function AppsPage() {
             Link external services so KovaGPT can reference your files, messages, and activity in
             chat. You can disconnect any app at any time.
           </p>
+          <p className="text-xs text-muted-foreground mt-2">
+            {CONNECTOR_CATALOG.length.toLocaleString()} apps available, including school portals for assignments, grades, and remaining work.
+          </p>
         </div>
 
         <div className="relative max-w-md">
@@ -81,7 +84,7 @@ function AppsPage() {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search apps (Gmail, Notion, Slack, ...)"
+            placeholder="Search apps like Gmail, Canvas, Clever, or Slack"
             className="h-10 pl-9"
           />
         </div>
