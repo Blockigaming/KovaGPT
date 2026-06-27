@@ -45,7 +45,7 @@ function ChatMessageInner({
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState<"edit" | "preview">("edit");
   const { isSignedIn } = useUser();
-  const clerk = useClerkSafe();
+  void useClerkSafe;
   const saveFn = useServerFn(saveToLibrary);
   useEffect(() => { setTtsOk(ttsSupported()); }, []);
 
