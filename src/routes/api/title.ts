@@ -51,7 +51,8 @@ export const Route = createFileRoute("/api/title")({
                 {
                   role: "system",
                   content:
-                    "Summarize the user's conversation into a SHORT title (max 5 words, no quotes, no punctuation at the end). Return ONLY the title text.",
+                    "You write concise chat titles. Read the conversation and return a clear 3 to 5 word title summarizing the main topic. No quotes. No trailing punctuation. No emoji. No dashes. Return only the title.",
+
                 },
                 { role: "user", content: excerpt },
               ],
