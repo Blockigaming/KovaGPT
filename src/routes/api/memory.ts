@@ -72,11 +72,31 @@ export const Route = createFileRoute("/api/memory")({
         const tier = await getCallerTier(auth);
         if (tier === "free") return new Response(null, { status: 204 });
 
-        const body = (await request.json().catch(() => null)) as {
+        const MAX_BODY = 4 * 1024 * 1024; // 4 MB
+        const contentLength = Number(request.headers.get("content-length") ?? "0");
+        if (contentLength > MAX_BODY) {
+          return new Response(JSON.stringify({ error: "Request too large." }), {
+            status: 413,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        const raw = await request.text();
+        if (raw.length > MAX_BODY) {
+          return new Response(JSON.stringify({ error: "Request too large." }), {
+            status: 413,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        let body: {
           chatId?: string;
           title?: string;
           messages?: { role: string; content: string }[];
-        } | null;
+        } | null = null;
+        try {
+          body = JSON.parse(raw);
+        } catch {
+          body = null;
+        }
         if (!body || typeof body.chatId !== "string" || !Array.isArray(body.messages)) {
           return new Response(JSON.stringify({ error: "Invalid payload" }), {
             status: 400,
