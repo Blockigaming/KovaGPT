@@ -1551,32 +1551,26 @@ function SignedOutSettings({
           checked={settings.trainingOptOut !== true}
           onCheckedChange={(v) => onChange({ ...settings, trainingOptOut: !v })}
         />
-        <ToggleRow
+        <GuestToggleRow
+          storageKey="kova-guest-campaign-measurement"
           title="Campaign Measurement"
           hint="Allow cookies that help Kova measure how well our marketing campaigns are performing."
-          checked={false}
-          onCheckedChange={() => {}}
         />
-        <ToggleRow
+        <GuestToggleRow
+          storageKey="kova-guest-personalized-marketing"
           title="Personalized Marketing"
           hint="Allow Kova to personalize and measure our marketing on third-party platforms."
-          checked={false}
-          onCheckedChange={() => {}}
         />
-        <ToggleRow
+        <GuestToggleRow
+          storageKey="kova-guest-ad-personalization"
           title="Ad Personalization"
           hint="Use relevant activity, interests, and conversation context to make ads more useful to you."
-          checked={false}
-          onCheckedChange={() => {}}
         />
-        <ToggleRow
+        <GuestToggleRow
+          storageKey="kova-guest-past-chat-relevance"
           title="Past Chat Relevance"
           hint="Use past conversations and memory to improve ad relevance. Your chats and memories are not shared with advertisers."
-          checked={false}
-          onCheckedChange={() => {}}
         />
-        {/* TODO(guest-privacy): persist guest privacy toggles in localStorage and
-            wire them into analytics/consent logic. Currently UI-only. */}
       </section>
 
       <section className="space-y-3">
@@ -1601,19 +1595,109 @@ function SignedOutSettings({
 
       <section className="space-y-2">
         <h3 className="text-sm font-semibold">Language</h3>
-        <Select value="auto" onValueChange={() => {}}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="auto">Auto-detect</SelectItem>
-          </SelectContent>
-        </Select>
+        <GuestLanguageSelect />
         <p className="text-xs text-muted-foreground">
-          KovaGPT replies in the language you write in.
+          KovaGPT replies in the language you write in. Auto detect uses your browser language.
         </p>
       </section>
     </div>
+  );
+}
+
+const KOVA_LANGUAGES: { value: string; label: string }[] = [
+  { value: "auto", label: "Auto detect" },
+  { value: "en", label: "English" },
+  { value: "en-GB", label: "English (UK)" },
+  { value: "es", label: "Español" },
+  { value: "es-MX", label: "Español (México)" },
+  { value: "fr", label: "Français" },
+  { value: "de", label: "Deutsch" },
+  { value: "it", label: "Italiano" },
+  { value: "pt", label: "Português" },
+  { value: "pt-BR", label: "Português (Brasil)" },
+  { value: "nl", label: "Nederlands" },
+  { value: "sv", label: "Svenska" },
+  { value: "no", label: "Norsk" },
+  { value: "da", label: "Dansk" },
+  { value: "fi", label: "Suomi" },
+  { value: "pl", label: "Polski" },
+  { value: "cs", label: "Čeština" },
+  { value: "ro", label: "Română" },
+  { value: "hu", label: "Magyar" },
+  { value: "el", label: "Ελληνικά" },
+  { value: "tr", label: "Türkçe" },
+  { value: "ru", label: "Русский" },
+  { value: "uk", label: "Українська" },
+  { value: "ar", label: "العربية" },
+  { value: "he", label: "עברית" },
+  { value: "fa", label: "فارسی" },
+  { value: "hi", label: "हिन्दी" },
+  { value: "bn", label: "বাংলা" },
+  { value: "ur", label: "اردو" },
+  { value: "ta", label: "தமிழ்" },
+  { value: "te", label: "తెలుగు" },
+  { value: "th", label: "ไทย" },
+  { value: "vi", label: "Tiếng Việt" },
+  { value: "id", label: "Bahasa Indonesia" },
+  { value: "ms", label: "Bahasa Melayu" },
+  { value: "tl", label: "Tagalog" },
+  { value: "zh-CN", label: "中文 (简体)" },
+  { value: "zh-TW", label: "中文 (繁體)" },
+  { value: "ja", label: "日本語" },
+  { value: "ko", label: "한국어" },
+  { value: "sw", label: "Kiswahili" },
+  { value: "af", label: "Afrikaans" },
+];
+
+function GuestLanguageSelect() {
+  const KEY = "kova-guest-language";
+  const [value, setValue] = useState<string>("auto");
+  useEffect(() => {
+    try { setValue(localStorage.getItem(KEY) || "auto"); } catch { /* noop */ }
+  }, []);
+  return (
+    <Select
+      value={value}
+      onValueChange={(v) => {
+        setValue(v);
+        try { localStorage.setItem(KEY, v); } catch { /* noop */ }
+      }}
+    >
+      <SelectTrigger>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent className="max-h-72">
+        {KOVA_LANGUAGES.map((l) => (
+          <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function GuestToggleRow({
+  storageKey,
+  title,
+  hint,
+}: {
+  storageKey: string;
+  title: string;
+  hint: string;
+}) {
+  const [checked, setChecked] = useState(false);
+  useEffect(() => {
+    try { setChecked(localStorage.getItem(storageKey) === "1"); } catch { /* noop */ }
+  }, [storageKey]);
+  return (
+    <ToggleRow
+      title={title}
+      hint={hint}
+      checked={checked}
+      onCheckedChange={(v) => {
+        setChecked(v);
+        try { localStorage.setItem(storageKey, v ? "1" : "0"); } catch { /* noop */ }
+      }}
+    />
   );
 }
 
