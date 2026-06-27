@@ -586,6 +586,15 @@ function KovaGPT() {
           if (activeId === id) setActiveId(null);
           toast.success("Chat archived");
         }}
+        onTogglePin={(id) => {
+          setConversations((prev) =>
+            prev.map((c) =>
+              c.id === id
+                ? { ...c, pinned: !c.pinned, pinnedAt: !c.pinned ? Date.now() : undefined }
+                : c,
+            ),
+          );
+        }}
       />
 
       <main className="flex-1 flex flex-col min-w-0">
