@@ -8,7 +8,7 @@ import { speak, stopSpeaking, isSpeaking, ttsSupported } from "@/lib/voice";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { saveToLibrary } from "@/lib/library.functions";
-import { useUser, useClerkSafe } from "@/components/auth/ClerkSafe";
+import { useUser } from "@/components/auth/ClerkSafe";
 import { ArtifactEditor, detectArtifactKind, extractCodeBlocks } from "./ArtifactEditor";
 
 // Strip numbered citation markers like [1], [2], [3] that web-search-augmented
@@ -45,7 +45,7 @@ function ChatMessageInner({
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState<"edit" | "preview">("edit");
   const { isSignedIn } = useUser();
-  const clerk = useClerkSafe();
+  
   const saveFn = useServerFn(saveToLibrary);
   useEffect(() => { setTtsOk(ttsSupported()); }, []);
 
@@ -70,10 +70,9 @@ function ChatMessageInner({
   };
 
   const saveItem = async () => {
-    if (!isSignedIn) {
-      clerk?.openSignIn();
-      return;
-    }
+    // Guests can save to a local-only library (kept in localStorage). The
+    // ClerkSafe sign-in prompt is no longer shown here.
+
     // Duplicate-safe: stable per-message id stored in localStorage avoids re-saves.
     const dedupKey = "kovagpt:savedMessageIds";
     let savedIds: string[] = [];
@@ -100,14 +99,19 @@ function ChatMessageInner({
         const words = firstSentence.replace(/\s+/g, " ").split(" ").slice(0, 10).join(" ");
         title = words ? words.slice(0, 120) : "Saved chat response";
       }
-      await saveFn({
-        data: {
-          title,
-          item_type: codeRatio ? "code" : "chat_artifact",
-          source: "chat",
-          content_text: message.content.slice(0, 100_000),
-        },
-      });
+      const payload = {
+        title,
+        item_type: (codeRatio ? "code" : "chat_artifact") as "code" | "chat_artifact",
+        source: "chat" as const,
+        content_text: message.content.slice(0, 100_000),
+      };
+      if (isSignedIn) {
+        await saveFn({ data: payload });
+      } else {
+        const { saveGuestItem } = await import("@/lib/guest-library");
+        saveGuestItem(payload);
+      }
+
       if (message.id) {
         try {
           savedIds.push(message.id);

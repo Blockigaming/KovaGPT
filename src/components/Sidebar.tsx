@@ -1,9 +1,9 @@
 import { MessageSquare, Trash2, PanelLeft, Search, Sparkles, HelpCircle, ImageIcon, Plus, Share2, Settings as SettingsIcon, FolderOpen, Link2 } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { SignInButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
-import { LoginPromptDialog } from "@/components/LoginPromptDialog";
+
 import type { Conversation } from "@/lib/chat-store";
 
 
@@ -35,9 +35,8 @@ export function Sidebar({
   onOpenHelp: () => void;
 }) {
   const { user, isSignedIn } = useUser();
-  const navigate = useNavigate();
-  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
   const [width, setWidth] = useState<number>(260);
+
   const draggingRef = useRef(false);
 
   useEffect(() => {
@@ -153,24 +152,23 @@ export function Sidebar({
             <Sparkles className="w-4 h-4" />
             <span>Subscriptions</span>
           </Link>
-          {/* Library: route for signed-in users; popup for guests so they keep their context. */}
-          <button
-            type="button"
-            onClick={() => (isSignedIn ? navigate({ to: "/library" }) : setLoginPromptOpen(true))}
-            className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left active:scale-[0.98] active:bg-sidebar-hover/80"
+          {/* Library: works for guests too (session-scoped) so uploads/images persist locally. */}
+          <Link
+            to="/library"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition active:scale-[0.98] active:bg-sidebar-hover/80"
           >
             <FolderOpen className="w-4 h-4" />
             <span>Library</span>
-          </button>
-          {/* Apps: route for signed-in users; popup for guests. */}
-          <button
-            type="button"
-            onClick={() => (isSignedIn ? navigate({ to: "/apps" }) : setLoginPromptOpen(true))}
-            className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left active:scale-[0.98] active:bg-sidebar-hover/80"
+          </Link>
+          {/* Apps: route is browseable; Connect prompts sign-in for guests. */}
+          <Link
+            to="/apps"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition active:scale-[0.98] active:bg-sidebar-hover/80"
           >
             <Link2 className="w-4 h-4" />
             <span>Apps</span>
-          </button>
+          </Link>
+
         </div>
 
         {/* Chats list (signed in) or flexible spacer (signed out) */}
@@ -288,7 +286,7 @@ export function Sidebar({
         />
       )}
       </aside>
-      <LoginPromptDialog open={loginPromptOpen} onOpenChange={setLoginPromptOpen} />
+      
     </>
   );
 }

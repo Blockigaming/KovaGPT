@@ -591,23 +591,8 @@ function KovaGPT() {
                 {greeting}
               </h1>
 
-              <div className="flex flex-wrap gap-2 justify-center mb-5">
-                <SignUpButton mode="modal">
-                  <button className="text-sm font-medium px-4 py-2 rounded-full bg-foreground text-background hover:opacity-90 transition">
-                    Start Free
-                  </button>
-                </SignUpButton>
-                <Link to="/pricing">
-                  <button className="text-sm font-medium px-4 py-2 rounded-full border border-border hover:bg-accent transition">
-                    View Pricing
-                  </button>
-                </Link>
-                <Link to="/images">
-                  <button className="text-sm font-medium px-4 py-2 rounded-full border border-border hover:bg-accent transition">
-                    Generate Images
-                  </button>
-                </Link>
-              </div>
+
+
 
               <div className="w-full max-w-3xl mx-auto">
                 <ChatInput

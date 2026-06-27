@@ -20,16 +20,8 @@ export const Route = createFileRoute("/library")({
 
 type LibItem = import("@/lib/library.functions").LibraryItem;
 
-const GUEST_KEY = "kova-guest-library";
+import { loadGuestLibrary, deleteGuestItem } from "@/lib/guest-library";
 
-function loadGuestItems(): LibItem[] {
-  if (typeof sessionStorage === "undefined") return [];
-  try {
-    return JSON.parse(sessionStorage.getItem(GUEST_KEY) ?? "[]");
-  } catch {
-    return [];
-  }
-}
 
 function LibraryPage() {
   const { isSignedIn, isLoaded } = useUser();
@@ -39,7 +31,7 @@ function LibraryPage() {
 
   const load = async () => {
     if (!isSignedIn) {
-      setItems(loadGuestItems());
+      setItems(loadGuestLibrary());
       return;
     }
     setLoading(true);
@@ -61,11 +53,11 @@ function LibraryPage() {
 
   const remove = async (id: string) => {
     if (!isSignedIn) {
-      const next = items.filter((i) => i.id !== id);
-      setItems(next);
-      sessionStorage.setItem(GUEST_KEY, JSON.stringify(next));
+      deleteGuestItem(id);
+      setItems((prev) => prev.filter((i) => i.id !== id));
       return;
     }
+
     try {
       const { deleteLibraryItem } = await import("@/lib/library.functions");
       await deleteLibraryItem({ data: { id } });
@@ -109,9 +101,10 @@ function LibraryPage() {
           <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm">
             <div className="font-medium mb-1">You are browsing as a guest.</div>
             <p className="text-muted-foreground text-xs mb-3">
-              Items saved while signed out stay only in this browser tab and will be cleared if you
-              refresh or close it. Sign in to keep your library across devices.
+              Items you save stay in this browser. Sign in to keep them across devices and free up
+              local storage.
             </p>
+
             <SignInButton mode="modal">
               <button className="px-3 py-1.5 rounded-full bg-foreground text-background text-xs font-medium hover:opacity-90 transition">
                 Sign in to save permanently
@@ -139,6 +132,13 @@ function LibraryPage() {
           <ul className="divide-y divide-border rounded-lg border border-border bg-card">
             {filtered.map((it) => (
               <li key={it.id} className="p-3 flex items-start gap-3">
+                {it.file_url && (it.item_type === "image" || it.file_type?.startsWith("image/")) && (
+                  <img
+                    src={it.file_url}
+                    alt={it.title}
+                    className="w-14 h-14 rounded-md object-cover border border-border shrink-0"
+                  />
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">{it.title}</div>
                   <div className="text-[11px] text-muted-foreground mt-0.5">
@@ -149,7 +149,18 @@ function LibraryPage() {
                       {it.content_text.slice(0, 240)}
                     </div>
                   )}
+                  {it.file_url && it.item_type === "upload" && !it.file_type?.startsWith("image/") && (
+                    <a
+                      href={it.file_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-foreground/80 underline mt-1 inline-block"
+                    >
+                      Open file
+                    </a>
+                  )}
                 </div>
+
                 <button
                   onClick={() => remove(it.id)}
                   className="p-1.5 rounded hover:bg-accent transition active:scale-95"
