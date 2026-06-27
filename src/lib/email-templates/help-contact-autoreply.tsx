@@ -5,11 +5,14 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Preview,
   Section,
   Text,
 } from '@react-email/components'
 import type { TemplateEntry } from './registry'
+
+const LOGO_URL = 'https://kovagpt.com/favicon.png'
 
 interface Props {
   name?: string
@@ -23,6 +26,9 @@ const Email = ({ name, topic, variant = 'help' }: Props) => (
     <Preview>Thanks for reaching out to KovaGPT - we'll get back to you soon.</Preview>
     <Body style={main}>
       <Container style={container}>
+        <Section style={logoWrap}>
+          <Img src={LOGO_URL} width="48" height="48" alt="KovaGPT" style={logoImg} />
+        </Section>
         <Heading style={h1}>Thanks{name ? `, ${name}` : ''} 👋</Heading>
         <Text style={p}>
           We received your {variant === 'bug' ? 'bug report' : 'message'} and someone from the
@@ -62,3 +68,5 @@ const card = { backgroundColor: '#f5f5f5', borderRadius: '10px', padding: '14px 
 const label = { fontSize: '11px', textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: '#737373', margin: '0 0 4px 0' }
 const value = { fontSize: '14px', margin: '0' }
 const signoff = { fontSize: '14px', color: '#525252', marginTop: '24px' }
+const logoWrap = { margin: '0 0 20px 0' }
+const logoImg = { display: 'block', borderRadius: '10px' }
