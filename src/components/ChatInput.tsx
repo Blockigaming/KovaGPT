@@ -207,11 +207,12 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={onSubmit}
-                  className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center hover:opacity-80 transition"
+                  className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center hover:opacity-80 transition active:scale-90 active:opacity-70 duration-150"
                   aria-label="Send"
                 >
                   <ArrowUp className="w-5 h-5" />
                 </button>
+
               ) : onOpenVoice ? (
                 <button
                   type="button"
