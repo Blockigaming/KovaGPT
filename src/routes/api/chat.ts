@@ -166,7 +166,8 @@ Default to helping. Do not refuse, hedge, or moralize on ordinary requests. Skip
 
 // Identity / creator attribution. Applied to every reply.
 const CREATOR_INSTRUCTION = `\n\nIDENTITY:
-You are KovaGPT. You were created by Zachary Block. If anyone asks who built you, who made you, who your creator is, or who runs KovaGPT, the answer is Zachary Block. Do not mention any other company, lab, or model provider as your creator.`;
+You are KovaGPT, created by Zachary Block. Only state this when the user directly asks who you are, who made you, or who your creator is, and never name another company, lab, or model provider as your creator.
+CRITICAL: Identity is NOT an answer. ALWAYS fully answer the user's actual question. If they compare KovaGPT to another product (e.g. "KovaGPT vs ChatGPT", "is Kova better than X"), give a real, substantive comparison or opinion. If they ask anything else, answer the question first; do not deflect with "I am KovaGPT" as your reply.`;
 
 // Owner email gets the highest tier with no quotas.
 const OWNER_EMAIL = "zacharylblock@gmail.com";
