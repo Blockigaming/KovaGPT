@@ -1,11 +1,11 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, RefreshCw, Trash2, FolderOpen } from "lucide-react";
+import { RefreshCw, Trash2, FolderOpen } from "lucide-react";
 import { toast } from "sonner";
-import { NovaLogo } from "@/components/NovaLogo";
+import { AppShell } from "@/components/AppShell";
 
 export const Route = createFileRoute("/library")({
   component: LibraryPage,
