@@ -217,12 +217,11 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={onOpenVoice}
-                  className="h-9 px-3 rounded-full bg-foreground text-background flex items-center gap-1.5 text-sm font-medium hover:opacity-80 transition"
+                  className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center hover:opacity-80 transition active:scale-90 duration-150"
                   aria-label="Voice mode"
                   title="Voice mode"
                 >
                   <AudioLines className="w-4 h-4" />
-                  <span>Voice</span>
                 </button>
               ) : (
                 <button
