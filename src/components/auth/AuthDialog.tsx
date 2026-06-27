@@ -129,6 +129,18 @@ export function AuthDialog({
   };
 
   return (
+    <>
+    {loading && (
+      <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-background/95 backdrop-blur-sm">
+        <div className="relative w-16 h-16 rounded-2xl bg-foreground/5 ring-1 ring-border flex items-center justify-center">
+          <NovaLogo className="w-10 h-10" />
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>Signing you in to KovaGPT…</span>
+        </div>
+      </div>
+    )}
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
