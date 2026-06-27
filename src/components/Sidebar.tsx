@@ -150,8 +150,6 @@ export function Sidebar({
               </button>
             </div>
           </div>
-          {/* Fade strip directly below brand */}
-          <div className="pointer-events-none relative z-10 -mt-2 h-6 bg-gradient-to-b from-sidebar to-transparent" />
 
           {searchOpen && (
             <div className="px-3 pb-2">
