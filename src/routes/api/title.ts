@@ -1,11 +1,37 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+const RATE_LIMIT_MAX = 30;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const bucket = rateLimitBuckets.get(ip);
+  if (!bucket || bucket.resetAt < now) {
+    rateLimitBuckets.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (bucket.count >= RATE_LIMIT_MAX) return false;
+  bucket.count += 1;
+  return true;
+}
 
 export const Route = createFileRoute("/api/title")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         try {
+          const ip =
+            request.headers.get("cf-connecting-ip") ??
+            request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+            "unknown";
+          if (!checkRateLimit(ip)) {
+            return new Response(JSON.stringify({ title: "New chat" }), {
+              status: 429,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+
 
           const MAX_BODY = 1 * 1024 * 1024;
           const contentLength = Number(request.headers.get("content-length") ?? "0");
