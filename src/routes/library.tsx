@@ -75,15 +75,9 @@ function LibraryPage() {
   });
 
   return (
-    <div className="min-h-[100dvh] bg-background text-foreground">
+    <AppShell>
       <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
-          <Link to="/" className="p-2 rounded-md hover:bg-accent transition" aria-label="Back to chat">
-            <ArrowLeft className="w-4 h-4" />
-          </Link>
-          <span className="inline-flex rounded-full dark:bg-black dark:p-[2px]">
-            <NovaLogo className="w-6 h-6" />
-          </span>
           <h1 className="font-display font-semibold tracking-tight text-base flex items-center gap-2">
             <FolderOpen className="w-4 h-4" /> Library
           </h1>
