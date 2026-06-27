@@ -129,7 +129,8 @@ export function Sidebar({
             </div>
             <div className="flex items-center gap-1">
               <button
-                className="p-2 rounded-md hover:bg-sidebar-hover transition"
+                onClick={() => setSearchOpen((v) => !v)}
+                className="p-2 rounded-md hover:bg-sidebar-hover transition active:scale-95"
                 aria-label="Search chats"
                 title="Search chats"
               >
