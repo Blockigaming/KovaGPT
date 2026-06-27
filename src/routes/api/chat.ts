@@ -570,7 +570,18 @@ export const Route = createFileRoute("/api/chat")({
           }
           const hasImages = totalAttachments > 0;
 
-          const transformed = messages.map((msg) => {
+          // COST: only send the last ~12 turns to the model. Adaptive memory +
+          // cross-chat summaries (below) carry forward standing rules and
+          // long-term context, so we don't need to resend the full transcript
+          // on every call. The latest user message is always preserved.
+          // TODO(summarization): when history exceeds threshold, run a cheap
+          // background summary pass and store it in chat_memories instead of
+          // sending raw turns.
+          const HISTORY_TURNS = 12;
+          const trimmedMessages =
+            messages.length > HISTORY_TURNS ? messages.slice(-HISTORY_TURNS) : messages;
+
+          const transformed = trimmedMessages.map((msg) => {
             // SECURITY: client-supplied "system" messages would otherwise sit
             // next to the server's authoritative system prompt and could
             // override it. Demote any non-assistant/non-user role to "user".
