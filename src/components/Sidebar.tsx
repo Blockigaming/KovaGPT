@@ -35,6 +35,8 @@ export function Sidebar({
   onOpenHelp: () => void;
 }) {
   const { user, isSignedIn } = useUser();
+  const navigate = useNavigate();
+  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
   const [width, setWidth] = useState<number>(260);
   const draggingRef = useRef(false);
 
