@@ -124,8 +124,8 @@ export function Sidebar({
         className="relative shrink-0 overflow-hidden transition-[width] duration-150 bg-sidebar text-sidebar-foreground border-r border-border flex flex-col max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:h-[100dvh]"
       >
         <div style={{ width }} className="flex flex-col h-full">
-          {/* Brand row with search + collapse */}
-          <div className="flex items-center justify-between px-4 pt-4 pb-3">
+          {/* Brand row sits on top; fade beneath obscures scrolled content */}
+          <div className="relative z-20 flex items-center justify-between px-4 pt-4 pb-3 bg-sidebar">
             <div className="flex items-center gap-2">
               <span className="inline-flex rounded-full dark:bg-black dark:p-[2px] dark:ring-1 dark:ring-black">
                 <NovaLogo className="w-7 h-7" />
@@ -150,6 +150,8 @@ export function Sidebar({
               </button>
             </div>
           </div>
+          {/* Fade strip directly below brand */}
+          <div className="pointer-events-none relative z-10 -mt-2 h-6 bg-gradient-to-b from-sidebar to-transparent" />
 
           {searchOpen && (
             <div className="px-3 pb-2">
