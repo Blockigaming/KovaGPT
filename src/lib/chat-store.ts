@@ -16,6 +16,8 @@ export type Conversation = {
   mode: ModeId;
   createdAt: number;
   updatedAt: number;
+  pinned?: boolean;
+  pinnedAt?: number;
 };
 
 const KEY = "nova-gpt-conversations-v2";

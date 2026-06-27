@@ -14,6 +14,7 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as StudyAssistantRouteImport } from './routes/study-assistant'
 import { Route as StatusRouteImport } from './routes/status'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as ScheduledTasksRouteImport } from './routes/scheduled-tasks'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ResearchAssistantRouteImport } from './routes/research-assistant'
 import { Route as RefundRouteImport } from './routes/refund'
@@ -75,6 +76,11 @@ const StatusRoute = StatusRouteImport.update({
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScheduledTasksRoute = ScheduledTasksRouteImport.update({
+  id: '/scheduled-tasks',
+  path: '/scheduled-tasks',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -289,6 +295,7 @@ export interface FileRoutesByFullPath {
   '/refund': typeof RefundRoute
   '/research-assistant': typeof ResearchAssistantRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/scheduled-tasks': typeof ScheduledTasksRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/status': typeof StatusRoute
   '/study-assistant': typeof StudyAssistantRoute
@@ -333,6 +340,7 @@ export interface FileRoutesByTo {
   '/refund': typeof RefundRoute
   '/research-assistant': typeof ResearchAssistantRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/scheduled-tasks': typeof ScheduledTasksRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/status': typeof StatusRoute
   '/study-assistant': typeof StudyAssistantRoute
@@ -378,6 +386,7 @@ export interface FileRoutesById {
   '/refund': typeof RefundRoute
   '/research-assistant': typeof ResearchAssistantRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/scheduled-tasks': typeof ScheduledTasksRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/status': typeof StatusRoute
   '/study-assistant': typeof StudyAssistantRoute
@@ -424,6 +433,7 @@ export interface FileRouteTypes {
     | '/refund'
     | '/research-assistant'
     | '/reset-password'
+    | '/scheduled-tasks'
     | '/sitemap.xml'
     | '/status'
     | '/study-assistant'
@@ -468,6 +478,7 @@ export interface FileRouteTypes {
     | '/refund'
     | '/research-assistant'
     | '/reset-password'
+    | '/scheduled-tasks'
     | '/sitemap.xml'
     | '/status'
     | '/study-assistant'
@@ -512,6 +523,7 @@ export interface FileRouteTypes {
     | '/refund'
     | '/research-assistant'
     | '/reset-password'
+    | '/scheduled-tasks'
     | '/sitemap.xml'
     | '/status'
     | '/study-assistant'
@@ -557,6 +569,7 @@ export interface RootRouteChildren {
   RefundRoute: typeof RefundRoute
   ResearchAssistantRoute: typeof ResearchAssistantRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  ScheduledTasksRoute: typeof ScheduledTasksRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StatusRoute: typeof StatusRoute
   StudyAssistantRoute: typeof StudyAssistantRoute
@@ -617,6 +630,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scheduled-tasks': {
+      id: '/scheduled-tasks'
+      path: '/scheduled-tasks'
+      fullPath: '/scheduled-tasks'
+      preLoaderRoute: typeof ScheduledTasksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -901,6 +921,7 @@ const rootRouteChildren: RootRouteChildren = {
   RefundRoute: RefundRoute,
   ResearchAssistantRoute: ResearchAssistantRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  ScheduledTasksRoute: ScheduledTasksRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StatusRoute: StatusRoute,
   StudyAssistantRoute: StudyAssistantRoute,
