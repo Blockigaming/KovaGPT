@@ -93,6 +93,7 @@ export function AuthDialog({
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      console.error("[KovaAuth] Email sign in failed.", err);
       toast.error(msg);
     } finally {
       setLoading(false);
