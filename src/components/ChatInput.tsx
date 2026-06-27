@@ -47,6 +47,29 @@ export function ChatInput({
   const recRef = useRef<any>(null);
   const [listening, setListening] = useState(false);
   const [sendFlash, setSendFlash] = useState(false);
+  const [actionColor, setActionColor] = useState<string>("#2563eb");
+
+  useEffect(() => {
+    try {
+      const c = localStorage.getItem("kova-action-color");
+      if (c && /^#[0-9a-f]{6}$/i.test(c)) setActionColor(c);
+    } catch { /* ignore */ }
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "kova-action-color" && e.newValue && /^#[0-9a-f]{6}$/i.test(e.newValue)) {
+        setActionColor(e.newValue);
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    const onLocal = (e: Event) => {
+      const ce = e as CustomEvent<string>;
+      if (typeof ce.detail === "string" && /^#[0-9a-f]{6}$/i.test(ce.detail)) setActionColor(ce.detail);
+    };
+    window.addEventListener("kova-action-color", onLocal as EventListener);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("kova-action-color", onLocal as EventListener);
+    };
+  }, []);
 
   useEffect(() => {
     const el = ref.current;
@@ -57,7 +80,7 @@ export function ChatInput({
 
   const triggerSubmit = () => {
     setSendFlash(true);
-    window.setTimeout(() => setSendFlash(false), 320);
+    window.setTimeout(() => setSendFlash(false), 380);
     onSubmit();
   };
 
