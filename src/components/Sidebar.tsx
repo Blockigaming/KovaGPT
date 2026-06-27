@@ -150,31 +150,22 @@ export function Sidebar({
             <Sparkles className="w-4 h-4" />
             <span>Subscriptions</span>
           </Link>
-          {/* Library: available to everyone, including signed-out users (session-only for guests). */}
-          <button
-            onClick={() => onOpenSettings("library")}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
+          {/* Library: dedicated route. Signed-out users see session-only items that clear on refresh. */}
+          <Link
+            to="/library"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition"
           >
             <FolderOpen className="w-4 h-4" />
             <span>Library</span>
-          </button>
-          {/* Apps: visible to everyone; signed-out users see a sign-in prompt when opened. */}
-          <button
-            onClick={() => onOpenSettings("linked")}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
+          </Link>
+          {/* Apps: dedicated route. Signed-out users see a clean sign-in prompt. */}
+          <Link
+            to="/apps"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition"
           >
             <Link2 className="w-4 h-4" />
             <span>Apps</span>
-          </button>
-          <button
-            onClick={() => onOpenSettings("general")}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
-          >
-            <SettingsIcon className="w-4 h-4" />
-            <span>Settings</span>
-          </button>
-          {/* TODO(finances): Finance tab removed from sidebar/settings per spec. Re-add as
-              standalone chat surface in a future pass if needed. */}
+          </Link>
         </div>
 
         {/* Chats list (signed in) or flexible spacer (signed out) */}
@@ -228,8 +219,15 @@ export function Sidebar({
           <div className="flex-1 min-h-0" />
         )}
 
-        {/* Secondary nav: help only (settings live behind profile click) */}
-        <div className="px-3 pb-2 pt-1 border-t border-border/60">
+        {/* Secondary nav: settings then help, just above the user card */}
+        <div className="px-3 pb-2 pt-1 border-t border-border/60 flex flex-col gap-1">
+          <button
+            onClick={() => onOpenSettings("general")}
+            className="w-full flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-sidebar-hover transition text-left"
+          >
+            <SettingsIcon className="w-4 h-4" />
+            <span>Settings</span>
+          </button>
           <button
             onClick={onOpenHelp}
             className="w-full flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-sidebar-hover transition text-left"

@@ -1499,7 +1499,7 @@ function FinancesPanel() {
               <div className="text-sm font-medium tabular-nums">
                 {a.current_balance != null
                   ? `${a.currency ?? "USD"} ${a.current_balance.toFixed(2)}`
-                  : "—"}
+                  : "..."}
               </div>
             </li>
           ))}
