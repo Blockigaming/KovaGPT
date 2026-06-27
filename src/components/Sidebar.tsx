@@ -150,31 +150,22 @@ export function Sidebar({
             <Sparkles className="w-4 h-4" />
             <span>Subscriptions</span>
           </Link>
-          {/* Library: available to everyone, including signed-out users (session-only for guests). */}
-          <button
-            onClick={() => onOpenSettings("library")}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
+          {/* Library: dedicated route. Signed-out users see session-only items that clear on refresh. */}
+          <Link
+            to="/library"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition"
           >
             <FolderOpen className="w-4 h-4" />
             <span>Library</span>
-          </button>
-          {/* Apps: visible to everyone; signed-out users see a sign-in prompt when opened. */}
-          <button
-            onClick={() => onOpenSettings("linked")}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
+          </Link>
+          {/* Apps: dedicated route. Signed-out users see a clean sign-in prompt. */}
+          <Link
+            to="/apps"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition"
           >
             <Link2 className="w-4 h-4" />
             <span>Apps</span>
-          </button>
-          <button
-            onClick={() => onOpenSettings("general")}
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
-          >
-            <SettingsIcon className="w-4 h-4" />
-            <span>Settings</span>
-          </button>
-          {/* TODO(finances): Finance tab removed from sidebar/settings per spec. Re-add as
-              standalone chat surface in a future pass if needed. */}
+          </Link>
         </div>
 
         {/* Chats list (signed in) or flexible spacer (signed out) */}

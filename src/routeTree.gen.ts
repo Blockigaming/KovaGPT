@@ -20,12 +20,14 @@ import { Route as RefundRouteImport } from './routes/refund'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ModesRouteImport } from './routes/modes'
+import { Route as LibraryRouteImport } from './routes/library'
 import { Route as ImagesRouteImport } from './routes/images'
 import { Route as GettingStartedRouteImport } from './routes/getting-started'
 import { Route as ContactSupportRouteImport } from './routes/contact-support'
 import { Route as CodeHelperRouteImport } from './routes/code-helper'
 import { Route as ChatgptAlternativeRouteImport } from './routes/chatgpt-alternative'
 import { Route as ChangelogRouteImport } from './routes/changelog'
+import { Route as AppsRouteImport } from './routes/apps'
 import { Route as AiWriterRouteImport } from './routes/ai-writer'
 import { Route as AiSafetyRouteImport } from './routes/ai-safety'
 import { Route as AiImageGeneratorRouteImport } from './routes/ai-image-generator'
@@ -103,6 +105,11 @@ const ModesRoute = ModesRouteImport.update({
   path: '/modes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LibraryRoute = LibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ImagesRoute = ImagesRouteImport.update({
   id: '/images',
   path: '/images',
@@ -131,6 +138,11 @@ const ChatgptAlternativeRoute = ChatgptAlternativeRouteImport.update({
 const ChangelogRoute = ChangelogRouteImport.update({
   id: '/changelog',
   path: '/changelog',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppsRoute = AppsRouteImport.update({
+  id: '/apps',
+  path: '/apps',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AiWriterRoute = AiWriterRouteImport.update({
@@ -250,12 +262,14 @@ export interface FileRoutesByFullPath {
   '/ai-image-generator': typeof AiImageGeneratorRoute
   '/ai-safety': typeof AiSafetyRoute
   '/ai-writer': typeof AiWriterRoute
+  '/apps': typeof AppsRoute
   '/changelog': typeof ChangelogRoute
   '/chatgpt-alternative': typeof ChatgptAlternativeRoute
   '/code-helper': typeof CodeHelperRoute
   '/contact-support': typeof ContactSupportRoute
   '/getting-started': typeof GettingStartedRoute
   '/images': typeof ImagesRoute
+  '/library': typeof LibraryRoute
   '/modes': typeof ModesRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -290,12 +304,14 @@ export interface FileRoutesByTo {
   '/ai-image-generator': typeof AiImageGeneratorRoute
   '/ai-safety': typeof AiSafetyRoute
   '/ai-writer': typeof AiWriterRoute
+  '/apps': typeof AppsRoute
   '/changelog': typeof ChangelogRoute
   '/chatgpt-alternative': typeof ChatgptAlternativeRoute
   '/code-helper': typeof CodeHelperRoute
   '/contact-support': typeof ContactSupportRoute
   '/getting-started': typeof GettingStartedRoute
   '/images': typeof ImagesRoute
+  '/library': typeof LibraryRoute
   '/modes': typeof ModesRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -331,12 +347,14 @@ export interface FileRoutesById {
   '/ai-image-generator': typeof AiImageGeneratorRoute
   '/ai-safety': typeof AiSafetyRoute
   '/ai-writer': typeof AiWriterRoute
+  '/apps': typeof AppsRoute
   '/changelog': typeof ChangelogRoute
   '/chatgpt-alternative': typeof ChatgptAlternativeRoute
   '/code-helper': typeof CodeHelperRoute
   '/contact-support': typeof ContactSupportRoute
   '/getting-started': typeof GettingStartedRoute
   '/images': typeof ImagesRoute
+  '/library': typeof LibraryRoute
   '/modes': typeof ModesRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -373,12 +391,14 @@ export interface FileRouteTypes {
     | '/ai-image-generator'
     | '/ai-safety'
     | '/ai-writer'
+    | '/apps'
     | '/changelog'
     | '/chatgpt-alternative'
     | '/code-helper'
     | '/contact-support'
     | '/getting-started'
     | '/images'
+    | '/library'
     | '/modes'
     | '/pricing'
     | '/privacy'
@@ -413,12 +433,14 @@ export interface FileRouteTypes {
     | '/ai-image-generator'
     | '/ai-safety'
     | '/ai-writer'
+    | '/apps'
     | '/changelog'
     | '/chatgpt-alternative'
     | '/code-helper'
     | '/contact-support'
     | '/getting-started'
     | '/images'
+    | '/library'
     | '/modes'
     | '/pricing'
     | '/privacy'
@@ -453,12 +475,14 @@ export interface FileRouteTypes {
     | '/ai-image-generator'
     | '/ai-safety'
     | '/ai-writer'
+    | '/apps'
     | '/changelog'
     | '/chatgpt-alternative'
     | '/code-helper'
     | '/contact-support'
     | '/getting-started'
     | '/images'
+    | '/library'
     | '/modes'
     | '/pricing'
     | '/privacy'
@@ -494,12 +518,14 @@ export interface RootRouteChildren {
   AiImageGeneratorRoute: typeof AiImageGeneratorRoute
   AiSafetyRoute: typeof AiSafetyRoute
   AiWriterRoute: typeof AiWriterRoute
+  AppsRoute: typeof AppsRoute
   ChangelogRoute: typeof ChangelogRoute
   ChatgptAlternativeRoute: typeof ChatgptAlternativeRoute
   CodeHelperRoute: typeof CodeHelperRoute
   ContactSupportRoute: typeof ContactSupportRoute
   GettingStartedRoute: typeof GettingStartedRoute
   ImagesRoute: typeof ImagesRoute
+  LibraryRoute: typeof LibraryRoute
   ModesRoute: typeof ModesRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -609,6 +635,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ModesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/library': {
+      id: '/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof LibraryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/images': {
       id: '/images'
       path: '/images'
@@ -649,6 +682,13 @@ declare module '@tanstack/react-router' {
       path: '/changelog'
       fullPath: '/changelog'
       preLoaderRoute: typeof ChangelogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/apps': {
+      id: '/apps'
+      path: '/apps'
+      fullPath: '/apps'
+      preLoaderRoute: typeof AppsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ai-writer': {
@@ -806,12 +846,14 @@ const rootRouteChildren: RootRouteChildren = {
   AiImageGeneratorRoute: AiImageGeneratorRoute,
   AiSafetyRoute: AiSafetyRoute,
   AiWriterRoute: AiWriterRoute,
+  AppsRoute: AppsRoute,
   ChangelogRoute: ChangelogRoute,
   ChatgptAlternativeRoute: ChatgptAlternativeRoute,
   CodeHelperRoute: CodeHelperRoute,
   ContactSupportRoute: ContactSupportRoute,
   GettingStartedRoute: GettingStartedRoute,
   ImagesRoute: ImagesRoute,
+  LibraryRoute: LibraryRoute,
   ModesRoute: ModesRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
