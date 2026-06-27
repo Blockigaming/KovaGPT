@@ -48,24 +48,28 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
   const [dialog, setDialog] = useState<AuthDialogState>({ open: false, mode: "sign-in" });
 
   useEffect(() => {
-    // Register listener first to capture token refresh / sign in events.
+    // Register listener first so we capture the SIGNED_IN that fires when
+    // setSession() persists the OAuth tokens below.
     let cancelled = false;
-    const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
-        setSession(newSession);
-        setIsLoaded(true);
-      }
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (cancelled) return;
+      setSession(newSession);
+      setIsLoaded(true);
     });
 
     async function hydrateSession() {
       try {
         if (hasOAuthResponseInUrl() && window.location.pathname !== OAUTH_CALLBACK_PATH) {
+          // Clear the OAuth params from the URL up-front so a StrictMode
+          // double-invoke / reload can't re-trigger exchange.
           const oauthSession = await completeOAuthSessionFromUrl("app bootstrap");
-          if (cancelled) return;
-          setSession(oauthSession);
           clearOAuthResponseFromUrl();
-          setIsLoaded(true);
-          return;
+          if (cancelled) return;
+          if (oauthSession) {
+            setSession(oauthSession);
+            setIsLoaded(true);
+            return;
+          }
         }
 
         const { data, error } = await supabase.auth.getSession();
