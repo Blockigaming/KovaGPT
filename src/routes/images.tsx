@@ -498,18 +498,29 @@ function ImagesPage() {
                         type="button"
                         disabled={saving || saved}
                         onClick={async () => {
-                          if (!isSignedIn) { setLoginOpen(true); return; }
                           if (!result) return;
                           setSaving(true);
                           try {
-                            const { saveImageToLibrary } = await import("@/lib/library-images.functions");
-                            await saveImageToLibrary({
-                              data: {
-                                imageUrl: result,
+                            if (isSignedIn) {
+                              const { saveImageToLibrary } = await import("@/lib/library-images.functions");
+                              await saveImageToLibrary({
+                                data: {
+                                  imageUrl: result,
+                                  title: resultPrompt.slice(0, 120) || "Generated image",
+                                  prompt: resultPrompt,
+                                },
+                              });
+                            } else {
+                              const { saveGuestItem } = await import("@/lib/guest-library");
+                              saveGuestItem({
                                 title: resultPrompt.slice(0, 120) || "Generated image",
-                                prompt: resultPrompt,
-                              },
-                            });
+                                item_type: "image",
+                                source: "images",
+                                content_text: resultPrompt,
+                                file_url: result,
+                                file_type: "image/png",
+                              });
+                            }
                             setSaved(true);
                           } catch (err) {
                             setError(err instanceof Error ? err.message : "Could not save image");
@@ -517,6 +528,7 @@ function ImagesPage() {
                             setSaving(false);
                           }
                         }}
+
                         className="inline-flex items-center gap-2 text-sm px-4 py-1.5 rounded-full border border-border hover:bg-accent transition disabled:opacity-60"
                       >
                         {saved ? "Saved to Library" : saving ? "Saving…" : "Save to Library"}
