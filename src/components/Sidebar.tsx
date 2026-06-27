@@ -1,8 +1,9 @@
 import { MessageSquare, Trash2, PanelLeft, Search, Sparkles, HelpCircle, ImageIcon, Plus, Share2, Settings as SettingsIcon, FolderOpen, Link2 } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
-import { Link, useRouter } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { SignInButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
+import { LoginPromptDialog } from "@/components/LoginPromptDialog";
 import type { Conversation } from "@/lib/chat-store";
 
 
