@@ -43,6 +43,7 @@ function ScheduledTasksPage() {
   const create = useServerFn(createScheduledTask);
   const update = useServerFn(updateScheduledTask);
   const remove = useServerFn(deleteScheduledTask);
+  const checkEligible = useServerFn(isScheduledTasksEligible);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -51,27 +52,18 @@ function ScheduledTasksPage() {
       return;
     }
     let cancel = false;
-    (async () => {
-      try {
-        const resp = await authFetch("/api/usage");
-        const j = await resp.json().catch(() => ({}));
-        const tier = (j?.tier ?? j?.plan ?? "free") as string;
+    checkEligible({})
+      .then((r) => {
         if (cancel) return;
-        setPlan(tier && tier !== "free" ? "paid" : "free");
-      } catch {
-        // Fall back to attempting list; server enforces plan and will throw.
-        try {
-          await list({});
-          if (!cancel) setPlan("paid");
-        } catch {
-          if (!cancel) setPlan("free");
-        }
-      }
-    })();
+        setPlan(r.eligible ? "paid" : "free");
+      })
+      .catch(() => {
+        if (!cancel) setPlan("free");
+      });
     return () => {
       cancel = true;
     };
-  }, [isLoaded, isSignedIn, list]);
+  }, [isLoaded, isSignedIn, checkEligible]);
 
   useEffect(() => {
     if (plan !== "paid") return;
