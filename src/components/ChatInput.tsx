@@ -46,6 +46,7 @@ export function ChatInput({
   const fileRef = useRef<HTMLInputElement>(null);
   const recRef = useRef<any>(null);
   const [listening, setListening] = useState(false);
+  const [sendFlash, setSendFlash] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
@@ -54,10 +55,16 @@ export function ChatInput({
     el.style.height = Math.min(el.scrollHeight, 200) + "px";
   }, [value]);
 
+  const triggerSubmit = () => {
+    setSendFlash(true);
+    window.setTimeout(() => setSendFlash(false), 320);
+    onSubmit();
+  };
+
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (!isStreaming && (value.trim() || attachments.length > 0)) onSubmit();
+      if (!isStreaming && (value.trim() || attachments.length > 0)) triggerSubmit();
     }
   };
 
