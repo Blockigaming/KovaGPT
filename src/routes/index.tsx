@@ -496,10 +496,12 @@ function KovaGPT() {
           }
         }
 
-        // Auto title after first exchange
-        if (priorMessages.length === 0) {
-          autoTitle(nextConvId, [userMsg, { ...assistantMsg, content: assembledReply }]);
+        // Always re-summarize so the chat name in the sidebar reflects the conversation
+        if (assembledReply) {
+          const fullMsgs = [...priorMessages, userMsg, { ...assistantMsg, content: assembledReply }];
+          autoTitle(nextConvId, fullMsgs);
         }
+
 
         // Auto speak
         if (settings.autoSpeak && assembledReply) {
