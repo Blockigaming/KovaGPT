@@ -271,5 +271,7 @@ function ScheduledTasksPage() {
         )}
       </div>
     </div>
+    </AppShell>
   );
 }
+
