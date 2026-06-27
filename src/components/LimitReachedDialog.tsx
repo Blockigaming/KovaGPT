@@ -69,6 +69,19 @@ export function LimitReachedDialog({
           </DialogHeader>
           <p className="text-sm text-muted-foreground mt-2 leading-relaxed">{body}</p>
 
+          {/* Limited-time Plus promo: 1 month free, then regular Plus monthly price. */}
+          <div className="mt-4 rounded-xl border border-primary/40 bg-primary/5 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center rounded-full bg-primary text-primary-foreground text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5">
+                Limited offer
+              </span>
+              <span className="text-sm font-semibold">1 month of Plus, free</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              Start Plus today and get your first month on us. After that it's just $16/month. Cancel anytime.
+            </p>
+          </div>
+
           {resetsAt && (
             <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground rounded-lg border border-border bg-muted/30 px-3 py-2">
               <Clock className="w-3.5 h-3.5" />
@@ -86,7 +99,7 @@ export function LimitReachedDialog({
             </Button>
             <Button asChild className="flex-1">
               <Link to="/pricing" onClick={() => onOpenChange(false)}>
-                Upgrade to Pro
+                Claim 1 month free
               </Link>
             </Button>
           </div>

@@ -59,6 +59,36 @@ export const Route = createFileRoute("/lovable/email/transactional/send")({
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
+        // Require a verified email before allowing any KovaGPT-branded send.
+        // Prevents an unverified account from emailing addresses they don't own.
+        if (!user.email_confirmed_at) {
+          return Response.json(
+            { error: 'Please verify your email address before sending.' },
+            { status: 403 },
+          )
+        }
+
+        // Per-user rate limit: cap at 10 transactional sends / hour.
+        // Counts rows in email_send_log (any status) for this user's email.
+        {
+          const ownerEmail = (user.email ?? '').toLowerCase()
+          if (ownerEmail) {
+            const sinceIso = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+            const { count, error: rlErr } = await supabase
+              .from('email_send_log')
+              .select('id', { count: 'exact', head: true })
+              .eq('recipient_email', ownerEmail)
+              .gte('created_at', sinceIso)
+            if (!rlErr && typeof count === 'number' && count >= 10) {
+              return Response.json(
+                { error: 'You have hit the email send rate limit. Please try again later.' },
+                { status: 429 },
+              )
+            }
+          }
+        }
+
+
         // Parse request body
         let templateName: string
         let recipientEmail: string
@@ -107,7 +137,15 @@ export const Route = createFileRoute("/lovable/email/transactional/send")({
         // recipients to the authenticated user's own verified email address.
         let effectiveRecipient: string
         if (template.to) {
-          effectiveRecipient = template.to
+          // SECURITY: Templates with a fixed internal recipient (e.g., the
+          // support inbox) must NOT be callable from a user-authenticated
+          // request - that would let any signed-in user spam our inbox.
+          // Public action routes (e.g., help-submit) call this endpoint
+          // internally with their own validation and rate limiting.
+          return Response.json(
+            { error: 'This template is not callable from user requests.' },
+            { status: 403 },
+          )
         } else {
           const ownEmail = (user.email ?? '').toLowerCase().trim()
           const requested = (recipientEmail ?? '').toLowerCase().trim()

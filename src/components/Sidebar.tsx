@@ -141,14 +141,14 @@ export function Sidebar({
         <div className="px-3 pb-2 flex flex-col gap-1">
           <Link
             to="/images"
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition active:scale-[0.98] active:bg-sidebar-hover/80"
           >
             <ImageIcon className="w-4 h-4" />
             <span>Image Generation</span>
           </Link>
           <Link
             to="/pricing"
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition active:scale-[0.98] active:bg-sidebar-hover/80"
           >
             <Sparkles className="w-4 h-4" />
             <span>Subscriptions</span>
@@ -157,7 +157,7 @@ export function Sidebar({
           <button
             type="button"
             onClick={() => (isSignedIn ? navigate({ to: "/library" }) : setLoginPromptOpen(true))}
-            className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
+            className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left active:scale-[0.98] active:bg-sidebar-hover/80"
           >
             <FolderOpen className="w-4 h-4" />
             <span>Library</span>
@@ -166,7 +166,7 @@ export function Sidebar({
           <button
             type="button"
             onClick={() => (isSignedIn ? navigate({ to: "/apps" }) : setLoginPromptOpen(true))}
-            className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
+            className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left active:scale-[0.98] active:bg-sidebar-hover/80"
           >
             <Link2 className="w-4 h-4" />
             <span>Apps</span>

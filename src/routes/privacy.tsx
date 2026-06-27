@@ -6,9 +6,9 @@ export const Route = createFileRoute("/privacy")({
   head: () => ({
     meta: [
       { title: "Privacy Policy - KovaGPT" },
-      { name: "description", content: "How KovaGPT collects, uses, stores, and protects your data." },
+      { name: "description", content: "KovaGPT is built privacy-first. We do not sell your data, we do not read your chats, and we do not train models on your conversations." },
       { property: "og:title", content: "Privacy Policy - KovaGPT" },
-      { property: "og:description", content: "How KovaGPT collects, uses, stores, and protects your data." },
+      { property: "og:description", content: "KovaGPT is built privacy-first. We do not sell your data, we do not read your chats, and we do not train models on your conversations." },
       { property: "og:url", content: "https://kovagpt.com/privacy" },
     ],
     links: [{ rel: "canonical", href: "https://kovagpt.com/privacy" }],
@@ -21,36 +21,48 @@ function PrivacyPage() {
     <>
       <LegalArticle>
         <h1>Privacy Policy</h1>
-        <p>KovaGPT respects your privacy. This Privacy Policy explains what information we collect, how we use it, and how you can contact us.</p>
+        <p><strong>KovaGPT is built privacy-first.</strong> Your chats are yours. We do not sell your data, we do not read your conversations, and we do not use your prompts, files, or generated content to train AI models. Period.</p>
 
-        <h2>Information We Collect</h2>
-        <p>When you use KovaGPT, we may collect account information such as your email address, login details, subscription status, chat history, uploaded files, generated images, usage limits, and basic technical information like device type, browser type, and error logs.</p>
+        <h2>Our Privacy Promises</h2>
+        <ul>
+          <li><strong>We do not sell your data.</strong> Ever. To anyone.</li>
+          <li><strong>We do not read your chats.</strong> Staff do not browse, review, or monitor user conversations.</li>
+          <li><strong>We do not train on your content.</strong> Your prompts, uploads, and generated outputs are never used to train KovaGPT or any third-party model.</li>
+          <li><strong>No ad tracking.</strong> KovaGPT does not run advertising trackers or share your activity with ad networks.</li>
+          <li><strong>You stay in control.</strong> Delete a chat any time. Delete your account any time. We honor it.</li>
+        </ul>
+
+        <h2>What We Collect</h2>
+        <p>Only what we need to run the product: your email and login info, your subscription status, the chats you choose to save to your account, files you upload to a chat, generated images you save to your library, and basic technical signals (browser type, error logs) used to keep the service running and secure.</p>
 
         <h2>How We Use Information</h2>
-        <p>We use this information to provide KovaGPT, save your chats, process subscriptions, prevent abuse, improve the product, fix bugs, and provide customer support.</p>
+        <p>We use this information solely to: deliver KovaGPT to you, save and load your own chats, process your subscription, detect and prevent abuse of the service, and fix bugs. We do not profile you, score you, or build advertising audiences from your activity.</p>
 
-        <h2>AI Content</h2>
-        <p>KovaGPT may process the messages, files, and prompts you provide in order to generate responses. Do not submit private, sensitive, or confidential information unless you are comfortable with it being processed by the service.</p>
+        <h2>AI Processing</h2>
+        <p>To answer a message, the text and any attachments you send are processed by AI providers strictly to generate that response. Providers we use are contractually prohibited from training on your content. Once the response is returned, that processing is complete.</p>
 
         <h2>Payments</h2>
-        <p>Payments and subscriptions may be handled by Stripe or another payment provider. KovaGPT does not directly store your full credit card number.</p>
+        <p>Payments are handled by Stripe. KovaGPT never sees or stores your full card number; Stripe sends us only the subscription status we need to unlock features.</p>
 
-        <h2>Uploaded Files</h2>
-        <p>KovaGPT may allow users to upload files for AI analysis, summarization, or other features. Uploaded files should only contain content that you have permission to use. Do not upload private, sensitive, confidential, or personal information unless you are comfortable with it being processed by the service. Uploaded files may be stored temporarily or connected to your account depending on the feature being used. You may contact <a href="mailto:support@kovagpt.com">support@kovagpt.com</a> for help with file or data deletion.</p>
-
-        <h2>Data Deletion</h2>
-        <p>You may contact <a href="mailto:support@kovagpt.com">support@kovagpt.com</a> to request help with account or data deletion.</p>
+        <h2>Uploaded Files and Generated Content</h2>
+        <p>Files and images live in your account so you can come back to them. They are not shared, indexed publicly, or made available to other users. Delete them whenever you want from the Library, or email <a href="mailto:support@kovagpt.com">support@kovagpt.com</a> and we will erase them for you.</p>
 
         <h2>Account and Data Deletion</h2>
-        <p>If you want to delete your KovaGPT account or request deletion of your data, contact <a href="mailto:support@kovagpt.com">support@kovagpt.com</a> from the email connected to your account. Please include "Account Deletion Request" in the subject line. After receiving your request, we may ask for confirmation to make sure the request is coming from the correct account owner.</p>
+        <p>To delete your account or any specific data, email <a href="mailto:support@kovagpt.com">support@kovagpt.com</a> from the address tied to your account with the subject "Account Deletion Request". We will confirm and then remove your account, chats, uploads, and library content from active systems.</p>
+
+        <h2>Security</h2>
+        <p>Data is encrypted in transit (HTTPS) and at rest. Access to production systems is restricted to a small number of operators and is audit-logged. We do not retain payment card data.</p>
 
         <h2>Children and Teens</h2>
-        <p>KovaGPT is intended to be used responsibly. Younger users should use the service with permission from their parents when required.</p>
+        <p>KovaGPT is intended to be used responsibly. Younger users should use the service with permission from a parent or guardian where required by local law.</p>
+
+        <h2>Changes</h2>
+        <p>If we ever change this policy in a way that affects how your data is handled, we will update this page and, where appropriate, notify you in-app or by email.</p>
 
         <h2>Contact</h2>
-        <p>For privacy questions, contact <a href="mailto:support@kovagpt.com">support@kovagpt.com</a>.</p>
+        <p>Privacy questions or requests: <a href="mailto:support@kovagpt.com">support@kovagpt.com</a>.</p>
 
-        <p className="mt-12"><Link to="/">← Back to KovaGPT</Link> · <Link to="/terms">Terms of Service</Link></p>
+        <p className="mt-12"><Link to="/">. Back to KovaGPT</Link> . <Link to="/terms">Terms of Service</Link></p>
       </LegalArticle>
       <PublicFooter />
     </>
