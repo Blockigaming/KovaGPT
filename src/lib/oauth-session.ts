@@ -84,7 +84,16 @@ export function clearOAuthResponseFromUrl() {
 }
 
 async function waitForStoredSession(candidate: Session | null): Promise<Session | null> {
-  if (candidate?.access_token) return candidate;
+  if (candidate?.access_token && candidate.refresh_token) {
+    const { error } = await supabase.auth.setSession({
+      access_token: candidate.access_token,
+      refresh_token: candidate.refresh_token,
+    });
+    if (error) {
+      console.error("[KovaAuth] Session persistence failed after OAuth.", error);
+      throw error;
+    }
+  }
 
   for (let i = 0; i < 20; i += 1) {
     const { data, error } = await supabase.auth.getSession();
