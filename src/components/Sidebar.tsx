@@ -37,6 +37,9 @@ export function Sidebar({
   const { user, isSignedIn } = useUser();
   const [width, setWidth] = useState<number>(280);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
 
   const draggingRef = useRef(false);
 
