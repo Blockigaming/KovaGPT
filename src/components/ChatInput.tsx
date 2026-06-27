@@ -236,7 +236,8 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={onStop}
-                  className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center hover:opacity-80 transition"
+                  style={{ backgroundColor: actionColor }}
+                  className="w-9 h-9 rounded-full text-white flex items-center justify-center hover:opacity-80 transition"
                   aria-label="Stop"
                 >
                   <Square className="w-4 h-4 fill-current" />
@@ -245,17 +246,21 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={triggerSubmit}
-                  className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center hover:opacity-80 transition active:scale-90 active:opacity-70 duration-150"
+                  style={{ backgroundColor: actionColor }}
+                  className={`w-9 h-9 rounded-full text-white flex items-center justify-center hover:opacity-90 transition duration-150 active:scale-90 active:opacity-70 ${
+                    sendFlash ? "scale-90 opacity-80" : ""
+                  }`}
                   aria-label="Send"
                 >
-                  <ArrowUp className="w-5 h-5" />
+                  <ArrowUp className={`w-5 h-5 transition-transform duration-300 ${sendFlash ? "-translate-y-1.5 opacity-0" : ""}`} />
                 </button>
 
               ) : onOpenVoice ? (
                 <button
                   type="button"
                   onClick={onOpenVoice}
-                  className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center hover:opacity-80 transition active:scale-90 duration-150"
+                  style={{ backgroundColor: actionColor }}
+                  className="w-9 h-9 rounded-full text-white flex items-center justify-center hover:opacity-90 transition active:scale-90 duration-150"
                   aria-label="Voice mode"
                   title="Voice mode"
                 >
@@ -265,7 +270,8 @@ export function ChatInput({
                 <button
                   type="button"
                   disabled
-                  className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center opacity-30 cursor-not-allowed"
+                  style={{ backgroundColor: actionColor }}
+                  className="w-9 h-9 rounded-full text-white flex items-center justify-center opacity-30 cursor-not-allowed"
                   aria-label="Send"
                 >
                   <ArrowUp className="w-5 h-5" />
