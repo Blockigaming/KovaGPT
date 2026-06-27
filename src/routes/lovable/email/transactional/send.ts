@@ -137,7 +137,15 @@ export const Route = createFileRoute("/lovable/email/transactional/send")({
         // recipients to the authenticated user's own verified email address.
         let effectiveRecipient: string
         if (template.to) {
-          effectiveRecipient = template.to
+          // SECURITY: Templates with a fixed internal recipient (e.g., the
+          // support inbox) must NOT be callable from a user-authenticated
+          // request - that would let any signed-in user spam our inbox.
+          // Public action routes (e.g., help-submit) call this endpoint
+          // internally with their own validation and rate limiting.
+          return Response.json(
+            { error: 'This template is not callable from user requests.' },
+            { status: 403 },
+          )
         } else {
           const ownEmail = (user.email ?? '').toLowerCase().trim()
           const requested = (recipientEmail ?? '').toLowerCase().trim()
