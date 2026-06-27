@@ -275,13 +275,12 @@ export function SettingsDialog({
         </DialogHeader>
 
         {!loggedIn ? (
-          <div className="p-6">
-            <LockedTab
-              title="Sign in to access settings"
-              body="Your preferences are tied to your KovaGPT account. Sign in or create a free account to continue."
-              onSignIn={() => clerk?.openSignIn()}
-            />
-          </div>
+          <SignedOutSettings
+            settings={settings}
+            onChange={onChange}
+            setMode={setMode}
+            onSignIn={() => clerk?.openSignIn()}
+          />
         ) : (
         <Tabs value={tab} onValueChange={setTab} orientation="vertical" className="flex-1 overflow-hidden flex flex-row">
           <TabsList className="flex flex-col h-full w-56 shrink-0 overflow-y-auto items-stretch justify-start gap-0.5 p-2 bg-muted/40 border-r border-border rounded-none">
