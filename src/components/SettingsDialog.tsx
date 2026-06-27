@@ -133,6 +133,7 @@ export const DEFAULT_SETTINGS: Settings = {
   parentalMode: false,
   trainingOptOut: false,
   theme: DEFAULT_THEME,
+  buttonColor: "#2563eb",
 };
 
 const MOODS: { value: Mood; label: string; hint: string }[] = [
