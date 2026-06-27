@@ -31,7 +31,7 @@ function LibraryPage() {
 
   const load = async () => {
     if (!isSignedIn) {
-      setItems(loadGuestItems());
+      setItems(loadGuestLibrary());
       return;
     }
     setLoading(true);
