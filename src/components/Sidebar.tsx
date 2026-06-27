@@ -219,8 +219,15 @@ export function Sidebar({
           <div className="flex-1 min-h-0" />
         )}
 
-        {/* Secondary nav: help only (settings live behind profile click) */}
-        <div className="px-3 pb-2 pt-1 border-t border-border/60">
+        {/* Secondary nav: settings then help, just above the user card */}
+        <div className="px-3 pb-2 pt-1 border-t border-border/60 flex flex-col gap-1">
+          <button
+            onClick={() => onOpenSettings("general")}
+            className="w-full flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-sidebar-hover transition text-left"
+          >
+            <SettingsIcon className="w-4 h-4" />
+            <span>Settings</span>
+          </button>
           <button
             onClick={onOpenHelp}
             className="w-full flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-sidebar-hover transition text-left"
