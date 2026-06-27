@@ -6,8 +6,7 @@ export const Route = createFileRoute("/api/title")({
     handlers: {
       POST: async ({ request }) => {
         try {
-          const auth = await requireUser(request);
-          if (auth instanceof Response) return auth;
+
           const MAX_BODY = 1 * 1024 * 1024;
           const contentLength = Number(request.headers.get("content-length") ?? "0");
           if (contentLength > MAX_BODY) {
