@@ -35,6 +35,23 @@ async function ensurePlusOrAbove(supabase: any, userId: string) {
   }
 }
 
+export const isScheduledTasksEligible = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<{ eligible: boolean }> => {
+    const { data, error } = await context.supabase
+      .from("subscriptions")
+      .select("status, current_period_end")
+      .eq("user_id", context.userId)
+      .in("status", ["active", "trialing"]);
+    if (error) return { eligible: false };
+    const ok = (data ?? []).some(
+      (r: any) =>
+        ["active", "trialing"].includes(r.status) &&
+        (!r.current_period_end || new Date(r.current_period_end) > new Date()),
+    );
+    return { eligible: ok };
+  });
+
 export const listScheduledTasks = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<ScheduledTask[]> => {
