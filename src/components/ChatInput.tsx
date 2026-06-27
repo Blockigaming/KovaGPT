@@ -142,7 +142,15 @@ export function ChatInput({
   return (
     <div className="w-full px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background to-transparent">
       <div className="mx-auto max-w-3xl">
-        <div className="rounded-3xl border border-border bg-card shadow-lg focus-within:border-muted-foreground/50 transition-colors">
+        <div
+          className={`rounded-3xl border bg-card shadow-lg transition-all duration-200 focus-within:border-muted-foreground/50 ${
+            sendFlash
+              ? "border-foreground/60 ring-2 ring-foreground/20 scale-[0.995]"
+              : isStreaming
+                ? "border-foreground/40 ring-1 ring-foreground/10"
+                : "border-border"
+          }`}
+        >
           {attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 p-3 pb-0">
               {attachments.map((a, i) => (
