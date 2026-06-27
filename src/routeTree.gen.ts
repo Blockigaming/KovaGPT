@@ -33,6 +33,7 @@ import { Route as AiSafetyRouteImport } from './routes/ai-safety'
 import { Route as AiImageGeneratorRouteImport } from './routes/ai-image-generator'
 import { Route as AiHumanizerRouteImport } from './routes/ai-humanizer'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as Char126oauthCallbackRouteImport } from './routes/~oauth.callback'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as BlogBestAiMarketResearchToolsRouteImport } from './routes/blog.best-ai-market-research-tools'
@@ -171,6 +172,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Char126oauthCallbackRoute = Char126oauthCallbackRouteImport.update({
+  id: '/~oauth/callback',
+  path: '/~oauth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
   id: '/email/unsubscribe',
   path: '/email/unsubscribe',
@@ -299,6 +305,7 @@ export interface FileRoutesByFullPath {
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -342,6 +349,7 @@ export interface FileRoutesByTo {
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -386,6 +394,7 @@ export interface FileRoutesById {
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -431,6 +440,7 @@ export interface FileRouteTypes {
     | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
     | '/email/unsubscribe'
+    | '/~oauth/callback'
     | '/api/public/help-submit'
     | '/lovable/email/suppression'
     | '/api/public/payments/webhook'
@@ -474,6 +484,7 @@ export interface FileRouteTypes {
     | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
     | '/email/unsubscribe'
+    | '/~oauth/callback'
     | '/api/public/help-submit'
     | '/lovable/email/suppression'
     | '/api/public/payments/webhook'
@@ -517,6 +528,7 @@ export interface FileRouteTypes {
     | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
     | '/email/unsubscribe'
+    | '/~oauth/callback'
     | '/api/public/help-submit'
     | '/lovable/email/suppression'
     | '/api/public/payments/webhook'
@@ -561,6 +573,7 @@ export interface RootRouteChildren {
   BlogBestAiMarketResearchToolsRoute: typeof BlogBestAiMarketResearchToolsRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
+  Char126oauthCallbackRoute: typeof Char126oauthCallbackRoute
   ApiPublicHelpSubmitRoute: typeof ApiPublicHelpSubmitRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -739,6 +752,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/~oauth/callback': {
+      id: '/~oauth/callback'
+      path: '/~oauth/callback'
+      fullPath: '/~oauth/callback'
+      preLoaderRoute: typeof Char126oauthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/email/unsubscribe': {
       id: '/email/unsubscribe'
       path: '/email/unsubscribe'
@@ -897,6 +917,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogBestAiMarketResearchToolsRoute: BlogBestAiMarketResearchToolsRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
+  Char126oauthCallbackRoute: Char126oauthCallbackRoute,
   ApiPublicHelpSubmitRoute: ApiPublicHelpSubmitRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
