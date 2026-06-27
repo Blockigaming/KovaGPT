@@ -125,6 +125,7 @@ function KovaGPT() {
   }, [openSettings]);
   const [helpOpen, setHelpOpen] = useState(false);
   const [shareChatId, setShareChatId] = useState<string | null>(null);
+  const [membersChatId, setMembersChatId] = useState<string | null>(null);
   
   const [voiceModeOpen, setVoiceModeOpen] = useState(false);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
