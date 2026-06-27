@@ -99,7 +99,7 @@ export const updateScheduledTask = createServerFn({ method: "POST" })
     }
     if (data.repeat !== undefined) patch.repeat = data.repeat;
     if (data.status !== undefined) patch.status = data.status;
-    const { data: row, error } = await context.supabase
+    const { data: row, error } = await (context.supabase as any)
       .from("scheduled_tasks")
       .update(patch)
       .eq("id", data.id)
