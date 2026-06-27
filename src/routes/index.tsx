@@ -12,6 +12,7 @@ import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/Se
 import { HelpDialog } from "@/components/HelpDialog";
 import { LimitReachedDialog } from "@/components/LimitReachedDialog";
 import { ShareChatDialog } from "@/components/ShareChatDialog";
+import { AddMembersDialog } from "@/components/AddMembersDialog";
 import { applyThemeMode } from "@/lib/theme";
 
 import { getUsage } from "@/lib/limits";
@@ -124,6 +125,7 @@ function KovaGPT() {
   }, [openSettings]);
   const [helpOpen, setHelpOpen] = useState(false);
   const [shareChatId, setShareChatId] = useState<string | null>(null);
+  const [membersChatId, setMembersChatId] = useState<string | null>(null);
   
   const [voiceModeOpen, setVoiceModeOpen] = useState(false);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
@@ -595,6 +597,14 @@ function KovaGPT() {
             ),
           );
         }}
+        onAddMembers={(id) => {
+          if (!isSignedIn) {
+            toast.message("Sign in to add members");
+            openSignUp();
+            return;
+          }
+          setMembersChatId(id);
+        }}
       />
 
       <main className="flex-1 flex flex-col min-w-0">
@@ -816,6 +826,12 @@ function KovaGPT() {
         open={shareChatId !== null}
         onOpenChange={(v) => !v && setShareChatId(null)}
         conversation={conversations.find((c) => c.id === shareChatId) ?? null}
+      />
+
+      <AddMembersDialog
+        open={membersChatId !== null}
+        chatId={membersChatId}
+        onOpenChange={(v) => !v && setMembersChatId(null)}
       />
 
       

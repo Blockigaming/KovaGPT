@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useUser } from "@/components/auth/ClerkSafe";
+import { AppShell } from "@/components/AppShell";
 import {
   listScheduledTasks,
   createScheduledTask,
@@ -114,9 +115,11 @@ function ScheduledTasksPage() {
   };
 
   return (
+    <AppShell>
     <div className="min-h-screen bg-background text-foreground">
       <Toaster />
       <div className="max-w-3xl mx-auto px-4 py-8">
+
         <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6">
           <ArrowLeft className="w-4 h-4" /> Back to chat
         </Link>
@@ -268,5 +271,7 @@ function ScheduledTasksPage() {
         )}
       </div>
     </div>
+    </AppShell>
   );
 }
+

@@ -111,6 +111,7 @@ export type Settings = {
   language?: string;
   showTimestamps?: boolean;
   theme?: ThemeColors;
+  buttonColor?: string;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -132,6 +133,7 @@ export const DEFAULT_SETTINGS: Settings = {
   parentalMode: false,
   trainingOptOut: false,
   theme: DEFAULT_THEME,
+  buttonColor: "#2563eb",
 };
 
 const MOODS: { value: Mood; label: string; hint: string }[] = [
@@ -700,6 +702,46 @@ export function SettingsDialog({
                     </button>
                   );
                 })}
+              </div>
+            </section>
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold">Action button color</h3>
+              <p className="text-xs text-muted-foreground">
+                Color for the send and voice buttons. Default is KovaGPT blue.
+              </p>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={settings.buttonColor ?? "#2563eb"}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    onChange({ ...settings, buttonColor: v });
+                    try {
+                      localStorage.setItem("kova-action-color", v);
+                      window.dispatchEvent(new CustomEvent("kova-action-color", { detail: v }));
+                    } catch { /* ignore */ }
+                  }}
+                  className="h-10 w-16 rounded-md border border-border bg-transparent cursor-pointer"
+                  aria-label="Pick action button color"
+                />
+                <div className="flex flex-wrap gap-2">
+                  {["#2563eb", "#10a37f", "#7c3aed", "#ef4444", "#f59e0b", "#0a0a0a"].map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => {
+                        onChange({ ...settings, buttonColor: c });
+                        try {
+                          localStorage.setItem("kova-action-color", c);
+                          window.dispatchEvent(new CustomEvent("kova-action-color", { detail: c }));
+                        } catch { /* ignore */ }
+                      }}
+                      className="w-8 h-8 rounded-full border border-border ring-offset-2 ring-offset-background hover:ring-2 hover:ring-foreground/30 transition"
+                      style={{ backgroundColor: c }}
+                      aria-label={`Use ${c}`}
+                    />
+                  ))}
+                </div>
               </div>
             </section>
           </TabsContent>

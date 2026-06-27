@@ -47,6 +47,29 @@ export function ChatInput({
   const recRef = useRef<any>(null);
   const [listening, setListening] = useState(false);
   const [sendFlash, setSendFlash] = useState(false);
+  const [actionColor, setActionColor] = useState<string>("#2563eb");
+
+  useEffect(() => {
+    try {
+      const c = localStorage.getItem("kova-action-color");
+      if (c && /^#[0-9a-f]{6}$/i.test(c)) setActionColor(c);
+    } catch { /* ignore */ }
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "kova-action-color" && e.newValue && /^#[0-9a-f]{6}$/i.test(e.newValue)) {
+        setActionColor(e.newValue);
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    const onLocal = (e: Event) => {
+      const ce = e as CustomEvent<string>;
+      if (typeof ce.detail === "string" && /^#[0-9a-f]{6}$/i.test(ce.detail)) setActionColor(ce.detail);
+    };
+    window.addEventListener("kova-action-color", onLocal as EventListener);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("kova-action-color", onLocal as EventListener);
+    };
+  }, []);
 
   useEffect(() => {
     const el = ref.current;
@@ -57,7 +80,7 @@ export function ChatInput({
 
   const triggerSubmit = () => {
     setSendFlash(true);
-    window.setTimeout(() => setSendFlash(false), 320);
+    window.setTimeout(() => setSendFlash(false), 380);
     onSubmit();
   };
 
@@ -143,9 +166,14 @@ export function ChatInput({
     <div className="w-full px-4 pb-4 pt-2 bg-gradient-to-t from-background via-background to-transparent">
       <div className="mx-auto max-w-3xl">
         <div
+          style={
+            sendFlash
+              ? ({ boxShadow: `0 0 0 2px ${actionColor}33`, borderColor: `${actionColor}99` } as React.CSSProperties)
+              : undefined
+          }
           className={`rounded-3xl border bg-card shadow-lg transition-all duration-200 focus-within:border-muted-foreground/50 ${
             sendFlash
-              ? "border-foreground/60 ring-2 ring-foreground/20 scale-[0.995]"
+              ? "scale-[0.995]"
               : isStreaming
                 ? "border-foreground/40 ring-1 ring-foreground/10"
                 : "border-border"
@@ -213,7 +241,8 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={onStop}
-                  className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center hover:opacity-80 transition"
+                  style={{ backgroundColor: actionColor }}
+                  className="w-9 h-9 rounded-full text-white flex items-center justify-center hover:opacity-80 transition"
                   aria-label="Stop"
                 >
                   <Square className="w-4 h-4 fill-current" />
@@ -222,17 +251,21 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={triggerSubmit}
-                  className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center hover:opacity-80 transition active:scale-90 active:opacity-70 duration-150"
+                  style={{ backgroundColor: actionColor }}
+                  className={`w-9 h-9 rounded-full text-white flex items-center justify-center hover:opacity-90 transition duration-150 active:scale-90 active:opacity-70 ${
+                    sendFlash ? "scale-90 opacity-80" : ""
+                  }`}
                   aria-label="Send"
                 >
-                  <ArrowUp className="w-5 h-5" />
+                  <ArrowUp className={`w-5 h-5 transition-transform duration-300 ${sendFlash ? "-translate-y-1.5 opacity-0" : ""}`} />
                 </button>
 
               ) : onOpenVoice ? (
                 <button
                   type="button"
                   onClick={onOpenVoice}
-                  className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center hover:opacity-80 transition active:scale-90 duration-150"
+                  style={{ backgroundColor: actionColor }}
+                  className="w-9 h-9 rounded-full text-white flex items-center justify-center hover:opacity-90 transition active:scale-90 duration-150"
                   aria-label="Voice mode"
                   title="Voice mode"
                 >
@@ -242,7 +275,8 @@ export function ChatInput({
                 <button
                   type="button"
                   disabled
-                  className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center opacity-30 cursor-not-allowed"
+                  style={{ backgroundColor: actionColor }}
+                  className="w-9 h-9 rounded-full text-white flex items-center justify-center opacity-30 cursor-not-allowed"
                   aria-label="Send"
                 >
                   <ArrowUp className="w-5 h-5" />

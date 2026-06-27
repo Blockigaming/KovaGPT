@@ -1,4 +1,4 @@
-import { Trash2, PanelLeft, Search, HelpCircle, Plus, Share2, Settings as SettingsIcon, FolderOpen, Link2, MoreHorizontal, MessageCircle, Copy as CopyIcon, Archive, Pin, PinOff } from "lucide-react";
+import { Trash2, PanelLeft, Search, HelpCircle, Plus, Share2, Settings as SettingsIcon, FolderOpen, Link2, MoreHorizontal, MessageCircle, Copy as CopyIcon, Archive, Pin, PinOff, Users } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { NovaLogo } from "@/components/NovaLogo";
 import { Link } from "@tanstack/react-router";
@@ -22,6 +22,7 @@ export function Sidebar({
   onDuplicate,
   onArchive,
   onTogglePin,
+  onAddMembers,
   open,
   onToggle,
   onOpenSettings,
@@ -36,6 +37,7 @@ export function Sidebar({
   onDuplicate?: (id: string) => void;
   onArchive?: (id: string) => void;
   onTogglePin?: (id: string) => void;
+  onAddMembers?: (id: string) => void;
   open: boolean;
   onToggle: () => void;
   onOpenSettings: (tab?: string) => void;
@@ -153,7 +155,12 @@ export function Sidebar({
               >
                 <PanelLeft className="w-[18px] h-[18px]" />
               </button>
-            </div>
+          </div>
+          {/* Subtle fade so scrolled chat list dissolves into the header area */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none relative z-10 -mt-1 h-4 bg-gradient-to-b from-sidebar to-transparent"
+          />
           </div>
 
           {searchOpen && (
@@ -201,9 +208,11 @@ export function Sidebar({
                 <Link to="/images" className="rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition">
                   Image Generation
                 </Link>
-                <Link to="/scheduled-tasks" className="rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition">
-                  Scheduled Tasks
-                </Link>
+                {showSignedIn && (
+                  <Link to="/scheduled-tasks" className="rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition">
+                    Scheduled Tasks
+                  </Link>
+                )}
                 <Link to="/pricing" className="rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition">
                   Subscriptions
                 </Link>
@@ -281,6 +290,11 @@ export function Sidebar({
                       {onShare && (
                         <DropdownMenuItem onClick={() => onShare(c.id)}>
                           <Share2 className="w-4 h-4 mr-2" /> Share
+                        </DropdownMenuItem>
+                      )}
+                      {showSignedIn && onAddMembers && (
+                        <DropdownMenuItem onClick={() => onAddMembers(c.id)}>
+                          <Users className="w-4 h-4 mr-2" /> Add members
                         </DropdownMenuItem>
                       )}
                       {onDuplicate && (
