@@ -33,10 +33,11 @@ export const Route = createFileRoute("/api/title")({
           }
 
           const excerpt = messages
-            .slice(0, 4)
+            .slice(0, 8)
             .map((m) => `${m.role}: ${m.content}`)
             .join("\n")
-            .slice(0, 2000);
+            .slice(0, 4000);
+
 
           const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
