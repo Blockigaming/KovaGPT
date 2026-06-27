@@ -287,6 +287,11 @@ export function Sidebar({
                           <Share2 className="w-4 h-4 mr-2" /> Share
                         </DropdownMenuItem>
                       )}
+                      {showSignedIn && onAddMembers && (
+                        <DropdownMenuItem onClick={() => onAddMembers(c.id)}>
+                          <Users className="w-4 h-4 mr-2" /> Add members
+                        </DropdownMenuItem>
+                      )}
                       {onDuplicate && (
                         <DropdownMenuItem onClick={() => onDuplicate(c.id)}>
                           <CopyIcon className="w-4 h-4 mr-2" /> Duplicate
