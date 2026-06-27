@@ -39,7 +39,7 @@ export function Sidebar({
   onOpenSettings: (tab?: string) => void;
   onOpenHelp: () => void;
 }) {
-  const { user, isSignedIn } = useUser();
+  const { user, isSignedIn, isLoaded } = useUser();
   const [width, setWidth] = useState<number>(280);
   const [moreOpen, setMoreOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -106,6 +106,9 @@ export function Sidebar({
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
   };
+
+  const showSignedIn = isLoaded && isSignedIn;
+  const showSignedOut = isLoaded && !isSignedIn;
 
   const navItemClass =
     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] hover:bg-sidebar-hover transition active:scale-[0.98]";
@@ -205,7 +208,7 @@ export function Sidebar({
 
 
           {/* Pinned */}
-          {isSignedIn && (
+          {showSignedIn && (
             <>
               <div className="px-5 pt-5 pb-1.5 text-[13px] font-medium text-muted-foreground">
                 Pinned
@@ -221,7 +224,7 @@ export function Sidebar({
 
           {/* Recents / Chats */}
           <div className="px-5 pt-5 pb-1.5 text-[13px] font-medium text-muted-foreground">
-            {isSignedIn ? "Recents" : "Chats"}
+              {showSignedIn ? "Recents" : "Chats"}
           </div>
           <nav className="flex-1 overflow-y-auto px-2 pb-2 min-h-0">
             {(() => {
@@ -290,7 +293,9 @@ export function Sidebar({
           </nav>
 
           {/* Bottom row: Chat pill + Settings gear (ChatGPT style) */}
-          {isSignedIn ? (
+          {!isLoaded ? (
+            <div className="border-t border-border/60 p-3" />
+          ) : showSignedIn ? (
             <div className="border-t border-border/60 p-3 flex items-center gap-2">
               <button
                 onClick={onNew}
@@ -317,7 +322,7 @@ export function Sidebar({
                 <UserButton />
               </div>
             </div>
-          ) : (
+          ) : showSignedOut ? (
             <>
               <div className="px-3 pb-2 pt-1 border-t border-border/60 flex flex-col gap-1">
                 <button
@@ -349,7 +354,7 @@ export function Sidebar({
                 </SignInButton>
               </div>
             </>
-          )}
+          ) : null}
 
           {/* Hidden user reference to suppress unused warning when signed-in shows UserButton */}
           <span className="sr-only">{user?.firstName || ""}</span>
