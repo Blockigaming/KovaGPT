@@ -143,13 +143,14 @@ const MOODS: { value: Mood; label: string; hint: string }[] = [
 
 type TabDef = { v: string; label: string; icon: typeof Cog };
 
+// Library lives in the left sidebar as a primary nav item. Finances is removed
+// from Settings entirely per product spec. Keeping a single flat list keeps the
+// sidebar readable without grouping headers (deferred to a future polish pass).
 const TAB_ORDER: TabDef[] = [
   { v: "general", label: "General", icon: Cog },
   { v: "personalization", label: "Personalization", icon: User2 },
   { v: "memory", label: "Memory", icon: Brain },
   { v: "linked", label: "Apps", icon: Link2 },
-  { v: "library", label: "Library", icon: FolderOpen },
-  { v: "finances", label: "Finances", icon: Wallet },
   { v: "email", label: "Email", icon: Mail },
   { v: "subscription", label: "Subscription", icon: CreditCard },
   { v: "appearance", label: "Appearance", icon: Palette },
@@ -163,6 +164,12 @@ const TAB_ORDER: TabDef[] = [
   { v: "help", label: "Help center", icon: LifeBuoy },
   { v: "about", label: "About", icon: Info },
   { v: "logout", label: "Log out", icon: LogOut },
+];
+
+// Limited tabs shown to signed-out users (privacy preferences + appearance + language).
+const SIGNED_OUT_TABS: TabDef[] = [
+  { v: "appearance", label: "Appearance", icon: Palette },
+  { v: "data", label: "Privacy & data", icon: Database },
 ];
 
 export function SettingsDialog({

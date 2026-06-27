@@ -150,38 +150,31 @@ export function Sidebar({
             <Sparkles className="w-4 h-4" />
             <span>Subscriptions</span>
           </Link>
-          {isSignedIn && (
-            <>
-              <button
-                onClick={() => onOpenSettings("library")}
-                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
-              >
-                <FolderOpen className="w-4 h-4" />
-                <span>Library</span>
-              </button>
-              <button
-                onClick={() => onOpenSettings("linked")}
-                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
-              >
-                <Link2 className="w-4 h-4" />
-                <span>Apps</span>
-              </button>
-              <button
-                onClick={() => onOpenSettings("finances")}
-                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
-              >
-                <Wallet className="w-4 h-4" />
-                <span>Finances</span>
-              </button>
-              <button
-                onClick={() => onOpenSettings("general")}
-                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
-              >
-                <SettingsIcon className="w-4 h-4" />
-                <span>Settings</span>
-              </button>
-            </>
-          )}
+          {/* Library: available to everyone, including signed-out users (session-only for guests). */}
+          <button
+            onClick={() => onOpenSettings("library")}
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
+          >
+            <FolderOpen className="w-4 h-4" />
+            <span>Library</span>
+          </button>
+          {/* Apps: visible to everyone; signed-out users see a sign-in prompt when opened. */}
+          <button
+            onClick={() => onOpenSettings("linked")}
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
+          >
+            <Link2 className="w-4 h-4" />
+            <span>Apps</span>
+          </button>
+          <button
+            onClick={() => onOpenSettings("general")}
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
+          >
+            <SettingsIcon className="w-4 h-4" />
+            <span>Settings</span>
+          </button>
+          {/* TODO(finances): Finance tab removed from sidebar/settings per spec. Re-add as
+              standalone chat surface in a future pass if needed. */}
         </div>
 
         {/* Chats list (signed in) or flexible spacer (signed out) */}
