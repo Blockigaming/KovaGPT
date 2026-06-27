@@ -167,6 +167,6 @@ function LibraryPage() {
           </ul>
         )}
       </main>
-    </div>
+    </AppShell>
   );
 }
