@@ -37,6 +37,9 @@ export function Sidebar({
   const { user, isSignedIn } = useUser();
   const [width, setWidth] = useState<number>(280);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
 
   const draggingRef = useRef(false);
 
@@ -126,7 +129,8 @@ export function Sidebar({
             </div>
             <div className="flex items-center gap-1">
               <button
-                className="p-2 rounded-md hover:bg-sidebar-hover transition"
+                onClick={() => setSearchOpen((v) => !v)}
+                className="p-2 rounded-md hover:bg-sidebar-hover transition active:scale-95"
                 aria-label="Search chats"
                 title="Search chats"
               >
@@ -141,6 +145,18 @@ export function Sidebar({
               </button>
             </div>
           </div>
+
+          {searchOpen && (
+            <div className="px-3 pb-2">
+              <input
+                autoFocus
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search chats..."
+                className="w-full rounded-lg bg-sidebar-hover/60 px-3 py-2 text-sm outline-none focus:bg-sidebar-hover transition"
+              />
+            </div>
+          )}
 
           {/* New chat (kept; ChatGPT puts it in the bottom pill but users need it accessible) */}
           <div className="px-3 pb-2">
@@ -171,7 +187,7 @@ export function Sidebar({
               <span>More</span>
             </button>
             {moreOpen && (
-              <div className="ml-8 flex flex-col gap-0.5 pb-1">
+              <div className="mx-3 mt-1 mb-1 rounded-xl bg-sidebar-hover/60 p-1.5 flex flex-col gap-0.5">
                 <Link to="/images" className="rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition">
                   Image Generation
                 </Link>
@@ -181,6 +197,7 @@ export function Sidebar({
               </div>
             )}
           </div>
+
 
           {/* Pinned */}
           {isSignedIn && (
@@ -201,43 +218,61 @@ export function Sidebar({
           <div className="px-5 pt-5 pb-1.5 text-[13px] font-medium text-muted-foreground">
             {isSignedIn ? "Recents" : "Chats"}
           </div>
-          <nav className="flex-1 overflow-y-auto px-2 pb-2 min-h-0">
-            {conversations.length === 0 && (
-              <div className="px-3 py-2 text-sm text-muted-foreground">No chats yet</div>
-            )}
-            {conversations.map((c) => (
-              <div
-                key={c.id}
-                className={`group flex items-center gap-2 rounded-lg px-3 py-2 text-[14px] cursor-pointer transition ${
-                  activeId === c.id ? "bg-sidebar-hover" : "hover:bg-sidebar-hover"
-                }`}
-                onClick={() => onSelect(c.id)}
-              >
-                <span className="flex-1 truncate">{c.title}</span>
-                {onShare && (
+          <nav
+            className="flex-1 overflow-y-auto px-2 pb-2 min-h-0"
+            style={{
+              maskImage:
+                "linear-gradient(to bottom, transparent 0, #000 24px, #000 calc(100% - 8px), transparent 100%)",
+              WebkitMaskImage:
+                "linear-gradient(to bottom, transparent 0, #000 24px, #000 calc(100% - 8px), transparent 100%)",
+            }}
+          >
+            {(() => {
+              const q = searchQuery.trim().toLowerCase();
+              const list = q
+                ? conversations.filter((c) => c.title.toLowerCase().includes(q))
+                : conversations;
+              if (list.length === 0) {
+                return (
+                  <div className="px-3 py-2 text-sm text-muted-foreground">
+                    {q ? "No matches" : "No chats yet"}
+                  </div>
+                );
+              }
+              return list.map((c) => (
+                <div
+                  key={c.id}
+                  className={`group flex items-center gap-2 rounded-lg px-3 py-2 text-[14px] cursor-pointer transition ${
+                    activeId === c.id ? "bg-sidebar-hover" : "hover:bg-sidebar-hover"
+                  }`}
+                  onClick={() => onSelect(c.id)}
+                >
+                  <span className="flex-1 truncate">{c.title}</span>
+                  {onShare && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onShare(c.id);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-background/40 transition active:scale-95"
+                      aria-label="Share chat"
+                    >
+                      <Share2 className="w-3.5 h-3.5 text-muted-foreground" />
+                    </button>
+                  )}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onShare(c.id);
+                      onDelete(c.id);
                     }}
                     className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-background/40 transition active:scale-95"
-                    aria-label="Share chat"
+                    aria-label="Delete chat"
                   >
-                    <Share2 className="w-3.5 h-3.5 text-muted-foreground" />
+                    <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
                   </button>
-                )}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(c.id);
-                  }}
-                  className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-background/40 transition active:scale-95"
-                  aria-label="Delete chat"
-                >
-                  <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
-                </button>
-              </div>
-            ))}
+                </div>
+              ));
+            })()}
           </nav>
 
           {/* Bottom row: Chat pill + Settings gear (ChatGPT style) */}
