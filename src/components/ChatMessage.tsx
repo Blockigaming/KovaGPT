@@ -99,14 +99,19 @@ function ChatMessageInner({
         const words = firstSentence.replace(/\s+/g, " ").split(" ").slice(0, 10).join(" ");
         title = words ? words.slice(0, 120) : "Saved chat response";
       }
-      await saveFn({
-        data: {
-          title,
-          item_type: codeRatio ? "code" : "chat_artifact",
-          source: "chat",
-          content_text: message.content.slice(0, 100_000),
-        },
-      });
+      const payload = {
+        title,
+        item_type: (codeRatio ? "code" : "chat_artifact") as "code" | "chat_artifact",
+        source: "chat" as const,
+        content_text: message.content.slice(0, 100_000),
+      };
+      if (isSignedIn) {
+        await saveFn({ data: payload });
+      } else {
+        const { saveGuestItem } = await import("@/lib/guest-library");
+        saveGuestItem(payload);
+      }
+
       if (message.id) {
         try {
           savedIds.push(message.id);
