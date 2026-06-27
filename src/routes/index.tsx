@@ -12,6 +12,7 @@ import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/Se
 import { HelpDialog } from "@/components/HelpDialog";
 import { LimitReachedDialog } from "@/components/LimitReachedDialog";
 import { ShareChatDialog } from "@/components/ShareChatDialog";
+import { AddMembersDialog } from "@/components/AddMembersDialog";
 import { applyThemeMode } from "@/lib/theme";
 
 import { getUsage } from "@/lib/limits";
