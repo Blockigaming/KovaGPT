@@ -68,3 +68,5 @@ const card = { backgroundColor: '#f5f5f5', borderRadius: '10px', padding: '14px 
 const label = { fontSize: '11px', textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: '#737373', margin: '0 0 4px 0' }
 const value = { fontSize: '14px', margin: '0' }
 const signoff = { fontSize: '14px', color: '#525252', marginTop: '24px' }
+const logoWrap = { margin: '0 0 20px 0' }
+const logoImg = { display: 'block', borderRadius: '10px' }
