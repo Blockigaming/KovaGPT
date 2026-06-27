@@ -547,6 +547,39 @@ function KovaGPT() {
           }
           setShareChatId(id);
         }}
+        onDuplicate={(id) => {
+          setConversations((prev) => {
+            const src = prev.find((c) => c.id === id);
+            if (!src) return prev;
+            const copy: Conversation = {
+              ...src,
+              id: newId(),
+              title: `${src.title} (copy)`,
+              messages: src.messages.map((m) => ({ ...m, id: newId() })),
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            };
+            return [copy, ...prev];
+          });
+          toast.success("Chat duplicated");
+        }}
+        onArchive={(id) => {
+          // Lightweight archive: remove from sidebar list, persist in localStorage.
+          setConversations((prev) => {
+            const target = prev.find((c) => c.id === id);
+            if (target) {
+              try {
+                const raw = localStorage.getItem("kovagpt:archived") || "[]";
+                const arr = JSON.parse(raw);
+                arr.unshift(target);
+                localStorage.setItem("kovagpt:archived", JSON.stringify(arr.slice(0, 200)));
+              } catch { /* ignore */ }
+            }
+            return prev.filter((c) => c.id !== id);
+          });
+          if (activeId === id) setActiveId(null);
+          toast.success("Chat archived");
+        }}
       />
 
       <main className="flex-1 flex flex-col min-w-0">
