@@ -1,9 +1,10 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Copy, Check, User, Volume2, VolumeX, ImageIcon, Loader2, Bookmark, FileEdit, Code2, Eye } from "lucide-react";
+import { Copy, Check, User, Volume2, VolumeX, ImageIcon, Loader2, Bookmark, FileEdit, Code2, Eye, MoreHorizontal, Send, Pencil, RefreshCw, ThumbsUp, ThumbsDown, GitBranch, Globe } from "lucide-react";
 import { memo, useEffect, useMemo, useState } from "react";
 import type { Message } from "@/lib/chat-store";
 import { NovaLogo } from "./NovaLogo";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { speak, stopSpeaking, isSpeaking, ttsSupported } from "@/lib/voice";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
