@@ -89,21 +89,6 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  /*
-    Legacy implementation kept here for reference:
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-      setIsLoaded(true);
-    });
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setIsLoaded(true);
-    });
-    return () => {
-      sub.subscription.unsubscribe();
-    };
-  */
-
   // Support ?sign-in=1 / ?sign-up=1 deep links (legacy behavior).
   useEffect(() => {
     if (typeof window === "undefined") return;
