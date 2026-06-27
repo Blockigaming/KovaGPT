@@ -828,6 +828,12 @@ function KovaGPT() {
         conversation={conversations.find((c) => c.id === shareChatId) ?? null}
       />
 
+      <AddMembersDialog
+        open={membersChatId !== null}
+        chatId={membersChatId}
+        onOpenChange={(v) => !v && setMembersChatId(null)}
+      />
+
       
 
       <SignUpPrompt open={signupPromptOpen} onOpenChange={setSignupPromptOpen} />
