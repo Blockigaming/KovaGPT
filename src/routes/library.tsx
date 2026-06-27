@@ -53,11 +53,11 @@ function LibraryPage() {
 
   const remove = async (id: string) => {
     if (!isSignedIn) {
-      const next = items.filter((i) => i.id !== id);
-      setItems(next);
-      sessionStorage.setItem(GUEST_KEY, JSON.stringify(next));
+      deleteGuestItem(id);
+      setItems((prev) => prev.filter((i) => i.id !== id));
       return;
     }
+
     try {
       const { deleteLibraryItem } = await import("@/lib/library.functions");
       await deleteLibraryItem({ data: { id } });
