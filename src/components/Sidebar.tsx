@@ -146,6 +146,18 @@ export function Sidebar({
             </div>
           </div>
 
+          {searchOpen && (
+            <div className="px-3 pb-2">
+              <input
+                autoFocus
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search chats..."
+                className="w-full rounded-lg bg-sidebar-hover/60 px-3 py-2 text-sm outline-none focus:bg-sidebar-hover transition"
+              />
+            </div>
+          )}
+
           {/* New chat (kept; ChatGPT puts it in the bottom pill but users need it accessible) */}
           <div className="px-3 pb-2">
             <button
@@ -175,7 +187,7 @@ export function Sidebar({
               <span>More</span>
             </button>
             {moreOpen && (
-              <div className="ml-8 flex flex-col gap-0.5 pb-1">
+              <div className="mx-3 mt-1 mb-1 rounded-xl bg-sidebar-hover/60 p-1.5 flex flex-col gap-0.5">
                 <Link to="/images" className="rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition">
                   Image Generation
                 </Link>
@@ -185,6 +197,7 @@ export function Sidebar({
               </div>
             )}
           </div>
+
 
           {/* Pinned */}
           {isSignedIn && (
