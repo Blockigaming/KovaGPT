@@ -141,6 +141,7 @@ function KovaGPT() {
   // Load (or reload) settings whenever the signed-in user changes so each
   // account gets its own personalization, behavior, appearance, etc.
   useEffect(() => {
+    if (!isLoaded) return;
     const loaded = loadSettings(userKey);
     setSettings(loaded);
     applyThemeMode(loaded.mode ?? "system");
@@ -162,7 +163,7 @@ function KovaGPT() {
         localStorage.removeItem("nova-gpt-pending-active");
       } catch { /* ignore */ }
     }
-  }, [userKey, isSignedIn]);
+  }, [isLoaded, userKey, isSignedIn]);
 
   // Re-apply theme mode whenever it changes
   useEffect(() => {
@@ -186,6 +187,7 @@ function KovaGPT() {
 
   // If the user signs out mid-session, clear stored chats immediately.
   useEffect(() => {
+    if (!isLoaded) return;
     if (clerkEnabled && !isSignedIn) {
       try {
         localStorage.removeItem("nova-gpt-conversations-v2");
@@ -193,7 +195,7 @@ function KovaGPT() {
         /* ignore */
       }
     }
-  }, [isSignedIn]);
+  }, [isLoaded, isSignedIn]);
 
   const active = useMemo(
     () => conversations.find((c) => c.id === activeId) ?? null,
@@ -212,6 +214,7 @@ function KovaGPT() {
   }, [settings.displayName, user]);
 
   const greeting = useMemo(() => {
+    if (!isLoaded) return "KovaGPT";
     if (clerkEnabled && !isSignedIn) return "KovaGPT";
     const name = firstName;
     const prompts = name
@@ -236,7 +239,7 @@ function KovaGPT() {
     // Pick once per mount so it doesn't flicker on every render.
     return prompts[Math.floor(Math.random() * prompts.length)];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firstName, isSignedIn]);
+  }, [firstName, isLoaded, isSignedIn]);
 
 
   useEffect(() => {
@@ -267,6 +270,7 @@ function KovaGPT() {
 
   // After 3 user messages in this session while signed out, prompt to sign up.
   useEffect(() => {
+    if (!isLoaded) return;
     if (signupPromptShown) return;
     if (clerkEnabled && isSignedIn) return;
     const userMsgCount = conversations.reduce(
@@ -277,7 +281,7 @@ function KovaGPT() {
       setSignupPromptOpen(true);
       setSignupPromptShown(true);
     }
-  }, [conversations, isSignedIn, isStreaming, signupPromptShown]);
+  }, [conversations, isLoaded, isSignedIn, isStreaming, signupPromptShown]);
 
   const newChat = useCallback(() => {
     setActiveId(null);
@@ -607,7 +611,7 @@ function KovaGPT() {
 
 
           <div className="ml-auto flex items-center gap-2">
-            {isLoaded && isSignedIn ? (
+            {!isLoaded ? null : isSignedIn ? (
               <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
             ) : (
               <>
