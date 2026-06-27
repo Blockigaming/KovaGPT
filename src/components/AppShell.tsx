@@ -85,6 +85,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         onOpenChange={setSettingsOpen}
         settings={settings}
         onChange={setSettings}
+        onClearAll={() => {
+          try {
+            localStorage.removeItem("nova-gpt-conversations-v2");
+          } catch { /* ignore */ }
+          setConversations([]);
+        }}
+        onOpenHelp={() => setHelpOpen(true)}
         initialTab={settingsTab}
       />
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
