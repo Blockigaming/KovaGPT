@@ -26,6 +26,9 @@ const Email = ({ name, topic, variant = 'help' }: Props) => (
     <Preview>Thanks for reaching out to KovaGPT - we'll get back to you soon.</Preview>
     <Body style={main}>
       <Container style={container}>
+        <Section style={logoWrap}>
+          <Img src={LOGO_URL} width="48" height="48" alt="KovaGPT" style={logoImg} />
+        </Section>
         <Heading style={h1}>Thanks{name ? `, ${name}` : ''} 👋</Heading>
         <Text style={p}>
           We received your {variant === 'bug' ? 'bug report' : 'message'} and someone from the
