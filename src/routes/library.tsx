@@ -101,9 +101,10 @@ function LibraryPage() {
           <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm">
             <div className="font-medium mb-1">You are browsing as a guest.</div>
             <p className="text-muted-foreground text-xs mb-3">
-              Items saved while signed out stay only in this browser tab and will be cleared if you
-              refresh or close it. Sign in to keep your library across devices.
+              Items you save stay in this browser. Sign in to keep them across devices and free up
+              local storage.
             </p>
+
             <SignInButton mode="modal">
               <button className="px-3 py-1.5 rounded-full bg-foreground text-background text-xs font-medium hover:opacity-90 transition">
                 Sign in to save permanently
