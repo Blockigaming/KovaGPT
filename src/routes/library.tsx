@@ -20,16 +20,8 @@ export const Route = createFileRoute("/library")({
 
 type LibItem = import("@/lib/library.functions").LibraryItem;
 
-const GUEST_KEY = "kova-guest-library";
+import { loadGuestLibrary, deleteGuestItem } from "@/lib/guest-library";
 
-function loadGuestItems(): LibItem[] {
-  if (typeof sessionStorage === "undefined") return [];
-  try {
-    return JSON.parse(sessionStorage.getItem(GUEST_KEY) ?? "[]");
-  } catch {
-    return [];
-  }
-}
 
 function LibraryPage() {
   const { isSignedIn, isLoaded } = useUser();
