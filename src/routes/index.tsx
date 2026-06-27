@@ -703,6 +703,11 @@ function KovaGPT() {
               {active.messages.map((m, i) => {
                 const isLastAssistant =
                   m.role === "assistant" && i === active.messages.length - 1;
+                // Find the user message that prompted this assistant reply (immediately before).
+                const priorUser =
+                  m.role === "assistant" && i > 0 && active.messages[i - 1]?.role === "user"
+                    ? active.messages[i - 1]
+                    : null;
                 return (
                   <ChatMessage
                     key={m.id}
@@ -714,6 +719,47 @@ function KovaGPT() {
                         ? (prompt) => send(prompt, [])
                         : undefined
                     }
+                    onRetry={
+                      isLastAssistant && !isStreaming && priorUser
+                        ? () => {
+                            // Drop the last assistant message, then resend the prior user prompt.
+                            setConversations((prev) =>
+                              prev.map((c) =>
+                                c.id === active.id
+                                  ? { ...c, messages: c.messages.slice(0, -2) }
+                                  : c,
+                              ),
+                            );
+                            send(priorUser.content, []);
+                          }
+                        : undefined
+                    }
+                    onEdit={
+                      priorUser
+                        ? () => {
+                            setInput(priorUser.content);
+                            toast.message("Edit your prompt below, then press Enter");
+                          }
+                        : undefined
+                    }
+                    onBranch={() => {
+                      // Branch: create a new conversation with messages up to and including this one.
+                      const sliceEnd = i + 1;
+                      const branched: Conversation = {
+                        id: newId(),
+                        title: `${active.title} (branch)`,
+                        messages: active.messages.slice(0, sliceEnd).map((mm) => ({
+                          ...mm,
+                          id: newId(),
+                        })),
+                        mode: active.mode,
+                        createdAt: Date.now(),
+                        updatedAt: Date.now(),
+                      };
+                      setConversations((prev) => [branched, ...prev]);
+                      setActiveId(branched.id);
+                      toast.success("Branched into a new chat");
+                    }}
                   />
                 );
               })}
