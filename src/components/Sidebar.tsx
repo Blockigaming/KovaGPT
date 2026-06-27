@@ -291,7 +291,11 @@ export function Sidebar({
         <div
           onMouseDown={startDrag}
           onTouchStart={startDrag}
-          className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize hover:bg-border/80 active:bg-border transition-colors z-10 touch-none"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize sidebar"
+          style={{ touchAction: "none" }}
+          className="absolute top-0 -right-1 h-full w-3 cursor-col-resize hover:bg-border/80 active:bg-border transition-colors z-20"
           title="Drag to resize"
         />
       )}
