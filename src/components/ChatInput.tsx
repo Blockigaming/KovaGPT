@@ -221,7 +221,7 @@ export function ChatInput({
               ) : value.trim() || attachments.length > 0 ? (
                 <button
                   type="button"
-                  onClick={onSubmit}
+                  onClick={triggerSubmit}
                   className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center hover:opacity-80 transition active:scale-90 active:opacity-70 duration-150"
                   aria-label="Send"
                 >
