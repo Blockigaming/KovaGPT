@@ -153,24 +153,23 @@ export function Sidebar({
             <Sparkles className="w-4 h-4" />
             <span>Subscriptions</span>
           </Link>
-          {/* Library: route for signed-in users; popup for guests so they keep their context. */}
-          <button
-            type="button"
-            onClick={() => (isSignedIn ? navigate({ to: "/library" }) : setLoginPromptOpen(true))}
-            className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left active:scale-[0.98] active:bg-sidebar-hover/80"
+          {/* Library: works for guests too (session-scoped) so uploads/images persist locally. */}
+          <Link
+            to="/library"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition active:scale-[0.98] active:bg-sidebar-hover/80"
           >
             <FolderOpen className="w-4 h-4" />
             <span>Library</span>
-          </button>
-          {/* Apps: route for signed-in users; popup for guests. */}
-          <button
-            type="button"
-            onClick={() => (isSignedIn ? navigate({ to: "/apps" }) : setLoginPromptOpen(true))}
-            className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left active:scale-[0.98] active:bg-sidebar-hover/80"
+          </Link>
+          {/* Apps: route is browseable; Connect prompts sign-in for guests. */}
+          <Link
+            to="/apps"
+            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition active:scale-[0.98] active:bg-sidebar-hover/80"
           >
             <Link2 className="w-4 h-4" />
             <span>Apps</span>
-          </button>
+          </Link>
+
         </div>
 
         {/* Chats list (signed in) or flexible spacer (signed out) */}
