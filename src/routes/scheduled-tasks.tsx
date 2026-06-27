@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useUser } from "@/components/auth/ClerkSafe";
+import { AppShell } from "@/components/AppShell";
 import {
   listScheduledTasks,
   createScheduledTask,
