@@ -56,11 +56,20 @@ export function Sidebar({
   };
 
   useEffect(() => {
-    const onMove = (e: MouseEvent) => {
+    const move = (clientX: number) => {
       if (!draggingRef.current) return;
-      setWidth(clampWidth(e.clientX));
+      setWidth(clampWidth(clientX));
     };
-    const onUp = () => {
+    const onMove = (e: MouseEvent) => move(e.clientX);
+    const onTouchMove = (e: TouchEvent) => {
+      if (!draggingRef.current) return;
+      const t = e.touches[0];
+      if (t) {
+        e.preventDefault();
+        move(t.clientX);
+      }
+    };
+    const stop = () => {
       if (draggingRef.current) {
         draggingRef.current = false;
         document.body.style.cursor = "";
@@ -70,16 +79,22 @@ export function Sidebar({
     };
     const onResize = () => setWidth((w) => clampWidth(w));
     window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
+    window.addEventListener("mouseup", stop);
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("touchend", stop);
+    window.addEventListener("touchcancel", stop);
     window.addEventListener("resize", onResize);
     return () => {
       window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("mouseup", stop);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", stop);
+      window.removeEventListener("touchcancel", stop);
       window.removeEventListener("resize", onResize);
     };
   }, [width]);
 
-  const startDrag = (e: React.MouseEvent) => {
+  const startDrag = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
     draggingRef.current = true;
     document.body.style.cursor = "col-resize";
@@ -281,7 +296,8 @@ export function Sidebar({
       {open && (
         <div
           onMouseDown={startDrag}
-          className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize hover:bg-border/80 active:bg-border transition-colors z-10"
+          onTouchStart={startDrag}
+          className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize hover:bg-border/80 active:bg-border transition-colors z-10 touch-none"
           title="Drag to resize"
         />
       )}

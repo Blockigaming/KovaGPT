@@ -152,7 +152,15 @@ function KovaGPT() {
       }
       setConversations([]);
     } else {
-      setConversations(loadConversations());
+      const loadedConvs = loadConversations();
+      setConversations(loadedConvs);
+      try {
+        const pending = localStorage.getItem("nova-gpt-pending-active");
+        if (pending && loadedConvs.some((c) => c.id === pending)) {
+          setActiveId(pending);
+        }
+        localStorage.removeItem("nova-gpt-pending-active");
+      } catch { /* ignore */ }
     }
   }, [userKey, isSignedIn]);
 
