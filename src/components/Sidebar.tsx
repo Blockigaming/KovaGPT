@@ -19,6 +19,8 @@ export function Sidebar({
   onNew,
   onDelete,
   onShare,
+  onDuplicate,
+  onArchive,
   open,
   onToggle,
   onOpenSettings,
@@ -30,6 +32,8 @@ export function Sidebar({
   onNew: () => void;
   onDelete: (id: string) => void;
   onShare?: (id: string) => void;
+  onDuplicate?: (id: string) => void;
+  onArchive?: (id: string) => void;
   open: boolean;
   onToggle: () => void;
   onOpenSettings: (tab?: string) => void;
