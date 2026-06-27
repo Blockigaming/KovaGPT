@@ -339,7 +339,7 @@ function KovaGPT() {
         if (isNewConversation) {
           const c: Conversation = {
             id: nextConvId,
-            title: deriveTitle(trimmed || "Image chat"),
+            title: "New chat",
             messages: [userMsg, assistantMsg],
             mode,
             createdAt: Date.now(),
@@ -367,7 +367,7 @@ function KovaGPT() {
               : [
                   {
                     id: nextConvId,
-                    title: deriveTitle(trimmed || "Image chat"),
+                    title: "New chat",
                     messages: [userMsg, assistantMsg],
                     mode,
                     createdAt: Date.now(),
@@ -870,7 +870,7 @@ function KovaGPT() {
             return [
               {
                 id,
-                title: deriveTitle(userText),
+                title: "New chat",
                 messages: [userMsg, aiMsg],
                 mode,
                 createdAt: Date.now(),
