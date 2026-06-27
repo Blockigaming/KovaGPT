@@ -597,6 +597,14 @@ function KovaGPT() {
             ),
           );
         }}
+        onAddMembers={(id) => {
+          if (!isSignedIn) {
+            toast.message("Sign in to add members");
+            openSignUp();
+            return;
+          }
+          setMembersChatId(id);
+        }}
       />
 
       <main className="flex-1 flex flex-col min-w-0">
