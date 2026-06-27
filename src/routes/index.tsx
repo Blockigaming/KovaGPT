@@ -547,6 +547,39 @@ function KovaGPT() {
           }
           setShareChatId(id);
         }}
+        onDuplicate={(id) => {
+          setConversations((prev) => {
+            const src = prev.find((c) => c.id === id);
+            if (!src) return prev;
+            const copy: Conversation = {
+              ...src,
+              id: newId(),
+              title: `${src.title} (copy)`,
+              messages: src.messages.map((m) => ({ ...m, id: newId() })),
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            };
+            return [copy, ...prev];
+          });
+          toast.success("Chat duplicated");
+        }}
+        onArchive={(id) => {
+          // Lightweight archive: remove from sidebar list, persist in localStorage.
+          setConversations((prev) => {
+            const target = prev.find((c) => c.id === id);
+            if (target) {
+              try {
+                const raw = localStorage.getItem("kovagpt:archived") || "[]";
+                const arr = JSON.parse(raw);
+                arr.unshift(target);
+                localStorage.setItem("kovagpt:archived", JSON.stringify(arr.slice(0, 200)));
+              } catch { /* ignore */ }
+            }
+            return prev.filter((c) => c.id !== id);
+          });
+          if (activeId === id) setActiveId(null);
+          toast.success("Chat archived");
+        }}
       />
 
       <main className="flex-1 flex flex-col min-w-0">
@@ -670,6 +703,11 @@ function KovaGPT() {
               {active.messages.map((m, i) => {
                 const isLastAssistant =
                   m.role === "assistant" && i === active.messages.length - 1;
+                // Find the user message that prompted this assistant reply (immediately before).
+                const priorUser =
+                  m.role === "assistant" && i > 0 && active.messages[i - 1]?.role === "user"
+                    ? active.messages[i - 1]
+                    : null;
                 return (
                   <ChatMessage
                     key={m.id}
@@ -681,6 +719,47 @@ function KovaGPT() {
                         ? (prompt) => send(prompt, [])
                         : undefined
                     }
+                    onRetry={
+                      isLastAssistant && !isStreaming && priorUser
+                        ? () => {
+                            // Drop the last assistant message, then resend the prior user prompt.
+                            setConversations((prev) =>
+                              prev.map((c) =>
+                                c.id === active.id
+                                  ? { ...c, messages: c.messages.slice(0, -2) }
+                                  : c,
+                              ),
+                            );
+                            send(priorUser.content, []);
+                          }
+                        : undefined
+                    }
+                    onEdit={
+                      priorUser
+                        ? () => {
+                            setInput(priorUser.content);
+                            toast.message("Edit your prompt below, then press Enter");
+                          }
+                        : undefined
+                    }
+                    onBranch={() => {
+                      // Branch: create a new conversation with messages up to and including this one.
+                      const sliceEnd = i + 1;
+                      const branched: Conversation = {
+                        id: newId(),
+                        title: `${active.title} (branch)`,
+                        messages: active.messages.slice(0, sliceEnd).map((mm) => ({
+                          ...mm,
+                          id: newId(),
+                        })),
+                        mode: active.mode,
+                        createdAt: Date.now(),
+                        updatedAt: Date.now(),
+                      };
+                      setConversations((prev) => [branched, ...prev]);
+                      setActiveId(branched.id);
+                      toast.success("Branched into a new chat");
+                    }}
                   />
                 );
               })}

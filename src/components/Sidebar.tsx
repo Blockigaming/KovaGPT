@@ -1,4 +1,5 @@
-import { MessageSquare, Trash2, PanelLeft, Search, HelpCircle, Plus, Share2, Settings as SettingsIcon, FolderOpen, Link2, MoreHorizontal, Briefcase, MessageCircle } from "lucide-react";
+import { Trash2, PanelLeft, Search, HelpCircle, Plus, Share2, Settings as SettingsIcon, FolderOpen, Link2, MoreHorizontal, Briefcase, MessageCircle, Copy as CopyIcon, Archive } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { NovaLogo } from "@/components/NovaLogo";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
@@ -18,6 +19,8 @@ export function Sidebar({
   onNew,
   onDelete,
   onShare,
+  onDuplicate,
+  onArchive,
   open,
   onToggle,
   onOpenSettings,
@@ -29,6 +32,8 @@ export function Sidebar({
   onNew: () => void;
   onDelete: (id: string) => void;
   onShare?: (id: string) => void;
+  onDuplicate?: (id: string) => void;
+  onArchive?: (id: string) => void;
   open: boolean;
   onToggle: () => void;
   onOpenSettings: (tab?: string) => void;
@@ -119,8 +124,8 @@ export function Sidebar({
         className="relative shrink-0 overflow-hidden transition-[width] duration-150 bg-sidebar text-sidebar-foreground border-r border-border flex flex-col max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:h-[100dvh]"
       >
         <div style={{ width }} className="flex flex-col h-full">
-          {/* Brand row with search + collapse */}
-          <div className="flex items-center justify-between px-4 pt-4 pb-3">
+          {/* Brand row sits on top; fade beneath obscures scrolled content */}
+          <div className="relative z-20 flex items-center justify-between px-4 pt-4 pb-3 bg-sidebar">
             <div className="flex items-center gap-2">
               <span className="inline-flex rounded-full dark:bg-black dark:p-[2px] dark:ring-1 dark:ring-black">
                 <NovaLogo className="w-7 h-7" />
@@ -145,6 +150,8 @@ export function Sidebar({
               </button>
             </div>
           </div>
+          {/* Fade strip directly below brand */}
+          <div className="pointer-events-none relative z-10 -mt-2 h-6 bg-gradient-to-b from-sidebar to-transparent" />
 
           {searchOpen && (
             <div className="px-3 pb-2">
@@ -242,34 +249,51 @@ export function Sidebar({
               return list.map((c) => (
                 <div
                   key={c.id}
-                  className={`group flex items-center gap-2 rounded-lg px-3 py-2 text-[14px] cursor-pointer transition ${
-                    activeId === c.id ? "bg-sidebar-hover" : "hover:bg-sidebar-hover"
+                  className={`group mx-1 my-0.5 flex items-center gap-1 rounded-xl px-3 py-2 text-[14px] cursor-pointer transition bg-sidebar-hover/60 hover:bg-sidebar-hover ${
+                    activeId === c.id ? "bg-sidebar-hover ring-1 ring-border/60" : ""
                   }`}
                   onClick={() => onSelect(c.id)}
                 >
                   <span className="flex-1 truncate">{c.title}</span>
-                  {onShare && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onShare(c.id);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-background/40 transition active:scale-95"
-                      aria-label="Share chat"
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        onClick={(e) => e.stopPropagation()}
+                        className="opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 p-1 rounded hover:bg-background/40 transition active:scale-95"
+                        aria-label="Chat options"
+                      >
+                        <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      className="w-44"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      <Share2 className="w-3.5 h-3.5 text-muted-foreground" />
-                    </button>
-                  )}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(c.id);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-background/40 transition active:scale-95"
-                    aria-label="Delete chat"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
-                  </button>
+                      {onShare && (
+                        <DropdownMenuItem onClick={() => onShare(c.id)}>
+                          <Share2 className="w-4 h-4 mr-2" /> Share
+                        </DropdownMenuItem>
+                      )}
+                      {onDuplicate && (
+                        <DropdownMenuItem onClick={() => onDuplicate(c.id)}>
+                          <CopyIcon className="w-4 h-4 mr-2" /> Duplicate
+                        </DropdownMenuItem>
+                      )}
+                      {onArchive && (
+                        <DropdownMenuItem onClick={() => onArchive(c.id)}>
+                          <Archive className="w-4 h-4 mr-2" /> Archive
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => onDelete(c.id)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               ));
             })()}
