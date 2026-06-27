@@ -5,11 +5,14 @@ import {
   Head,
   Heading,
   Html,
+  Img,
   Preview,
   Section,
   Text,
 } from '@react-email/components'
 import type { TemplateEntry } from './registry'
+
+const LOGO_URL = 'https://kovagpt.com/favicon.png'
 
 interface Props {
   name?: string
