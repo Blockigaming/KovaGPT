@@ -21,6 +21,7 @@ export function Sidebar({
   onShare,
   onDuplicate,
   onArchive,
+  onTogglePin,
   open,
   onToggle,
   onOpenSettings,
@@ -34,6 +35,7 @@ export function Sidebar({
   onShare?: (id: string) => void;
   onDuplicate?: (id: string) => void;
   onArchive?: (id: string) => void;
+  onTogglePin?: (id: string) => void;
   open: boolean;
   onToggle: () => void;
   onOpenSettings: (tab?: string) => void;
