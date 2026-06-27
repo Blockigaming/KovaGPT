@@ -115,9 +115,11 @@ function ScheduledTasksPage() {
   };
 
   return (
+    <AppShell>
     <div className="min-h-screen bg-background text-foreground">
       <Toaster />
       <div className="max-w-3xl mx-auto px-4 py-8">
+
         <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6">
           <ArrowLeft className="w-4 h-4" /> Back to chat
         </Link>
