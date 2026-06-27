@@ -41,6 +41,9 @@ const Email = ({
     </Preview>
     <Body style={main}>
       <Container style={container}>
+        <Section style={logoWrap}>
+          <Img src={LOGO_URL} width="40" height="40" alt="KovaGPT" style={logoImg} />
+        </Section>
         <Heading style={h1}>
           {variant === 'bug' ? '🐞 Bug report' : '✉️ Help request'}
         </Heading>
