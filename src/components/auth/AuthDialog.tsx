@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Loader2, LogIn, UserPlus } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { ForgotPasswordDialog } from "@/components/auth/ForgotPasswordDialog";
+import { getOAuthRedirectUri, rememberPostAuthRedirect } from "@/lib/oauth-session";
 
 type Mode = "sign-in" | "sign-up";
 
@@ -92,6 +93,7 @@ export function AuthDialog({
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      console.error("[KovaAuth] Email sign in failed.", err);
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -101,12 +103,15 @@ export function AuthDialog({
   const handleGoogle = async () => {
     setLoading(true);
     try {
+      rememberPostAuthRedirect();
       const { lovable } = await import("@/integrations/lovable");
+      const redirectUri = getOAuthRedirectUri();
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: redirectUri,
       });
       if (result.error) {
         const msg = result.error instanceof Error ? result.error.message : String(result.error);
+        console.error("[KovaAuth] Google sign in failed before redirect.", result.error);
         toast.error(msg);
         setLoading(false);
         return;
@@ -116,6 +121,7 @@ export function AuthDialog({
       onOpenChange(false);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      console.error("[KovaAuth] Google sign in failed.", err);
       toast.error(msg);
     } finally {
       setLoading(false);

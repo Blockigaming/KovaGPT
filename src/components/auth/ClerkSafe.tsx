@@ -13,6 +13,12 @@ import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthDialog } from "@/components/auth/AuthDialog";
 import {
+  clearOAuthResponseFromUrl,
+  completeOAuthSessionFromUrl,
+  hasOAuthResponseInUrl,
+  OAUTH_CALLBACK_PATH,
+} from "@/lib/oauth-session";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -43,15 +49,42 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Register listener first to capture token refresh / sign in events.
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-      setIsLoaded(true);
+    let cancelled = false;
+    const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
+        setSession(newSession);
+        setIsLoaded(true);
+      }
     });
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setIsLoaded(true);
-    });
+
+    async function hydrateSession() {
+      try {
+        if (hasOAuthResponseInUrl() && window.location.pathname !== OAUTH_CALLBACK_PATH) {
+          const oauthSession = await completeOAuthSessionFromUrl("app bootstrap");
+          if (cancelled) return;
+          setSession(oauthSession);
+          clearOAuthResponseFromUrl();
+          setIsLoaded(true);
+          return;
+        }
+
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error("[KovaAuth] Initial session restore failed.", error);
+        }
+        if (cancelled) return;
+        setSession(data.session);
+        setIsLoaded(true);
+      } catch (error) {
+        console.error("[KovaAuth] Auth initialization failed.", error);
+        if (!cancelled) setIsLoaded(true);
+      }
+    }
+
+    hydrateSession();
+
     return () => {
+      cancelled = true;
       sub.subscription.unsubscribe();
     };
   }, []);
