@@ -296,7 +296,8 @@ export function Sidebar({
       {open && (
         <div
           onMouseDown={startDrag}
-          className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize hover:bg-border/80 active:bg-border transition-colors z-10"
+          onTouchStart={startDrag}
+          className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize hover:bg-border/80 active:bg-border transition-colors z-10 touch-none"
           title="Drag to resize"
         />
       )}
