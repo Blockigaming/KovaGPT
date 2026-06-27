@@ -31,6 +31,7 @@ import { Route as AppsRouteImport } from './routes/apps'
 import { Route as AiWriterRouteImport } from './routes/ai-writer'
 import { Route as AiSafetyRouteImport } from './routes/ai-safety'
 import { Route as AiImageGeneratorRouteImport } from './routes/ai-image-generator'
+import { Route as AiHumanizerRouteImport } from './routes/ai-humanizer'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
@@ -160,6 +161,11 @@ const AiImageGeneratorRoute = AiImageGeneratorRouteImport.update({
   path: '/ai-image-generator',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AiHumanizerRoute = AiHumanizerRouteImport.update({
+  id: '/ai-humanizer',
+  path: '/ai-humanizer',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -259,6 +265,7 @@ const ApiPublicPaymentsWebhookRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/ai-humanizer': typeof AiHumanizerRoute
   '/ai-image-generator': typeof AiImageGeneratorRoute
   '/ai-safety': typeof AiSafetyRoute
   '/ai-writer': typeof AiWriterRoute
@@ -301,6 +308,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/ai-humanizer': typeof AiHumanizerRoute
   '/ai-image-generator': typeof AiImageGeneratorRoute
   '/ai-safety': typeof AiSafetyRoute
   '/ai-writer': typeof AiWriterRoute
@@ -344,6 +352,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/ai-humanizer': typeof AiHumanizerRoute
   '/ai-image-generator': typeof AiImageGeneratorRoute
   '/ai-safety': typeof AiSafetyRoute
   '/ai-writer': typeof AiWriterRoute
@@ -388,6 +397,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/ai-humanizer'
     | '/ai-image-generator'
     | '/ai-safety'
     | '/ai-writer'
@@ -430,6 +440,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/ai-humanizer'
     | '/ai-image-generator'
     | '/ai-safety'
     | '/ai-writer'
@@ -472,6 +483,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/ai-humanizer'
     | '/ai-image-generator'
     | '/ai-safety'
     | '/ai-writer'
@@ -515,6 +527,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AiHumanizerRoute: typeof AiHumanizerRoute
   AiImageGeneratorRoute: typeof AiImageGeneratorRoute
   AiSafetyRoute: typeof AiSafetyRoute
   AiWriterRoute: typeof AiWriterRoute
@@ -712,6 +725,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AiImageGeneratorRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ai-humanizer': {
+      id: '/ai-humanizer'
+      path: '/ai-humanizer'
+      fullPath: '/ai-humanizer'
+      preLoaderRoute: typeof AiHumanizerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -843,6 +863,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AiHumanizerRoute: AiHumanizerRoute,
   AiImageGeneratorRoute: AiImageGeneratorRoute,
   AiSafetyRoute: AiSafetyRoute,
   AiWriterRoute: AiWriterRoute,

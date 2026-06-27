@@ -34,6 +34,39 @@ export const Route = createFileRoute("/blog/best-ai-assistants")({
           mainEntityOfPage: CANONICAL,
         }),
       },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            {
+              "@type": "Question",
+              name: "Which AI assistant is best for students?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "KovaGPT's Study mode explains topics step by step and can create quizzes, which works well for studying.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Which is best for coding?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "KovaGPT's Code mode and ChatGPT are both strong; Copilot is great inside the editor.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Are these tools accurate?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "All AI assistants can make mistakes. Always verify important information from primary sources.",
+              },
+            },
+          ],
+        }),
+      },
     ],
   }),
   component: BestAiAssistantsPage,

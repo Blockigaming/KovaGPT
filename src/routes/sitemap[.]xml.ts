@@ -37,6 +37,9 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/ai-writer", changefreq: "monthly", priority: "0.7" },
           { path: "/research-assistant", changefreq: "monthly", priority: "0.7" },
           { path: "/chatgpt-alternative", changefreq: "monthly", priority: "0.7" },
+          { path: "/ai-humanizer", changefreq: "monthly", priority: "0.7" },
+          { path: "/apps", changefreq: "monthly", priority: "0.5" },
+          { path: "/library", changefreq: "monthly", priority: "0.4" },
         ];
 
         const urls = entries.map((e) =>
