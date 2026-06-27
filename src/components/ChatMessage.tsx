@@ -207,6 +207,7 @@ function ChatMessageInner({
           )}
           {!streaming && !isUser && message.content && (
             <div className="mt-2 flex flex-wrap items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+              {/* Visible: Copy, Read aloud, Send */}
               <button
                 onClick={copy}
                 className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent"
@@ -225,76 +226,140 @@ function ChatMessageInner({
                   {playing ? "Stop" : "Read aloud"}
                 </button>
               )}
-
               <button
-                onClick={saveItem}
-                disabled={saving}
-                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent disabled:opacity-50"
-                title="Save to Library"
-              >
-                <Bookmark className={`w-3.5 h-3.5 ${saved ? "fill-current" : ""}`} />
-                {saved ? "Saved" : saving ? "Saving…" : "Save"}
-              </button>
-              {artifactKind && (
-                <button
-                  onClick={() => {
-                    setEditorMode("edit");
-                    setEditorOpen(true);
-                  }}
-                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent"
-                  title={
-                    artifactKind === "website"
-                      ? "Edit website code"
-                      : artifactKind === "code"
-                        ? "Open code in editor"
-                        : "Open in editor"
+                onClick={async () => {
+                  const text = message.content;
+                  if (typeof navigator !== "undefined" && navigator.share) {
+                    try {
+                      await navigator.share({ text, title: "KovaGPT response" });
+                      return;
+                    } catch { /* user cancelled */ }
                   }
-                >
-                  {artifactKind === "writing" ? (
-                    <FileEdit className="w-3.5 h-3.5" />
-                  ) : (
-                    <Code2 className="w-3.5 h-3.5" />
-                  )}
-                  {artifactKind === "website"
-                    ? "Edit code"
-                    : artifactKind === "code"
-                      ? "Open code"
-                      : "Open in editor"}
-                </button>
-              )}
-              {artifactKind === "website" && (
-                <button
-                  onClick={() => {
-                    setEditorMode("preview");
-                    setEditorOpen(true);
-                  }}
-                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent"
-                  title="Preview website (static HTML/CSS only)"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  Preview website
-                </button>
-              )}
-              {onFollowUp && (
-                <>
-                  <span className="mx-1 h-3 w-px bg-border" aria-hidden />
-                  {[
-                    { label: "Continue", prompt: "Continue from where you left off." },
-                    { label: "Shorter", prompt: "Rewrite your last response to be shorter, keeping the key points." },
-                    { label: "Longer", prompt: "Expand your last response with more detail and examples." },
-                    { label: "Improve", prompt: "Improve the wording and clarity of your last response." },
-                  ].map((a) => (
-                    <button
-                      key={a.label}
-                      onClick={() => onFollowUp(a.prompt)}
-                      className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent"
-                      title={a.label}
+                  try {
+                    await navigator.clipboard.writeText(text);
+                    toast.success("Response copied; ready to send");
+                  } catch {
+                    toast.error("Couldn't prepare for sending");
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent"
+                title="Send / share"
+              >
+                <Send className="w-3.5 h-3.5" />
+                Send
+              </button>
+
+              {/* Everything else lives behind the 3-dot menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent"
+                    title="More actions"
+                    aria-label="More actions"
+                  >
+                    <MoreHorizontal className="w-3.5 h-3.5" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-52">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      if (onEdit) onEdit();
+                      else toast.message("Edit your previous message above");
+                    }}
+                  >
+                    <Pencil className="w-4 h-4 mr-2" /> Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      if (onRetry) onRetry();
+                      else toast.message("Retry available on the latest response");
+                    }}
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" /> Retry
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setFeedback((f) => (f === "up" ? null : "up"));
+                      toast.success("Thanks for the feedback");
+                    }}
+                  >
+                    <ThumbsUp className={`w-4 h-4 mr-2 ${feedback === "up" ? "fill-current" : ""}`} /> Like
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setFeedback((f) => (f === "down" ? null : "down"));
+                      toast.success("Thanks, we'll improve");
+                    }}
+                  >
+                    <ThumbsDown className={`w-4 h-4 mr-2 ${feedback === "down" ? "fill-current" : ""}`} /> Dislike
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      if (onBranch) onBranch();
+                      else toast.message("Branching coming to this chat");
+                    }}
+                  >
+                    <GitBranch className="w-4 h-4 mr-2" /> Branch in new chat
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      const q = encodeURIComponent(message.content.slice(0, 300));
+                      window.open(`https://www.google.com/search?q=${q}`, "_blank", "noopener,noreferrer");
+                    }}
+                  >
+                    <Globe className="w-4 h-4 mr-2" /> Search the web
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={saveItem} disabled={saving}>
+                    <Bookmark className={`w-4 h-4 mr-2 ${saved ? "fill-current" : ""}`} />
+                    {saved ? "Saved" : saving ? "Saving…" : "Save to Library"}
+                  </DropdownMenuItem>
+                  {artifactKind && (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setEditorMode("edit");
+                        setEditorOpen(true);
+                      }}
                     >
-                      {a.label}
-                    </button>
-                  ))}
-                </>
-              )}
+                      {artifactKind === "writing" ? (
+                        <FileEdit className="w-4 h-4 mr-2" />
+                      ) : (
+                        <Code2 className="w-4 h-4 mr-2" />
+                      )}
+                      {artifactKind === "website"
+                        ? "Edit code"
+                        : artifactKind === "code"
+                          ? "Open code"
+                          : "Open in editor"}
+                    </DropdownMenuItem>
+                  )}
+                  {artifactKind === "website" && (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setEditorMode("preview");
+                        setEditorOpen(true);
+                      }}
+                    >
+                      <Eye className="w-4 h-4 mr-2" /> Preview website
+                    </DropdownMenuItem>
+                  )}
+                  {onFollowUp && (
+                    <>
+                      <DropdownMenuSeparator />
+                      {[
+                        { label: "Continue", prompt: "Continue from where you left off." },
+                        { label: "Shorter", prompt: "Rewrite your last response to be shorter, keeping the key points." },
+                        { label: "Longer", prompt: "Expand your last response with more detail and examples." },
+                        { label: "Improve", prompt: "Improve the wording and clarity of your last response." },
+                      ].map((a) => (
+                        <DropdownMenuItem key={a.label} onClick={() => onFollowUp(a.prompt)}>
+                          {a.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           )}
         </div>
