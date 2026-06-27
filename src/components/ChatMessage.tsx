@@ -29,12 +29,19 @@ function ChatMessageInner({
   streaming,
   voiceRate,
   onFollowUp,
+  onRetry,
+  onBranch,
+  onEdit,
 }: {
   message: Message;
   streaming?: boolean;
   voiceRate?: number;
   onFollowUp?: (prompt: string) => void;
+  onRetry?: () => void;
+  onBranch?: () => void;
+  onEdit?: () => void;
 }) {
+  const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
   const [playing, setPlaying] = useState(false);
