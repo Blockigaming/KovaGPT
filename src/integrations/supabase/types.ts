@@ -307,6 +307,51 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_tasks: {
+        Row: {
+          created_at: string
+          id: string
+          last_result: string | null
+          last_run_at: string | null
+          next_run_at: string | null
+          prompt: string
+          repeat: string
+          run_at: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_result?: string | null
+          last_run_at?: string | null
+          next_run_at?: string | null
+          prompt: string
+          repeat?: string
+          run_at: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_result?: string | null
+          last_run_at?: string | null
+          next_run_at?: string | null
+          prompt?: string
+          repeat?: string
+          run_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       shared_chats: {
         Row: {
           created_at: string
