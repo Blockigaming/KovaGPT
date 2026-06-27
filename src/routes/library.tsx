@@ -132,6 +132,13 @@ function LibraryPage() {
           <ul className="divide-y divide-border rounded-lg border border-border bg-card">
             {filtered.map((it) => (
               <li key={it.id} className="p-3 flex items-start gap-3">
+                {it.file_url && (it.item_type === "image" || it.file_type?.startsWith("image/")) && (
+                  <img
+                    src={it.file_url}
+                    alt={it.title}
+                    className="w-14 h-14 rounded-md object-cover border border-border shrink-0"
+                  />
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">{it.title}</div>
                   <div className="text-[11px] text-muted-foreground mt-0.5">
@@ -142,7 +149,18 @@ function LibraryPage() {
                       {it.content_text.slice(0, 240)}
                     </div>
                   )}
+                  {it.file_url && it.item_type === "upload" && !it.file_type?.startsWith("image/") && (
+                    <a
+                      href={it.file_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-foreground/80 underline mt-1 inline-block"
+                    >
+                      Open file
+                    </a>
+                  )}
                 </div>
+
                 <button
                   onClick={() => remove(it.id)}
                   className="p-1.5 rounded hover:bg-accent transition active:scale-95"
