@@ -288,6 +288,7 @@ export function Sidebar({
         />
       )}
       </aside>
+      <LoginPromptDialog open={loginPromptOpen} onOpenChange={setLoginPromptOpen} />
     </>
   );
 }
