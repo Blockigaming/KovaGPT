@@ -249,34 +249,51 @@ export function Sidebar({
               return list.map((c) => (
                 <div
                   key={c.id}
-                  className={`group flex items-center gap-2 rounded-lg px-3 py-2 text-[14px] cursor-pointer transition ${
-                    activeId === c.id ? "bg-sidebar-hover" : "hover:bg-sidebar-hover"
+                  className={`group mx-1 my-0.5 flex items-center gap-1 rounded-xl px-3 py-2 text-[14px] cursor-pointer transition bg-sidebar-hover/60 hover:bg-sidebar-hover ${
+                    activeId === c.id ? "bg-sidebar-hover ring-1 ring-border/60" : ""
                   }`}
                   onClick={() => onSelect(c.id)}
                 >
                   <span className="flex-1 truncate">{c.title}</span>
-                  {onShare && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onShare(c.id);
-                      }}
-                      className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-background/40 transition active:scale-95"
-                      aria-label="Share chat"
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        onClick={(e) => e.stopPropagation()}
+                        className="opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 p-1 rounded hover:bg-background/40 transition active:scale-95"
+                        aria-label="Chat options"
+                      >
+                        <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      className="w-44"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      <Share2 className="w-3.5 h-3.5 text-muted-foreground" />
-                    </button>
-                  )}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(c.id);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-background/40 transition active:scale-95"
-                    aria-label="Delete chat"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
-                  </button>
+                      {onShare && (
+                        <DropdownMenuItem onClick={() => onShare(c.id)}>
+                          <Share2 className="w-4 h-4 mr-2" /> Share
+                        </DropdownMenuItem>
+                      )}
+                      {onDuplicate && (
+                        <DropdownMenuItem onClick={() => onDuplicate(c.id)}>
+                          <CopyIcon className="w-4 h-4 mr-2" /> Duplicate
+                        </DropdownMenuItem>
+                      )}
+                      {onArchive && (
+                        <DropdownMenuItem onClick={() => onArchive(c.id)}>
+                          <Archive className="w-4 h-4 mr-2" /> Archive
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => onDelete(c.id)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               ));
             })()}
