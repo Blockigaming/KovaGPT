@@ -70,10 +70,9 @@ function ChatMessageInner({
   };
 
   const saveItem = async () => {
-    if (!isSignedIn) {
-      clerk?.openSignIn();
-      return;
-    }
+    // Guests can save to a local-only library (kept in localStorage). The
+    // ClerkSafe sign-in prompt is no longer shown here.
+
     // Duplicate-safe: stable per-message id stored in localStorage avoids re-saves.
     const dedupKey = "kovagpt:savedMessageIds";
     let savedIds: string[] = [];
