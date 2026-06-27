@@ -223,15 +223,7 @@ export function Sidebar({
           <div className="px-5 pt-5 pb-1.5 text-[13px] font-medium text-muted-foreground">
             {isSignedIn ? "Recents" : "Chats"}
           </div>
-          <nav
-            className="flex-1 overflow-y-auto px-2 pb-2 min-h-0"
-            style={{
-              maskImage:
-                "linear-gradient(to bottom, transparent 0, #000 24px, #000 calc(100% - 8px), transparent 100%)",
-              WebkitMaskImage:
-                "linear-gradient(to bottom, transparent 0, #000 24px, #000 calc(100% - 8px), transparent 100%)",
-            }}
-          >
+          <nav className="flex-1 overflow-y-auto px-2 pb-2 min-h-0">
             {(() => {
               const q = searchQuery.trim().toLowerCase();
               const list = q
