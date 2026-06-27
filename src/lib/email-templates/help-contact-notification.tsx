@@ -90,3 +90,5 @@ const hr = { borderColor: '#e5e5e5', margin: '20px 0' }
 const label = { fontSize: '11px', textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: '#737373', margin: '12px 0 4px 0' }
 const value = { fontSize: '15px', margin: '0', lineHeight: '1.5', whiteSpace: 'pre-wrap' as const }
 const small = { fontSize: '12px', color: '#737373', margin: '4px 0' }
+const logoWrap = { margin: '0 0 16px 0' }
+const logoImg = { display: 'block', borderRadius: '8px' }
