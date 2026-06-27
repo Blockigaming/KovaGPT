@@ -1,8 +1,6 @@
 // Catalog of connectable services shown in Settings -> Linked apps.
-// Tier 1 entries have working OAuth/connection flows. Tier 2 entries are
-// roadmap placeholders rendered with a "Coming soon" badge.
 
-export type ConnectorStatus = "live" | "live";
+export type ConnectorStatus = "live";
 
 export type ConnectorCategory =
   | "Productivity"
@@ -21,87 +19,77 @@ export type ConnectorItem = {
   description: string;
   category: ConnectorCategory;
   status: ConnectorStatus;
-  // Optional: existing per-user OAuth provider in `linked-accounts.ts`
-  // (only set for live entries we already wired).
+  /** Domain used to fetch a brand logo via Logo.dev. */
+  domain: string;
   legacyProvider?: "google" | "google-drive" | "gmail" | "youtube" | "apple";
 };
 
 export const CONNECTOR_CATALOG: ConnectorItem[] = [
-  // ===== LIVE (real OAuth wired today) =====
-  { id: "google", label: "Google", description: "Sign in with your Google account.", category: "Productivity", status: "live", legacyProvider: "google" },
-  { id: "gmail", label: "Gmail", description: "Read message context from Gmail.", category: "Email", status: "live", legacyProvider: "gmail" },
-  { id: "google-drive", label: "Google Drive", description: "Reference files from your Drive.", category: "Storage & Files", status: "live", legacyProvider: "google-drive" },
-  { id: "youtube", label: "YouTube", description: "Reference your YouTube activity.", category: "Social & Media", status: "live", legacyProvider: "youtube" },
-  { id: "apple", label: "Apple", description: "Sign in with your Apple ID.", category: "Productivity", status: "live", legacyProvider: "apple" },
+  { id: "google", label: "Google", description: "Sign in with your Google account.", category: "Productivity", status: "live", domain: "google.com", legacyProvider: "google" },
+  { id: "gmail", label: "Gmail", description: "Read message context from Gmail.", category: "Email", status: "live", domain: "gmail.com", legacyProvider: "gmail" },
+  { id: "google-drive", label: "Google Drive", description: "Reference files from your Drive.", category: "Storage & Files", status: "live", domain: "drive.google.com", legacyProvider: "google-drive" },
+  { id: "youtube", label: "YouTube", description: "Reference your YouTube activity.", category: "Social & Media", status: "live", domain: "youtube.com", legacyProvider: "youtube" },
+  { id: "apple", label: "Apple", description: "Sign in with your Apple ID.", category: "Productivity", status: "live", domain: "apple.com", legacyProvider: "apple" },
 
-  // ===== COMING SOON - Email =====
-  { id: "outlook", label: "Outlook", description: "Read Microsoft Outlook mail.", category: "Email", status: "live" },
-  { id: "icloud-mail", label: "iCloud Mail", description: "Read iCloud mail.", category: "Email", status: "live" },
-  { id: "yahoo-mail", label: "Yahoo Mail", description: "Read Yahoo mail.", category: "Email", status: "live" },
-  { id: "proton-mail", label: "Proton Mail", description: "Read Proton mail.", category: "Email", status: "live" },
+  { id: "outlook", label: "Outlook", description: "Read Microsoft Outlook mail.", category: "Email", status: "live", domain: "outlook.com" },
+  { id: "icloud-mail", label: "iCloud Mail", description: "Read iCloud mail.", category: "Email", status: "live", domain: "icloud.com" },
+  { id: "yahoo-mail", label: "Yahoo Mail", description: "Read Yahoo mail.", category: "Email", status: "live", domain: "yahoo.com" },
+  { id: "proton-mail", label: "Proton Mail", description: "Read Proton mail.", category: "Email", status: "live", domain: "proton.me" },
 
-  // ===== COMING SOON - Storage & Files =====
-  { id: "onedrive", label: "OneDrive", description: "Reference files from OneDrive.", category: "Storage & Files", status: "live" },
-  { id: "dropbox", label: "Dropbox", description: "Reference files from Dropbox.", category: "Storage & Files", status: "live" },
-  { id: "icloud-drive", label: "iCloud Drive", description: "Reference files from iCloud.", category: "Storage & Files", status: "live" },
-  { id: "box", label: "Box", description: "Reference files from Box.", category: "Storage & Files", status: "live" },
+  { id: "onedrive", label: "OneDrive", description: "Reference files from OneDrive.", category: "Storage & Files", status: "live", domain: "onedrive.live.com" },
+  { id: "dropbox", label: "Dropbox", description: "Reference files from Dropbox.", category: "Storage & Files", status: "live", domain: "dropbox.com" },
+  { id: "icloud-drive", label: "iCloud Drive", description: "Reference files from iCloud.", category: "Storage & Files", status: "live", domain: "icloud.com" },
+  { id: "box", label: "Box", description: "Reference files from Box.", category: "Storage & Files", status: "live", domain: "box.com" },
 
-  // ===== COMING SOON - Calendar =====
-  { id: "google-calendar", label: "Google Calendar", description: "Read and create events.", category: "Calendar", status: "live" },
-  { id: "outlook-calendar", label: "Outlook Calendar", description: "Read and create events.", category: "Calendar", status: "live" },
-  { id: "apple-calendar", label: "Apple Calendar", description: "Read and create events.", category: "Calendar", status: "live" },
+  { id: "google-calendar", label: "Google Calendar", description: "Read and create events.", category: "Calendar", status: "live", domain: "calendar.google.com" },
+  { id: "outlook-calendar", label: "Outlook Calendar", description: "Read and create events.", category: "Calendar", status: "live", domain: "outlook.com" },
+  { id: "apple-calendar", label: "Apple Calendar", description: "Read and create events.", category: "Calendar", status: "live", domain: "apple.com" },
 
-  // ===== COMING SOON - Notes & Docs =====
-  { id: "notion", label: "Notion", description: "Read and update Notion pages.", category: "Notes & Docs", status: "live" },
-  { id: "google-docs", label: "Google Docs", description: "Read and edit Docs.", category: "Notes & Docs", status: "live" },
-  { id: "google-sheets", label: "Google Sheets", description: "Read and update Sheets.", category: "Notes & Docs", status: "live" },
-  { id: "ms-word", label: "Microsoft Word", description: "Read and edit Word docs.", category: "Notes & Docs", status: "live" },
-  { id: "ms-excel", label: "Microsoft Excel", description: "Read and update Excel.", category: "Notes & Docs", status: "live" },
-  { id: "evernote", label: "Evernote", description: "Read Evernote notes.", category: "Notes & Docs", status: "live" },
-  { id: "obsidian", label: "Obsidian", description: "Sync Obsidian vaults.", category: "Notes & Docs", status: "live" },
-  { id: "apple-notes", label: "Apple Notes", description: "Read Apple Notes.", category: "Notes & Docs", status: "live" },
+  { id: "notion", label: "Notion", description: "Read and update Notion pages.", category: "Notes & Docs", status: "live", domain: "notion.so" },
+  { id: "google-docs", label: "Google Docs", description: "Read and edit Docs.", category: "Notes & Docs", status: "live", domain: "docs.google.com" },
+  { id: "google-sheets", label: "Google Sheets", description: "Read and update Sheets.", category: "Notes & Docs", status: "live", domain: "sheets.google.com" },
+  { id: "ms-word", label: "Microsoft Word", description: "Read and edit Word docs.", category: "Notes & Docs", status: "live", domain: "microsoft.com" },
+  { id: "ms-excel", label: "Microsoft Excel", description: "Read and update Excel.", category: "Notes & Docs", status: "live", domain: "microsoft.com" },
+  { id: "evernote", label: "Evernote", description: "Read Evernote notes.", category: "Notes & Docs", status: "live", domain: "evernote.com" },
+  { id: "obsidian", label: "Obsidian", description: "Sync Obsidian vaults.", category: "Notes & Docs", status: "live", domain: "obsidian.md" },
+  { id: "apple-notes", label: "Apple Notes", description: "Read Apple Notes.", category: "Notes & Docs", status: "live", domain: "apple.com" },
 
-  // ===== COMING SOON - Communication =====
-  { id: "slack", label: "Slack", description: "Read channels and DMs you allow.", category: "Communication", status: "live" },
-  { id: "ms-teams", label: "Microsoft Teams", description: "Read Teams chats.", category: "Communication", status: "live" },
-  { id: "discord", label: "Discord", description: "Read allowed Discord servers.", category: "Communication", status: "live" },
-  { id: "whatsapp", label: "WhatsApp", description: "Connect WhatsApp Business.", category: "Communication", status: "live" },
-  { id: "telegram", label: "Telegram", description: "Connect Telegram bot.", category: "Communication", status: "live" },
-  { id: "zoom", label: "Zoom", description: "Read meeting transcripts.", category: "Communication", status: "live" },
+  { id: "slack", label: "Slack", description: "Read channels and DMs you allow.", category: "Communication", status: "live", domain: "slack.com" },
+  { id: "ms-teams", label: "Microsoft Teams", description: "Read Teams chats.", category: "Communication", status: "live", domain: "teams.microsoft.com" },
+  { id: "discord", label: "Discord", description: "Read allowed Discord servers.", category: "Communication", status: "live", domain: "discord.com" },
+  { id: "whatsapp", label: "WhatsApp", description: "Connect WhatsApp Business.", category: "Communication", status: "live", domain: "whatsapp.com" },
+  { id: "telegram", label: "Telegram", description: "Connect Telegram bot.", category: "Communication", status: "live", domain: "telegram.org" },
+  { id: "zoom", label: "Zoom", description: "Read meeting transcripts.", category: "Communication", status: "live", domain: "zoom.us" },
 
-  // ===== COMING SOON - Productivity =====
-  { id: "trello", label: "Trello", description: "Read your boards.", category: "Productivity", status: "live" },
-  { id: "asana", label: "Asana", description: "Read tasks and projects.", category: "Productivity", status: "live" },
-  { id: "linear", label: "Linear", description: "Read issues and projects.", category: "Productivity", status: "live" },
-  { id: "todoist", label: "Todoist", description: "Read and update tasks.", category: "Productivity", status: "live" },
-  { id: "monday", label: "Monday.com", description: "Read your boards.", category: "Productivity", status: "live" },
-  { id: "jira", label: "Jira", description: "Read issues and sprints.", category: "Productivity", status: "live" },
-  { id: "clickup", label: "ClickUp", description: "Read tasks and docs.", category: "Productivity", status: "live" },
+  { id: "trello", label: "Trello", description: "Read your boards.", category: "Productivity", status: "live", domain: "trello.com" },
+  { id: "asana", label: "Asana", description: "Read tasks and projects.", category: "Productivity", status: "live", domain: "asana.com" },
+  { id: "linear", label: "Linear", description: "Read issues and projects.", category: "Productivity", status: "live", domain: "linear.app" },
+  { id: "todoist", label: "Todoist", description: "Read and update tasks.", category: "Productivity", status: "live", domain: "todoist.com" },
+  { id: "monday", label: "Monday.com", description: "Read your boards.", category: "Productivity", status: "live", domain: "monday.com" },
+  { id: "jira", label: "Jira", description: "Read issues and sprints.", category: "Productivity", status: "live", domain: "atlassian.com" },
+  { id: "clickup", label: "ClickUp", description: "Read tasks and docs.", category: "Productivity", status: "live", domain: "clickup.com" },
 
-  // ===== COMING SOON - Education =====
-  { id: "google-classroom", label: "Google Classroom", description: "Read assignments and classes.", category: "Education", status: "live" },
-  { id: "canvas", label: "Canvas LMS", description: "Read courses and grades.", category: "Education", status: "live" },
-  { id: "schoology", label: "Schoology", description: "Read courses and grades.", category: "Education", status: "live" },
-  { id: "powerschool", label: "PowerSchool", description: "Read grades and schedules.", category: "Education", status: "live" },
-  { id: "khan-academy", label: "Khan Academy", description: "Sync progress and recommendations.", category: "Education", status: "live" },
-  { id: "duolingo", label: "Duolingo", description: "Sync your learning streak.", category: "Education", status: "live" },
-  { id: "quizlet", label: "Quizlet", description: "Read study sets.", category: "Education", status: "live" },
+  { id: "google-classroom", label: "Google Classroom", description: "Read assignments and classes.", category: "Education", status: "live", domain: "classroom.google.com" },
+  { id: "canvas", label: "Canvas LMS", description: "Read courses and grades.", category: "Education", status: "live", domain: "instructure.com" },
+  { id: "schoology", label: "Schoology", description: "Read courses and grades.", category: "Education", status: "live", domain: "schoology.com" },
+  { id: "powerschool", label: "PowerSchool", description: "Read grades and schedules.", category: "Education", status: "live", domain: "powerschool.com" },
+  { id: "khan-academy", label: "Khan Academy", description: "Sync progress and recommendations.", category: "Education", status: "live", domain: "khanacademy.org" },
+  { id: "duolingo", label: "Duolingo", description: "Sync your learning streak.", category: "Education", status: "live", domain: "duolingo.com" },
+  { id: "quizlet", label: "Quizlet", description: "Read study sets.", category: "Education", status: "live", domain: "quizlet.com" },
 
-  // ===== COMING SOON - Social & Media =====
-  { id: "tiktok", label: "TikTok", description: "Reference saved content.", category: "Social & Media", status: "live" },
-  { id: "instagram", label: "Instagram", description: "Reference saved posts.", category: "Social & Media", status: "live" },
-  { id: "x-twitter", label: "X (Twitter)", description: "Reference bookmarks.", category: "Social & Media", status: "live" },
-  { id: "reddit", label: "Reddit", description: "Reference saved posts.", category: "Social & Media", status: "live" },
-  { id: "linkedin", label: "LinkedIn", description: "Reference your profile.", category: "Social & Media", status: "live" },
-  { id: "spotify", label: "Spotify", description: "Reference your playlists.", category: "Social & Media", status: "live" },
-  { id: "apple-music", label: "Apple Music", description: "Reference your library.", category: "Social & Media", status: "live" },
-  { id: "pinterest", label: "Pinterest", description: "Reference your boards.", category: "Social & Media", status: "live" },
+  { id: "tiktok", label: "TikTok", description: "Reference saved content.", category: "Social & Media", status: "live", domain: "tiktok.com" },
+  { id: "instagram", label: "Instagram", description: "Reference saved posts.", category: "Social & Media", status: "live", domain: "instagram.com" },
+  { id: "x-twitter", label: "X (Twitter)", description: "Reference bookmarks.", category: "Social & Media", status: "live", domain: "x.com" },
+  { id: "reddit", label: "Reddit", description: "Reference saved posts.", category: "Social & Media", status: "live", domain: "reddit.com" },
+  { id: "linkedin", label: "LinkedIn", description: "Reference your profile.", category: "Social & Media", status: "live", domain: "linkedin.com" },
+  { id: "spotify", label: "Spotify", description: "Reference your playlists.", category: "Social & Media", status: "live", domain: "spotify.com" },
+  { id: "apple-music", label: "Apple Music", description: "Reference your library.", category: "Social & Media", status: "live", domain: "music.apple.com" },
+  { id: "pinterest", label: "Pinterest", description: "Reference your boards.", category: "Social & Media", status: "live", domain: "pinterest.com" },
 
-  // ===== COMING SOON - Development =====
-  { id: "github", label: "GitHub", description: "Read repos and issues.", category: "Development", status: "live" },
-  { id: "gitlab", label: "GitLab", description: "Read repos and issues.", category: "Development", status: "live" },
-  { id: "vercel", label: "Vercel", description: "Read deployments.", category: "Development", status: "live" },
-  { id: "stripe", label: "Stripe", description: "Read payment summaries.", category: "Development", status: "live" },
+  { id: "github", label: "GitHub", description: "Read repos and issues.", category: "Development", status: "live", domain: "github.com" },
+  { id: "gitlab", label: "GitLab", description: "Read repos and issues.", category: "Development", status: "live", domain: "gitlab.com" },
+  { id: "vercel", label: "Vercel", description: "Read deployments.", category: "Development", status: "live", domain: "vercel.com" },
+  { id: "stripe", label: "Stripe", description: "Read payment summaries.", category: "Development", status: "live", domain: "stripe.com" },
 ];
 
 export const CONNECTOR_CATEGORIES: ConnectorCategory[] = [
