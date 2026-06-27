@@ -153,22 +153,24 @@ export function Sidebar({
             <Sparkles className="w-4 h-4" />
             <span>Subscriptions</span>
           </Link>
-          {/* Library: dedicated route. Signed-out users see session-only items that clear on refresh. */}
-          <Link
-            to="/library"
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition"
+          {/* Library: route for signed-in users; popup for guests so they keep their context. */}
+          <button
+            type="button"
+            onClick={() => (isSignedIn ? navigate({ to: "/library" }) : setLoginPromptOpen(true))}
+            className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
           >
             <FolderOpen className="w-4 h-4" />
             <span>Library</span>
-          </Link>
-          {/* Apps: dedicated route. Signed-out users see a clean sign-in prompt. */}
-          <Link
-            to="/apps"
-            className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition"
+          </button>
+          {/* Apps: route for signed-in users; popup for guests. */}
+          <button
+            type="button"
+            onClick={() => (isSignedIn ? navigate({ to: "/apps" }) : setLoginPromptOpen(true))}
+            className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition text-left"
           >
             <Link2 className="w-4 h-4" />
             <span>Apps</span>
-          </Link>
+          </button>
         </div>
 
         {/* Chats list (signed in) or flexible spacer (signed out) */}
