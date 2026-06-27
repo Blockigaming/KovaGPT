@@ -155,7 +155,12 @@ export function Sidebar({
               >
                 <PanelLeft className="w-[18px] h-[18px]" />
               </button>
-            </div>
+          </div>
+          {/* Subtle fade so scrolled chat list dissolves into the header area */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none relative z-10 -mt-1 h-4 bg-gradient-to-b from-sidebar to-transparent"
+          />
           </div>
 
           {searchOpen && (
