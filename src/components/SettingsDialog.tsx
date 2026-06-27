@@ -743,6 +743,7 @@ export function SettingsDialog({
                   ))}
                 </div>
               </div>
+            </section>
           </TabsContent>
 
           {/* NOTIFICATIONS */}
