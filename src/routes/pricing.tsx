@@ -76,6 +76,47 @@ export const Route = createFileRoute("/pricing")({
           ],
         }),
       },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            {
+              "@type": "Question",
+              name: "Can I cancel anytime?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Yes. You can cancel from your account settings. Canceling stops future renewals.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "What happens if I hit my limit?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "You may need to wait until your limit resets or upgrade to a higher plan.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Can I switch plans?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "If plan switching is supported, you can manage your subscription from your account settings.",
+              },
+            },
+            {
+              "@type": "Question",
+              name: "Do unused credits roll over?",
+              acceptedAnswer: {
+                "@type": "Answer",
+                text: "Unused usage does not roll over unless stated otherwise.",
+              },
+            },
+          ],
+        }),
+      },
     ],
   }),
 });
