@@ -972,11 +972,6 @@ function ConnectorRow({
         <div className="min-w-0">
           <div className="text-sm font-medium truncate flex items-center gap-2">
             {item.label}
-            {item.status === "coming-soon" && (
-              <span className="text-[10px] uppercase tracking-wider rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
-                Coming soon
-              </span>
-            )}
           </div>
           <div className="text-xs text-muted-foreground truncate">{item.description}</div>
         </div>
