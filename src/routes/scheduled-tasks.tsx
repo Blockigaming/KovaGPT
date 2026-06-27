@@ -2,12 +2,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useUser } from "@/components/auth/ClerkSafe";
-import { authFetch } from "@/lib/auth-fetch";
 import {
   listScheduledTasks,
   createScheduledTask,
   updateScheduledTask,
   deleteScheduledTask,
+  isScheduledTasksEligible,
   type ScheduledTask,
 } from "@/lib/scheduled-tasks.functions";
 import { Calendar, Clock, Plus, Trash2, Pause, Play, ArrowLeft, Lock } from "lucide-react";
