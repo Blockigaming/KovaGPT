@@ -1515,3 +1515,105 @@ function FinancesPanel() {
     </section>
   );
 }
+
+// Limited settings panel shown to signed-out visitors. Includes only privacy
+// preferences, appearance, and language. All copy is KovaGPT-branded (not
+// copied from any other provider).
+function SignedOutSettings({
+  settings,
+  onChange,
+  setMode,
+  onSignIn,
+}: {
+  settings: Settings;
+  onChange: (s: Settings) => void;
+  setMode: (m: ThemeMode) => void;
+  onSignIn: () => void;
+}) {
+  return (
+    <div className="overflow-y-auto px-6 py-5 space-y-6 max-h-[78vh]">
+      <div className="rounded-lg border border-border bg-muted/30 p-4 flex items-start gap-3">
+        <Lock className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
+        <div className="flex-1 text-sm">
+          <div className="font-medium">You're browsing as a guest</div>
+          <div className="text-xs text-muted-foreground mt-1">
+            Sign in for your full settings, saved chats, Library, and Apps.
+          </div>
+          <Button size="sm" className="mt-3" onClick={onSignIn}>Sign in</Button>
+        </div>
+      </div>
+
+      <section className="space-y-4">
+        <h3 className="text-sm font-semibold">Privacy</h3>
+        <ToggleRow
+          title="Help Improve Kova"
+          hint="Allow your content to help improve Kova's models and overall experience. We apply privacy protections to help keep your data safe."
+          checked={settings.trainingOptOut !== true}
+          onCheckedChange={(v) => onChange({ ...settings, trainingOptOut: !v })}
+        />
+        <ToggleRow
+          title="Campaign Measurement"
+          hint="Allow cookies that help Kova measure how well our marketing campaigns are performing."
+          checked={false}
+          onCheckedChange={() => {}}
+        />
+        <ToggleRow
+          title="Personalized Marketing"
+          hint="Allow Kova to personalize and measure our marketing on third-party platforms."
+          checked={false}
+          onCheckedChange={() => {}}
+        />
+        <ToggleRow
+          title="Ad Personalization"
+          hint="Use relevant activity, interests, and conversation context to make ads more useful to you."
+          checked={false}
+          onCheckedChange={() => {}}
+        />
+        <ToggleRow
+          title="Past Chat Relevance"
+          hint="Use past conversations and memory to improve ad relevance. Your chats and memories are not shared with advertisers."
+          checked={false}
+          onCheckedChange={() => {}}
+        />
+        {/* TODO(guest-privacy): persist guest privacy toggles in localStorage and
+            wire them into analytics/consent logic. Currently UI-only. */}
+      </section>
+
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold">Appearance</h3>
+        <div className="grid grid-cols-3 gap-2">
+          {(["system", "light", "dark"] as ThemeMode[]).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm capitalize transition ${
+                settings.mode === m
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border hover:bg-muted"
+              }`}
+            >
+              {m === "system" ? <Monitor className="w-4 h-4" /> : m === "light" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              {m}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="space-y-2">
+        <h3 className="text-sm font-semibold">Language</h3>
+        <Select value="auto" onValueChange={() => {}}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="auto">Auto-detect</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          KovaGPT replies in the language you write in.
+        </p>
+      </section>
+    </div>
+  );
+}
+
