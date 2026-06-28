@@ -111,7 +111,14 @@ async function waitForStoredSession(candidate: Session | null): Promise<Session 
       console.error("[KovaAuth] Session read failed after OAuth.", error);
       throw error;
     }
-    if (data.session?.access_token) return data.session;
+    if (data.session?.access_token) {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) {
+        console.error("[KovaAuth] Current user check failed after OAuth.", userError);
+        throw userError ?? new Error("No current user was found after Google sign in.");
+      }
+      return data.session;
+    }
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
