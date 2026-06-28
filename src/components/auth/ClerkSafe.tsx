@@ -53,6 +53,7 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
       if (cancelled) return;
+      if (!newSession && hasOAuthResponseInUrl()) return;
       setSession(newSession);
       setIsLoaded(true);
     });
@@ -75,6 +76,17 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
         const { data, error } = await supabase.auth.getSession();
         if (error) {
           console.error("[KovaAuth] Initial session restore failed.", error);
+        }
+        if (data.session) {
+          const { data: userData, error: userError } = await supabase.auth.getUser();
+          if (userError || !userData.user) {
+            console.error("[KovaAuth] Current user check failed during session restore.", userError);
+            if (!cancelled) {
+              setSession(null);
+              setIsLoaded(true);
+            }
+            return;
+          }
         }
         if (cancelled) return;
         setSession(data.session);
