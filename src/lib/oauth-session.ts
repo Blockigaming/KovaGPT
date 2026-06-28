@@ -18,6 +18,10 @@ function getHashParams(url: URL): URLSearchParams {
   return new URLSearchParams(hash);
 }
 
+function getOAuthParam(url: URL, key: string): string | null {
+  return url.searchParams.get(key) || getHashParams(url).get(key);
+}
+
 export function getOAuthRedirectUri(): string {
   if (typeof window === "undefined") return "https://kovagpt.com/";
 
@@ -58,13 +62,11 @@ export function getSafePostAuthRedirect(): string {
 export function hasOAuthResponseInUrl(): boolean {
   const url = getCurrentUrl();
   if (!url) return false;
-  const hashParams = getHashParams(url);
   return (
     url.searchParams.has("code") ||
-    url.searchParams.has("error") ||
-    hashParams.has("access_token") ||
-    hashParams.has("refresh_token") ||
-    hashParams.has("error")
+    !!getOAuthParam(url, "access_token") ||
+    !!getOAuthParam(url, "refresh_token") ||
+    !!getOAuthParam(url, "error")
   );
 }
 
@@ -78,6 +80,14 @@ export function clearOAuthResponseFromUrl() {
   url.searchParams.delete("error_code");
   url.searchParams.delete("error_description");
   url.searchParams.delete("state");
+  url.searchParams.delete("access_token");
+  url.searchParams.delete("refresh_token");
+  url.searchParams.delete("expires_in");
+  url.searchParams.delete("expires_at");
+  url.searchParams.delete("provider_token");
+  url.searchParams.delete("provider_refresh_token");
+  url.searchParams.delete("token_type");
+  url.searchParams.delete("type");
   url.hash = "";
 
   window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
@@ -112,30 +122,18 @@ export async function completeOAuthSessionFromUrl(source: string): Promise<Sessi
   const url = getCurrentUrl();
   if (!url) return null;
 
-  const hashParams = getHashParams(url);
-  const oauthError = url.searchParams.get("error") || hashParams.get("error");
+  const oauthError = getOAuthParam(url, "error");
   if (oauthError) {
     const description =
-      url.searchParams.get("error_description") ||
-      hashParams.get("error_description") ||
+      getOAuthParam(url, "error_description") ||
       "Google sign in failed.";
     const error = new Error(description);
     console.error(`[KovaAuth] OAuth callback error from ${source}.`, error);
     throw error;
   }
 
-  const code = url.searchParams.get("code");
-  if (code) {
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error) {
-      console.error(`[KovaAuth] OAuth code exchange failed from ${source}.`, error);
-      throw error;
-    }
-    return waitForStoredSession(data.session ?? null);
-  }
-
-  const accessToken = hashParams.get("access_token");
-  const refreshToken = hashParams.get("refresh_token");
+  const accessToken = getOAuthParam(url, "access_token");
+  const refreshToken = getOAuthParam(url, "refresh_token");
   if (accessToken && refreshToken) {
     const { data, error } = await supabase.auth.setSession({
       access_token: accessToken,
@@ -143,6 +141,16 @@ export async function completeOAuthSessionFromUrl(source: string): Promise<Sessi
     });
     if (error) {
       console.error(`[KovaAuth] OAuth token session save failed from ${source}.`, error);
+      throw error;
+    }
+    return waitForStoredSession(data.session ?? null);
+  }
+
+  const code = url.searchParams.get("code");
+  if (code) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      console.error(`[KovaAuth] OAuth code exchange failed from ${source}.`, error);
       throw error;
     }
     return waitForStoredSession(data.session ?? null);
