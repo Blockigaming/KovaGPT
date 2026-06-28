@@ -1,4 +1,4 @@
-import { Trash2, PanelLeft, Search, HelpCircle, Plus, Share2, Settings as SettingsIcon, FolderOpen, Link2, MoreHorizontal, MessageCircle, Copy as CopyIcon, Archive, Pin, PinOff, Users } from "lucide-react";
+import { Trash2, PanelLeft, Search, HelpCircle, Plus, Share2, Settings as SettingsIcon, FolderOpen, Link2, MoreHorizontal, MessageCircle, Copy as CopyIcon, Archive, Pin, PinOff, Users, Image as ImageIcon, CreditCard, Calendar } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { NovaLogo } from "@/components/NovaLogo";
 import { Link } from "@tanstack/react-router";
@@ -45,7 +45,7 @@ export function Sidebar({
 }) {
   const { user, isSignedIn, isLoaded } = useUser();
   const [width, setWidth] = useState<number>(280);
-  const [moreOpen, setMoreOpen] = useState(false);
+  
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -196,28 +196,20 @@ export function Sidebar({
               <Link2 className="w-[18px] h-[18px]" />
               <span>Apps</span>
             </Link>
-            <button
-              onClick={() => setMoreOpen((v) => !v)}
-              className={`${navItemClass} w-full text-left`}
-            >
-              <MoreHorizontal className="w-[18px] h-[18px]" />
-              <span>More</span>
-            </button>
-            {moreOpen && (
-              <div className="mx-3 mt-1 mb-1 rounded-xl bg-sidebar-hover/60 p-1.5 flex flex-col gap-0.5">
-                <Link to="/images" className="rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition">
-                  Image Generation
-                </Link>
-                {showSignedIn && (
-                  <Link to="/scheduled-tasks" className="rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition">
-                    Scheduled Tasks
-                  </Link>
-                )}
-                <Link to="/pricing" className="rounded-lg px-3 py-2 text-sm hover:bg-sidebar-hover transition">
-                  Subscriptions
-                </Link>
-              </div>
+            <Link to="/images" className={navItemClass}>
+              <ImageIcon className="w-[18px] h-[18px]" />
+              <span>Image Generation</span>
+            </Link>
+            {showSignedIn && (
+              <Link to="/scheduled-tasks" className={navItemClass}>
+                <Calendar className="w-[18px] h-[18px]" />
+                <span>Scheduled Tasks</span>
+              </Link>
             )}
+            <Link to="/pricing" className={navItemClass}>
+              <CreditCard className="w-[18px] h-[18px]" />
+              <span>Subscriptions</span>
+            </Link>
           </div>
 
           {/* Combined scrollable area: Pinned + Recents */}
