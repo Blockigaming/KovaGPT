@@ -11,7 +11,6 @@ import {
   Section,
   Text,
 } from '@react-email/components'
-import type { TemplateEntry } from './registry'
 import { BrandFooter, BrandHeader, styles } from './_brand'
 
 interface RecoveryEmailProps {
@@ -40,9 +39,7 @@ export const RecoveryEmail = ({
             Reset password
           </Button>
         </Section>
-        <Text style={styles.fallbackLabel}>
-          Button not working? Use this link:
-        </Text>
+        <Text style={styles.fallbackLabel}>Button not working? Use this link:</Text>
         <Link href={confirmationUrl} style={styles.fallbackLink}>
           {confirmationUrl}
         </Link>
@@ -57,9 +54,3 @@ export const RecoveryEmail = ({
 )
 
 export default RecoveryEmail
-
-export const template = {
-  component: RecoveryEmail,
-  subject: 'Reset your KovaGPT password',
-  displayName: 'Password reset',
-} satisfies TemplateEntry
