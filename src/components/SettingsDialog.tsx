@@ -39,8 +39,8 @@ import {
   LogOut,
   RefreshCw,
   FolderOpen,
-  Wallet,
   Settings as Cog,
+
 } from "lucide-react";
 import { useTier, tierRank } from "@/hooks/useTier";
 import {
@@ -264,12 +264,12 @@ export function SettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[88vh] overflow-hidden flex flex-col gap-0 p-0 border border-border/60 shadow-2xl">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col gap-0 p-0 border border-border/60 shadow-2xl">
+        <DialogHeader className="px-7 pt-6 pb-5 border-b border-border">
           <DialogTitle className="text-xl font-semibold tracking-tight font-display">
             Settings
           </DialogTitle>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1.5">
             {loggedIn
               ? "Changes save automatically."
               : "Sign in to view and change your settings."}
@@ -285,12 +285,12 @@ export function SettingsDialog({
           />
         ) : (
         <Tabs value={tab} onValueChange={setTab} orientation="vertical" className="flex-1 overflow-hidden flex flex-row">
-          <TabsList className="flex flex-col h-full w-56 shrink-0 overflow-y-auto items-stretch justify-start gap-0.5 p-2 bg-muted/40 border-r border-border rounded-none">
+          <TabsList className="flex flex-col h-full w-60 shrink-0 overflow-y-auto items-stretch justify-start gap-1 p-3 bg-muted/40 border-r border-border rounded-none">
             {TAB_ORDER.map(({ v, icon: Icon, label }) => (
               <TabsTrigger
                 key={v}
                 value={v}
-                className="w-full justify-start gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
+                className="w-full justify-start gap-2.5 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
               >
                 <Icon className="w-4 h-4 shrink-0" />
                 <span className="truncate text-left">{label}</span>
@@ -298,9 +298,10 @@ export function SettingsDialog({
             ))}
           </TabsList>
 
+
           <div className="flex-1 overflow-hidden flex flex-col">
           {/* GENERAL */}
-          <TabsContent value="general" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+          <TabsContent value="general" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
             <section className="space-y-4">
               <h3 className="text-sm font-semibold">Behavior</h3>
               <ToggleRow
@@ -353,7 +354,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* PERSONALIZATION */}
-          <TabsContent value="personalization" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+          <TabsContent value="personalization" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
             <section className="space-y-3">
               <h3 className="text-sm font-semibold">About you</h3>
               <div>
@@ -417,7 +418,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* MEMORY */}
-          <TabsContent value="memory" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+          <TabsContent value="memory" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
             <section className="space-y-3">
               <div className="flex items-center gap-2">
                 <Brain className="w-4 h-4" />
@@ -479,7 +480,7 @@ export function SettingsDialog({
             </section>
           </TabsContent>
 
-          <TabsContent value="linked" className="overflow-y-auto px-6 pb-6 space-y-5 py-4">
+          <TabsContent value="linked" className="overflow-y-auto px-7 pb-8 space-y-5 py-5">
             {!loggedIn ? (
               <SignInGate label="Apps" />
             ) : (
@@ -538,7 +539,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* LIBRARY */}
-          <TabsContent value="library" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+          <TabsContent value="library" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
             {!loggedIn ? (
               <SignInGate label="Library" />
             ) : (
@@ -546,19 +547,13 @@ export function SettingsDialog({
             )}
           </TabsContent>
 
-          {/* FINANCES */}
-          <TabsContent value="finances" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
-            {!loggedIn ? (
-              <SignInGate label="Finances" />
-            ) : (
-              <FinancesPanel />
-            )}
-          </TabsContent>
+          {/* Finances tab intentionally removed from Settings. */}
+
 
 
 
           {/* EMAIL */}
-          <TabsContent value="email" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+          <TabsContent value="email" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
             <h3 className="text-sm font-semibold">Email address</h3>
             <div className="rounded-lg border border-border p-4">
               <div className="text-sm font-medium">Primary email</div>
@@ -576,7 +571,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* SUBSCRIPTION */}
-          <TabsContent value="subscription" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+          <TabsContent value="subscription" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
             <div className="rounded-lg border border-border p-4 flex items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-medium">Current plan</div>
@@ -674,7 +669,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* APPEARANCE */}
-          <TabsContent value="appearance" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+          <TabsContent value="appearance" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
             <section className="space-y-3">
               <h3 className="text-sm font-semibold">Appearance</h3>
               <p className="text-xs text-muted-foreground">
@@ -747,7 +742,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* NOTIFICATIONS */}
-          <TabsContent value="notifications" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+          <TabsContent value="notifications" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
             <h3 className="text-sm font-semibold">Notifications</h3>
             <ToggleRow
               title="Account & security emails"
@@ -770,7 +765,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* PARENTAL */}
-          <TabsContent value="parental" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+          <TabsContent value="parental" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
             <h3 className="text-sm font-semibold">Parental controls</h3>
             <ToggleRow
               title="Family-safe mode"
@@ -784,7 +779,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* VOICE */}
-          <TabsContent value="voice" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+          <TabsContent value="voice" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
             <h3 className="text-sm font-semibold">Voice</h3>
             <ToggleRow
               title="Auto-read responses"
@@ -840,7 +835,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* SAFETY & SECURITY */}
-          <TabsContent value="security" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+          <TabsContent value="security" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
             <div className="rounded-lg border border-border p-4">
               <div className="text-sm font-medium">Signed in as</div>
               <div className="text-sm text-muted-foreground mt-1">
@@ -864,7 +859,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* DATA CONTROL */}
-          <TabsContent value="data" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+          <TabsContent value="data" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
             <h3 className="text-sm font-semibold">Data controls</h3>
             <ToggleRow
               title="Improve the model for everyone"
@@ -887,7 +882,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* STORAGE */}
-          <TabsContent value="storage" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+          <TabsContent value="storage" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
             <h3 className="text-sm font-semibold">Storage</h3>
             <p className="text-xs text-muted-foreground">
               Conversations and preferences are stored locally on this device and synced to your account.
@@ -907,7 +902,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* REPORT ISSUE */}
-          <TabsContent value="report" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+          <TabsContent value="report" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
             <h3 className="text-sm font-semibold">Report an issue</h3>
             <p className="text-xs text-muted-foreground">
               Found a bug or something off? Send it to our team and we'll take a look.
@@ -925,7 +920,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* HELP CENTER */}
-          <TabsContent value="help" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+          <TabsContent value="help" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
             <h3 className="text-sm font-semibold">Help center</h3>
             <p className="text-xs text-muted-foreground">
               Get help, contact support, or browse common questions.
@@ -943,7 +938,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* ABOUT */}
-          <TabsContent value="about" className="overflow-y-auto px-6 pb-6 space-y-3 py-4">
+          <TabsContent value="about" className="overflow-y-auto px-7 pb-8 space-y-3 py-5">
             <h3 className="text-sm font-semibold">About KovaGPT</h3>
             <p className="text-sm text-muted-foreground">
               KovaGPT is built by Zachary Block. Our mission is to make a helpful, kind, and trustworthy AI available to everyone.
@@ -963,7 +958,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* LOG OUT */}
-          <TabsContent value="logout" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+          <TabsContent value="logout" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
             <h3 className="text-sm font-semibold">Log out</h3>
             <p className="text-sm text-muted-foreground">
               You'll be signed out of KovaGPT on this device.
@@ -1475,83 +1470,8 @@ function LibraryPanel() {
   );
 }
 
-function FinancesPanel() {
-  const [status, setStatus] = useState<import("@/lib/finance.functions").FinanceStatus | null>(null);
-  const [loading, setLoading] = useState(true);
+// FinancesPanel removed - the Finances tab is no longer part of Settings.
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const { getMyFinanceStatus } = await import("@/lib/finance.functions");
-        setStatus(await getMyFinanceStatus());
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
-
-  return (
-    <section className="space-y-4">
-      <div>
-        <h3 className="text-sm font-semibold">Finances</h3>
-        <p className="text-xs text-muted-foreground mt-1">
-          Connect accounts to view balances and organize financial context for KovaGPT.
-        </p>
-      </div>
-
-      {loading ? (
-        <div className="text-sm text-muted-foreground">Loading…</div>
-      ) : status?.plaidConfigured ? (
-        <Button size="sm" onClick={() => toast.info("Plaid Link will open here once the client SDK is added.")}>
-          Connect account
-        </Button>
-      ) : (
-        <div className="rounded-lg border border-dashed border-border p-4 text-sm space-y-2">
-          <div className="font-medium">Bank linking is not configured yet</div>
-          <p className="text-xs text-muted-foreground">
-            To enable secure bank, brokerage, and credit-card linking, an admin must add Plaid
-            credentials (PLAID_CLIENT_ID, PLAID_SECRET, PLAID_ENV) and an access-token encryption
-            key on the server.
-          </p>
-          <Button size="sm" disabled className="opacity-60 cursor-not-allowed">
-            Connect account
-          </Button>
-        </div>
-      )}
-
-      {status && status.accounts.length > 0 && (
-        <ul className="divide-y divide-border rounded-lg border border-border">
-          {status.accounts.map((a) => (
-            <li key={a.id} className="p-3 flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-sm font-medium truncate">{a.account_name}</div>
-                <div className="text-[11px] text-muted-foreground">
-                  {[a.institution_name, a.account_type, a.account_subtype, a.mask && `••${a.mask}`]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </div>
-              </div>
-              <div className="text-sm font-medium tabular-nums">
-                {a.current_balance != null
-                  ? `${a.currency ?? "USD"} ${a.current_balance.toFixed(2)}`
-                  : "..."}
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <p className="text-[11px] text-muted-foreground leading-relaxed">
-        KovaGPT is not a financial advisor. Financial information may be incomplete or delayed.
-        Always verify important decisions with your bank, brokerage, parent, or a qualified
-        professional. Brokerage support (including Fidelity) depends on the connected account
-        provider; availability may vary.
-      </p>
-    </section>
-  );
-}
 
 // Limited settings panel shown to signed-out visitors. Includes only privacy
 // preferences, appearance, and language. All copy is KovaGPT-branded (not
