@@ -301,7 +301,7 @@ export function SettingsDialog({
 
           <div className="flex-1 overflow-hidden flex flex-col">
           {/* GENERAL */}
-          <TabsContent value="general" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+          <TabsContent value="general" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
             <section className="space-y-4">
               <h3 className="text-sm font-semibold">Behavior</h3>
               <ToggleRow
@@ -354,7 +354,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* PERSONALIZATION */}
-          <TabsContent value="personalization" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+          <TabsContent value="personalization" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
             <section className="space-y-3">
               <h3 className="text-sm font-semibold">About you</h3>
               <div>
@@ -418,7 +418,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* MEMORY */}
-          <TabsContent value="memory" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+          <TabsContent value="memory" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
             <section className="space-y-3">
               <div className="flex items-center gap-2">
                 <Brain className="w-4 h-4" />
@@ -480,7 +480,7 @@ export function SettingsDialog({
             </section>
           </TabsContent>
 
-          <TabsContent value="linked" className="overflow-y-auto px-6 pb-6 space-y-5 py-4">
+          <TabsContent value="linked" className="overflow-y-auto px-7 pb-8 space-y-5 py-5">
             {!loggedIn ? (
               <SignInGate label="Apps" />
             ) : (
@@ -539,7 +539,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* LIBRARY */}
-          <TabsContent value="library" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+          <TabsContent value="library" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
             {!loggedIn ? (
               <SignInGate label="Library" />
             ) : (
@@ -553,7 +553,7 @@ export function SettingsDialog({
 
 
           {/* EMAIL */}
-          <TabsContent value="email" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+          <TabsContent value="email" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
             <h3 className="text-sm font-semibold">Email address</h3>
             <div className="rounded-lg border border-border p-4">
               <div className="text-sm font-medium">Primary email</div>
@@ -571,7 +571,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* SUBSCRIPTION */}
-          <TabsContent value="subscription" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+          <TabsContent value="subscription" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
             <div className="rounded-lg border border-border p-4 flex items-center justify-between gap-3">
               <div>
                 <div className="text-sm font-medium">Current plan</div>
@@ -669,7 +669,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* APPEARANCE */}
-          <TabsContent value="appearance" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+          <TabsContent value="appearance" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
             <section className="space-y-3">
               <h3 className="text-sm font-semibold">Appearance</h3>
               <p className="text-xs text-muted-foreground">
@@ -742,7 +742,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* NOTIFICATIONS */}
-          <TabsContent value="notifications" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+          <TabsContent value="notifications" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
             <h3 className="text-sm font-semibold">Notifications</h3>
             <ToggleRow
               title="Account & security emails"
@@ -765,7 +765,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* PARENTAL */}
-          <TabsContent value="parental" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+          <TabsContent value="parental" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
             <h3 className="text-sm font-semibold">Parental controls</h3>
             <ToggleRow
               title="Family-safe mode"
@@ -779,7 +779,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* VOICE */}
-          <TabsContent value="voice" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+          <TabsContent value="voice" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
             <h3 className="text-sm font-semibold">Voice</h3>
             <ToggleRow
               title="Auto-read responses"
@@ -835,7 +835,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* SAFETY & SECURITY */}
-          <TabsContent value="security" className="overflow-y-auto px-6 pb-6 space-y-6 py-4">
+          <TabsContent value="security" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
             <div className="rounded-lg border border-border p-4">
               <div className="text-sm font-medium">Signed in as</div>
               <div className="text-sm text-muted-foreground mt-1">
@@ -859,7 +859,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* DATA CONTROL */}
-          <TabsContent value="data" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+          <TabsContent value="data" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
             <h3 className="text-sm font-semibold">Data controls</h3>
             <ToggleRow
               title="Improve the model for everyone"
@@ -882,7 +882,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* STORAGE */}
-          <TabsContent value="storage" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+          <TabsContent value="storage" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
             <h3 className="text-sm font-semibold">Storage</h3>
             <p className="text-xs text-muted-foreground">
               Conversations and preferences are stored locally on this device and synced to your account.
@@ -902,7 +902,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* REPORT ISSUE */}
-          <TabsContent value="report" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+          <TabsContent value="report" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
             <h3 className="text-sm font-semibold">Report an issue</h3>
             <p className="text-xs text-muted-foreground">
               Found a bug or something off? Send it to our team and we'll take a look.
@@ -920,7 +920,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* HELP CENTER */}
-          <TabsContent value="help" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+          <TabsContent value="help" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
             <h3 className="text-sm font-semibold">Help center</h3>
             <p className="text-xs text-muted-foreground">
               Get help, contact support, or browse common questions.
@@ -938,7 +938,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* ABOUT */}
-          <TabsContent value="about" className="overflow-y-auto px-6 pb-6 space-y-3 py-4">
+          <TabsContent value="about" className="overflow-y-auto px-7 pb-8 space-y-3 py-5">
             <h3 className="text-sm font-semibold">About KovaGPT</h3>
             <p className="text-sm text-muted-foreground">
               KovaGPT is built by Zachary Block. Our mission is to make a helpful, kind, and trustworthy AI available to everyone.
@@ -958,7 +958,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* LOG OUT */}
-          <TabsContent value="logout" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
+          <TabsContent value="logout" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
             <h3 className="text-sm font-semibold">Log out</h3>
             <p className="text-sm text-muted-foreground">
               You'll be signed out of KovaGPT on this device.
