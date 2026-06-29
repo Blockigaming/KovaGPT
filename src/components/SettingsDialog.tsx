@@ -1469,83 +1469,8 @@ function LibraryPanel() {
   );
 }
 
-function FinancesPanel() {
-  const [status, setStatus] = useState<import("@/lib/finance.functions").FinanceStatus | null>(null);
-  const [loading, setLoading] = useState(true);
+// FinancesPanel removed - the Finances tab is no longer part of Settings.
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const { getMyFinanceStatus } = await import("@/lib/finance.functions");
-        setStatus(await getMyFinanceStatus());
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
-
-  return (
-    <section className="space-y-4">
-      <div>
-        <h3 className="text-sm font-semibold">Finances</h3>
-        <p className="text-xs text-muted-foreground mt-1">
-          Connect accounts to view balances and organize financial context for KovaGPT.
-        </p>
-      </div>
-
-      {loading ? (
-        <div className="text-sm text-muted-foreground">Loading…</div>
-      ) : status?.plaidConfigured ? (
-        <Button size="sm" onClick={() => toast.info("Plaid Link will open here once the client SDK is added.")}>
-          Connect account
-        </Button>
-      ) : (
-        <div className="rounded-lg border border-dashed border-border p-4 text-sm space-y-2">
-          <div className="font-medium">Bank linking is not configured yet</div>
-          <p className="text-xs text-muted-foreground">
-            To enable secure bank, brokerage, and credit-card linking, an admin must add Plaid
-            credentials (PLAID_CLIENT_ID, PLAID_SECRET, PLAID_ENV) and an access-token encryption
-            key on the server.
-          </p>
-          <Button size="sm" disabled className="opacity-60 cursor-not-allowed">
-            Connect account
-          </Button>
-        </div>
-      )}
-
-      {status && status.accounts.length > 0 && (
-        <ul className="divide-y divide-border rounded-lg border border-border">
-          {status.accounts.map((a) => (
-            <li key={a.id} className="p-3 flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-sm font-medium truncate">{a.account_name}</div>
-                <div className="text-[11px] text-muted-foreground">
-                  {[a.institution_name, a.account_type, a.account_subtype, a.mask && `••${a.mask}`]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </div>
-              </div>
-              <div className="text-sm font-medium tabular-nums">
-                {a.current_balance != null
-                  ? `${a.currency ?? "USD"} ${a.current_balance.toFixed(2)}`
-                  : "..."}
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <p className="text-[11px] text-muted-foreground leading-relaxed">
-        KovaGPT is not a financial advisor. Financial information may be incomplete or delayed.
-        Always verify important decisions with your bank, brokerage, parent, or a qualified
-        professional. Brokerage support (including Fidelity) depends on the connected account
-        provider; availability may vary.
-      </p>
-    </section>
-  );
-}
 
 // Limited settings panel shown to signed-out visitors. Includes only privacy
 // preferences, appearance, and language. All copy is KovaGPT-branded (not
