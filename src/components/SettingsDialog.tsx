@@ -546,14 +546,8 @@ export function SettingsDialog({
             )}
           </TabsContent>
 
-          {/* FINANCES */}
-          <TabsContent value="finances" className="overflow-y-auto px-6 pb-6 space-y-4 py-4">
-            {!loggedIn ? (
-              <SignInGate label="Finances" />
-            ) : (
-              <FinancesPanel />
-            )}
-          </TabsContent>
+          {/* Finances tab intentionally removed from Settings. */}
+
 
 
 
