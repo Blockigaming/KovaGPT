@@ -264,12 +264,12 @@ export function SettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[88vh] overflow-hidden flex flex-col gap-0 p-0 border border-border/60 shadow-2xl">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col gap-0 p-0 border border-border/60 shadow-2xl">
+        <DialogHeader className="px-7 pt-6 pb-5 border-b border-border">
           <DialogTitle className="text-xl font-semibold tracking-tight font-display">
             Settings
           </DialogTitle>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-muted-foreground mt-1.5">
             {loggedIn
               ? "Changes save automatically."
               : "Sign in to view and change your settings."}
@@ -285,18 +285,19 @@ export function SettingsDialog({
           />
         ) : (
         <Tabs value={tab} onValueChange={setTab} orientation="vertical" className="flex-1 overflow-hidden flex flex-row">
-          <TabsList className="flex flex-col h-full w-56 shrink-0 overflow-y-auto items-stretch justify-start gap-0.5 p-2 bg-muted/40 border-r border-border rounded-none">
+          <TabsList className="flex flex-col h-full w-60 shrink-0 overflow-y-auto items-stretch justify-start gap-1 p-3 bg-muted/40 border-r border-border rounded-none">
             {TAB_ORDER.map(({ v, icon: Icon, label }) => (
               <TabsTrigger
                 key={v}
                 value={v}
-                className="w-full justify-start gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
+                className="w-full justify-start gap-2.5 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
               >
                 <Icon className="w-4 h-4 shrink-0" />
                 <span className="truncate text-left">{label}</span>
               </TabsTrigger>
             ))}
           </TabsList>
+
 
           <div className="flex-1 overflow-hidden flex flex-col">
           {/* GENERAL */}
