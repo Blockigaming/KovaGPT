@@ -12,13 +12,14 @@ import { EmailChangeEmail } from '@/lib/email-templates/email-change'
 import { ReauthenticationEmail } from '@/lib/email-templates/reauthentication'
 
 const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirm your email',
-  invite: "You've been invited",
-  magiclink: 'Your login link',
-  recovery: 'Reset your password',
-  email_change: 'Confirm your new email',
-  reauthentication: 'Your verification code',
+  signup: 'Confirm your KovaGPT email',
+  invite: 'You have been invited to KovaGPT',
+  magiclink: 'Your KovaGPT sign-in link',
+  recovery: 'Reset your KovaGPT password',
+  email_change: 'Confirm your new KovaGPT email',
+  reauthentication: 'Your KovaGPT verification code',
 }
+
 
 // Template mapping
 const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
