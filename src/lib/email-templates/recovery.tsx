@@ -1,5 +1,4 @@
 import * as React from 'react'
-
 import {
   Body,
   Button,
@@ -7,9 +6,13 @@ import {
   Head,
   Heading,
   Html,
+  Link,
   Preview,
+  Section,
   Text,
 } from '@react-email/components'
+import type { TemplateEntry } from './registry'
+import { BrandFooter, BrandHeader, styles } from './_brand'
 
 interface RecoveryEmailProps {
   siteName: string
@@ -22,21 +25,32 @@ export const RecoveryEmail = ({
 }: RecoveryEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Reset your password for {siteName}</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>Reset your password</Heading>
-        <Text style={text}>
-          We received a request to reset your password for {siteName}. Click
-          the button below to choose a new password.
+    <Preview>Reset your {siteName} password</Preview>
+    <Body style={styles.main}>
+      <Container style={styles.container}>
+        <BrandHeader />
+        <Heading style={styles.h1}>Reset your password</Heading>
+        <Text style={styles.text}>
+          We received a request to reset the password for your {siteName}{' '}
+          account. Click the button below to choose a new password. This link
+          expires in 60 minutes.
         </Text>
-        <Button style={button} href={confirmationUrl}>
-          Reset Password
-        </Button>
-        <Text style={footer}>
+        <Section style={styles.buttonWrap}>
+          <Button style={styles.button} href={confirmationUrl}>
+            Reset password
+          </Button>
+        </Section>
+        <Text style={styles.fallbackLabel}>
+          Button not working? Use this link:
+        </Text>
+        <Link href={confirmationUrl} style={styles.fallbackLink}>
+          {confirmationUrl}
+        </Link>
+        <Text style={{ ...styles.text, fontSize: '13px', color: '#6b7280', margin: '18px 0 0' }}>
           If you didn't request a password reset, you can safely ignore this
-          email. Your password will not be changed.
+          email and your password will remain unchanged.
         </Text>
+        <BrandFooter />
       </Container>
     </Body>
   </Html>
@@ -44,26 +58,8 @@ export const RecoveryEmail = ({
 
 export default RecoveryEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
-const button = {
-  backgroundColor: '#000000',
-  color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
-  textDecoration: 'none',
-}
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+export const template = {
+  component: RecoveryEmail,
+  subject: 'Reset your KovaGPT password',
+  displayName: 'Password reset',
+} satisfies TemplateEntry
