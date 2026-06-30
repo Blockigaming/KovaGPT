@@ -1,7 +1,7 @@
 import { Trash2, PanelLeft, Search, HelpCircle, Plus, Share2, Settings as SettingsIcon, FolderOpen, Link2, MoreHorizontal, MessageCircle, Copy as CopyIcon, Archive, Pin, PinOff, Users, Image as ImageIcon, CreditCard, Calendar } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { NovaLogo } from "@/components/NovaLogo";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { SignInButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
 
@@ -114,8 +114,21 @@ export function Sidebar({
   const showSignedIn = isLoaded && isSignedIn;
   const showSignedOut = isLoaded && !isSignedIn;
 
-  const navItemClass =
-    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] hover:bg-sidebar-hover transition active:scale-[0.98]";
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isOn = (p: string) => pathname === p;
+  const navItemClass = (active: boolean) =>
+    `relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] transition active:scale-[0.98] ${
+      active
+        ? "bg-sidebar-hover text-foreground"
+        : "hover:bg-sidebar-hover text-sidebar-foreground"
+    }`;
+  const ActiveBar = ({ on }: { on: boolean }) =>
+    on ? (
+      <span
+        aria-hidden
+        className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-[#3b82f6]"
+      />
+    ) : null;
 
   return (
     <>
@@ -175,7 +188,7 @@ export function Sidebar({
             </div>
           )}
 
-          {/* New chat (kept; ChatGPT puts it in the bottom pill but users need it accessible) */}
+          {/* New chat */}
           <div className="px-3 pb-2">
             <button
               onClick={onNew}
@@ -186,27 +199,35 @@ export function Sidebar({
             </button>
           </div>
 
-          {/* Primary nav */}
+          {/* Workspace nav */}
+          <div className="px-5 pt-1 pb-1 text-[11px] font-semibold tracking-wider uppercase text-muted-foreground/80">
+            Workspace
+          </div>
           <div className="px-3 flex flex-col gap-0.5">
-            <Link to="/library" className={navItemClass}>
+            <Link to="/library" className={navItemClass(isOn("/library"))}>
+              <ActiveBar on={isOn("/library")} />
               <FolderOpen className="w-[18px] h-[18px]" />
               <span>Library</span>
             </Link>
-            <Link to="/apps" className={navItemClass}>
+            <Link to="/apps" className={navItemClass(isOn("/apps"))}>
+              <ActiveBar on={isOn("/apps")} />
               <Link2 className="w-[18px] h-[18px]" />
               <span>Apps</span>
             </Link>
-            <Link to="/images" className={navItemClass}>
+            <Link to="/images" className={navItemClass(isOn("/images"))}>
+              <ActiveBar on={isOn("/images")} />
               <ImageIcon className="w-[18px] h-[18px]" />
               <span>Image Generation</span>
             </Link>
             {showSignedIn && (
-              <Link to="/scheduled-tasks" className={navItemClass}>
+              <Link to="/scheduled-tasks" className={navItemClass(isOn("/scheduled-tasks"))}>
+                <ActiveBar on={isOn("/scheduled-tasks")} />
                 <Calendar className="w-[18px] h-[18px]" />
                 <span>Scheduled Tasks</span>
               </Link>
             )}
-            <Link to="/pricing" className={navItemClass}>
+            <Link to="/pricing" className={navItemClass(isOn("/pricing"))}>
+              <ActiveBar on={isOn("/pricing")} />
               <CreditCard className="w-[18px] h-[18px]" />
               <span>Subscriptions</span>
             </Link>

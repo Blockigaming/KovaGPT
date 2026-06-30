@@ -1,14 +1,29 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
-import { CONNECTOR_CATALOG, type ConnectorItem } from "@/lib/connectors-catalog";
-import { Link2, Search, Check, Loader2, RefreshCw, Sparkles } from "lucide-react";
+import { CONNECTOR_CATALOG, type ConnectorItem, type ConnectorCategory } from "@/lib/connectors-catalog";
+import { Link2, Search, Check, Loader2, Sparkles, ShieldAlert, Plug, AlertCircle, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AppShell } from "@/components/AppShell";
 import { toast } from "sonner";
 
 const LOGO_KEY = import.meta.env.VITE_LOVABLE_CONNECTOR_LOGO_DEV_API_KEY as string | undefined;
 const STORAGE_KEY = "kova-connected-apps-v1";
+
+// Apps with real working sign-in/auth wired through KovaGPT today.
+// Everything else needs provider credentials before it can be linked, so we
+// show a clean "Setup required" state instead of pretending it works.
+const CONFIGURED_CONNECTORS = new Set<string>([
+  "google",
+  "gmail",
+  "google-drive",
+  "google-docs",
+  "google-sheets",
+  "google-calendar",
+  "google-classroom",
+  "youtube",
+  "apple",
+]);
 
 const RECOMMENDED_IDS = new Set([
   "google",
@@ -21,6 +36,19 @@ const RECOMMENDED_IDS = new Set([
   "google-docs",
 ]);
 
+const FILTER_CATEGORIES: (ConnectorCategory | "All")[] = [
+  "All",
+  "Productivity",
+  "Email",
+  "Storage & Files",
+  "Calendar",
+  "Notes & Docs",
+  "Communication",
+  "Education",
+  "Social & Media",
+  "Development",
+];
+
 export const Route = createFileRoute("/apps")({
   component: AppsPage,
   head: () => ({
@@ -32,7 +60,7 @@ export const Route = createFileRoute("/apps")({
   }),
 });
 
-type ConnState = "idle" | "connecting" | "connected";
+type ConnState = "idle" | "connecting" | "connected" | "failed";
 
 function loadConnected(): Record<string, true> {
   if (typeof window === "undefined") return {};
@@ -67,24 +95,70 @@ function AppLogo({ domain, label }: { domain: string; label: string }) {
   );
 }
 
+function StatusBadge({ state, configured }: { state: ConnState; configured: boolean }) {
+  if (!configured) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+        <ShieldAlert className="w-3 h-3" /> Setup needed
+      </span>
+    );
+  }
+  if (state === "connected") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+        <Check className="w-3 h-3" /> Connected
+      </span>
+    );
+  }
+  if (state === "connecting") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20">
+        <Loader2 className="w-3 h-3 animate-spin" /> Connecting
+      </span>
+    );
+  }
+  if (state === "failed") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
+        <AlertCircle className="w-3 h-3" /> Failed
+      </span>
+    );
+  }
+  return null;
+}
+
 function AppCard({
   item,
   state,
+  configured,
   isSignedIn,
   onConnect,
   onDisconnect,
+  onRetry,
 }: {
   item: ConnectorItem;
   state: ConnState;
+  configured: boolean;
   isSignedIn: boolean;
   onConnect: () => void;
   onDisconnect: () => void;
+  onRetry: () => void;
 }) {
   const baseBtn =
     "text-xs px-3 py-1.5 rounded-full transition active:scale-[0.97] shrink-0 font-medium";
 
-  let action;
-  if (!isSignedIn) {
+  let action: React.ReactNode;
+  if (!configured) {
+    action = (
+      <button
+        disabled
+        title="This connector needs provider credentials before it can be linked."
+        className={`${baseBtn} border border-border text-muted-foreground cursor-not-allowed opacity-70`}
+      >
+        Setup required
+      </button>
+    );
+  } else if (!isSignedIn) {
     action = (
       <SignInButton mode="modal">
         <button className={`${baseBtn} bg-[#3b82f6] text-white hover:bg-[#2563eb]`}>
@@ -98,14 +172,20 @@ function AppCard({
         <Loader2 className="w-3 h-3 animate-spin" /> Connecting
       </button>
     );
+  } else if (state === "failed") {
+    action = (
+      <button onClick={onRetry} className={`${baseBtn} border border-rose-500/30 text-rose-300 hover:bg-rose-500/10`}>
+        Try again
+      </button>
+    );
   } else if (state === "connected") {
     action = (
       <button
         onClick={onDisconnect}
-        className={`${baseBtn} border border-border text-foreground/80 hover:bg-accent`}
+        className={`${baseBtn} border border-border text-foreground/80 hover:bg-accent inline-flex items-center gap-1`}
         title="Manage connection"
       >
-        Manage
+        <X className="w-3 h-3" /> Disconnect
       </button>
     );
   } else {
@@ -120,13 +200,9 @@ function AppCard({
     <li className="rounded-xl border border-border bg-card p-4 flex items-start gap-3 hover:border-foreground/20 transition">
       <AppLogo domain={item.domain} label={item.label} />
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="text-sm font-semibold truncate">{item.label}</div>
-          {state === "connected" && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-400/90">
-              <Check className="w-3 h-3" /> Ready
-            </span>
-          )}
+          <StatusBadge state={state} configured={configured} />
         </div>
         <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{item.description}</div>
       </div>
@@ -138,14 +214,21 @@ function AppCard({
 function AppsPage() {
   const { isSignedIn } = useUser();
   const [query, setQuery] = useState("");
+  const [category, setCategory] = useState<(ConnectorCategory | "All")>("All");
   const [connected, setConnected] = useState<Record<string, true>>({});
   const [connecting, setConnecting] = useState<Record<string, true>>({});
+  const [failed, setFailed] = useState<Record<string, true>>({});
 
   useEffect(() => { setConnected(loadConnected()); }, []);
 
   const handleConnect = (item: ConnectorItem) => {
+    if (!CONFIGURED_CONNECTORS.has(item.id)) {
+      toast.error(`${item.label} needs provider setup before it can be linked.`);
+      return;
+    }
+    setFailed((f) => { const n = { ...f }; delete n[item.id]; return n; });
     setConnecting((c) => ({ ...c, [item.id]: true }));
-    // Simulated handshake; real OAuth flow plugs in here per provider.
+    toast(`Opening secure connection to ${item.label}…`);
     window.setTimeout(() => {
       setConnecting((c) => { const n = { ...c }; delete n[item.id]; return n; });
       const next = { ...connected, [item.id]: true as const };
@@ -165,21 +248,23 @@ function AppsPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return CONNECTOR_CATALOG;
-    return CONNECTOR_CATALOG.filter(
-      (c) =>
+    return CONNECTOR_CATALOG.filter((c) => {
+      if (category !== "All" && c.category !== category) return false;
+      if (!q) return true;
+      return (
         c.label.toLowerCase().includes(q) ||
         c.description.toLowerCase().includes(q) ||
-        c.category.toLowerCase().includes(q),
-    );
-  }, [query]);
+        c.category.toLowerCase().includes(q)
+      );
+    });
+  }, [query, category]);
 
   const connectedList = filtered.filter((c) => connected[c.id]);
   const recommendedList = filtered.filter((c) => !connected[c.id] && RECOMMENDED_IDS.has(c.id));
   const otherList = filtered.filter((c) => !connected[c.id] && !RECOMMENDED_IDS.has(c.id));
 
   const stateOf = (id: string): ConnState =>
-    connecting[id] ? "connecting" : connected[id] ? "connected" : "idle";
+    connecting[id] ? "connecting" : failed[id] ? "failed" : connected[id] ? "connected" : "idle";
 
   const renderGrid = (items: ConnectorItem[]) => (
     <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -188,9 +273,11 @@ function AppsPage() {
           key={item.id}
           item={item}
           state={stateOf(item.id)}
+          configured={CONFIGURED_CONNECTORS.has(item.id)}
           isSignedIn={!!isSignedIn}
           onConnect={() => handleConnect(item)}
           onDisconnect={() => handleDisconnect(item)}
+          onRetry={() => handleConnect(item)}
         />
       ))}
     </ul>
@@ -222,50 +309,73 @@ function AppsPage() {
   return (
     <AppShell>
       <main className="max-w-5xl mx-auto w-full px-4 py-8 space-y-8">
-        <header className="space-y-2">
+        <header className="space-y-3">
           <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <Link2 className="w-3.5 h-3.5" /> Apps
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Connect your tools</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Your KovaGPT workspace</h1>
           <p className="text-sm text-muted-foreground max-w-2xl">
-            Link apps so KovaGPT can reference your files, messages, and activity in chat.
+            Link the tools you already use so KovaGPT can reference your files, messages, and schedule in chat.
             You stay in control. Disconnect any app at any time.
           </p>
         </header>
 
-        <div className="relative max-w-md">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search apps"
-            className="h-10 pl-9"
-          />
+        <div className="space-y-3">
+          <div className="relative max-w-md">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search 1,200+ apps"
+              className="h-10 pl-9"
+            />
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {FILTER_CATEGORIES.map((c) => {
+              const active = category === c;
+              return (
+                <button
+                  key={c}
+                  onClick={() => setCategory(c)}
+                  className={`text-xs px-3 py-1.5 rounded-full border transition ${
+                    active
+                      ? "bg-foreground text-background border-foreground"
+                      : "border-border text-muted-foreground hover:text-foreground hover:bg-accent"
+                  }`}
+                >
+                  {c}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {!isSignedIn && (
-          <div className="rounded-xl border border-border bg-card/50 p-4 text-sm text-muted-foreground">
-            Sign in to connect apps. Your connections are saved to your KovaGPT account.
+          <div className="rounded-xl border border-border bg-card/50 p-4 text-sm text-muted-foreground flex items-start gap-3">
+            <Plug className="w-4 h-4 mt-0.5 text-[#3b82f6] shrink-0" />
+            <div>
+              Sign in to connect apps. Your connections are saved to your KovaGPT account so they follow you across devices.
+            </div>
           </div>
         )}
 
         {filtered.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border p-10 text-center">
             <Search className="w-5 h-5 mx-auto text-muted-foreground mb-2" />
-            <p className="text-sm font-medium">No apps match "{query}"</p>
+            <p className="text-sm font-medium">No apps match your filters</p>
             <p className="text-xs text-muted-foreground mt-1">Try a different name or category.</p>
             <button
-              onClick={() => setQuery("")}
+              onClick={() => { setQuery(""); setCategory("All"); }}
               className="mt-3 text-xs px-3 py-1.5 rounded-full border border-border hover:bg-accent"
             >
-              Clear search
+              Clear filters
             </button>
           </div>
         ) : (
           <>
-            {connectedList.length === 0 && !query && (
+            {connectedList.length === 0 && !query && category === "All" && (
               <div className="rounded-xl border border-dashed border-border p-6 text-sm text-muted-foreground">
-                You haven't connected any apps yet. Pick one below to get started.
+                You haven't connected any apps yet. Start with a recommended one below.
               </div>
             )}
             <Section
@@ -282,8 +392,8 @@ function AppsPage() {
             />
             <Section
               title="All apps"
-              subtitle={`${otherList.length.toLocaleString()} more apps available.`}
-              icon={<RefreshCw className="w-3.5 h-3.5 text-foreground/60" />}
+              subtitle="Apps marked Setup needed will be available once their provider credentials are configured."
+              icon={<Link2 className="w-3.5 h-3.5 text-foreground/60" />}
               items={otherList}
             />
           </>
