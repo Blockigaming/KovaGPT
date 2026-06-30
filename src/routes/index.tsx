@@ -653,12 +653,17 @@ function KovaGPT() {
         {!active || active.messages.length === 0 ? (
           <div className="flex-1 flex flex-col overflow-y-auto px-4">
             <div className="flex-1 flex flex-col items-center justify-center w-full py-10">
-              <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight mb-4 text-center">
-                {greeting}
-              </h1>
-
-
-
+              <div className="flex flex-col items-center gap-4 mb-6">
+                <span className="inline-flex rounded-full bg-black p-1.5 ring-1 ring-border shadow-sm">
+                  <NovaLogo className="w-10 h-10" />
+                </span>
+                <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight text-center">
+                  {greeting}
+                </h1>
+                <p className="text-sm text-muted-foreground text-center max-w-md -mt-1">
+                  Your private workspace for chat, code, research, images, and voice.
+                </p>
+              </div>
 
               <div className="w-full max-w-3xl mx-auto">
                 <ChatInput
@@ -679,35 +684,36 @@ function KovaGPT() {
                 />
               </div>
               {(() => {
+                type Starter = { label: string; prompt?: string; href?: string };
+                const starters: Starter[] = [
+                  { label: "Generate an image", prompt: "Generate an image of " },
+                  { label: "Summarize something", prompt: "Summarize this for me: " },
+                  { label: "Start a plan", prompt: "Help me build a plan to " },
+                  { label: "Get advice", prompt: "I need advice on " },
+                  { label: "Connect an app", href: "/apps" },
+                  { label: "Open Library", href: "/library" },
+                ];
                 const chipClass =
-                  "text-xs sm:text-sm px-3 py-1.5 rounded-full border border-border hover:bg-accent transition text-muted-foreground hover:text-foreground whitespace-nowrap";
-                const Chip = (s: string) => (
-                  <button key={s} type="button" onClick={() => setInput(s)} className={chipClass}>
-                    {s}
-                  </button>
-                );
-                const mobileRows = [
-                  ["Generate an image", "Look something up"],
-                  ["Write or Edit"],
-                ];
-                const wideRows = [
-                  ["Generate an image", "Look something up", "Write or Edit"],
-                ];
+                  "text-xs sm:text-sm px-3.5 py-1.5 rounded-full border border-border bg-card/40 hover:bg-accent hover:border-foreground/30 transition text-muted-foreground hover:text-foreground whitespace-nowrap";
                 return (
-                  <div className="w-full max-w-3xl mx-auto mt-4 px-2">
-                    <div className="flex flex-col gap-2 sm:hidden">
-                      {mobileRows.map((row, i) => (
-                        <div key={i} className="flex flex-wrap gap-2 justify-center">
-                          {row.map(Chip)}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="hidden sm:flex flex-col gap-2">
-                      {wideRows.map((row, i) => (
-                        <div key={i} className="flex flex-wrap gap-2 justify-center">
-                          {row.map(Chip)}
-                        </div>
-                      ))}
+                  <div className="w-full max-w-3xl mx-auto mt-5 px-2">
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {starters.map((s) =>
+                        s.href ? (
+                          <Link key={s.label} to={s.href} className={chipClass}>
+                            {s.label}
+                          </Link>
+                        ) : (
+                          <button
+                            key={s.label}
+                            type="button"
+                            onClick={() => setInput(s.prompt ?? s.label)}
+                            className={chipClass}
+                          >
+                            {s.label}
+                          </button>
+                        ),
+                      )}
                     </div>
                   </div>
                 );
