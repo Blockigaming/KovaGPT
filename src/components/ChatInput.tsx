@@ -47,7 +47,7 @@ export function ChatInput({
   const recRef = useRef<any>(null);
   const [listening, setListening] = useState(false);
   const [sendFlash, setSendFlash] = useState(false);
-  const [actionColor, setActionColor] = useState<string>("#2563eb");
+  const [actionColor, setActionColor] = useState<string>("#3b82f6");
 
   useEffect(() => {
     try {
