@@ -31,7 +31,7 @@ const RECOMMENDED_IDS = new Set([
   "google-drive",
   "google-calendar",
   "icloud-mail",
-  "microsoft",
+  "ms-word",
   "youtube",
   "apple",
 ]);
