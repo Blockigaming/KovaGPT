@@ -654,9 +654,7 @@ function KovaGPT() {
           <div className="flex-1 flex flex-col overflow-y-auto px-4">
             <div className="flex-1 flex flex-col items-center justify-center w-full py-10">
               <div className="flex flex-col items-center gap-4 mb-6">
-                <span className="inline-flex rounded-full bg-black p-1.5 ring-1 ring-border shadow-sm">
-                  <NovaLogo className="w-10 h-10" />
-                </span>
+                <NovaLogo className="w-12 h-12" />
                 <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight text-center">
                   {greeting}
                 </h1>
@@ -683,41 +681,6 @@ function KovaGPT() {
                   placeholder="Ask anything"
                 />
               </div>
-              {(() => {
-                type Starter = { label: string; prompt?: string; href?: string };
-                const starters: Starter[] = [
-                  { label: "Generate an image", prompt: "Generate an image of " },
-                  { label: "Summarize something", prompt: "Summarize this for me: " },
-                  { label: "Start a plan", prompt: "Help me build a plan to " },
-                  { label: "Get advice", prompt: "I need advice on " },
-                  { label: "Connect an app", href: "/apps" },
-                  { label: "Open Library", href: "/library" },
-                ];
-                const chipClass =
-                  "text-xs sm:text-sm px-3.5 py-1.5 rounded-full border border-border bg-card/40 hover:bg-accent hover:border-foreground/30 transition text-muted-foreground hover:text-foreground whitespace-nowrap";
-                return (
-                  <div className="w-full max-w-3xl mx-auto mt-5 px-2">
-                    <div className="flex flex-wrap gap-2 justify-center">
-                      {starters.map((s) =>
-                        s.href ? (
-                          <Link key={s.label} to={s.href} className={chipClass}>
-                            {s.label}
-                          </Link>
-                        ) : (
-                          <button
-                            key={s.label}
-                            type="button"
-                            onClick={() => setInput(s.prompt ?? s.label)}
-                            className={chipClass}
-                          >
-                            {s.label}
-                          </button>
-                        ),
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
             </div>
 
             <nav className="w-full max-w-3xl mx-auto py-4 flex flex-wrap gap-x-4 gap-y-1 text-sm justify-center">

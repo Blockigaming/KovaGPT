@@ -115,7 +115,7 @@ function LibraryPage() {
         />
 
         {filtered.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+          <div className="rounded-lg border border-border p-8 text-center text-sm text-muted-foreground">
             {loading
               ? "Loading..."
               : items.length === 0

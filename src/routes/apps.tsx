@@ -30,10 +30,10 @@ const RECOMMENDED_IDS = new Set([
   "gmail",
   "google-drive",
   "google-calendar",
-  "notion",
-  "slack",
-  "github",
-  "google-docs",
+  "icloud-mail",
+  "microsoft",
+  "youtube",
+  "apple",
 ]);
 
 const FILTER_CATEGORIES: (ConnectorCategory | "All")[] = [
@@ -296,7 +296,6 @@ function AppsPage() {
           <div>
             <h2 className="text-sm font-semibold tracking-wide inline-flex items-center gap-1.5">
               {icon}{title}
-              <span className="text-xs font-normal text-muted-foreground">· {items.length}</span>
             </h2>
             {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
           </div>
@@ -305,6 +304,10 @@ function AppsPage() {
       </section>
     );
   };
+
+  // "All apps" is only revealed when the user searches or picks a specific category.
+  // Otherwise we intentionally show Connected + Recommended only.
+  const showAllApps = query.trim().length > 0 || category !== "All";
 
   return (
     <AppShell>
@@ -326,7 +329,7 @@ function AppsPage() {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search 1,200+ apps"
+              placeholder="Search apps"
               className="h-10 pl-9"
             />
           </div>
@@ -360,7 +363,7 @@ function AppsPage() {
         )}
 
         {filtered.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border p-10 text-center">
+          <div className="rounded-xl border border-border p-10 text-center">
             <Search className="w-5 h-5 mx-auto text-muted-foreground mb-2" />
             <p className="text-sm font-medium">No apps match your filters</p>
             <p className="text-xs text-muted-foreground mt-1">Try a different name or category.</p>
@@ -374,7 +377,7 @@ function AppsPage() {
         ) : (
           <>
             {connectedList.length === 0 && !query && category === "All" && (
-              <div className="rounded-xl border border-dashed border-border p-6 text-sm text-muted-foreground">
+              <div className="rounded-xl border border-border p-6 text-sm text-muted-foreground">
                 You haven't connected any apps yet. Start with a recommended one below.
               </div>
             )}
@@ -390,12 +393,20 @@ function AppsPage() {
               icon={<Sparkles className="w-3.5 h-3.5 text-foreground/70" />}
               items={recommendedList}
             />
-            <Section
-              title="All apps"
-              subtitle="Apps marked Setup needed will be available once their provider credentials are configured."
-              icon={<Link2 className="w-3.5 h-3.5 text-foreground/60" />}
-              items={otherList}
-            />
+            {showAllApps ? (
+              <Section
+                title={category === "All" ? "All apps" : category}
+                subtitle="Apps marked Setup needed will be available once their provider credentials are configured."
+                icon={<Link2 className="w-3.5 h-3.5 text-foreground/60" />}
+                items={otherList}
+              />
+            ) : (
+              otherList.length > 0 && (
+                <div className="rounded-xl border border-border p-5 text-sm text-muted-foreground flex items-center justify-between gap-3">
+                  <span>Browse the full catalog by picking a category above or searching.</span>
+                </div>
+              )
+            )}
           </>
         )}
       </main>
