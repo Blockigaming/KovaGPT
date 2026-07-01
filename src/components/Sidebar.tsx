@@ -163,8 +163,9 @@ export function Sidebar({
               </button>
               <button
                 onClick={onToggle}
-                className="p-2 rounded-md hover:bg-sidebar-hover transition md:hidden"
+                className="p-2 rounded-md hover:bg-sidebar-hover transition active:scale-95"
                 aria-label="Toggle sidebar"
+                title="Toggle sidebar"
               >
                 <PanelLeft className="w-[18px] h-[18px]" />
               </button>
@@ -415,7 +416,7 @@ export function Sidebar({
                 <div>
                   <div className="text-sm font-semibold mb-1">Get responses tailored to you</div>
                   <div className="text-xs text-muted-foreground leading-relaxed">
-                    Log in to get answers based on saved chats, plus create images and upload files.
+                    Log in to get answers based on saved chats, plus create images and upload files all for free with Kova.
                   </div>
                 </div>
                 <SignInButton mode="modal">

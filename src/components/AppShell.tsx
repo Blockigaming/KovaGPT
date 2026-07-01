@@ -54,7 +54,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="flex min-h-[100dvh] w-full bg-background text-foreground">
+    <div className="flex h-[100dvh] w-full bg-background text-foreground overflow-hidden">
       <Sidebar
         conversations={conversations}
         activeId={null}
@@ -67,7 +67,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         onOpenHelp={() => setHelpOpen(true)}
       />
 
-      <div className="flex-1 min-w-0 flex flex-col">
+      <div className="flex-1 min-w-0 flex flex-col overflow-y-auto">
         {!sidebarOpen && (
           <button
             onClick={() => setSidebarOpen(true)}
