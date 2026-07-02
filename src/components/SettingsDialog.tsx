@@ -850,21 +850,15 @@ export function SettingsDialog({
                 {user?.primaryEmailAddress?.emailAddress ?? user?.firstName ?? "your account"}
               </div>
             </div>
-            <div className="space-y-3 text-sm">
-              <SecurityRow
-                title="Password & two-factor"
-                body="Manage your password and turn on 2FA."
-                actionLabel="Open account"
-                onAction={() => clerk?.openUserProfile()}
-              />
-              <SecurityRow
-                title="Active sessions"
-                body="See devices currently signed into your account."
-                actionLabel="Manage"
-                onAction={() => clerk?.openUserProfile()}
-              />
-            </div>
+            {loggedIn ? (
+              <MfaPanel />
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                Sign in to manage two-factor authentication and active sessions.
+              </div>
+            )}
           </TabsContent>
+
 
           {/* DATA CONTROL */}
           <TabsContent value="data" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
