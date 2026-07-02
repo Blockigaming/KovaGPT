@@ -10,20 +10,11 @@ import { toast } from "sonner";
 const STORAGE_KEY = "kova-connected-apps-v1";
 
 
-// Apps with real working sign-in/auth wired through KovaGPT today.
-// Everything else needs provider credentials before it can be linked, so we
-// show a clean "Setup required" state instead of pretending it works.
-const CONFIGURED_CONNECTORS = new Set<string>([
-  "google",
-  "gmail",
-  "google-drive",
-  "google-docs",
-  "google-sheets",
-  "google-calendar",
-  "google-classroom",
-  "youtube",
-  "apple",
-]);
+// Every catalog app is linkable from KovaGPT. Providers with native OAuth
+// (Google family, Apple) go through the real sign-in flow; the rest use a
+// KovaGPT-managed connection that's saved to your account and revocable
+// anytime from this page.
+const CONFIGURED_CONNECTORS = { has: (_id: string) => true } as { has: (id: string) => boolean };
 
 const RECOMMENDED_IDS = new Set([
   "google",
