@@ -89,10 +89,49 @@ export function ChatInput({
     }
   };
 
+  const toggleDictation = () => {
+    const SR: any =
+      typeof window !== "undefined" &&
+      ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+    if (!SR) {
+      toast.error("Dictation isn't supported in this browser.");
+      return;
+    }
+    if (listening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+    const rec = new SR();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = typeof navigator !== "undefined" ? navigator.language : "en-US";
+    let baseText = value;
+    let finalAppend = "";
+    rec.onresult = (e: any) => {
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (r.isFinal) finalAppend += r[0].transcript;
+        else interim += r[0].transcript;
+      }
+      const glue = baseText && !baseText.endsWith(" ") ? " " : "";
+      onChange(baseText + glue + finalAppend + interim);
+    };
+    rec.onerror = () => setListening(false);
+    rec.onend = () => {
+      setListening(false);
+      baseText = "";
+      finalAppend = "";
+    };
+    recognitionRef.current = rec;
+    setListening(true);
+    try {
+      rec.start();
+    } catch {
+      setListening(false);
+    }
+  };
 
-
-
-  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     e.target.value = "";
     let nextValue = value;
