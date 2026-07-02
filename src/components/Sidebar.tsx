@@ -152,10 +152,10 @@ export function Sidebar({
               </span>
               <span className="font-display font-semibold tracking-tight text-[18px]">KovaGPT</span>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 shrink-0 ml-auto">
               <button
                 onClick={() => setSearchOpen((v) => !v)}
-                className="p-2 rounded-md hover:bg-sidebar-hover transition active:scale-95"
+                className="p-2 rounded-md transition-all duration-200 hover:bg-sidebar-hover hover:scale-110 active:scale-95"
                 aria-label="Search chats"
                 title="Search chats"
               >
@@ -163,19 +163,20 @@ export function Sidebar({
               </button>
               <button
                 onClick={onToggle}
-                className="p-2 rounded-md hover:bg-sidebar-hover transition active:scale-95"
+                className="p-2 rounded-md transition-all duration-200 hover:bg-sidebar-hover hover:scale-110 active:scale-95"
                 aria-label="Toggle sidebar"
                 title="Toggle sidebar"
               >
                 <PanelLeft className="w-[18px] h-[18px]" />
               </button>
+            </div>
           </div>
           {/* Subtle fade so scrolled chat list dissolves into the header area */}
           <div
             aria-hidden="true"
             className="pointer-events-none relative z-10 -mt-1 h-4 bg-gradient-to-b from-sidebar to-transparent"
           />
-          </div>
+
 
           {searchOpen && (
             <div className="px-3 pb-2">
