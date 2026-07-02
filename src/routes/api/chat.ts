@@ -416,7 +416,7 @@ export const Route = createFileRoute("/api/chat")({
               { status: 413, headers: { "Content-Type": "application/json" } },
             );
           }
-          const { messages, mode, user, voice, timezone, locale, chatId } = JSON.parse(rawBody) as {
+          const { messages, mode, user, voice, timezone, locale, chatId, personality } = JSON.parse(rawBody) as {
             messages: IncomingMessage[];
             mode?: ModeId;
             user?: UserContext;
@@ -424,7 +424,12 @@ export const Route = createFileRoute("/api/chat")({
             timezone?: string;
             locale?: string;
             chatId?: string;
+            personality?: string;
           };
+          const personalityBlock = (() => {
+            const p = sanitizeLong(personality, 500);
+            return p ? `\n\n--- User personality preferences ---\n${p}\n--- End personality ---` : "";
+          })();
 
           // Hard caps on message volume and per-message size. Anonymous
           // callers and signed-in callers both run through this; signed-in
