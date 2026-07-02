@@ -157,7 +157,7 @@ function ChatMessageInner({
   return (
     <div className="w-full px-4 py-3 group animate-fade-in">
       {isUser ? (
-        <div className="mx-auto max-w-2xl flex justify-end">
+        <div className="mx-auto max-w-3xl flex justify-end">
           <div className="max-w-[80%] sm:max-w-[70%] flex flex-col items-end min-w-0">
             {message.attachments && message.attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2 justify-end">
