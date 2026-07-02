@@ -1,4 +1,4 @@
-import { ArrowUp, Square, Plus, X } from "lucide-react";
+import { ArrowUp, Square, Plus, X, Mic } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { tryUseUpload, DAILY_UPLOAD_LIMIT, getUsage } from "@/lib/limits";
 import { toast } from "sonner";
