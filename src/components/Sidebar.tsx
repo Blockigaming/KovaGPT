@@ -9,9 +9,8 @@ import { useTier } from "@/hooks/useTier";
 import type { Conversation } from "@/lib/chat-store";
 
 
-const MIN_W = 200;
-const MAX_W = 480;
-const WIDTH_KEY = "nova-gpt-sidebar-width";
+const SIDEBAR_WIDTH = 264;
+
 
 export function Sidebar({
   conversations,
