@@ -658,9 +658,6 @@ function KovaGPT() {
                 <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight text-center">
                   {greeting}
                 </h1>
-                <p className="text-sm text-muted-foreground text-center max-w-md -mt-1">
-                  Your private workspace for chat, code, research, images, and voice.
-                </p>
               </div>
 
               <div className="w-full max-w-3xl mx-auto">
