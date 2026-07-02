@@ -280,22 +280,7 @@ function ChatMessageInner({
                     <RefreshCw className="w-4 h-4 mr-2" /> Retry
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => {
-                      setFeedback((f) => (f === "up" ? null : "up"));
-                      toast.success("Thanks for the feedback");
-                    }}
-                  >
-                    <ThumbsUp className={`w-4 h-4 mr-2 ${feedback === "up" ? "fill-current" : ""}`} /> Like
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setFeedback((f) => (f === "down" ? null : "down"));
-                      toast.success("Thanks, we'll improve");
-                    }}
-                  >
-                    <ThumbsDown className={`w-4 h-4 mr-2 ${feedback === "down" ? "fill-current" : ""}`} /> Dislike
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
+
                     onClick={() => {
                       if (onBranch) onBranch();
                       else toast.message("Branching coming to this chat");
