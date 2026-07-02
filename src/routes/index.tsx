@@ -660,9 +660,6 @@ function KovaGPT() {
           )}
           <div className="flex items-center gap-2 min-w-0">
             <div className="flex items-center gap-2 px-1 min-w-0">
-              <span className="inline-flex shrink-0 rounded-full dark:bg-black dark:p-[2px] dark:ring-1 dark:ring-black">
-                <NovaLogo className="w-6 h-6" />
-              </span>
               <span className="font-display font-semibold tracking-tight hidden sm:inline truncate">
                 {mode === "fast" ? "Kova 2.0" : "Kova 2.5"}
               </span>
