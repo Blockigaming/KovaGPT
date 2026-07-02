@@ -650,7 +650,7 @@ export const Route = createFileRoute("/api/chat")({
           // out in settings except for explicit/time-sensitive search asks.
           // Fast mode skips web search entirely to stay instant.
           let webBlock = "";
-          if (lastText && !hasImages && m.id !== "fast") {
+          if (lastText && !hasImages && m.id !== "instant") {
             if (shouldRunWebSearch(lastText, user?.webSearch) || voice) {
               const result = await runWebSearch(lastText, NEWS_TRIGGER.test(lastText) || !!voice);
               if (result) webBlock = result;
