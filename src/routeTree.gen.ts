@@ -40,9 +40,7 @@ import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as BlogBestAiMarketResearchToolsRouteImport } from './routes/blog.best-ai-market-research-tools'
 import { Route as BlogBestAiAssistantsRouteImport } from './routes/blog.best-ai-assistants'
 import { Route as BlogAiMarketResearchGuideRouteImport } from './routes/blog.ai-market-research-guide'
-import { Route as ApiTtsRouteImport } from './routes/api/tts'
 import { Route as ApiTitleRouteImport } from './routes/api/title'
-import { Route as ApiRealtimeSessionRouteImport } from './routes/api/realtime-session'
 import { Route as ApiMemoryRouteImport } from './routes/api/memory'
 import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
@@ -212,19 +210,9 @@ const BlogAiMarketResearchGuideRoute =
     path: '/blog/ai-market-research-guide',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiTtsRoute = ApiTtsRouteImport.update({
-  id: '/api/tts',
-  path: '/api/tts',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiTitleRoute = ApiTitleRouteImport.update({
   id: '/api/title',
   path: '/api/title',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiRealtimeSessionRoute = ApiRealtimeSessionRouteImport.update({
-  id: '/api/realtime-session',
-  path: '/api/realtime-session',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiMemoryRoute = ApiMemoryRouteImport.update({
@@ -316,9 +304,7 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/memory': typeof ApiMemoryRoute
-  '/api/realtime-session': typeof ApiRealtimeSessionRoute
   '/api/title': typeof ApiTitleRoute
-  '/api/tts': typeof ApiTtsRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
   '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
@@ -363,9 +349,7 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/memory': typeof ApiMemoryRoute
-  '/api/realtime-session': typeof ApiRealtimeSessionRoute
   '/api/title': typeof ApiTitleRoute
-  '/api/tts': typeof ApiTtsRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
   '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
@@ -411,9 +395,7 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRoute
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/memory': typeof ApiMemoryRoute
-  '/api/realtime-session': typeof ApiRealtimeSessionRoute
   '/api/title': typeof ApiTitleRoute
-  '/api/tts': typeof ApiTtsRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
   '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
@@ -460,9 +442,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/generate-image'
     | '/api/memory'
-    | '/api/realtime-session'
     | '/api/title'
-    | '/api/tts'
     | '/blog/ai-market-research-guide'
     | '/blog/best-ai-assistants'
     | '/blog/best-ai-market-research-tools'
@@ -507,9 +487,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/generate-image'
     | '/api/memory'
-    | '/api/realtime-session'
     | '/api/title'
-    | '/api/tts'
     | '/blog/ai-market-research-guide'
     | '/blog/best-ai-assistants'
     | '/blog/best-ai-market-research-tools'
@@ -554,9 +532,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/generate-image'
     | '/api/memory'
-    | '/api/realtime-session'
     | '/api/title'
-    | '/api/tts'
     | '/blog/ai-market-research-guide'
     | '/blog/best-ai-assistants'
     | '/blog/best-ai-market-research-tools'
@@ -602,9 +578,7 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRoute
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
   ApiMemoryRoute: typeof ApiMemoryRoute
-  ApiRealtimeSessionRoute: typeof ApiRealtimeSessionRoute
   ApiTitleRoute: typeof ApiTitleRoute
-  ApiTtsRoute: typeof ApiTtsRoute
   BlogAiMarketResearchGuideRoute: typeof BlogAiMarketResearchGuideRoute
   BlogBestAiAssistantsRoute: typeof BlogBestAiAssistantsRoute
   BlogBestAiMarketResearchToolsRoute: typeof BlogBestAiMarketResearchToolsRoute
@@ -840,25 +814,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogAiMarketResearchGuideRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/tts': {
-      id: '/api/tts'
-      path: '/api/tts'
-      fullPath: '/api/tts'
-      preLoaderRoute: typeof ApiTtsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/title': {
       id: '/api/title'
       path: '/api/title'
       fullPath: '/api/title'
       preLoaderRoute: typeof ApiTitleRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/realtime-session': {
-      id: '/api/realtime-session'
-      path: '/api/realtime-session'
-      fullPath: '/api/realtime-session'
-      preLoaderRoute: typeof ApiRealtimeSessionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/memory': {
@@ -970,9 +930,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRoute,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
   ApiMemoryRoute: ApiMemoryRoute,
-  ApiRealtimeSessionRoute: ApiRealtimeSessionRoute,
   ApiTitleRoute: ApiTitleRoute,
-  ApiTtsRoute: ApiTtsRoute,
   BlogAiMarketResearchGuideRoute: BlogAiMarketResearchGuideRoute,
   BlogBestAiAssistantsRoute: BlogBestAiAssistantsRoute,
   BlogBestAiMarketResearchToolsRoute: BlogBestAiMarketResearchToolsRoute,

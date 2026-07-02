@@ -1,6 +1,5 @@
-import { ArrowUp, Square, Mic, Plus, X, AudioLines } from "lucide-react";
+import { ArrowUp, Square, Plus, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { createRecognition, sttSupported } from "@/lib/voice";
 import { tryUseUpload, DAILY_UPLOAD_LIMIT, getUsage } from "@/lib/limits";
 import { toast } from "sonner";
 import { ModelSelector } from "@/components/ModelSelector";
@@ -22,7 +21,6 @@ export function ChatInput({
   mode,
   onModeChange,
   userTier = "free",
-  onOpenVoice,
   onUploadLimit,
   placeholder,
 }: {
@@ -36,7 +34,6 @@ export function ChatInput({
   mode?: ModeId;
   onModeChange?: (m: ModeId) => void;
   userTier?: Tier;
-  onOpenVoice?: () => void;
   /** Called when the user hits their daily upload quota. */
   onUploadLimit?: () => void;
   placeholder?: string;
@@ -44,8 +41,6 @@ export function ChatInput({
 
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const recRef = useRef<any>(null);
-  const [listening, setListening] = useState(false);
   const [sendFlash, setSendFlash] = useState(false);
   const [actionColor, setActionColor] = useState<string>("#3b82f6");
 
@@ -91,27 +86,8 @@ export function ChatInput({
     }
   };
 
-  const toggleMic = () => {
-    if (!sttSupported()) {
-      toast.error("Voice input isn't supported in this browser.");
-      return;
-    }
-    if (listening) {
-      recRef.current?.stop();
-      setListening(false);
-      return;
-    }
-    const rec = createRecognition(
-      (text, isFinal) => {
-        if (isFinal) onChange((value ? value + " " : "") + text);
-      },
-      () => setListening(false),
-    );
-    if (!rec) return;
-    recRef.current = rec;
-    rec.start();
-    setListening(true);
-  };
+
+
 
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -221,24 +197,11 @@ export function ChatInput({
               value={value}
               onChange={(e) => onChange(e.target.value)}
               onKeyDown={handleKey}
-              placeholder={listening ? "Listening…" : (placeholder ?? "Message KovaGPT…")}
+              placeholder={placeholder ?? "Message KovaGPT…"}
               rows={1}
               className="flex-1 resize-none bg-transparent px-3 py-4 outline-none text-foreground placeholder:text-muted-foreground max-h-[200px]"
             />
             <div className="flex items-center gap-1 p-2">
-              <button
-                type="button"
-                onClick={toggleMic}
-                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 backdrop-blur-md border border-white/10 ${
-                  listening
-                    ? "bg-destructive text-destructive-foreground animate-pulse"
-                    : "bg-white/5 hover:bg-white/15 hover:border-white/25 hover:shadow-[0_4px_20px_rgba(255,255,255,0.1)] hover:scale-105 active:scale-95"
-                }`}
-                aria-label="Voice input"
-                title="Voice input"
-              >
-                <Mic className="w-4 h-4" />
-              </button>
               {isStreaming ? (
                 <button
                   type="button"
@@ -260,18 +223,6 @@ export function ChatInput({
                   aria-label="Send"
                 >
                   <ArrowUp className={`w-5 h-5 transition-transform duration-300 ${sendFlash ? "-translate-y-1.5 opacity-0" : ""}`} />
-                </button>
-
-              ) : onOpenVoice ? (
-                <button
-                  type="button"
-                  onClick={onOpenVoice}
-                  style={{ backgroundColor: actionColor }}
-                  className="w-9 h-9 rounded-full text-white flex items-center justify-center backdrop-blur-md border border-white/20 transition-all duration-200 hover:opacity-95 hover:scale-105 hover:shadow-[0_6px_24px_rgba(255,255,255,0.18)] hover:border-white/40 active:scale-90 duration-150"
-                  aria-label="Voice mode"
-                  title="Voice mode"
-                >
-                  <AudioLines className="w-4 h-4" />
                 </button>
               ) : (
                 <button

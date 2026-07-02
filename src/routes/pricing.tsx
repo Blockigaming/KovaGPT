@@ -178,7 +178,7 @@ function PricingPage() {
               "Basic Mode",
               "Limited image generations",
               "Limited file uploads",
-              "Voice input & read-aloud",
+              "File & image uploads",
               "Conversation history saved when signed in",
             ]}
           />

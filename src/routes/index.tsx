@@ -3,7 +3,6 @@ import { authFetch } from "@/lib/auth-fetch";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
 import { PanelLeft, Search } from "lucide-react";
-import { NovaLogo } from "@/components/NovaLogo";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
@@ -17,7 +16,6 @@ import { applyThemeMode } from "@/lib/theme";
 
 import { getUsage } from "@/lib/limits";
 
-import { VoiceMode } from "@/components/VoiceMode";
 import {
   useUser,
   useClerkSafe,
@@ -26,7 +24,6 @@ import {
   UserButton,
   clerkEnabled,
 } from "@/components/auth/ClerkSafe";
-import { speak } from "@/lib/voice";
 import { type ModeId } from "@/lib/modes";
 import {
   type Conversation,
@@ -47,18 +44,18 @@ export const Route = createFileRoute("/")({
       { title: "KovaGPT" },
       {
         name: "description",
-        content: "See AI at its highest potential - chat, code, research, create images, and speak out loud.",
+        content: "KovaGPT — a multimodal AI assistant for chat, code, research, and image generation.",
       },
       { property: "og:title", content: "KovaGPT" },
       {
         property: "og:description",
-        content: "See AI at its highest potential - chat, code, research, create images, and speak out loud.",
+        content: "KovaGPT — a multimodal AI assistant for chat, code, research, and image generation.",
       },
       { property: "og:url", content: "https://kovagpt.com/" },
       { name: "twitter:title", content: "KovaGPT" },
       {
         name: "twitter:description",
-        content: "See AI at its highest potential - chat, code, research, create images, and speak out loud.",
+        content: "KovaGPT — a multimodal AI assistant for chat, code, research, and image generation.",
       },
     ],
     links: [{ rel: "canonical", href: "https://kovagpt.com/" }],
@@ -89,16 +86,6 @@ function KovaGPT() {
   const { isSignedIn, isLoaded, user } = useUser();
   const { openSignUp } = useClerkSafe();
   const userKey = user?.id ?? null;
-  const tryOpenVoice = useCallback(() => {
-    // Voice mode is free for all users. Sign-in is requested only so we can
-    // enforce per-user quotas server-side.
-    if (!isSignedIn) {
-      toast.message("Sign in (free) to use voice mode");
-      openSignUp();
-      return;
-    }
-    setVoiceModeOpen(true);
-  }, [isSignedIn, openSignUp]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
@@ -154,7 +141,6 @@ function KovaGPT() {
   const [shareChatId, setShareChatId] = useState<string | null>(null);
   const [membersChatId, setMembersChatId] = useState<string | null>(null);
   
-  const [voiceModeOpen, setVoiceModeOpen] = useState(false);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [signupPromptOpen, setSignupPromptOpen] = useState(false);
   const [signupPromptShown, setSignupPromptShown] = useState(false);
@@ -166,32 +152,6 @@ function KovaGPT() {
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const voiceOnTurn = useCallback((userText: string, assistantText: string) => {
-    const userMsg: Message = { id: newId(), role: "user", content: userText };
-    const aiMsg: Message = { id: newId(), role: "assistant", content: assistantText };
-    setConversations((prev) => {
-      if (activeId) {
-        return prev.map((c) =>
-          c.id === activeId
-            ? { ...c, messages: [...c.messages, userMsg, aiMsg], updatedAt: Date.now() }
-            : c,
-        );
-      }
-      const id = newId();
-      setActiveId(id);
-      return [
-        {
-          id,
-          title: "New chat",
-          messages: [userMsg, aiMsg],
-          mode,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        },
-        ...prev,
-      ];
-    });
-  }, [activeId, mode]);
 
 
   // Load (or reload) settings whenever the signed-in user changes so each
@@ -563,11 +523,6 @@ function KovaGPT() {
           autoTitle(nextConvId, fullMsgs);
         }
 
-
-        // Auto speak
-        if (settings.autoSpeak && assembledReply) {
-          speak(assembledReply, { rate: settings.voiceRate, voice: settings.voiceName });
-        }
       } catch (e: unknown) {
         if ((e as Error).name !== "AbortError") {
           const msg = e instanceof Error ? e.message : "Something went wrong";
@@ -719,22 +674,12 @@ function KovaGPT() {
           <div className="flex-1 flex flex-col overflow-y-auto px-4">
             <div className="flex-1 flex flex-col items-center justify-center w-full py-10">
               <div className="flex flex-col items-center gap-4 mb-6">
-                <NovaLogo className="w-12 h-12" />
                 <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight text-center">
                   {greeting}
                 </h1>
               </div>
 
               <div className="w-full max-w-3xl mx-auto">
-                <VoiceMode
-                  open={voiceModeOpen}
-                  onClose={() => setVoiceModeOpen(false)}
-                  initialMessages={active?.messages ?? []}
-                  voiceName={settings.voiceName}
-                  voiceRate={settings.voiceRate}
-                  onTurn={voiceOnTurn}
-                />
-
                 <ChatInput
                   value={input}
                   onChange={setInput}
@@ -745,7 +690,6 @@ function KovaGPT() {
                   onAttachmentsChange={setAttachments}
                   mode={mode}
                   onModeChange={setMode}
-                  onOpenVoice={tryOpenVoice}
                   onUploadLimit={() =>
                     setLimitDialog({ open: true, kind: "upload" })
                   }
@@ -778,7 +722,7 @@ function KovaGPT() {
                     key={m.id}
                     message={m}
                     streaming={isStreaming && isLastAssistant}
-                    voiceRate={settings.voiceRate}
+                    
                     onFollowUp={
                       isLastAssistant && !isStreaming
                         ? (prompt) => send(prompt, [])
@@ -829,17 +773,6 @@ function KovaGPT() {
                 );
               })}
             </div>
-            <div className="w-full max-w-3xl mx-auto">
-              <VoiceMode
-                open={voiceModeOpen}
-                onClose={() => setVoiceModeOpen(false)}
-                initialMessages={active?.messages ?? []}
-                voiceName={settings.voiceName}
-                voiceRate={settings.voiceRate}
-                onTurn={voiceOnTurn}
-              />
-            </div>
-
             <ChatInput
               value={input}
               onChange={setInput}
@@ -850,7 +783,6 @@ function KovaGPT() {
               onAttachmentsChange={setAttachments}
               mode={mode}
               onModeChange={setMode}
-              onOpenVoice={tryOpenVoice}
               onUploadLimit={() =>
                 setLimitDialog({ open: true, kind: "upload" })
               }
@@ -898,7 +830,7 @@ function KovaGPT() {
       />
 
 
-      {/* VoiceMode is rendered inline above the ChatInput in main; see above. */}
+      
     </div>
   );
 }
