@@ -268,7 +268,7 @@ export function SettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="liquid-glass-strong max-w-4xl max-h-[90vh] overflow-hidden flex flex-col gap-0 p-0 rounded-2xl">
+      <DialogContent className="bg-background border border-border max-w-4xl max-h-[90vh] overflow-hidden flex flex-col gap-0 p-0 rounded-2xl">
         <DialogHeader className="px-7 pt-6 pb-5 border-b border-border">
           <DialogTitle className="text-xl font-semibold tracking-tight font-display">
             Settings
@@ -909,9 +909,9 @@ export function SettingsDialog({
 
           {/* FAMILY CENTER */}
           <TabsContent value="family" className="overflow-y-auto px-7 pb-8 space-y-5 py-5">
-            <div className="liquid-glass rounded-2xl p-5 space-y-3">
+            <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl liquid-glass-soft flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-muted border border-border/60 flex items-center justify-center">
                   <Users className="w-5 h-5" />
                 </div>
                 <div>
