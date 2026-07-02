@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
-import { PanelLeft } from "lucide-react";
+import { PanelLeft, Search } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatMessage } from "@/components/ChatMessage";
