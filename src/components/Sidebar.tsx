@@ -213,30 +213,30 @@ export function Sidebar({
           <div className="px-3 flex flex-col gap-0.5">
             <Link to="/library" className={navItemClass(isOn("/library"))}>
               <ActiveBar on={isOn("/library")} />
-              <FolderOpen className="w-[18px] h-[18px]" />
-              <span>Library</span>
+              <FolderOpen className="w-[18px] h-[18px] shrink-0" />
+              <span className="truncate">Library</span>
             </Link>
             <Link to="/apps" className={navItemClass(isOn("/apps"))}>
               <ActiveBar on={isOn("/apps")} />
-              <Link2 className="w-[18px] h-[18px]" />
-              <span>Apps</span>
+              <Link2 className="w-[18px] h-[18px] shrink-0" />
+              <span className="truncate">Apps</span>
             </Link>
             <Link to="/images" className={navItemClass(isOn("/images"))}>
               <ActiveBar on={isOn("/images")} />
-              <ImageIcon className="w-[18px] h-[18px]" />
-              <span>Image Generation</span>
+              <ImageIcon className="w-[18px] h-[18px] shrink-0" />
+              <span className="truncate">Image Generation</span>
             </Link>
             {showSignedIn && (
               <Link to="/scheduled-tasks" className={navItemClass(isOn("/scheduled-tasks"))}>
                 <ActiveBar on={isOn("/scheduled-tasks")} />
-                <Calendar className="w-[18px] h-[18px]" />
-                <span>Scheduled Tasks</span>
+                <Calendar className="w-[18px] h-[18px] shrink-0" />
+                <span className="truncate">Scheduled Tasks</span>
               </Link>
             )}
             <Link to="/pricing" className={navItemClass(isOn("/pricing"))}>
               <ActiveBar on={isOn("/pricing")} />
-              <CreditCard className="w-[18px] h-[18px]" />
-              <span>Subscriptions</span>
+              <CreditCard className="w-[18px] h-[18px] shrink-0" />
+              <span className="truncate">Subscriptions</span>
             </Link>
           </div>
 
