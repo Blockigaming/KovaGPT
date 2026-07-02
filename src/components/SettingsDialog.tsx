@@ -885,22 +885,25 @@ export function SettingsDialog({
 
           {/* STORAGE */}
           <TabsContent value="storage" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
-            <h3 className="text-sm font-semibold">Storage</h3>
-            <p className="text-xs text-muted-foreground">
-              Conversations and preferences are stored locally on this device and synced to your account.
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                clearConversations();
-                onClearAll();
-                toast.success("Local storage cleared.");
-              }}
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Clear local storage
-            </Button>
+            <StorageDashboard signedIn={loggedIn} />
+            <div className="rounded-2xl border border-border bg-card/60 backdrop-blur-sm p-5 space-y-3">
+              <h3 className="text-sm font-semibold">Local device data</h3>
+              <p className="text-xs text-muted-foreground">
+                Clears cached chats, drafts, and preferences stored on this device. Cloud data is not affected.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  clearConversations();
+                  onClearAll();
+                  toast.success("Local storage cleared.");
+                }}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Clear local storage
+              </Button>
+            </div>
           </TabsContent>
 
           {/* REPORT ISSUE */}
