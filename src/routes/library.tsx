@@ -77,7 +77,7 @@ function LibraryPage() {
   return (
     <AppShell>
       <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center gap-3">
+        <div className="w-full px-4 sm:px-6 lg:px-10 py-3 flex items-center gap-3">
           <h1 className="font-display font-semibold tracking-tight text-base flex items-center gap-2">
             <FolderOpen className="w-4 h-4" /> Library
           </h1>
@@ -90,7 +90,7 @@ function LibraryPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-6 space-y-4">
+      <main className="w-full px-4 sm:px-6 lg:px-10 py-6 space-y-4">
         {!isSignedIn && isLoaded && (
           <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm">
             <div className="font-medium mb-1">You are browsing as a guest.</div>
@@ -115,7 +115,7 @@ function LibraryPage() {
         />
 
         {filtered.length === 0 ? (
-          <div className="rounded-lg border border-border p-12 text-center text-sm text-muted-foreground">
+          <div className="w-full rounded-lg border border-border p-12 text-center text-sm text-muted-foreground">
             {loading
               ? "Loading..."
               : items.length === 0
@@ -123,7 +123,8 @@ function LibraryPage() {
                 : "No items match your search."}
           </div>
         ) : (
-          <ul className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(240px,1fr))]">
+          <ul className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(260px,1fr))]">
+
             {filtered.map((it) => {
               const isImage = it.file_url && (it.item_type === "image" || it.file_type?.startsWith("image/"));
               return (
