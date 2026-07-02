@@ -691,13 +691,26 @@ function KovaGPT() {
               </div>
             </div>
 
-            <nav className="w-full max-w-3xl mx-auto py-4 flex flex-wrap gap-x-4 gap-y-1 text-sm justify-center">
-              <Link to="/pricing" className="text-muted-foreground hover:text-foreground underline underline-offset-2">Pricing</Link>
-              <Link to="/images" className="text-muted-foreground hover:text-foreground underline underline-offset-2">Images</Link>
-              <Link to="/modes" className="text-muted-foreground hover:text-foreground underline underline-offset-2">Modes</Link>
-              <Link to="/privacy" className="text-muted-foreground hover:text-foreground underline underline-offset-2">Privacy Policy</Link>
-              <Link to="/contact-support" className="text-muted-foreground hover:text-foreground underline underline-offset-2">Contact Support</Link>
-            </nav>
+            <div className="w-full max-w-3xl mx-auto pb-6 flex flex-wrap gap-2 justify-center">
+              {[
+                "Create an image",
+                "Search the web",
+                "Nail down a concept",
+                "Draft an email",
+                "Summarize this",
+                "Plan my day",
+              ].map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setInput((v) => (v ? v : p))}
+                  className="text-sm px-3.5 py-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition"
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+
           </div>
         ) : (
           <>
