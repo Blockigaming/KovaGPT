@@ -179,7 +179,7 @@ function ChatMessageInner({
           </div>
         </div>
       ) : (
-        <div className="mx-auto max-w-2xl flex gap-3 sm:gap-4 justify-start pr-4 sm:pr-12">
+        <div className="mx-auto max-w-3xl flex gap-3 sm:gap-4 justify-start">
           <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center">
             <NovaLogo className="w-8 h-8" />
           </div>
