@@ -743,7 +743,7 @@ export function SettingsDialog({
             <section className="space-y-3">
               <h3 className="text-sm font-semibold">Action button color</h3>
               <p className="text-xs text-muted-foreground">
-                Color for the send and voice buttons. Default is KovaGPT blue.
+                Color for the send and other primary action buttons. Default is KovaGPT blue.
               </p>
               <div className="flex items-center gap-3">
                 <input
