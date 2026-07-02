@@ -50,18 +50,17 @@ export const Route = createFileRoute("/api/realtime-session")({
         };
         const ALLOWED_VOICES = new Set([
           "alloy", "ash", "ballad", "coral", "echo",
-          "sage", "shimmer", "verse", "marin", "cedar",
+          "sage", "shimmer", "verse",
         ]);
-        const voice = body.voice && ALLOWED_VOICES.has(body.voice) ? body.voice : "marin";
+        const voice = body.voice && ALLOWED_VOICES.has(body.voice) ? body.voice : "verse";
         const instructions =
           (typeof body.instructions === "string" ? body.instructions.slice(0, 4000) : "") ||
           "You are KovaGPT, a warm, helpful, conversational AI built by Zachary Block. Speak naturally in short, complete sentences. Keep replies under three sentences unless asked for more. Never use markdown, lists, or symbols. Acknowledge user feelings briefly before solving. Never repeat profanity. Stay PG.";
 
-        // gpt-realtime is the current GA realtime model and supports the
-        // newer voices (marin, cedar). The old gpt-4o-realtime-preview
-        // model rejects those voices, which was the source of the
-        // "Could not start realtime voice session" error.
-        const model = "gpt-realtime";
+        // The /v1/realtime/sessions endpoint currently serves the
+        // gpt-4o-realtime-preview family. gpt-realtime GA uses a different
+        // endpoint (/v1/realtime/client_secrets), which was causing 404s.
+        const model = "gpt-4o-realtime-preview-2024-12-17";
         const resp = await fetch("https://api.openai.com/v1/realtime/sessions", {
           method: "POST",
           headers: {
