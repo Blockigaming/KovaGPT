@@ -639,13 +639,6 @@ function KovaGPT() {
               </button>
             </div>
           )}
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="flex items-center gap-2 px-1 min-w-0">
-              <span className="font-display font-semibold tracking-tight hidden sm:inline truncate">
-                {mode === "fast" ? "Kova 2.0" : "Kova 2.5"}
-              </span>
-            </div>
-          </div>
 
 
 
