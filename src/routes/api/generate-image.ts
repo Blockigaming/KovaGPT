@@ -27,21 +27,23 @@ async function tryModel(
   model: string,
   prompt: string,
   apiKey: string,
+  size: string,
 ): Promise<{ imageUrl?: string; status: number; error?: string }> {
   const isOpenAI = model.startsWith("openai/");
   const body = isOpenAI
     ? {
         model,
         prompt,
-        size: "1024x1024",
+        size,
         quality: "low",
         n: 1,
       }
     : {
         model,
-        messages: [{ role: "user", content: prompt }],
+        messages: [{ role: "user", content: `${prompt}\n\n(Target aspect ratio / size: ${size})` }],
         modalities: ["image", "text"],
       };
+
 
   const endpoint = isOpenAI
     ? "https://ai.gateway.lovable.dev/v1/images/generations"
