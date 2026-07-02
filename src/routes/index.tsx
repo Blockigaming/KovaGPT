@@ -3,7 +3,6 @@ import { authFetch } from "@/lib/auth-fetch";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
 import { PanelLeft, Search } from "lucide-react";
-import { NovaLogo } from "@/components/NovaLogo";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
@@ -17,7 +16,6 @@ import { applyThemeMode } from "@/lib/theme";
 
 import { getUsage } from "@/lib/limits";
 
-import { VoiceMode } from "@/components/VoiceMode";
 import {
   useUser,
   useClerkSafe,
@@ -26,7 +24,6 @@ import {
   UserButton,
   clerkEnabled,
 } from "@/components/auth/ClerkSafe";
-import { speak } from "@/lib/voice";
 import { type ModeId } from "@/lib/modes";
 import {
   type Conversation,
@@ -89,16 +86,6 @@ function KovaGPT() {
   const { isSignedIn, isLoaded, user } = useUser();
   const { openSignUp } = useClerkSafe();
   const userKey = user?.id ?? null;
-  const tryOpenVoice = useCallback(() => {
-    // Voice mode is free for all users. Sign-in is requested only so we can
-    // enforce per-user quotas server-side.
-    if (!isSignedIn) {
-      toast.message("Sign in (free) to use voice mode");
-      openSignUp();
-      return;
-    }
-    setVoiceModeOpen(true);
-  }, [isSignedIn, openSignUp]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
