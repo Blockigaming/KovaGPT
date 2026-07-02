@@ -551,7 +551,7 @@ export function SettingsDialog({
                         key={item.id}
                         item={item}
                         linked={linked}
-                        canConnect={tier !== "free"}
+                        canConnect={true}
                         onConnect={async (p) => {
                           if (!user?.id) return;
                           const res = await connectProvider(user.id, p);
