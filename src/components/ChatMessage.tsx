@@ -155,9 +155,9 @@ function ChatMessageInner({
   };
 
   return (
-    <div className="w-full px-4 py-3 group animate-fade-in">
+    <div className="w-full px-6 sm:px-12 lg:px-20 py-3 group animate-fade-in">
       {isUser ? (
-        <div className="mx-auto max-w-2xl flex justify-end">
+        <div className="mx-auto max-w-3xl flex justify-end">
           <div className="max-w-[80%] sm:max-w-[70%] flex flex-col items-end min-w-0">
             {message.attachments && message.attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2 justify-end">
@@ -179,7 +179,7 @@ function ChatMessageInner({
           </div>
         </div>
       ) : (
-        <div className="mx-auto max-w-2xl flex gap-3 sm:gap-4 justify-start pr-4 sm:pr-12">
+        <div className="mx-auto max-w-3xl flex gap-3 sm:gap-4 justify-start">
           <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center">
             <NovaLogo className="w-8 h-8" />
           </div>
@@ -207,8 +207,8 @@ function ChatMessageInner({
           </div>
         </div>
       )}
-      <div className="mx-auto max-w-2xl">
-        <div className={isUser ? "flex justify-end" : "sm:pl-12"}>
+      <div className="mx-auto max-w-3xl">
+        <div className={isUser ? "flex justify-end" : "pl-11 sm:pl-12"}>
           {!streaming && !isUser && message.content && (
             <div className="mt-2 flex flex-wrap items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
               {/* Visible: Copy, Read aloud, Share */}
