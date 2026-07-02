@@ -418,7 +418,12 @@ export function SettingsDialog({
                 />
               </div>
             </section>
+
+            <section className="space-y-3">
+              <PersonalitySliders />
+            </section>
           </TabsContent>
+
 
           {/* MEMORY */}
           <TabsContent value="memory" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
