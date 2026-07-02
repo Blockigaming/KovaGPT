@@ -830,7 +830,7 @@ function KovaGPT() {
       />
 
 
-      {/* VoiceMode is rendered inline above the ChatInput in main; see above. */}
+      
     </div>
   );
 }
