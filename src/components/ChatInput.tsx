@@ -41,8 +41,11 @@ export function ChatInput({
 
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
   const [sendFlash, setSendFlash] = useState(false);
   const [actionColor, setActionColor] = useState<string>("#3b82f6");
+  const [listening, setListening] = useState(false);
+
 
   useEffect(() => {
     try {
