@@ -164,7 +164,7 @@ export function ChatInput({
 
   return (
     <div className="w-full px-6 sm:px-12 lg:px-20 pb-4 pt-2 bg-gradient-to-t from-background via-background to-transparent">
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-3xl [[data-sidebar=closed]_&]:max-w-4xl">
         <div
           style={
             sendFlash
