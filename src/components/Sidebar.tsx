@@ -83,18 +83,17 @@ export function Sidebar({
       >
         <div style={{ width: SIDEBAR_WIDTH }} className="flex flex-col h-full">
 
-          {/* Brand row sits on top; fade beneath obscures scrolled content */}
-          <div className="relative z-20 flex items-center gap-2 px-3 sm:px-4 pt-4 pb-3 bg-sidebar">
+          {/* Brand row blends into the app background via a bottom gradient */}
+          <div className="relative z-20 flex items-center gap-2 px-3 sm:px-4 pt-4 pb-4 bg-gradient-to-b from-background via-background/95 to-transparent">
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <span className="inline-flex shrink-0 rounded-full dark:bg-black dark:p-[2px] dark:ring-1 dark:ring-black">
                 <NovaLogo className="w-7 h-7" />
               </span>
-              {width >= 240 && (
-                <span className="font-display font-semibold tracking-tight text-[18px] truncate">
-                  KovaGPT
-                </span>
-              )}
+              <span className="font-display font-semibold tracking-tight text-[18px] truncate">
+                KovaGPT
+              </span>
             </div>
+
             <div className="flex items-center gap-1 shrink-0 ml-auto">
               <button
                 onClick={() => setSearchOpen((v) => !v)}
