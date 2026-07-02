@@ -827,40 +827,7 @@ function KovaGPT() {
       />
 
 
-      <VoiceMode
-        open={voiceModeOpen}
-        onClose={() => setVoiceModeOpen(false)}
-        initialMessages={active?.messages ?? []}
-        voiceName={settings.voiceName}
-        voiceRate={settings.voiceRate}
-        onTurn={(userText, assistantText) => {
-          // Append turn to active conversation (or create one)
-          const userMsg: Message = { id: newId(), role: "user", content: userText };
-          const aiMsg: Message = { id: newId(), role: "assistant", content: assistantText };
-          setConversations((prev) => {
-            if (activeId) {
-              return prev.map((c) =>
-                c.id === activeId
-                  ? { ...c, messages: [...c.messages, userMsg, aiMsg], updatedAt: Date.now() }
-                  : c,
-              );
-            }
-            const id = newId();
-            setActiveId(id);
-            return [
-              {
-                id,
-                title: "New chat",
-                messages: [userMsg, aiMsg],
-                mode,
-                createdAt: Date.now(),
-                updatedAt: Date.now(),
-              },
-              ...prev,
-            ];
-          });
-        }}
-      />
+      {/* VoiceMode is rendered inline above the ChatInput in main; see above. */}
     </div>
   );
 }
