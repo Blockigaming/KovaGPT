@@ -60,6 +60,7 @@ import { useEffect, useState } from "react";
 import { getMyDailyUsage, type DailyUsageDto } from "@/utils/usage.functions";
 import { PersonalitySliders } from "@/components/PersonalitySliders";
 import { StorageDashboard } from "@/components/StorageDashboard";
+import { FamilySharingPanel } from "@/components/FamilySharingPanel";
 import { MfaPanel } from "@/components/MfaPanel";
 import { clearConversations } from "@/lib/chat-store";
 import { getUsage, DAILY_IMAGE_LIMIT, DAILY_UPLOAD_LIMIT } from "@/lib/limits";
@@ -499,6 +500,15 @@ export function SettingsDialog({
               <p className="text-xs text-muted-foreground">
                 Connect external accounts so KovaGPT can use them in your chats. Live integrations work today; others are on the roadmap.
               </p>
+              <div className="mt-2 rounded-lg border border-border/60 bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
+                <div className="text-foreground font-medium">Privacy: what "Connect" actually does</div>
+                <p>
+                  Connecting an app <span className="font-medium text-foreground">only records that you linked it</span>.
+                  KovaGPT does not run in the background, does not poll your Gmail/Drive/school portal,
+                  and never signs in on your behalf between sessions. You can disconnect at any time —
+                  the local link is removed immediately.
+                </p>
+              </div>
               {tier === "free" && (
                 <p className="text-xs text-amber-600 dark:text-amber-400 pt-1">
                   Linked apps are a Plus feature. Upgrade to connect external accounts.
@@ -909,42 +919,11 @@ export function SettingsDialog({
 
           {/* FAMILY CENTER */}
           <TabsContent value="family" className="overflow-y-auto px-7 pb-8 space-y-5 py-5">
-            <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-muted border border-border/60 flex items-center justify-center">
-                  <Users className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold">Family Center</h3>
-                  <p className="text-xs text-muted-foreground">Share KovaGPT Plus or Pro with up to 5 family members.</p>
-                </div>
-              </div>
-              <div className="grid gap-2 pt-2">
-                <ToggleRow
-                  title="Enable Family sharing"
-                  hint="Invite members to your plan. Each gets their own private workspace."
-                  checked={settings.parentalMode === false}
-                  onCheckedChange={() => toast.message("Family sharing", { description: "Invite links are rolling out soon. Your seat is reserved." })}
-                />
-                <ToggleRow
-                  title="Kid-safe filters for members under 13"
-                  hint="Applies stricter safety filters and disables mature content for child accounts."
-                  checked={!!settings.parentalMode}
-                  onCheckedChange={(v) => onChange({ ...settings, parentalMode: v })}
-                />
-              </div>
-              <div className="flex flex-wrap gap-2 pt-2">
-                <Button size="sm" variant="outline" onClick={() => toast.message("Invite sent", { description: "We'll email your family member a link to join." })}>
-                  Invite a member
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => toast.message("Manage seats", { description: "Seat management opens in Subscription." })}>
-                  Manage seats
-                </Button>
-              </div>
-            </div>
-            <p className="text-[11px] text-muted-foreground px-1">
-              Family sharing requires an active Plus or Pro subscription. Billing stays on the plan owner.
-            </p>
+            {!loggedIn ? (
+              <SignInGate label="Family Sharing" />
+            ) : (
+              <FamilySharingPanel />
+            )}
           </TabsContent>
 
           {/* REPORT ISSUE */}
@@ -1072,7 +1051,7 @@ function ConnectorRow({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+            className="h-8 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
             onClick={() => onDisconnect(item.legacyProvider as LinkedProvider)}
           >
             Disconnect

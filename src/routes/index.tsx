@@ -124,6 +124,32 @@ function KovaGPT() {
     window.addEventListener("kova-open-settings", h);
     return () => window.removeEventListener("kova-open-settings", h);
   }, [openSettings]);
+
+  // Family Sharing: if the URL carries ?family_invite=TOKEN, redeem it once
+  // the user is signed in and drop the param.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    const token = url.searchParams.get("family_invite");
+    if (!token) return;
+    if (!isSignedIn) {
+      toast.message("Sign in to accept the family invite");
+      openSignUp();
+      return;
+    }
+    (async () => {
+      try {
+        const { acceptFamilyInvite } = await import("@/lib/family.functions");
+        await acceptFamilyInvite({ data: { token } });
+        toast.success("Joined family plan.");
+      } catch (e) {
+        toast.error((e as Error).message || "Could not accept invite.");
+      } finally {
+        url.searchParams.delete("family_invite");
+        window.history.replaceState({}, "", url.toString());
+      }
+    })();
+  }, [isSignedIn, openSignUp]);
   const [helpOpen, setHelpOpen] = useState(false);
   const [shareChatId, setShareChatId] = useState<string | null>(null);
   const [membersChatId, setMembersChatId] = useState<string | null>(null);

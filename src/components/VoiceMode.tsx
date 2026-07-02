@@ -1,18 +1,13 @@
-// Voice mode powered by OpenAI Realtime API over WebRTC.
+// Voice mode via OpenAI Realtime API over WebRTC.
 //
-// For Plus+ / Pro users (gated server-side by /api/realtime-session),
-// this opens a peer connection straight to OpenAI for true conversational
-// voice: barge-in interruptions, natural turn-taking, sub-300ms latency.
-//
-// Architecture:
-// 1. Fetch an ephemeral session token from /api/realtime-session
-// 2. Create RTCPeerConnection, add mic track, attach an audio sink
-//    for incoming model audio
-// 3. Open a "oai-events" data channel for JSON events (transcripts etc)
-// 4. POST the local SDP offer to OpenAI Realtime, set remote answer
-//
-// On any failure (no key on server, free tier, network), we fall back to
-// the legacy turn-based TTS path so voice still works.
+// UX contract (Phase 2):
+//   * No separate "voice screen" — voice sits inline above the chat input.
+//   * Big animated NovaLogo that reacts to microphone + assistant audio via
+//     AnalyserNode (real audio-reactive scale, not just CSS pulse).
+//   * Barge-in: when the user starts speaking, we cancel the current
+//     assistant response and mute remote audio until the next response.
+//   * Each completed turn fires onTurn(userText, assistantText) so the
+//     parent inserts real chat bubbles into the transcript.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { authFetch } from "@/lib/auth-fetch";
 import { X, Mic, MicOff } from "lucide-react";
@@ -38,23 +33,33 @@ export function VoiceMode({
 }) {
   const [status, setStatus] = useState<Status>("connecting");
   const [muted, setMuted] = useState(false);
-  const [transcript, setTranscript] = useState("");
-  const [reply, setReply] = useState("");
+  const [level, setLevel] = useState(0); // 0..1 audio energy for the logo
 
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
   const audioElRef = useRef<HTMLAudioElement | null>(null);
   const dataChannelRef = useRef<RTCDataChannel | null>(null);
 
+  // Web Audio graph for audio-reactive animation + barge-in metering.
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const micAnalyserRef = useRef<AnalyserNode | null>(null);
+  const remoteAnalyserRef = useRef<AnalyserNode | null>(null);
+  const rafRef = useRef<number | null>(null);
+
   const currentUserTextRef = useRef("");
   const currentAssistantTextRef = useRef("");
+  const activeResponseIdRef = useRef<string | null>(null);
 
   const voice = (() => {
-    const allowed = ["alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse", "marin", "cedar"];
-    return allowed.includes(voiceName) ? voiceName : "marin";
+    const allowed = ["alloy", "ash", "ballad", "coral", "echo", "sage", "shimmer", "verse"];
+    return allowed.includes(voiceName) ? voiceName : "verse";
   })();
 
   const cleanup = useCallback(() => {
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
     try { dataChannelRef.current?.close(); } catch { /* ignore */ }
     dataChannelRef.current = null;
     try { pcRef.current?.close(); } catch { /* ignore */ }
@@ -69,6 +74,10 @@ export function VoiceMode({
       try { audioElRef.current.pause(); } catch { /* ignore */ }
       audioElRef.current.srcObject = null;
     }
+    try { audioCtxRef.current?.close(); } catch { /* ignore */ }
+    audioCtxRef.current = null;
+    micAnalyserRef.current = null;
+    remoteAnalyserRef.current = null;
   }, []);
 
   useEffect(() => {
@@ -77,11 +86,8 @@ export function VoiceMode({
 
     (async () => {
       setStatus("connecting");
-      setTranscript("");
-      setReply("");
+      setLevel(0);
 
-      // Build a brief context summary from the existing conversation so the
-      // Realtime session is aware of what the user was just doing.
       const recentContext = initialMessages
         .slice(-6)
         .map((m) => `${m.role === "user" ? "User" : "KovaGPT"}: ${m.content}`)
@@ -94,7 +100,7 @@ export function VoiceMode({
         "If the user sounds frustrated, briefly acknowledge it before solving. " +
         (recentContext ? `\n\nRecent chat context:\n${recentContext}` : "");
 
-      // 1. Get ephemeral session token from our server
+      // 1. Ephemeral session token
       let token: string;
       let model: string;
       try {
@@ -105,7 +111,7 @@ export function VoiceMode({
         });
         if (!resp.ok) {
           const data = await resp.json().catch(() => ({}));
-          const msg = data?.error || "Voice mode unavailable.";
+          const msg = data?.error || `Voice mode unavailable (${resp.status}).`;
           toast.error(msg);
           setStatus("error");
           onClose();
@@ -123,7 +129,7 @@ export function VoiceMode({
       }
       if (cancelled) return;
 
-      // 2. Set up WebRTC
+      // 2. WebRTC + Web Audio graph
       try {
         const pc = new RTCPeerConnection();
         pcRef.current = pc;
@@ -131,8 +137,22 @@ export function VoiceMode({
         const audioEl = document.createElement("audio");
         audioEl.autoplay = true;
         audioElRef.current = audioEl;
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const AC: typeof AudioContext = (window as any).AudioContext || (window as any).webkitAudioContext;
+        const ctx = new AC();
+        audioCtxRef.current = ctx;
+
         pc.ontrack = (event) => {
-          audioEl.srcObject = event.streams[0];
+          const stream = event.streams[0];
+          audioEl.srcObject = stream;
+          try {
+            const src = ctx.createMediaStreamSource(stream);
+            const analyser = ctx.createAnalyser();
+            analyser.fftSize = 512;
+            src.connect(analyser);
+            remoteAnalyserRef.current = analyser;
+          } catch { /* ignore */ }
         };
 
         const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -140,35 +160,71 @@ export function VoiceMode({
         for (const track of micStream.getTracks()) {
           pc.addTrack(track, micStream);
         }
+        try {
+          const micSrc = ctx.createMediaStreamSource(micStream);
+          const micAnalyser = ctx.createAnalyser();
+          micAnalyser.fftSize = 512;
+          micSrc.connect(micAnalyser);
+          micAnalyserRef.current = micAnalyser;
+        } catch { /* ignore */ }
+
+        // Animation loop — read whichever analyser is louder and expose it.
+        const buf = new Uint8Array(256);
+        const loop = () => {
+          let m = 0;
+          const readRMS = (a: AnalyserNode | null) => {
+            if (!a) return 0;
+            a.getByteTimeDomainData(buf);
+            let sum = 0;
+            for (let i = 0; i < buf.length; i++) {
+              const v = (buf[i] - 128) / 128;
+              sum += v * v;
+            }
+            return Math.sqrt(sum / buf.length);
+          };
+          const micLvl = muted ? 0 : readRMS(micAnalyserRef.current);
+          const remoteLvl = readRMS(remoteAnalyserRef.current);
+          m = Math.max(micLvl, remoteLvl);
+          // Smooth + normalise into 0..1 with a floor so it always breathes slightly.
+          setLevel((prev) => prev * 0.7 + Math.min(1, m * 4) * 0.3);
+          rafRef.current = requestAnimationFrame(loop);
+        };
+        rafRef.current = requestAnimationFrame(loop);
 
         const dc = pc.createDataChannel("oai-events");
         dataChannelRef.current = dc;
         dc.onmessage = (ev) => {
           try {
             const msg = JSON.parse(ev.data);
-            // Track speaking state
+            if (msg.type === "response.created" && msg.response?.id) {
+              activeResponseIdRef.current = msg.response.id;
+              // A fresh response — un-mute remote if we muted for barge-in.
+              if (audioElRef.current) audioElRef.current.muted = false;
+            }
             if (msg.type === "response.audio.delta" || msg.type === "response.output_audio.delta") {
               setStatus("speaking");
             }
             if (msg.type === "input_audio_buffer.speech_started") {
               setStatus("listening");
+              // BARGE-IN: cancel current response and mute remote audio.
+              if (activeResponseIdRef.current) {
+                try {
+                  dc.send(JSON.stringify({ type: "response.cancel" }));
+                } catch { /* ignore */ }
+                if (audioElRef.current) audioElRef.current.muted = true;
+              }
             }
             if (msg.type === "input_audio_buffer.speech_stopped") {
               setStatus("thinking");
             }
-            // Transcripts
             if (msg.type === "conversation.item.input_audio_transcription.completed") {
-              const text: string = msg.transcript || "";
-              currentUserTextRef.current = text;
-              setTranscript(text);
+              currentUserTextRef.current = (msg.transcript || "").trim();
             }
             if (
               msg.type === "response.audio_transcript.delta" ||
               msg.type === "response.output_audio_transcript.delta"
             ) {
-              const delta: string = msg.delta || "";
-              currentAssistantTextRef.current += delta;
-              setReply((r) => r + delta);
+              currentAssistantTextRef.current += (msg.delta || "");
             }
             if (
               msg.type === "response.audio_transcript.done" ||
@@ -177,15 +233,11 @@ export function VoiceMode({
             ) {
               const u = currentUserTextRef.current.trim();
               const a = currentAssistantTextRef.current.trim();
-              if (u && a) onTurn?.(u, a);
+              if (u || a) onTurn?.(u, a);
               currentUserTextRef.current = "";
               currentAssistantTextRef.current = "";
+              activeResponseIdRef.current = null;
               setStatus("listening");
-              // Reset the visible reply after a beat
-              setTimeout(() => {
-                setReply("");
-                setTranscript("");
-              }, 1500);
             }
             if (msg.type === "error") {
               console.warn("[realtime] error event", msg);
@@ -241,36 +293,30 @@ export function VoiceMode({
 
   const label =
     status === "connecting" ? "Connecting…" :
-    status === "listening" ? "Listening…" :
+    status === "listening" ? "Listening" :
     status === "thinking" ? "Thinking…" :
-    status === "speaking" ? "Speaking…" :
+    status === "speaking" ? "Speaking" :
     status === "error" ? "Connection error" : "";
 
-  return (
-    <div className="w-full flex flex-col items-center gap-2 px-4 pb-2 pt-1 animate-fade-in">
-      {reply && (
-        <div className="text-center text-muted-foreground text-sm max-w-md max-h-24 overflow-y-auto">
-          {reply}
-        </div>
-      )}
-      {transcript && (
-        <div className="text-center text-foreground text-base max-w-md">{transcript}</div>
-      )}
+  // Logo scale reacts to audio energy: baseline breathes 1.0 -> 1.03, peaks push to 1.3.
+  const baseline = 1 + Math.sin(Date.now() / 700) * 0.015;
+  const scale = baseline + level * 0.35;
+  const glow = 0.25 + level * 0.75;
 
+  return (
+    <div className="w-full flex flex-col items-center gap-3 pt-2 pb-3 animate-fade-in">
       <div className="relative flex items-center justify-center">
         <div
-          className={`absolute inset-0 rounded-full bg-primary/20 blur-xl transition-opacity duration-300 ${
-            status === "speaking" ? "opacity-100 animate-pulse" : "opacity-40"
-          }`}
+          className="absolute inset-0 rounded-full blur-2xl transition-opacity duration-150"
+          style={{
+            background: "radial-gradient(circle, hsl(var(--primary) / 0.6), transparent 70%)",
+            opacity: glow,
+            transform: `scale(${1 + level * 0.6})`,
+          }}
         />
         <div
-          className={`relative w-20 h-20 rounded-full overflow-hidden flex items-center justify-center bg-background ring-1 ring-border transition-transform duration-300 ${
-            status === "speaking"
-              ? "scale-110 animate-pulse"
-              : status === "listening"
-                ? "scale-100"
-                : "scale-95"
-          }`}
+          className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden flex items-center justify-center bg-background ring-1 ring-border transition-transform duration-75"
+          style={{ transform: `scale(${scale})` }}
         >
           <NovaLogo className="w-full h-full" />
         </div>
@@ -290,7 +336,7 @@ export function VoiceMode({
         </button>
         <button
           onClick={onClose}
-          className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center hover:opacity-90 transition"
+          className="w-9 h-9 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center hover:opacity-90 transition"
           aria-label="Close voice mode"
           title="End voice mode"
         >
