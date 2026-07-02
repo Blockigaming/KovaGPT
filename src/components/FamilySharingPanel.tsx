@@ -230,7 +230,7 @@ export function FamilySharingPanel() {
                 onClick={async () => {
                   setBusy(true);
                   try {
-                    await leaveFamily({ data: {} });
+                    await leaveFamily();
                     toast.success("Left family group.");
                     await refresh();
                   } catch (e) { toast.error((e as Error).message); }
