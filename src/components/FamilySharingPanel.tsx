@@ -21,16 +21,19 @@ export function FamilySharingPanel() {
   const { tier } = useTier();
   const [state, setState] = useState<FamilyState | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
 
   const refresh = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const s = await getMyFamily();
       setState(s);
     } catch (e) {
-      toast.error((e as Error).message);
+      const msg = (e as Error).message || "Could not load your family group.";
+      setLoadError(msg);
     } finally {
       setLoading(false);
     }
@@ -43,10 +46,22 @@ export function FamilySharingPanel() {
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+        <Loader2 className="w-4 h-4 animate-spin" /> Loading family center...
       </div>
     );
   }
+
+  if (loadError) {
+    return (
+      <div className="space-y-3">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          {loadError}
+        </div>
+        <Button size="sm" variant="outline" onClick={refresh}>Try again</Button>
+      </div>
+    );
+  }
+
 
   const group = state?.group;
   const role = state?.role;

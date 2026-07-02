@@ -531,11 +531,10 @@ export function SettingsDialog({
                   the local link is removed immediately.
                 </p>
               </div>
-              {tier === "free" && (
-                <p className="text-xs text-amber-600 dark:text-amber-400 pt-1">
-                  Linked apps are a Plus feature. Upgrade to connect external accounts.
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground pt-1">
+                Linking apps is free for everyone. Disconnect at any time.
+              </p>
+
             </section>
 
             {CONNECTOR_CATEGORIES.map((cat) => {
@@ -552,7 +551,7 @@ export function SettingsDialog({
                         key={item.id}
                         item={item}
                         linked={linked}
-                        canConnect={tier !== "free"}
+                        canConnect={true}
                         onConnect={async (p) => {
                           if (!user?.id) return;
                           const res = await connectProvider(user.id, p);

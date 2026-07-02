@@ -631,26 +631,17 @@ export const Route = createFileRoute("/api/chat")({
             return { role: safeRole, content: msg.content };
           });
 
-          // COST: route to the cheapest acceptable model per request.
-          // - Normal/default chat: lite (fast + cheap)
-          // - Heavier modes (precise/code/study/research/creative/writer/tutor/history): mid
-          // - Deep reasoning: pro
-          // - Image-bearing turns: pro (multimodal quality matters)
-          // - Voice: mid (keeps latency low, quality good)
-          const HEAVY_MODES: ModeId[] = [
-            "precise", "code", "study", "research", "creative", "writer", "tutor", "history", "auto",
-          ];
+          // COST: route to the cheapest acceptable model per intelligence tier.
           const model = voice
             ? "google/gemini-3.5-flash"
-            : m.id === "reason"
+            : m.id === "high"
               ? "google/gemini-3.1-pro-preview"
               : hasImages
                 ? "google/gemini-2.5-pro"
-                : m.id === "fast" || m.id === "default"
+                : m.id === "instant"
                   ? "google/gemini-3.1-flash-lite"
-                  : HEAVY_MODES.includes(m.id)
-                    ? "google/gemini-3.5-flash"
-                    : "google/gemini-3.1-flash-lite";
+                  : "google/gemini-3.5-flash";
+
           // TODO(routing): add per-request classification (rewrite/summary/coding)
           // and an explicit "Improve answer" client action that re-runs with a
           // stronger model only on demand.
@@ -659,7 +650,7 @@ export const Route = createFileRoute("/api/chat")({
           // out in settings except for explicit/time-sensitive search asks.
           // Fast mode skips web search entirely to stay instant.
           let webBlock = "";
-          if (lastText && !hasImages && m.id !== "fast") {
+          if (lastText && !hasImages && m.id !== "instant") {
             if (shouldRunWebSearch(lastText, user?.webSearch) || voice) {
               const result = await runWebSearch(lastText, NEWS_TRIGGER.test(lastText) || !!voice);
               if (result) webBlock = result;
@@ -723,7 +714,7 @@ export const Route = createFileRoute("/api/chat")({
           };
           // Only enable reasoning when the user explicitly chose the
           // reason mode  -  reasoning adds significant latency.
-          if (m.reasoning && !voice && m.id === "reason") {
+          if (m.reasoning && !voice && m.id === "high") {
             body.reasoning = { effort: m.reasoning };
           }
 

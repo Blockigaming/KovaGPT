@@ -190,7 +190,7 @@ function ChatMessageInner({
         <div className={isUser ? "flex justify-end" : "pl-11 sm:pl-12"}>
           {!streaming && !isUser && message.content && (
             <div className="mt-2 flex flex-wrap items-center gap-1 transition-opacity">
-              {/* Visible: Copy, Read aloud, Share — icon-only, label on hover */}
+              {/* Visible: Copy, Thumbs up, Thumbs down, Share */}
               <button
                 onClick={copy}
                 className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
@@ -198,6 +198,34 @@ function ChatMessageInner({
                 aria-label={copied ? "Copied" : "Copy"}
               >
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              </button>
+              <button
+                onClick={() => {
+                  setFeedback((f) => (f === "up" ? null : "up"));
+                  toast.success("Thanks for the feedback");
+                }}
+                className={`inline-flex items-center justify-center p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95 ${
+                  feedback === "up" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="Good response"
+                aria-label="Good response"
+                aria-pressed={feedback === "up"}
+              >
+                <ThumbsUp className={`w-4 h-4 ${feedback === "up" ? "fill-current" : ""}`} />
+              </button>
+              <button
+                onClick={() => {
+                  setFeedback((f) => (f === "down" ? null : "down"));
+                  toast.success("Thanks, we'll improve");
+                }}
+                className={`inline-flex items-center justify-center p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95 ${
+                  feedback === "down" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="Bad response"
+                aria-label="Bad response"
+                aria-pressed={feedback === "down"}
+              >
+                <ThumbsDown className={`w-4 h-4 ${feedback === "down" ? "fill-current" : ""}`} />
               </button>
               <button
                 onClick={async () => {
@@ -221,6 +249,7 @@ function ChatMessageInner({
               >
                 <Share2 className="w-4 h-4" />
               </button>
+
 
               {/* Everything else lives behind the 3-dot menu */}
               <DropdownMenu>
@@ -251,22 +280,7 @@ function ChatMessageInner({
                     <RefreshCw className="w-4 h-4 mr-2" /> Retry
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => {
-                      setFeedback((f) => (f === "up" ? null : "up"));
-                      toast.success("Thanks for the feedback");
-                    }}
-                  >
-                    <ThumbsUp className={`w-4 h-4 mr-2 ${feedback === "up" ? "fill-current" : ""}`} /> Like
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      setFeedback((f) => (f === "down" ? null : "down"));
-                      toast.success("Thanks, we'll improve");
-                    }}
-                  >
-                    <ThumbsDown className={`w-4 h-4 mr-2 ${feedback === "down" ? "fill-current" : ""}`} /> Dislike
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
+
                     onClick={() => {
                       if (onBranch) onBranch();
                       else toast.message("Branching coming to this chat");

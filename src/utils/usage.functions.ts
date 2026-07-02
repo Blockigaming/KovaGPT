@@ -23,12 +23,10 @@ export const getMyDailyUsage = createServerFn({ method: "GET" })
       .from("daily_usage")
       .select("usage_date, chats, images, uploads, voice")
       .eq("user_id", context.userId)
-      .order("updated_at", { ascending: false })
-      .limit(1)
+      .eq("usage_date", ymd)
       .maybeSingle();
 
     if (error) {
-      // RLS or table issue - return zeros rather than leaking error details
       console.error("[getMyDailyUsage] read error", error.message);
       return {
         date: ymd,
@@ -40,8 +38,7 @@ export const getMyDailyUsage = createServerFn({ method: "GET" })
       };
     }
 
-    // The row is considered "today" only if the latest row's date matches today.
-    if (!data || data.usage_date !== ymd) {
+    if (!data) {
       return {
         date: ymd,
         chats: 0,
@@ -51,6 +48,8 @@ export const getMyDailyUsage = createServerFn({ method: "GET" })
         resetsAt: nextMidnight.toISOString(),
       };
     }
+
+
 
     return {
       date: ymd,

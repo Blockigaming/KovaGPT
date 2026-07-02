@@ -1,4 +1,4 @@
-import { ArrowUp, Square, Plus, X } from "lucide-react";
+import { ArrowUp, Square, Plus, X, Mic } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { tryUseUpload, DAILY_UPLOAD_LIMIT, getUsage } from "@/lib/limits";
 import { toast } from "sonner";
@@ -41,8 +41,11 @@ export function ChatInput({
 
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
   const [sendFlash, setSendFlash] = useState(false);
   const [actionColor, setActionColor] = useState<string>("#3b82f6");
+  const [listening, setListening] = useState(false);
+
 
   useEffect(() => {
     try {
@@ -86,11 +89,52 @@ export function ChatInput({
     }
   };
 
-
-
+  const toggleDictation = () => {
+    const SR: any =
+      typeof window !== "undefined" &&
+      ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+    if (!SR) {
+      toast.error("Dictation isn't supported in this browser.");
+      return;
+    }
+    if (listening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+    const rec = new SR();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = typeof navigator !== "undefined" ? navigator.language : "en-US";
+    let baseText = value;
+    let finalAppend = "";
+    rec.onresult = (e: any) => {
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (r.isFinal) finalAppend += r[0].transcript;
+        else interim += r[0].transcript;
+      }
+      const glue = baseText && !baseText.endsWith(" ") ? " " : "";
+      onChange(baseText + glue + finalAppend + interim);
+    };
+    rec.onerror = () => setListening(false);
+    rec.onend = () => {
+      setListening(false);
+      baseText = "";
+      finalAppend = "";
+    };
+    recognitionRef.current = rec;
+    setListening(true);
+    try {
+      rec.start();
+    } catch {
+      setListening(false);
+    }
+  };
 
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+
     e.target.value = "";
     let nextValue = value;
     for (const f of files) {
@@ -202,6 +246,23 @@ export function ChatInput({
               className="flex-1 resize-none bg-transparent px-3 py-4 outline-none text-foreground placeholder:text-muted-foreground max-h-[200px]"
             />
             <div className="flex items-center gap-1 p-2">
+              {mode && onModeChange && (
+                <div className="hidden sm:block">
+                  <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={toggleDictation}
+                className={`w-9 h-9 rounded-full hover:bg-accent flex items-center justify-center transition ${
+                  listening ? "text-white" : "text-muted-foreground"
+                }`}
+                style={listening ? { backgroundColor: "#ef4444" } : undefined}
+                aria-label={listening ? "Stop dictation" : "Start dictation"}
+                title={listening ? "Stop dictation" : "Dictate"}
+              >
+                <Mic className={`w-5 h-5 ${listening ? "animate-pulse" : ""}`} />
+              </button>
               {isStreaming ? (
                 <button
                   type="button"
@@ -238,15 +299,13 @@ export function ChatInput({
             </div>
           </div>
           {mode && onModeChange && (
-            <div className="flex items-center px-2 pb-2 -mt-1">
+            <div className="flex items-center px-2 pb-2 sm:hidden">
               <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
             </div>
           )}
         </div>
-        <p className="text-center text-xs text-muted-foreground mt-2">
-          KovaGPT can make mistakes. Check important info.
-        </p>
       </div>
     </div>
+
   );
 }
