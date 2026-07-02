@@ -155,7 +155,7 @@ function ChatMessageInner({
   };
 
   return (
-    <div className="w-full px-4 py-3 group animate-fade-in">
+    <div className="w-full px-6 sm:px-12 lg:px-20 py-3 group animate-fade-in">
       {isUser ? (
         <div className="mx-auto max-w-3xl flex justify-end">
           <div className="max-w-[80%] sm:max-w-[70%] flex flex-col items-end min-w-0">
