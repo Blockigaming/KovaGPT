@@ -165,6 +165,7 @@ const TAB_ORDER: TabDef[] = [
   { v: "security", label: "Safety & security", icon: ShieldCheck },
   { v: "data", label: "Data control", icon: Database },
   { v: "storage", label: "Storage", icon: HardDrive },
+  { v: "family", label: "Family Center", icon: Users },
   { v: "report", label: "Report an issue", icon: Bug },
   { v: "help", label: "Help center", icon: LifeBuoy },
   { v: "about", label: "About", icon: Info },
