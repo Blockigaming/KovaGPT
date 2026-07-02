@@ -40,7 +40,7 @@
 :root {
   --radius: 0.875rem;
   /* KovaGPT light theme - Safari-like soft off-white */
-  --background: oklch(0.985 0.002 250);
+  --background: oklch(0.955 0.003 250);
   --foreground: oklch(0.18 0 0);
   --card: oklch(0.965 0.003 250);
   --card-foreground: oklch(0.18 0 0);
@@ -60,9 +60,9 @@
   --input: oklch(0 0 0 / 12%);
   --ring: oklch(0.4 0 0);
 
-  --sidebar: oklch(0.955 0.003 250);
+  --sidebar: oklch(0.985 0.002 250);
   --sidebar-foreground: oklch(0.22 0 0);
-  --sidebar-hover: oklch(0.92 0.003 250);
+  --sidebar-hover: oklch(0.94 0.003 250);
   --user-bubble: oklch(0.925 0.003 250);
 
 
