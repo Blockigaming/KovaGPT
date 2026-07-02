@@ -47,18 +47,18 @@ export const Route = createFileRoute("/")({
       { title: "KovaGPT" },
       {
         name: "description",
-        content: "See AI at its highest potential - chat, code, research, create images, and speak out loud.",
+        content: "KovaGPT — a multimodal AI assistant for chat, code, research, and image generation.",
       },
       { property: "og:title", content: "KovaGPT" },
       {
         property: "og:description",
-        content: "See AI at its highest potential - chat, code, research, create images, and speak out loud.",
+        content: "KovaGPT — a multimodal AI assistant for chat, code, research, and image generation.",
       },
       { property: "og:url", content: "https://kovagpt.com/" },
       { name: "twitter:title", content: "KovaGPT" },
       {
         name: "twitter:description",
-        content: "See AI at its highest potential - chat, code, research, create images, and speak out loud.",
+        content: "KovaGPT — a multimodal AI assistant for chat, code, research, and image generation.",
       },
     ],
     links: [{ rel: "canonical", href: "https://kovagpt.com/" }],
