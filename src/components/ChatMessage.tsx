@@ -39,7 +39,21 @@ function ChatMessageInner({
   onBranch?: () => void;
   onEdit?: () => void;
 }) {
+  const feedbackKey = `kova-feedback:${message.id}`;
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(feedbackKey);
+      if (v === "up" || v === "down") setFeedback(v);
+    } catch { /* ignore */ }
+  }, [feedbackKey]);
+  const persistFeedback = (next: "up" | "down" | null) => {
+    setFeedback(next);
+    try {
+      if (next) localStorage.setItem(feedbackKey, next);
+      else localStorage.removeItem(feedbackKey);
+    } catch { /* ignore */ }
+  };
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
 
