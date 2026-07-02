@@ -40,7 +40,7 @@ import {
   RefreshCw,
   FolderOpen,
   Settings as Cog,
-
+  Users,
 } from "lucide-react";
 import { useTier, tierRank } from "@/hooks/useTier";
 import {
@@ -165,6 +165,7 @@ const TAB_ORDER: TabDef[] = [
   { v: "security", label: "Safety & security", icon: ShieldCheck },
   { v: "data", label: "Data control", icon: Database },
   { v: "storage", label: "Storage", icon: HardDrive },
+  { v: "family", label: "Family Center", icon: Users },
   { v: "report", label: "Report an issue", icon: Bug },
   { v: "help", label: "Help center", icon: LifeBuoy },
   { v: "about", label: "About", icon: Info },
@@ -267,7 +268,7 @@ export function SettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col gap-0 p-0 border border-border/60 shadow-2xl">
+      <DialogContent className="liquid-glass-strong max-w-4xl max-h-[90vh] overflow-hidden flex flex-col gap-0 p-0 rounded-2xl">
         <DialogHeader className="px-7 pt-6 pb-5 border-b border-border">
           <DialogTitle className="text-xl font-semibold tracking-tight font-display">
             Settings
@@ -906,8 +907,49 @@ export function SettingsDialog({
             </div>
           </TabsContent>
 
+          {/* FAMILY CENTER */}
+          <TabsContent value="family" className="overflow-y-auto px-7 pb-8 space-y-5 py-5">
+            <div className="liquid-glass rounded-2xl p-5 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl liquid-glass-soft flex items-center justify-center">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold">Family Center</h3>
+                  <p className="text-xs text-muted-foreground">Share KovaGPT Plus or Pro with up to 5 family members.</p>
+                </div>
+              </div>
+              <div className="grid gap-2 pt-2">
+                <ToggleRow
+                  title="Enable Family sharing"
+                  hint="Invite members to your plan. Each gets their own private workspace."
+                  checked={settings.parentalMode === false}
+                  onCheckedChange={() => toast.message("Family sharing", { description: "Invite links are rolling out soon. Your seat is reserved." })}
+                />
+                <ToggleRow
+                  title="Kid-safe filters for members under 13"
+                  hint="Applies stricter safety filters and disables mature content for child accounts."
+                  checked={!!settings.parentalMode}
+                  onCheckedChange={(v) => onChange({ ...settings, parentalMode: v })}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2 pt-2">
+                <Button size="sm" variant="outline" onClick={() => toast.message("Invite sent", { description: "We'll email your family member a link to join." })}>
+                  Invite a member
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => toast.message("Manage seats", { description: "Seat management opens in Subscription." })}>
+                  Manage seats
+                </Button>
+              </div>
+            </div>
+            <p className="text-[11px] text-muted-foreground px-1">
+              Family sharing requires an active Plus or Pro subscription. Billing stays on the plan owner.
+            </p>
+          </TabsContent>
+
           {/* REPORT ISSUE */}
           <TabsContent value="report" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
+
             <h3 className="text-sm font-semibold">Report an issue</h3>
             <p className="text-xs text-muted-foreground">
               Found a bug or something off? Send it to our team and we'll take a look.
