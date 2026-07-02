@@ -145,14 +145,14 @@ export function Sidebar({
       >
         <div style={{ width }} className="flex flex-col h-full">
           {/* Brand row sits on top; fade beneath obscures scrolled content */}
-          <div className="relative z-20 flex items-center justify-between px-4 pt-4 pb-3 bg-sidebar">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex rounded-full dark:bg-black dark:p-[2px] dark:ring-1 dark:ring-black">
+          <div className="relative z-20 flex items-center gap-2 px-4 pt-4 pb-3 bg-sidebar">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <span className="inline-flex shrink-0 rounded-full dark:bg-black dark:p-[2px] dark:ring-1 dark:ring-black">
                 <NovaLogo className="w-7 h-7" />
               </span>
-              <span className="font-display font-semibold tracking-tight text-[18px]">KovaGPT</span>
+              <span className="font-display font-semibold tracking-tight text-[18px] truncate">KovaGPT</span>
             </div>
-            <div className="flex items-center gap-1 shrink-0 ml-auto">
+            <div className="flex items-center gap-1 shrink-0">
               <button
                 onClick={() => setSearchOpen((v) => !v)}
                 className="p-2 rounded-md transition-all duration-200 hover:bg-sidebar-hover hover:scale-110 active:scale-95"
