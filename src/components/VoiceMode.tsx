@@ -247,45 +247,54 @@ export function VoiceMode({
     status === "error" ? "Connection error" : "";
 
   return (
-    <div className="fixed inset-0 z-50 bg-black text-white flex flex-col">
-      <div className="flex-1 overflow-y-auto px-6 pt-6 pb-2 flex flex-col items-center justify-end gap-4">
-        {reply && (
-          <div className="text-center text-white/70 text-sm max-w-md max-h-40 overflow-y-auto">
-            {reply}
-          </div>
-        )}
-        {transcript && (
-          <div className="text-center text-white text-lg max-w-md">{transcript}</div>
-        )}
-        {label && (
-          <div className="text-xs uppercase tracking-widest text-white/40">{label}</div>
-        )}
-      </div>
+    <div className="w-full flex flex-col items-center gap-2 px-4 pb-2 pt-1 animate-fade-in">
+      {reply && (
+        <div className="text-center text-muted-foreground text-sm max-w-md max-h-24 overflow-y-auto">
+          {reply}
+        </div>
+      )}
+      {transcript && (
+        <div className="text-center text-foreground text-base max-w-md">{transcript}</div>
+      )}
 
-      <div className="flex justify-center pb-6">
+      <div className="relative flex items-center justify-center">
         <div
-          className={`w-56 h-56 sm:w-64 sm:h-64 rounded-full overflow-hidden flex items-center justify-center bg-white shadow-[0_0_80px_rgba(255,255,255,0.25)] ring-1 ring-white/20 transition-transform ${
-            status === "speaking" ? "animate-pulse scale-105" : ""
+          className={`absolute inset-0 rounded-full bg-primary/20 blur-xl transition-opacity duration-300 ${
+            status === "speaking" ? "opacity-100 animate-pulse" : "opacity-40"
+          }`}
+        />
+        <div
+          className={`relative w-20 h-20 rounded-full overflow-hidden flex items-center justify-center bg-background ring-1 ring-border transition-transform duration-300 ${
+            status === "speaking"
+              ? "scale-110 animate-pulse"
+              : status === "listening"
+                ? "scale-100"
+                : "scale-95"
           }`}
         >
           <NovaLogo className="w-full h-full" />
         </div>
       </div>
 
-      <div className="px-3 pb-6 pt-2 flex items-center justify-center gap-3">
+      <div className="flex items-center gap-3">
+        {label && (
+          <span className="text-[11px] uppercase tracking-widest text-muted-foreground">{label}</span>
+        )}
         <button
           onClick={toggleMute}
-          className="w-12 h-12 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition"
+          className="w-9 h-9 rounded-full bg-accent text-foreground flex items-center justify-center hover:bg-accent/80 transition"
           aria-label={muted ? "Unmute microphone" : "Mute microphone"}
+          title={muted ? "Unmute" : "Mute"}
         >
-          {muted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+          {muted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
         </button>
         <button
           onClick={onClose}
-          className="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center hover:bg-white/90 transition"
+          className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center hover:opacity-90 transition"
           aria-label="Close voice mode"
+          title="End voice mode"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4" />
         </button>
       </div>
     </div>
