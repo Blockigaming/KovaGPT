@@ -38,6 +38,7 @@ import {
 } from "@/lib/chat-store";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
+import { loadPersonality, personalityToInstruction } from "@/components/PersonalitySliders";
 
 export const Route = createFileRoute("/")({
   component: KovaGPT,
@@ -450,6 +451,7 @@ function KovaGPT() {
             },
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             locale: typeof navigator !== "undefined" ? navigator.language : "en-US",
+            personality: personalityToInstruction(loadPersonality()) || undefined,
           }),
           signal: controller.signal,
         });

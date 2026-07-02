@@ -58,6 +58,9 @@ import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { getMyDailyUsage, type DailyUsageDto } from "@/utils/usage.functions";
+import { PersonalitySliders } from "@/components/PersonalitySliders";
+import { StorageDashboard } from "@/components/StorageDashboard";
+import { MfaPanel } from "@/components/MfaPanel";
 import { clearConversations } from "@/lib/chat-store";
 import { getUsage, DAILY_IMAGE_LIMIT, DAILY_UPLOAD_LIMIT } from "@/lib/limits";
 import {
@@ -415,7 +418,12 @@ export function SettingsDialog({
                 />
               </div>
             </section>
+
+            <section className="space-y-3">
+              <PersonalitySliders />
+            </section>
           </TabsContent>
+
 
           {/* MEMORY */}
           <TabsContent value="memory" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
@@ -842,21 +850,15 @@ export function SettingsDialog({
                 {user?.primaryEmailAddress?.emailAddress ?? user?.firstName ?? "your account"}
               </div>
             </div>
-            <div className="space-y-3 text-sm">
-              <SecurityRow
-                title="Password & two-factor"
-                body="Manage your password and turn on 2FA."
-                actionLabel="Open account"
-                onAction={() => clerk?.openUserProfile()}
-              />
-              <SecurityRow
-                title="Active sessions"
-                body="See devices currently signed into your account."
-                actionLabel="Manage"
-                onAction={() => clerk?.openUserProfile()}
-              />
-            </div>
+            {loggedIn ? (
+              <MfaPanel />
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                Sign in to manage two-factor authentication and active sessions.
+              </div>
+            )}
           </TabsContent>
+
 
           {/* DATA CONTROL */}
           <TabsContent value="data" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
@@ -883,22 +885,25 @@ export function SettingsDialog({
 
           {/* STORAGE */}
           <TabsContent value="storage" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
-            <h3 className="text-sm font-semibold">Storage</h3>
-            <p className="text-xs text-muted-foreground">
-              Conversations and preferences are stored locally on this device and synced to your account.
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                clearConversations();
-                onClearAll();
-                toast.success("Local storage cleared.");
-              }}
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Clear local storage
-            </Button>
+            <StorageDashboard signedIn={loggedIn} />
+            <div className="rounded-2xl border border-border bg-card/60 backdrop-blur-sm p-5 space-y-3">
+              <h3 className="text-sm font-semibold">Local device data</h3>
+              <p className="text-xs text-muted-foreground">
+                Clears cached chats, drafts, and preferences stored on this device. Cloud data is not affected.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  clearConversations();
+                  onClearAll();
+                  toast.success("Local storage cleared.");
+                }}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Clear local storage
+              </Button>
+            </div>
           </TabsContent>
 
           {/* REPORT ISSUE */}
