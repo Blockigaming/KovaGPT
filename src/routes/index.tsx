@@ -611,6 +611,16 @@ function KovaGPT() {
 
       <main className="flex-1 flex flex-col min-w-0">
         <header className="h-14 flex items-center px-3 border-b border-border relative">
+          {!sidebarOpen && (
+            <button
+              onClick={() => setSidebarOpen((v) => !v)}
+              className="p-2 rounded-lg hover:bg-accent transition mr-2"
+              aria-label="Toggle sidebar"
+              title="Toggle sidebar"
+            >
+              <PanelLeft className="w-5 h-5" />
+            </button>
+          )}
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2 px-1">
               <span className="inline-flex rounded-full dark:bg-black dark:p-[2px] dark:ring-1 dark:ring-black">
@@ -637,16 +647,6 @@ function KovaGPT() {
                   </button>
                 </SignUpButton>
               </>
-            )}
-            {!sidebarOpen && (
-              <button
-                onClick={() => setSidebarOpen((v) => !v)}
-                className="p-2 rounded-lg hover:bg-accent transition"
-                aria-label="Toggle sidebar"
-                title="Toggle sidebar"
-              >
-                <PanelLeft className="w-5 h-5" />
-              </button>
             )}
           </div>
         </header>
