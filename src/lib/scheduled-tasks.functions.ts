@@ -24,7 +24,7 @@ async function ensurePlusOrAbove(supabase: any, userId: string) {
     .select("status, current_period_end")
     .eq("user_id", userId)
     .in("status", ["active", "trialing"]);
-  if (error) throw new Error(error.message);
+  if (error) { console.error("[serverfn]", error.message); throw new Error("Request failed. Please try again."); }
   const ok = (data ?? []).some(
     (r: any) =>
       ["active", "trialing"].includes(r.status) &&
@@ -60,7 +60,7 @@ export const listScheduledTasks = createServerFn({ method: "POST" })
       .select("*")
       .eq("user_id", context.userId)
       .order("run_at", { ascending: true });
-    if (error) throw new Error(error.message);
+    if (error) { console.error("[serverfn]", error.message); throw new Error("Request failed. Please try again."); }
     return (data ?? []) as ScheduledTask[];
   });
 
@@ -89,7 +89,7 @@ export const createScheduledTask = createServerFn({ method: "POST" })
       })
       .select("*")
       .single();
-    if (error || !row) throw new Error(error?.message ?? "Failed to create task");
+    if (error || !row) { console.error("[serverfn]", error?.message); throw new Error("Failed to create task"); }
     return row as ScheduledTask;
   });
 
@@ -123,7 +123,7 @@ export const updateScheduledTask = createServerFn({ method: "POST" })
       .eq("user_id", context.userId)
       .select("*")
       .single();
-    if (error || !row) throw new Error(error?.message ?? "Failed to update task");
+    if (error || !row) { console.error("[serverfn]", error?.message); throw new Error("Failed to update task"); }
     return row as ScheduledTask;
   });
 
@@ -138,6 +138,6 @@ export const deleteScheduledTask = createServerFn({ method: "POST" })
       .delete()
       .eq("id", data.id)
       .eq("user_id", context.userId);
-    if (error) throw new Error(error.message);
+    if (error) { console.error("[serverfn]", error.message); throw new Error("Request failed. Please try again."); }
     return { ok: true };
   });

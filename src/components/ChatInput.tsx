@@ -229,8 +229,10 @@ export function ChatInput({
               <button
                 type="button"
                 onClick={toggleMic}
-                className={`w-9 h-9 rounded-full flex items-center justify-center transition ${
-                  listening ? "bg-destructive text-destructive-foreground animate-pulse" : "hover:bg-accent"
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 backdrop-blur-md border border-white/10 ${
+                  listening
+                    ? "bg-destructive text-destructive-foreground animate-pulse"
+                    : "bg-white/5 hover:bg-white/15 hover:border-white/25 hover:shadow-[0_4px_20px_rgba(255,255,255,0.1)] hover:scale-105 active:scale-95"
                 }`}
                 aria-label="Voice input"
                 title="Voice input"
@@ -265,7 +267,7 @@ export function ChatInput({
                   type="button"
                   onClick={onOpenVoice}
                   style={{ backgroundColor: actionColor }}
-                  className="w-9 h-9 rounded-full text-white flex items-center justify-center hover:opacity-90 transition active:scale-90 duration-150"
+                  className="w-9 h-9 rounded-full text-white flex items-center justify-center backdrop-blur-md border border-white/20 transition-all duration-200 hover:opacity-95 hover:scale-105 hover:shadow-[0_6px_24px_rgba(255,255,255,0.18)] hover:border-white/40 active:scale-90 duration-150"
                   aria-label="Voice mode"
                   title="Voice mode"
                 >
