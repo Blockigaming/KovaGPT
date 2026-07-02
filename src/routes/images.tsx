@@ -441,34 +441,84 @@ function ImagesPage() {
               </div>
             </form>
 
-            <div className="mt-4 flex flex-wrap gap-2">
-              {[
-                "Realistic Images",
-                "Anime & Illustration",
-                "Logos & Icons",
-                "Gaming Avatars",
-                "Product Renders",
-                "Wallpapers",
-                "Social Media Posts",
-                "Website Graphics",
-                "Fantasy Art",
-                "Interior Design",
-                "Cyberpunk",
-                "Nature & Landscapes",
-              ].map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setPrompt((p) => (p ? `${p}, ${cat.toLowerCase()}` : cat))}
-                  className="text-xs px-3 py-1.5 rounded-full border border-border hover:bg-accent transition text-muted-foreground hover:text-foreground"
-                >
-                  {cat}
-                </button>
-              ))}
+            <div className="mt-4 space-y-3">
+              <div>
+                <div className="text-xs font-medium text-muted-foreground mb-1.5">Frame / size</div>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { v: "1024x1024" as const, label: "Square", hint: "1:1" },
+                    { v: "1536x1024" as const, label: "Landscape", hint: "3:2" },
+                    { v: "1024x1536" as const, label: "Portrait", hint: "2:3" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.v}
+                      type="button"
+                      onClick={() => setSize(opt.v)}
+                      className={`text-xs px-3 py-1.5 rounded-full border transition ${
+                        size === opt.v
+                          ? "border-foreground bg-foreground text-background"
+                          : "border-border text-muted-foreground hover:text-foreground hover:bg-accent"
+                      }`}
+                    >
+                      {opt.label} <span className="opacity-70">· {opt.hint}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs font-medium text-muted-foreground mb-1.5">Ideas & suggestions</div>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    "A minimalist logo for a coffee brand",
+                    "Cinematic dog portrait, golden hour",
+                    "Isometric city block, pastel palette",
+                    "Watercolor of a mountain lake at dawn",
+                    "Retro 80s synthwave poster",
+                    "Cute sticker of a smiling avocado",
+                  ].map((idea) => (
+                    <button
+                      key={idea}
+                      type="button"
+                      onClick={() => setPrompt(idea)}
+                      className="text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition"
+                    >
+                      {idea}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {[
+                  "Realistic Images",
+                  "Anime & Illustration",
+                  "Logos & Icons",
+                  "Gaming Avatars",
+                  "Product Renders",
+                  "Wallpapers",
+                  "Social Media Posts",
+                  "Website Graphics",
+                  "Fantasy Art",
+                  "Interior Design",
+                  "Cyberpunk",
+                  "Nature & Landscapes",
+                ].map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setPrompt((p) => (p ? `${p}, ${cat.toLowerCase()}` : cat))}
+                    className="text-xs px-3 py-1.5 rounded-full border border-border hover:bg-accent transition text-muted-foreground hover:text-foreground"
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
               AI-generated images may not always match your prompt perfectly. Review generated images before using them publicly or commercially.
             </p>
+
 
             {error && (
               <div className="mt-4 text-sm text-destructive">{error}</div>
