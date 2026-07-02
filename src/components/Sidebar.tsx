@@ -45,72 +45,9 @@ export function Sidebar({
 }) {
   const { user, isSignedIn, isLoaded } = useUser();
   const { tier } = useTier();
-  const [width, setWidth] = useState<number>(280);
-  
+
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-
-
-  const draggingRef = useRef(false);
-
-  useEffect(() => {
-    try {
-      const saved = parseInt(localStorage.getItem(WIDTH_KEY) || "", 10);
-      if (saved >= MIN_W && saved <= MAX_W) setWidth(saved);
-    } catch { /* ignore */ }
-  }, []);
-
-  const clampWidth = (w: number) => {
-    const vw = typeof window !== "undefined" ? window.innerWidth : 1280;
-    const cap = Math.max(MIN_W, Math.min(MAX_W, Math.floor(vw * 0.4)));
-    return Math.max(MIN_W, Math.min(cap, w));
-  };
-
-  useEffect(() => {
-    const move = (clientX: number) => {
-      if (!draggingRef.current) return;
-      setWidth(clampWidth(clientX));
-    };
-    const onMove = (e: MouseEvent) => move(e.clientX);
-    const onTouchMove = (e: TouchEvent) => {
-      if (!draggingRef.current) return;
-      const t = e.touches[0];
-      if (t) {
-        e.preventDefault();
-        move(t.clientX);
-      }
-    };
-    const stop = () => {
-      if (draggingRef.current) {
-        draggingRef.current = false;
-        document.body.style.cursor = "";
-        document.body.style.userSelect = "";
-        try { localStorage.setItem(WIDTH_KEY, String(width)); } catch { /* ignore */ }
-      }
-    };
-    const onResize = () => setWidth((w) => clampWidth(w));
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", stop);
-    window.addEventListener("touchmove", onTouchMove, { passive: false });
-    window.addEventListener("touchend", stop);
-    window.addEventListener("touchcancel", stop);
-    window.addEventListener("resize", onResize);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", stop);
-      window.removeEventListener("touchmove", onTouchMove);
-      window.removeEventListener("touchend", stop);
-      window.removeEventListener("touchcancel", stop);
-      window.removeEventListener("resize", onResize);
-    };
-  }, [width]);
-
-  const startDrag = (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    draggingRef.current = true;
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-  };
 
   const showSignedIn = isLoaded && isSignedIn;
   const showSignedOut = isLoaded && !isSignedIn;
@@ -120,7 +57,7 @@ export function Sidebar({
   const navItemClass = (active: boolean) =>
     `relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] transition active:scale-[0.98] min-w-0 ${
       active
-        ? "bg-sidebar-hover text-foreground"
+        ? "bg-gradient-to-r from-sidebar-hover via-sidebar-hover/60 to-transparent text-foreground"
         : "hover:bg-sidebar-hover text-sidebar-foreground"
     }`;
   const ActiveBar = ({ on }: { on: boolean }) =>
@@ -141,10 +78,11 @@ export function Sidebar({
         />
       )}
       <aside
-        style={{ width: open ? width : 0 }}
-        className="relative shrink-0 overflow-hidden transition-[width] duration-150 bg-sidebar text-sidebar-foreground border-r border-border/60 flex flex-col max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:h-[100dvh]"
+        style={{ width: open ? SIDEBAR_WIDTH : 0 }}
+        className="relative shrink-0 overflow-hidden transition-[width] duration-150 bg-background text-sidebar-foreground flex flex-col max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:h-[100dvh]"
       >
-        <div style={{ width }} className="flex flex-col h-full">
+        <div style={{ width: SIDEBAR_WIDTH }} className="flex flex-col h-full">
+
           {/* Brand row sits on top; fade beneath obscures scrolled content */}
           <div className="relative z-20 flex items-center gap-2 px-3 sm:px-4 pt-4 pb-3 bg-sidebar">
             <div className="flex items-center gap-2 min-w-0 flex-1">
