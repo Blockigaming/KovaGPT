@@ -287,6 +287,19 @@ function shouldRunWebSearch(text: string, userWantsWebSearch?: boolean): boolean
 const IMAGE_INTENT =
   /\b(generate|make|create|draw|design|render|paint|produce|give\s+me)\b[^.?!]{0,40}\b(image|picture|photo|photograph|illustration|logo|drawing|artwork|painting|render|wallpaper|icon)\b/i;
 
+// Negation guard: user explicitly saying they DON'T want an image/action.
+// Prevents "don't generate an image", "no image please", "stop making pictures"
+// from triggering the image workflow.
+const NEGATION_GUARD =
+  /\b(do\s*n[o']?t|don't|dont|never|no|stop|please\s+don't|please\s+do\s+not|without|skip|avoid|instead\s+of)\b[^.?!]{0,60}\b(generate|make|create|draw|design|render|paint|produce|image|picture|photo|illustration|logo|drawing)\b/i;
+
+function detectImageIntent(text: string): boolean {
+  if (!IMAGE_INTENT.test(text)) return false;
+  if (NEGATION_GUARD.test(text)) return false;
+  return true;
+}
+
+
 function sseChunk(text: string) {
   const payload = {
     choices: [{ index: 0, delta: { role: "assistant", content: text } }],
@@ -483,7 +496,8 @@ export const Route = createFileRoute("/api/chat")({
             !voice &&
             lastText.length > 0 &&
             (!lastUser?.attachments || lastUser.attachments.length === 0) &&
-            IMAGE_INTENT.test(lastText);
+            detectImageIntent(lastText);
+
 
           // Detect the owner account - gets highest tier with no quotas.
           let isOwner = false;
