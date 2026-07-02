@@ -141,7 +141,7 @@ export function Sidebar({
       )}
       <aside
         style={{ width: open ? width : 0 }}
-        className="relative shrink-0 overflow-hidden transition-[width] duration-150 bg-sidebar text-sidebar-foreground border-r border-border flex flex-col max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:h-[100dvh]"
+        className="relative shrink-0 overflow-hidden transition-[width] duration-150 liquid-glass text-sidebar-foreground border-r border-border/60 flex flex-col max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:h-[100dvh]"
       >
         <div style={{ width }} className="flex flex-col h-full">
           {/* Brand row sits on top; fade beneath obscures scrolled content */}
