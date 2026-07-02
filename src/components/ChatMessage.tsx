@@ -199,16 +199,6 @@ function ChatMessageInner({
               >
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               </button>
-              {ttsOk && (
-                <button
-                  onClick={toggleSpeak}
-                  className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
-                  title={playing ? "Stop" : "Read aloud"}
-                  aria-label={playing ? "Stop reading" : "Read aloud"}
-                >
-                  {playing ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                </button>
-              )}
               <button
                 onClick={async () => {
                   const text = message.content;
