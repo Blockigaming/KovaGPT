@@ -714,7 +714,7 @@ export const Route = createFileRoute("/api/chat")({
           };
           // Only enable reasoning when the user explicitly chose the
           // reason mode  -  reasoning adds significant latency.
-          if (m.reasoning && !voice && m.id === "reason") {
+          if (m.reasoning && !voice && m.id === "high") {
             body.reasoning = { effort: m.reasoning };
           }
 
