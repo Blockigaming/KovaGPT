@@ -28,29 +28,43 @@ export function useTier(): { tier: Tier; loading: boolean } {
         }
         return;
       }
-      const { data } = await supabase
-        .from("subscriptions")
-        .select("price_id, status, current_period_end")
-        .eq("user_id", uid)
-        .order("created_at", { ascending: false })
-        .limit(5);
-      if (!alive) return;
-      const now = Date.now();
-      let resolved: Tier = "free";
-      for (const row of data ?? []) {
-        const end = row.current_period_end ? new Date(row.current_period_end).getTime() : 0;
-        const active =
-          (["active", "trialing", "past_due"].includes(row.status) &&
-            (!row.current_period_end || end > now)) ||
-          (row.status === "canceled" && end > now);
-        if (!active) continue;
-        const t = classify(row.price_id);
-        if (t === "pro") {
-          resolved = "pro";
-          break;
+      const resolveFor = async (targetUid: string): Promise<Tier> => {
+        const { data } = await supabase
+          .from("subscriptions")
+          .select("price_id, status, current_period_end")
+          .eq("user_id", targetUid)
+          .order("created_at", { ascending: false })
+          .limit(5);
+        const now = Date.now();
+        let resolved: Tier = "free";
+        for (const row of data ?? []) {
+          const end = row.current_period_end ? new Date(row.current_period_end).getTime() : 0;
+          const active =
+            (["active", "trialing", "past_due"].includes(row.status) &&
+              (!row.current_period_end || end > now)) ||
+            (row.status === "canceled" && end > now);
+          if (!active) continue;
+          const t = classify(row.price_id);
+          if (t === "pro") return "pro";
+          if (t === "plus") resolved = "plus";
         }
-        if (t === "plus") resolved = "plus";
+        return resolved;
+      };
+
+      let resolved = await resolveFor(uid);
+
+      // Family Sharing: if the user is a member of a family group, inherit
+      // the owner's plan when it is higher than their own.
+      if (resolved !== "pro") {
+        const { data: ownerId } = await supabase.rpc("family_owner_of", { _user_id: uid });
+        if (typeof ownerId === "string" && ownerId && ownerId !== uid) {
+          const ownerTier = await resolveFor(ownerId);
+          if (ownerTier === "pro") resolved = "pro";
+          else if (ownerTier === "plus" && resolved === "free") resolved = "plus";
+        }
       }
+
+      if (!alive) return;
       setTier(resolved);
       setLoading(false);
     };
