@@ -451,6 +451,7 @@ function KovaGPT() {
             },
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             locale: typeof navigator !== "undefined" ? navigator.language : "en-US",
+            personality: personalityToInstruction(loadPersonality()) || undefined,
           }),
           signal: controller.signal,
         });
