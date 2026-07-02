@@ -1,6 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Copy, Check, Volume2, VolumeX, ImageIcon, Loader2, Bookmark, FileEdit, Code2, Eye, MoreHorizontal, Send, Pencil, RefreshCw, ThumbsUp, ThumbsDown, GitBranch, Globe } from "lucide-react";
+import { Copy, Check, Volume2, VolumeX, ImageIcon, Loader2, Bookmark, FileEdit, Code2, Eye, MoreHorizontal, Share2, Pencil, RefreshCw, ThumbsUp, ThumbsDown, GitBranch, Globe } from "lucide-react";
 import { memo, useEffect, useMemo, useState } from "react";
 import type { Message } from "@/lib/chat-store";
 import { NovaLogo } from "./NovaLogo";
@@ -157,8 +157,8 @@ function ChatMessageInner({
   return (
     <div className="w-full px-4 py-3 group animate-fade-in">
       {isUser ? (
-        <div className="mx-auto max-w-3xl flex justify-end">
-          <div className="max-w-[85%] sm:max-w-[75%] flex flex-col items-end min-w-0">
+        <div className="mx-auto max-w-2xl flex justify-end">
+          <div className="max-w-[80%] sm:max-w-[70%] flex flex-col items-end min-w-0">
             {message.attachments && message.attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2 justify-end">
                 {message.attachments.map((a, i) => (
@@ -179,7 +179,7 @@ function ChatMessageInner({
           </div>
         </div>
       ) : (
-        <div className="mx-auto max-w-3xl flex gap-3 sm:gap-4 justify-start">
+        <div className="mx-auto max-w-2xl flex gap-3 sm:gap-4 justify-start pr-4 sm:pr-12">
           <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center">
             <NovaLogo className="w-8 h-8" />
           </div>
@@ -207,14 +207,14 @@ function ChatMessageInner({
           </div>
         </div>
       )}
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-2xl">
         <div className={isUser ? "flex justify-end" : "sm:pl-12"}>
           {!streaming && !isUser && message.content && (
             <div className="mt-2 flex flex-wrap items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-              {/* Visible: Copy, Read aloud, Send */}
+              {/* Visible: Copy, Read aloud, Share */}
               <button
                 onClick={copy}
-                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent"
+                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded-md hover:bg-accent transition-all hover:scale-[1.04] active:scale-95"
                 title="Copy"
               >
                 {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
@@ -223,7 +223,7 @@ function ChatMessageInner({
               {ttsOk && (
                 <button
                   onClick={toggleSpeak}
-                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent"
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded-md hover:bg-accent transition-all hover:scale-[1.04] active:scale-95"
                   title="Read aloud"
                 >
                   {playing ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
@@ -241,27 +241,28 @@ function ChatMessageInner({
                   }
                   try {
                     await navigator.clipboard.writeText(text);
-                    toast.success("Response copied; ready to send");
+                    toast.success("Response copied to clipboard");
                   } catch {
-                    toast.error("Couldn't prepare for sending");
+                    toast.error("Couldn't share");
                   }
                 }}
-                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent"
-                title="Send / share"
+                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded-md hover:bg-accent transition-all hover:scale-[1.04] active:scale-95"
+                title="Share"
               >
-                <Send className="w-3.5 h-3.5" />
-                Send
+                <Share2 className="w-3.5 h-3.5" />
+                Share
               </button>
 
               {/* Everything else lives behind the 3-dot menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-accent"
+                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded-md hover:bg-accent transition-all hover:scale-[1.04] active:scale-95"
                     title="More actions"
                     aria-label="More actions"
                   >
                     <MoreHorizontal className="w-3.5 h-3.5" />
+                    More
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-52">
