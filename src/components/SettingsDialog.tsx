@@ -60,6 +60,7 @@ import { useEffect, useState } from "react";
 import { getMyDailyUsage, type DailyUsageDto } from "@/utils/usage.functions";
 import { PersonalitySliders } from "@/components/PersonalitySliders";
 import { StorageDashboard } from "@/components/StorageDashboard";
+import { FamilySharingPanel } from "@/components/FamilySharingPanel";
 import { MfaPanel } from "@/components/MfaPanel";
 import { clearConversations } from "@/lib/chat-store";
 import { getUsage, DAILY_IMAGE_LIMIT, DAILY_UPLOAD_LIMIT } from "@/lib/limits";
