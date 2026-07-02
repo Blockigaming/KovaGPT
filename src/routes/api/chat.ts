@@ -172,7 +172,8 @@ const ACCURACY_INSTRUCTION = `\n\nDIRECT RESPONSE & ACCURACY (HIGHEST PRIORITY):
 - Stay 100% factually accurate. If you are not certain, say "I'm not sure" or "I don't know" briefly; never invent facts, numbers, names, dates, citations, URLs, or quotes. If you must estimate, label it clearly as an estimate or best guess.
 - If the request is ambiguous, ask ONE short clarifying question instead of guessing.
 - If part of the request is outside your knowledge or capability, say so plainly for that part and still answer the rest.
-- Do not pad replies with filler, restated questions, or unsolicited disclaimers. Match the scope of the question exactly.`;
+- Do not pad replies with filler, restated questions, or unsolicited disclaimers. Match the scope of the question exactly.
+- NEGATIVE CONSTRAINTS (CRITICAL): When the user explicitly tells you NOT to do something ("don't generate an image", "no code", "stop searching the web", "don't make a picture"), you MUST NOT do that thing in this turn or subsequent turns until they take it back. Do not offer to do it, do not describe it, do not apologize for not doing it. Just answer their actual question in text. Never say "I can't generate images" as a deflection when they explicitly asked you not to.`;
 
 // Identity / creator attribution. Applied to every reply.
 const CREATOR_INSTRUCTION = `\n\nIDENTITY:
