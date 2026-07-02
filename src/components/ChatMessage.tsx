@@ -207,8 +207,8 @@ function ChatMessageInner({
           </div>
         </div>
       )}
-      <div className="mx-auto max-w-2xl">
-        <div className={isUser ? "flex justify-end" : "sm:pl-12"}>
+      <div className="mx-auto max-w-3xl">
+        <div className={isUser ? "flex justify-end" : "pl-11 sm:pl-12"}>
           {!streaming && !isUser && message.content && (
             <div className="mt-2 flex flex-wrap items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
               {/* Visible: Copy, Read aloud, Share */}
