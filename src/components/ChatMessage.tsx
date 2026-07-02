@@ -211,23 +211,23 @@ function ChatMessageInner({
         <div className={isUser ? "flex justify-end" : "pl-11 sm:pl-12"}>
           {!streaming && !isUser && message.content && (
             <div className="mt-2 flex flex-wrap items-center gap-1 transition-opacity">
-              {/* Visible: Copy, Read aloud, Share */}
+              {/* Visible: Copy, Read aloud, Share — icon-only, label on hover */}
               <button
                 onClick={copy}
-                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded-md hover:bg-accent transition-all hover:scale-[1.04] active:scale-95"
-                title="Copy"
+                className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
+                title={copied ? "Copied" : "Copy"}
+                aria-label={copied ? "Copied" : "Copy"}
               >
-                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                {copied ? "Copied" : "Copy"}
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               </button>
               {ttsOk && (
                 <button
                   onClick={toggleSpeak}
-                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded-md hover:bg-accent transition-all hover:scale-[1.04] active:scale-95"
-                  title="Read aloud"
+                  className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
+                  title={playing ? "Stop" : "Read aloud"}
+                  aria-label={playing ? "Stop reading" : "Read aloud"}
                 >
-                  {playing ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                  {playing ? "Stop" : "Read aloud"}
+                  {playing ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
                 </button>
               )}
               <button
@@ -246,23 +246,22 @@ function ChatMessageInner({
                     toast.error("Couldn't share");
                   }
                 }}
-                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded-md hover:bg-accent transition-all hover:scale-[1.04] active:scale-95"
+                className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
                 title="Share"
+                aria-label="Share"
               >
-                <Share2 className="w-3.5 h-3.5" />
-                Share
+                <Share2 className="w-4 h-4" />
               </button>
 
               {/* Everything else lives behind the 3-dot menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded-md hover:bg-accent transition-all hover:scale-[1.04] active:scale-95"
+                    className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
                     title="More actions"
                     aria-label="More actions"
                   >
-                    <MoreHorizontal className="w-3.5 h-3.5" />
-                    More
+                    <MoreHorizontal className="w-4 h-4" />
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-52">
