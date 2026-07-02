@@ -76,7 +76,7 @@
 
 .dark {
   /* KovaGPT dark theme - Safari-like soft charcoal, not pure black */
-  --background: oklch(0.19 0.004 250);
+  --background: oklch(0.165 0.004 250);
   --foreground: oklch(0.97 0 0);
   --card: oklch(0.235 0.004 250);
   --card-foreground: oklch(0.97 0 0);
@@ -96,9 +96,9 @@
   --input: oklch(1 0 0 / 13%);
   --ring: oklch(0.7 0.02 250);
 
-  --sidebar: oklch(0.165 0.004 250);
+  --sidebar: oklch(0.19 0.004 250);
   --sidebar-foreground: oklch(0.94 0 0);
-  --sidebar-hover: oklch(0.235 0.004 250);
+  --sidebar-hover: oklch(0.25 0.004 250);
   --user-bubble: oklch(0.31 0.004 250);
 
   --scrollbar-thumb: oklch(1 0 0 / 12%);
