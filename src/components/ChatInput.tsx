@@ -45,6 +45,12 @@ export function ChatInput({
   const [sendFlash, setSendFlash] = useState(false);
   const [actionColor, setActionColor] = useState<string>("#3b82f6");
   const [listening, setListening] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState(true);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    setSpeechSupported(Boolean(SR));
+  }, []);
 
 
   useEffect(() => {
@@ -253,13 +259,18 @@ export function ChatInput({
               )}
               <button
                 type="button"
-                onClick={toggleDictation}
-                className={`w-9 h-9 rounded-full hover:bg-accent flex items-center justify-center transition ${
-                  listening ? "text-white" : "text-muted-foreground"
+                onClick={speechSupported ? toggleDictation : () => toast.error("Voice dictation isn't supported in this browser. Try Chrome, Edge, or Safari.")}
+                aria-disabled={!speechSupported}
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition ${
+                  !speechSupported
+                    ? "text-muted-foreground/40 cursor-not-allowed"
+                    : listening
+                      ? "text-white hover:opacity-90"
+                      : "text-muted-foreground hover:bg-accent"
                 }`}
                 style={listening ? { backgroundColor: "#ef4444" } : undefined}
-                aria-label={listening ? "Stop dictation" : "Start dictation"}
-                title={listening ? "Stop dictation" : "Dictate"}
+                aria-label={!speechSupported ? "Dictation unavailable" : listening ? "Stop dictation" : "Start dictation"}
+                title={!speechSupported ? "Dictation isn't supported in this browser" : listening ? "Stop dictation" : "Dictate"}
               >
                 <Mic className={`w-5 h-5 ${listening ? "animate-pulse" : ""}`} />
               </button>

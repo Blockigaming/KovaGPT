@@ -39,7 +39,21 @@ function ChatMessageInner({
   onBranch?: () => void;
   onEdit?: () => void;
 }) {
+  const feedbackKey = `kova-feedback:${message.id}`;
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(feedbackKey);
+      if (v === "up" || v === "down") setFeedback(v);
+    } catch { /* ignore */ }
+  }, [feedbackKey]);
+  const persistFeedback = (next: "up" | "down" | null) => {
+    setFeedback(next);
+    try {
+      if (next) localStorage.setItem(feedbackKey, next);
+      else localStorage.removeItem(feedbackKey);
+    } catch { /* ignore */ }
+  };
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
 
@@ -201,8 +215,9 @@ function ChatMessageInner({
               </button>
               <button
                 onClick={() => {
-                  setFeedback((f) => (f === "up" ? null : "up"));
-                  toast.success("Thanks for the feedback");
+                  const next = feedback === "up" ? null : "up";
+                  persistFeedback(next);
+                  if (next) toast.success("Thanks for the feedback");
                 }}
                 className={`inline-flex items-center justify-center p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95 ${
                   feedback === "up" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
@@ -215,8 +230,9 @@ function ChatMessageInner({
               </button>
               <button
                 onClick={() => {
-                  setFeedback((f) => (f === "down" ? null : "down"));
-                  toast.success("Thanks, we'll improve");
+                  const next = feedback === "down" ? null : "down";
+                  persistFeedback(next);
+                  if (next) toast.success("Thanks, we'll improve");
                 }}
                 className={`inline-flex items-center justify-center p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95 ${
                   feedback === "down" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
