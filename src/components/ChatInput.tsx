@@ -246,6 +246,23 @@ export function ChatInput({
               className="flex-1 resize-none bg-transparent px-3 py-4 outline-none text-foreground placeholder:text-muted-foreground max-h-[200px]"
             />
             <div className="flex items-center gap-1 p-2">
+              {mode && onModeChange && (
+                <div className="hidden sm:block">
+                  <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={toggleDictation}
+                className={`w-9 h-9 rounded-full hover:bg-accent flex items-center justify-center transition ${
+                  listening ? "text-white" : "text-muted-foreground"
+                }`}
+                style={listening ? { backgroundColor: "#ef4444" } : undefined}
+                aria-label={listening ? "Stop dictation" : "Start dictation"}
+                title={listening ? "Stop dictation" : "Dictate"}
+              >
+                <Mic className={`w-5 h-5 ${listening ? "animate-pulse" : ""}`} />
+              </button>
               {isStreaming ? (
                 <button
                   type="button"
@@ -282,15 +299,13 @@ export function ChatInput({
             </div>
           </div>
           {mode && onModeChange && (
-            <div className="flex items-center px-2 pb-2 -mt-1">
+            <div className="flex items-center px-2 pb-2 sm:hidden">
               <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
             </div>
           )}
         </div>
-        <p className="text-center text-xs text-muted-foreground mt-2">
-          KovaGPT can make mistakes. Check important info.
-        </p>
       </div>
     </div>
+
   );
 }
