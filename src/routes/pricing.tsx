@@ -267,22 +267,22 @@ function PricingPage() {
         Exact usage limits may vary by plan and feature. You can view your current limits from your account when signed in.
       </p>
 
-      <section className="max-w-3xl px-6 mt-16 mx-auto">
+      <section className="mx-auto max-w-5xl px-6 mt-16">
         <h2 className="text-2xl font-semibold mb-6 text-left">Pricing FAQ</h2>
-        <div className="space-y-5 text-sm">
-          <div>
+        <div className="grid gap-5 text-sm sm:grid-cols-2">
+          <div className="rounded-2xl border border-border bg-card/50 p-5">
             <h3 className="font-medium mb-1">Can I cancel anytime?</h3>
             <p className="text-muted-foreground">Yes. You can cancel from your account settings. Canceling stops future renewals.</p>
           </div>
-          <div>
+          <div className="rounded-2xl border border-border bg-card/50 p-5">
             <h3 className="font-medium mb-1">What happens if I hit my limit?</h3>
-            <p className="text-muted-foreground">You may need to wait until your limit resets or upgrade to a higher plan.</p>
+            <p className="text-muted-foreground">You can wait until your limit resets or upgrade to a higher plan for more usage.</p>
           </div>
-          <div>
+          <div className="rounded-2xl border border-border bg-card/50 p-5">
             <h3 className="font-medium mb-1">Can I switch plans?</h3>
-            <p className="text-muted-foreground">If plan switching is supported, you can manage your subscription from your account settings.</p>
+            <p className="text-muted-foreground">Yes. Manage your subscription from your account settings at any time.</p>
           </div>
-          <div>
+          <div className="rounded-2xl border border-border bg-card/50 p-5">
             <h3 className="font-medium mb-1">Do unused credits roll over?</h3>
             <p className="text-muted-foreground">Unused usage does not roll over unless stated otherwise.</p>
           </div>
