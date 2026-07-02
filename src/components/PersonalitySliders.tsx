@@ -47,7 +47,7 @@ export function personalityToInstruction(p: Personality): string {
 }
 
 export function PersonalitySliders() {
-  const tier = useTier();
+  const { tier } = useTier();
   const unlocked = tierRank(tier) >= tierRank("plus");
   const [values, setValues] = useState<Personality>(DEFAULT_PERSONALITY);
 
