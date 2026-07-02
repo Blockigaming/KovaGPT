@@ -2,7 +2,7 @@ import { Trash2, PanelLeft, Search, HelpCircle, Plus, Share2, Settings as Settin
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { NovaLogo } from "@/components/NovaLogo";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { SignInButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
 import { useTier } from "@/hooks/useTier";
 
