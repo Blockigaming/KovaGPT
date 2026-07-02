@@ -523,11 +523,6 @@ function KovaGPT() {
           autoTitle(nextConvId, fullMsgs);
         }
 
-
-        // Auto speak
-        if (settings.autoSpeak && assembledReply) {
-          speak(assembledReply, { rate: settings.voiceRate, voice: settings.voiceName });
-        }
       } catch (e: unknown) {
         if ((e as Error).name !== "AbortError") {
           const msg = e instanceof Error ? e.message : "Something went wrong";
