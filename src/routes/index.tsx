@@ -665,6 +665,16 @@ function KovaGPT() {
               </div>
 
               <div className="w-full max-w-3xl mx-auto">
+                {voiceModeOpen && (
+                  <VoiceMode
+                    open={voiceModeOpen}
+                    onClose={() => setVoiceModeOpen(false)}
+                    initialMessages={active?.messages ?? []}
+                    voiceName={settings.voiceName}
+                    voiceRate={settings.voiceRate}
+                    onTurn={voiceOnTurn}
+                  />
+                )}
                 <ChatInput
                   value={input}
                   onChange={setInput}
