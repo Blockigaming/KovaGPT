@@ -376,19 +376,8 @@ export function Sidebar({
           <span className="sr-only">{user?.firstName || ""}</span>
         </div>
 
-        {open && (
-          <div
-            onMouseDown={startDrag}
-            onTouchStart={startDrag}
-            role="separator"
-            aria-orientation="vertical"
-            aria-label="Resize sidebar"
-            style={{ touchAction: "none" }}
-            className="absolute top-0 -right-1 h-full w-3 cursor-col-resize hover:bg-border/80 active:bg-border transition-colors z-20"
-            title="Drag to resize"
-          />
-        )}
       </aside>
     </>
   );
 }
+
