@@ -58,6 +58,9 @@ import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { getMyDailyUsage, type DailyUsageDto } from "@/utils/usage.functions";
+import { PersonalitySliders } from "@/components/PersonalitySliders";
+import { StorageDashboard } from "@/components/StorageDashboard";
+import { MfaPanel } from "@/components/MfaPanel";
 import { clearConversations } from "@/lib/chat-store";
 import { getUsage, DAILY_IMAGE_LIMIT, DAILY_UPLOAD_LIMIT } from "@/lib/limits";
 import {
