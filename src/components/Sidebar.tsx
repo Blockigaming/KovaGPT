@@ -4,6 +4,7 @@ import { NovaLogo } from "@/components/NovaLogo";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { SignInButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
+import { useTier } from "@/hooks/useTier";
 
 import type { Conversation } from "@/lib/chat-store";
 
@@ -44,6 +45,7 @@ export function Sidebar({
   onOpenHelp: () => void;
 }) {
   const { user, isSignedIn, isLoaded } = useUser();
+  const { tier } = useTier();
   const [width, setWidth] = useState<number>(280);
   
   const [searchOpen, setSearchOpen] = useState(false);
@@ -226,7 +228,7 @@ export function Sidebar({
               <ImageIcon className="w-[18px] h-[18px] shrink-0" />
               <span className="truncate">Image Generation</span>
             </Link>
-            {showSignedIn && (
+            {showSignedIn && (tier === "plus" || tier === "pro") && (
               <Link to="/scheduled-tasks" className={navItemClass(isOn("/scheduled-tasks"))}>
                 <ActiveBar on={isOn("/scheduled-tasks")} />
                 <Calendar className="w-[18px] h-[18px] shrink-0" />

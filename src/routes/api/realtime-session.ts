@@ -57,14 +57,20 @@ export const Route = createFileRoute("/api/realtime-session")({
           (typeof body.instructions === "string" ? body.instructions.slice(0, 4000) : "") ||
           "You are KovaGPT, a warm, helpful, conversational AI built by Zachary Block. Speak naturally in short, complete sentences. Keep replies under three sentences unless asked for more. Never use markdown, lists, or symbols. Acknowledge user feelings briefly before solving. Never repeat profanity. Stay PG.";
 
+        // gpt-realtime is the current GA realtime model and supports the
+        // newer voices (marin, cedar). The old gpt-4o-realtime-preview
+        // model rejects those voices, which was the source of the
+        // "Could not start realtime voice session" error.
+        const model = "gpt-realtime";
         const resp = await fetch("https://api.openai.com/v1/realtime/sessions", {
           method: "POST",
           headers: {
             Authorization: `Bearer ${key}`,
             "Content-Type": "application/json",
+            "OpenAI-Beta": "realtime=v1",
           },
           body: JSON.stringify({
-            model: "gpt-4o-realtime-preview-2024-12-17",
+            model,
             voice,
             instructions,
             modalities: ["audio", "text"],
@@ -81,16 +87,24 @@ export const Route = createFileRoute("/api/realtime-session")({
         if (!resp.ok) {
           const text = await resp.text().catch(() => "");
           console.error("[realtime-session] upstream error", resp.status, text);
+          // Surface the actual upstream reason so client can show something useful
+          let detail = "Could not start realtime voice session.";
+          try {
+            const parsed = JSON.parse(text);
+            detail = parsed?.error?.message || detail;
+          } catch { /* keep default */ }
           return new Response(
-            JSON.stringify({ error: "Could not start realtime voice session. Please try again." }),
+            JSON.stringify({ error: detail, upstream_status: resp.status }),
             { status: 502, headers: { "Content-Type": "application/json" } },
           );
         }
 
         const json = await resp.json();
-        return new Response(JSON.stringify(json), {
+        // Include the model so the client's SDP handshake uses the same one.
+        return new Response(JSON.stringify({ ...json, model }), {
           headers: { "Content-Type": "application/json" },
         });
+
       },
     },
   },

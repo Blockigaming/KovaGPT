@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_user_library_items_user_created ON public.user_library_items (user_id, created_at DESC);

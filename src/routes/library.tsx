@@ -77,7 +77,7 @@ function LibraryPage() {
   return (
     <AppShell>
       <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
+        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center gap-3">
           <h1 className="font-display font-semibold tracking-tight text-base flex items-center gap-2">
             <FolderOpen className="w-4 h-4" /> Library
           </h1>
@@ -90,7 +90,7 @@ function LibraryPage() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-6 space-y-4">
+      <main className="max-w-7xl mx-auto px-6 py-6 space-y-4">
         {!isSignedIn && isLoaded && (
           <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm">
             <div className="font-medium mb-1">You are browsing as a guest.</div>
@@ -111,11 +111,11 @@ function LibraryPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search your library..."
-          className="h-9"
+          className="h-10 max-w-md"
         />
 
         {filtered.length === 0 ? (
-          <div className="rounded-lg border border-border p-8 text-center text-sm text-muted-foreground">
+          <div className="rounded-lg border border-border p-12 text-center text-sm text-muted-foreground">
             {loading
               ? "Loading..."
               : items.length === 0
@@ -123,50 +123,61 @@ function LibraryPage() {
                 : "No items match your search."}
           </div>
         ) : (
-          <ul className="divide-y divide-border rounded-lg border border-border bg-card">
-            {filtered.map((it) => (
-              <li key={it.id} className="p-3 flex items-start gap-3">
-                {it.file_url && (it.item_type === "image" || it.file_type?.startsWith("image/")) && (
-                  <img
-                    src={it.file_url}
-                    alt={it.title}
-                    className="w-14 h-14 rounded-md object-cover border border-border shrink-0"
-                  />
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{it.title}</div>
-                  <div className="text-[11px] text-muted-foreground mt-0.5">
-                    {it.item_type} · {new Date(it.created_at).toLocaleDateString()}
-                  </div>
-                  {it.content_text && (
-                    <div className="text-xs text-muted-foreground mt-1 line-clamp-2 whitespace-pre-wrap">
-                      {it.content_text.slice(0, 240)}
+          <ul className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(240px,1fr))]">
+            {filtered.map((it) => {
+              const isImage = it.file_url && (it.item_type === "image" || it.file_type?.startsWith("image/"));
+              return (
+                <li
+                  key={it.id}
+                  className="group relative rounded-xl border border-border bg-card overflow-hidden hover:border-foreground/30 transition"
+                >
+                  {isImage ? (
+                    <div className="aspect-square bg-muted overflow-hidden">
+                      <img
+                        src={it.file_url!}
+                        alt={it.title}
+                        loading="lazy"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                  ) : (
+                    <div className="aspect-square bg-gradient-to-br from-muted/40 to-muted/10 flex items-center justify-center p-4">
+                      <div className="text-xs text-muted-foreground line-clamp-6 whitespace-pre-wrap">
+                        {(it.content_text ?? it.title).slice(0, 300)}
+                      </div>
                     </div>
                   )}
-                  {it.file_url && it.item_type === "upload" && !it.file_type?.startsWith("image/") && (
-                    <a
-                      href={it.file_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-foreground/80 underline mt-1 inline-block"
-                    >
-                      Open file
-                    </a>
-                  )}
-                </div>
-
-                <button
-                  onClick={() => remove(it.id)}
-                  className="p-1.5 rounded hover:bg-accent transition active:scale-95"
-                  title="Delete"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </li>
-            ))}
+                  <div className="p-3">
+                    <div className="text-sm font-medium truncate">{it.title}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">
+                      {it.item_type} · {new Date(it.created_at).toLocaleDateString()}
+                    </div>
+                    {it.file_url && it.item_type === "upload" && !it.file_type?.startsWith("image/") && (
+                      <a
+                        href={it.file_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-foreground/80 underline mt-1 inline-block"
+                      >
+                        Open file
+                      </a>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => remove(it.id)}
+                    className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 backdrop-blur opacity-0 group-hover:opacity-100 transition hover:bg-destructive hover:text-destructive-foreground active:scale-95"
+                    title="Delete"
+                    aria-label="Delete item"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </main>
+
     </AppShell>
   );
 }

@@ -51,14 +51,14 @@ Knowledge:
 export const MODES: Mode[] = [
   {
     id: "default",
-    label: "Default",
+    label: "Kova 2.5",
     description: "The standard KovaGPT experience. Balanced, helpful, and friendly.",
     tier: "free",
     systemPrompt: BASE_SYSTEM,
   },
   {
     id: "fast",
-    label: "Fast",
+    label: "Kova 2.0",
     description: "Instant, snappy answers. Free plan, optimized for speed.",
     tier: "free",
     systemPrompt: `You are KovaGPT in Fast mode. Optimize for speed and brevity.
