@@ -1051,7 +1051,7 @@ function ConnectorRow({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground"
+            className="h-8 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
             onClick={() => onDisconnect(item.legacyProvider as LinkedProvider)}
           >
             Disconnect
