@@ -1,11 +1,10 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Copy, Check, Volume2, VolumeX, ImageIcon, Loader2, Bookmark, FileEdit, Code2, Eye, MoreHorizontal, Share2, Pencil, RefreshCw, ThumbsUp, ThumbsDown, GitBranch, Globe } from "lucide-react";
+import { Copy, Check, ImageIcon, Loader2, Bookmark, FileEdit, Code2, Eye, MoreHorizontal, Share2, Pencil, RefreshCw, ThumbsUp, ThumbsDown, GitBranch, Globe } from "lucide-react";
 import { memo, useEffect, useMemo, useState } from "react";
 import type { Message } from "@/lib/chat-store";
 import { NovaLogo } from "./NovaLogo";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { speak, stopSpeaking, isSpeaking, ttsSupported } from "@/lib/voice";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { saveToLibrary } from "@/lib/library.functions";
@@ -27,7 +26,6 @@ function cleanAssistantText(text: string): string {
 function ChatMessageInner({
   message,
   streaming,
-  voiceRate,
   onFollowUp,
   onRetry,
   onBranch,
@@ -44,8 +42,6 @@ function ChatMessageInner({
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
-  const [playing, setPlaying] = useState(false);
-  const [ttsOk, setTtsOk] = useState(false);
 
 
   const [saving, setSaving] = useState(false);
@@ -53,9 +49,9 @@ function ChatMessageInner({
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState<"edit" | "preview">("edit");
   const { isSignedIn } = useUser();
-  
+
   const saveFn = useServerFn(saveToLibrary);
-  useEffect(() => { setTtsOk(ttsSupported()); }, []);
+
 
 
   const artifactKind = useMemo(
@@ -136,23 +132,6 @@ function ChatMessageInner({
     }
   };
 
-  const toggleSpeak = () => {
-    if (isSpeaking()) {
-      stopSpeaking();
-      setPlaying(false);
-      return;
-    }
-    speak(message.content.replace(/```[\s\S]*?```/g, " code block ").replace(/[#*_`>]/g, ""), {
-      rate: voiceRate ?? 1,
-    });
-    setPlaying(true);
-    const i = setInterval(() => {
-      if (!isSpeaking()) {
-        setPlaying(false);
-        clearInterval(i);
-      }
-    }, 400);
-  };
 
   return (
     <div className="w-full px-6 sm:px-12 lg:px-20 py-3 group animate-fade-in text-[15px] [[data-sidebar=closed]_&]:text-[17px] [[data-sidebar=closed]_&]:py-4">

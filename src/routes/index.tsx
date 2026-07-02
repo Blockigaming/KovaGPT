@@ -674,22 +674,12 @@ function KovaGPT() {
           <div className="flex-1 flex flex-col overflow-y-auto px-4">
             <div className="flex-1 flex flex-col items-center justify-center w-full py-10">
               <div className="flex flex-col items-center gap-4 mb-6">
-                <NovaLogo className="w-12 h-12" />
                 <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight text-center">
                   {greeting}
                 </h1>
               </div>
 
               <div className="w-full max-w-3xl mx-auto">
-                <VoiceMode
-                  open={voiceModeOpen}
-                  onClose={() => setVoiceModeOpen(false)}
-                  initialMessages={active?.messages ?? []}
-                  voiceName={settings.voiceName}
-                  voiceRate={settings.voiceRate}
-                  onTurn={voiceOnTurn}
-                />
-
                 <ChatInput
                   value={input}
                   onChange={setInput}
@@ -700,7 +690,6 @@ function KovaGPT() {
                   onAttachmentsChange={setAttachments}
                   mode={mode}
                   onModeChange={setMode}
-                  onOpenVoice={tryOpenVoice}
                   onUploadLimit={() =>
                     setLimitDialog({ open: true, kind: "upload" })
                   }
@@ -784,17 +773,6 @@ function KovaGPT() {
                 );
               })}
             </div>
-            <div className="w-full max-w-3xl mx-auto">
-              <VoiceMode
-                open={voiceModeOpen}
-                onClose={() => setVoiceModeOpen(false)}
-                initialMessages={active?.messages ?? []}
-                voiceName={settings.voiceName}
-                voiceRate={settings.voiceRate}
-                onTurn={voiceOnTurn}
-              />
-            </div>
-
             <ChatInput
               value={input}
               onChange={setInput}
@@ -805,7 +783,6 @@ function KovaGPT() {
               onAttachmentsChange={setAttachments}
               mode={mode}
               onModeChange={setMode}
-              onOpenVoice={tryOpenVoice}
               onUploadLimit={() =>
                 setLimitDialog({ open: true, kind: "upload" })
               }
