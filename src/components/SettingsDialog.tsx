@@ -299,16 +299,30 @@ export function SettingsDialog({
           />
         ) : (
         <Tabs value={tab} onValueChange={setTab} orientation="vertical" className="flex-1 overflow-hidden flex flex-row">
-          <TabsList className="flex flex-col h-full w-60 shrink-0 overflow-y-auto items-stretch justify-start gap-1 p-3 bg-muted/40 border-r border-border rounded-none">
-            {TAB_ORDER.map(({ v, icon: Icon, label }) => (
-              <TabsTrigger
-                key={v}
-                value={v}
-                className="w-full justify-start gap-2.5 rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span className="truncate text-left">{label}</span>
-              </TabsTrigger>
+          <TabsList className="flex flex-col h-full w-64 shrink-0 overflow-y-auto items-stretch justify-start gap-4 p-3 bg-muted/40 border-r border-border rounded-none">
+            {TAB_GROUPS.map((group) => (
+              <div key={group.title} className="flex flex-col gap-0.5">
+                <div className="px-2 pt-1 pb-1.5">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+                    {group.title}
+                  </div>
+                  {group.hint && (
+                    <div className="text-[11px] text-muted-foreground/70 mt-0.5 leading-snug">
+                      {group.hint}
+                    </div>
+                  )}
+                </div>
+                {group.tabs.map(({ v, icon: Icon, label }) => (
+                  <TabsTrigger
+                    key={v}
+                    value={v}
+                    className="w-full justify-start gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span className="truncate text-left">{label}</span>
+                  </TabsTrigger>
+                ))}
+              </div>
             ))}
           </TabsList>
 
@@ -806,61 +820,6 @@ export function SettingsDialog({
             </p>
           </TabsContent>
 
-          {/* VOICE */}
-          <TabsContent value="voice" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
-            <h3 className="text-sm font-semibold">Voice</h3>
-            <ToggleRow
-              title="Auto-read responses"
-              hint="Speak replies out loud automatically."
-              checked={settings.autoSpeak}
-              onCheckedChange={(v) => onChange({ ...settings, autoSpeak: v })}
-            />
-            <div>
-              <label className="text-xs text-muted-foreground mb-1.5 block">Voice</label>
-              <div className="flex gap-2">
-                <Select
-                  value={currentVoice}
-                  onValueChange={(v) => onChange({ ...settings, voiceName: v })}
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Select a voice" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-72">
-                    {list.map((v) => (
-                      <SelectItem key={v.name} value={v.name}>
-                        {friendlyVoiceLabel(v)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  size="icon"
-                  variant="outline"
-                  onClick={() =>
-                    speak("Hi, I'm KovaGPT. This is how I sound.", {
-                      voice: currentVoice,
-                      rate: settings.voiceRate,
-                    })
-                  }
-                  title="Preview"
-                >
-                  <Play className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground mb-1.5">
-                Speech rate: {settings.voiceRate.toFixed(1)}x
-              </div>
-              <Slider
-                min={0.5}
-                max={2}
-                step={0.1}
-                value={[settings.voiceRate]}
-                onValueChange={(v) => onChange({ ...settings, voiceRate: v[0] })}
-              />
-            </div>
-          </TabsContent>
 
           {/* SAFETY & SECURITY */}
           <TabsContent value="security" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
