@@ -329,8 +329,9 @@ function ImagesPage() {
       const res = await authFetch("/api/generate-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: trimmed }),
+        body: JSON.stringify({ prompt: trimmed, size }),
       });
+
       const data = await res.json();
       if (!res.ok) {
         const msg = data?.error || "Failed to generate image";
