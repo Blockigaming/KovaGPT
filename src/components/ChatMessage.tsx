@@ -1,6 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Copy, Check, User, Volume2, VolumeX, ImageIcon, Loader2, Bookmark, FileEdit, Code2, Eye, MoreHorizontal, Send, Pencil, RefreshCw, ThumbsUp, ThumbsDown, GitBranch, Globe } from "lucide-react";
+import { Copy, Check, Volume2, VolumeX, ImageIcon, Loader2, Bookmark, FileEdit, Code2, Eye, MoreHorizontal, Send, Pencil, RefreshCw, ThumbsUp, ThumbsDown, GitBranch, Globe } from "lucide-react";
 import { memo, useEffect, useMemo, useState } from "react";
 import type { Message } from "@/lib/chat-store";
 import { NovaLogo } from "./NovaLogo";
@@ -156,33 +156,34 @@ function ChatMessageInner({
 
   return (
     <div className="w-full px-4 py-3 group animate-fade-in">
-      <div className="mx-auto max-w-3xl flex gap-4">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center">
-          {isUser ? (
-            <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center">
-              <User className="w-4 h-4" />
-            </div>
-          ) : (
-            <NovaLogo className="w-8 h-8" />
-          )}
+      {isUser ? (
+        <div className="mx-auto max-w-3xl flex justify-end">
+          <div className="max-w-[85%] sm:max-w-[75%] flex flex-col items-end min-w-0">
+            {message.attachments && message.attachments.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2 justify-end">
+                {message.attachments.map((a, i) => (
+                  <img
+                    key={i}
+                    src={a.dataUrl}
+                    alt={message.content?.trim() ? `User-uploaded image: ${message.content.slice(0, 120)}` : "User-uploaded image attached to message"}
+                    className="max-h-64 rounded-2xl border border-border"
+                  />
+                ))}
+              </div>
+            )}
+            {message.content && (
+              <div className="rounded-3xl bg-accent text-foreground px-4 py-2.5 whitespace-pre-wrap break-words prose-chat">
+                {message.content}
+              </div>
+            )}
+          </div>
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="font-semibold text-sm mb-1">{isUser ? "You" : "KovaGPT"}</div>
-          {message.attachments && message.attachments.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-2">
-              {message.attachments.map((a, i) => (
-                <img
-                  key={i}
-                  src={a.dataUrl}
-                  alt={message.content?.trim() ? `User-uploaded image: ${message.content.slice(0, 120)}` : "User-uploaded image attached to message"}
-                  className="max-h-64 rounded-lg border border-border"
-                />
-              ))}
-            </div>
-          )}
-          {isUser ? (
-            <div className="prose-chat whitespace-pre-wrap">{message.content}</div>
-          ) : (
+      ) : (
+        <div className="mx-auto max-w-3xl flex gap-3 sm:gap-4 justify-start">
+          <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center">
+            <NovaLogo className="w-8 h-8" />
+          </div>
+          <div className="flex-1 min-w-0">
             <div className="prose-chat">
               {message.pendingImage && !message.content ? (
                 <div className="flex items-center gap-3 px-4 py-6 rounded-xl bg-accent/40 border border-border w-fit">
@@ -201,10 +202,13 @@ function ChatMessageInner({
                   {cleanAssistantText(message.content)}
                 </ReactMarkdown>
               )}
-
               {streaming && message.content && <span className="cursor-blink" />}
             </div>
-          )}
+          </div>
+        </div>
+      )}
+      <div className="mx-auto max-w-3xl">
+        <div className={isUser ? "flex justify-end" : "sm:pl-12"}>
           {!streaming && !isUser && message.content && (
             <div className="mt-2 flex flex-wrap items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
               {/* Visible: Copy, Read aloud, Send */}
