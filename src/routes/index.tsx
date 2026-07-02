@@ -637,27 +637,38 @@ function KovaGPT() {
       />
 
       <main className="flex-1 flex flex-col min-w-0" data-sidebar={sidebarOpen ? "open" : "closed"}>
-        <header className="h-14 flex items-center px-3 relative">
+        <header className="h-14 flex items-center px-3 relative gap-1">
           {!sidebarOpen && (
-            <button
-              onClick={() => setSidebarOpen((v) => !v)}
-              className="p-2 rounded-lg hover:bg-accent transition mr-2"
-              aria-label="Toggle sidebar"
-              title="Toggle sidebar"
-            >
-              <PanelLeft className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-1 mr-2 shrink-0">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="shrink-0 p-2 rounded-lg hover:bg-accent transition"
+                aria-label="Open sidebar"
+                title="Open sidebar"
+              >
+                <PanelLeft className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="shrink-0 p-2 rounded-lg hover:bg-accent transition"
+                aria-label="Search chats"
+                title="Search chats"
+              >
+                <Search className="w-5 h-5" />
+              </button>
+            </div>
           )}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 px-1">
-              <span className="inline-flex rounded-full dark:bg-black dark:p-[2px] dark:ring-1 dark:ring-black">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-2 px-1 min-w-0">
+              <span className="inline-flex shrink-0 rounded-full dark:bg-black dark:p-[2px] dark:ring-1 dark:ring-black">
                 <NovaLogo className="w-6 h-6" />
               </span>
-              <span className="font-display font-semibold tracking-tight hidden sm:inline">
+              <span className="font-display font-semibold tracking-tight hidden sm:inline truncate">
                 {mode === "fast" ? "Kova 2.0" : "Kova 2.5"}
               </span>
             </div>
           </div>
+
 
 
           <div className="ml-auto flex items-center gap-2">
