@@ -520,9 +520,11 @@ export const Route = createFileRoute("/api/chat")({
             if (!isOwner) callerTier = await getCallerTier(auth);
           }
 
-          // Image generation requires an account.
-          if (isImageRequest) {
-            if (!auth) return unauthorized("Sign in to generate images.");
+          // Image generation requires an account. For signed-out users,
+          // silently fall through to normal chat so the model can respond
+          // in text (esp. important when the user *explicitly declined* an
+          // image but a keyword still slipped past the negation guard).
+          if (isImageRequest && auth) {
             if (!isOwner) {
               const maint = await assertFeatureEnabled(auth, "images");
               if (maint) return maint;
