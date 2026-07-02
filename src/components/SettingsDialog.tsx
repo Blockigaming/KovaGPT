@@ -921,15 +921,15 @@ export function SettingsDialog({
               </div>
               <div className="grid gap-2 pt-2">
                 <ToggleRow
-                  label="Enable Family sharing"
+                  title="Enable Family sharing"
                   hint="Invite members to your plan. Each gets their own private workspace."
                   checked={settings.parentalMode === false}
                   onCheckedChange={() => toast.message("Family sharing", { description: "Invite links are rolling out soon. Your seat is reserved." })}
                 />
                 <ToggleRow
-                  label="Kid-safe filters for members under 13"
+                  title="Kid-safe filters for members under 13"
                   hint="Applies stricter safety filters and disables mature content for child accounts."
-                  checked={settings.parentalMode}
+                  checked={!!settings.parentalMode}
                   onCheckedChange={(v) => onChange({ ...settings, parentalMode: v })}
                 />
               </div>
