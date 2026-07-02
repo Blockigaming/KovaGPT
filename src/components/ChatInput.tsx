@@ -1,6 +1,5 @@
-import { ArrowUp, Square, Mic, Plus, X, AudioLines } from "lucide-react";
+import { ArrowUp, Square, Plus, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { createRecognition, sttSupported } from "@/lib/voice";
 import { tryUseUpload, DAILY_UPLOAD_LIMIT, getUsage } from "@/lib/limits";
 import { toast } from "sonner";
 import { ModelSelector } from "@/components/ModelSelector";
@@ -22,7 +21,6 @@ export function ChatInput({
   mode,
   onModeChange,
   userTier = "free",
-  onOpenVoice,
   onUploadLimit,
   placeholder,
 }: {
@@ -36,7 +34,6 @@ export function ChatInput({
   mode?: ModeId;
   onModeChange?: (m: ModeId) => void;
   userTier?: Tier;
-  onOpenVoice?: () => void;
   /** Called when the user hits their daily upload quota. */
   onUploadLimit?: () => void;
   placeholder?: string;
@@ -44,8 +41,6 @@ export function ChatInput({
 
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const recRef = useRef<any>(null);
-  const [listening, setListening] = useState(false);
   const [sendFlash, setSendFlash] = useState(false);
   const [actionColor, setActionColor] = useState<string>("#3b82f6");
 
@@ -91,27 +86,8 @@ export function ChatInput({
     }
   };
 
-  const toggleMic = () => {
-    if (!sttSupported()) {
-      toast.error("Voice input isn't supported in this browser.");
-      return;
-    }
-    if (listening) {
-      recRef.current?.stop();
-      setListening(false);
-      return;
-    }
-    const rec = createRecognition(
-      (text, isFinal) => {
-        if (isFinal) onChange((value ? value + " " : "") + text);
-      },
-      () => setListening(false),
-    );
-    if (!rec) return;
-    recRef.current = rec;
-    rec.start();
-    setListening(true);
-  };
+
+
 
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
