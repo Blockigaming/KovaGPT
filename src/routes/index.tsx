@@ -609,7 +609,7 @@ function KovaGPT() {
         }}
       />
 
-      <main className="flex-1 flex flex-col min-w-0">
+      <main className="flex-1 flex flex-col min-w-0" data-sidebar={sidebarOpen ? "open" : "closed"}>
         <header className="h-14 flex items-center px-3 border-b border-border relative">
           {!sidebarOpen && (
             <button
