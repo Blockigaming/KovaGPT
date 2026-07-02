@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input";
 import { AppShell } from "@/components/AppShell";
 import { toast } from "sonner";
 
-const LOGO_KEY = import.meta.env.VITE_LOVABLE_CONNECTOR_LOGO_DEV_API_KEY as string | undefined;
 const STORAGE_KEY = "kova-connected-apps-v1";
+
 
 // Apps with real working sign-in/auth wired through KovaGPT today.
 // Everything else needs provider credentials before it can be linked, so we
@@ -76,24 +76,28 @@ function saveConnected(map: Record<string, true>) {
 }
 
 function AppLogo({ domain, label }: { domain: string; label: string }) {
+  // Locally rendered brand mark using the domain's own favicon as a fallback.
+  // Avoids Logo.dev entirely.
   const [failed, setFailed] = useState(false);
-  if (LOGO_KEY && !failed) {
+  const src = `https://www.google.com/s2/favicons?sz=64&domain=${encodeURIComponent(domain)}`;
+  if (!failed) {
     return (
       <img
-        src={`https://img.logo.dev/${domain}?token=${LOGO_KEY}&size=64`}
+        src={src}
         alt=""
         loading="lazy"
         onError={() => setFailed(true)}
-        className="w-10 h-10 rounded-lg object-contain bg-white border border-border shrink-0 p-1"
+        className="w-10 h-10 rounded-lg object-contain bg-white border border-border shrink-0 p-1.5"
       />
     );
   }
   return (
-    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0 text-xs font-semibold text-muted-foreground">
+    <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0 text-xs font-semibold text-muted-foreground border border-border">
       {label.slice(0, 2).toUpperCase()}
     </div>
   );
 }
+
 
 function StatusBadge({ state, configured }: { state: ConnState; configured: boolean }) {
   if (!configured) {
