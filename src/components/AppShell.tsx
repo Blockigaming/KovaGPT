@@ -71,7 +71,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {!sidebarOpen && (
           <button
             onClick={() => setSidebarOpen(true)}
-            className="fixed top-3 right-3 z-30 p-2 rounded-md bg-background/90 border border-border hover:bg-accent transition shadow-sm"
+            className="fixed top-3 left-3 z-30 p-2 rounded-md bg-background/90 border border-border hover:bg-accent transition shadow-sm"
             aria-label="Open sidebar"
           >
             <PanelLeft className="w-4 h-4" />
