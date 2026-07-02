@@ -113,7 +113,7 @@ export const saveImageToLibrary = createServerFn({ method: "POST" })
     if (error || !row) {
       // best-effort cleanup of orphan upload
       await context.supabase.storage.from(BUCKET).remove([path]);
-      throw new Error(error?.message ?? "Failed to save");
+      { console.error("[serverfn]", error?.message); throw new Error("Failed to save"); }
     }
     return { id: row.id };
   });
@@ -156,6 +156,6 @@ export const deleteLibraryImage = createServerFn({ method: "POST" })
       .delete()
       .eq("id", data.id)
       .eq("user_id", context.userId);
-    if (error) throw new Error(error.message);
+    if (error) { console.error("[serverfn]", error.message); throw new Error("Request failed. Please try again."); }
     return { ok: true };
   });
