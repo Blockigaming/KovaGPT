@@ -722,7 +722,7 @@ function KovaGPT() {
                     key={m.id}
                     message={m}
                     streaming={isStreaming && isLastAssistant}
-                    voiceRate={settings.voiceRate}
+                    
                     onFollowUp={
                       isLastAssistant && !isStreaming
                         ? (prompt) => send(prompt, [])

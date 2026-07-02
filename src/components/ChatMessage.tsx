@@ -33,7 +33,7 @@ function ChatMessageInner({
 }: {
   message: Message;
   streaming?: boolean;
-  voiceRate?: number;
+  
   onFollowUp?: (prompt: string) => void;
   onRetry?: () => void;
   onBranch?: () => void;
