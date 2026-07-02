@@ -104,10 +104,12 @@ export const Route = createFileRoute("/api/generate-image")({
           if (contentLength > MAX_BODY) return jsonError("Request too large.", 413);
           const raw = await request.text();
           if (raw.length > MAX_BODY) return jsonError("Request too large.", 413);
-          const { prompt } = JSON.parse(raw) as { prompt?: string };
+          const { prompt, size } = JSON.parse(raw) as { prompt?: string; size?: string };
           if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
             return jsonError("Prompt required", 400);
           }
+          const ALLOWED_SIZES = new Set(["1024x1024", "1024x1536", "1536x1024"]);
+          const chosenSize = ALLOWED_SIZES.has(size ?? "") ? (size as string) : "1024x1024";
           const apiKey = process.env.LOVABLE_API_KEY;
           if (!apiKey) return jsonError("AI service not configured", 500);
 
@@ -123,7 +125,8 @@ export const Route = createFileRoute("/api/generate-image")({
 
           let lastStatus = 500;
           for (const model of MODELS) {
-            const result = await tryModel(model, prompt.trim(), apiKey);
+            const result = await tryModel(model, prompt.trim(), apiKey, chosenSize);
+
             if (result.imageUrl) {
               return new Response(
                 JSON.stringify({ imageUrl: result.imageUrl, model }),
