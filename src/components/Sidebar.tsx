@@ -117,7 +117,7 @@ export function Sidebar({
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isOn = (p: string) => pathname === p;
   const navItemClass = (active: boolean) =>
-    `relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] transition active:scale-[0.98] ${
+    `relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] transition active:scale-[0.98] min-w-0 ${
       active
         ? "bg-sidebar-hover text-foreground"
         : "hover:bg-sidebar-hover text-sidebar-foreground"
