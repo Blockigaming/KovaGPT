@@ -42,8 +42,7 @@ export function ModelSelector({
           compact ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-sm font-medium"
         }`}
       >
-        <span className="text-muted-foreground">Mode:</span>
-        <span className="text-foreground">{current.label}</span>
+        <span className="text-foreground font-medium">{current.label}</span>
         <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
       </button>
       {open && (
