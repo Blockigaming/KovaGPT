@@ -132,7 +132,9 @@ export function ChatInput({
     }
   };
 
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+
     e.target.value = "";
     let nextValue = value;
     for (const f of files) {
