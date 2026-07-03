@@ -631,16 +631,16 @@ export const Route = createFileRoute("/api/chat")({
             return { role: safeRole, content: msg.content };
           });
 
-          // COST: route to the cheapest acceptable model per intelligence tier.
+          // COST: route to the cheapest capable model per intelligence tier.
+          // Default (Medium) uses the fast preview model which is smart and
+          // very cheap. High escalates to the pro preview only when asked.
           const model = voice
-            ? "google/gemini-3.5-flash"
+            ? "google/gemini-3-flash-preview"
             : m.id === "high"
               ? "google/gemini-3.1-pro-preview"
-              : hasImages
-                ? "google/gemini-2.5-pro"
-                : m.id === "instant"
-                  ? "google/gemini-3.1-flash-lite"
-                  : "google/gemini-3.5-flash";
+              : m.id === "instant"
+                ? "google/gemini-3.1-flash-lite"
+                : "google/gemini-3-flash-preview";
 
           // TODO(routing): add per-request classification (rewrite/summary/coding)
           // and an explicit "Improve answer" client action that re-runs with a
