@@ -662,7 +662,7 @@ export const Route = createFileRoute("/api/chat")({
           // summaries of their recent past chats so KovaGPT can recall
           // context across conversations. Respects user.rememberAcross.
           let memoryBlock = "";
-          if (auth && (callerTier === "plus" || callerTier === "pro" || isOwner) && user?.rememberAcross !== false) {
+          if (auth && user?.rememberAcross !== false) {
             try {
               const { data: memRows } = await (auth.supabaseAdmin as unknown as {
                 from: (t: string) => any;
