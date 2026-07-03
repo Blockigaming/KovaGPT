@@ -92,6 +92,13 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         userId,
       });
 
+      // First month of Plus is free — give a 30-day trial to any user who
+      // has never had a subscription in this environment before.
+      const isPlusTrialEligible =
+        isRecurring &&
+        data.priceId === "plus_monthly" &&
+        !existing;
+
       const sessionParams: Record<string, unknown> = {
         line_items: [{ price: stripePrice.id, quantity: data.quantity || 1 }],
         mode: isRecurring ? "subscription" : "payment",
@@ -100,7 +107,12 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         managed_payments: { enabled: true },
         customer: customerId,
         metadata: { userId },
-        ...(isRecurring && { subscription_data: { metadata: { userId } } }),
+        ...(isRecurring && {
+          subscription_data: {
+            metadata: { userId },
+            ...(isPlusTrialEligible && { trial_period_days: 30 }),
+          },
+        }),
       };
       const session = await stripe.checkout.sessions.create(
         sessionParams as Parameters<typeof stripe.checkout.sessions.create>[0],

@@ -188,11 +188,12 @@ function PricingPage() {
             name="Plus"
             price="$16"
             period="/ month"
-            description="More of everything, plus advanced modes."
-            cta="Upgrade to Plus"
+            description="Free for your first month, then $16/month. Cancel anytime."
+            cta="Start free month"
             highlight
             onCta={() => startCheckout("plus_monthly")}
             features={[
+              "First month free — cancel anytime",
               "Everything in Free",
               "Auto Mode (adapts to your unlocked modes)",
               "Higher daily usage limits",

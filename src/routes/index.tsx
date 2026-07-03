@@ -691,14 +691,11 @@ function KovaGPT() {
               </div>
             </div>
 
-            <div className="w-full max-w-3xl mx-auto pb-6 flex flex-wrap gap-2 justify-center">
+            <div className="w-full max-w-3xl mx-auto -mt-2 pb-6 flex flex-wrap gap-2 justify-center">
               {[
                 "Create an image",
                 "Search the web",
                 "Nail down a concept",
-                "Draft an email",
-                "Summarize this",
-                "Plan my day",
               ].map((p) => (
                 <button
                   key={p}
