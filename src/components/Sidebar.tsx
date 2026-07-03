@@ -83,8 +83,8 @@ export function Sidebar({
       >
         <div style={{ width: SIDEBAR_WIDTH }} className="flex flex-col h-full">
 
-          {/* Brand row — top edge fades into the app background */}
-          <div className="relative z-20 flex items-center gap-2 px-3 sm:px-4 pt-4 pb-4 bg-gradient-to-b from-background/70 via-sidebar/90 to-sidebar">
+          {/* Brand row */}
+          <div className="relative z-20 flex items-center gap-2 px-3 sm:px-4 pt-4 pb-3 bg-sidebar">
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <span className="inline-flex shrink-0 rounded-full dark:bg-black dark:p-[2px] dark:ring-1 dark:ring-black">
                 <NovaLogo className="w-7 h-7" />
@@ -114,10 +114,10 @@ export function Sidebar({
             </div>
           </div>
 
-          {/* Subtle fade so scrolled chat list dissolves into the header area */}
+          {/* Tight top fade – only the very top edge blends into the app background */}
           <div
             aria-hidden="true"
-            className="pointer-events-none relative z-10 -mt-1 h-4 bg-gradient-to-b from-sidebar to-transparent"
+            className="pointer-events-none absolute inset-x-0 top-0 z-10 h-5 bg-gradient-to-b from-background to-transparent"
           />
 
 
