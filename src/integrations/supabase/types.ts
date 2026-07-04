@@ -65,6 +65,42 @@ export type Database = {
         }
         Relationships: []
       }
+      connected_account_audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          provider: string
+          resource_id: string | null
+          status: string
+          summary: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          provider: string
+          resource_id?: string | null
+          status?: string
+          summary?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          provider?: string
+          resource_id?: string | null
+          status?: string
+          summary?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       daily_usage: {
         Row: {
           chats: number
@@ -353,6 +389,42 @@ export type Database = {
           },
         ]
       }
+      google_oauth_tokens: {
+        Row: {
+          access_token: string
+          created_at: string
+          email: string | null
+          expires_at: string
+          google_sub: string | null
+          refresh_token: string | null
+          scopes: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          email?: string | null
+          expires_at: string
+          google_sub?: string | null
+          refresh_token?: string | null
+          scopes?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          email?: string | null
+          expires_at?: string
+          google_sub?: string | null
+          refresh_token?: string | null
+          scopes?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       plaid_items: {
         Row: {
           access_token_encrypted: string | null
@@ -609,6 +681,36 @@ export type Database = {
           metadata?: Json | null
           source?: string
           title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_onboarding: {
+        Row: {
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          primary_use: string | null
+          response_style: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          primary_use?: string | null
+          response_style?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          primary_use?: string | null
+          response_style?: string
           updated_at?: string
           user_id?: string
         }
