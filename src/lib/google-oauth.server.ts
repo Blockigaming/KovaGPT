@@ -208,7 +208,7 @@ export async function logAudit(opts: {
       status: opts.status ?? "success",
       resource_id: opts.resourceId ?? null,
       summary: opts.summary ?? null,
-      metadata: (opts.metadata as unknown) ?? null,
+      metadata: (opts.metadata ?? null) as never,
     });
   } catch (e) {
     console.warn("[audit] insert failed", e);

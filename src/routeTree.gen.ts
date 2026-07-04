@@ -28,6 +28,7 @@ import { Route as ContactSupportRouteImport } from './routes/contact-support'
 import { Route as CodeHelperRouteImport } from './routes/code-helper'
 import { Route as ChatgptAlternativeRouteImport } from './routes/chatgpt-alternative'
 import { Route as ChangelogRouteImport } from './routes/changelog'
+import { Route as AuditLogRouteImport } from './routes/audit-log'
 import { Route as AppsRouteImport } from './routes/apps'
 import { Route as AiWriterRouteImport } from './routes/ai-writer'
 import { Route as AiSafetyRouteImport } from './routes/ai-safety'
@@ -46,6 +47,13 @@ import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-imag
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as ApiPublicHelpSubmitRouteImport } from './routes/api/public/help-submit'
+import { Route as ApiGoogleStatusRouteImport } from './routes/api/google/status'
+import { Route as ApiGoogleGmailRouteImport } from './routes/api/google/gmail'
+import { Route as ApiGoogleDriveRouteImport } from './routes/api/google/drive'
+import { Route as ApiGoogleDisconnectRouteImport } from './routes/api/google/disconnect'
+import { Route as ApiGoogleCallbackRouteImport } from './routes/api/google/callback'
+import { Route as ApiGoogleCalendarRouteImport } from './routes/api/google/calendar'
+import { Route as ApiGoogleAuthRouteImport } from './routes/api/google/auth'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -148,6 +156,11 @@ const ChangelogRoute = ChangelogRouteImport.update({
   path: '/changelog',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuditLogRoute = AuditLogRouteImport.update({
+  id: '/audit-log',
+  path: '/audit-log',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppsRoute = AppsRouteImport.update({
   id: '/apps',
   path: '/apps',
@@ -240,6 +253,41 @@ const ApiPublicHelpSubmitRoute = ApiPublicHelpSubmitRouteImport.update({
   path: '/api/public/help-submit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGoogleStatusRoute = ApiGoogleStatusRouteImport.update({
+  id: '/api/google/status',
+  path: '/api/google/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGoogleGmailRoute = ApiGoogleGmailRouteImport.update({
+  id: '/api/google/gmail',
+  path: '/api/google/gmail',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGoogleDriveRoute = ApiGoogleDriveRouteImport.update({
+  id: '/api/google/drive',
+  path: '/api/google/drive',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGoogleDisconnectRoute = ApiGoogleDisconnectRouteImport.update({
+  id: '/api/google/disconnect',
+  path: '/api/google/disconnect',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGoogleCallbackRoute = ApiGoogleCallbackRouteImport.update({
+  id: '/api/google/callback',
+  path: '/api/google/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGoogleCalendarRoute = ApiGoogleCalendarRouteImport.update({
+  id: '/api/google/calendar',
+  path: '/api/google/calendar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGoogleAuthRoute = ApiGoogleAuthRouteImport.update({
+  id: '/api/google/auth',
+  path: '/api/google/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailTransactionalSendRoute =
   LovableEmailTransactionalSendRouteImport.update({
     id: '/lovable/email/transactional/send',
@@ -282,6 +330,7 @@ export interface FileRoutesByFullPath {
   '/ai-safety': typeof AiSafetyRoute
   '/ai-writer': typeof AiWriterRoute
   '/apps': typeof AppsRoute
+  '/audit-log': typeof AuditLogRoute
   '/changelog': typeof ChangelogRoute
   '/chatgpt-alternative': typeof ChatgptAlternativeRoute
   '/code-helper': typeof CodeHelperRoute
@@ -311,6 +360,13 @@ export interface FileRoutesByFullPath {
   '/checkout/return': typeof CheckoutReturnRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
+  '/api/google/auth': typeof ApiGoogleAuthRoute
+  '/api/google/calendar': typeof ApiGoogleCalendarRoute
+  '/api/google/callback': typeof ApiGoogleCallbackRoute
+  '/api/google/disconnect': typeof ApiGoogleDisconnectRoute
+  '/api/google/drive': typeof ApiGoogleDriveRoute
+  '/api/google/gmail': typeof ApiGoogleGmailRoute
+  '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -327,6 +383,7 @@ export interface FileRoutesByTo {
   '/ai-safety': typeof AiSafetyRoute
   '/ai-writer': typeof AiWriterRoute
   '/apps': typeof AppsRoute
+  '/audit-log': typeof AuditLogRoute
   '/changelog': typeof ChangelogRoute
   '/chatgpt-alternative': typeof ChatgptAlternativeRoute
   '/code-helper': typeof CodeHelperRoute
@@ -356,6 +413,13 @@ export interface FileRoutesByTo {
   '/checkout/return': typeof CheckoutReturnRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
+  '/api/google/auth': typeof ApiGoogleAuthRoute
+  '/api/google/calendar': typeof ApiGoogleCalendarRoute
+  '/api/google/callback': typeof ApiGoogleCallbackRoute
+  '/api/google/disconnect': typeof ApiGoogleDisconnectRoute
+  '/api/google/drive': typeof ApiGoogleDriveRoute
+  '/api/google/gmail': typeof ApiGoogleGmailRoute
+  '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -373,6 +437,7 @@ export interface FileRoutesById {
   '/ai-safety': typeof AiSafetyRoute
   '/ai-writer': typeof AiWriterRoute
   '/apps': typeof AppsRoute
+  '/audit-log': typeof AuditLogRoute
   '/changelog': typeof ChangelogRoute
   '/chatgpt-alternative': typeof ChatgptAlternativeRoute
   '/code-helper': typeof CodeHelperRoute
@@ -402,6 +467,13 @@ export interface FileRoutesById {
   '/checkout/return': typeof CheckoutReturnRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
+  '/api/google/auth': typeof ApiGoogleAuthRoute
+  '/api/google/calendar': typeof ApiGoogleCalendarRoute
+  '/api/google/callback': typeof ApiGoogleCallbackRoute
+  '/api/google/disconnect': typeof ApiGoogleDisconnectRoute
+  '/api/google/drive': typeof ApiGoogleDriveRoute
+  '/api/google/gmail': typeof ApiGoogleGmailRoute
+  '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -420,6 +492,7 @@ export interface FileRouteTypes {
     | '/ai-safety'
     | '/ai-writer'
     | '/apps'
+    | '/audit-log'
     | '/changelog'
     | '/chatgpt-alternative'
     | '/code-helper'
@@ -449,6 +522,13 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/email/unsubscribe'
     | '/~oauth/callback'
+    | '/api/google/auth'
+    | '/api/google/calendar'
+    | '/api/google/callback'
+    | '/api/google/disconnect'
+    | '/api/google/drive'
+    | '/api/google/gmail'
+    | '/api/google/status'
     | '/api/public/help-submit'
     | '/lovable/email/suppression'
     | '/api/public/payments/webhook'
@@ -465,6 +545,7 @@ export interface FileRouteTypes {
     | '/ai-safety'
     | '/ai-writer'
     | '/apps'
+    | '/audit-log'
     | '/changelog'
     | '/chatgpt-alternative'
     | '/code-helper'
@@ -494,6 +575,13 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/email/unsubscribe'
     | '/~oauth/callback'
+    | '/api/google/auth'
+    | '/api/google/calendar'
+    | '/api/google/callback'
+    | '/api/google/disconnect'
+    | '/api/google/drive'
+    | '/api/google/gmail'
+    | '/api/google/status'
     | '/api/public/help-submit'
     | '/lovable/email/suppression'
     | '/api/public/payments/webhook'
@@ -510,6 +598,7 @@ export interface FileRouteTypes {
     | '/ai-safety'
     | '/ai-writer'
     | '/apps'
+    | '/audit-log'
     | '/changelog'
     | '/chatgpt-alternative'
     | '/code-helper'
@@ -539,6 +628,13 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/email/unsubscribe'
     | '/~oauth/callback'
+    | '/api/google/auth'
+    | '/api/google/calendar'
+    | '/api/google/callback'
+    | '/api/google/disconnect'
+    | '/api/google/drive'
+    | '/api/google/gmail'
+    | '/api/google/status'
     | '/api/public/help-submit'
     | '/lovable/email/suppression'
     | '/api/public/payments/webhook'
@@ -556,6 +652,7 @@ export interface RootRouteChildren {
   AiSafetyRoute: typeof AiSafetyRoute
   AiWriterRoute: typeof AiWriterRoute
   AppsRoute: typeof AppsRoute
+  AuditLogRoute: typeof AuditLogRoute
   ChangelogRoute: typeof ChangelogRoute
   ChatgptAlternativeRoute: typeof ChatgptAlternativeRoute
   CodeHelperRoute: typeof CodeHelperRoute
@@ -585,6 +682,13 @@ export interface RootRouteChildren {
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   Char126oauthCallbackRoute: typeof Char126oauthCallbackRoute
+  ApiGoogleAuthRoute: typeof ApiGoogleAuthRoute
+  ApiGoogleCalendarRoute: typeof ApiGoogleCalendarRoute
+  ApiGoogleCallbackRoute: typeof ApiGoogleCallbackRoute
+  ApiGoogleDisconnectRoute: typeof ApiGoogleDisconnectRoute
+  ApiGoogleDriveRoute: typeof ApiGoogleDriveRoute
+  ApiGoogleGmailRoute: typeof ApiGoogleGmailRoute
+  ApiGoogleStatusRoute: typeof ApiGoogleStatusRoute
   ApiPublicHelpSubmitRoute: typeof ApiPublicHelpSubmitRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -730,6 +834,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChangelogRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/audit-log': {
+      id: '/audit-log'
+      path: '/audit-log'
+      fullPath: '/audit-log'
+      preLoaderRoute: typeof AuditLogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/apps': {
       id: '/apps'
       path: '/apps'
@@ -856,6 +967,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHelpSubmitRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/google/status': {
+      id: '/api/google/status'
+      path: '/api/google/status'
+      fullPath: '/api/google/status'
+      preLoaderRoute: typeof ApiGoogleStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/google/gmail': {
+      id: '/api/google/gmail'
+      path: '/api/google/gmail'
+      fullPath: '/api/google/gmail'
+      preLoaderRoute: typeof ApiGoogleGmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/google/drive': {
+      id: '/api/google/drive'
+      path: '/api/google/drive'
+      fullPath: '/api/google/drive'
+      preLoaderRoute: typeof ApiGoogleDriveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/google/disconnect': {
+      id: '/api/google/disconnect'
+      path: '/api/google/disconnect'
+      fullPath: '/api/google/disconnect'
+      preLoaderRoute: typeof ApiGoogleDisconnectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/google/callback': {
+      id: '/api/google/callback'
+      path: '/api/google/callback'
+      fullPath: '/api/google/callback'
+      preLoaderRoute: typeof ApiGoogleCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/google/calendar': {
+      id: '/api/google/calendar'
+      path: '/api/google/calendar'
+      fullPath: '/api/google/calendar'
+      preLoaderRoute: typeof ApiGoogleCalendarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/google/auth': {
+      id: '/api/google/auth'
+      path: '/api/google/auth'
+      fullPath: '/api/google/auth'
+      preLoaderRoute: typeof ApiGoogleAuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/transactional/send': {
       id: '/lovable/email/transactional/send'
       path: '/lovable/email/transactional/send'
@@ -908,6 +1068,7 @@ const rootRouteChildren: RootRouteChildren = {
   AiSafetyRoute: AiSafetyRoute,
   AiWriterRoute: AiWriterRoute,
   AppsRoute: AppsRoute,
+  AuditLogRoute: AuditLogRoute,
   ChangelogRoute: ChangelogRoute,
   ChatgptAlternativeRoute: ChatgptAlternativeRoute,
   CodeHelperRoute: CodeHelperRoute,
@@ -937,6 +1098,13 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutReturnRoute: CheckoutReturnRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   Char126oauthCallbackRoute: Char126oauthCallbackRoute,
+  ApiGoogleAuthRoute: ApiGoogleAuthRoute,
+  ApiGoogleCalendarRoute: ApiGoogleCalendarRoute,
+  ApiGoogleCallbackRoute: ApiGoogleCallbackRoute,
+  ApiGoogleDisconnectRoute: ApiGoogleDisconnectRoute,
+  ApiGoogleDriveRoute: ApiGoogleDriveRoute,
+  ApiGoogleGmailRoute: ApiGoogleGmailRoute,
+  ApiGoogleStatusRoute: ApiGoogleStatusRoute,
   ApiPublicHelpSubmitRoute: ApiPublicHelpSubmitRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
