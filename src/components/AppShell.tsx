@@ -3,12 +3,14 @@ import { useNavigate } from "@tanstack/react-router";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 import { HelpDialog } from "@/components/HelpDialog";
+import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { PanelLeft } from "lucide-react";
 import {
   type Conversation,
   loadConversations,
   saveConversations,
 } from "@/lib/chat-store";
+
 
 /**
  * Shared shell that renders the chat Sidebar alongside any page (e.g. /apps,
@@ -95,6 +97,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         initialTab={settingsTab}
       />
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+      <OnboardingDialog />
     </div>
   );
 }

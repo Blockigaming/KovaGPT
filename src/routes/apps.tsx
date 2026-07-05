@@ -1,13 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { CONNECTOR_CATALOG, type ConnectorItem, type ConnectorCategory } from "@/lib/connectors-catalog";
 import { Link2, Search, Check, Loader2, Sparkles, ShieldAlert, Plug, AlertCircle, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AppShell } from "@/components/AppShell";
 import { toast } from "sonner";
+import {
+  getGoogleStatus,
+  startGoogleConnect,
+  disconnectGoogleAccount,
+  type GoogleStatus,
+} from "@/lib/google-client";
 
 const STORAGE_KEY = "kova-connected-apps-v1";
+const GOOGLE_IDS = new Set(["google", "gmail", "google-drive", "google-calendar"]);
+
 
 
 // Every catalog app is linkable from KovaGPT. Providers with native OAuth
@@ -213,10 +221,66 @@ function AppsPage() {
   const [connected, setConnected] = useState<Record<string, true>>({});
   const [connecting, setConnecting] = useState<Record<string, true>>({});
   const [failed, setFailed] = useState<Record<string, true>>({});
+  const [googleStatus, setGoogleStatus] = useState<GoogleStatus | null>(null);
+  const [googleLoading, setGoogleLoading] = useState(true);
 
   useEffect(() => { setConnected(loadConnected()); }, []);
 
-  const handleConnect = (item: ConnectorItem) => {
+  const refreshGoogle = useCallback(async () => {
+    try {
+      const s = await getGoogleStatus();
+      setGoogleStatus(s);
+    } catch {
+      setGoogleStatus({ connected: false });
+    } finally {
+      setGoogleLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isSignedIn) { setGoogleLoading(false); setGoogleStatus({ connected: false }); return; }
+    refreshGoogle();
+  }, [isSignedIn, refreshGoogle]);
+
+  // Handle OAuth return params (?google_connected=1 or ?google_error=...)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const ok = params.get("google_connected");
+    const err = params.get("google_error");
+    if (ok) {
+      toast.success("Google account connected");
+      refreshGoogle();
+    } else if (err) {
+      const msg =
+        err === "access_denied" ? "Authentication canceled" :
+        err === "invalid_state" ? "Session expired, try again" :
+        err === "exchange_failed" ? "Google sign-in failed, try again" :
+        `Google error: ${err}`;
+      toast.error(msg);
+    }
+    if (ok || err) {
+      params.delete("google_connected");
+      params.delete("google_error");
+      const url = window.location.pathname + (params.toString() ? `?${params}` : "");
+      window.history.replaceState({}, "", url);
+    }
+  }, [refreshGoogle]);
+
+  const isGoogleId = (id: string) => GOOGLE_IDS.has(id);
+
+  const handleConnect = async (item: ConnectorItem) => {
+    if (isGoogleId(item.id)) {
+      setConnecting((c) => ({ ...c, [item.id]: true }));
+      try {
+        await startGoogleConnect();
+      } catch (e) {
+        setConnecting((c) => { const n = { ...c }; delete n[item.id]; return n; });
+        setFailed((f) => ({ ...f, [item.id]: true }));
+        toast.error(e instanceof Error ? e.message : "Could not start Google connection");
+      }
+      return;
+    }
     if (!CONFIGURED_CONNECTORS.has(item.id)) {
       toast.error(`${item.label} needs provider setup before it can be linked.`);
       return;
@@ -233,12 +297,31 @@ function AppsPage() {
     }, 700);
   };
 
-  const handleDisconnect = (item: ConnectorItem) => {
+  const handleDisconnect = async (item: ConnectorItem) => {
+    if (isGoogleId(item.id)) {
+      try {
+        await disconnectGoogleAccount();
+        setGoogleStatus({ connected: false });
+        toast("Google account disconnected");
+      } catch {
+        toast.error("Could not disconnect Google. Try again.");
+      }
+      return;
+    }
     const next = { ...connected };
     delete next[item.id];
     setConnected(next);
     saveConnected(next);
     toast(`${item.label} disconnected`);
+  };
+
+  const isGoogleConnected = (id: string): boolean => {
+    if (!googleStatus?.connected) return false;
+    if (id === "google") return true;
+    if (id === "gmail") return !!googleStatus.has?.gmail;
+    if (id === "google-calendar") return !!googleStatus.has?.calendar;
+    if (id === "google-drive") return !!googleStatus.has?.drive;
+    return false;
   };
 
   const filtered = useMemo(() => {
@@ -254,12 +337,21 @@ function AppsPage() {
     });
   }, [query, category]);
 
-  const connectedList = filtered.filter((c) => connected[c.id]);
-  const recommendedList = filtered.filter((c) => !connected[c.id] && RECOMMENDED_IDS.has(c.id));
-  const otherList = filtered.filter((c) => !connected[c.id] && !RECOMMENDED_IDS.has(c.id));
+  const isConnected = (id: string) => (isGoogleId(id) ? isGoogleConnected(id) : !!connected[id]);
+  const connectedList = filtered.filter((c) => isConnected(c.id));
+  const recommendedList = filtered.filter((c) => !isConnected(c.id) && RECOMMENDED_IDS.has(c.id));
+  const otherList = filtered.filter((c) => !isConnected(c.id) && !RECOMMENDED_IDS.has(c.id));
 
-  const stateOf = (id: string): ConnState =>
-    connecting[id] ? "connecting" : failed[id] ? "failed" : connected[id] ? "connected" : "idle";
+  const stateOf = (id: string): ConnState => {
+    if (isGoogleId(id)) {
+      if (googleLoading) return "connecting";
+      if (connecting[id]) return "connecting";
+      if (failed[id]) return "failed";
+      return isGoogleConnected(id) ? "connected" : "idle";
+    }
+    return connecting[id] ? "connecting" : failed[id] ? "failed" : connected[id] ? "connected" : "idle";
+  };
+
 
   const renderGrid = (items: ConnectorItem[]) => (
     <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
