@@ -9,6 +9,8 @@ import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
 
 import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 import { HelpDialog } from "@/components/HelpDialog";
+import { OnboardingDialog } from "@/components/OnboardingDialog";
+
 import { LimitReachedDialog } from "@/components/LimitReachedDialog";
 import { ShareChatDialog } from "@/components/ShareChatDialog";
 import { AddMembersDialog } from "@/components/AddMembersDialog";
