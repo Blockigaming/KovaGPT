@@ -1,13 +1,21 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, useSearch } from "@tanstack/react-router";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { CONNECTOR_CATALOG, type ConnectorItem, type ConnectorCategory } from "@/lib/connectors-catalog";
 import { Link2, Search, Check, Loader2, Sparkles, ShieldAlert, Plug, AlertCircle, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AppShell } from "@/components/AppShell";
 import { toast } from "sonner";
+import {
+  getGoogleStatus,
+  startGoogleConnect,
+  disconnectGoogleAccount,
+  type GoogleStatus,
+} from "@/lib/google-client";
 
 const STORAGE_KEY = "kova-connected-apps-v1";
+const GOOGLE_IDS = new Set(["google", "gmail", "google-drive", "google-calendar"]);
+
 
 
 // Every catalog app is linkable from KovaGPT. Providers with native OAuth
