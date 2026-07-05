@@ -806,6 +806,8 @@ function KovaGPT() {
       />
 
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+      <OnboardingDialog />
+
 
       <ShareChatDialog
         open={shareChatId !== null}
