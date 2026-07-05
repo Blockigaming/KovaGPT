@@ -97,6 +97,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         initialTab={settingsTab}
       />
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+      <OnboardingDialog />
     </div>
   );
 }
