@@ -508,6 +508,19 @@ function KovaGPT() {
               if (delta?.kind === "image_pending") {
                 markPendingImage();
               }
+              if (delta?.kind === "activity" && delta?.label) {
+                setConversations((prev) =>
+                  prev.map((c) => {
+                    if (c.id !== nextConvId) return c;
+                    const msgs = c.messages.map((m) => {
+                      if (m.id !== assistantMsg.id) return m;
+                      const activities = [...(m.activities ?? []), { tool: String(delta.tool ?? ""), label: String(delta.label), status: "done" as const }];
+                      return { ...m, activities };
+                    });
+                    return { ...c, messages: msgs };
+                  }),
+                );
+              }
               if (delta?.content) {
                 assembledReply += delta.content;
                 updateAssistant(delta.content);
