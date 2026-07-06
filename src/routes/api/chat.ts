@@ -756,11 +756,11 @@ export const Route = createFileRoute("/api/chat")({
           };
           type ToolResultMsg = { role: "tool"; tool_call_id: string; content: string };
           type ChatMsg =
-            | (typeof body.messages)[number]
+            | { role: string; content: unknown; [k: string]: unknown }
             | AssistantMsg
             | ToolResultMsg;
 
-          const workingMessages: ChatMsg[] = [...(body.messages as ChatMsg[])];
+          const workingMessages: ChatMsg[] = [...((body.messages as unknown) as ChatMsg[])];
           const activityEvents: Array<{ tool: string; label: string; args?: unknown }> = [];
 
           if (enableTools) {
