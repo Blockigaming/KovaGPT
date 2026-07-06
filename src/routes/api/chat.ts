@@ -724,13 +724,170 @@ export const Route = createFileRoute("/api/chat")({
             body.reasoning = { effort: m.reasoning };
           }
 
+          // === TOOL-CALLING PRE-LOOP ============================================
+          // Only for signed-in users who've connected Google, on a real text
+          // turn (no attachments, not voice, not instant mode). We run up to
+          // MAX_TOOL_HOPS non-streaming calls with tools enabled. Each hop
+          // that produces tool_calls gets executed server-side and streams a
+          // typed `activity` event back to the client so the user sees
+          // "Searching Gmail…" while it happens. Once the model returns a
+          // stop/content response (no more tool_calls), we do ONE final
+          // streaming call and pipe it through to the browser.
+          //
+          // If any step fails, or the user has no Google connection, we fall
+          // through to the original streaming behavior with zero change.
+          const enableTools =
+            !!auth &&
+            !voice &&
+            !hasImages &&
+            m.id !== "instant" &&
+            lastText.length > 0 &&
+            (await userHasGoogle(auth.userId).catch(() => false));
+
+          type ToolCall = {
+            id: string;
+            type: "function";
+            function: { name: string; arguments: string };
+          };
+          type AssistantMsg = {
+            role: "assistant";
+            content: string | null;
+            tool_calls?: ToolCall[];
+          };
+          type ToolResultMsg = { role: "tool"; tool_call_id: string; content: string };
+          type ChatMsg =
+            | (typeof body.messages)[number]
+            | AssistantMsg
+            | ToolResultMsg;
+
+          const workingMessages: ChatMsg[] = [...(body.messages as ChatMsg[])];
+          const activityEvents: Array<{ tool: string; label: string; args?: unknown }> = [];
+
+          if (enableTools) {
+            const MAX_TOOL_HOPS = 4;
+            let toolsWereUsed = false;
+            let hopFailed = false;
+            for (let hop = 0; hop < MAX_TOOL_HOPS; hop++) {
+              const hopRes = await fetch(
+                "https://ai.gateway.lovable.dev/v1/chat/completions",
+                {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${apiKey}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    model,
+                    messages: workingMessages,
+                    tools: READ_ONLY_TOOLS,
+                    tool_choice: "auto",
+                    stream: false,
+                  }),
+                },
+              );
+              if (!hopRes.ok) {
+                hopFailed = true;
+                console.warn("[chat] tool hop failed", hopRes.status);
+                break;
+              }
+              const hopJson = (await hopRes.json()) as {
+                choices?: Array<{
+                  finish_reason?: string;
+                  message?: AssistantMsg;
+                }>;
+              };
+              const msg = hopJson.choices?.[0]?.message;
+              const finish = hopJson.choices?.[0]?.finish_reason;
+              if (!msg) {
+                hopFailed = true;
+                break;
+              }
+              // If no tool_calls, we're done with the tool loop. If tools
+              // were used along the way, the assistant's final content is
+              // in `msg.content` — we'll stream that back synthetically.
+              // Otherwise (no tools used at all), fall through to the
+              // original streaming code path unchanged.
+              if (!msg.tool_calls || msg.tool_calls.length === 0) {
+                if (toolsWereUsed && typeof msg.content === "string" && msg.content) {
+                  // Serve final answer as a synthetic SSE stream so the
+                  // client parser needs no changes for the text path.
+                  const enc = new TextEncoder();
+                  const stream = new ReadableStream({
+                    start(controller) {
+                      for (const a of activityEvents) {
+                        controller.enqueue(
+                          enc.encode(sseEvent({ kind: "activity", tool: a.tool, label: a.label, status: "done" })),
+                        );
+                      }
+                      // Stream in chunks so the UI feels alive.
+                      const text = msg.content as string;
+                      const CHUNK = 60;
+                      for (let i = 0; i < text.length; i += CHUNK) {
+                        controller.enqueue(enc.encode(sseChunk(text.slice(i, i + CHUNK))));
+                      }
+                      controller.enqueue(enc.encode(sseDone()));
+                      controller.close();
+                    },
+                  });
+                  return new Response(stream, {
+                    headers: {
+                      "Content-Type": "text/event-stream",
+                      "Cache-Control": "no-cache",
+                    },
+                  });
+                }
+                break;
+              }
+              // Execute each tool call in parallel.
+              toolsWereUsed = true;
+              workingMessages.push({
+                role: "assistant",
+                content: msg.content ?? null,
+                tool_calls: msg.tool_calls,
+              });
+              const results = await Promise.all(
+                msg.tool_calls.map(async (tc): Promise<ToolResultMsg> => {
+                  let parsedArgs: Record<string, unknown> = {};
+                  try {
+                    parsedArgs = tc.function.arguments
+                      ? (JSON.parse(tc.function.arguments) as Record<string, unknown>)
+                      : {};
+                  } catch {
+                    /* keep empty */
+                  }
+                  const activityLabel = TOOL_ACTIVITY[tc.function.name]?.done ?? tc.function.name;
+                  activityEvents.push({
+                    tool: tc.function.name,
+                    label: activityLabel,
+                    args: parsedArgs,
+                  });
+                  const out = await runGoogleTool(auth.userId, tc.function.name, parsedArgs);
+                  return {
+                    role: "tool",
+                    tool_call_id: tc.id,
+                    content: JSON.stringify(out).slice(0, 24000),
+                  };
+                }),
+              );
+              for (const r of results) workingMessages.push(r);
+              if (finish === "stop") break;
+            }
+            if (hopFailed) {
+              // Fall through to plain streaming with the original messages.
+              workingMessages.length = 0;
+              workingMessages.push(...(body.messages as ChatMsg[]));
+            }
+          }
+
+          // === FINAL STREAMING CALL =============================================
+          const finalBody = { ...body, messages: workingMessages, stream: true };
           const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
             method: "POST",
             headers: {
               Authorization: `Bearer ${apiKey}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify(body),
+            body: JSON.stringify(finalBody),
           });
 
           if (!upstream.ok) {
@@ -752,6 +909,32 @@ export const Route = createFileRoute("/api/chat")({
               JSON.stringify({ error: "AI service is temporarily unavailable. Please try again." }),
               { status: 502, headers: { "Content-Type": "application/json" } },
             );
+          }
+
+          // If any tools ran, prepend their activity events to the stream
+          // so the client renders them inline as the assistant speaks.
+          if (activityEvents.length > 0 && upstream.body) {
+            const enc = new TextEncoder();
+            const upstreamReader = upstream.body.getReader();
+            const stream = new ReadableStream({
+              async start(controller) {
+                for (const a of activityEvents) {
+                  controller.enqueue(
+                    enc.encode(sseEvent({ kind: "activity", tool: a.tool, label: a.label, status: "done" })),
+                  );
+                }
+                // eslint-disable-next-line no-constant-condition
+                while (true) {
+                  const { done, value } = await upstreamReader.read();
+                  if (done) break;
+                  controller.enqueue(value);
+                }
+                controller.close();
+              },
+            });
+            return new Response(stream, {
+              headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
+            });
           }
 
           return new Response(upstream.body, {
