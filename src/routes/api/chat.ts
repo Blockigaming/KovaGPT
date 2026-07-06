@@ -11,6 +11,12 @@ import {
   optionalUser,
   unauthorized,
 } from "@/lib/api-auth.server";
+import {
+  READ_ONLY_TOOLS,
+  TOOL_ACTIVITY,
+  runGoogleTool,
+  userHasGoogle,
+} from "@/lib/google-tools.server";
 
 type IncomingMessage = {
   role: "user" | "assistant" | "system";
