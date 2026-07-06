@@ -2,12 +2,14 @@ import type { ModeId } from "./modes";
 
 export type Role = "user" | "assistant";
 export type Attachment = { kind: "image"; dataUrl: string };
+export type Activity = { tool: string; label: string; status: "done" | "running" };
 export type Message = {
   id: string;
   role: Role;
   content: string;
   attachments?: Attachment[];
   pendingImage?: boolean;
+  activities?: Activity[];
 };
 export type Conversation = {
   id: string;

@@ -177,6 +177,19 @@ function ChatMessageInner({
             <NovaLogo className="w-8 h-8 [[data-sidebar=closed]_&]:w-9 [[data-sidebar=closed]_&]:h-9" />
           </div>
           <div className="flex-1 min-w-0">
+            {message.activities && message.activities.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                {message.activities.map((a, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-border bg-accent/40 px-2.5 py-1 text-xs text-muted-foreground"
+                  >
+                    <Check className="w-3 h-3 text-primary" />
+                    {a.label}
+                  </span>
+                ))}
+              </div>
+            )}
             <div className="prose-chat">
               {message.pendingImage && !message.content ? (
                 <div className="flex items-center gap-3 px-4 py-6 rounded-xl bg-accent/40 border border-border w-fit">
@@ -186,7 +199,7 @@ function ChatMessageInner({
                   </div>
                   <div className="text-sm text-muted-foreground">Generating image…</div>
                 </div>
-              ) : streaming && !message.content ? (
+              ) : streaming && !message.content && (!message.activities || message.activities.length === 0) ? (
                 <div className="thinking-dots" aria-label="Thinking">
                   <span /><span /><span />
                 </div>
