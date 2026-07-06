@@ -875,7 +875,7 @@ export const Route = createFileRoute("/api/chat")({
             if (hopFailed) {
               // Fall through to plain streaming with the original messages.
               workingMessages.length = 0;
-              workingMessages.push(...(body.messages as ChatMsg[]));
+              workingMessages.push(...((body.messages as unknown) as ChatMsg[]));
             }
           }
 
