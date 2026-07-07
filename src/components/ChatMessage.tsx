@@ -32,14 +32,15 @@ function ChatMessageInner({
   onRetry,
   onBranch,
   onEdit,
+  onUpdatePendingConfirm,
 }: {
   message: Message;
   streaming?: boolean;
-  
   onFollowUp?: (prompt: string) => void;
   onRetry?: () => void;
   onBranch?: () => void;
   onEdit?: () => void;
+  onUpdatePendingConfirm?: (messageId: string, next: PendingConfirm) => void;
 }) {
   const feedbackKey = `kova-feedback:${message.id}`;
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
