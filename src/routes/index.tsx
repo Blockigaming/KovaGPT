@@ -761,6 +761,27 @@ function KovaGPT() {
                     key={m.id}
                     message={m}
                     streaming={isStreaming && isLastAssistant}
+                    onUpdatePendingConfirm={(messageId, next) => {
+                      setConversations((prev) =>
+                        prev.map((c) => {
+                          if (c.id !== active.id) return c;
+                          return {
+                            ...c,
+                            messages: c.messages.map((msg) =>
+                              msg.id !== messageId
+                                ? msg
+                                : {
+                                    ...msg,
+                                    pendingConfirms: (msg.pendingConfirms ?? []).map((pc) =>
+                                      pc.actionId === next.actionId ? next : pc,
+                                    ),
+                                  },
+                            ),
+                          };
+                        }),
+                      );
+                    }}
+                    
                     
                     onFollowUp={
                       isLastAssistant && !isStreaming
