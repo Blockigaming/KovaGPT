@@ -194,6 +194,13 @@ function ChatMessageInner({
               </div>
             )}
             <div className="prose-chat">
+              {message.pendingConfirms?.map((pc) => (
+                <ToolConfirmCard
+                  key={pc.actionId}
+                  confirm={pc}
+                  onUpdate={(next) => onUpdatePendingConfirm?.(message.id, next)}
+                />
+              ))}
               {message.pendingImage && !message.content ? (
                 <div className="flex items-center gap-3 px-4 py-6 rounded-xl bg-accent/40 border border-border w-fit">
                   <div className="relative">
