@@ -769,6 +769,7 @@ export const Route = createFileRoute("/api/chat")({
             const MAX_TOOL_HOPS = 4;
             let toolsWereUsed = false;
             let hopFailed = false;
+            const pendingConfirms: Array<{ id: string; tool: string; summary: string; args_preview: Record<string, unknown> }> = [];
             for (let hop = 0; hop < MAX_TOOL_HOPS; hop++) {
               const hopRes = await fetch(
                 "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -781,7 +782,7 @@ export const Route = createFileRoute("/api/chat")({
                   body: JSON.stringify({
                     model,
                     messages: workingMessages,
-                    tools: READ_ONLY_TOOLS,
+                    tools: ALL_TOOLS,
                     tool_choice: "auto",
                     stream: false,
                   }),
@@ -804,15 +805,8 @@ export const Route = createFileRoute("/api/chat")({
                 hopFailed = true;
                 break;
               }
-              // If no tool_calls, we're done with the tool loop. If tools
-              // were used along the way, the assistant's final content is
-              // in `msg.content` — we'll stream that back synthetically.
-              // Otherwise (no tools used at all), fall through to the
-              // original streaming code path unchanged.
               if (!msg.tool_calls || msg.tool_calls.length === 0) {
                 if (toolsWereUsed && typeof msg.content === "string" && msg.content) {
-                  // Serve final answer as a synthetic SSE stream so the
-                  // client parser needs no changes for the text path.
                   const enc = new TextEncoder();
                   const stream = new ReadableStream({
                     start(controller) {
@@ -821,7 +815,11 @@ export const Route = createFileRoute("/api/chat")({
                           enc.encode(sseEvent({ kind: "activity", tool: a.tool, label: a.label, status: "done" })),
                         );
                       }
-                      // Stream in chunks so the UI feels alive.
+                      for (const p of pendingConfirms) {
+                        controller.enqueue(
+                          enc.encode(sseEvent({ kind: "tool_confirm", action_id: p.id, tool: p.tool, summary: p.summary, args_preview: p.args_preview })),
+                        );
+                      }
                       const text = msg.content as string;
                       const CHUNK = 60;
                       for (let i = 0; i < text.length; i += CHUNK) {
@@ -840,7 +838,10 @@ export const Route = createFileRoute("/api/chat")({
                 }
                 break;
               }
-              // Execute each tool call in parallel.
+              // Execute each tool call in parallel. Write tools are STAGED
+              // (never executed here) and their tool result to the model is
+              // a "queued" sentinel so the model produces a short natural
+              // confirmation prompt like "I've drafted this — confirm to send".
               toolsWereUsed = true;
               workingMessages.push({
                 role: "assistant",
@@ -863,6 +864,33 @@ export const Route = createFileRoute("/api/chat")({
                     label: activityLabel,
                     args: parsedArgs,
                   });
+                  if (WRITE_TOOL_NAMES.has(tc.function.name)) {
+                    try {
+                      const staged = await stagePendingAction(auth.userId, tc.function.name, parsedArgs);
+                      pendingConfirms.push({
+                        id: staged.id,
+                        tool: staged.tool,
+                        summary: staged.summary,
+                        args_preview: staged.args_preview,
+                      });
+                      return {
+                        role: "tool",
+                        tool_call_id: tc.id,
+                        content: JSON.stringify({
+                          status: "awaiting_user_confirmation",
+                          summary: staged.summary,
+                          instruction:
+                            "The action has been queued and will only run after the user clicks Confirm on the card that will appear below your reply. Write one short natural sentence asking the user to review and confirm. Do NOT claim it has been sent, drafted, created, or deleted yet.",
+                        }),
+                      };
+                    } catch (e) {
+                      return {
+                        role: "tool",
+                        tool_call_id: tc.id,
+                        content: JSON.stringify({ error: "stage_failed", message: (e as Error).message }),
+                      };
+                    }
+                  }
                   const out = await runGoogleTool(auth.userId, tc.function.name, parsedArgs);
                   return {
                     role: "tool",
@@ -875,10 +903,12 @@ export const Route = createFileRoute("/api/chat")({
               if (finish === "stop") break;
             }
             if (hopFailed) {
-              // Fall through to plain streaming with the original messages.
               workingMessages.length = 0;
               workingMessages.push(...((body.messages as unknown) as ChatMsg[]));
             }
+            // Stash pending confirms on the outer scope so the final
+            // streaming branch can prepend them too.
+            (activityEvents as unknown as { __pending?: typeof pendingConfirms }).__pending = pendingConfirms;
           }
 
           // === FINAL STREAMING CALL =============================================
