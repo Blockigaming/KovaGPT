@@ -945,7 +945,8 @@ export const Route = createFileRoute("/api/chat")({
 
           // If any tools ran, prepend their activity events to the stream
           // so the client renders them inline as the assistant speaks.
-          if (activityEvents.length > 0 && upstream.body) {
+          const pendingForStream = ((activityEvents as unknown) as { __pending?: Array<{ id: string; tool: string; summary: string; args_preview: Record<string, unknown> }> }).__pending ?? [];
+          if ((activityEvents.length > 0 || pendingForStream.length > 0) && upstream.body) {
             const enc = new TextEncoder();
             const upstreamReader = upstream.body.getReader();
             const stream = new ReadableStream({
@@ -953,6 +954,11 @@ export const Route = createFileRoute("/api/chat")({
                 for (const a of activityEvents) {
                   controller.enqueue(
                     enc.encode(sseEvent({ kind: "activity", tool: a.tool, label: a.label, status: "done" })),
+                  );
+                }
+                for (const p of pendingForStream) {
+                  controller.enqueue(
+                    enc.encode(sseEvent({ kind: "tool_confirm", action_id: p.id, tool: p.tool, summary: p.summary, args_preview: p.args_preview })),
                   );
                 }
                 // eslint-disable-next-line no-constant-condition
