@@ -71,8 +71,8 @@ export function ToolConfirmCard({
             <div className="whitespace-pre-wrap rounded-md bg-background/60 p-2 max-h-32 overflow-y-auto"><span className="font-medium text-foreground">Body: </span>{preview.body_preview}</div>
           )}
           {typeof preview.start === "string" && <div><span className="font-medium text-foreground">Start:</span> {preview.start}</div>}
-          {typeof preview.end === "string" && preview.end && <div><span className="font-medium text-foreground">End:</span> {preview.end}</div>}
-          {typeof preview.location === "string" && preview.location && <div><span className="font-medium text-foreground">Where:</span> {preview.location}</div>}
+          {typeof preview.end === "string" && preview.end.length > 0 && <div><span className="font-medium text-foreground">End:</span> {preview.end}</div>}
+          {typeof preview.location === "string" && preview.location.length > 0 && <div><span className="font-medium text-foreground">Where:</span> {preview.location}</div>}
           {Array.isArray(preview.attendees) && (preview.attendees as string[]).length > 0 && (
             <div><span className="font-medium text-foreground">Attendees:</span> {(preview.attendees as string[]).join(", ")}</div>
           )}
