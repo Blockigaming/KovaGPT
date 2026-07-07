@@ -54,6 +54,7 @@ import { Route as ApiGoogleDisconnectRouteImport } from './routes/api/google/dis
 import { Route as ApiGoogleCallbackRouteImport } from './routes/api/google/callback'
 import { Route as ApiGoogleCalendarRouteImport } from './routes/api/google/calendar'
 import { Route as ApiGoogleAuthRouteImport } from './routes/api/google/auth'
+import { Route as ApiChatConfirmRouteImport } from './routes/api/chat/confirm'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -288,6 +289,11 @@ const ApiGoogleAuthRoute = ApiGoogleAuthRouteImport.update({
   path: '/api/google/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiChatConfirmRoute = ApiChatConfirmRouteImport.update({
+  id: '/confirm',
+  path: '/confirm',
+  getParentRoute: () => ApiChatRoute,
+} as any)
 const LovableEmailTransactionalSendRoute =
   LovableEmailTransactionalSendRouteImport.update({
     id: '/lovable/email/transactional/send',
@@ -350,7 +356,7 @@ export interface FileRoutesByFullPath {
   '/study-assistant': typeof StudyAssistantRoute
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
-  '/api/chat': typeof ApiChatRoute
+  '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/title': typeof ApiTitleRoute
@@ -360,6 +366,7 @@ export interface FileRoutesByFullPath {
   '/checkout/return': typeof CheckoutReturnRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
+  '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/google/auth': typeof ApiGoogleAuthRoute
   '/api/google/calendar': typeof ApiGoogleCalendarRoute
   '/api/google/callback': typeof ApiGoogleCallbackRoute
@@ -403,7 +410,7 @@ export interface FileRoutesByTo {
   '/study-assistant': typeof StudyAssistantRoute
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
-  '/api/chat': typeof ApiChatRoute
+  '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/title': typeof ApiTitleRoute
@@ -413,6 +420,7 @@ export interface FileRoutesByTo {
   '/checkout/return': typeof CheckoutReturnRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
+  '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/google/auth': typeof ApiGoogleAuthRoute
   '/api/google/calendar': typeof ApiGoogleCalendarRoute
   '/api/google/callback': typeof ApiGoogleCallbackRoute
@@ -457,7 +465,7 @@ export interface FileRoutesById {
   '/study-assistant': typeof StudyAssistantRoute
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
-  '/api/chat': typeof ApiChatRoute
+  '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/title': typeof ApiTitleRoute
@@ -467,6 +475,7 @@ export interface FileRoutesById {
   '/checkout/return': typeof CheckoutReturnRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
+  '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/google/auth': typeof ApiGoogleAuthRoute
   '/api/google/calendar': typeof ApiGoogleCalendarRoute
   '/api/google/callback': typeof ApiGoogleCallbackRoute
@@ -522,6 +531,7 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/email/unsubscribe'
     | '/~oauth/callback'
+    | '/api/chat/confirm'
     | '/api/google/auth'
     | '/api/google/calendar'
     | '/api/google/callback'
@@ -575,6 +585,7 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/email/unsubscribe'
     | '/~oauth/callback'
+    | '/api/chat/confirm'
     | '/api/google/auth'
     | '/api/google/calendar'
     | '/api/google/callback'
@@ -628,6 +639,7 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/email/unsubscribe'
     | '/~oauth/callback'
+    | '/api/chat/confirm'
     | '/api/google/auth'
     | '/api/google/calendar'
     | '/api/google/callback'
@@ -672,7 +684,7 @@ export interface RootRouteChildren {
   StudyAssistantRoute: typeof StudyAssistantRoute
   TermsRoute: typeof TermsRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
-  ApiChatRoute: typeof ApiChatRoute
+  ApiChatRoute: typeof ApiChatRouteWithChildren
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
   ApiMemoryRoute: typeof ApiMemoryRoute
   ApiTitleRoute: typeof ApiTitleRoute
@@ -1016,6 +1028,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGoogleAuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/chat/confirm': {
+      id: '/api/chat/confirm'
+      path: '/confirm'
+      fullPath: '/api/chat/confirm'
+      preLoaderRoute: typeof ApiChatConfirmRouteImport
+      parentRoute: typeof ApiChatRoute
+    }
     '/lovable/email/transactional/send': {
       id: '/lovable/email/transactional/send'
       path: '/lovable/email/transactional/send'
@@ -1061,6 +1080,17 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ApiChatRouteChildren {
+  ApiChatConfirmRoute: typeof ApiChatConfirmRoute
+}
+
+const ApiChatRouteChildren: ApiChatRouteChildren = {
+  ApiChatConfirmRoute: ApiChatConfirmRoute,
+}
+
+const ApiChatRouteWithChildren =
+  ApiChatRoute._addFileChildren(ApiChatRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AiHumanizerRoute: AiHumanizerRoute,
@@ -1088,7 +1118,7 @@ const rootRouteChildren: RootRouteChildren = {
   StudyAssistantRoute: StudyAssistantRoute,
   TermsRoute: TermsRoute,
   UnsubscribeRoute: UnsubscribeRoute,
-  ApiChatRoute: ApiChatRoute,
+  ApiChatRoute: ApiChatRouteWithChildren,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
   ApiMemoryRoute: ApiMemoryRoute,
   ApiTitleRoute: ApiTitleRoute,
