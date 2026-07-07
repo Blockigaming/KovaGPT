@@ -3,6 +3,14 @@ import type { ModeId } from "./modes";
 export type Role = "user" | "assistant";
 export type Attachment = { kind: "image"; dataUrl: string };
 export type Activity = { tool: string; label: string; status: "done" | "running" };
+export type PendingConfirm = {
+  actionId: string;
+  tool: string;
+  summary: string;
+  argsPreview: Record<string, unknown>;
+  status: "pending" | "confirmed" | "cancelled" | "failed";
+  resultText?: string;
+};
 export type Message = {
   id: string;
   role: Role;
@@ -10,6 +18,7 @@ export type Message = {
   attachments?: Attachment[];
   pendingImage?: boolean;
   activities?: Activity[];
+  pendingConfirms?: PendingConfirm[];
 };
 export type Conversation = {
   id: string;

@@ -10,6 +10,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { saveToLibrary } from "@/lib/library.functions";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { ArtifactEditor, detectArtifactKind, extractCodeBlocks } from "./ArtifactEditor";
+import { ToolConfirmCard } from "./ToolConfirmCard";
+import type { PendingConfirm } from "@/lib/chat-store";
 
 // Strip numbered citation markers like [1], [2], [3] that web-search-augmented
 // answers sometimes still inject, and normalize en/em dashes to a hyphen
@@ -30,14 +32,15 @@ function ChatMessageInner({
   onRetry,
   onBranch,
   onEdit,
+  onUpdatePendingConfirm,
 }: {
   message: Message;
   streaming?: boolean;
-  
   onFollowUp?: (prompt: string) => void;
   onRetry?: () => void;
   onBranch?: () => void;
   onEdit?: () => void;
+  onUpdatePendingConfirm?: (messageId: string, next: PendingConfirm) => void;
 }) {
   const feedbackKey = `kova-feedback:${message.id}`;
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
@@ -191,6 +194,13 @@ function ChatMessageInner({
               </div>
             )}
             <div className="prose-chat">
+              {message.pendingConfirms?.map((pc) => (
+                <ToolConfirmCard
+                  key={pc.actionId}
+                  confirm={pc}
+                  onUpdate={(next) => onUpdatePendingConfirm?.(message.id, next)}
+                />
+              ))}
               {message.pendingImage && !message.content ? (
                 <div className="flex items-center gap-3 px-4 py-6 rounded-xl bg-accent/40 border border-border w-fit">
                   <div className="relative">
