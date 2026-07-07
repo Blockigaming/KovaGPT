@@ -62,7 +62,7 @@ export function ToolConfirmCard({
         <span>{meta.label}</span>
       </div>
       <div className="mt-1 text-foreground">{confirm.summary}</div>
-      {(preview.to || preview.subject || preview.body_preview || preview.start || preview.location) && (
+      {Boolean(preview.to || preview.subject || preview.body_preview || preview.start || preview.location) && (
         <div className="mt-2 space-y-1 text-xs text-muted-foreground">
           {typeof preview.to === "string" && <div><span className="font-medium text-foreground">To:</span> {preview.to}</div>}
           {typeof preview.cc === "string" && preview.cc && <div><span className="font-medium text-foreground">Cc:</span> {preview.cc}</div>}
