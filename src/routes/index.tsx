@@ -521,6 +521,28 @@ function KovaGPT() {
                   }),
                 );
               }
+              if (delta?.kind === "tool_confirm" && delta?.action_id) {
+                setConversations((prev) =>
+                  prev.map((c) => {
+                    if (c.id !== nextConvId) return c;
+                    const msgs = c.messages.map((m) => {
+                      if (m.id !== assistantMsg.id) return m;
+                      const pendingConfirms = [
+                        ...(m.pendingConfirms ?? []),
+                        {
+                          actionId: String(delta.action_id),
+                          tool: String(delta.tool ?? ""),
+                          summary: String(delta.summary ?? "Confirm action"),
+                          argsPreview: (delta.args_preview ?? {}) as Record<string, unknown>,
+                          status: "pending" as const,
+                        },
+                      ];
+                      return { ...m, pendingConfirms };
+                    });
+                    return { ...c, messages: msgs };
+                  }),
+                );
+              }
               if (delta?.content) {
                 assembledReply += delta.content;
                 updateAssistant(delta.content);
