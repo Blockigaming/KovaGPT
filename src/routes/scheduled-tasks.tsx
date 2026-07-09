@@ -226,9 +226,25 @@ function ScheduledTasksPage() {
 
             <h2 className="font-display text-lg font-semibold mb-3">Your scheduled tasks</h2>
             {loading ? (
-              <div className="text-sm text-muted-foreground">Loading…</div>
+              <ul className="flex flex-col gap-2" aria-hidden>
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <li key={i} className="rounded-xl border border-border p-4">
+                    <div className="h-4 w-1/3 rounded bg-muted animate-pulse mb-2" />
+                    <div className="h-3 w-2/3 rounded bg-muted animate-pulse mb-3" />
+                    <div className="h-3 w-full rounded bg-muted animate-pulse" />
+                  </li>
+                ))}
+              </ul>
             ) : tasks.length === 0 ? (
-              <div className="text-sm text-muted-foreground">Nothing scheduled yet.</div>
+              <div className="rounded-xl border border-dashed border-border p-10 text-center">
+                <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <Calendar className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div className="text-base font-medium mb-1">Nothing scheduled yet</div>
+                <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                  Use the form above to have KovaGPT run a prompt for you at a specific time — once, or on a repeating schedule.
+                </p>
+              </div>
             ) : (
               <ul className="flex flex-col gap-2">
                 {tasks.map((t) => (
