@@ -114,13 +114,36 @@ function LibraryPage() {
           className="h-10 max-w-md"
         />
 
-        {filtered.length === 0 ? (
-          <div className="w-full rounded-lg border border-border p-12 text-center text-sm text-muted-foreground">
-            {loading
-              ? "Loading..."
-              : items.length === 0
-                ? "Nothing saved yet. Use the Save button on any AI response or generated image to add it here."
-                : "No items match your search."}
+        {loading && items.length === 0 ? (
+          <ul className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(260px,1fr))]" aria-hidden>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <li key={i} className="rounded-xl border border-border bg-card overflow-hidden">
+                <div className="aspect-square bg-muted animate-pulse" />
+                <div className="p-3 space-y-2">
+                  <div className="h-3.5 w-3/4 rounded bg-muted animate-pulse" />
+                  <div className="h-2.5 w-1/2 rounded bg-muted animate-pulse" />
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : filtered.length === 0 ? (
+          <div className="w-full rounded-xl border border-dashed border-border p-12 text-center">
+            <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+              <FolderOpen className="w-5 h-5 text-muted-foreground" />
+            </div>
+            {items.length === 0 ? (
+              <>
+                <div className="text-base font-medium mb-1">Your library is empty</div>
+                <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                  Save any AI response, upload, or generated image with the Save button — it'll appear here so you can find it later.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="text-base font-medium mb-1">No matches</div>
+                <p className="text-sm text-muted-foreground">Nothing in your library matches "{query}".</p>
+              </>
+            )}
           </div>
         ) : (
           <ul className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(260px,1fr))]">

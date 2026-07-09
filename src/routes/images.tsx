@@ -534,9 +534,12 @@ function ImagesPage() {
             {(loading || result) && (
               <div className="mt-6 rounded-2xl border border-border bg-card overflow-hidden">
                 {loading && !result && (
-                  <div className="aspect-square w-full max-w-md mx-auto flex flex-col items-center justify-center gap-3 text-muted-foreground">
-                    <Loader2 className="w-6 h-6 animate-spin" />
-                    <div className="text-sm">Generating your image…</div>
+                  <div className="aspect-square w-full max-w-md mx-auto relative overflow-hidden bg-muted">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-foreground/10 to-transparent animate-[shimmer_1.6s_infinite]" style={{ backgroundSize: "200% 100%" }} />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                      <div className="text-sm">Generating your image…</div>
+                    </div>
                   </div>
                 )}
                 {result && (
