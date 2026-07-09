@@ -27,6 +27,7 @@ export const Route = createFileRoute("/ai-humanizer")({
       description:
         "Humanize AI-generated text with KovaGPT. Rewrite stiff, robotic AI output into natural, human-sounding writing that reads clearly and passes AI detection.",
       path: "/ai-humanizer",
+      ogImage: "/og/writer.jpg",
       faq,
     }),
   component: Page,

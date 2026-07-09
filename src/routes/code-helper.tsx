@@ -27,6 +27,7 @@ export const Route = createFileRoute("/code-helper")({
       description:
         "Ship faster with KovaGPT: debug errors, explain unfamiliar code, generate tests, refactor for readability, and scaffold components across every major language and framework.",
       path: "/code-helper",
+      ogImage: "/og/code.jpg",
       faq,
     }),
   component: Page,
