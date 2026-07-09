@@ -27,6 +27,7 @@ export const Route = createFileRoute("/study-assistant")({
       description:
         "Study smarter with KovaGPT: step-by-step explanations, practice quizzes, note summaries, flashcards, and worked examples across every subject.",
       path: "/study-assistant",
+      ogImage: "/og/writer.jpg",
       faq,
     }),
   component: Page,

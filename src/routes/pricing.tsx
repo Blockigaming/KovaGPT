@@ -26,6 +26,13 @@ export const Route = createFileRoute("/pricing")({
       },
       { property: "og:url", content: "https://kovagpt.com/pricing" },
       { property: "og:type", content: "website" },
+      { property: "og:image", content: "https://kovagpt.com/og/pricing.jpg" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Pricing - KovaGPT Plus & Pro plans" },
+      { name: "twitter:description", content: "Compare KovaGPT Free, Plus, and Pro plans." },
+      { name: "twitter:image", content: "https://kovagpt.com/og/pricing.jpg" },
     ],
     links: [{ rel: "canonical", href: "https://kovagpt.com/pricing" }],
     scripts: [

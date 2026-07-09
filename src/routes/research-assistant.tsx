@@ -27,6 +27,7 @@ export const Route = createFileRoute("/research-assistant")({
       description:
         "KovaGPT organizes sources, summarizes long documents, compares options, and turns messy notes into structured research. Upload PDFs and ask questions directly.",
       path: "/research-assistant",
+      ogImage: "/og/writer.jpg",
       faq,
     }),
   component: Page,

@@ -113,9 +113,13 @@ export function seoLandingHead(opts: {
   title: string;
   description: string;
   path: string;
+  ogImage?: string;
   faq?: SeoFaq[];
 }) {
   const url = `https://kovagpt.com${opts.path}`;
+  const ogImage = opts.ogImage
+    ? (opts.ogImage.startsWith("http") ? opts.ogImage : `https://kovagpt.com${opts.ogImage}`)
+    : "https://kovagpt.com/og/home.jpg";
   const scripts: { type: string; children: string }[] = [
     {
       type: "application/ld+json",
@@ -125,6 +129,7 @@ export function seoLandingHead(opts: {
         name: opts.title,
         description: opts.description,
         url,
+        image: ogImage,
       }),
     },
   ];
@@ -150,9 +155,13 @@ export function seoLandingHead(opts: {
       { property: "og:description", content: opts.description },
       { property: "og:url", content: url },
       { property: "og:type", content: "website" },
+      { property: "og:image", content: ogImage },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: opts.title },
       { name: "twitter:description", content: opts.description },
+      { name: "twitter:image", content: ogImage },
     ],
     links: [{ rel: "canonical", href: url }],
     scripts,

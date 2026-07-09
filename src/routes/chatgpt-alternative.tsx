@@ -27,6 +27,7 @@ export const Route = createFileRoute("/chatgpt-alternative")({
       description:
         "KovaGPT is a fast ChatGPT alternative with focused modes for writing, studying, coding, research, and image generation. Free to try, no card required.",
       path: "/chatgpt-alternative",
+      ogImage: "/og/home.jpg",
       faq,
     }),
   component: Page,

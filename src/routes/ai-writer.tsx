@@ -27,6 +27,7 @@ export const Route = createFileRoute("/ai-writer")({
       description:
         "Draft, rewrite, and polish anything with KovaGPT's AI writer. Keeps your voice, cuts filler, and works across emails, essays, blog posts, scripts, and captions.",
       path: "/ai-writer",
+      ogImage: "/og/writer.jpg",
       faq,
     }),
   component: Page,
