@@ -27,6 +27,7 @@ export const Route = createFileRoute("/ai-image-generator")({
       description:
         "Generate high-quality images from text prompts with KovaGPT. Photorealistic, illustration, 3D, product shots, logos — commercial-safe, fast, and easy to iterate.",
       path: "/ai-image-generator",
+      ogImage: "/og/images.jpg",
       faq,
     }),
   component: Page,
