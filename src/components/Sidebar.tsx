@@ -154,6 +154,11 @@ export function Sidebar({
               <FolderOpen className="w-[18px] h-[18px] shrink-0" />
               <span className="truncate">Library</span>
             </Link>
+            <Link to="/write" className={navItemClass(isOn("/write"))}>
+              <ActiveBar on={isOn("/write")} />
+              <PenLine className="w-[18px] h-[18px] shrink-0" />
+              <span className="truncate">Writing</span>
+            </Link>
             <Link to="/apps" className={navItemClass(isOn("/apps"))}>
               <ActiveBar on={isOn("/apps")} />
               <Link2 className="w-[18px] h-[18px] shrink-0" />
