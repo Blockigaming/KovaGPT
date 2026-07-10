@@ -34,6 +34,8 @@ export const TOOL_ACTIVITY: Record<string, ActivityLabel> = {
   gmail_send: { running: "Preparing to send email…", done: "Prepared email to send" },
   calendar_create_event: { running: "Preparing calendar event…", done: "Prepared calendar event" },
   calendar_delete_event: { running: "Preparing to delete event…", done: "Prepared event deletion" },
+  drive_upload_text_file: { running: "Preparing file upload…", done: "Prepared file for Drive" },
+  drive_create_doc: { running: "Preparing Google Doc…", done: "Prepared Google Doc" },
 };
 
 // Tools the model may call whose *effects* only happen after the user
@@ -44,6 +46,8 @@ export const WRITE_TOOL_NAMES = new Set<string>([
   "gmail_create_draft",
   "calendar_create_event",
   "calendar_delete_event",
+  "drive_upload_text_file",
+  "drive_create_doc",
 ]);
 
 export const READ_ONLY_TOOLS: ToolDef[] = [
@@ -192,6 +196,39 @@ export const WRITE_TOOLS: ToolDef[] = [
           summary: { type: "string", description: "Event title (for the confirmation card only)." },
         },
         required: ["id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "drive_upload_text_file",
+      description:
+        "Upload a new text file to the user's Google Drive. Use when the user asks you to save notes, a draft, a summary, or any text content to their Drive. The user will confirm before it is uploaded.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "File name including extension, e.g. 'meeting-notes.txt' or 'summary.md'." },
+          content: { type: "string", description: "Full text contents of the file." },
+          mime_type: { type: "string", description: "Optional MIME type. Defaults to text/plain. Use text/markdown for .md." },
+        },
+        required: ["name", "content"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "drive_create_doc",
+      description:
+        "Create a new Google Doc in the user's Drive with the given title and body text. Use when the user asks to draft, write, or save a document to Google Docs. The user will confirm before it is created.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Document title." },
+          content: { type: "string", description: "Plain-text body content. Line breaks are preserved." },
+        },
+        required: ["title", "content"],
       },
     },
   },
@@ -477,6 +514,27 @@ export function summarizeWriteTool(tool: string, args: WriteArgs): { summary: st
     return {
       summary: `Delete calendar event "${title || (args.id as string)}"`,
       preview: { id: args.id, summary: title },
+    };
+  }
+  if (tool === "drive_upload_text_file") {
+    const name = truncate(args.name, 120);
+    return {
+      summary: `Upload "${name || "(unnamed)"}" to Google Drive`,
+      preview: {
+        name,
+        mime_type: args.mime_type ? truncate(args.mime_type, 60) : "text/plain",
+        content_preview: truncate(args.content, 500),
+      },
+    };
+  }
+  if (tool === "drive_create_doc") {
+    const title = truncate(args.title, 120);
+    return {
+      summary: `Create Google Doc "${title || "(untitled)"}"`,
+      preview: {
+        title,
+        content_preview: truncate(args.content, 500),
+      },
     };
   }
   return { summary: `Perform ${tool}`, preview: {} };
