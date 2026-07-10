@@ -714,7 +714,8 @@ export async function executePendingAction(
       .update({ status: "failed", result: { error: msg } })
       .eq("id", actionId);
     await logAudit({
-      userId, provider: row.tool.startsWith("gmail") ? "gmail" : "calendar",
+      userId,
+      provider: row.tool.startsWith("gmail") ? "gmail" : row.tool.startsWith("drive") ? "drive" : "calendar",
       action: row.tool, status: "failure", summary: msg.slice(0, 400),
     });
     return { ok: false, error: msg };
