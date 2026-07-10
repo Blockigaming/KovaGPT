@@ -648,6 +648,56 @@ export async function executePendingAction(
       if (!r.ok && r.status !== 410) throw new Error(`calendar delete ${r.status}`);
       resultText = "Event deleted.";
       await logAudit({ userId, provider: "calendar", action: "delete", resourceId: id, summary: `Deleted event: ${a.summary ?? id}` });
+    } else if (row.tool === "drive_upload_text_file") {
+      const name = String(a.name ?? "untitled.txt");
+      const content = String(a.content ?? "");
+      const mimeType = a.mime_type ? String(a.mime_type) : "text/plain";
+      const boundary = `-------kova-${Math.random().toString(36).slice(2)}`;
+      const metadata = { name, mimeType };
+      const multipartBody =
+        `--${boundary}\r\n` +
+        `Content-Type: application/json; charset=UTF-8\r\n\r\n` +
+        `${JSON.stringify(metadata)}\r\n` +
+        `--${boundary}\r\n` +
+        `Content-Type: ${mimeType}; charset=UTF-8\r\n\r\n` +
+        `${content}\r\n` +
+        `--${boundary}--`;
+      const r = await fetch(`https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": `multipart/related; boundary=${boundary}`,
+        },
+        body: multipartBody,
+      });
+      if (!r.ok) throw new Error(`drive upload ${r.status} ${await r.text().catch(() => "")}`);
+      const created = (await r.json()) as { id: string; name: string; webViewLink?: string };
+      resultText = `Uploaded "${created.name}"${created.webViewLink ? ` — [open in Drive](${created.webViewLink})` : "."}`;
+      await logAudit({ userId, provider: "drive", action: "upload", resourceId: created.id, summary: `Uploaded to Drive: ${created.name}` });
+    } else if (row.tool === "drive_create_doc") {
+      const title = String(a.title ?? "Untitled");
+      const content = String(a.content ?? "");
+      // 1. Create empty Google Doc via Drive
+      const createRes = await fetch(`${DRIVE}/files?fields=id,name,webViewLink`, {
+        method: "POST",
+        headers: H,
+        body: JSON.stringify({ name: title, mimeType: "application/vnd.google-apps.document" }),
+      });
+      if (!createRes.ok) throw new Error(`docs create ${createRes.status} ${await createRes.text().catch(() => "")}`);
+      const doc = (await createRes.json()) as { id: string; name: string; webViewLink?: string };
+      // 2. Insert body text via Docs API batchUpdate
+      if (content) {
+        const upd = await fetch(`https://docs.googleapis.com/v1/documents/${doc.id}:batchUpdate`, {
+          method: "POST",
+          headers: H,
+          body: JSON.stringify({
+            requests: [{ insertText: { location: { index: 1 }, text: content } }],
+          }),
+        });
+        if (!upd.ok) throw new Error(`docs write ${upd.status} ${await upd.text().catch(() => "")}`);
+      }
+      resultText = `Created "${doc.name}"${doc.webViewLink ? ` — [open in Google Docs](${doc.webViewLink})` : "."}`;
+      await logAudit({ userId, provider: "drive", action: "create_doc", resourceId: doc.id, summary: `Created Google Doc: ${doc.name}` });
     } else {
       return { ok: false, error: `Unknown tool: ${row.tool}` };
     }
