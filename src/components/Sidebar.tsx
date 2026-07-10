@@ -1,4 +1,4 @@
-import { Trash2, PanelLeft, Search, HelpCircle, Plus, Share2, Settings as SettingsIcon, FolderOpen, Link2, MoreHorizontal, MessageCircle, Copy as CopyIcon, Archive, Pin, PinOff, Users, Image as ImageIcon, CreditCard, Calendar, Activity } from "lucide-react";
+import { Trash2, PanelLeft, Search, HelpCircle, Plus, Share2, Settings as SettingsIcon, FolderOpen, Link2, MoreHorizontal, MessageCircle, Copy as CopyIcon, Archive, Pin, PinOff, Users, Image as ImageIcon, CreditCard, Calendar, Activity, PenLine } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { NovaLogo } from "@/components/NovaLogo";
 import { Link, useRouterState } from "@tanstack/react-router";
@@ -153,6 +153,11 @@ export function Sidebar({
               <ActiveBar on={isOn("/library")} />
               <FolderOpen className="w-[18px] h-[18px] shrink-0" />
               <span className="truncate">Library</span>
+            </Link>
+            <Link to="/write" className={navItemClass(isOn("/write"))}>
+              <ActiveBar on={isOn("/write")} />
+              <PenLine className="w-[18px] h-[18px] shrink-0" />
+              <span className="truncate">Writing</span>
             </Link>
             <Link to="/apps" className={navItemClass(isOn("/apps"))}>
               <ActiveBar on={isOn("/apps")} />
