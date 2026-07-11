@@ -970,35 +970,68 @@ export const Route = createFileRoute("/api/chat")({
 
           // === FINAL STREAMING CALL =============================================
           const finalBody = { ...body, messages: workingMessages, stream: true };
-          const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(finalBody),
-          });
-
-          if (!upstream.ok) {
-            if (upstream.status === 429) {
-              return new Response(
-                JSON.stringify({ error: "Rate limit exceeded. Please wait a moment." }),
-                { status: 429, headers: { "Content-Type": "application/json" } },
-              );
-            }
-            if (upstream.status === 402) {
-              return new Response(JSON.stringify({ error: "AI credits exhausted." }), {
-                status: 402,
-                headers: { "Content-Type": "application/json" },
-              });
-            }
-            const txt = await upstream.text().catch(() => "");
-            console.error("[chat] upstream error", upstream.status, txt);
+          const activityCount = activityEvents.length;
+          const pendingCount = ((activityEvents as unknown) as { __pending?: unknown[] }).__pending?.length ?? 0;
+          const hasStreamedActivity = activityCount > 0 || pendingCount > 0;
+          let upstream: Response;
+          try {
+            upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${apiKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(finalBody),
+              signal: request.signal,
+            });
+          } catch (e) {
+            if (request.signal?.aborted) return new Response(null, { status: 499 });
+            console.error("[chat] final call network error", e);
             return new Response(
               JSON.stringify({ error: "AI service is temporarily unavailable. Please try again." }),
               { status: 502, headers: { "Content-Type": "application/json" } },
             );
           }
+
+          if (!upstream.ok) {
+            const errMsg =
+              upstream.status === 429
+                ? "Rate limit exceeded. Please wait a moment."
+                : upstream.status === 402
+                  ? "AI credits exhausted."
+                  : "AI service is temporarily unavailable. Please try again.";
+            const status = upstream.status === 429 ? 429 : upstream.status === 402 ? 402 : 502;
+            const txt = upstream.ok ? "" : await upstream.text().catch(() => "");
+            if (!upstream.ok) console.error("[chat] upstream error", upstream.status, txt);
+            // If we already committed to SSE (activities/confirms staged),
+            // deliver the error inside the stream so the client renders it
+            // instead of hanging.
+            if (hasStreamedActivity) {
+              const enc = new TextEncoder();
+              const stream = new ReadableStream({
+                start(controller) {
+                  for (const a of activityEvents) {
+                    controller.enqueue(enc.encode(sseEvent({ kind: "activity", tool: a.tool, label: a.label, status: "done" })));
+                  }
+                  const pending = ((activityEvents as unknown) as { __pending?: Array<{ id: string; tool: string; summary: string; args_preview: Record<string, unknown> }> }).__pending ?? [];
+                  for (const p of pending) {
+                    controller.enqueue(enc.encode(sseEvent({ kind: "tool_confirm", action_id: p.id, tool: p.tool, summary: p.summary, args_preview: p.args_preview })));
+                  }
+                  controller.enqueue(enc.encode(sseChunk(`\n\n_${errMsg}_`)));
+                  controller.enqueue(enc.encode(sseDone()));
+                  controller.close();
+                },
+              });
+              return new Response(stream, {
+                headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
+              });
+            }
+            return new Response(JSON.stringify({ error: errMsg }), {
+              status,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+
 
           // If any tools ran, prepend their activity events to the stream
           // so the client renders them inline as the assistant speaks.
