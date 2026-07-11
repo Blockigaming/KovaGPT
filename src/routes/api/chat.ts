@@ -766,31 +766,62 @@ export const Route = createFileRoute("/api/chat")({
           const activityEvents: Array<{ tool: string; label: string; args?: unknown }> = [];
 
           if (enableTools) {
-            const MAX_TOOL_HOPS = 4;
+            const MAX_TOOL_HOPS = 8;
+            const MAX_TOOL_CALLS_TOTAL = 16;
+            const PER_HOP_TIMEOUT_MS = 25_000;
+            let totalToolCalls = 0;
             let toolsWereUsed = false;
             let hopFailed = false;
             const pendingConfirms: Array<{ id: string; tool: string; summary: string; args_preview: Record<string, unknown> }> = [];
+            // Dedup identical tool calls (same name + normalized args) within
+            // one request to prevent runaway loops where the model retries
+            // the same call. Returns cached result to the model instead.
+            const dedupCache = new Map<string, string>();
+            const dedupKey = (name: string, args: Record<string, unknown>) => {
+              try { return `${name}::${JSON.stringify(args, Object.keys(args).sort())}`; }
+              catch { return `${name}::${Math.random()}`; }
+            };
+
             for (let hop = 0; hop < MAX_TOOL_HOPS; hop++) {
-              const hopRes = await fetch(
-                "https://ai.gateway.lovable.dev/v1/chat/completions",
-                {
-                  method: "POST",
-                  headers: {
-                    Authorization: `Bearer ${apiKey}`,
-                    "Content-Type": "application/json",
+              // Per-hop abort: user disconnect OR 25s timeout, whichever first.
+              const hopCtl = new AbortController();
+              const hopTimer = setTimeout(() => hopCtl.abort(), PER_HOP_TIMEOUT_MS);
+              const onReqAbort = () => hopCtl.abort();
+              request.signal?.addEventListener("abort", onReqAbort, { once: true });
+              let hopRes: Response;
+              try {
+                hopRes = await fetch(
+                  "https://ai.gateway.lovable.dev/v1/chat/completions",
+                  {
+                    method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${apiKey}`,
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      model,
+                      messages: workingMessages,
+                      tools: ALL_TOOLS,
+                      tool_choice: "auto",
+                      stream: false,
+                    }),
+                    signal: hopCtl.signal,
                   },
-                  body: JSON.stringify({
-                    model,
-                    messages: workingMessages,
-                    tools: ALL_TOOLS,
-                    tool_choice: "auto",
-                    stream: false,
-                  }),
-                },
-              );
+                );
+              } catch (e) {
+                clearTimeout(hopTimer);
+                request.signal?.removeEventListener("abort", onReqAbort);
+                if (request.signal?.aborted) return new Response(null, { status: 499 });
+                hopFailed = true;
+                console.warn("[chat] tool hop aborted/failed", (e as Error).message);
+                break;
+              }
+              clearTimeout(hopTimer);
+              request.signal?.removeEventListener("abort", onReqAbort);
+
               if (!hopRes.ok) {
                 hopFailed = true;
-                console.warn("[chat] tool hop failed", hopRes.status);
+                console.warn("[chat] tool hop http", hopRes.status);
                 break;
               }
               const hopJson = (await hopRes.json()) as {
@@ -838,10 +869,24 @@ export const Route = createFileRoute("/api/chat")({
                 }
                 break;
               }
-              // Execute each tool call in parallel. Write tools are STAGED
-              // (never executed here) and their tool result to the model is
-              // a "queued" sentinel so the model produces a short natural
-              // confirmation prompt like "I've drafted this — confirm to send".
+              // Enforce total tool-call cap before executing this batch.
+              if (totalToolCalls + msg.tool_calls.length > MAX_TOOL_CALLS_TOTAL) {
+                console.warn("[chat] max tool calls exceeded, breaking loop");
+                workingMessages.push({
+                  role: "assistant",
+                  content: msg.content ?? null,
+                  tool_calls: msg.tool_calls,
+                });
+                for (const tc of msg.tool_calls) {
+                  workingMessages.push({
+                    role: "tool",
+                    tool_call_id: tc.id,
+                    content: JSON.stringify({ error: "tool_budget_exceeded", message: "Maximum tool calls per request reached. Answer with what you have." }),
+                  });
+                }
+                break;
+              }
+              totalToolCalls += msg.tool_calls.length;
               toolsWereUsed = true;
               workingMessages.push({
                 role: "assistant",
@@ -864,6 +909,12 @@ export const Route = createFileRoute("/api/chat")({
                     label: activityLabel,
                     args: parsedArgs,
                   });
+                  // Dedup identical (name+args) within this request.
+                  const key = dedupKey(tc.function.name, parsedArgs);
+                  const cached = dedupCache.get(key);
+                  if (cached) {
+                    return { role: "tool", tool_call_id: tc.id, content: cached };
+                  }
                   if (WRITE_TOOL_NAMES.has(tc.function.name)) {
                     try {
                       const staged = await stagePendingAction(auth.userId, tc.function.name, parsedArgs);
@@ -873,16 +924,14 @@ export const Route = createFileRoute("/api/chat")({
                         summary: staged.summary,
                         args_preview: staged.args_preview,
                       });
-                      return {
-                        role: "tool",
-                        tool_call_id: tc.id,
-                        content: JSON.stringify({
-                          status: "awaiting_user_confirmation",
-                          summary: staged.summary,
-                          instruction:
-                            "The action has been queued and will only run after the user clicks Confirm on the card that will appear below your reply. Write one short natural sentence asking the user to review and confirm. Do NOT claim it has been sent, drafted, created, or deleted yet.",
-                        }),
-                      };
+                      const content = JSON.stringify({
+                        status: "awaiting_user_confirmation",
+                        summary: staged.summary,
+                        instruction:
+                          "The action has been queued and will only run after the user clicks Confirm on the card that will appear below your reply. Write one short natural sentence asking the user to review and confirm. Do NOT claim it has been sent, drafted, created, or deleted yet.",
+                      });
+                      dedupCache.set(key, content);
+                      return { role: "tool", tool_call_id: tc.id, content };
                     } catch (e) {
                       return {
                         role: "tool",
@@ -891,16 +940,23 @@ export const Route = createFileRoute("/api/chat")({
                       };
                     }
                   }
-                  const out = await runGoogleTool(auth.userId, tc.function.name, parsedArgs);
-                  return {
-                    role: "tool",
-                    tool_call_id: tc.id,
-                    content: JSON.stringify(out).slice(0, 24000),
-                  };
+                  try {
+                    const out = await runGoogleTool(auth.userId, tc.function.name, parsedArgs);
+                    const content = JSON.stringify(out).slice(0, 24000);
+                    dedupCache.set(key, content);
+                    return { role: "tool", tool_call_id: tc.id, content };
+                  } catch (e) {
+                    return {
+                      role: "tool",
+                      tool_call_id: tc.id,
+                      content: JSON.stringify({ error: "tool_failed", message: (e as Error).message }),
+                    };
+                  }
                 }),
               );
               for (const r of results) workingMessages.push(r);
               if (finish === "stop") break;
+              if (request.signal?.aborted) return new Response(null, { status: 499 });
             }
             if (hopFailed) {
               workingMessages.length = 0;
@@ -910,6 +966,7 @@ export const Route = createFileRoute("/api/chat")({
             // streaming branch can prepend them too.
             (activityEvents as unknown as { __pending?: typeof pendingConfirms }).__pending = pendingConfirms;
           }
+
 
           // === FINAL STREAMING CALL =============================================
           const finalBody = { ...body, messages: workingMessages, stream: true };
