@@ -1041,6 +1041,11 @@ export const Route = createFileRoute("/api/chat")({
             const upstreamReader = upstream.body.getReader();
             const stream = new ReadableStream({
               async start(controller) {
+                const onAbort = () => {
+                  try { upstreamReader.cancel(); } catch { /* noop */ }
+                  try { controller.close(); } catch { /* noop */ }
+                };
+                request.signal?.addEventListener("abort", onAbort, { once: true });
                 for (const a of activityEvents) {
                   controller.enqueue(
                     enc.encode(sseEvent({ kind: "activity", tool: a.tool, label: a.label, status: "done" })),
@@ -1051,15 +1056,21 @@ export const Route = createFileRoute("/api/chat")({
                     enc.encode(sseEvent({ kind: "tool_confirm", action_id: p.id, tool: p.tool, summary: p.summary, args_preview: p.args_preview })),
                   );
                 }
-                // eslint-disable-next-line no-constant-condition
-                while (true) {
-                  const { done, value } = await upstreamReader.read();
-                  if (done) break;
-                  controller.enqueue(value);
+                try {
+                  // eslint-disable-next-line no-constant-condition
+                  while (true) {
+                    const { done, value } = await upstreamReader.read();
+                    if (done) break;
+                    controller.enqueue(value);
+                  }
+                } catch {
+                  // client disconnect or upstream tore down - end gracefully
                 }
-                controller.close();
+                request.signal?.removeEventListener("abort", onAbort);
+                try { controller.close(); } catch { /* already closed */ }
               },
             });
+
             return new Response(stream, {
               headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
             });
