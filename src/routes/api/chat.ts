@@ -766,31 +766,62 @@ export const Route = createFileRoute("/api/chat")({
           const activityEvents: Array<{ tool: string; label: string; args?: unknown }> = [];
 
           if (enableTools) {
-            const MAX_TOOL_HOPS = 4;
+            const MAX_TOOL_HOPS = 8;
+            const MAX_TOOL_CALLS_TOTAL = 16;
+            const PER_HOP_TIMEOUT_MS = 25_000;
+            let totalToolCalls = 0;
             let toolsWereUsed = false;
             let hopFailed = false;
             const pendingConfirms: Array<{ id: string; tool: string; summary: string; args_preview: Record<string, unknown> }> = [];
+            // Dedup identical tool calls (same name + normalized args) within
+            // one request to prevent runaway loops where the model retries
+            // the same call. Returns cached result to the model instead.
+            const dedupCache = new Map<string, string>();
+            const dedupKey = (name: string, args: Record<string, unknown>) => {
+              try { return `${name}::${JSON.stringify(args, Object.keys(args).sort())}`; }
+              catch { return `${name}::${Math.random()}`; }
+            };
+
             for (let hop = 0; hop < MAX_TOOL_HOPS; hop++) {
-              const hopRes = await fetch(
-                "https://ai.gateway.lovable.dev/v1/chat/completions",
-                {
-                  method: "POST",
-                  headers: {
-                    Authorization: `Bearer ${apiKey}`,
-                    "Content-Type": "application/json",
+              // Per-hop abort: user disconnect OR 25s timeout, whichever first.
+              const hopCtl = new AbortController();
+              const hopTimer = setTimeout(() => hopCtl.abort(), PER_HOP_TIMEOUT_MS);
+              const onReqAbort = () => hopCtl.abort();
+              request.signal?.addEventListener("abort", onReqAbort, { once: true });
+              let hopRes: Response;
+              try {
+                hopRes = await fetch(
+                  "https://ai.gateway.lovable.dev/v1/chat/completions",
+                  {
+                    method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${apiKey}`,
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      model,
+                      messages: workingMessages,
+                      tools: ALL_TOOLS,
+                      tool_choice: "auto",
+                      stream: false,
+                    }),
+                    signal: hopCtl.signal,
                   },
-                  body: JSON.stringify({
-                    model,
-                    messages: workingMessages,
-                    tools: ALL_TOOLS,
-                    tool_choice: "auto",
-                    stream: false,
-                  }),
-                },
-              );
+                );
+              } catch (e) {
+                clearTimeout(hopTimer);
+                request.signal?.removeEventListener("abort", onReqAbort);
+                if (request.signal?.aborted) return new Response(null, { status: 499 });
+                hopFailed = true;
+                console.warn("[chat] tool hop aborted/failed", (e as Error).message);
+                break;
+              }
+              clearTimeout(hopTimer);
+              request.signal?.removeEventListener("abort", onReqAbort);
+
               if (!hopRes.ok) {
                 hopFailed = true;
-                console.warn("[chat] tool hop failed", hopRes.status);
+                console.warn("[chat] tool hop http", hopRes.status);
                 break;
               }
               const hopJson = (await hopRes.json()) as {
@@ -838,10 +869,24 @@ export const Route = createFileRoute("/api/chat")({
                 }
                 break;
               }
-              // Execute each tool call in parallel. Write tools are STAGED
-              // (never executed here) and their tool result to the model is
-              // a "queued" sentinel so the model produces a short natural
-              // confirmation prompt like "I've drafted this — confirm to send".
+              // Enforce total tool-call cap before executing this batch.
+              if (totalToolCalls + msg.tool_calls.length > MAX_TOOL_CALLS_TOTAL) {
+                console.warn("[chat] max tool calls exceeded, breaking loop");
+                workingMessages.push({
+                  role: "assistant",
+                  content: msg.content ?? null,
+                  tool_calls: msg.tool_calls,
+                });
+                for (const tc of msg.tool_calls) {
+                  workingMessages.push({
+                    role: "tool",
+                    tool_call_id: tc.id,
+                    content: JSON.stringify({ error: "tool_budget_exceeded", message: "Maximum tool calls per request reached. Answer with what you have." }),
+                  });
+                }
+                break;
+              }
+              totalToolCalls += msg.tool_calls.length;
               toolsWereUsed = true;
               workingMessages.push({
                 role: "assistant",
@@ -864,6 +909,12 @@ export const Route = createFileRoute("/api/chat")({
                     label: activityLabel,
                     args: parsedArgs,
                   });
+                  // Dedup identical (name+args) within this request.
+                  const key = dedupKey(tc.function.name, parsedArgs);
+                  const cached = dedupCache.get(key);
+                  if (cached) {
+                    return { role: "tool", tool_call_id: tc.id, content: cached };
+                  }
                   if (WRITE_TOOL_NAMES.has(tc.function.name)) {
                     try {
                       const staged = await stagePendingAction(auth.userId, tc.function.name, parsedArgs);
@@ -873,16 +924,14 @@ export const Route = createFileRoute("/api/chat")({
                         summary: staged.summary,
                         args_preview: staged.args_preview,
                       });
-                      return {
-                        role: "tool",
-                        tool_call_id: tc.id,
-                        content: JSON.stringify({
-                          status: "awaiting_user_confirmation",
-                          summary: staged.summary,
-                          instruction:
-                            "The action has been queued and will only run after the user clicks Confirm on the card that will appear below your reply. Write one short natural sentence asking the user to review and confirm. Do NOT claim it has been sent, drafted, created, or deleted yet.",
-                        }),
-                      };
+                      const content = JSON.stringify({
+                        status: "awaiting_user_confirmation",
+                        summary: staged.summary,
+                        instruction:
+                          "The action has been queued and will only run after the user clicks Confirm on the card that will appear below your reply. Write one short natural sentence asking the user to review and confirm. Do NOT claim it has been sent, drafted, created, or deleted yet.",
+                      });
+                      dedupCache.set(key, content);
+                      return { role: "tool", tool_call_id: tc.id, content };
                     } catch (e) {
                       return {
                         role: "tool",
@@ -891,16 +940,23 @@ export const Route = createFileRoute("/api/chat")({
                       };
                     }
                   }
-                  const out = await runGoogleTool(auth.userId, tc.function.name, parsedArgs);
-                  return {
-                    role: "tool",
-                    tool_call_id: tc.id,
-                    content: JSON.stringify(out).slice(0, 24000),
-                  };
+                  try {
+                    const out = await runGoogleTool(auth.userId, tc.function.name, parsedArgs);
+                    const content = JSON.stringify(out).slice(0, 24000);
+                    dedupCache.set(key, content);
+                    return { role: "tool", tool_call_id: tc.id, content };
+                  } catch (e) {
+                    return {
+                      role: "tool",
+                      tool_call_id: tc.id,
+                      content: JSON.stringify({ error: "tool_failed", message: (e as Error).message }),
+                    };
+                  }
                 }),
               );
               for (const r of results) workingMessages.push(r);
               if (finish === "stop") break;
+              if (request.signal?.aborted) return new Response(null, { status: 499 });
             }
             if (hopFailed) {
               workingMessages.length = 0;
@@ -911,37 +967,71 @@ export const Route = createFileRoute("/api/chat")({
             (activityEvents as unknown as { __pending?: typeof pendingConfirms }).__pending = pendingConfirms;
           }
 
+
           // === FINAL STREAMING CALL =============================================
           const finalBody = { ...body, messages: workingMessages, stream: true };
-          const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(finalBody),
-          });
-
-          if (!upstream.ok) {
-            if (upstream.status === 429) {
-              return new Response(
-                JSON.stringify({ error: "Rate limit exceeded. Please wait a moment." }),
-                { status: 429, headers: { "Content-Type": "application/json" } },
-              );
-            }
-            if (upstream.status === 402) {
-              return new Response(JSON.stringify({ error: "AI credits exhausted." }), {
-                status: 402,
-                headers: { "Content-Type": "application/json" },
-              });
-            }
-            const txt = await upstream.text().catch(() => "");
-            console.error("[chat] upstream error", upstream.status, txt);
+          const activityCount = activityEvents.length;
+          const pendingCount = ((activityEvents as unknown) as { __pending?: unknown[] }).__pending?.length ?? 0;
+          const hasStreamedActivity = activityCount > 0 || pendingCount > 0;
+          let upstream: Response;
+          try {
+            upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${apiKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(finalBody),
+              signal: request.signal,
+            });
+          } catch (e) {
+            if (request.signal?.aborted) return new Response(null, { status: 499 });
+            console.error("[chat] final call network error", e);
             return new Response(
               JSON.stringify({ error: "AI service is temporarily unavailable. Please try again." }),
               { status: 502, headers: { "Content-Type": "application/json" } },
             );
           }
+
+          if (!upstream.ok) {
+            const errMsg =
+              upstream.status === 429
+                ? "Rate limit exceeded. Please wait a moment."
+                : upstream.status === 402
+                  ? "AI credits exhausted."
+                  : "AI service is temporarily unavailable. Please try again.";
+            const status = upstream.status === 429 ? 429 : upstream.status === 402 ? 402 : 502;
+            const txt = upstream.ok ? "" : await upstream.text().catch(() => "");
+            if (!upstream.ok) console.error("[chat] upstream error", upstream.status, txt);
+            // If we already committed to SSE (activities/confirms staged),
+            // deliver the error inside the stream so the client renders it
+            // instead of hanging.
+            if (hasStreamedActivity) {
+              const enc = new TextEncoder();
+              const stream = new ReadableStream({
+                start(controller) {
+                  for (const a of activityEvents) {
+                    controller.enqueue(enc.encode(sseEvent({ kind: "activity", tool: a.tool, label: a.label, status: "done" })));
+                  }
+                  const pending = ((activityEvents as unknown) as { __pending?: Array<{ id: string; tool: string; summary: string; args_preview: Record<string, unknown> }> }).__pending ?? [];
+                  for (const p of pending) {
+                    controller.enqueue(enc.encode(sseEvent({ kind: "tool_confirm", action_id: p.id, tool: p.tool, summary: p.summary, args_preview: p.args_preview })));
+                  }
+                  controller.enqueue(enc.encode(sseChunk(`\n\n_${errMsg}_`)));
+                  controller.enqueue(enc.encode(sseDone()));
+                  controller.close();
+                },
+              });
+              return new Response(stream, {
+                headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
+              });
+            }
+            return new Response(JSON.stringify({ error: errMsg }), {
+              status,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+
 
           // If any tools ran, prepend their activity events to the stream
           // so the client renders them inline as the assistant speaks.
@@ -951,6 +1041,11 @@ export const Route = createFileRoute("/api/chat")({
             const upstreamReader = upstream.body.getReader();
             const stream = new ReadableStream({
               async start(controller) {
+                const onAbort = () => {
+                  try { upstreamReader.cancel(); } catch { /* noop */ }
+                  try { controller.close(); } catch { /* noop */ }
+                };
+                request.signal?.addEventListener("abort", onAbort, { once: true });
                 for (const a of activityEvents) {
                   controller.enqueue(
                     enc.encode(sseEvent({ kind: "activity", tool: a.tool, label: a.label, status: "done" })),
@@ -961,15 +1056,21 @@ export const Route = createFileRoute("/api/chat")({
                     enc.encode(sseEvent({ kind: "tool_confirm", action_id: p.id, tool: p.tool, summary: p.summary, args_preview: p.args_preview })),
                   );
                 }
-                // eslint-disable-next-line no-constant-condition
-                while (true) {
-                  const { done, value } = await upstreamReader.read();
-                  if (done) break;
-                  controller.enqueue(value);
+                try {
+                  // eslint-disable-next-line no-constant-condition
+                  while (true) {
+                    const { done, value } = await upstreamReader.read();
+                    if (done) break;
+                    controller.enqueue(value);
+                  }
+                } catch {
+                  // client disconnect or upstream tore down - end gracefully
                 }
-                controller.close();
+                request.signal?.removeEventListener("abort", onAbort);
+                try { controller.close(); } catch { /* already closed */ }
               },
             });
+
             return new Response(stream, {
               headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
             });
