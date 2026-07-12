@@ -108,7 +108,7 @@ export const Route = createFileRoute("/api/generate-image")({
           if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
             return jsonError("Prompt required", 400);
           }
-          const ALLOWED_SIZES = new Set(["1024x1024", "1024x1536", "1536x1024"]);
+          const ALLOWED_SIZES = new Set(["1024x1024", "1024x1536", "1536x1024", "1792x1024"]);
           const chosenSize = ALLOWED_SIZES.has(size ?? "") ? (size as string) : "1024x1024";
           const apiKey = process.env.LOVABLE_API_KEY;
           if (!apiKey) return jsonError("AI service not configured", 500);
