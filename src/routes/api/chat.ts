@@ -1,8 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { getMode, type ModeId, STORAGE_LIMITS_BYTES, DAILY_IMAGE_LIMIT_BY_TIER } from "@/lib/modes";
 import {
-  DAILY_CHAT_LIMIT,
-  DAILY_UPLOAD_LIMIT,
+  getMode,
+  type ModeId,
+  STORAGE_LIMITS_BYTES,
+  DAILY_IMAGE_LIMIT_BY_TIER,
+  DAILY_CHAT_LIMIT_BY_TIER,
+  DAILY_UPLOAD_LIMIT_BY_TIER,
+} from "@/lib/modes";
+import {
   assertFeatureEnabled,
   assertNotBanned,
   enforceQuota,
@@ -547,7 +552,7 @@ export const Route = createFileRoute("/api/chat")({
           if (auth && !isOwner) {
             const maint = await assertFeatureEnabled(auth, "chat");
             if (maint) return maint;
-            const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT);
+            const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[callerTier]);
             if (quota) return quota;
           }
 
@@ -583,7 +588,7 @@ export const Route = createFileRoute("/api/chat")({
             const quota = await enforceQuota(
               auth,
               "uploads",
-              DAILY_UPLOAD_LIMIT,
+              DAILY_UPLOAD_LIMIT_BY_TIER[callerTier],
               totalAttachments,
             );
             if (quota) return quota;

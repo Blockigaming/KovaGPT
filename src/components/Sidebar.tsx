@@ -57,7 +57,7 @@ export function Sidebar({
   const navItemClass = (active: boolean) =>
     `relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] transition active:scale-[0.98] min-w-0 ${
       active
-        ? "bg-gradient-to-r from-sidebar-hover via-sidebar-hover/60 to-transparent text-foreground"
+        ? "bg-sidebar-hover text-foreground"
         : "hover:bg-sidebar-hover text-sidebar-foreground"
     }`;
   const ActiveBar = ({ on }: { on: boolean }) =>
