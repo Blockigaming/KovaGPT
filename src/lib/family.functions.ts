@@ -98,7 +98,8 @@ export const acceptFamilyInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => z.object({ token: z.string().min(8) }).parse(i))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
+
     // We need to READ any invite by token to validate. RLS only lets the owner
     // read invites, so use the admin client for the read-only lookup.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
