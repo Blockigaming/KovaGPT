@@ -236,12 +236,34 @@ function ChatMessageInner({
                 />
               ))}
               {message.pendingImage && !message.content ? (
-                <div className="flex items-center gap-3 px-4 py-6 rounded-xl bg-accent/40 border border-border w-fit">
-                  <div className="relative">
-                    <ImageIcon className="w-6 h-6 text-muted-foreground" />
-                    <Loader2 className="w-4 h-4 absolute -bottom-1 -right-1 animate-spin text-primary" />
+                <div className="relative w-full max-w-sm aspect-square rounded-2xl border border-border overflow-hidden bg-gradient-to-br from-accent/60 via-muted to-accent/60">
+                  <div
+                    aria-hidden
+                    className="absolute inset-0 opacity-70"
+                    style={{
+                      backgroundImage:
+                        "linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.25) 50%, transparent 70%)",
+                      backgroundSize: "200% 100%",
+                      animation: "shimmer 1.8s linear infinite",
+                    }}
+                  />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                    <div className="relative">
+                      <ImageIcon className="w-10 h-10 text-foreground/70" />
+                      <Loader2 className="w-5 h-5 absolute -bottom-1 -right-1 animate-spin text-primary" />
+                    </div>
+                    <div
+                      className="text-sm font-medium bg-clip-text text-transparent"
+                      style={{
+                        backgroundImage:
+                          "linear-gradient(90deg, var(--color-muted-foreground) 0%, var(--color-foreground) 50%, var(--color-muted-foreground) 100%)",
+                        backgroundSize: "200% 100%",
+                        animation: "shimmer 1.8s linear infinite",
+                      }}
+                    >
+                      Creating image
+                    </div>
                   </div>
-                  <div className="text-sm text-muted-foreground">Generating image…</div>
                 </div>
               ) : streaming && !message.content ? (
                 <StreamingStatus activities={message.activities} />
