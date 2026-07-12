@@ -12,6 +12,7 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import { ArtifactEditor, detectArtifactKind, extractCodeBlocks } from "./ArtifactEditor";
 import { ToolConfirmCard } from "./ToolConfirmCard";
 import type { PendingConfirm } from "@/lib/chat-store";
+import { LongResponseCard, shouldWrapAsDocument } from "./LongResponseCard";
 
 // Strip numbered citation markers like [1], [2], [3] that web-search-augmented
 // answers sometimes still inject, and normalize en/em dashes to a hyphen
