@@ -161,7 +161,7 @@ function LibraryPage() {
               <>
                 <div className="text-base font-medium mb-1">Your library is empty</div>
                 <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                  Save any AI response, upload, or generated image with the Save button — it'll appear here so you can find it later.
+                  Save any AI response, upload, or generated image with the Save button: It'll appear here so you can find it later.
                 </p>
               </>
             ) : (
