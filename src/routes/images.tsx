@@ -377,14 +377,14 @@ function ImagesPage() {
 
               <div>
                 <div className="text-xs font-medium text-muted-foreground mb-2">Try one of these</div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {[
-                    "A minimalist logo for a coffee brand",
-                    "Cinematic dog portrait, golden hour",
-                    "Isometric city block, pastel palette",
-                    "Watercolor of a mountain lake at dawn",
-                    "Retro 80s synthwave poster",
-                    "Cute sticker of a smiling avocado",
+                    "Neon city at night",
+                    "Cozy modern bedroom",
+                    "Futuristic gaming avatar",
+                    "Mountain lake sunrise",
+                    "Minimal blue logo",
+                    "Luxury product photo",
                   ].map((idea) => (
                     <button
                       key={idea}
@@ -398,35 +398,72 @@ function ImagesPage() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                {[
-                  "Realistic Images",
-                  "Anime & Illustration",
-                  "Logos & Icons",
-                  "Gaming Avatars",
-                  "Product Renders",
-                  "Wallpapers",
-                  "Social Media Posts",
-                  "Website Graphics",
-                  "Fantasy Art",
-                  "Interior Design",
-                  "Cyberpunk",
-                  "Nature & Landscapes",
-                ].map((cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setPrompt((p) => (p ? `${p}, ${cat.toLowerCase()}` : cat))}
-                    className="text-xs px-3 py-1.5 rounded-full border border-border hover:bg-accent transition text-muted-foreground hover:text-foreground"
-                  >
-                    {cat}
-                  </button>
-                ))}
+              {/* Example gallery: 8 pages of curated example prompts with lazy thumbnails. */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs font-medium text-muted-foreground">Examples</div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setGalleryPage((p) => (p - 1 + EXAMPLE_PAGES.length) % EXAMPLE_PAGES.length)}
+                      className="text-xs px-2 py-1 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition"
+                      aria-label="Previous examples"
+                    >
+                      ‹
+                    </button>
+                    <span className="text-[11px] text-muted-foreground tabular-nums px-1">
+                      {galleryPage + 1} / {EXAMPLE_PAGES.length}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setGalleryPage((p) => (p + 1) % EXAMPLE_PAGES.length)}
+                      className="text-xs px-2 py-1 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition"
+                      aria-label="Next examples"
+                    >
+                      ›
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {EXAMPLE_PAGES[galleryPage].map((ex) => (
+                    <button
+                      key={ex.prompt}
+                      type="button"
+                      onClick={() => setPrompt(ex.prompt)}
+                      className="group relative aspect-square rounded-xl overflow-hidden border border-border bg-muted hover:ring-2 hover:ring-foreground/30 transition"
+                      title={`Use prompt: ${ex.prompt}`}
+                    >
+                      <img
+                        src={`https://source.unsplash.com/400x400/?${encodeURIComponent(ex.keyword)}`}
+                        alt=""
+                        loading="lazy"
+                        className="absolute inset-0 w-full h-full object-cover transition group-hover:scale-105"
+                      />
+                      <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
+                        <p className="text-[11px] text-white line-clamp-2 text-left">{ex.prompt}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <div className="flex justify-center gap-1.5 mt-3">
+                  {EXAMPLE_PAGES.map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setGalleryPage(i)}
+                      aria-label={`Go to examples page ${i + 1}`}
+                      className={`h-1.5 rounded-full transition-all ${
+                        i === galleryPage ? "w-6 bg-foreground" : "w-1.5 bg-border hover:bg-muted-foreground/50"
+                      }`}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
               AI-generated images may not always match your prompt perfectly. Review generated images before using them publicly or commercially.
             </p>
+
 
 
             {error && (
