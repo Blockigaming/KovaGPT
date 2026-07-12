@@ -232,7 +232,7 @@ export function Sidebar({
                     <DropdownMenuTrigger asChild>
                       <button
                         onClick={(e) => e.stopPropagation()}
-                        className="opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 p-1 rounded hover:bg-background/40 transition active:scale-95"
+                        className="opacity-70 hover:opacity-100 data-[state=open]:opacity-100 p-1 rounded hover:bg-background/40 transition active:scale-95"
                         aria-label="Chat options"
                       >
                         <MoreHorizontal className="w-4 h-4 text-muted-foreground" />
