@@ -265,6 +265,21 @@ button:not(:disabled):active,
 [role="button"]:not([aria-disabled="true"]):active {
   transform: scale(0.97);
 }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  button:not(:disabled):active,
+  [role="button"]:not([aria-disabled="true"]):active {
+    transform: none;
+  }
+}
 a {
   transition: color 150ms ease, opacity 150ms ease, background-color 150ms ease;
 }
