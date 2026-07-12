@@ -111,12 +111,34 @@ function LibraryPage() {
           </div>
         )}
 
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search your library..."
-          className="h-10 max-w-md"
-        />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="inline-flex rounded-full border border-border p-0.5 bg-muted/40">
+            {([
+              { id: "all" as const, label: "All" },
+              { id: "images" as const, label: "Images" },
+              { id: "documents" as const, label: "Documents" },
+            ]).map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTab(t.id)}
+                className={`px-3.5 py-1.5 text-xs font-medium rounded-full transition ${
+                  tab === t.id
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search your library..."
+            className="h-10 max-w-md"
+          />
+        </div>
 
         {loading && items.length === 0 ? (
           <ul className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(260px,1fr))]" aria-hidden>
