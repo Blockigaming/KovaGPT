@@ -98,7 +98,8 @@ export const acceptFamilyInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => z.object({ token: z.string().min(8) }).parse(i))
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
+    const { userId } = context;
+
     // We need to READ any invite by token to validate. RLS only lets the owner
     // read invites, so use the admin client for the read-only lookup.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -110,11 +111,14 @@ export const acceptFamilyInvite = createServerFn({ method: "POST" })
     if (!invite) throw new Error("Invalid invite.");
     if (invite.accepted_at) throw new Error("This invite has already been used.");
     if (new Date(invite.expires_at).getTime() < Date.now()) throw new Error("Invite expired.");
-    // Insert membership (RLS: user_id = auth.uid() is allowed by the insert policy).
-    const { error: mErr } = await supabase
+    // Insert membership via the admin client — the RLS INSERT policy only
+    // permits the owner to add members; invite acceptance is authorized here
+    // by the valid unexpired token above.
+    const { error: mErr } = await supabaseAdmin
       .from("family_members")
       .insert({ group_id: invite.group_id, user_id: userId, role: "member" });
     if (mErr) throw new Error(mErr.message);
+
     await supabaseAdmin
       .from("family_invites")
       .update({ accepted_at: new Date().toISOString(), accepted_by: userId })

@@ -418,6 +418,24 @@ async function handleImageRequest(prompt: string, apiKey: string): Promise<Respo
   });
 }
 
+// In-memory per-IP rate limiter for anonymous /api/chat callers to prevent
+// scripted denial-of-wallet abuse against the paid LLM/search gateways.
+// Signed-in callers are gated by daily quota (enforceQuota) further below.
+const ANON_RATE_MAX = 20;
+const ANON_RATE_WINDOW_MS = 60 * 60 * 1000; // 20 requests / hour / IP
+const anonRateBuckets = new Map<string, { count: number; resetAt: number }>();
+function anonRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const b = anonRateBuckets.get(ip);
+  if (!b || b.resetAt < now) {
+    anonRateBuckets.set(ip, { count: 1, resetAt: now + ANON_RATE_WINDOW_MS });
+    return false;
+  }
+  if (b.count >= ANON_RATE_MAX) return true;
+  b.count += 1;
+  return false;
+}
+
 export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
@@ -425,6 +443,21 @@ export const Route = createFileRoute("/api/chat")({
         try {
           const auth = await optionalUser(request);
           if (auth instanceof Response) return auth;
+
+          if (!auth) {
+            const ip =
+              request.headers.get("cf-connecting-ip") ??
+              request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+              "unknown";
+            if (anonRateLimited(ip)) {
+              return new Response(
+                JSON.stringify({ error: "Too many requests. Sign in to continue." }),
+                { status: 429, headers: { "Content-Type": "application/json" } },
+              );
+            }
+          }
+
+
 
           // Reject oversized request bodies before parsing JSON to avoid
           // memory/cost amplification attacks against the AI gateway.
