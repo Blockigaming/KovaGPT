@@ -445,7 +445,9 @@ export const saveProjectChat = createServerFn({ method: "POST" })
     messages: z.array(MessageSchema).max(500),
   }).parse(input))
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
-    const patch: Record<string, unknown> = { snapshot: { messages: data.messages } };
+    const patch: { snapshot: { messages: ProjectChatMessage[] }; title?: string } = {
+      snapshot: { messages: data.messages },
+    };
     if (data.title) patch.title = data.title;
     const { error } = await context.supabase.from("project_chats").update(patch).eq("id", data.id);
     if (error) { console.error("[saveProjectChat]", error.message); throw new Error("Failed to save"); }
