@@ -669,62 +669,6 @@ function ImagesPage() {
               </div>
             )}
 
-            <div className="mt-10">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">
-                  Explore AI image examples
-                  <span className="ml-2 text-xs font-normal text-muted-foreground">
-                    Page {examplePage + 1} of {exampleTotalPages}
-                  </span>
-                </h2>
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setExamplePage((p) => Math.max(0, p - 1))}
-                    disabled={examplePage === 0}
-                    className="w-8 h-8 rounded-full border border-border hover:bg-accent flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
-                    aria-label="Previous examples page"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setExamplePage((p) => Math.min(exampleTotalPages - 1, p + 1))}
-                    disabled={examplePage >= exampleTotalPages - 1}
-                    className="w-8 h-8 rounded-full border border-border hover:bg-accent flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
-                    aria-label="Next examples page"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground mb-4">
-                Click any example to use it as your prompt.
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                {visibleExamples.map((ex) => (
-                  <button
-                    key={ex.label}
-                    onClick={() => {
-                      setPrompt(ex.prompt);
-                      generate(ex.prompt);
-                    }}
-                    className="group relative aspect-[3/4] rounded-2xl overflow-hidden bg-muted hover:scale-[1.02] transition-transform text-left"
-                    aria-label={`Use example: ${ex.label}`}
-                  >
-                    <img
-                      src={ex.src}
-                      alt={ex.label}
-                      loading="lazy"
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 to-transparent">
-                      <div className="text-sm font-medium text-white">{ex.label}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
       </main>
