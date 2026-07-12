@@ -209,10 +209,9 @@ function ChatMessageInner({
                   </div>
                   <div className="text-sm text-muted-foreground">Generating image…</div>
                 </div>
-              ) : streaming && !message.content && (!message.activities || message.activities.length === 0) ? (
-                <div className="thinking-dots" aria-label="Thinking">
-                  <span /><span /><span />
-                </div>
+              ) : streaming && !message.content ? (
+                <StreamingStatus activities={message.activities} />
+              
               ) : (
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {cleanAssistantText(message.content)}

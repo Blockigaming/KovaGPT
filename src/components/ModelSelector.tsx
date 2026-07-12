@@ -46,7 +46,10 @@ export function ModelSelector({
         <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
       </button>
       {open && (
-        <div className="absolute bottom-full mb-2 left-0 w-44 rounded-xl border border-border bg-popover shadow-xl z-50 p-1">
+        <div className="absolute bottom-full mb-2 left-0 w-52 rounded-xl border border-border bg-popover shadow-xl z-50 p-1 animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-1 duration-150">
+          <div className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Intelligence
+          </div>
           {MODES.map((m) => {
             const locked = TIER_RANK[m.tier] > TIER_RANK[userTier];
             const badge = tierBadge(m.tier);

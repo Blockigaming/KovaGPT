@@ -57,7 +57,7 @@ Mode: Instant. Optimize aggressively for speed and brevity.
   },
   {
     id: "high",
-    label: "High",
+    label: "Thinking",
     description: "Deepest reasoning. Careful, thorough, well-structured answers.",
     tier: "free",
     reasoning: "high",
