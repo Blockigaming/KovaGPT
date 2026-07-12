@@ -4,6 +4,8 @@ import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 import { HelpDialog } from "@/components/HelpDialog";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
+import { TimersWidget } from "@/components/TimersWidget";
+import { installShortcutListener } from "@/lib/shortcuts";
 import { PanelLeft } from "lucide-react";
 import {
   type Conversation,
@@ -31,6 +33,22 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     setConversations(loadConversations());
   }, []);
+
+  useEffect(() => {
+    return installShortcutListener({
+      "new-chat": () => { try { localStorage.removeItem("nova-gpt-pending-active"); } catch { /* ignore */ } navigate({ to: "/" }); },
+      "search": () => { window.dispatchEvent(new CustomEvent("kova-open-search")); },
+      "open-projects": () => { navigate({ to: "/" as never }); },
+      "open-library": () => { navigate({ to: "/library" }); },
+      "open-settings": () => { setSettingsTab(undefined); setSettingsOpen(true); },
+      "generate-image": () => { navigate({ to: "/images" }); },
+      "toggle-sidebar": () => { setSidebarOpen((v) => !v); },
+      "focus-input": () => {
+        const el = document.querySelector<HTMLTextAreaElement>('textarea, [contenteditable="true"]');
+        el?.focus();
+      },
+    });
+  }, [navigate]);
 
   const openSettings = useCallback((tab?: string) => {
     setSettingsTab(tab);
@@ -98,6 +116,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       />
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
       <OnboardingDialog />
+      <TimersWidget />
     </div>
   );
 }

@@ -40,6 +40,8 @@ import {
   FolderOpen,
   Settings as Cog,
   Users,
+  Keyboard,
+  MapPin,
 } from "lucide-react";
 import { useTier, tierRank } from "@/hooks/useTier";
 import {
@@ -163,6 +165,8 @@ const TAB_GROUPS: TabGroup[] = [
     tabs: [
       { v: "appearance", label: "Appearance", icon: Palette },
       { v: "notifications", label: "Notifications", icon: Bell },
+      { v: "shortcuts", label: "Keyboard shortcuts", icon: Keyboard },
+      { v: "location", label: "Location", icon: MapPin },
       { v: "parental", label: "Parental controls", icon: Baby },
     ],
   },
@@ -796,7 +800,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* PARENTAL */}
-          <TabsContent value="parental" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
+          <TabsContent value="parental" className="overflow-y-auto px-7 pb-8 space-y-5 py-5">
             <h3 className="text-sm font-semibold">Parental controls</h3>
             <ToggleRow
               title="Family-safe mode"
@@ -804,10 +808,37 @@ export function SettingsDialog({
               checked={settings.parentalMode ?? false}
               onCheckedChange={(v) => onChange({ ...settings, parentalMode: v })}
             />
+            <FamilySafeAudience />
+            <FamilyPinPanel />
             <p className="text-xs text-muted-foreground">
-              For full account-level parental controls (screen time, app restrictions), use your device's built-in settings.
+              For full device-level parental controls (screen time, app restrictions), use your device's built-in settings.
             </p>
           </TabsContent>
+
+          {/* KEYBOARD SHORTCUTS */}
+          <TabsContent value="shortcuts" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
+            <div>
+              <h3 className="text-sm font-semibold">Keyboard shortcuts</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Customize shortcuts for common actions. Click a combo to record a new one.
+              </p>
+            </div>
+            <ShortcutsEditor />
+          </TabsContent>
+
+          {/* LOCATION */}
+          <TabsContent value="location" className="overflow-y-auto px-7 pb-8 space-y-5 py-5">
+            <div>
+              <h3 className="text-sm font-semibold">Location</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                KovaGPT can use your approximate location to answer questions about local time,
+                weather, nearby places, and recommendations. Location is optional and never required.
+              </p>
+            </div>
+            <LocationPanel />
+          </TabsContent>
+
+
 
 
           {/* SAFETY & SECURITY */}
@@ -1684,4 +1715,321 @@ function GuestToggleRow({
     />
   );
 }
+
+// ---------- Family-safe audience + PIN ----------
+
+type SafeAudience = "myself" | "child" | "none";
+
+function FamilySafeAudience() {
+  const [aud, setAud] = useState<SafeAudience>(() => {
+    if (typeof window === "undefined") return "none";
+    return (localStorage.getItem("kova-safe-audience") as SafeAudience) || "none";
+  });
+  const set = (v: SafeAudience) => {
+    setAud(v);
+    try { localStorage.setItem("kova-safe-audience", v); } catch { /* ignore */ }
+  };
+  const opts: { v: SafeAudience; label: string; hint: string }[] = [
+    { v: "myself", label: "Myself", hint: "I'm using Family-safe mode for me." },
+    { v: "child", label: "My child", hint: "A child uses this device — enable a PIN below to lock changes." },
+    { v: "none", label: "None of the above", hint: "Don't apply Family-safe defaults." },
+  ];
+  return (
+    <div className="space-y-2">
+      <div className="text-sm font-medium">Who is this for?</div>
+      <div className="grid gap-2">
+        {opts.map((o) => (
+          <button
+            key={o.v}
+            type="button"
+            onClick={() => set(o.v)}
+            className={`text-left rounded-lg border p-3 transition ${
+              aud === o.v ? "border-foreground bg-accent" : "border-border hover:bg-accent/50"
+            }`}
+          >
+            <div className="text-sm font-medium">{o.label}</div>
+            <div className="text-xs text-muted-foreground mt-0.5">{o.hint}</div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FamilyPinPanel() {
+  const [aud, setAud] = useState<SafeAudience>(() => {
+    if (typeof window === "undefined") return "none";
+    return (localStorage.getItem("kova-safe-audience") as SafeAudience) || "none";
+  });
+  const [hasPin, setHasPin] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return !!localStorage.getItem("kova-family-pin");
+  });
+  const [pin, setPin] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [current, setCurrent] = useState("");
+
+  useEffect(() => {
+    const sync = () => {
+      setAud((localStorage.getItem("kova-safe-audience") as SafeAudience) || "none");
+      setHasPin(!!localStorage.getItem("kova-family-pin"));
+    };
+    window.addEventListener("storage", sync);
+    const id = window.setInterval(sync, 800);
+    return () => { window.removeEventListener("storage", sync); window.clearInterval(id); };
+  }, []);
+
+  if (aud === "none") return null;
+
+  const savePin = () => {
+    if (!/^\d{4,8}$/.test(pin)) { toast.error("PIN must be 4–8 digits."); return; }
+    if (pin !== confirm) { toast.error("PINs don't match."); return; }
+    try {
+      localStorage.setItem("kova-family-pin", pin);
+      setHasPin(true); setPin(""); setConfirm("");
+      toast.success("Family Center PIN set.");
+    } catch { toast.error("Couldn't save PIN"); }
+  };
+
+  const changePin = () => {
+    const saved = localStorage.getItem("kova-family-pin") || "";
+    if (current !== saved) { toast.error("Current PIN is incorrect."); return; }
+    if (!/^\d{4,8}$/.test(pin)) { toast.error("New PIN must be 4–8 digits."); return; }
+    if (pin !== confirm) { toast.error("PINs don't match."); return; }
+    try {
+      localStorage.setItem("kova-family-pin", pin);
+      setCurrent(""); setPin(""); setConfirm("");
+      toast.success("PIN updated.");
+    } catch { toast.error("Couldn't update PIN"); }
+  };
+
+  const removePin = () => {
+    const saved = localStorage.getItem("kova-family-pin") || "";
+    if (current !== saved) { toast.error("Current PIN is incorrect."); return; }
+    try {
+      localStorage.removeItem("kova-family-pin");
+      setHasPin(false); setCurrent("");
+      toast.success("PIN removed.");
+    } catch { /* ignore */ }
+  };
+
+  return (
+    <div className="rounded-lg border border-border p-4 space-y-3">
+      <div>
+        <div className="text-sm font-medium">Family Center PIN</div>
+        <div className="text-xs text-muted-foreground mt-0.5">
+          A PIN prevents changes to Family-safe mode and parental controls without your permission.
+        </div>
+      </div>
+      {!hasPin ? (
+        <div className="grid sm:grid-cols-2 gap-2">
+          <Input inputMode="numeric" pattern="\d*" maxLength={8} placeholder="New PIN (4–8 digits)"
+            value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} />
+          <Input inputMode="numeric" pattern="\d*" maxLength={8} placeholder="Confirm PIN"
+            value={confirm} onChange={(e) => setConfirm(e.target.value.replace(/\D/g, ""))} />
+          <div className="sm:col-span-2">
+            <Button size="sm" onClick={savePin}>Set PIN</Button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid sm:grid-cols-3 gap-2">
+          <Input inputMode="numeric" pattern="\d*" maxLength={8} placeholder="Current PIN"
+            value={current} onChange={(e) => setCurrent(e.target.value.replace(/\D/g, ""))} />
+          <Input inputMode="numeric" pattern="\d*" maxLength={8} placeholder="New PIN"
+            value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} />
+          <Input inputMode="numeric" pattern="\d*" maxLength={8} placeholder="Confirm new PIN"
+            value={confirm} onChange={(e) => setConfirm(e.target.value.replace(/\D/g, ""))} />
+          <div className="sm:col-span-3 flex gap-2">
+            <Button size="sm" onClick={changePin}>Update PIN</Button>
+            <Button size="sm" variant="outline"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+              onClick={removePin}>Remove PIN</Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------- Keyboard shortcuts editor ----------
+
+function ShortcutsEditor() {
+  // Lazy-load lib to keep imports colocated at usage.
+  const [list, setList] = useState<import("@/lib/shortcuts").Shortcut[]>([]);
+  const [recordingId, setRecordingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const mod = await import("@/lib/shortcuts");
+      if (!cancelled) setList(mod.loadShortcuts());
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    if (!recordingId) return;
+    const onKey = async (e: KeyboardEvent) => {
+      e.preventDefault(); e.stopPropagation();
+      // Ignore lone modifiers.
+      if (["Shift", "Control", "Meta", "Alt"].includes(e.key)) return;
+      const parts: string[] = [];
+      if (e.metaKey || e.ctrlKey) parts.push("Mod");
+      if (e.shiftKey) parts.push("Shift");
+      if (e.altKey) parts.push("Alt");
+      const key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+      parts.push(key);
+      const combo = parts.join("+");
+      const mod = await import("@/lib/shortcuts");
+      const next = list.map((s) => (s.id === recordingId ? { ...s, combo } : s));
+      setList(next); mod.saveShortcuts(next); setRecordingId(null);
+    };
+    window.addEventListener("keydown", onKey, { capture: true });
+    return () => window.removeEventListener("keydown", onKey, { capture: true } as unknown as EventListenerOptions);
+  }, [recordingId, list]);
+
+  const reset = async () => {
+    const mod = await import("@/lib/shortcuts");
+    mod.resetShortcuts();
+    setList(mod.DEFAULT_SHORTCUTS);
+    toast.success("Shortcuts reset");
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="rounded-lg border border-border divide-y divide-border">
+        {list.map((s) => (
+          <ShortcutRow
+            key={s.id}
+            id={s.id}
+            label={s.label}
+            description={s.description}
+            combo={s.combo}
+            recording={recordingId === s.id}
+            onRecord={() => setRecordingId(s.id)}
+            onCancel={() => setRecordingId(null)}
+          />
+        ))}
+      </div>
+      <div>
+        <Button size="sm" variant="outline" onClick={reset}>Reset to defaults</Button>
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        Shortcuts are saved to this browser. "Mod" is ⌘ on macOS, Ctrl elsewhere.
+      </p>
+    </div>
+  );
+}
+
+function ShortcutRow({
+  label, description, combo, recording, onRecord, onCancel,
+}: {
+  id: string;
+  label: string;
+  description: string;
+  combo: string;
+  recording: boolean;
+  onRecord: () => void;
+  onCancel: () => void;
+}) {
+  const [display, setDisplay] = useState(combo);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const mod = await import("@/lib/shortcuts");
+      if (alive) setDisplay(mod.displayCombo(combo));
+    })();
+    return () => { alive = false; };
+  }, [combo]);
+  return (
+    <div className="flex items-center justify-between gap-3 px-3 py-2.5">
+      <div className="min-w-0">
+        <div className="text-sm font-medium">{label}</div>
+        <div className="text-xs text-muted-foreground">{description}</div>
+      </div>
+      <button
+        onClick={recording ? onCancel : onRecord}
+        className={`text-xs px-3 py-1.5 rounded-md border font-mono min-w-[6rem] text-center transition ${
+          recording
+            ? "border-primary bg-primary/10 text-primary animate-pulse"
+            : "border-border hover:bg-accent"
+        }`}
+      >
+        {recording ? "Press keys…" : display}
+      </button>
+    </div>
+  );
+}
+
+// ---------- Location panel ----------
+
+type StoredLocation = { enabled: boolean; lat?: number; lon?: number; label?: string; savedAt?: number };
+
+function LocationPanel() {
+  const [loc, setLoc] = useState<StoredLocation>({ enabled: false });
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("kova-location");
+      if (raw) setLoc(JSON.parse(raw));
+    } catch { /* ignore */ }
+  }, []);
+
+  const persist = (next: StoredLocation) => {
+    setLoc(next);
+    try { localStorage.setItem("kova-location", JSON.stringify(next)); } catch { /* ignore */ }
+  };
+
+  const enable = async () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      toast.error("Location not available in this browser.");
+      return;
+    }
+    setBusy(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setBusy(false);
+        persist({
+          enabled: true,
+          lat: Math.round(pos.coords.latitude * 100) / 100,
+          lon: Math.round(pos.coords.longitude * 100) / 100,
+          savedAt: Date.now(),
+        });
+        toast.success("Location saved");
+      },
+      (err) => {
+        setBusy(false);
+        toast.error(err.code === err.PERMISSION_DENIED ? "Permission denied" : "Couldn't get location");
+      },
+      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 60_000 },
+    );
+  };
+
+  const disable = () => persist({ enabled: false });
+
+  return (
+    <div className="space-y-3">
+      <ToggleRow
+        title="Use my approximate location"
+        hint="KovaGPT stores only a coarse latitude/longitude in this browser. You can turn this off anytime."
+        checked={loc.enabled}
+        onCheckedChange={(v) => (v ? enable() : disable())}
+      />
+      {loc.enabled && loc.lat != null && loc.lon != null && (
+        <div className="rounded-lg border border-border p-3 text-xs text-muted-foreground space-y-1">
+          <div>Saved: {loc.lat.toFixed(2)}, {loc.lon.toFixed(2)}</div>
+          {loc.savedAt && <div>Updated {new Date(loc.savedAt).toLocaleString()}</div>}
+          <div className="pt-1">
+            <Button size="sm" variant="outline" onClick={enable} disabled={busy}>Refresh</Button>
+          </div>
+        </div>
+      )}
+      <p className="text-[11px] text-muted-foreground">
+        Location is never required. When enabled, it improves answers about local time, weather, nearby places, and recommendations.
+      </p>
+    </div>
+  );
+}
+
 

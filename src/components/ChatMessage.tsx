@@ -12,6 +12,7 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import { ArtifactEditor, detectArtifactKind, extractCodeBlocks } from "./ArtifactEditor";
 import { ToolConfirmCard } from "./ToolConfirmCard";
 import type { PendingConfirm } from "@/lib/chat-store";
+import { LongResponseCard, shouldWrapAsDocument } from "./LongResponseCard";
 
 // Strip numbered citation markers like [1], [2], [3] that web-search-augmented
 // answers sometimes still inject, and normalize en/em dashes to a hyphen
@@ -246,9 +247,12 @@ function ChatMessageInner({
                 <StreamingStatus activities={message.activities} />
               
               ) : (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {cleanAssistantText(message.content)}
-                </ReactMarkdown>
+                (() => {
+                  const cleaned = cleanAssistantText(message.content);
+                  const wrap = !artifactKind && !streaming && shouldWrapAsDocument(cleaned);
+                  const md = <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleaned}</ReactMarkdown>;
+                  return wrap ? <LongResponseCard content={cleaned}>{md}</LongResponseCard> : md;
+                })()
               )}
               {streaming && message.content && <span className="cursor-blink" />}
             </div>
