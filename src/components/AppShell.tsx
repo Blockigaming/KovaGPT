@@ -116,6 +116,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       />
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
       <OnboardingDialog />
+      <TimersWidget />
     </div>
   );
 }
