@@ -55,18 +55,12 @@ export function Sidebar({
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isOn = (p: string) => pathname === p;
   const navItemClass = (active: boolean) =>
-    `relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] transition active:scale-[0.98] min-w-0 ${
+    `flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] transition active:scale-[0.98] min-w-0 ${
       active
-        ? "bg-sidebar-hover text-foreground"
+        ? "bg-sidebar-active text-foreground font-medium"
         : "hover:bg-sidebar-hover text-sidebar-foreground"
     }`;
-  const ActiveBar = ({ on }: { on: boolean }) =>
-    on ? (
-      <span
-        aria-hidden
-        className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-[#3b82f6]"
-      />
-    ) : null;
+  const ActiveBar = (_: { on: boolean }) => null;
 
   return (
     <>
