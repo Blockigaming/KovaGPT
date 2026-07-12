@@ -444,7 +444,7 @@ export const Route = createFileRoute("/api/chat")({
           const auth = await optionalUser(request);
           if (auth instanceof Response) return auth;
 
-          if (!auth.user) {
+          if (!auth) {
             const ip =
               request.headers.get("cf-connecting-ip") ??
               request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
