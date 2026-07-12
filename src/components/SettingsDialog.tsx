@@ -800,7 +800,7 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* PARENTAL */}
-          <TabsContent value="parental" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
+          <TabsContent value="parental" className="overflow-y-auto px-7 pb-8 space-y-5 py-5">
             <h3 className="text-sm font-semibold">Parental controls</h3>
             <ToggleRow
               title="Family-safe mode"
@@ -808,10 +808,37 @@ export function SettingsDialog({
               checked={settings.parentalMode ?? false}
               onCheckedChange={(v) => onChange({ ...settings, parentalMode: v })}
             />
+            <FamilySafeAudience />
+            <FamilyPinPanel />
             <p className="text-xs text-muted-foreground">
-              For full account-level parental controls (screen time, app restrictions), use your device's built-in settings.
+              For full device-level parental controls (screen time, app restrictions), use your device's built-in settings.
             </p>
           </TabsContent>
+
+          {/* KEYBOARD SHORTCUTS */}
+          <TabsContent value="shortcuts" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
+            <div>
+              <h3 className="text-sm font-semibold">Keyboard shortcuts</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Customize shortcuts for common actions. Click a combo to record a new one.
+              </p>
+            </div>
+            <ShortcutsEditor />
+          </TabsContent>
+
+          {/* LOCATION */}
+          <TabsContent value="location" className="overflow-y-auto px-7 pb-8 space-y-5 py-5">
+            <div>
+              <h3 className="text-sm font-semibold">Location</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                KovaGPT can use your approximate location to answer questions about local time,
+                weather, nearby places, and recommendations. Location is optional and never required.
+              </p>
+            </div>
+            <LocationPanel />
+          </TabsContent>
+
+
 
 
           {/* SAFETY & SECURITY */}
