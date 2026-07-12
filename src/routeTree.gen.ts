@@ -38,6 +38,7 @@ import { Route as AiImageGeneratorRouteImport } from './routes/ai-image-generato
 import { Route as AiHumanizerRouteImport } from './routes/ai-humanizer'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as Char126oauthCallbackRouteImport } from './routes/~oauth.callback'
+import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as BlogBestAiMarketResearchToolsRouteImport } from './routes/blog.best-ai-market-research-tools'
@@ -210,6 +211,11 @@ const Char126oauthCallbackRoute = Char126oauthCallbackRouteImport.update({
   path: '/~oauth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
+  id: '/$projectId',
+  path: '/$projectId',
+  getParentRoute: () => ProjectsRoute,
+} as any)
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
   id: '/email/unsubscribe',
   path: '/email/unsubscribe',
@@ -365,7 +371,7 @@ export interface FileRoutesByFullPath {
   '/modes': typeof ModesRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
-  '/projects': typeof ProjectsRoute
+  '/projects': typeof ProjectsRouteWithChildren
   '/refund': typeof RefundRoute
   '/research-assistant': typeof ResearchAssistantRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -386,6 +392,7 @@ export interface FileRoutesByFullPath {
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/google/auth': typeof ApiGoogleAuthRoute
@@ -422,7 +429,7 @@ export interface FileRoutesByTo {
   '/modes': typeof ModesRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
-  '/projects': typeof ProjectsRoute
+  '/projects': typeof ProjectsRouteWithChildren
   '/refund': typeof RefundRoute
   '/research-assistant': typeof ResearchAssistantRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -443,6 +450,7 @@ export interface FileRoutesByTo {
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/google/auth': typeof ApiGoogleAuthRoute
@@ -480,7 +488,7 @@ export interface FileRoutesById {
   '/modes': typeof ModesRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
-  '/projects': typeof ProjectsRoute
+  '/projects': typeof ProjectsRouteWithChildren
   '/refund': typeof RefundRoute
   '/research-assistant': typeof ResearchAssistantRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -501,6 +509,7 @@ export interface FileRoutesById {
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/google/auth': typeof ApiGoogleAuthRoute
@@ -560,6 +569,7 @@ export interface FileRouteTypes {
     | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
     | '/email/unsubscribe'
+    | '/projects/$projectId'
     | '/~oauth/callback'
     | '/api/chat/confirm'
     | '/api/google/auth'
@@ -617,6 +627,7 @@ export interface FileRouteTypes {
     | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
     | '/email/unsubscribe'
+    | '/projects/$projectId'
     | '/~oauth/callback'
     | '/api/chat/confirm'
     | '/api/google/auth'
@@ -674,6 +685,7 @@ export interface FileRouteTypes {
     | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
     | '/email/unsubscribe'
+    | '/projects/$projectId'
     | '/~oauth/callback'
     | '/api/chat/confirm'
     | '/api/google/auth'
@@ -711,7 +723,7 @@ export interface RootRouteChildren {
   ModesRoute: typeof ModesRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
-  ProjectsRoute: typeof ProjectsRoute
+  ProjectsRoute: typeof ProjectsRouteWithChildren
   RefundRoute: typeof RefundRoute
   ResearchAssistantRoute: typeof ResearchAssistantRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -955,6 +967,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char126oauthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/projects/$projectId': {
+      id: '/projects/$projectId'
+      path: '/$projectId'
+      fullPath: '/projects/$projectId'
+      preLoaderRoute: typeof ProjectsProjectIdRouteImport
+      parentRoute: typeof ProjectsRoute
+    }
     '/email/unsubscribe': {
       id: '/email/unsubscribe'
       path: '/email/unsubscribe'
@@ -1140,6 +1159,18 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ProjectsRouteChildren {
+  ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
+}
+
+const ProjectsRouteChildren: ProjectsRouteChildren = {
+  ProjectsProjectIdRoute: ProjectsProjectIdRoute,
+}
+
+const ProjectsRouteWithChildren = ProjectsRoute._addFileChildren(
+  ProjectsRouteChildren,
+)
+
 interface ApiChatRouteChildren {
   ApiChatConfirmRoute: typeof ApiChatConfirmRoute
 }
@@ -1169,7 +1200,7 @@ const rootRouteChildren: RootRouteChildren = {
   ModesRoute: ModesRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
-  ProjectsRoute: ProjectsRoute,
+  ProjectsRoute: ProjectsRouteWithChildren,
   RefundRoute: RefundRoute,
   ResearchAssistantRoute: ResearchAssistantRoute,
   ResetPasswordRoute: ResetPasswordRoute,
