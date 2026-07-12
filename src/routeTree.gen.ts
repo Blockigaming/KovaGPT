@@ -19,6 +19,7 @@ import { Route as ScheduledTasksRouteImport } from './routes/scheduled-tasks'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ResearchAssistantRouteImport } from './routes/research-assistant'
 import { Route as RefundRouteImport } from './routes/refund'
+import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ModesRouteImport } from './routes/modes'
@@ -112,6 +113,11 @@ const ResearchAssistantRoute = ResearchAssistantRouteImport.update({
 const RefundRoute = RefundRouteImport.update({
   id: '/refund',
   path: '/refund',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsRoute = ProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -359,6 +365,7 @@ export interface FileRoutesByFullPath {
   '/modes': typeof ModesRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/projects': typeof ProjectsRoute
   '/refund': typeof RefundRoute
   '/research-assistant': typeof ResearchAssistantRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -415,6 +422,7 @@ export interface FileRoutesByTo {
   '/modes': typeof ModesRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/projects': typeof ProjectsRoute
   '/refund': typeof RefundRoute
   '/research-assistant': typeof ResearchAssistantRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -472,6 +480,7 @@ export interface FileRoutesById {
   '/modes': typeof ModesRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/projects': typeof ProjectsRoute
   '/refund': typeof RefundRoute
   '/research-assistant': typeof ResearchAssistantRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -530,6 +539,7 @@ export interface FileRouteTypes {
     | '/modes'
     | '/pricing'
     | '/privacy'
+    | '/projects'
     | '/refund'
     | '/research-assistant'
     | '/reset-password'
@@ -586,6 +596,7 @@ export interface FileRouteTypes {
     | '/modes'
     | '/pricing'
     | '/privacy'
+    | '/projects'
     | '/refund'
     | '/research-assistant'
     | '/reset-password'
@@ -642,6 +653,7 @@ export interface FileRouteTypes {
     | '/modes'
     | '/pricing'
     | '/privacy'
+    | '/projects'
     | '/refund'
     | '/research-assistant'
     | '/reset-password'
@@ -699,6 +711,7 @@ export interface RootRouteChildren {
   ModesRoute: typeof ModesRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
+  ProjectsRoute: typeof ProjectsRoute
   RefundRoute: typeof RefundRoute
   ResearchAssistantRoute: typeof ResearchAssistantRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -807,6 +820,13 @@ declare module '@tanstack/react-router' {
       path: '/refund'
       fullPath: '/refund'
       preLoaderRoute: typeof RefundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects': {
+      id: '/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof ProjectsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -1149,6 +1169,7 @@ const rootRouteChildren: RootRouteChildren = {
   ModesRoute: ModesRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
+  ProjectsRoute: ProjectsRoute,
   RefundRoute: RefundRoute,
   ResearchAssistantRoute: ResearchAssistantRoute,
   ResetPasswordRoute: ResetPasswordRoute,
