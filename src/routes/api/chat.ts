@@ -552,7 +552,7 @@ export const Route = createFileRoute("/api/chat")({
           if (auth && !isOwner) {
             const maint = await assertFeatureEnabled(auth, "chat");
             if (maint) return maint;
-            const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT);
+            const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[callerTier]);
             if (quota) return quota;
           }
 
