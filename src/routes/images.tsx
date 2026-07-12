@@ -48,7 +48,77 @@ export const Route = createFileRoute("/images")({
 });
 
 
-// (Example gallery removed — page now uses six inline suggestion cards.)
+// Curated example prompts, grouped into 8 visual pages of 6 cards each.
+// Thumbnails come from source.unsplash.com (keyword-based public photography)
+// so we never ship copyrighted or brand imagery, and only the active page's
+// images are ever requested (lazy) — no eager fetch of all 8 pages.
+type ExamplePrompt = { prompt: string; keyword: string };
+const EXAMPLE_PAGES: ExamplePrompt[][] = [
+  [
+    { prompt: "Neon city skyline at night, cinematic", keyword: "neon,city,night" },
+    { prompt: "Cozy modern bedroom with warm light", keyword: "cozy,bedroom,interior" },
+    { prompt: "Mountain lake at sunrise, misty", keyword: "mountain,lake,sunrise" },
+    { prompt: "Minimal blue geometric logo", keyword: "blue,geometric,minimal" },
+    { prompt: "Luxury product photo, matte black", keyword: "product,black,luxury" },
+    { prompt: "Futuristic sci-fi corridor", keyword: "sci-fi,corridor,futuristic" },
+  ],
+  [
+    { prompt: "Watercolor cherry blossom tree", keyword: "cherry,blossom,watercolor" },
+    { prompt: "Retro 80s synthwave sunset", keyword: "synthwave,sunset,retro" },
+    { prompt: "Isometric pastel city block", keyword: "isometric,pastel,city" },
+    { prompt: "Aerial ocean waves, turquoise", keyword: "ocean,aerial,turquoise" },
+    { prompt: "Fantasy castle on a cliff", keyword: "castle,fantasy,cliff" },
+    { prompt: "Steaming ramen bowl, top-down", keyword: "ramen,food,japanese" },
+  ],
+  [
+    { prompt: "Golden hour portrait, soft bokeh", keyword: "portrait,goldenhour,bokeh" },
+    { prompt: "Snowy pine forest at dusk", keyword: "snow,forest,pine" },
+    { prompt: "Modern minimalist kitchen", keyword: "kitchen,minimal,modern" },
+    { prompt: "Rainy Tokyo street reflections", keyword: "tokyo,rain,street" },
+    { prompt: "Astronaut floating over Earth", keyword: "astronaut,earth,space" },
+    { prompt: "Botanical illustration of ferns", keyword: "botanical,fern,illustration" },
+  ],
+  [
+    { prompt: "Vintage film camera close-up", keyword: "vintage,camera,film" },
+    { prompt: "Autumn forest path, warm tones", keyword: "autumn,forest,path" },
+    { prompt: "Desert dunes at twilight", keyword: "desert,dunes,twilight" },
+    { prompt: "Cyberpunk alley with neon signs", keyword: "cyberpunk,alley,neon" },
+    { prompt: "Cozy coffee shop interior", keyword: "coffee,shop,cafe" },
+    { prompt: "Aurora borealis over mountains", keyword: "aurora,northern,lights" },
+  ],
+  [
+    { prompt: "Underwater coral reef, vibrant", keyword: "coral,reef,underwater" },
+    { prompt: "Modern glass skyscraper facade", keyword: "skyscraper,glass,modern" },
+    { prompt: "Stack of colorful macarons", keyword: "macaron,dessert,pastel" },
+    { prompt: "Foggy Scottish highlands", keyword: "scotland,highlands,fog" },
+    { prompt: "Vintage red convertible on coast", keyword: "convertible,red,coast" },
+    { prompt: "Origami crane, paper texture", keyword: "origami,crane,paper" },
+  ],
+  [
+    { prompt: "Serene zen garden with stones", keyword: "zen,garden,japanese" },
+    { prompt: "Tropical waterfall in jungle", keyword: "waterfall,jungle,tropical" },
+    { prompt: "Vinyl records on shelves", keyword: "vinyl,records,music" },
+    { prompt: "Old library with warm lamps", keyword: "library,books,warm" },
+    { prompt: "Field of lavender at sunset", keyword: "lavender,field,sunset" },
+    { prompt: "Bright yellow race car, studio", keyword: "car,yellow,studio" },
+  ],
+  [
+    { prompt: "Snowy village at Christmas", keyword: "snow,village,christmas" },
+    { prompt: "Minimalist ceramic tea set", keyword: "ceramic,tea,minimal" },
+    { prompt: "Hot air balloons at dawn", keyword: "hotairballoon,dawn,sky" },
+    { prompt: "Old European cobblestone street", keyword: "cobblestone,europe,street" },
+    { prompt: "Neon arcade cabinet, 80s", keyword: "arcade,neon,retro" },
+    { prompt: "Golden wheat field, breeze", keyword: "wheat,field,golden" },
+  ],
+  [
+    { prompt: "Colorful hot street food market", keyword: "streetfood,market,asia" },
+    { prompt: "Bioluminescent forest at night", keyword: "bioluminescent,forest,glow" },
+    { prompt: "Vintage typewriter on wood desk", keyword: "typewriter,vintage,desk" },
+    { prompt: "Sunlit tropical beach, palms", keyword: "beach,palm,tropical" },
+    { prompt: "Modern art gallery interior", keyword: "gallery,art,modern" },
+    { prompt: "Enchanted mushroom forest", keyword: "mushroom,forest,fantasy" },
+  ],
+];
 
 type HistoryItem = { id: string; prompt: string; imageUrl: string; createdAt: number };
 
@@ -109,6 +179,7 @@ function ImagesPage() {
   const [limitMessage, setLimitMessage] = useState<string | undefined>(undefined);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [galleryPage, setGalleryPage] = useState(0);
 
 
 
@@ -306,14 +377,14 @@ function ImagesPage() {
 
               <div>
                 <div className="text-xs font-medium text-muted-foreground mb-2">Try one of these</div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {[
-                    "A minimalist logo for a coffee brand",
-                    "Cinematic dog portrait, golden hour",
-                    "Isometric city block, pastel palette",
-                    "Watercolor of a mountain lake at dawn",
-                    "Retro 80s synthwave poster",
-                    "Cute sticker of a smiling avocado",
+                    "Neon city at night",
+                    "Cozy modern bedroom",
+                    "Futuristic gaming avatar",
+                    "Mountain lake sunrise",
+                    "Minimal blue logo",
+                    "Luxury product photo",
                   ].map((idea) => (
                     <button
                       key={idea}
@@ -327,35 +398,72 @@ function ImagesPage() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                {[
-                  "Realistic Images",
-                  "Anime & Illustration",
-                  "Logos & Icons",
-                  "Gaming Avatars",
-                  "Product Renders",
-                  "Wallpapers",
-                  "Social Media Posts",
-                  "Website Graphics",
-                  "Fantasy Art",
-                  "Interior Design",
-                  "Cyberpunk",
-                  "Nature & Landscapes",
-                ].map((cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setPrompt((p) => (p ? `${p}, ${cat.toLowerCase()}` : cat))}
-                    className="text-xs px-3 py-1.5 rounded-full border border-border hover:bg-accent transition text-muted-foreground hover:text-foreground"
-                  >
-                    {cat}
-                  </button>
-                ))}
+              {/* Example gallery: 8 pages of curated example prompts with lazy thumbnails. */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-xs font-medium text-muted-foreground">Examples</div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setGalleryPage((p) => (p - 1 + EXAMPLE_PAGES.length) % EXAMPLE_PAGES.length)}
+                      className="text-xs px-2 py-1 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition"
+                      aria-label="Previous examples"
+                    >
+                      ‹
+                    </button>
+                    <span className="text-[11px] text-muted-foreground tabular-nums px-1">
+                      {galleryPage + 1} / {EXAMPLE_PAGES.length}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setGalleryPage((p) => (p + 1) % EXAMPLE_PAGES.length)}
+                      className="text-xs px-2 py-1 rounded-md border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition"
+                      aria-label="Next examples"
+                    >
+                      ›
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {EXAMPLE_PAGES[galleryPage].map((ex) => (
+                    <button
+                      key={ex.prompt}
+                      type="button"
+                      onClick={() => setPrompt(ex.prompt)}
+                      className="group relative aspect-square rounded-xl overflow-hidden border border-border bg-muted hover:ring-2 hover:ring-foreground/30 transition"
+                      title={`Use prompt: ${ex.prompt}`}
+                    >
+                      <img
+                        src={`https://source.unsplash.com/400x400/?${encodeURIComponent(ex.keyword)}`}
+                        alt=""
+                        loading="lazy"
+                        className="absolute inset-0 w-full h-full object-cover transition group-hover:scale-105"
+                      />
+                      <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
+                        <p className="text-[11px] text-white line-clamp-2 text-left">{ex.prompt}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <div className="flex justify-center gap-1.5 mt-3">
+                  {EXAMPLE_PAGES.map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setGalleryPage(i)}
+                      aria-label={`Go to examples page ${i + 1}`}
+                      className={`h-1.5 rounded-full transition-all ${
+                        i === galleryPage ? "w-6 bg-foreground" : "w-1.5 bg-border hover:bg-muted-foreground/50"
+                      }`}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
               AI-generated images may not always match your prompt perfectly. Review generated images before using them publicly or commercially.
             </p>
+
 
 
             {error && (
