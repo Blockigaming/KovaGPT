@@ -257,23 +257,6 @@ export function ChatInput({
                   <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
                 </div>
               )}
-              <button
-                type="button"
-                onClick={speechSupported ? toggleDictation : () => toast.error("Voice dictation isn't supported in this browser. Try Chrome, Edge, or Safari.")}
-                aria-disabled={!speechSupported}
-                className={`w-9 h-9 rounded-full flex items-center justify-center transition ${
-                  !speechSupported
-                    ? "text-muted-foreground/40 cursor-not-allowed"
-                    : listening
-                      ? "text-white hover:opacity-90"
-                      : "text-muted-foreground hover:bg-accent"
-                }`}
-                style={listening ? { backgroundColor: "#ef4444" } : undefined}
-                aria-label={!speechSupported ? "Dictation unavailable" : listening ? "Stop dictation" : "Start dictation"}
-                title={!speechSupported ? "Dictation isn't supported in this browser" : listening ? "Stop dictation" : "Dictate"}
-              >
-                <Mic className={`w-5 h-5 ${listening ? "animate-pulse" : ""}`} />
-              </button>
               {isStreaming ? (
                 <button
                   type="button"
