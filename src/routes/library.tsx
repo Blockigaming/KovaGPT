@@ -69,14 +69,21 @@ function LibraryPage() {
     }
   };
 
-  const filtered = items.filter((it) => {
-    const isImage = !!(it.file_url && (it.item_type === "image" || it.file_type?.startsWith("image/")));
-    if (tab === "images" && !isImage) return false;
-    if (tab === "documents" && isImage) return false;
+  const isImageItem = (it: LibItem) =>
+    !!(it.file_url && (it.item_type === "image" || it.file_type?.startsWith("image/")));
+
+  const searchFilter = (it: LibItem) => {
     if (!query.trim()) return true;
     const q = query.toLowerCase();
     return it.title.toLowerCase().includes(q) || (it.content_text ?? "").toLowerCase().includes(q);
-  });
+  };
+
+  const searched = items.filter(searchFilter);
+  const imagesList = searched.filter(isImageItem);
+  const documentsList = searched.filter((it) => !isImageItem(it));
+
+  const filtered =
+    tab === "images" ? imagesList : tab === "documents" ? documentsList : searched;
 
   return (
     <AppShell>
@@ -172,10 +179,9 @@ function LibraryPage() {
             )}
           </div>
         ) : (
-          <ul className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(260px,1fr))]">
-
-            {filtered.map((it) => {
-              const isImage = it.file_url && (it.item_type === "image" || it.file_type?.startsWith("image/"));
+          (() => {
+            const renderCard = (it: LibItem) => {
+              const isImage = isImageItem(it);
               return (
                 <li
                   key={it.id}
@@ -223,8 +229,35 @@ function LibraryPage() {
                   </button>
                 </li>
               );
-            })}
-          </ul>
+            };
+
+            const Section = ({ title, count, items: sec }: { title: string; count: number; items: LibItem[] }) =>
+              sec.length === 0 ? null : (
+                <section className="rounded-2xl border border-border bg-muted/20 p-4">
+                  <div className="flex items-baseline gap-2 mb-3">
+                    <h2 className="text-sm font-semibold">{title}</h2>
+                    <span className="text-xs text-muted-foreground">{count}</span>
+                  </div>
+                  <ul className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(220px,1fr))]">
+                    {sec.map(renderCard)}
+                  </ul>
+                </section>
+              );
+
+            if (tab === "all") {
+              return (
+                <div className="space-y-6">
+                  <Section title="Images" count={imagesList.length} items={imagesList} />
+                  <Section title="Documents & responses" count={documentsList.length} items={documentsList} />
+                </div>
+              );
+            }
+            return (
+              <ul className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(260px,1fr))]">
+                {filtered.map(renderCard)}
+              </ul>
+            );
+          })()
         )}
       </main>
 

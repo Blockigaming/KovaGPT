@@ -652,8 +652,8 @@ export const Route = createFileRoute("/api/chat")({
             : m.id === "high"
               ? "google/gemini-3.1-pro-preview"
               : m.id === "instant"
-                ? "google/gemini-3.1-flash-lite"
-                : "google/gemini-3.5-flash";
+                ? "google/gemini-3.5-flash"
+                : "google/gemini-3.1-pro-preview";
 
           // TODO(routing): add per-request classification (rewrite/summary/coding)
           // and an explicit "Improve answer" client action that re-runs with a
