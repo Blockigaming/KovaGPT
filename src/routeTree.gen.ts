@@ -19,6 +19,7 @@ import { Route as ScheduledTasksRouteImport } from './routes/scheduled-tasks'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ResearchAssistantRouteImport } from './routes/research-assistant'
 import { Route as RefundRouteImport } from './routes/refund'
+import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ModesRouteImport } from './routes/modes'
@@ -37,6 +38,7 @@ import { Route as AiImageGeneratorRouteImport } from './routes/ai-image-generato
 import { Route as AiHumanizerRouteImport } from './routes/ai-humanizer'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as Char126oauthCallbackRouteImport } from './routes/~oauth.callback'
+import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as BlogBestAiMarketResearchToolsRouteImport } from './routes/blog.best-ai-market-research-tools'
@@ -57,6 +59,7 @@ import { Route as ApiGoogleCallbackRouteImport } from './routes/api/google/callb
 import { Route as ApiGoogleCalendarRouteImport } from './routes/api/google/calendar'
 import { Route as ApiGoogleAuthRouteImport } from './routes/api/google/auth'
 import { Route as ApiChatConfirmRouteImport } from './routes/api/chat/confirm'
+import { Route as ProjectsProjectIdChatChatIdRouteImport } from './routes/projects.$projectId.chat.$chatId'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -112,6 +115,11 @@ const ResearchAssistantRoute = ResearchAssistantRouteImport.update({
 const RefundRoute = RefundRouteImport.update({
   id: '/refund',
   path: '/refund',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsRoute = ProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -203,6 +211,11 @@ const Char126oauthCallbackRoute = Char126oauthCallbackRouteImport.update({
   id: '/~oauth/callback',
   path: '/~oauth/callback',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
+  id: '/$projectId',
+  path: '/$projectId',
+  getParentRoute: () => ProjectsRoute,
 } as any)
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
   id: '/email/unsubscribe',
@@ -306,6 +319,12 @@ const ApiChatConfirmRoute = ApiChatConfirmRouteImport.update({
   path: '/confirm',
   getParentRoute: () => ApiChatRoute,
 } as any)
+const ProjectsProjectIdChatChatIdRoute =
+  ProjectsProjectIdChatChatIdRouteImport.update({
+    id: '/chat/$chatId',
+    path: '/chat/$chatId',
+    getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
 const LovableEmailTransactionalSendRoute =
   LovableEmailTransactionalSendRouteImport.update({
     id: '/lovable/email/transactional/send',
@@ -359,6 +378,7 @@ export interface FileRoutesByFullPath {
   '/modes': typeof ModesRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/projects': typeof ProjectsRouteWithChildren
   '/refund': typeof RefundRoute
   '/research-assistant': typeof ResearchAssistantRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -379,6 +399,7 @@ export interface FileRoutesByFullPath {
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/google/auth': typeof ApiGoogleAuthRoute
@@ -396,6 +417,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -415,6 +437,7 @@ export interface FileRoutesByTo {
   '/modes': typeof ModesRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/projects': typeof ProjectsRouteWithChildren
   '/refund': typeof RefundRoute
   '/research-assistant': typeof ResearchAssistantRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -435,6 +458,7 @@ export interface FileRoutesByTo {
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/google/auth': typeof ApiGoogleAuthRoute
@@ -452,6 +476,7 @@ export interface FileRoutesByTo {
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -472,6 +497,7 @@ export interface FileRoutesById {
   '/modes': typeof ModesRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/projects': typeof ProjectsRouteWithChildren
   '/refund': typeof RefundRoute
   '/research-assistant': typeof ResearchAssistantRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -492,6 +518,7 @@ export interface FileRoutesById {
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/google/auth': typeof ApiGoogleAuthRoute
@@ -509,6 +536,7 @@ export interface FileRoutesById {
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -530,6 +558,7 @@ export interface FileRouteTypes {
     | '/modes'
     | '/pricing'
     | '/privacy'
+    | '/projects'
     | '/refund'
     | '/research-assistant'
     | '/reset-password'
@@ -550,6 +579,7 @@ export interface FileRouteTypes {
     | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
     | '/email/unsubscribe'
+    | '/projects/$projectId'
     | '/~oauth/callback'
     | '/api/chat/confirm'
     | '/api/google/auth'
@@ -567,6 +597,7 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/projects/$projectId/chat/$chatId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -586,6 +617,7 @@ export interface FileRouteTypes {
     | '/modes'
     | '/pricing'
     | '/privacy'
+    | '/projects'
     | '/refund'
     | '/research-assistant'
     | '/reset-password'
@@ -606,6 +638,7 @@ export interface FileRouteTypes {
     | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
     | '/email/unsubscribe'
+    | '/projects/$projectId'
     | '/~oauth/callback'
     | '/api/chat/confirm'
     | '/api/google/auth'
@@ -623,6 +656,7 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/projects/$projectId/chat/$chatId'
   id:
     | '__root__'
     | '/'
@@ -642,6 +676,7 @@ export interface FileRouteTypes {
     | '/modes'
     | '/pricing'
     | '/privacy'
+    | '/projects'
     | '/refund'
     | '/research-assistant'
     | '/reset-password'
@@ -662,6 +697,7 @@ export interface FileRouteTypes {
     | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
     | '/email/unsubscribe'
+    | '/projects/$projectId'
     | '/~oauth/callback'
     | '/api/chat/confirm'
     | '/api/google/auth'
@@ -679,6 +715,7 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/projects/$projectId/chat/$chatId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -699,6 +736,7 @@ export interface RootRouteChildren {
   ModesRoute: typeof ModesRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
+  ProjectsRoute: typeof ProjectsRouteWithChildren
   RefundRoute: typeof RefundRoute
   ResearchAssistantRoute: typeof ResearchAssistantRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -807,6 +845,13 @@ declare module '@tanstack/react-router' {
       path: '/refund'
       fullPath: '/refund'
       preLoaderRoute: typeof RefundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects': {
+      id: '/projects'
+      path: '/projects'
+      fullPath: '/projects'
+      preLoaderRoute: typeof ProjectsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -934,6 +979,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/~oauth/callback'
       preLoaderRoute: typeof Char126oauthCallbackRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/projects/$projectId': {
+      id: '/projects/$projectId'
+      path: '/$projectId'
+      fullPath: '/projects/$projectId'
+      preLoaderRoute: typeof ProjectsProjectIdRouteImport
+      parentRoute: typeof ProjectsRoute
     }
     '/email/unsubscribe': {
       id: '/email/unsubscribe'
@@ -1075,6 +1127,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatConfirmRouteImport
       parentRoute: typeof ApiChatRoute
     }
+    '/projects/$projectId/chat/$chatId': {
+      id: '/projects/$projectId/chat/$chatId'
+      path: '/chat/$chatId'
+      fullPath: '/projects/$projectId/chat/$chatId'
+      preLoaderRoute: typeof ProjectsProjectIdChatChatIdRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
     '/lovable/email/transactional/send': {
       id: '/lovable/email/transactional/send'
       path: '/lovable/email/transactional/send'
@@ -1120,6 +1179,29 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ProjectsProjectIdRouteChildren {
+  ProjectsProjectIdChatChatIdRoute: typeof ProjectsProjectIdChatChatIdRoute
+}
+
+const ProjectsProjectIdRouteChildren: ProjectsProjectIdRouteChildren = {
+  ProjectsProjectIdChatChatIdRoute: ProjectsProjectIdChatChatIdRoute,
+}
+
+const ProjectsProjectIdRouteWithChildren =
+  ProjectsProjectIdRoute._addFileChildren(ProjectsProjectIdRouteChildren)
+
+interface ProjectsRouteChildren {
+  ProjectsProjectIdRoute: typeof ProjectsProjectIdRouteWithChildren
+}
+
+const ProjectsRouteChildren: ProjectsRouteChildren = {
+  ProjectsProjectIdRoute: ProjectsProjectIdRouteWithChildren,
+}
+
+const ProjectsRouteWithChildren = ProjectsRoute._addFileChildren(
+  ProjectsRouteChildren,
+)
+
 interface ApiChatRouteChildren {
   ApiChatConfirmRoute: typeof ApiChatConfirmRoute
 }
@@ -1149,6 +1231,7 @@ const rootRouteChildren: RootRouteChildren = {
   ModesRoute: ModesRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
+  ProjectsRoute: ProjectsRouteWithChildren,
   RefundRoute: RefundRoute,
   ResearchAssistantRoute: ResearchAssistantRoute,
   ResetPasswordRoute: ResetPasswordRoute,

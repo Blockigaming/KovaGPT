@@ -38,7 +38,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     return installShortcutListener({
       "new-chat": () => { try { localStorage.removeItem("nova-gpt-pending-active"); } catch { /* ignore */ } navigate({ to: "/" }); },
       "search": () => { window.dispatchEvent(new CustomEvent("kova-open-search")); },
-      "open-projects": () => { navigate({ to: "/" as never }); },
+      "open-projects": () => { navigate({ to: "/projects" as never }); },
       "open-library": () => { navigate({ to: "/library" }); },
       "open-settings": () => { setSettingsTab(undefined); setSettingsOpen(true); },
       "generate-image": () => { navigate({ to: "/images" }); },
