@@ -70,6 +70,9 @@ function LibraryPage() {
   };
 
   const filtered = items.filter((it) => {
+    const isImage = !!(it.file_url && (it.item_type === "image" || it.file_type?.startsWith("image/")));
+    if (tab === "images" && !isImage) return false;
+    if (tab === "documents" && isImage) return false;
     if (!query.trim()) return true;
     const q = query.toLowerCase();
     return it.title.toLowerCase().includes(q) || (it.content_text ?? "").toLowerCase().includes(q);
