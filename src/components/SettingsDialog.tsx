@@ -62,7 +62,7 @@ import { StorageDashboard } from "@/components/StorageDashboard";
 import { FamilySharingPanel } from "@/components/FamilySharingPanel";
 import { MfaPanel } from "@/components/MfaPanel";
 import { clearConversations } from "@/lib/chat-store";
-import { getUsage, DAILY_IMAGE_LIMIT, DAILY_UPLOAD_LIMIT } from "@/lib/limits";
+import { getUsage } from "@/lib/limits";
 import { useUser, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
 import {
