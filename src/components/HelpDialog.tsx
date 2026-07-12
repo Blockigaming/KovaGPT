@@ -136,7 +136,7 @@ export function HelpDialog({
             </Label>
             <Input
               id="help-topic"
-              placeholder={isBug ? "Voice mode keeps cutting out on iPad" : "Billing question, feedback, feature request..."}
+              placeholder={isBug ? "Image generation fails on iPad" : "Billing question, feedback, feature request..."}
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               maxLength={200}

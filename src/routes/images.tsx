@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
 import { useEffect, useState } from "react";
-import { PanelLeft, ChevronDown, ChevronLeft, ChevronRight, ImageIcon, ArrowUp, Loader2, Download, Trash2, History } from "lucide-react";
+import { PanelLeft, ChevronDown, ImageIcon, ArrowUp, Loader2, Download, Trash2, History } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { HelpDialog } from "@/components/HelpDialog";
@@ -48,170 +48,7 @@ export const Route = createFileRoute("/images")({
 });
 
 
-// Curated AI-art style example images (Unsplash, free to use).
-const EXAMPLES: { label: string; prompt: string; src: string }[] = [
-  {
-    label: "Cinematic portrait",
-    prompt: "Cinematic portrait of a woman in golden hour light, 85mm lens, shallow depth of field",
-    src: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Cyberpunk city",
-    prompt: "Neon-lit cyberpunk Tokyo street at night, rainy reflections, blade runner aesthetic",
-    src: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Surreal landscape",
-    prompt: "Surreal floating islands above a sea of clouds at sunrise, ethereal lighting",
-    src: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Watercolor mountains",
-    prompt: "Soft watercolor painting of misty mountains and pine forest, pastel palette",
-    src: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Anime sunset",
-    prompt: "Anime style girl on a rooftop watching a vivid sunset, Makoto Shinkai inspired",
-    src: "https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?auto=format&fit=crop&w=600&q=70",
-  },
-
-  {
-    label: "Product render",
-    prompt: "Studio product render of futuristic wireless headphones on a marble pedestal",
-    src: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Fantasy castle",
-    prompt: "Epic fantasy castle on a cliff at twilight, dramatic clouds, painterly",
-    src: "https://images.unsplash.com/photo-1533154683836-84ea7a0bc310?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Cozy interior",
-    prompt: "Cozy reading nook with warm lamp light, plants, rainy window, 3D render",
-    src: "https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Abstract gradient",
-    prompt: "Abstract liquid gradient art, vibrant magenta and teal, smooth flowing shapes",
-    src: "https://images.unsplash.com/photo-1557672172-298e090bd0f1?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Forest path",
-    prompt: "Sunlit misty forest path in autumn, golden leaves, cinematic depth",
-    src: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Ocean wave",
-    prompt: "Macro photo of a cresting turquoise ocean wave at golden hour",
-    src: "https://images.unsplash.com/photo-1505144808419-1957a94ca61e?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Mountain lake",
-    prompt: "Crystal clear alpine lake reflecting snow-capped mountains, ultra realistic",
-    src: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Desert dunes",
-    prompt: "Endless rolling Sahara desert dunes at sunset, long shadows, photo realistic",
-    src: "https://images.unsplash.com/photo-1473580044384-7ba9967e16a0?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Astronaut",
-    prompt: "Lone astronaut floating above Earth, dramatic lighting, NASA style photography",
-    src: "https://images.unsplash.com/photo-1457364887197-9150188c107b?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Northern lights",
-    prompt: "Aurora borealis dancing above a snowy lakeside cabin, long exposure",
-    src: "https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Coffee art",
-    prompt: "Top-down latte art with steam, on a rustic wood table, warm light",
-    src: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Vintage car",
-    prompt: "Glossy red 1960s convertible parked on Pacific coast highway at golden hour",
-    src: "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "City skyline",
-    prompt: "Modern Manhattan skyline at dusk, glowing windows, ultra-detailed",
-    src: "https://images.unsplash.com/photo-1496588152823-86ff7695e68f?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Galaxy nebula",
-    prompt: "Vibrant deep-space nebula with swirling cosmic dust, hubble telescope style",
-    src: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Macro flower",
-    prompt: "Extreme close-up of a dewy red rose petal, photo realistic, soft focus",
-    src: "https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Snowy village",
-    prompt: "Cozy Christmas village under heavy snowfall at night, warm window lights",
-    src: "https://images.unsplash.com/photo-1482517967863-00e15c9b44be?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Tropical beach",
-    prompt: "Aerial drone shot of a tropical island with turquoise water and palm trees",
-    src: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Steampunk gear",
-    prompt: "Intricate brass steampunk pocket watch with exposed gears, studio lighting",
-    src: "https://images.unsplash.com/photo-1509048191080-d2984bad6ae5?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Misty bridge",
-    prompt: "Stone arch bridge over a foggy river at dawn, moody atmosphere",
-    src: "https://images.unsplash.com/photo-1500964757637-c85e8a162699?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Studio portrait",
-    prompt: "Black and white studio portrait of an elderly man, soft Rembrandt lighting",
-    src: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Hot air balloons",
-    prompt: "Dozens of colorful hot air balloons over Cappadocia at sunrise",
-    src: "https://images.unsplash.com/photo-1507608616759-54f48f0af0ee?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Underwater coral",
-    prompt: "Vivid coral reef with tropical fish, sunbeams piercing the surface",
-    src: "https://images.unsplash.com/photo-1497436072909-60f360e1d4b1?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Neon arcade",
-    prompt: "1980s arcade hallway with neon signs and CRT glow, synthwave aesthetic",
-    src: "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Geometric art",
-    prompt: "Minimal geometric pastel composition, soft shadows, design poster style",
-    src: "https://images.unsplash.com/photo-1558865869-c93f6f8482af?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Library aisle",
-    prompt: "Endless old library with tall bookshelves, warm reading lamps, cinematic",
-    src: "https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Foggy forest",
-    prompt: "Dark misty pine forest at dawn, volumetric fog, atmospheric photography",
-    src: "https://images.unsplash.com/photo-1418065460487-3e41a6c84dc5?auto=format&fit=crop&w=600&q=70",
-  },
-  {
-    label: "Northern fjord",
-    prompt: "Aerial of Norwegian fjord with tiny village by the water, dramatic cliffs",
-    src: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=600&q=70",
-  },
-];
+// (Example gallery removed — page now uses six inline suggestion cards.)
 
 type HistoryItem = { id: string; prompt: string; imageUrl: string; createdAt: number };
 
@@ -262,7 +99,7 @@ function ImagesPage() {
   const [helpOpen, setHelpOpen] = useState(false);
   
   const [prompt, setPrompt] = useState("");
-  const [size, setSize] = useState<"1024x1024" | "1024x1536" | "1536x1024">("1024x1024");
+  const [size, setSize] = useState<"1024x1024" | "1024x1536" | "1536x1024" | "1792x1024">("1024x1024");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
@@ -276,13 +113,6 @@ function ImagesPage() {
 
 
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [examplePage, setExamplePage] = useState(0);
-  const EXAMPLES_PER_PAGE = 10;
-  const exampleTotalPages = Math.max(1, Math.ceil(EXAMPLES.length / EXAMPLES_PER_PAGE));
-  const visibleExamples = EXAMPLES.slice(
-    examplePage * EXAMPLES_PER_PAGE,
-    examplePage * EXAMPLES_PER_PAGE + EXAMPLES_PER_PAGE,
-  );
 
   // Load per-user history when sign-in state resolves.
   useEffect(() => {
@@ -448,14 +278,15 @@ function ImagesPage() {
               </div>
             </form>
 
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 space-y-4">
               <div>
-                <div className="text-xs font-medium text-muted-foreground mb-1.5">Frame / size</div>
+                <div className="text-xs font-medium text-muted-foreground mb-1.5">Size</div>
                 <div className="flex flex-wrap gap-2">
                   {[
                     { v: "1024x1024" as const, label: "Square", hint: "1:1" },
-                    { v: "1536x1024" as const, label: "Landscape", hint: "3:2" },
                     { v: "1024x1536" as const, label: "Portrait", hint: "2:3" },
+                    { v: "1536x1024" as const, label: "Landscape", hint: "3:2" },
+                    { v: "1792x1024" as const, label: "Wide", hint: "16:9" },
                   ].map((opt) => (
                     <button
                       key={opt.v}
@@ -474,8 +305,8 @@ function ImagesPage() {
               </div>
 
               <div>
-                <div className="text-xs font-medium text-muted-foreground mb-1.5">Ideas & suggestions</div>
-                <div className="flex flex-wrap gap-2">
+                <div className="text-xs font-medium text-muted-foreground mb-2">Try one of these</div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {[
                     "A minimalist logo for a coffee brand",
                     "Cinematic dog portrait, golden hour",
@@ -488,7 +319,7 @@ function ImagesPage() {
                       key={idea}
                       type="button"
                       onClick={() => setPrompt(idea)}
-                      className="text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition"
+                      className="text-left text-xs px-3 py-2.5 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition"
                     >
                       {idea}
                     </button>
@@ -668,62 +499,6 @@ function ImagesPage() {
               </div>
             )}
 
-            <div className="mt-10">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">
-                  Explore AI image examples
-                  <span className="ml-2 text-xs font-normal text-muted-foreground">
-                    Page {examplePage + 1} of {exampleTotalPages}
-                  </span>
-                </h2>
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setExamplePage((p) => Math.max(0, p - 1))}
-                    disabled={examplePage === 0}
-                    className="w-8 h-8 rounded-full border border-border hover:bg-accent flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
-                    aria-label="Previous examples page"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setExamplePage((p) => Math.min(exampleTotalPages - 1, p + 1))}
-                    disabled={examplePage >= exampleTotalPages - 1}
-                    className="w-8 h-8 rounded-full border border-border hover:bg-accent flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
-                    aria-label="Next examples page"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground mb-4">
-                Click any example to use it as your prompt.
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                {visibleExamples.map((ex) => (
-                  <button
-                    key={ex.label}
-                    onClick={() => {
-                      setPrompt(ex.prompt);
-                      generate(ex.prompt);
-                    }}
-                    className="group relative aspect-[3/4] rounded-2xl overflow-hidden bg-muted hover:scale-[1.02] transition-transform text-left"
-                    aria-label={`Use example: ${ex.label}`}
-                  >
-                    <img
-                      src={ex.src}
-                      alt={ex.label}
-                      loading="lazy"
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 to-transparent">
-                      <div className="text-sm font-medium text-white">{ex.label}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
       </main>

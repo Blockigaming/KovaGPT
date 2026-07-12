@@ -200,8 +200,8 @@ export function Sidebar({
               const renderRow = (c: Conversation) => (
                 <div
                   key={c.id}
-                  className={`group mx-2 my-0.5 flex items-center gap-1 rounded-xl px-3 py-2 text-[14px] cursor-pointer transition bg-sidebar-hover/60 hover:bg-sidebar-hover ${
-                    activeId === c.id ? "bg-sidebar-hover ring-1 ring-border/60" : ""
+                  className={`group mx-2 my-0.5 flex items-center gap-1 rounded-xl px-3 py-2 text-[14px] cursor-pointer transition ${
+                    activeId === c.id ? "bg-sidebar-hover" : "hover:bg-sidebar-hover/60"
                   }`}
                   onClick={() => onSelect(c.id)}
                 >
@@ -232,7 +232,7 @@ export function Sidebar({
                     <DropdownMenuTrigger asChild>
                       <button
                         onClick={(e) => e.stopPropagation()}
-                        className="opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 p-1 rounded hover:bg-background/40 transition active:scale-95"
+                        className="opacity-70 hover:opacity-100 data-[state=open]:opacity-100 p-1 rounded hover:bg-background/40 transition active:scale-95"
                         aria-label="Chat options"
                       >
                         <MoreHorizontal className="w-4 h-4 text-muted-foreground" />

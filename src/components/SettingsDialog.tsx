@@ -62,7 +62,7 @@ import { StorageDashboard } from "@/components/StorageDashboard";
 import { FamilySharingPanel } from "@/components/FamilySharingPanel";
 import { MfaPanel } from "@/components/MfaPanel";
 import { clearConversations } from "@/lib/chat-store";
-import { getUsage, DAILY_IMAGE_LIMIT, DAILY_UPLOAD_LIMIT } from "@/lib/limits";
+import { getUsage } from "@/lib/limits";
 import { useUser, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
 import {
@@ -370,11 +370,11 @@ export function SettingsDialog({
               <div className="space-y-1.5 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Images generated</span>
-                  <span>{localUsage.images} / {DAILY_IMAGE_LIMIT}</span>
+                  <span>{localUsage.images}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Images uploaded</span>
-                  <span>{localUsage.uploads} / {DAILY_UPLOAD_LIMIT}</span>
+                  <span>{localUsage.uploads}</span>
                 </div>
               </div>
             </section>
