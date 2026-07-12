@@ -28,6 +28,7 @@ function LibraryPage() {
   const [items, setItems] = useState<LibItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState("");
+  const [tab, setTab] = useState<"all" | "images" | "documents">("all");
 
   const load = async () => {
     if (!isSignedIn) {
