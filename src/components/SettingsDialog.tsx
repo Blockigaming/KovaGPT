@@ -40,6 +40,8 @@ import {
   FolderOpen,
   Settings as Cog,
   Users,
+  Keyboard,
+  MapPin,
 } from "lucide-react";
 import { useTier, tierRank } from "@/hooks/useTier";
 import {
