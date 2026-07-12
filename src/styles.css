@@ -64,6 +64,7 @@
   --sidebar: oklch(0.985 0.002 250);
   --sidebar-foreground: oklch(0.22 0 0);
   --sidebar-hover: oklch(0.94 0.003 250);
+  --sidebar-active: oklch(0.88 0.004 250);
   --user-bubble: oklch(0.925 0.003 250);
 
 
