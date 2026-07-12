@@ -588,7 +588,7 @@ export const Route = createFileRoute("/api/chat")({
             const quota = await enforceQuota(
               auth,
               "uploads",
-              DAILY_UPLOAD_LIMIT,
+              DAILY_UPLOAD_LIMIT_BY_TIER[callerTier],
               totalAttachments,
             );
             if (quota) return quota;
