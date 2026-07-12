@@ -149,6 +149,11 @@ export function Sidebar({
             Workspace
           </div>
           <div className="px-3 flex flex-col gap-0.5">
+            <Link to="/projects" className={navItemClass(isOn("/projects"))}>
+              <ActiveBar on={isOn("/projects")} />
+              <FolderKanban className="w-[18px] h-[18px] shrink-0" />
+              <span className="truncate">Projects</span>
+            </Link>
             <Link to="/library" className={navItemClass(isOn("/library"))}>
               <ActiveBar on={isOn("/library")} />
               <FolderOpen className="w-[18px] h-[18px] shrink-0" />
