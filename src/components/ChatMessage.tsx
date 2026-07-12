@@ -23,6 +23,39 @@ function cleanAssistantText(text: string): string {
     .replace(/[\u2013\u2014]/g, "-");
 }
 
+// Short status label shown while the assistant is streaming but has no text yet.
+// Derives from the latest running/last activity tool, so users see
+// "Searching", "Reading Files", "Interacting with Gmail", etc.
+function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store").Activity[] }) {
+  const last = activities && activities.length > 0 ? activities[activities.length - 1] : null;
+  const tool = (last?.tool ?? "").toLowerCase();
+  let label = "Thinking";
+  if (tool) {
+    if (tool.includes("image")) label = "Creating Image";
+    else if (tool.includes("gmail") || tool.includes("mail")) label = "Interacting with Gmail";
+    else if (tool.includes("calendar")) label = "Checking Calendar";
+    else if (tool.includes("drive") || tool.includes("file") || tool.includes("read")) label = "Reading Files";
+    else if (tool.includes("search") || tool.includes("web") || tool.includes("browse")) label = "Searching the Web";
+    else if (tool.includes("write")) label = "Writing";
+    else label = last?.label ?? "Working";
+  }
+  return (
+    <div className="flex items-center gap-2 py-1" aria-live="polite">
+      <span
+        className="text-sm font-medium bg-clip-text text-transparent"
+        style={{
+          backgroundImage:
+            "linear-gradient(90deg, var(--color-muted-foreground) 0%, var(--color-foreground) 50%, var(--color-muted-foreground) 100%)",
+          backgroundSize: "200% 100%",
+          animation: "shimmer 1.8s linear infinite",
+        }}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
+
 
 
 function ChatMessageInner({

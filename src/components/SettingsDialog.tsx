@@ -522,15 +522,6 @@ export function SettingsDialog({
               <p className="text-xs text-muted-foreground">
                 Connect external accounts so KovaGPT can use them in your chats. Live integrations work today; others are on the roadmap.
               </p>
-              <div className="mt-2 rounded-lg border border-border/60 bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
-                <div className="text-foreground font-medium">Privacy: what "Connect" actually does</div>
-                <p>
-                  Connecting an app <span className="font-medium text-foreground">only records that you linked it</span>.
-                  KovaGPT does not run in the background, does not poll your Gmail/Drive/school portal,
-                  and never signs in on your behalf between sessions. You can disconnect at any time —
-                  the local link is removed immediately.
-                </p>
-              </div>
               <p className="text-xs text-muted-foreground pt-1">
                 Linking apps is free for everyone. Disconnect at any time.
               </p>

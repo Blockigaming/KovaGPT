@@ -176,13 +176,7 @@ export function Sidebar({
                 <span className="truncate">Scheduled Tasks</span>
               </Link>
             )}
-            {showSignedIn && (
-              <Link to="/audit-log" className={navItemClass(isOn("/audit-log"))}>
-                <ActiveBar on={isOn("/audit-log")} />
-                <Activity className="w-[18px] h-[18px] shrink-0" />
-                <span className="truncate">Activity Log</span>
-              </Link>
-            )}
+            {/* Activity Log intentionally lives only in Settings; removed from sidebar. */}
 
             <Link to="/pricing" className={navItemClass(isOn("/pricing"))}>
               <ActiveBar on={isOn("/pricing")} />
