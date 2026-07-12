@@ -276,13 +276,6 @@ function ImagesPage() {
 
 
   const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [examplePage, setExamplePage] = useState(0);
-  const EXAMPLES_PER_PAGE = 10;
-  const exampleTotalPages = Math.max(1, Math.ceil(EXAMPLES.length / EXAMPLES_PER_PAGE));
-  const visibleExamples = EXAMPLES.slice(
-    examplePage * EXAMPLES_PER_PAGE,
-    examplePage * EXAMPLES_PER_PAGE + EXAMPLES_PER_PAGE,
-  );
 
   // Load per-user history when sign-in state resolves.
   useEffect(() => {
