@@ -247,9 +247,12 @@ function ChatMessageInner({
                 <StreamingStatus activities={message.activities} />
               
               ) : (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {cleanAssistantText(message.content)}
-                </ReactMarkdown>
+                (() => {
+                  const cleaned = cleanAssistantText(message.content);
+                  const wrap = !artifactKind && !streaming && shouldWrapAsDocument(cleaned);
+                  const md = <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleaned}</ReactMarkdown>;
+                  return wrap ? <LongResponseCard content={cleaned}>{md}</LongResponseCard> : md;
+                })()
               )}
               {streaming && message.content && <span className="cursor-blink" />}
             </div>
