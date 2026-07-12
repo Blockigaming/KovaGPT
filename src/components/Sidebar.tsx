@@ -149,20 +149,17 @@ export function Sidebar({
             Workspace
           </div>
           <div className="px-3 flex flex-col gap-0.5">
-            <Link to="/projects" className={navItemClass(isOn("/projects"))}>
-              <ActiveBar on={isOn("/projects")} />
-              <FolderKanban className="w-[18px] h-[18px] shrink-0" />
-              <span className="truncate">Projects</span>
-            </Link>
+            {showSignedIn && (
+              <Link to="/projects" className={navItemClass(isOn("/projects"))}>
+                <ActiveBar on={isOn("/projects")} />
+                <FolderKanban className="w-[18px] h-[18px] shrink-0" />
+                <span className="truncate">Projects</span>
+              </Link>
+            )}
             <Link to="/library" className={navItemClass(isOn("/library"))}>
               <ActiveBar on={isOn("/library")} />
               <FolderOpen className="w-[18px] h-[18px] shrink-0" />
               <span className="truncate">Library</span>
-            </Link>
-            <Link to="/write" className={navItemClass(isOn("/write"))}>
-              <ActiveBar on={isOn("/write")} />
-              <PenLine className="w-[18px] h-[18px] shrink-0" />
-              <span className="truncate">Writing</span>
             </Link>
             <Link to="/apps" className={navItemClass(isOn("/apps"))}>
               <ActiveBar on={isOn("/apps")} />
@@ -172,7 +169,7 @@ export function Sidebar({
             <Link to="/images" className={navItemClass(isOn("/images"))}>
               <ActiveBar on={isOn("/images")} />
               <ImageIcon className="w-[18px] h-[18px] shrink-0" />
-              <span className="truncate">Image Generation</span>
+              <span className="truncate">Images</span>
             </Link>
             {showSignedIn && (tier === "plus" || tier === "pro") && (
               <Link to="/scheduled-tasks" className={navItemClass(isOn("/scheduled-tasks"))}>
