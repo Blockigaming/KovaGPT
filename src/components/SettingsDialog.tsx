@@ -165,6 +165,8 @@ const TAB_GROUPS: TabGroup[] = [
     tabs: [
       { v: "appearance", label: "Appearance", icon: Palette },
       { v: "notifications", label: "Notifications", icon: Bell },
+      { v: "shortcuts", label: "Keyboard shortcuts", icon: Keyboard },
+      { v: "location", label: "Location", icon: MapPin },
       { v: "parental", label: "Parental controls", icon: Baby },
     ],
   },
