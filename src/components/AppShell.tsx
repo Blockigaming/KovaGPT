@@ -4,6 +4,8 @@ import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 import { HelpDialog } from "@/components/HelpDialog";
 import { OnboardingDialog } from "@/components/OnboardingDialog";
+import { TimersWidget } from "@/components/TimersWidget";
+import { installShortcutListener } from "@/lib/shortcuts";
 import { PanelLeft } from "lucide-react";
 import {
   type Conversation,
