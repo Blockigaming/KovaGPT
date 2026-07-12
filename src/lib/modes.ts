@@ -105,3 +105,16 @@ export const DAILY_IMAGE_LIMIT_BY_TIER: Record<Tier, number> = {
   plus: 40,
   pro: 200,
 };
+
+export const DAILY_CHAT_LIMIT_BY_TIER: Record<Tier, number> = {
+  free: 50,
+  plus: 500,
+  pro: 2000,
+};
+
+export const DAILY_UPLOAD_LIMIT_BY_TIER: Record<Tier, number> = {
+  free: 3,
+  plus: 50,
+  pro: 200,
+};
+
