@@ -48,7 +48,77 @@ export const Route = createFileRoute("/images")({
 });
 
 
-// (Example gallery removed — page now uses six inline suggestion cards.)
+// Curated example prompts, grouped into 8 visual pages of 6 cards each.
+// Thumbnails come from source.unsplash.com (keyword-based public photography)
+// so we never ship copyrighted or brand imagery, and only the active page's
+// images are ever requested (lazy) — no eager fetch of all 8 pages.
+type ExamplePrompt = { prompt: string; keyword: string };
+const EXAMPLE_PAGES: ExamplePrompt[][] = [
+  [
+    { prompt: "Neon city skyline at night, cinematic", keyword: "neon,city,night" },
+    { prompt: "Cozy modern bedroom with warm light", keyword: "cozy,bedroom,interior" },
+    { prompt: "Mountain lake at sunrise, misty", keyword: "mountain,lake,sunrise" },
+    { prompt: "Minimal blue geometric logo", keyword: "blue,geometric,minimal" },
+    { prompt: "Luxury product photo, matte black", keyword: "product,black,luxury" },
+    { prompt: "Futuristic sci-fi corridor", keyword: "sci-fi,corridor,futuristic" },
+  ],
+  [
+    { prompt: "Watercolor cherry blossom tree", keyword: "cherry,blossom,watercolor" },
+    { prompt: "Retro 80s synthwave sunset", keyword: "synthwave,sunset,retro" },
+    { prompt: "Isometric pastel city block", keyword: "isometric,pastel,city" },
+    { prompt: "Aerial ocean waves, turquoise", keyword: "ocean,aerial,turquoise" },
+    { prompt: "Fantasy castle on a cliff", keyword: "castle,fantasy,cliff" },
+    { prompt: "Steaming ramen bowl, top-down", keyword: "ramen,food,japanese" },
+  ],
+  [
+    { prompt: "Golden hour portrait, soft bokeh", keyword: "portrait,goldenhour,bokeh" },
+    { prompt: "Snowy pine forest at dusk", keyword: "snow,forest,pine" },
+    { prompt: "Modern minimalist kitchen", keyword: "kitchen,minimal,modern" },
+    { prompt: "Rainy Tokyo street reflections", keyword: "tokyo,rain,street" },
+    { prompt: "Astronaut floating over Earth", keyword: "astronaut,earth,space" },
+    { prompt: "Botanical illustration of ferns", keyword: "botanical,fern,illustration" },
+  ],
+  [
+    { prompt: "Vintage film camera close-up", keyword: "vintage,camera,film" },
+    { prompt: "Autumn forest path, warm tones", keyword: "autumn,forest,path" },
+    { prompt: "Desert dunes at twilight", keyword: "desert,dunes,twilight" },
+    { prompt: "Cyberpunk alley with neon signs", keyword: "cyberpunk,alley,neon" },
+    { prompt: "Cozy coffee shop interior", keyword: "coffee,shop,cafe" },
+    { prompt: "Aurora borealis over mountains", keyword: "aurora,northern,lights" },
+  ],
+  [
+    { prompt: "Underwater coral reef, vibrant", keyword: "coral,reef,underwater" },
+    { prompt: "Modern glass skyscraper facade", keyword: "skyscraper,glass,modern" },
+    { prompt: "Stack of colorful macarons", keyword: "macaron,dessert,pastel" },
+    { prompt: "Foggy Scottish highlands", keyword: "scotland,highlands,fog" },
+    { prompt: "Vintage red convertible on coast", keyword: "convertible,red,coast" },
+    { prompt: "Origami crane, paper texture", keyword: "origami,crane,paper" },
+  ],
+  [
+    { prompt: "Serene zen garden with stones", keyword: "zen,garden,japanese" },
+    { prompt: "Tropical waterfall in jungle", keyword: "waterfall,jungle,tropical" },
+    { prompt: "Vinyl records on shelves", keyword: "vinyl,records,music" },
+    { prompt: "Old library with warm lamps", keyword: "library,books,warm" },
+    { prompt: "Field of lavender at sunset", keyword: "lavender,field,sunset" },
+    { prompt: "Bright yellow race car, studio", keyword: "car,yellow,studio" },
+  ],
+  [
+    { prompt: "Snowy village at Christmas", keyword: "snow,village,christmas" },
+    { prompt: "Minimalist ceramic tea set", keyword: "ceramic,tea,minimal" },
+    { prompt: "Hot air balloons at dawn", keyword: "hotairballoon,dawn,sky" },
+    { prompt: "Old European cobblestone street", keyword: "cobblestone,europe,street" },
+    { prompt: "Neon arcade cabinet, 80s", keyword: "arcade,neon,retro" },
+    { prompt: "Golden wheat field, breeze", keyword: "wheat,field,golden" },
+  ],
+  [
+    { prompt: "Colorful hot street food market", keyword: "streetfood,market,asia" },
+    { prompt: "Bioluminescent forest at night", keyword: "bioluminescent,forest,glow" },
+    { prompt: "Vintage typewriter on wood desk", keyword: "typewriter,vintage,desk" },
+    { prompt: "Sunlit tropical beach, palms", keyword: "beach,palm,tropical" },
+    { prompt: "Modern art gallery interior", keyword: "gallery,art,modern" },
+    { prompt: "Enchanted mushroom forest", keyword: "mushroom,forest,fantasy" },
+  ],
+];
 
 type HistoryItem = { id: string; prompt: string; imageUrl: string; createdAt: number };
 
