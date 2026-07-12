@@ -262,7 +262,7 @@ function ImagesPage() {
   const [helpOpen, setHelpOpen] = useState(false);
   
   const [prompt, setPrompt] = useState("");
-  const [size, setSize] = useState<"1024x1024" | "1024x1536" | "1536x1024">("1024x1024");
+  const [size, setSize] = useState<"1024x1024" | "1024x1536" | "1536x1024" | "1792x1024">("1024x1024");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<string | null>(null);
