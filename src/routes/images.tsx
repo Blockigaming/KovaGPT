@@ -179,6 +179,7 @@ function ImagesPage() {
   const [limitMessage, setLimitMessage] = useState<string | undefined>(undefined);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [galleryPage, setGalleryPage] = useState(0);
 
 
 
