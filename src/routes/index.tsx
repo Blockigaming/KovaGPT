@@ -733,15 +733,15 @@ function KovaGPT() {
 
                 <div className="mt-3 flex flex-wrap gap-2 justify-center">
                   {[
-                    "Create an image",
-                    "Search the web",
-                    "Nail down a concept",
+                    "Track the World Cup",
+                    "Search Current Trends",
+                    "Flash Sales Near Me",
                   ].map((p) => (
                     <button
                       key={p}
                       type="button"
                       onClick={() => setInput((v) => (v ? v : p))}
-                      className="text-sm px-3.5 py-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition"
+                      className="text-sm px-3.5 py-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:bg-accent hover:border-foreground/20 transition-all hover:scale-[1.02] active:scale-95"
                     >
                       {p}
                     </button>

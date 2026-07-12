@@ -522,15 +522,6 @@ export function SettingsDialog({
               <p className="text-xs text-muted-foreground">
                 Connect external accounts so KovaGPT can use them in your chats. Live integrations work today; others are on the roadmap.
               </p>
-              <div className="mt-2 rounded-lg border border-border/60 bg-muted/40 p-3 text-xs text-muted-foreground space-y-1">
-                <div className="text-foreground font-medium">Privacy: what "Connect" actually does</div>
-                <p>
-                  Connecting an app <span className="font-medium text-foreground">only records that you linked it</span>.
-                  KovaGPT does not run in the background, does not poll your Gmail/Drive/school portal,
-                  and never signs in on your behalf between sessions. You can disconnect at any time —
-                  the local link is removed immediately.
-                </p>
-              </div>
               <p className="text-xs text-muted-foreground pt-1">
                 Linking apps is free for everyone. Disconnect at any time.
               </p>
@@ -848,15 +839,48 @@ export function SettingsDialog({
             />
             <SecurityRow
               title="Export your data"
-              body="Download a copy of your account data."
-              actionLabel="Request export"
-              onAction={() => toast.message("Export request received. We'll email you when it's ready.")}
+              body="Download a copy of your account data right now."
+              actionLabel="Download"
+              onAction={() => {
+                try {
+                  const payload = {
+                    exportedAt: new Date().toISOString(),
+                    settings,
+                    conversations: JSON.parse(
+                      localStorage.getItem("nova-gpt-conversations-v2") || "[]",
+                    ),
+                  };
+                  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+                    type: "application/json",
+                  });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `kovagpt-export-${new Date().toISOString().slice(0, 10)}.json`;
+                  document.body.appendChild(a);
+                  a.click();
+                  a.remove();
+                  URL.revokeObjectURL(url);
+                  toast.success("Export downloaded.");
+                } catch {
+                  toast.error("Could not build export. Try again.");
+                }
+              }}
             />
             <SecurityRow
               title="Delete account"
               body="Permanently delete your account and all data."
-              actionLabel="Delete"
-              onAction={() => clerk?.openUserProfile()}
+              actionLabel="Delete account"
+              danger
+              onAction={() => {
+                // User is already signed in when this dialog is open (SignInGate above).
+                // Open the account management surface directly.
+                try {
+                  clerk?.openUserProfile();
+                } catch {
+                  toast.error("Could not open account settings.");
+                }
+              }}
             />
           </TabsContent>
 
@@ -869,7 +893,7 @@ export function SettingsDialog({
                 Clears cached chats, drafts, and preferences stored on this device. Cloud data is not affected.
               </p>
               <Button
-                variant="outline"
+                variant="destructive"
                 size="sm"
                 onClick={() => {
                   clearConversations();
@@ -1123,19 +1147,30 @@ function SecurityRow({
   body,
   actionLabel,
   onAction,
+  danger,
 }: {
   title: string;
   body: string;
   actionLabel: string;
   onAction: () => void;
+  danger?: boolean;
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 rounded-lg border border-border p-4">
+    <div
+      className={`flex items-start justify-between gap-3 rounded-lg border p-4 transition-colors ${
+        danger ? "border-destructive/40 bg-destructive/5" : "border-border"
+      }`}
+    >
       <div className="min-w-0">
-        <div className="text-sm font-medium">{title}</div>
+        <div className={`text-sm font-medium ${danger ? "text-destructive" : ""}`}>{title}</div>
         <div className="text-xs text-muted-foreground mt-1">{body}</div>
       </div>
-      <Button size="sm" variant="outline" onClick={onAction}>
+      <Button
+        size="sm"
+        variant={danger ? "destructive" : "outline"}
+        onClick={onAction}
+        className={danger ? "shadow-sm" : ""}
+      >
         {actionLabel}
       </Button>
     </div>
