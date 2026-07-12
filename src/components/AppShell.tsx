@@ -34,6 +34,22 @@ export function AppShell({ children }: { children: ReactNode }) {
     setConversations(loadConversations());
   }, []);
 
+  useEffect(() => {
+    return installShortcutListener({
+      "new-chat": () => { try { localStorage.removeItem("nova-gpt-pending-active"); } catch { /* ignore */ } navigate({ to: "/" }); },
+      "search": () => { window.dispatchEvent(new CustomEvent("kova-open-search")); },
+      "open-projects": () => { navigate({ to: "/" as never }); toast(); },
+      "open-library": () => { navigate({ to: "/library" }); },
+      "open-settings": () => { setSettingsTab(undefined); setSettingsOpen(true); },
+      "generate-image": () => { navigate({ to: "/images" }); },
+      "toggle-sidebar": () => { setSidebarOpen((v) => !v); },
+      "focus-input": () => {
+        const el = document.querySelector<HTMLTextAreaElement>('textarea, [contenteditable="true"]');
+        el?.focus();
+      },
+    });
+  }, [navigate]);
+
   const openSettings = useCallback((tab?: string) => {
     setSettingsTab(tab);
     setSettingsOpen(true);
