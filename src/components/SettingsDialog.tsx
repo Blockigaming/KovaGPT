@@ -370,11 +370,11 @@ export function SettingsDialog({
               <div className="space-y-1.5 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Images generated</span>
-                  <span>{localUsage.images} / {DAILY_IMAGE_LIMIT}</span>
+                  <span>{localUsage.images}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Images uploaded</span>
-                  <span>{localUsage.uploads} / {DAILY_UPLOAD_LIMIT}</span>
+                  <span>{localUsage.uploads}</span>
                 </div>
               </div>
             </section>
