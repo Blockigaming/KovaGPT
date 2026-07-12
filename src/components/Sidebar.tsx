@@ -55,12 +55,18 @@ export function Sidebar({
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isOn = (p: string) => pathname === p;
   const navItemClass = (active: boolean) =>
-    `flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] transition active:scale-[0.98] min-w-0 ${
+    `relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] transition active:scale-[0.98] min-w-0 ${
       active
         ? "bg-sidebar-active text-foreground font-medium"
         : "hover:bg-sidebar-hover text-sidebar-foreground"
     }`;
-  const ActiveBar = (_: { on: boolean }) => null;
+  const ActiveBar = ({ on }: { on: boolean }) =>
+    on ? (
+      <span
+        aria-hidden="true"
+        className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-primary"
+      />
+    ) : null;
 
   return (
     <>
@@ -143,20 +149,17 @@ export function Sidebar({
             Workspace
           </div>
           <div className="px-3 flex flex-col gap-0.5">
-            <Link to="/projects" className={navItemClass(isOn("/projects"))}>
-              <ActiveBar on={isOn("/projects")} />
-              <FolderKanban className="w-[18px] h-[18px] shrink-0" />
-              <span className="truncate">Projects</span>
-            </Link>
+            {showSignedIn && (
+              <Link to="/projects" className={navItemClass(isOn("/projects"))}>
+                <ActiveBar on={isOn("/projects")} />
+                <FolderKanban className="w-[18px] h-[18px] shrink-0" />
+                <span className="truncate">Projects</span>
+              </Link>
+            )}
             <Link to="/library" className={navItemClass(isOn("/library"))}>
               <ActiveBar on={isOn("/library")} />
               <FolderOpen className="w-[18px] h-[18px] shrink-0" />
               <span className="truncate">Library</span>
-            </Link>
-            <Link to="/write" className={navItemClass(isOn("/write"))}>
-              <ActiveBar on={isOn("/write")} />
-              <PenLine className="w-[18px] h-[18px] shrink-0" />
-              <span className="truncate">Writing</span>
             </Link>
             <Link to="/apps" className={navItemClass(isOn("/apps"))}>
               <ActiveBar on={isOn("/apps")} />
@@ -166,7 +169,7 @@ export function Sidebar({
             <Link to="/images" className={navItemClass(isOn("/images"))}>
               <ActiveBar on={isOn("/images")} />
               <ImageIcon className="w-[18px] h-[18px] shrink-0" />
-              <span className="truncate">Image Generation</span>
+              <span className="truncate">Images</span>
             </Link>
             {showSignedIn && (tier === "plus" || tier === "pro") && (
               <Link to="/scheduled-tasks" className={navItemClass(isOn("/scheduled-tasks"))}>
