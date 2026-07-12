@@ -434,9 +434,16 @@ function ImagesPage() {
                       title={`Use prompt: ${ex.prompt}`}
                     >
                       <img
-                        src={`https://source.unsplash.com/400x400/?${encodeURIComponent(ex.keyword)}`}
+                        src={`https://picsum.photos/seed/${encodeURIComponent(ex.keyword)}/400/400`}
                         alt=""
                         loading="lazy"
+                        onError={(e) => {
+                          const img = e.currentTarget;
+                          if (!img.dataset.fallback) {
+                            img.dataset.fallback = "1";
+                            img.src = `https://picsum.photos/400/400?random=${encodeURIComponent(ex.prompt)}`;
+                          }
+                        }}
                         className="absolute inset-0 w-full h-full object-cover transition group-hover:scale-105"
                       />
                       <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
