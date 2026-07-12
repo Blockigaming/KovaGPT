@@ -448,14 +448,15 @@ function ImagesPage() {
               </div>
             </form>
 
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 space-y-4">
               <div>
-                <div className="text-xs font-medium text-muted-foreground mb-1.5">Frame / size</div>
+                <div className="text-xs font-medium text-muted-foreground mb-1.5">Size</div>
                 <div className="flex flex-wrap gap-2">
                   {[
                     { v: "1024x1024" as const, label: "Square", hint: "1:1" },
-                    { v: "1536x1024" as const, label: "Landscape", hint: "3:2" },
                     { v: "1024x1536" as const, label: "Portrait", hint: "2:3" },
+                    { v: "1536x1024" as const, label: "Landscape", hint: "3:2" },
+                    { v: "1792x1024" as const, label: "Wide", hint: "16:9" },
                   ].map((opt) => (
                     <button
                       key={opt.v}
@@ -474,8 +475,8 @@ function ImagesPage() {
               </div>
 
               <div>
-                <div className="text-xs font-medium text-muted-foreground mb-1.5">Ideas & suggestions</div>
-                <div className="flex flex-wrap gap-2">
+                <div className="text-xs font-medium text-muted-foreground mb-2">Try one of these</div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   {[
                     "A minimalist logo for a coffee brand",
                     "Cinematic dog portrait, golden hour",
@@ -488,7 +489,7 @@ function ImagesPage() {
                       key={idea}
                       type="button"
                       onClick={() => setPrompt(idea)}
-                      className="text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition"
+                      className="text-left text-xs px-3 py-2.5 rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition"
                     >
                       {idea}
                     </button>
