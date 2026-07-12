@@ -59,6 +59,7 @@ import { Route as ApiGoogleCallbackRouteImport } from './routes/api/google/callb
 import { Route as ApiGoogleCalendarRouteImport } from './routes/api/google/calendar'
 import { Route as ApiGoogleAuthRouteImport } from './routes/api/google/auth'
 import { Route as ApiChatConfirmRouteImport } from './routes/api/chat/confirm'
+import { Route as ProjectsProjectIdChatChatIdRouteImport } from './routes/projects.$projectId.chat.$chatId'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
@@ -318,6 +319,12 @@ const ApiChatConfirmRoute = ApiChatConfirmRouteImport.update({
   path: '/confirm',
   getParentRoute: () => ApiChatRoute,
 } as any)
+const ProjectsProjectIdChatChatIdRoute =
+  ProjectsProjectIdChatChatIdRouteImport.update({
+    id: '/chat/$chatId',
+    path: '/chat/$chatId',
+    getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
 const LovableEmailTransactionalSendRoute =
   LovableEmailTransactionalSendRouteImport.update({
     id: '/lovable/email/transactional/send',
@@ -392,7 +399,7 @@ export interface FileRoutesByFullPath {
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
-  '/projects/$projectId': typeof ProjectsProjectIdRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/google/auth': typeof ApiGoogleAuthRoute
@@ -410,6 +417,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -450,7 +458,7 @@ export interface FileRoutesByTo {
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
-  '/projects/$projectId': typeof ProjectsProjectIdRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/google/auth': typeof ApiGoogleAuthRoute
@@ -468,6 +476,7 @@ export interface FileRoutesByTo {
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -509,7 +518,7 @@ export interface FileRoutesById {
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
-  '/projects/$projectId': typeof ProjectsProjectIdRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/google/auth': typeof ApiGoogleAuthRoute
@@ -527,6 +536,7 @@ export interface FileRoutesById {
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/lovable/email/transactional/send': typeof LovableEmailTransactionalSendRoute
+  '/projects/$projectId/chat/$chatId': typeof ProjectsProjectIdChatChatIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -587,6 +597,7 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/projects/$projectId/chat/$chatId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -645,6 +656,7 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/projects/$projectId/chat/$chatId'
   id:
     | '__root__'
     | '/'
@@ -703,6 +715,7 @@ export interface FileRouteTypes {
     | '/lovable/email/queue/process'
     | '/lovable/email/transactional/preview'
     | '/lovable/email/transactional/send'
+    | '/projects/$projectId/chat/$chatId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1114,6 +1127,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatConfirmRouteImport
       parentRoute: typeof ApiChatRoute
     }
+    '/projects/$projectId/chat/$chatId': {
+      id: '/projects/$projectId/chat/$chatId'
+      path: '/chat/$chatId'
+      fullPath: '/projects/$projectId/chat/$chatId'
+      preLoaderRoute: typeof ProjectsProjectIdChatChatIdRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
     '/lovable/email/transactional/send': {
       id: '/lovable/email/transactional/send'
       path: '/lovable/email/transactional/send'
@@ -1159,12 +1179,23 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface ProjectsProjectIdRouteChildren {
+  ProjectsProjectIdChatChatIdRoute: typeof ProjectsProjectIdChatChatIdRoute
+}
+
+const ProjectsProjectIdRouteChildren: ProjectsProjectIdRouteChildren = {
+  ProjectsProjectIdChatChatIdRoute: ProjectsProjectIdChatChatIdRoute,
+}
+
+const ProjectsProjectIdRouteWithChildren =
+  ProjectsProjectIdRoute._addFileChildren(ProjectsProjectIdRouteChildren)
+
 interface ProjectsRouteChildren {
-  ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
+  ProjectsProjectIdRoute: typeof ProjectsProjectIdRouteWithChildren
 }
 
 const ProjectsRouteChildren: ProjectsRouteChildren = {
-  ProjectsProjectIdRoute: ProjectsProjectIdRoute,
+  ProjectsProjectIdRoute: ProjectsProjectIdRouteWithChildren,
 }
 
 const ProjectsRouteWithChildren = ProjectsRoute._addFileChildren(
