@@ -30,19 +30,30 @@ export const Route = createFileRoute("/images")({
   }),
 });
 
-type Preset = { label: string; prompt: string; seed: string; gradient: string };
+import portraitModeImg from "@/assets/image-presets/portrait-mode.jpg";
+import stickerPackImg from "@/assets/image-presets/sticker-pack.jpg";
+import bobbleheadImg from "@/assets/image-presets/bobblehead.jpg";
+import actionShotImg from "@/assets/image-presets/action-shot.jpg";
+import handwrittenImg from "@/assets/image-presets/handwritten.jpg";
+import interiorDesignImg from "@/assets/image-presets/interior-design.jpg";
+import actionFigureImg from "@/assets/image-presets/action-figure.jpg";
+import discoModeImg from "@/assets/image-presets/disco-mode.jpg";
+import appIconImg from "@/assets/image-presets/app-icon.jpg";
+import logoMarkImg from "@/assets/image-presets/logo-mark.jpg";
+
+type Preset = { label: string; prompt: string; seed: string; image: string };
 
 const PRESETS: Preset[] = [
-  { label: "Portrait mode", prompt: "A cinematic close-up portrait, soft natural light, shallow depth of field", seed: "portrait-mode", gradient: "from-rose-400 via-orange-300 to-amber-200" },
-  { label: "Sticker pack", prompt: "A cute die-cut sticker illustration of my subject, thick white border, flat colors", seed: "sticker-pack", gradient: "from-violet-400 via-fuchsia-300 to-pink-200" },
-  { label: "Bobblehead", prompt: "A miniature bobblehead figurine on a stadium field, oversized head, detailed uniform, studio lighting", seed: "bobblehead", gradient: "from-emerald-400 via-lime-300 to-yellow-200" },
-  { label: "Action shot", prompt: "A dynamic action shot mid-motion, dramatic lighting, sports photography, sharp focus", seed: "action-shot", gradient: "from-sky-400 via-cyan-300 to-emerald-200" },
-  { label: "Handwritten", prompt: "A candid family moment illustrated in a warm handwritten storybook style, pastel palette", seed: "handwritten", gradient: "from-indigo-400 via-blue-300 to-cyan-200" },
-  { label: "Interior design", prompt: "A modern interior of my described room, warm wood, natural light, magazine photography", seed: "interior-design", gradient: "from-amber-500 via-orange-300 to-rose-200" },
-  { label: "Action figure", prompt: "A collectible action figure of my subject in a blister-pack toy box with accessories, product photo", seed: "action-figure", gradient: "from-blue-500 via-indigo-400 to-purple-300" },
-  { label: "Disco mode", prompt: "A shiny mirrorball sculpture of my subject on a reflective black stage, studio lights, sparkle", seed: "disco-mode", gradient: "from-slate-800 via-slate-500 to-slate-200" },
-  { label: "App icon", prompt: "A polished app icon for my described product, gradient background, rounded corners, minimal", seed: "app-icon", gradient: "from-fuchsia-500 via-pink-400 to-orange-300" },
-  { label: "Logo mark", prompt: "A minimal vector logo mark for my described brand, symmetrical, black on white", seed: "logo-mark", gradient: "from-neutral-800 via-neutral-500 to-neutral-200" },
+  { label: "Portrait mode", prompt: "A cinematic close-up portrait, soft natural light, shallow depth of field", seed: "portrait-mode", image: portraitModeImg },
+  { label: "Sticker pack", prompt: "A cute die-cut sticker illustration of my subject, thick white border, flat colors", seed: "sticker-pack", image: stickerPackImg },
+  { label: "Bobblehead", prompt: "A miniature bobblehead figurine on a stadium field, oversized head, detailed uniform, studio lighting", seed: "bobblehead", image: bobbleheadImg },
+  { label: "Action shot", prompt: "A dynamic action shot mid-motion, dramatic lighting, sports photography, sharp focus", seed: "action-shot", image: actionShotImg },
+  { label: "Handwritten", prompt: "A candid family moment illustrated in a warm handwritten storybook style, pastel palette", seed: "handwritten", image: handwrittenImg },
+  { label: "Interior design", prompt: "A modern interior of my described room, warm wood, natural light, magazine photography", seed: "interior-design", image: interiorDesignImg },
+  { label: "Action figure", prompt: "A collectible action figure of my subject in a blister-pack toy box with accessories, product photo", seed: "action-figure", image: actionFigureImg },
+  { label: "Disco mode", prompt: "A shiny mirrorball sculpture of my subject on a reflective black stage, studio lights, sparkle", seed: "disco-mode", image: discoModeImg },
+  { label: "App icon", prompt: "A polished app icon for my described product, gradient background, rounded corners, minimal", seed: "app-icon", image: appIconImg },
+  { label: "Logo mark", prompt: "A minimal vector logo mark for my described brand, symmetrical, black on white", seed: "logo-mark", image: logoMarkImg },
 ];
 
 type HistoryItem = { id: string; prompt: string; imageUrl: string; createdAt: number };
