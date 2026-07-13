@@ -5,6 +5,7 @@ import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 const SettingsDialog = lazy(() => import("@/components/SettingsDialog").then(m => ({ default: m.SettingsDialog })));
 const OnboardingDialog = lazy(() => import("@/components/OnboardingDialog").then(m => ({ default: m.OnboardingDialog })));
 import { TimersWidget } from "@/components/TimersWidget";
+import { AppErrorBoundary, OfflineBanner } from "@/components/states";
 import { installShortcutListener } from "@/lib/shortcuts";
 import { PanelLeft, Plus, Settings as SettingsIcon } from "lucide-react";
 import {
