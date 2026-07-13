@@ -84,7 +84,7 @@ export function Sidebar({
 
       <aside
         style={{ width: open ? SIDEBAR_WIDTH : 0 }}
-        className="relative shrink-0 overflow-hidden transition-[width] duration-150 bg-sidebar text-sidebar-foreground flex flex-col max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:h-[100dvh]"
+        className="relative shrink-0 overflow-hidden transition-[width] duration-150 bg-sidebar text-sidebar-foreground flex flex-col max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:h-[100dvh] md:border-r md:border-border/70"
       >
         <div style={{ width: SIDEBAR_WIDTH }} className="flex flex-col h-full">
 
@@ -92,7 +92,7 @@ export function Sidebar({
           <div className="relative z-20 flex items-center gap-2 px-3 sm:px-4 pt-4 pb-3 bg-sidebar">
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <span className="inline-flex shrink-0 rounded-full dark:bg-black dark:p-[2px] dark:ring-1 dark:ring-black">
-                <NovaLogo className="w-7 h-7" />
+                <NovaLogo className="w-7 h-7" animated />
               </span>
               <span className="font-display font-semibold tracking-tight text-[18px] truncate">
                 KovaGPT
