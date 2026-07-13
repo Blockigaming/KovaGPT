@@ -1,19 +1,19 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
 import { PanelLeft, Search } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
 
-import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
+import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 
-import { OnboardingDialog } from "@/components/OnboardingDialog";
-
-import { LimitReachedDialog } from "@/components/LimitReachedDialog";
-import { ShareChatDialog } from "@/components/ShareChatDialog";
-import { AddMembersDialog } from "@/components/AddMembersDialog";
+const SettingsDialog = lazy(() => import("@/components/SettingsDialog").then(m => ({ default: m.SettingsDialog })));
+const OnboardingDialog = lazy(() => import("@/components/OnboardingDialog").then(m => ({ default: m.OnboardingDialog })));
+const LimitReachedDialog = lazy(() => import("@/components/LimitReachedDialog").then(m => ({ default: m.LimitReachedDialog })));
+const ShareChatDialog = lazy(() => import("@/components/ShareChatDialog").then(m => ({ default: m.ShareChatDialog })));
+const AddMembersDialog = lazy(() => import("@/components/AddMembersDialog").then(m => ({ default: m.AddMembersDialog })));
 import { applyThemeMode } from "@/lib/theme";
 
 import { getUsage } from "@/lib/limits";
@@ -859,43 +859,49 @@ function KovaGPT() {
       </main>
 
 
-      <SettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        settings={settings}
-        onChange={setSettings}
-        onClearAll={() => setConversations([])}
-        onOpenHelp={openHelp}
-        initialTab={settingsTab}
-      />
+      <Suspense fallback={null}>
+        {settingsOpen && (
+          <SettingsDialog
+            open={settingsOpen}
+            onOpenChange={setSettingsOpen}
+            settings={settings}
+            onChange={setSettings}
+            onClearAll={() => setConversations([])}
+            onOpenHelp={openHelp}
+            initialTab={settingsTab}
+          />
+        )}
 
+        <OnboardingDialog />
 
-      <OnboardingDialog />
+        {shareChatId !== null && (
+          <ShareChatDialog
+            open={shareChatId !== null}
+            onOpenChange={(v) => !v && setShareChatId(null)}
+            conversation={conversations.find((c) => c.id === shareChatId) ?? null}
+          />
+        )}
 
+        {membersChatId !== null && (
+          <AddMembersDialog
+            open={membersChatId !== null}
+            chatId={membersChatId}
+            onOpenChange={(v) => !v && setMembersChatId(null)}
+          />
+        )}
 
-      <ShareChatDialog
-        open={shareChatId !== null}
-        onOpenChange={(v) => !v && setShareChatId(null)}
-        conversation={conversations.find((c) => c.id === shareChatId) ?? null}
-      />
-
-      <AddMembersDialog
-        open={membersChatId !== null}
-        chatId={membersChatId}
-        onOpenChange={(v) => !v && setMembersChatId(null)}
-      />
-
-      
+        {limitDialog.open && (
+          <LimitReachedDialog
+            open={limitDialog.open}
+            onOpenChange={(v) => setLimitDialog((d) => ({ ...d, open: v }))}
+            kind={limitDialog.kind}
+            message={limitDialog.message}
+            resetsAt={getUsage().resetsAt}
+          />
+        )}
+      </Suspense>
 
       <SignUpPrompt open={signupPromptOpen} onOpenChange={setSignupPromptOpen} />
-
-      <LimitReachedDialog
-        open={limitDialog.open}
-        onOpenChange={(v) => setLimitDialog((d) => ({ ...d, open: v }))}
-        kind={limitDialog.kind}
-        message={limitDialog.message}
-        resetsAt={getUsage().resetsAt}
-      />
 
 
       
