@@ -58,7 +58,7 @@ export const Route = createFileRoute("/api/google/drive")({
             let content = "";
             const mt: string = meta.mimeType ?? "";
             if (mt.startsWith("application/vnd.google-apps.")) {
-              // Native Google Docs/Sheets/Slides — export to text/csv.
+              // Native Google Docs/Sheets/Slides - export to text/csv.
               const exportMime = mt.includes("spreadsheet")
                 ? "text/csv"
                 : mt.includes("presentation")

@@ -8,11 +8,11 @@ const faq = [
   },
   {
     q: "Can it debug a real error from my project?",
-    a: "Yes. Paste the error message, the relevant code, and any context — KovaGPT explains what's wrong, why it's happening, and how to fix it. For gnarlier bugs, share the stack trace.",
+    a: "Yes. Paste the error message, the relevant code, and any context - KovaGPT explains what's wrong, why it's happening, and how to fix it. For gnarlier bugs, share the stack trace.",
   },
   {
     q: "Does it write tests?",
-    a: "Yes. Ask for unit tests, integration tests, or e2e tests in your framework of choice — Jest, Vitest, Pytest, Playwright, Cypress — and KovaGPT delivers runnable test files.",
+    a: "Yes. Ask for unit tests, integration tests, or e2e tests in your framework of choice - Jest, Vitest, Pytest, Playwright, Cypress - and KovaGPT delivers runnable test files.",
   },
   {
     q: "Will it explain code I don't understand?",
@@ -23,7 +23,7 @@ const faq = [
 export const Route = createFileRoute("/code-helper")({
   head: () =>
     seoLandingHead({
-      title: "AI Code Helper — Debug, Explain, Refactor | KovaGPT",
+      title: "AI Code Helper - Debug, Explain, Refactor | KovaGPT",
       description:
         "Ship faster with KovaGPT: debug errors, explain unfamiliar code, generate tests, refactor for readability, and scaffold components across every major language and framework.",
       path: "/code-helper",
@@ -47,7 +47,7 @@ function Page() {
         "Answer language and framework questions with runnable code",
       ]}
       details={[
-        "Every developer has three recurring problems: an error they've never seen, a codebase they didn't write, and a task they know how to do but not fast. KovaGPT is built for exactly those. Paste the error, paste the file, describe the task — get an answer that compiles.",
+        "Every developer has three recurring problems: an error they've never seen, a codebase they didn't write, and a task they know how to do but not fast. KovaGPT is built for exactly those. Paste the error, paste the file, describe the task - get an answer that compiles.",
         "It also handles the invisible work: writing the test you skipped, documenting the function you promised to document, converting the CommonJS file to ESM, cleaning up the migration you rushed. The unsexy stuff that makes codebases livable.",
       ]}
       prompts={[

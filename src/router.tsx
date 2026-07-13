@@ -21,7 +21,7 @@ export const getRouter = () => {
     routeTree,
     context: { queryClient },
     scrollRestoration: true,
-    // TanStack Query owns freshness — keep router preload cache disabled.
+    // TanStack Query owns freshness - keep router preload cache disabled.
     defaultPreloadStaleTime: 0,
   });
 

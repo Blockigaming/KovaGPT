@@ -47,12 +47,12 @@ export const Route = createFileRoute("/")({
       { title: "KovaGPT" },
       {
         name: "description",
-        content: "KovaGPT — a multimodal AI assistant for chat, code, research, and image generation.",
+        content: "KovaGPT - a multimodal AI assistant for chat, code, research, and image generation.",
       },
       { property: "og:title", content: "KovaGPT" },
       {
         property: "og:description",
-        content: "KovaGPT — a multimodal AI assistant for chat, code, research, and image generation.",
+        content: "KovaGPT - a multimodal AI assistant for chat, code, research, and image generation.",
       },
       { property: "og:url", content: "https://kovagpt.com/" },
       { property: "og:image", content: "https://kovagpt.com/og/home.jpg" },
@@ -62,7 +62,7 @@ export const Route = createFileRoute("/")({
       { name: "twitter:title", content: "KovaGPT" },
       {
         name: "twitter:description",
-        content: "KovaGPT — a multimodal AI assistant for chat, code, research, and image generation.",
+        content: "KovaGPT - a multimodal AI assistant for chat, code, research, and image generation.",
       },
       { name: "twitter:image", content: "https://kovagpt.com/og/home.jpg" },
     ],

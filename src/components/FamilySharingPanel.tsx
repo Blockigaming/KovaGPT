@@ -1,4 +1,4 @@
-// Family Sharing UI panel — lives inside Settings > Family tab.
+// Family Sharing UI panel - lives inside Settings > Family tab.
 // Renders group state, member list, and an invite creator.
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -79,7 +79,7 @@ export function FamilySharingPanel() {
             <h3 className="text-sm font-semibold">Family Sharing</h3>
             <p className="text-xs text-muted-foreground">
               Share KovaGPT Plus or Pro with up to 5 family members. Each member keeps
-              their own private chats — only the plan is shared.
+              their own private chats - only the plan is shared.
             </p>
           </div>
         </div>
@@ -261,7 +261,7 @@ export function FamilySharingPanel() {
 
       <p className="text-[11px] text-muted-foreground px-1">
         Members inherit the owner's Plus or Pro features. Each member has their own daily
-        quotas, chats, and settings — nothing shared besides the plan.
+        quotas, chats, and settings - nothing shared besides the plan.
       </p>
     </div>
   );

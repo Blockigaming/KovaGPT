@@ -698,15 +698,15 @@ export function SettingsDialog({
                 <div className="text-xs text-muted-foreground mt-1">
                   You're on the {tier === "free" ? "Free" : tier === "plus" ? "Plus" : "Pro"} plan
                   {subSummary?.trialing ? " (free trial)" : ""}
-                  {subSummary?.status === "past_due" ? " — payment past due" : ""}
-                  {subSummary?.status === "unpaid" ? " — payment failed" : ""}
-                  {subSummary?.status === "incomplete" ? " — awaiting first payment" : ""}
+                  {subSummary?.status === "past_due" ? " - payment past due" : ""}
+                  {subSummary?.status === "unpaid" ? " - payment failed" : ""}
+                  {subSummary?.status === "incomplete" ? " - awaiting first payment" : ""}
                   .
                 </div>
                 {subSummary?.currentPeriodEnd && (
                   <div className="text-[11px] text-muted-foreground mt-1">
                     {subSummary.trialing
-                      ? `Trial ends ${new Date(subSummary.currentPeriodEnd).toLocaleDateString()} — billing starts then unless you cancel.`
+                      ? `Trial ends ${new Date(subSummary.currentPeriodEnd).toLocaleDateString()} - billing starts then unless you cancel.`
                       : subSummary.cancelAtPeriodEnd
                         ? `Cancels on ${new Date(subSummary.currentPeriodEnd).toLocaleDateString()}. You keep access until then.`
                         : `Renews on ${new Date(subSummary.currentPeriodEnd).toLocaleDateString()}.`}
@@ -1838,7 +1838,7 @@ function FamilySafeAudience() {
   };
   const opts: { v: SafeAudience; label: string; hint: string }[] = [
     { v: "myself", label: "Myself", hint: "I'm using Family-safe mode for me." },
-    { v: "child", label: "My child", hint: "A child uses this device — enable a PIN below to lock changes." },
+    { v: "child", label: "My child", hint: "A child uses this device - enable a PIN below to lock changes." },
     { v: "none", label: "None of the above", hint: "Don't apply Family-safe defaults." },
   ];
   return (

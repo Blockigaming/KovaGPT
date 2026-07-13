@@ -39,7 +39,7 @@ export const TOOL_ACTIVITY: Record<string, ActivityLabel> = {
 };
 
 // Tools the model may call whose *effects* only happen after the user
-// explicitly confirms in the UI. runGoogleTool never runs these — the
+// explicitly confirms in the UI. runGoogleTool never runs these - the
 // chat loop intercepts them and stages a pending action instead.
 export const WRITE_TOOL_NAMES = new Set<string>([
   "gmail_send",
@@ -474,7 +474,7 @@ function truncate(s: unknown, n: number): string {
 /**
  * Build a short, human-readable summary + a redacted preview of the args so
  * the confirmation card can show the user exactly what will happen. We never
- * echo full recipient lists or full email bodies into the SSE stream — the
+ * echo full recipient lists or full email bodies into the SSE stream - the
  * body preview is capped and long addresses are truncated.
  */
 export function summarizeWriteTool(tool: string, args: WriteArgs): { summary: string; preview: Record<string, unknown> } {
@@ -484,7 +484,7 @@ export function summarizeWriteTool(tool: string, args: WriteArgs): { summary: st
     const body = truncate(args.body, 500);
     const verb = tool === "gmail_send" ? "Send email" : "Save draft";
     return {
-      summary: `${verb} to ${to || "(no recipient)"} — ${subject || "(no subject)"}`,
+      summary: `${verb} to ${to || "(no recipient)"} - ${subject || "(no subject)"}`,
       preview: {
         to,
         cc: args.cc ? truncate(args.cc, 120) : undefined,
@@ -637,7 +637,7 @@ export async function executePendingAction(
       });
       if (!r.ok) throw new Error(`calendar create ${r.status} ${await r.text().catch(() => "")}`);
       const created = (await r.json()) as { id: string; htmlLink?: string };
-      resultText = `Event created${created.htmlLink ? ` — [open in Google Calendar](${created.htmlLink})` : "."}`;
+      resultText = `Event created${created.htmlLink ? ` - [open in Google Calendar](${created.htmlLink})` : "."}`;
       await logAudit({ userId, provider: "calendar", action: "create", resourceId: created.id, summary: `Created event: ${a.summary ?? ""}` });
     } else if (row.tool === "calendar_delete_event") {
       const id = String(a.id ?? "");
@@ -672,7 +672,7 @@ export async function executePendingAction(
       });
       if (!r.ok) throw new Error(`drive upload ${r.status} ${await r.text().catch(() => "")}`);
       const created = (await r.json()) as { id: string; name: string; webViewLink?: string };
-      resultText = `Uploaded "${created.name}"${created.webViewLink ? ` — [open in Drive](${created.webViewLink})` : "."}`;
+      resultText = `Uploaded "${created.name}"${created.webViewLink ? ` - [open in Drive](${created.webViewLink})` : "."}`;
       await logAudit({ userId, provider: "drive", action: "upload", resourceId: created.id, summary: `Uploaded to Drive: ${created.name}` });
     } else if (row.tool === "drive_create_doc") {
       const title = String(a.title ?? "Untitled");
@@ -696,7 +696,7 @@ export async function executePendingAction(
         });
         if (!upd.ok) throw new Error(`docs write ${upd.status} ${await upd.text().catch(() => "")}`);
       }
-      resultText = `Created "${doc.name}"${doc.webViewLink ? ` — [open in Google Docs](${doc.webViewLink})` : "."}`;
+      resultText = `Created "${doc.name}"${doc.webViewLink ? ` - [open in Google Docs](${doc.webViewLink})` : "."}`;
       await logAudit({ userId, provider: "drive", action: "create_doc", resourceId: doc.id, summary: `Created Google Doc: ${doc.name}` });
     } else {
       return { ok: false, error: `Unknown tool: ${row.tool}` };

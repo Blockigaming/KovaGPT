@@ -200,7 +200,7 @@ function PricingPage() {
             highlight
             onCta={() => startCheckout("plus_monthly")}
             features={[
-              "First month free — cancel anytime",
+              "First month free - cancel anytime",
               "Everything in Free",
               "Auto Mode (adapts to your unlocked modes)",
               "Higher daily usage limits",

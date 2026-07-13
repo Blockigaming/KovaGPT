@@ -37,7 +37,7 @@ function Page() {
   return (
     <SeoLanding
       h1="AI Writer That Sounds Like You, Not Like a Bot"
-      intro="KovaGPT helps you draft, rewrite, and polish writing across every format that matters — emails, essays, blog posts, scripts, LinkedIn posts, captions, product copy — while keeping your voice, not replacing it. Give it a topic or a rough draft and it delivers clear, publishable prose in seconds."
+      intro="KovaGPT helps you draft, rewrite, and polish writing across every format that matters - emails, essays, blog posts, scripts, LinkedIn posts, captions, product copy - while keeping your voice, not replacing it. Give it a topic or a rough draft and it delivers clear, publishable prose in seconds."
       benefits={[
         "Turn bullet points or voice notes into a finished draft",
         "Rewrite emails to sound more professional, warmer, or more direct",
@@ -47,7 +47,7 @@ function Page() {
         "Translate while preserving voice",
       ]}
       details={[
-        "Writing is rarely the bottleneck — it's the blank page, the tenth revision, or the email you've been putting off for three days. KovaGPT compresses that friction. Describe what you need and it produces a real draft you can send, publish, or hand to an editor.",
+        "Writing is rarely the bottleneck - it's the blank page, the tenth revision, or the email you've been putting off for three days. KovaGPT compresses that friction. Describe what you need and it produces a real draft you can send, publish, or hand to an editor.",
         "It's especially good at the boring high-volume writing: routine emails, meeting recaps, product descriptions, weekly updates, LinkedIn posts. Set the tone once and KovaGPT keeps delivering in that voice.",
       ]}
       prompts={[

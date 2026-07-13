@@ -65,7 +65,7 @@ export function TimersWidget() {
         markFired(t.id);
         beep();
         notify(t.label);
-        toast.success(`${t.label} — done`, { duration: 6000 });
+        toast.success(`${t.label} - done`, { duration: 6000 });
       }
     }
   }, [items, now]);

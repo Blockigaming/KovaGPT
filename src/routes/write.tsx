@@ -298,7 +298,7 @@ function WritePage() {
           <input
             value={custom}
             onChange={(e) => setCustom(e.target.value)}
-            placeholder="Custom instruction — e.g. 'rewrite as a cover letter'"
+            placeholder="Custom instruction - e.g. 'rewrite as a cover letter'"
             className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground/40"
           />
           <button
