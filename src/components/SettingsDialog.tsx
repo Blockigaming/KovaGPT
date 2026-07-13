@@ -1121,6 +1121,11 @@ export function SettingsDialog({
         </Tabs>
         )}
       </DialogContent>
+      <LogoutConfirmDialog
+        open={logoutConfirmOpen}
+        onOpenChange={setLogoutConfirmOpen}
+        onConfirm={handleLogout}
+      />
     </Dialog>
   );
 }
