@@ -24,26 +24,47 @@ function cleanAssistantText(text: string): string {
     .replace(/[\u2013\u2014]/g, "-");
 }
 
+// Rotating idle statuses cycled while the assistant is streaming with no
+// tool activity, so users see progression rather than a static "Thinking".
+const IDLE_STATUSES = [
+  "Thinking",
+  "Planning response",
+  "Reasoning",
+  "Analyzing",
+  "Writing draft",
+  "Formatting",
+  "Finishing response",
+];
+
 // Short status label shown while the assistant is streaming but has no text yet.
 // Derives from the latest running/last activity tool, so users see
 // "Searching", "Reading Files", "Interacting with Gmail", etc.
 function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store").Activity[] }) {
   const last = activities && activities.length > 0 ? activities[activities.length - 1] : null;
   const tool = (last?.tool ?? "").toLowerCase();
-  let label = "Thinking";
+  const [idleIdx, setIdleIdx] = useState(0);
+  useEffect(() => {
+    if (tool) return;
+    const t = setInterval(() => setIdleIdx((i) => (i + 1) % IDLE_STATUSES.length), 2200);
+    return () => clearInterval(t);
+  }, [tool]);
+
+  let label = IDLE_STATUSES[idleIdx];
   if (tool) {
     if (tool.includes("image")) label = "Creating Image";
-    else if (tool.includes("gmail") || tool.includes("mail")) label = "Interacting with Gmail";
+    else if (tool.includes("gmail") || tool.includes("mail")) label = "Checking Gmail";
     else if (tool.includes("calendar")) label = "Checking Calendar";
-    else if (tool.includes("drive") || tool.includes("file") || tool.includes("read")) label = "Reading Files";
-    else if (tool.includes("search") || tool.includes("web") || tool.includes("browse")) label = "Searching the Web";
-    else if (tool.includes("write")) label = "Writing";
+    else if (tool.includes("drive") || tool.includes("file") || tool.includes("read")) label = "Reading documents";
+    else if (tool.includes("memory") || tool.includes("recall")) label = "Searching memory";
+    else if (tool.includes("search") || tool.includes("web") || tool.includes("browse")) label = "Searching the web";
+    else if (tool.includes("write")) label = "Writing draft";
     else label = last?.label ?? "Working";
   }
   return (
     <div className="flex items-center gap-2 py-1" aria-live="polite">
       <span
-        className="text-sm font-medium bg-clip-text text-transparent"
+        key={label}
+        className="text-sm font-medium bg-clip-text text-transparent animate-in fade-in duration-300"
         style={{
           backgroundImage:
             "linear-gradient(90deg, var(--color-muted-foreground) 0%, var(--color-foreground) 50%, var(--color-muted-foreground) 100%)",
@@ -51,7 +72,7 @@ function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store
           animation: "shimmer 1.8s linear infinite",
         }}
       >
-        {label}
+        {label}…
       </span>
     </div>
   );

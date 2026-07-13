@@ -242,22 +242,22 @@ function KovaGPT() {
     const name = firstName;
     const prompts = name
       ? [
-          `What's on your mind today, ${name}?`,
+          `Let's jump in, ${name}.`,
           `Ready when you are, ${name}.`,
-          `Where should we start, ${name}?`,
-          `Good to see you, ${name}. What are we building?`,
-          `Hey ${name}, what can I help you figure out?`,
-          `What's the plan, ${name}?`,
-          `Got an idea brewing, ${name}?`,
-          `What are you curious about today, ${name}?`,
+          `What's next, ${name}?`,
+          `Pick up where you left off, ${name}.`,
+          `Where should we begin, ${name}?`,
+          `Let's make something, ${name}.`,
+          `Ready to create, ${name}?`,
+          `Start anywhere, ${name}.`,
         ]
       : [
-          "What's on your mind today?",
           "Ready when you are.",
-          "Where should we start?",
-          "What can I help you with?",
-          "What are you working on?",
-          "Got something to figure out?",
+          "Let's get started.",
+          "What are we working on?",
+          "Let's make something.",
+          "Where should we begin?",
+          "Start anywhere.",
         ];
     // Pick once per mount so it doesn't flicker on every render.
     return prompts[Math.floor(Math.random() * prompts.length)];

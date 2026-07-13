@@ -200,7 +200,7 @@ export function ChatInput({
               onKeyDown={handleKey}
               placeholder={placeholder ?? "Message KovaGPT…"}
               rows={1}
-              className="flex-1 resize-none bg-transparent px-3 py-4 outline-none text-foreground placeholder:text-muted-foreground max-h-[200px]"
+              className="flex-1 resize-none bg-transparent px-3 py-3 outline-none text-foreground placeholder:text-muted-foreground max-h-[200px] leading-relaxed"
             />
             <div className="flex items-center gap-1 p-2">
               {mode && onModeChange && (
