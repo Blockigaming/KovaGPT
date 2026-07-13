@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { PanelLeft, ArrowUp, Loader2, Download, Trash2, Paperclip, Sparkles } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
-import { HelpDialog } from "@/components/HelpDialog";
+
 import { LoginPromptDialog } from "@/components/LoginPromptDialog";
 import { LimitReachedDialog } from "@/components/LimitReachedDialog";
 import { getUsage } from "@/lib/limits";
