@@ -33,8 +33,8 @@
   --color-sidebar-hover: var(--sidebar-hover);
   --color-sidebar-active: var(--sidebar-active);
   --color-user-bubble: var(--user-bubble);
-   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-   --font-display: "Inter", "DM Sans", ui-sans-serif, system-ui, sans-serif;
+   --font-sans: "OpenAI Sans", "SoehneBuch", "Söhne", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+   --font-display: "OpenAI Sans", "SoehneBuch", "Söhne", "Inter", "DM Sans", ui-sans-serif, system-ui, sans-serif;
 
 }
 
