@@ -443,7 +443,7 @@ function AppsPage() {
 
         {!isSignedIn && (
           <div className="rounded-xl border border-border bg-card/50 p-4 text-sm text-muted-foreground flex items-start gap-3">
-            <Plug className="w-4 h-4 mt-0.5 text-[#3b82f6] shrink-0" />
+            <LogIn className="w-4 h-4 mt-0.5 text-[#3b82f6] shrink-0" />
             <div>
               Sign in to connect apps. Your connections are saved to your KovaGPT account so they follow you across devices.
             </div>
