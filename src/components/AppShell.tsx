@@ -5,6 +5,7 @@ import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 const SettingsDialog = lazy(() => import("@/components/SettingsDialog").then(m => ({ default: m.SettingsDialog })));
 const OnboardingDialog = lazy(() => import("@/components/OnboardingDialog").then(m => ({ default: m.OnboardingDialog })));
 import { TimersWidget } from "@/components/TimersWidget";
+import { AppErrorBoundary, OfflineBanner } from "@/components/states";
 import { installShortcutListener } from "@/lib/shortcuts";
 import { PanelLeft, Plus, Settings as SettingsIcon } from "lucide-react";
 import {
@@ -88,6 +89,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       />
 
       <div className="flex-1 min-w-0 flex flex-col overflow-y-auto">
+        <OfflineBanner />
         {!sidebarOpen && (
           <button
             onClick={() => setSidebarOpen(true)}
@@ -97,7 +99,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <PanelLeft className="w-4 h-4" />
           </button>
         )}
-        {children}
+        <AppErrorBoundary>{children}</AppErrorBoundary>
       </div>
 
       {/* Mobile floating actions */}

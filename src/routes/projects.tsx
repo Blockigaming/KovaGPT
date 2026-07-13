@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useServerFn } from "@tanstack/react-start";
 import { FolderKanban, Plus, Users, Check, X as XIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { SkeletonGrid, EmptyState, ErrorState } from "@/components/states";
 import {
   listProjects,
   createProject,
@@ -35,6 +36,7 @@ function ProjectsPage() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [invites, setInvites] = useState<PendingInvite[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -50,12 +52,14 @@ function ProjectsPage() {
   async function refresh() {
     if (!isSignedIn) return;
     setLoading(true);
+    setLoadError(null);
     try {
       const [p, i] = await Promise.all([fnList(), fnInvites()]);
       setProjects(p);
       setInvites(i);
     } catch (e) {
       console.error(e);
+      setLoadError(e instanceof Error ? e.message : "Could not load your projects.");
     } finally {
       setLoading(false);
     }
@@ -98,7 +102,14 @@ function ProjectsPage() {
   }
 
   if (!isLoaded) {
-    return <AppShell><div className="p-8 text-muted-foreground">Loading…</div></AppShell>;
+    return (
+      <AppShell>
+        <div className="max-w-5xl mx-auto p-6 md:p-8 w-full space-y-6">
+          <div className="h-8 w-40 rounded bg-muted animate-pulse" />
+          <SkeletonGrid count={6} minWidth={240} />
+        </div>
+      </AppShell>
+    );
   }
   if (!isSignedIn) {
     return (
@@ -145,14 +156,25 @@ function ProjectsPage() {
         )}
 
         {loading ? (
-          <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />Loading projects…</div>
+          <SkeletonGrid count={6} minWidth={240} />
+        ) : loadError ? (
+          <ErrorState
+            title="Couldn't load your projects"
+            description={loadError}
+            onRetry={refresh}
+          />
         ) : projects.length === 0 ? (
-          <div className="text-center py-16 border-2 border-dashed rounded-2xl">
-            <FolderKanban className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-            <div className="text-lg font-medium mb-1">No projects yet</div>
-            <p className="text-sm text-muted-foreground mb-4">Create a project to collaborate on chats with your team.</p>
-            <Button onClick={() => setCreateOpen(true)}><Plus className="w-4 h-4 mr-1.5" />Create project</Button>
-          </div>
+          <EmptyState
+            icon={FolderKanban}
+            title="No projects yet"
+            description="Create a project to collaborate on chats, files, notes, and tasks with your team."
+            tip="Press N to start a new chat, or click New project to begin."
+            action={
+              <Button onClick={() => setCreateOpen(true)}>
+                <Plus className="w-4 h-4 mr-1.5" />Create project
+              </Button>
+            }
+          />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {projects.map((p) => (
