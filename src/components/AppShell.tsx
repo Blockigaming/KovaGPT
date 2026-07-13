@@ -118,21 +118,25 @@ export function AppShell({ children }: { children: ReactNode }) {
         </button>
       </div>
 
-      <SettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        settings={settings}
-        onChange={setSettings}
-        onClearAll={() => {
-          try {
-            localStorage.removeItem("nova-gpt-conversations-v2");
-          } catch { /* ignore */ }
-          setConversations([]);
-        }}
-        onOpenHelp={openHelp}
-        initialTab={settingsTab}
-      />
-      <OnboardingDialog />
+      <Suspense fallback={null}>
+        {settingsOpen && (
+          <SettingsDialog
+            open={settingsOpen}
+            onOpenChange={setSettingsOpen}
+            settings={settings}
+            onChange={setSettings}
+            onClearAll={() => {
+              try {
+                localStorage.removeItem("nova-gpt-conversations-v2");
+              } catch { /* ignore */ }
+              setConversations([]);
+            }}
+            onOpenHelp={openHelp}
+            initialTab={settingsTab}
+          />
+        )}
+        <OnboardingDialog />
+      </Suspense>
       <TimersWidget />
     </div>
   );
