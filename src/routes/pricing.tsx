@@ -303,7 +303,7 @@ function PricingPage() {
 }
 
 type CardProps = {
-  icon: React.ComponentType<{ className?: string }>;
+  icon?: React.ComponentType<{ className?: string }>;
   name: string;
   price: string;
   period: string;
