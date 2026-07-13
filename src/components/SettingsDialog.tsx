@@ -1112,7 +1112,7 @@ export function SettingsDialog({
             <p className="text-sm text-muted-foreground">
               You'll be signed out of KovaGPT on this device.
             </p>
-            <Button variant="destructive" size="sm" onClick={handleLogout}>
+            <Button variant="destructive" size="sm" onClick={() => setLogoutConfirmOpen(true)}>
               <LogOut className="w-4 h-4 mr-2" />
               Log out
             </Button>
