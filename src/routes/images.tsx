@@ -343,7 +343,7 @@ function ImagesPage() {
           setHistory([]);
         }}
       />
-      <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+      
       <LoginPromptDialog
         open={loginOpen}
         onOpenChange={setLoginOpen}
