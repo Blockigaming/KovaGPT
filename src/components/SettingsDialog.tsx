@@ -278,8 +278,7 @@ export function SettingsDialog({
       setPortalLoading(false);
     }
   };
-
-
+  useEffect(() => {
     if (open && initialTab) setTab(initialTab);
   }, [open, initialTab]);
 
