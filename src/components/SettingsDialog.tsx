@@ -294,6 +294,7 @@ export function SettingsDialog({
     onChange({ ...settings, mode: m });
   };
 
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const handleLogout = async () => {
     try {
       await clerk?.signOut();
@@ -302,6 +303,15 @@ export function SettingsDialog({
       toast.error("Couldn't sign out. Try again.");
     }
   };
+
+  const visibleTabGroups = useMemo(() => {
+    const hideSubscription = tier === "plus" || tier === "pro";
+    if (!hideSubscription) return TAB_GROUPS;
+    return TAB_GROUPS.map((g) => ({
+      ...g,
+      tabs: g.tabs.filter((t) => t.v !== "subscription"),
+    })).filter((g) => g.tabs.length > 0);
+  }, [tier]);
 
   const handleRestore = async () => {
     try {
