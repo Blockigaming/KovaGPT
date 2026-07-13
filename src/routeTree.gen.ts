@@ -65,6 +65,7 @@ import { Route as ApiGoogleCalendarRouteImport } from './routes/api/google/calen
 import { Route as ApiGoogleAuthRouteImport } from './routes/api/google/auth'
 import { Route as ApiChatConfirmRouteImport } from './routes/api/chat/confirm'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ProjectsProjectIdChatChatIdRouteImport } from './routes/projects.$projectId.chat.$chatId'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
@@ -358,6 +359,11 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProjectsProjectIdChatChatIdRoute =
   ProjectsProjectIdChatChatIdRouteImport.update({
     id: '/chat/$chatId',
@@ -445,6 +451,7 @@ export interface FileRoutesByFullPath {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/google/auth': typeof ApiGoogleAuthRoute
@@ -510,6 +517,7 @@ export interface FileRoutesByTo {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/google/auth': typeof ApiGoogleAuthRoute
@@ -576,6 +584,7 @@ export interface FileRoutesById {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/google/auth': typeof ApiGoogleAuthRoute
@@ -643,6 +652,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/projects/$projectId'
     | '/~oauth/callback'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/chat/confirm'
     | '/api/google/auth'
@@ -708,6 +718,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/projects/$projectId'
     | '/~oauth/callback'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/chat/confirm'
     | '/api/google/auth'
@@ -773,6 +784,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/projects/$projectId'
     | '/~oauth/callback'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/chat/confirm'
     | '/api/google/auth'
@@ -838,6 +850,7 @@ export interface RootRouteChildren {
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   Char126oauthCallbackRoute: typeof Char126oauthCallbackRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiGoogleAuthRoute: typeof ApiGoogleAuthRoute
   ApiGoogleCalendarRoute: typeof ApiGoogleCalendarRoute
@@ -1250,6 +1263,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/projects/$projectId/chat/$chatId': {
       id: '/projects/$projectId/chat/$chatId'
       path: '/chat/$chatId'
@@ -1382,6 +1402,7 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutReturnRoute: CheckoutReturnRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   Char126oauthCallbackRoute: Char126oauthCallbackRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiGoogleAuthRoute: ApiGoogleAuthRoute,
   ApiGoogleCalendarRoute: ApiGoogleCalendarRoute,
