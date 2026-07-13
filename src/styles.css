@@ -253,6 +253,36 @@
   animation: pulse-slow 2.4s ease-in-out infinite;
 }
 
+/* AI status indicator: label enter animation + animated ellipsis */
+@keyframes ai-status-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ai-status-label {
+  animation: ai-status-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+@keyframes ai-status-dot {
+  0%, 80%, 100% { opacity: 0.2; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-1px); }
+}
+.ai-status-dots {
+  display: inline-flex;
+  gap: 1px;
+  line-height: 1;
+}
+.ai-status-dots > span {
+  display: inline-block;
+  animation: ai-status-dot 1.3s infinite ease-in-out both;
+}
+.ai-status-dots > span:nth-child(1) { animation-delay: 0s; }
+.ai-status-dots > span:nth-child(2) { animation-delay: 0.16s; }
+.ai-status-dots > span:nth-child(3) { animation-delay: 0.32s; }
+@media (prefers-reduced-motion: reduce) {
+  .ai-status-label,
+  .ai-status-dots > span { animation: none; }
+}
+
 /* Global button hover/click feedback. Buttons keep their existing
    hover utilities; this just ensures every button visibly reacts to
    pointer + active states, even those without hover classes set. */
