@@ -92,12 +92,21 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         userId,
       });
 
-      // First month of Plus is free — give a 30-day trial to any user who
-      // has never had a subscription in this environment before.
-      const isPlusTrialEligible =
-        isRecurring &&
-        data.priceId === "plus_monthly" &&
-        !existing;
+      // Free-trial eligibility for Plus. A user is eligible only if:
+      //   1) they have no subscription row in this env, AND
+      //   2) the Stripe Customer we resolved has no subscription history
+      //      (so recreating a KovaGPT account with the same email/userId
+      //      doesn't grant a second trial).
+      let isPlusTrialEligible = isRecurring && data.priceId === "plus_monthly" && !existing;
+      if (isPlusTrialEligible) {
+        const prior = await stripe.subscriptions.list({
+          customer: customerId,
+          status: "all",
+          limit: 1,
+        });
+        if (prior.data.length > 0) isPlusTrialEligible = false;
+      }
+
 
       const sessionParams: Record<string, unknown> = {
         line_items: [{ price: stripePrice.id, quantity: data.quantity || 1 }],
