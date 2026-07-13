@@ -144,7 +144,8 @@ function KovaGPT() {
       }
     })();
   }, [isSignedIn, openSignUp]);
-  const [helpOpen, setHelpOpen] = useState(false);
+  const navigate = useNavigate();
+  const openHelp = useCallback(() => { navigate({ to: "/help" as never }); }, [navigate]);
   const [shareChatId, setShareChatId] = useState<string | null>(null);
   const [membersChatId, setMembersChatId] = useState<string | null>(null);
   
