@@ -206,6 +206,11 @@ function ChatMessageInner({
       : (blocks[0] ?? message.content);
   }, [artifactKind, message.content]);
 
+  const email = useMemo(
+    () => (isUser ? null : extractEmailFromMessage(message.content || "")),
+    [isUser, message.content],
+  );
+
   const copy = async () => {
     await navigator.clipboard.writeText(message.content);
     setCopied(true);
