@@ -218,20 +218,6 @@ export function Sidebar({
             Workspace
           </div>
           <div className="px-3 flex flex-col gap-0.5">
-            {showSignedIn && (
-              <Link to="/summary" className={navItemClass(isOn("/summary"))}>
-                <ActiveBar on={isOn("/summary")} />
-                <LayoutDashboard className="w-[18px] h-[18px] shrink-0" />
-                <span className="truncate">Summary</span>
-              </Link>
-            )}
-            {showSignedIn && (
-              <Link to="/projects" className={navItemClass(isOn("/projects"))}>
-                <ActiveBar on={isOn("/projects")} />
-                <FolderKanban className="w-[18px] h-[18px] shrink-0" />
-                <span className="truncate">Projects</span>
-              </Link>
-            )}
             <Link to="/library" className={navItemClass(isOn("/library"))}>
               <ActiveBar on={isOn("/library")} />
               <FolderOpen className="w-[18px] h-[18px] shrink-0" />
@@ -239,14 +225,27 @@ export function Sidebar({
             </Link>
             <Link to="/apps" className={navItemClass(isOn("/apps"))}>
               <ActiveBar on={isOn("/apps")} />
-              <Link2 className="w-[18px] h-[18px] shrink-0" />
-              <span className="truncate">Apps</span>
+              {(tier === "plus" || tier === "pro") ? (
+                <Plug className="w-[18px] h-[18px] shrink-0" />
+              ) : (
+                <Link2 className="w-[18px] h-[18px] shrink-0" />
+              )}
+              <span className="truncate">
+                {(tier === "plus" || tier === "pro") ? "Plugins" : "Apps"}
+              </span>
             </Link>
             <Link to="/images" className={navItemClass(isOn("/images"))}>
               <ActiveBar on={isOn("/images")} />
-              <ImageIcon className="w-[18px] h-[18px] shrink-0" />
+              <Wand2 className="w-[18px] h-[18px] shrink-0" />
               <span className="truncate">Images</span>
             </Link>
+            {showSignedIn && (
+              <Link to="/projects" className={navItemClass(isOn("/projects"))}>
+                <ActiveBar on={isOn("/projects")} />
+                <FolderKanban className="w-[18px] h-[18px] shrink-0" />
+                <span className="truncate">Projects</span>
+              </Link>
+            )}
             {showSignedIn && (tier === "plus" || tier === "pro") && (
               <Link to="/scheduled-tasks" className={navItemClass(isOn("/scheduled-tasks"))}>
                 <ActiveBar on={isOn("/scheduled-tasks")} />
@@ -254,13 +253,13 @@ export function Sidebar({
                 <span className="truncate">Scheduled Tasks</span>
               </Link>
             )}
-            {/* Activity Log intentionally lives only in Settings; removed from sidebar. */}
-
-            <Link to="/pricing" className={navItemClass(isOn("/pricing"))}>
-              <ActiveBar on={isOn("/pricing")} />
-              <CreditCard className="w-[18px] h-[18px] shrink-0" />
-              <span className="truncate">Subscriptions</span>
-            </Link>
+            {tier !== "plus" && tier !== "pro" && (
+              <Link to="/pricing" className={navItemClass(isOn("/pricing"))}>
+                <ActiveBar on={isOn("/pricing")} />
+                <CreditCard className="w-[18px] h-[18px] shrink-0" />
+                <span className="truncate">Subscriptions</span>
+              </Link>
+            )}
           </div>
 
           {/* Combined scrollable area: Pinned + Recents */}
