@@ -137,7 +137,6 @@ function LibraryPage() {
               {t.label}
             </button>
           ))}
-          </div>
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
