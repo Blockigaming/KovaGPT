@@ -59,6 +59,8 @@ import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { getMyDailyUsage, type DailyUsageDto } from "@/utils/usage.functions";
+import { createPortalSession, getSubscriptionSummary, type SubscriptionSummary } from "@/utils/payments.functions";
+import { getStripeEnvironment } from "@/lib/stripe";
 import { PersonalitySliders } from "@/components/PersonalitySliders";
 import { StorageDashboard } from "@/components/StorageDashboard";
 import { FamilySharingPanel } from "@/components/FamilySharingPanel";
