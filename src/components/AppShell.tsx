@@ -103,22 +103,24 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       {/* Mobile floating actions */}
-      <div className="md:hidden fixed right-3 bottom-[max(5.5rem,calc(env(safe-area-inset-bottom)+5rem))] z-30 flex flex-col gap-2">
+      <div className="md:hidden fixed right-3 bottom-[max(5.5rem,calc(env(safe-area-inset-bottom)+5rem))] z-30 flex items-center gap-2">
         <button
           onClick={handleNew}
-          className="w-11 h-11 rounded-full bg-foreground text-background shadow-lg flex items-center justify-center active:scale-95 transition"
+          className="h-11 px-4 rounded-2xl bg-[#3b82f6] text-white shadow-lg flex items-center gap-2 active:scale-95 transition font-medium text-sm hover:bg-[#2563eb]"
           aria-label="New chat"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4" />
+          <span>New Chat</span>
         </button>
         <button
           onClick={() => openSettings()}
-          className="w-11 h-11 rounded-full bg-background border border-border shadow-lg flex items-center justify-center active:scale-95 transition"
+          className="w-11 h-11 rounded-2xl bg-background border border-border shadow-lg flex items-center justify-center active:scale-95 transition"
           aria-label="Open settings"
         >
           <SettingsIcon className="w-5 h-5" />
         </button>
       </div>
+
 
       <Suspense fallback={null}>
         {settingsOpen && (
