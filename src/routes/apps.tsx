@@ -16,7 +16,14 @@ import {
 const STORAGE_KEY = "kova-connected-apps-v1";
 const GOOGLE_IDS = new Set(["google", "gmail", "google-drive", "google-calendar"]);
 
-
+// Apps that are actually wired up end-to-end today. Everything else is
+// surfaced as "Coming soon" until its backend integration ships.
+const WORKING_IDS = new Set<string>([
+  "google",
+  "gmail",
+  "google-drive",
+  "google-calendar",
+]);
 
 // Every catalog app is linkable from KovaGPT. Providers with native OAuth
 // (Google family, Apple) go through the real sign-in flow; the rest use a
