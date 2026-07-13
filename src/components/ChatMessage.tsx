@@ -299,7 +299,7 @@ function ChatMessageInner({
                     return <LongResponseCard content={cleaned}>{md}</LongResponseCard>;
                   }
                   const chip = detectInfoChip(cleaned);
-                  if (chip) return <InfoChip kind={chip}>{md}</InfoChip>;
+                  if (chip) return <InfoChip kind={chip} rawText={cleaned}>{md}</InfoChip>;
                   return md;
                 })()
               )}
