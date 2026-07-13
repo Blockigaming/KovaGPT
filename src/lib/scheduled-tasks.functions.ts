@@ -18,22 +18,40 @@ export type ScheduledTask = {
 
 const RepeatEnum = z.enum(["none", "daily", "weekly", "monthly"]);
 
-async function ensurePlusOrAbove(supabase: any, userId: string) {
+function classifyTier(priceId: string | null | undefined): "free" | "plus" | "pro" {
+  const id = (priceId ?? "").toLowerCase();
+  if (id.includes("pro")) return "pro";
+  if (id.includes("plus")) return "plus";
+  return "free";
+}
+
+async function ensurePlusOrAbove(
+  supabase: any,
+  userId: string,
+): Promise<"plus" | "pro"> {
   const { data, error } = await supabase
     .from("subscriptions")
-    .select("status, current_period_end")
+    .select("status, current_period_end, price_id")
     .eq("user_id", userId)
     .in("status", ["active", "trialing"]);
   if (error) { console.error("[serverfn]", error.message); throw new Error("Request failed. Please try again."); }
-  const ok = (data ?? []).some(
+  const active = (data ?? []).filter(
     (r: any) =>
       ["active", "trialing"].includes(r.status) &&
       (!r.current_period_end || new Date(r.current_period_end) > new Date()),
   );
-  if (!ok) {
+  if (active.length === 0) {
     throw new Error("Scheduled tasks are available on Plus, Pro, and higher plans.");
   }
+  let tier: "plus" | "pro" = "plus";
+  for (const row of active) {
+    const t = classifyTier(row.price_id);
+    if (t === "pro") { tier = "pro"; break; }
+  }
+  return tier;
 }
+
+const MAX_TASKS: Record<"plus" | "pro", number> = { plus: 5, pro: 20 };
 
 export const isScheduledTasksEligible = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
