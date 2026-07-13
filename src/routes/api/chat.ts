@@ -677,15 +677,16 @@ export const Route = createFileRoute("/api/chat")({
             return { role: safeRole, content: msg.content };
           });
 
-          // COST vs QUALITY: default to Gemini 3.5 Flash for Medium — much
-          // smarter than flash-lite, still cheap. Instant stays on
-          // flash-lite for speed. High escalates to Pro Preview.
+          // Model routing:
+          // - instant: fastest available (Gemini flash-lite) for snappy replies.
+          // - medium:  balanced quality/speed (Gemini 3.1 Pro preview).
+          // - high:    smartest available (GPT-5.5 Pro extended reasoning).
           const model = voice
             ? "google/gemini-3.5-flash"
             : m.id === "high"
-              ? "google/gemini-3.1-pro-preview"
+              ? "openai/gpt-5.5-pro"
               : m.id === "instant"
-                ? "google/gemini-3.5-flash"
+                ? "google/gemini-3.1-flash-lite"
                 : "google/gemini-3.1-pro-preview";
 
           // TODO(routing): add per-request classification (rewrite/summary/coding)

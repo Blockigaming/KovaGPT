@@ -1,4 +1,4 @@
-import { Trash2, PanelLeft, Search, HelpCircle, Plus, Share2, Settings as SettingsIcon, FolderOpen, Link2, MoreHorizontal, MessageCircle, Copy as CopyIcon, Archive, Pin, PinOff, Users, CreditCard, Calendar, Activity, PenLine, FolderKanban, LayoutDashboard, Wand2, Plug } from "lucide-react";
+import { Trash2, PanelLeft, Search, HelpCircle, Plus, Share2, Settings as SettingsIcon, FolderOpen, Link2, MoreHorizontal, MessageCircle, Copy as CopyIcon, Archive, Pin, PinOff, Users, CreditCard, Calendar, Activity, PenLine, FolderKanban, LayoutDashboard, Wand2, Plug, SquarePen, ImageIcon } from "lucide-react";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { NovaLogo } from "@/components/NovaLogo";
@@ -65,7 +65,7 @@ export function Sidebar({
     on ? (
       <span
         aria-hidden="true"
-        className="absolute left-0 top-1/2 -translate-y-1/2 h-7 w-[5px] rounded-r-full bg-blue-500"
+        className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-blue-500"
       />
     ) : null;
 
@@ -213,7 +213,7 @@ export function Sidebar({
               onClick={onNew}
               className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] hover:bg-sidebar-hover transition active:scale-[0.98]"
             >
-              <Plus className="w-[18px] h-[18px] shrink-0" />
+              <SquarePen className="w-[18px] h-[18px] shrink-0" />
               <span>New chat</span>
             </button>
             <Link to="/library" className={navItemClass(isOn("/library"))}>
@@ -234,7 +234,7 @@ export function Sidebar({
             </Link>
             <Link to="/images" className={navItemClass(isOn("/images"))}>
               <ActiveBar on={isOn("/images")} />
-              <Wand2 className="w-[18px] h-[18px] shrink-0" />
+              <ImageIcon className="w-[18px] h-[18px] shrink-0" />
               <span className="truncate">Images</span>
             </Link>
             {showSignedIn && (
