@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { CONNECTOR_CATALOG, type ConnectorItem, type ConnectorCategory } from "@/lib/connectors-catalog";
-import { Link2, Search, Check, Loader2, Sparkles, ShieldAlert, Plug, AlertCircle, X } from "lucide-react";
+import { Link2, Search, Check, Loader2, Sparkles, ShieldAlert, Plug, AlertCircle, X, LogIn } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AppShell } from "@/components/AppShell";
 import { toast } from "sonner";
@@ -443,7 +443,7 @@ function AppsPage() {
 
         {!isSignedIn && (
           <div className="rounded-xl border border-border bg-card/50 p-4 text-sm text-muted-foreground flex items-start gap-3">
-            <Plug className="w-4 h-4 mt-0.5 text-[#3b82f6] shrink-0" />
+            <LogIn className="w-4 h-4 mt-0.5 text-[#3b82f6] shrink-0" />
             <div>
               Sign in to connect apps. Your connections are saved to your KovaGPT account so they follow you across devices.
             </div>

@@ -204,22 +204,18 @@ export function Sidebar({
             </div>
           )}
 
-          {/* New chat */}
-          <div className="px-3 pb-2">
+          {/* Workspace nav */}
+          <div className="px-5 pt-2 pb-2 text-[11px] font-semibold tracking-wider uppercase text-muted-foreground/80">
+            Workspace
+          </div>
+          <div className="px-3 flex flex-col gap-0.5">
             <button
               onClick={onNew}
               className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] hover:bg-sidebar-hover transition active:scale-[0.98]"
             >
-              <Plus className="w-[18px] h-[18px]" />
+              <Plus className="w-[18px] h-[18px] shrink-0" />
               <span>New chat</span>
             </button>
-          </div>
-
-          {/* Workspace nav */}
-          <div className="px-5 pt-1 pb-1 text-[11px] font-semibold tracking-wider uppercase text-muted-foreground/80">
-            Workspace
-          </div>
-          <div className="px-3 flex flex-col gap-0.5">
             <Link to="/library" className={navItemClass(isOn("/library"))}>
               <ActiveBar on={isOn("/library")} />
               <FolderOpen className="w-[18px] h-[18px] shrink-0" />

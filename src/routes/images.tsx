@@ -40,6 +40,21 @@ import actionFigureImg from "@/assets/image-presets/action-figure.jpg";
 import discoModeImg from "@/assets/image-presets/disco-mode.jpg";
 import appIconImg from "@/assets/image-presets/app-icon.jpg";
 import logoMarkImg from "@/assets/image-presets/logo-mark.jpg";
+import watercolorImg from "@/assets/image-presets/watercolor.jpg";
+import oilPaintingImg from "@/assets/image-presets/oil-painting.jpg";
+import pixelArtImg from "@/assets/image-presets/pixel-art.jpg";
+import animeImg from "@/assets/image-presets/anime.jpg";
+import threeDRenderImg from "@/assets/image-presets/3d-render.jpg";
+import cyberpunkImg from "@/assets/image-presets/cyberpunk.jpg";
+import vintagePosterImg from "@/assets/image-presets/vintage-poster.jpg";
+import lineDrawingImg from "@/assets/image-presets/line-drawing.jpg";
+import origamiImg from "@/assets/image-presets/origami.jpg";
+import comicBookImg from "@/assets/image-presets/comic-book.jpg";
+import isometricImg from "@/assets/image-presets/isometric.jpg";
+import lowPolyImg from "@/assets/image-presets/low-poly.jpg";
+import ghibliImg from "@/assets/image-presets/ghibli.jpg";
+import popArtImg from "@/assets/image-presets/pop-art.jpg";
+import blueprintImg from "@/assets/image-presets/blueprint.jpg";
 
 type Preset = { label: string; prompt: string; seed: string; image: string };
 
@@ -54,6 +69,21 @@ const PRESETS: Preset[] = [
   { label: "Disco mode", prompt: "A shiny mirrorball sculpture of my subject on a reflective black stage, studio lights, sparkle", seed: "disco-mode", image: discoModeImg },
   { label: "App icon", prompt: "A polished app icon for my described product, gradient background, rounded corners, minimal", seed: "app-icon", image: appIconImg },
   { label: "Logo mark", prompt: "A minimal vector logo mark for my described brand, symmetrical, black on white", seed: "logo-mark", image: logoMarkImg },
+  { label: "Watercolor", prompt: "A soft watercolor painting of my subject, pastel washes, paper texture, artistic brush strokes", seed: "watercolor", image: watercolorImg },
+  { label: "Oil painting", prompt: "A classical oil painting portrait of my subject, rich textured brush strokes, chiaroscuro lighting", seed: "oil-painting", image: oilPaintingImg },
+  { label: "Pixel art", prompt: "A retro 16-bit pixel art scene of my subject, crisp pixels, limited palette", seed: "pixel-art", image: pixelArtImg },
+  { label: "Anime", prompt: "An anime illustration of my subject, cel shaded, vivid colors, expressive eyes", seed: "anime", image: animeImg },
+  { label: "3D render", prompt: "A glossy 3D render of my subject in Pixar style, soft studio lighting, subsurface scattering", seed: "3d-render", image: threeDRenderImg },
+  { label: "Cyberpunk", prompt: "My subject in a neon cyberpunk city street at night, rain reflections, purple and cyan lights, cinematic", seed: "cyberpunk", image: cyberpunkImg },
+  { label: "Vintage poster", prompt: "A vintage travel poster of my subject, bold flat colors, mid-century deco composition", seed: "vintage-poster", image: vintagePosterImg },
+  { label: "Line drawing", prompt: "A minimal continuous line drawing of my subject on cream paper, elegant black ink", seed: "line-drawing", image: lineDrawingImg },
+  { label: "Origami", prompt: "An origami paper sculpture of my subject, folded pastel paper, soft studio lighting, minimal background", seed: "origami", image: origamiImg },
+  { label: "Comic book", prompt: "A comic book panel of my subject, bold ink outlines, halftone dots, dynamic action, saturated colors", seed: "comic-book", image: comicBookImg },
+  { label: "Isometric", prompt: "An isometric illustration of my subject in a tiny cutaway scene, soft colors, detailed miniature", seed: "isometric", image: isometricImg },
+  { label: "Low poly", prompt: "A low poly geometric render of my subject, flat shaded triangles, minimal gradient background", seed: "low-poly", image: lowPolyImg },
+  { label: "Ghibli", prompt: "A Studio Ghibli inspired scene of my subject, hand painted, lush environment, nostalgic warm light", seed: "ghibli", image: ghibliImg },
+  { label: "Pop art", prompt: "A pop art Warhol style portrait of my subject, bold flat blocks of complementary colors, screen print texture", seed: "pop-art", image: popArtImg },
+  { label: "Blueprint", prompt: "A technical blueprint drawing of my subject, cyan lines on dark blue paper, dimensional annotations", seed: "blueprint", image: blueprintImg },
 ];
 
 type HistoryItem = { id: string; prompt: string; imageUrl: string; createdAt: number };
@@ -321,7 +351,11 @@ function ImagesPage() {
                 }}
                 rows={1}
                 placeholder="Describe an image"
-                className="flex-1 bg-transparent outline-none text-[15px] placeholder:text-muted-foreground resize-none py-1.5 max-h-40"
+                spellCheck={false}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                className="flex-1 bg-transparent outline-none border-0 focus:ring-0 focus:outline-none text-[15px] placeholder:text-muted-foreground resize-none py-1.5 max-h-40"
               />
               <button
                 type="submit"
