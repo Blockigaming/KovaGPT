@@ -15,7 +15,7 @@ export type Shortcut = {
   id: ShortcutId;
   label: string;
   description: string;
-  // Combo like "Mod+K" — "Mod" means Meta on macOS, Ctrl elsewhere.
+  // Combo like "Mod+K" - "Mod" means Meta on macOS, Ctrl elsewhere.
   combo: string;
 };
 

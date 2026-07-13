@@ -22,7 +22,7 @@ type Body = {
 
 const PROMPTS: Record<Exclude<Action, "custom" | "tone">, string> = {
   improve:
-    "Improve the following text. Keep the author's meaning and voice, tighten prose, fix grammar, and return only the improved version — no preamble.",
+    "Improve the following text. Keep the author's meaning and voice, tighten prose, fix grammar, and return only the improved version - no preamble.",
   expand:
     "Expand the following text with more depth, examples, and detail while preserving voice. Return only the expanded version.",
   shorten:

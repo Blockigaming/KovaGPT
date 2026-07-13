@@ -16,7 +16,14 @@ import {
 const STORAGE_KEY = "kova-connected-apps-v1";
 const GOOGLE_IDS = new Set(["google", "gmail", "google-drive", "google-calendar"]);
 
-
+// Apps that are actually wired up end-to-end today. Everything else is
+// surfaced as "Coming soon" until its backend integration ships.
+const WORKING_IDS = new Set<string>([
+  "google",
+  "gmail",
+  "google-drive",
+  "google-calendar",
+]);
 
 // Every catalog app is linkable from KovaGPT. Providers with native OAuth
 // (Google family, Apple) go through the real sign-in flow; the rest use a
@@ -98,7 +105,14 @@ function AppLogo({ domain, label }: { domain: string; label: string }) {
 }
 
 
-function StatusBadge({ state, configured }: { state: ConnState; configured: boolean }) {
+function StatusBadge({ state, configured, comingSoon }: { state: ConnState; configured: boolean; comingSoon?: boolean }) {
+  if (comingSoon) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">
+        Coming soon
+      </span>
+    );
+  }
   if (!configured) {
     return (
       <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
@@ -135,6 +149,7 @@ function AppCard({
   state,
   configured,
   isSignedIn,
+  comingSoon,
   onConnect,
   onDisconnect,
   onRetry,
@@ -143,6 +158,7 @@ function AppCard({
   state: ConnState;
   configured: boolean;
   isSignedIn: boolean;
+  comingSoon: boolean;
   onConnect: () => void;
   onDisconnect: () => void;
   onRetry: () => void;
@@ -151,7 +167,17 @@ function AppCard({
     "text-xs px-3 py-1.5 rounded-full transition active:scale-[0.97] shrink-0 font-medium";
 
   let action: React.ReactNode;
-  if (!configured) {
+  if (comingSoon) {
+    action = (
+      <button
+        disabled
+        title="This integration is coming soon."
+        className={`${baseBtn} border border-border text-muted-foreground cursor-not-allowed opacity-70`}
+      >
+        Coming soon
+      </button>
+    );
+  } else if (!configured) {
     action = (
       <button
         disabled
@@ -205,7 +231,7 @@ function AppCard({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="text-sm font-semibold truncate">{item.label}</div>
-          <StatusBadge state={state} configured={configured} />
+          <StatusBadge state={state} configured={configured} comingSoon={comingSoon} />
         </div>
         <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{item.description}</div>
       </div>
@@ -363,6 +389,7 @@ function AppsPage() {
           state={stateOf(item.id)}
           configured={CONFIGURED_CONNECTORS.has(item.id)}
           isSignedIn={!!isSignedIn}
+          comingSoon={!WORKING_IDS.has(item.id)}
           onConnect={() => handleConnect(item)}
           onDisconnect={() => handleDisconnect(item)}
           onRetry={() => handleConnect(item)}

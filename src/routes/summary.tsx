@@ -16,7 +16,7 @@ import {
 export const Route = createFileRoute("/summary")({
   head: () => ({
     meta: [
-      { title: "Summary — KovaGPT" },
+      { title: "Summary - KovaGPT" },
       { name: "description", content: "Your personalized KovaGPT dashboard: chats, projects, files, tasks, and connected apps at a glance." },
       { name: "robots", content: "noindex" },
     ],
@@ -69,7 +69,7 @@ function useWeather(enabled: boolean) {
           if (!r.ok) throw new Error("weather");
           const j = await r.json();
           const code = j.current?.weather_code ?? 0;
-          setState({ status: "ok", data: { temp: Math.round(j.current?.temperature_2m ?? 0), code, label: WMO[code] ?? "—", city: null } });
+          setState({ status: "ok", data: { temp: Math.round(j.current?.temperature_2m ?? 0), code, label: WMO[code] ?? "-", city: null } });
         } catch { setState({ status: "error", data: null }); }
       },
       () => setState({ status: "denied", data: null }),
@@ -178,7 +178,7 @@ function SummaryPage() {
   const weather = useWeather(weatherEnabled);
   const enableWeather = () => { setWeatherEnabled(true); localStorage.setItem("kova-weather-opt-in", "1"); };
 
-  // Suggested actions — derived from real state
+  // Suggested actions - derived from real state
   const suggestions: Array<{ label: string; to: string; hint: string }> = [];
   if (!qGoogle.data?.connected) suggestions.push({ label: "Connect Google", to: "/apps", hint: "Get Gmail, Calendar, and Drive summaries." });
   if ((qProjects.data ?? []).length === 0) suggestions.push({ label: "Create your first project", to: "/projects", hint: "Group chats, files, and tasks." });
@@ -234,7 +234,7 @@ function SummaryPage() {
           {!isHidden("continue") && (
             <Section id="continue" title="Continue where you left off" icon={MessageCircle} onDismiss={hide}>
               {continueChats.length === 0 ? (
-                <Empty text="No recent chats yet — start one from the composer above." />
+                <Empty text="No recent chats yet - start one from the composer above." />
               ) : (
                 <ul className="space-y-1">
                   {continueChats.map((c) => (
@@ -407,7 +407,7 @@ function SummaryPage() {
           )}
 
           {!isHidden("gmail") && (
-            <Section id="gmail" title="Gmail — unread" icon={Mail} onDismiss={hide}>
+            <Section id="gmail" title="Gmail - unread" icon={Mail} onDismiss={hide}>
               {!qGoogle.isLoading && !hasGmail ? (
                 <div className="text-sm text-muted-foreground">
                   <p className="mb-2">Connect Gmail to see unread messages.</p>

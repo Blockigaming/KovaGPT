@@ -99,7 +99,7 @@ export function AuthDialog({
             email,
             options: { emailRedirectTo: `${window.location.origin}/` },
           });
-          toast.success("Already registered — we resent the verification link.");
+          toast.success("Already registered - we resent the verification link.");
         } else {
           toast.success("Verification email sent. Check your inbox.");
         }
@@ -113,7 +113,7 @@ export function AuthDialog({
               email,
               options: { emailRedirectTo: `${window.location.origin}/` },
             });
-            toast.error("Please verify your email — we just resent the link.");
+            toast.error("Please verify your email - we just resent the link.");
             return;
           }
           if (/invalid.*credentials|invalid_grant/i.test(error.message)) {

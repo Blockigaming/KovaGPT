@@ -332,7 +332,7 @@ a {
   transition: color 150ms ease, opacity 150ms ease, background-color 150ms ease;
 }
 
-/* Clean glassy surfaces — subtle translucent borders, no reflections */
+/* Clean glassy surfaces - subtle translucent borders, no reflections */
 .glassy {
   background: color-mix(in oklab, var(--color-background) 75%, transparent);
   backdrop-filter: blur(16px) saturate(140%);
@@ -383,7 +383,7 @@ button, [role="button"], a {
   html { scroll-behavior: smooth; }
 }
 
-/* Custom scrollbars — subtle in light, softer in dark. */
+/* Custom scrollbars - subtle in light, softer in dark. */
 @media (pointer: fine) {
   * { scrollbar-width: thin; scrollbar-color: color-mix(in oklab, var(--color-foreground) 20%, transparent) transparent; }
   *::-webkit-scrollbar { width: 10px; height: 10px; }

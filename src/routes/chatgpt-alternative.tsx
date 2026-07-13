@@ -12,7 +12,7 @@ const faq = [
   },
   {
     q: "Can KovaGPT connect to my Gmail and Google Calendar?",
-    a: "Yes. Connect your Google account from the Apps page and KovaGPT can search email, read messages, draft or send email, and create calendar events — always asking you to confirm before it sends anything.",
+    a: "Yes. Connect your Google account from the Apps page and KovaGPT can search email, read messages, draft or send email, and create calendar events - always asking you to confirm before it sends anything.",
   },
   {
     q: "Does KovaGPT keep my chats private?",
@@ -37,7 +37,7 @@ function Page() {
   return (
     <SeoLanding
       h1="The ChatGPT Alternative Built Around How You Actually Work"
-      intro="KovaGPT is a modern AI chatbot that swaps a blank prompt for focused modes — writing, study, code, research, images, everyday chat — so answers arrive tuned to the task. It runs fast, remembers what you asked, and can act on Gmail and Google Calendar when you connect them."
+      intro="KovaGPT is a modern AI chatbot that swaps a blank prompt for focused modes - writing, study, code, research, images, everyday chat - so answers arrive tuned to the task. It runs fast, remembers what you asked, and can act on Gmail and Google Calendar when you connect them."
       benefits={[
         "Purpose-built modes for writing, study, coding, research, and images",
         "Connect Gmail and Google Calendar to read, draft, and schedule",
@@ -47,8 +47,8 @@ function Page() {
         "Transparent pricing with a real free tier",
       ]}
       details={[
-        "Most AI chatbots hand you a blank text box and expect you to figure out how to prompt them. KovaGPT flips that: pick a mode and the assistant already knows what good looks like — a study mode that explains step-by-step, a writer mode that keeps your voice, a code mode that debugs before it lectures.",
-        "It also does the thing generic chatbots can't: real work in your inbox and calendar. Connect Google once and KovaGPT can find that email from your accountant, draft a reply in your tone, or schedule a meeting for next Tuesday — with a confirmation card before anything is sent.",
+        "Most AI chatbots hand you a blank text box and expect you to figure out how to prompt them. KovaGPT flips that: pick a mode and the assistant already knows what good looks like - a study mode that explains step-by-step, a writer mode that keeps your voice, a code mode that debugs before it lectures.",
+        "It also does the thing generic chatbots can't: real work in your inbox and calendar. Connect Google once and KovaGPT can find that email from your accountant, draft a reply in your tone, or schedule a meeting for next Tuesday - with a confirmation card before anything is sent.",
       ]}
       prompts={[
         "Draft a follow-up email to the client I met yesterday",

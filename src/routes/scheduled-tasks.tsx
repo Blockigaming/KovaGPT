@@ -19,7 +19,7 @@ export const Route = createFileRoute("/scheduled-tasks")({
   component: ScheduledTasksPage,
   head: () => ({
     meta: [
-      { title: "Scheduled Tasks — KovaGPT" },
+      { title: "Scheduled Tasks - KovaGPT" },
       { name: "description", content: "Schedule KovaGPT to do something for you later." },
       { name: "robots", content: "noindex" },
     ],
@@ -242,7 +242,7 @@ function ScheduledTasksPage() {
                 </div>
                 <div className="text-base font-medium mb-1">Nothing scheduled yet</div>
                 <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                  Use the form above to have KovaGPT run a prompt for you at a specific time — once, or on a repeating schedule.
+                  Use the form above to have KovaGPT run a prompt for you at a specific time - once, or on a repeating schedule.
                 </p>
               </div>
             ) : (

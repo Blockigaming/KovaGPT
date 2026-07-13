@@ -79,7 +79,7 @@ export function Sidebar({
         />
       )}
 
-      {/* Collapsed rail removed — on desktop the sidebar fully disappears when closed. */}
+      {/* Collapsed rail removed - on desktop the sidebar fully disappears when closed. */}
 
 
       <aside
