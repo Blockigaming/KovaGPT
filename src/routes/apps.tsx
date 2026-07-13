@@ -105,7 +105,14 @@ function AppLogo({ domain, label }: { domain: string; label: string }) {
 }
 
 
-function StatusBadge({ state, configured }: { state: ConnState; configured: boolean }) {
+function StatusBadge({ state, configured, comingSoon }: { state: ConnState; configured: boolean; comingSoon?: boolean }) {
+  if (comingSoon) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">
+        Coming soon
+      </span>
+    );
+  }
   if (!configured) {
     return (
       <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
@@ -142,6 +149,7 @@ function AppCard({
   state,
   configured,
   isSignedIn,
+  comingSoon,
   onConnect,
   onDisconnect,
   onRetry,
@@ -150,6 +158,7 @@ function AppCard({
   state: ConnState;
   configured: boolean;
   isSignedIn: boolean;
+  comingSoon: boolean;
   onConnect: () => void;
   onDisconnect: () => void;
   onRetry: () => void;
@@ -158,7 +167,17 @@ function AppCard({
     "text-xs px-3 py-1.5 rounded-full transition active:scale-[0.97] shrink-0 font-medium";
 
   let action: React.ReactNode;
-  if (!configured) {
+  if (comingSoon) {
+    action = (
+      <button
+        disabled
+        title="This integration is coming soon."
+        className={`${baseBtn} border border-border text-muted-foreground cursor-not-allowed opacity-70`}
+      >
+        Coming soon
+      </button>
+    );
+  } else if (!configured) {
     action = (
       <button
         disabled
