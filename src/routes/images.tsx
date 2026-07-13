@@ -161,7 +161,7 @@ function ImagesPage() {
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
-        onOpenHelp={() => setHelpOpen(true)}
+        onOpenHelp={openHelp}
       />
 
       <main className="flex-1 flex flex-col min-w-0">
