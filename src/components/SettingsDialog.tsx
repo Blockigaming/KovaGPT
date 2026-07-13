@@ -303,10 +303,18 @@ export function SettingsDialog({
     }
   };
 
-  const handleRestore = () => {
-    toast.message("Checking for previous purchases...", {
-      description: "If we find an active subscription on your account, it will be restored automatically.",
-    });
+  const handleRestore = async () => {
+    try {
+      const s = await getSubscriptionSummary({ data: { environment: getStripeEnvironment() } });
+      setSubSummary(s);
+      if (s.tier === "free") {
+        toast.message("No active subscription found on this account.");
+      } else {
+        toast.success(`${s.tier === "pro" ? "Pro" : "Plus"} plan restored.`);
+      }
+    } catch {
+      toast.error("Couldn't check your subscription. Try again.");
+    }
   };
 
   // "Saved" indicator: whenever settings change while the dialog is open, show
