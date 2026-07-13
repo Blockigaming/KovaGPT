@@ -316,7 +316,6 @@ type CardProps = {
 };
 
 function PlanCard({
-  icon: Icon,
   name,
   price,
   period,
