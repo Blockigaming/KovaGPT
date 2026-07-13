@@ -36,6 +36,7 @@ function ProjectsPage() {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [invites, setInvites] = useState<PendingInvite[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -51,12 +52,14 @@ function ProjectsPage() {
   async function refresh() {
     if (!isSignedIn) return;
     setLoading(true);
+    setLoadError(null);
     try {
       const [p, i] = await Promise.all([fnList(), fnInvites()]);
       setProjects(p);
       setInvites(i);
     } catch (e) {
       console.error(e);
+      setLoadError(e instanceof Error ? e.message : "Could not load your projects.");
     } finally {
       setLoading(false);
     }
