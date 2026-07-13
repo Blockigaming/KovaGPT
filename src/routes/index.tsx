@@ -859,43 +859,49 @@ function KovaGPT() {
       </main>
 
 
-      <SettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        settings={settings}
-        onChange={setSettings}
-        onClearAll={() => setConversations([])}
-        onOpenHelp={openHelp}
-        initialTab={settingsTab}
-      />
+      <Suspense fallback={null}>
+        {settingsOpen && (
+          <SettingsDialog
+            open={settingsOpen}
+            onOpenChange={setSettingsOpen}
+            settings={settings}
+            onChange={setSettings}
+            onClearAll={() => setConversations([])}
+            onOpenHelp={openHelp}
+            initialTab={settingsTab}
+          />
+        )}
 
+        <OnboardingDialog />
 
-      <OnboardingDialog />
+        {shareChatId !== null && (
+          <ShareChatDialog
+            open={shareChatId !== null}
+            onOpenChange={(v) => !v && setShareChatId(null)}
+            conversation={conversations.find((c) => c.id === shareChatId) ?? null}
+          />
+        )}
 
+        {membersChatId !== null && (
+          <AddMembersDialog
+            open={membersChatId !== null}
+            chatId={membersChatId}
+            onOpenChange={(v) => !v && setMembersChatId(null)}
+          />
+        )}
 
-      <ShareChatDialog
-        open={shareChatId !== null}
-        onOpenChange={(v) => !v && setShareChatId(null)}
-        conversation={conversations.find((c) => c.id === shareChatId) ?? null}
-      />
-
-      <AddMembersDialog
-        open={membersChatId !== null}
-        chatId={membersChatId}
-        onOpenChange={(v) => !v && setMembersChatId(null)}
-      />
-
-      
+        {limitDialog.open && (
+          <LimitReachedDialog
+            open={limitDialog.open}
+            onOpenChange={(v) => setLimitDialog((d) => ({ ...d, open: v }))}
+            kind={limitDialog.kind}
+            message={limitDialog.message}
+            resetsAt={getUsage().resetsAt}
+          />
+        )}
+      </Suspense>
 
       <SignUpPrompt open={signupPromptOpen} onOpenChange={setSignupPromptOpen} />
-
-      <LimitReachedDialog
-        open={limitDialog.open}
-        onOpenChange={(v) => setLimitDialog((d) => ({ ...d, open: v }))}
-        kind={limitDialog.kind}
-        message={limitDialog.message}
-        resetsAt={getUsage().resetsAt}
-      />
 
 
       
