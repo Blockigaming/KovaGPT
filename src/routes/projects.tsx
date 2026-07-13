@@ -156,14 +156,25 @@ function ProjectsPage() {
         )}
 
         {loading ? (
-          <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />Loading projects…</div>
+          <SkeletonGrid count={6} minWidth={240} />
+        ) : loadError ? (
+          <ErrorState
+            title="Couldn't load your projects"
+            description={loadError}
+            onRetry={refresh}
+          />
         ) : projects.length === 0 ? (
-          <div className="text-center py-16 border-2 border-dashed rounded-2xl">
-            <FolderKanban className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-            <div className="text-lg font-medium mb-1">No projects yet</div>
-            <p className="text-sm text-muted-foreground mb-4">Create a project to collaborate on chats with your team.</p>
-            <Button onClick={() => setCreateOpen(true)}><Plus className="w-4 h-4 mr-1.5" />Create project</Button>
-          </div>
+          <EmptyState
+            icon={FolderKanban}
+            title="No projects yet"
+            description="Create a project to collaborate on chats, files, notes, and tasks with your team."
+            tip="Press N to start a new chat, or click New project to begin."
+            action={
+              <Button onClick={() => setCreateOpen(true)}>
+                <Plus className="w-4 h-4 mr-1.5" />Create project
+              </Button>
+            }
+          />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {projects.map((p) => (
