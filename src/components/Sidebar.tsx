@@ -79,72 +79,8 @@ export function Sidebar({
         />
       )}
 
-      {/* Collapsed rail (desktop only, when sidebar is closed) */}
-      {!open && (
-        <aside
-          className="hidden md:flex shrink-0 w-14 bg-sidebar text-sidebar-foreground border-r border-border/60 flex-col items-center py-3 gap-1"
-          aria-label="Collapsed sidebar"
-        >
-          <button
-            onClick={onToggle}
-            className="p-2 rounded-md hover:bg-sidebar-hover transition"
-            aria-label="Open sidebar"
-            title="Open sidebar"
-          >
-            <NovaLogo className="w-6 h-6" />
-          </button>
-          <button
-            onClick={onNew}
-            className="mt-2 p-2 rounded-md hover:bg-sidebar-hover transition"
-            aria-label="New chat"
-            title="New chat"
-          >
-            <PenLine className="w-[18px] h-[18px]" />
-          </button>
-          <button
-            onClick={onToggle}
-            className="p-2 rounded-md hover:bg-sidebar-hover transition"
-            aria-label="Search chats"
-            title="Search chats"
-          >
-            <Search className="w-[18px] h-[18px]" />
-          </button>
-          <button
-            onClick={onToggle}
-            className="p-2 rounded-md hover:bg-sidebar-hover transition"
-            aria-label="Pinned chats"
-            title="Pinned chats"
-          >
-            <Pin className="w-[18px] h-[18px]" />
-          </button>
-          <button
-            onClick={onToggle}
-            className="p-2 rounded-md hover:bg-sidebar-hover transition"
-            aria-label="Chats"
-            title="Chats"
-          >
-            <MessageCircle className="w-[18px] h-[18px]" />
-          </button>
+      {/* Collapsed rail removed — on desktop the sidebar fully disappears when closed. */}
 
-          <div className="mt-auto flex flex-col items-center gap-1">
-            {showSignedIn ? (
-              <div onClick={(e) => e.stopPropagation()}>
-                <UserButton />
-              </div>
-            ) : showSignedOut ? (
-              <SignInButton mode="modal">
-                <button
-                  className="h-8 w-8 rounded-full bg-foreground text-background text-xs font-semibold hover:opacity-90 transition"
-                  aria-label="Log in"
-                  title="Log in"
-                >
-                  In
-                </button>
-              </SignInButton>
-            ) : null}
-          </div>
-        </aside>
-      )}
 
       <aside
         style={{ width: open ? SIDEBAR_WIDTH : 0 }}
