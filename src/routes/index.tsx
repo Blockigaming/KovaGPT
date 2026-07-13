@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
-import { PanelLeft, Search } from "lucide-react";
+import { PanelLeft, Search, MessageSquareDashed, Check } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
