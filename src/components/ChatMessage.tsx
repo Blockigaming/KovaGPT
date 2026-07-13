@@ -445,6 +445,45 @@ function ChatMessageInner({
                 <Share2 className="w-4 h-4" />
               </button>
 
+              {email && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-foreground bg-accent hover:bg-accent/80 px-2.5 py-1.5 rounded-full transition-all hover:scale-[1.03] active:scale-95"
+                      title="Send this email"
+                      aria-label="Send this email"
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                      <span>Send email</span>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    <div className="px-2 py-1.5 text-[11px] text-muted-foreground">
+                      Body copied to clipboard. Add recipients in the compose window.
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        await openEmailCompose("gmail", email.subject, email.body);
+                        toast.success("Opening Gmail compose");
+                      }}
+                    >
+                      <Mail className="w-4 h-4 mr-2" /> Open in Gmail
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        await openEmailCompose("outlook", email.subject, email.body);
+                        toast.success("Opening Outlook compose");
+                      }}
+                    >
+                      <Mail className="w-4 h-4 mr-2" /> Open in Outlook
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+
+
+
 
               {/* Everything else lives behind the 3-dot menu */}
               <DropdownMenu>
