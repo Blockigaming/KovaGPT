@@ -1889,7 +1889,7 @@ function FamilyPinPanel() {
   if (aud === "none") return null;
 
   const savePin = () => {
-    if (!/^\d{4,8}$/.test(pin)) { toast.error("PIN must be 4–8 digits."); return; }
+    if (!/^\d{4,8}$/.test(pin)) { toast.error("PIN must be 4-8 digits."); return; }
     if (pin !== confirm) { toast.error("PINs don't match."); return; }
     try {
       localStorage.setItem("kova-family-pin", pin);
@@ -1901,7 +1901,7 @@ function FamilyPinPanel() {
   const changePin = () => {
     const saved = localStorage.getItem("kova-family-pin") || "";
     if (current !== saved) { toast.error("Current PIN is incorrect."); return; }
-    if (!/^\d{4,8}$/.test(pin)) { toast.error("New PIN must be 4–8 digits."); return; }
+    if (!/^\d{4,8}$/.test(pin)) { toast.error("New PIN must be 4-8 digits."); return; }
     if (pin !== confirm) { toast.error("PINs don't match."); return; }
     try {
       localStorage.setItem("kova-family-pin", pin);
@@ -1930,7 +1930,7 @@ function FamilyPinPanel() {
       </div>
       {!hasPin ? (
         <div className="grid sm:grid-cols-2 gap-2">
-          <Input inputMode="numeric" pattern="\d*" maxLength={8} placeholder="New PIN (4–8 digits)"
+          <Input inputMode="numeric" pattern="\d*" maxLength={8} placeholder="New PIN (4-8 digits)"
             value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} />
           <Input inputMode="numeric" pattern="\d*" maxLength={8} placeholder="Confirm PIN"
             value={confirm} onChange={(e) => setConfirm(e.target.value.replace(/\D/g, ""))} />

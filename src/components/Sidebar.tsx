@@ -121,7 +121,7 @@ export function Sidebar({
             </div>
           </div>
 
-          {/* Tight top fade – only the very top edge blends into the app background */}
+          {/* Tight top fade - only the very top edge blends into the app background */}
           <div
             aria-hidden="true"
             className="pointer-events-none absolute inset-x-0 top-0 z-10 h-4 bg-gradient-to-b from-sidebar to-transparent"
