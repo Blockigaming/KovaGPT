@@ -100,6 +100,9 @@ function KovaGPT() {
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
   const [mode, setMode] = useState<ModeId>("medium");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [tempChat, setTempChat] = useState(false);
+  const [tempChatConfirmed, setTempChatConfirmed] = useState(false);
+
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     if (typeof window === "undefined") return true;
     return window.innerWidth >= 768;
