@@ -383,7 +383,7 @@ export function SettingsDialog({
 
           {/* Desktop: grouped sidebar */}
           <TabsList className="hidden md:flex flex-col h-full w-64 shrink-0 overflow-y-auto items-stretch justify-start gap-4 p-3 bg-muted/40 border-r border-border rounded-none">
-            {TAB_GROUPS.map((group) => (
+            {visibleTabGroups.map((group) => (
               <div key={group.title} className="flex flex-col gap-0.5">
                 <div className="px-2 pt-1 pb-1.5">
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
