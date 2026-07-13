@@ -102,7 +102,14 @@ function ProjectsPage() {
   }
 
   if (!isLoaded) {
-    return <AppShell><div className="p-8 text-muted-foreground">Loading…</div></AppShell>;
+    return (
+      <AppShell>
+        <div className="max-w-5xl mx-auto p-6 md:p-8 w-full space-y-6">
+          <div className="h-8 w-40 rounded bg-muted animate-pulse" />
+          <SkeletonGrid count={6} minWidth={240} />
+        </div>
+      </AppShell>
+    );
   }
   if (!isSignedIn) {
     return (
