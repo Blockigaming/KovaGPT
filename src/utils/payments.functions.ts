@@ -92,12 +92,21 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         userId,
       });
 
-      // First month of Plus is free — give a 30-day trial to any user who
-      // has never had a subscription in this environment before.
-      const isPlusTrialEligible =
-        isRecurring &&
-        data.priceId === "plus_monthly" &&
-        !existing;
+      // Free-trial eligibility for Plus. A user is eligible only if:
+      //   1) they have no subscription row in this env, AND
+      //   2) the Stripe Customer we resolved has no subscription history
+      //      (so recreating a KovaGPT account with the same email/userId
+      //      doesn't grant a second trial).
+      let isPlusTrialEligible = isRecurring && data.priceId === "plus_monthly" && !existing;
+      if (isPlusTrialEligible) {
+        const prior = await stripe.subscriptions.list({
+          customer: customerId,
+          status: "all",
+          limit: 1,
+        });
+        if (prior.data.length > 0) isPlusTrialEligible = false;
+      }
+
 
       const sessionParams: Record<string, unknown> = {
         line_items: [{ price: stripePrice.id, quantity: data.quantity || 1 }],
@@ -123,3 +132,88 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       return { error: getStripeErrorMessage(error) };
     }
   });
+
+type PortalResult = { url: string } | { error: string };
+
+// Opens the Stripe Billing Portal so users can update payment methods,
+// cancel, or view invoices. The customer id is resolved from the most
+// recent subscription row for this user + env (RLS-scoped via `context.supabase`).
+export const createPortalSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { returnUrl?: string; environment: StripeEnv }) => data)
+  .handler(async ({ data, context }): Promise<PortalResult> => {
+    const { supabase, userId } = context;
+    const { data: sub } = await supabase
+      .from("subscriptions")
+      .select("stripe_customer_id")
+      .eq("user_id", userId)
+      .eq("environment", data.environment)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!sub?.stripe_customer_id) {
+      return { error: "No billing account found. Start a subscription first." };
+    }
+    try {
+      const stripe = createStripeClient(data.environment);
+      const portal = await stripe.billingPortal.sessions.create({
+        customer: sub.stripe_customer_id,
+        ...(data.returnUrl && { return_url: data.returnUrl }),
+      });
+      return { url: portal.url };
+    } catch (error) {
+      return { error: getStripeErrorMessage(error) };
+    }
+  });
+
+export type SubscriptionSummary = {
+  tier: "free" | "plus" | "pro";
+  status: string | null;
+  priceId: string | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+  trialing: boolean;
+  hasBillingAccount: boolean;
+};
+
+// Server-verified subscription summary for the current user. Reads through
+// the RLS-scoped supabase client on the middleware context, so users only
+// ever see their own row.
+export const getSubscriptionSummary = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { environment: StripeEnv }) => data)
+  .handler(async ({ data, context }): Promise<SubscriptionSummary> => {
+    const { supabase, userId } = context;
+    const { data: row } = await supabase
+      .from("subscriptions")
+      .select("stripe_customer_id, price_id, status, current_period_end, cancel_at_period_end")
+      .eq("user_id", userId)
+      .eq("environment", data.environment)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const priceId = row?.price_id ?? null;
+    const id = (priceId ?? "").toLowerCase();
+    const now = Date.now();
+    const end = row?.current_period_end ? new Date(row.current_period_end).getTime() : 0;
+    const active =
+      !!row &&
+      ((["active", "trialing", "past_due"].includes(row.status) &&
+        (!row.current_period_end || end > now)) ||
+        (row.status === "canceled" && end > now));
+    let tier: "free" | "plus" | "pro" = "free";
+    if (active) {
+      if (id.includes("pro")) tier = "pro";
+      else if (id.includes("plus")) tier = "plus";
+    }
+    return {
+      tier,
+      status: row?.status ?? null,
+      priceId,
+      currentPeriodEnd: row?.current_period_end ?? null,
+      cancelAtPeriodEnd: !!row?.cancel_at_period_end,
+      trialing: row?.status === "trialing",
+      hasBillingAccount: !!row?.stripe_customer_id,
+    };
+  });
+

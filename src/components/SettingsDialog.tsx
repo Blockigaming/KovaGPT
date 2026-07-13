@@ -59,6 +59,8 @@ import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { getMyDailyUsage, type DailyUsageDto } from "@/utils/usage.functions";
+import { createPortalSession, getSubscriptionSummary, type SubscriptionSummary } from "@/utils/payments.functions";
+import { getStripeEnvironment } from "@/lib/stripe";
 import { PersonalitySliders } from "@/components/PersonalitySliders";
 import { StorageDashboard } from "@/components/StorageDashboard";
 import { FamilySharingPanel } from "@/components/FamilySharingPanel";
@@ -228,6 +230,8 @@ export function SettingsDialog({
   const [tab, setTab] = useState<string>(initialTab ?? "general");
   const [usage, setUsage] = useState<DailyUsageDto | null>(null);
   const [usageLoading, setUsageLoading] = useState(false);
+  const [subSummary, setSubSummary] = useState<SubscriptionSummary | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
     if (!open || tab !== "subscription" || !loggedIn) return;
@@ -248,6 +252,32 @@ export function SettingsDialog({
     };
   }, [open, tab, loggedIn]);
 
+  useEffect(() => {
+    if (!open || tab !== "subscription" || !loggedIn) return;
+    let cancelled = false;
+    getSubscriptionSummary({ data: { environment: getStripeEnvironment() } })
+      .then((s) => { if (!cancelled) setSubSummary(s); })
+      .catch(() => { if (!cancelled) setSubSummary(null); });
+    return () => { cancelled = true; };
+  }, [open, tab, loggedIn]);
+
+  const handleManageBilling = async () => {
+    setPortalLoading(true);
+    try {
+      const res = await createPortalSession({
+        data: {
+          environment: getStripeEnvironment(),
+          returnUrl: `${window.location.origin}/`,
+        },
+      });
+      if ("error" in res) throw new Error(res.error);
+      window.open(res.url, "_blank", "noopener,noreferrer");
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't open the billing portal.");
+    } finally {
+      setPortalLoading(false);
+    }
+  };
   useEffect(() => {
     if (open && initialTab) setTab(initialTab);
   }, [open, initialTab]);
@@ -273,10 +303,18 @@ export function SettingsDialog({
     }
   };
 
-  const handleRestore = () => {
-    toast.message("Checking for previous purchases...", {
-      description: "If we find an active subscription on your account, it will be restored automatically.",
-    });
+  const handleRestore = async () => {
+    try {
+      const s = await getSubscriptionSummary({ data: { environment: getStripeEnvironment() } });
+      setSubSummary(s);
+      if (s.tier === "free") {
+        toast.message("No active subscription found on this account.");
+      } else {
+        toast.success(`${s.tier === "pro" ? "Pro" : "Plus"} plan restored.`);
+      }
+    } catch {
+      toast.error("Couldn't check your subscription. Try again.");
+    }
   };
 
   // "Saved" indicator: whenever settings change while the dialog is open, show
@@ -647,15 +685,29 @@ export function SettingsDialog({
               <div>
                 <div className="text-sm font-medium">Current plan</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  You're on the {tier === "free" ? "Free" : tier === "plus" ? "Plus" : "Pro"} plan.
+                  You're on the {tier === "free" ? "Free" : tier === "plus" ? "Plus" : "Pro"} plan
+                  {subSummary?.trialing ? " (free trial)" : ""}
+                  {subSummary?.status === "past_due" ? " — payment past due" : ""}
+                  {subSummary?.status === "unpaid" ? " — payment failed" : ""}
+                  {subSummary?.status === "incomplete" ? " — awaiting first payment" : ""}
+                  .
                 </div>
+                {subSummary?.currentPeriodEnd && (
+                  <div className="text-[11px] text-muted-foreground mt-1">
+                    {subSummary.trialing
+                      ? `Trial ends ${new Date(subSummary.currentPeriodEnd).toLocaleDateString()} — billing starts then unless you cancel.`
+                      : subSummary.cancelAtPeriodEnd
+                        ? `Cancels on ${new Date(subSummary.currentPeriodEnd).toLocaleDateString()}. You keep access until then.`
+                        : `Renews on ${new Date(subSummary.currentPeriodEnd).toLocaleDateString()}.`}
+                  </div>
+                )}
               </div>
               <Link
                 to="/pricing"
                 onClick={() => onOpenChange(false)}
                 className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition whitespace-nowrap"
               >
-                <Sparkles className="w-4 h-4" /> Upgrade
+                <Sparkles className="w-4 h-4" /> {tier === "free" ? "Start free month" : "Change plan"}
               </Link>
             </div>
 
@@ -696,18 +748,21 @@ export function SettingsDialog({
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <a
-                href="https://billing.stripe.com/p/login"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border border-border hover:bg-accent transition"
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleManageBilling}
+                disabled={portalLoading || !subSummary?.hasBillingAccount}
+                title={!subSummary?.hasBillingAccount ? "Start a subscription to manage billing" : undefined}
               >
-                <ExternalLink className="w-4 h-4" /> Manage subscription / billing portal
-              </a>
+                <ExternalLink className="w-4 h-4 mr-2" />
+                {portalLoading ? "Opening…" : "Manage subscription"}
+              </Button>
               <Button variant="outline" size="sm" onClick={handleRestore}>
                 <RefreshCw className="w-4 h-4 mr-2" /> Restore purchases
               </Button>
             </div>
+
 
             <div className="rounded-lg border border-border p-4 space-y-2">
               <div className="text-sm font-medium">Cancel subscription</div>
