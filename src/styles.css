@@ -460,3 +460,167 @@ html, body { overscroll-behavior-y: none; }
   }
 }
 
+
+/* ============================================================
+   Kova motion + brand utilities
+   ============================================================ */
+
+@keyframes kova-mesh-drift {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(3%, -2%, 0) scale(1.06); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+@keyframes kova-mesh-drift-alt {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(-4%, 3%, 0) scale(1.08); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+.kova-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  pointer-events: none;
+  overflow: hidden;
+}
+.kova-bg::before,
+.kova-bg::after {
+  content: "";
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  will-change: transform;
+}
+.kova-bg::before {
+  top: -12%;
+  left: -8%;
+  width: 55vw;
+  height: 55vw;
+  background: radial-gradient(circle at 30% 30%,
+    color-mix(in oklab, var(--kova-blue) 55%, transparent),
+    transparent 65%);
+  animation: kova-mesh-drift 22s ease-in-out infinite;
+  opacity: 0.32;
+}
+.kova-bg::after {
+  bottom: -18%;
+  right: -10%;
+  width: 60vw;
+  height: 60vw;
+  background: radial-gradient(circle at 70% 70%,
+    color-mix(in oklab, var(--kova-violet) 45%, transparent),
+    transparent 65%);
+  animation: kova-mesh-drift-alt 26s ease-in-out infinite;
+  opacity: 0.25;
+}
+.dark .kova-bg::before { opacity: 0.30; }
+.dark .kova-bg::after  { opacity: 0.24; }
+
+@keyframes kova-float {
+  0%   { transform: translateY(0); }
+  50%  { transform: translateY(-2.5px); }
+  100% { transform: translateY(0); }
+}
+.animate-kova-float {
+  animation: kova-float 4.5s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes kova-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--kova-blue) 55%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in oklab, var(--kova-blue) 0%, transparent);
+  }
+}
+.animate-kova-pulse {
+  animation: kova-pulse 2s ease-in-out infinite;
+  border-radius: 9999px;
+}
+
+@keyframes kova-fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-fade-up {
+  animation: kova-fade-up 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes kova-check-pop {
+  0%   { transform: scale(0.4) rotate(-8deg); opacity: 0; }
+  60%  { transform: scale(1.15) rotate(2deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+.animate-check-pop {
+  animation: kova-check-pop 340ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hover-elevate {
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 200ms ease;
+  will-change: transform;
+}
+.hover-elevate:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-elevate);
+}
+
+.kova-card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  box-shadow: var(--shadow-soft);
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 200ms ease;
+}
+.kova-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklab, var(--kova-blue) 35%, var(--color-border));
+  box-shadow: var(--shadow-elevate);
+}
+
+.text-gradient-kova {
+  background: var(--gradient-kova);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.bg-gradient-kova { background: var(--gradient-kova); }
+.bg-gradient-kova-soft { background: var(--gradient-kova-soft); }
+
+.kova-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--color-foreground) 6%, transparent);
+  border-radius: 0.5rem;
+}
+.kova-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--kova-blue) 18%, transparent),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: kova-shimmer 1.6s ease-in-out infinite;
+}
+@keyframes kova-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kova-bg::before,
+  .kova-bg::after,
+  .animate-kova-float,
+  .animate-kova-pulse,
+  .animate-fade-up,
+  .animate-check-pop,
+  .kova-skeleton::after { animation: none !important; }
+  .hover-elevate:hover { transform: none; }
+}
