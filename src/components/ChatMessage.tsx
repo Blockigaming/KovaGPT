@@ -25,6 +25,72 @@ function cleanAssistantText(text: string): string {
     .replace(/[\u2013\u2014]/g, "-");
 }
 
+// Detect email-like assistant output and extract subject + body so the
+// "Send email" button can prefill Gmail / Outlook compose windows. Handles
+// three shapes: an explicit "Subject: ..." line, a fenced block labelled
+// email, or a message that opens with a greeting like Hi/Hello/Dear.
+export function extractEmailFromMessage(
+  raw: string,
+): { subject: string; body: string } | null {
+  if (!raw) return null;
+  const text = raw.replace(/\r\n/g, "\n").trim();
+
+  // 1) "Subject: ..." on its own line (case-insensitive).
+  const subjectMatch = text.match(/^\s*subject\s*:\s*(.+)$/im);
+  if (subjectMatch) {
+    const subject = subjectMatch[1].trim().replace(/^["']|["']$/g, "");
+    const body = text
+      .replace(subjectMatch[0], "")
+      .replace(/^\s*to\s*:.*$/im, "")
+      .replace(/^\s*from\s*:.*$/im, "")
+      .replace(/^\s*cc\s*:.*$/im, "")
+      .replace(/^\s*bcc\s*:.*$/im, "")
+      .replace(/^```(?:email|markdown|text)?\n?/i, "")
+      .replace(/```\s*$/i, "")
+      .trim();
+    if (body.length > 10) return { subject, body };
+  }
+
+  // 2) Fenced ```email block.
+  const fenced = text.match(/```(?:email|eml)?\s*\n([\s\S]+?)```/i);
+  if (fenced) {
+    const inner = fenced[1].trim();
+    const nested = extractEmailFromMessage(inner);
+    if (nested) return nested;
+  }
+
+  // 3) Greeting heuristic - starts with Hi/Hello/Dear/Hey <Name>, and has
+  // enough body + a signoff to feel like a real email draft.
+  const greeting = text.match(/^(hi|hello|dear|hey|good\s+(morning|afternoon|evening))\b[^\n]{0,60},?\s*\n/i);
+  const signoff = /\n\s*(best|thanks|thank you|regards|sincerely|cheers|kind regards|warmly|talk soon)[,\s]/i.test(text);
+  if (greeting && signoff && text.length > 80) {
+    return { subject: "", body: text };
+  }
+
+  return null;
+}
+
+// Open a compose window in Gmail or Outlook prefilled with subject/body, and
+// copy the body to the clipboard as a fallback so the user can paste manually.
+export async function openEmailCompose(
+  provider: "gmail" | "outlook",
+  subject: string,
+  body: string,
+) {
+  try {
+    await navigator.clipboard.writeText(body);
+  } catch {
+    /* clipboard may be blocked; the compose URL still carries the body */
+  }
+  const su = encodeURIComponent(subject);
+  const bo = encodeURIComponent(body);
+  const url =
+    provider === "gmail"
+      ? `https://mail.google.com/mail/?view=cm&fs=1&tf=1&su=${su}&body=${bo}`
+      : `https://outlook.office.com/mail/deeplink/compose?subject=${su}&body=${bo}`;
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
 // Rotating idle statuses cycled while the assistant is streaming with no
 // tool activity, so users see progression rather than a static "Thinking".
 const IDLE_STATUSES = [
