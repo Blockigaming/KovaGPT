@@ -77,7 +77,7 @@ function ImagesPage() {
     window.addEventListener("kova-open-settings", h);
     return () => window.removeEventListener("kova-open-settings", h);
   }, []);
-  const [helpOpen, setHelpOpen] = useState(false);
+  const openHelp = () => navigate({ to: "/help" as never });
 
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
