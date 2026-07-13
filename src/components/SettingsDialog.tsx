@@ -57,7 +57,8 @@ import {
 } from "@/lib/connectors-catalog";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { getMyDailyUsage, type DailyUsageDto } from "@/utils/usage.functions";
 import { createPortalSession, getSubscriptionSummary, type SubscriptionSummary } from "@/utils/payments.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
@@ -294,6 +295,7 @@ export function SettingsDialog({
     onChange({ ...settings, mode: m });
   };
 
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const handleLogout = async () => {
     try {
       await clerk?.signOut();
@@ -302,6 +304,15 @@ export function SettingsDialog({
       toast.error("Couldn't sign out. Try again.");
     }
   };
+
+  const visibleTabGroups = useMemo<TabGroup[]>(() => {
+    const hideSubscription = tier === "plus" || tier === "pro";
+    if (!hideSubscription) return TAB_GROUPS;
+    return TAB_GROUPS.map((g) => ({
+      ...g,
+      tabs: g.tabs.filter((t) => t.v !== "subscription"),
+    })).filter((g) => g.tabs.length > 0);
+  }, [tier]);
 
   const handleRestore = async () => {
     try {
@@ -369,7 +380,7 @@ export function SettingsDialog({
         <Tabs value={tab} onValueChange={setTab} orientation="vertical" className="flex-1 overflow-hidden flex flex-col md:flex-row">
           {/* Mobile: horizontal scrolling section nav */}
           <TabsList className="md:hidden flex w-full overflow-x-auto scrollbar-none justify-start gap-1 p-2 bg-muted/40 border-b border-border rounded-none h-auto shrink-0">
-            {TAB_GROUPS.flatMap((g) => g.tabs).map(({ v, icon: Icon, label }) => (
+            {visibleTabGroups.flatMap((g) => g.tabs).map(({ v, icon: Icon, label }) => (
               <TabsTrigger
                 key={v}
                 value={v}
@@ -383,7 +394,7 @@ export function SettingsDialog({
 
           {/* Desktop: grouped sidebar */}
           <TabsList className="hidden md:flex flex-col h-full w-64 shrink-0 overflow-y-auto items-stretch justify-start gap-4 p-3 bg-muted/40 border-r border-border rounded-none">
-            {TAB_GROUPS.map((group) => (
+            {visibleTabGroups.map((group) => (
               <div key={group.title} className="flex flex-col gap-0.5">
                 <div className="px-2 pt-1 pb-1.5">
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
@@ -1101,7 +1112,7 @@ export function SettingsDialog({
             <p className="text-sm text-muted-foreground">
               You'll be signed out of KovaGPT on this device.
             </p>
-            <Button variant="destructive" size="sm" onClick={handleLogout}>
+            <Button variant="destructive" size="sm" onClick={() => setLogoutConfirmOpen(true)}>
               <LogOut className="w-4 h-4 mr-2" />
               Log out
             </Button>
@@ -1110,6 +1121,11 @@ export function SettingsDialog({
         </Tabs>
         )}
       </DialogContent>
+      <LogoutConfirmDialog
+        open={logoutConfirmOpen}
+        onOpenChange={setLogoutConfirmOpen}
+        onConfirm={handleLogout}
+      />
     </Dialog>
   );
 }

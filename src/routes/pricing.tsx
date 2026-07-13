@@ -303,7 +303,7 @@ function PricingPage() {
 }
 
 type CardProps = {
-  icon: React.ComponentType<{ className?: string }>;
+  icon?: React.ComponentType<{ className?: string }>;
   name: string;
   price: string;
   period: string;
@@ -316,7 +316,6 @@ type CardProps = {
 };
 
 function PlanCard({
-  icon: Icon,
   name,
   price,
   period,
@@ -338,8 +337,7 @@ function PlanCard({
           MOST POPULAR
         </div>
       )}
-      <div className="flex items-center gap-2 mb-2">
-        <Icon className="w-5 h-5" />
+      <div className="mb-2">
         <h2 className="text-xl font-semibold">{name}</h2>
       </div>
       <div className="flex items-baseline gap-1 mb-2">

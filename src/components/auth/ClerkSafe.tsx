@@ -12,6 +12,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthDialog } from "@/components/auth/AuthDialog";
+import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import {
   clearOAuthResponseFromUrl,
   completeOAuthSessionFromUrl,
@@ -301,43 +302,46 @@ export function UserButton(_props?: {
   const label =
     adapted?.fullName || adapted?.email || "Account";
   const initial = (adapted?.fullName || adapted?.email || "?").trim().charAt(0).toUpperCase();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   if (!user) return null;
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        className="inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-border bg-muted text-xs font-medium text-foreground hover:opacity-90"
-        aria-label="Account menu"
-      >
-        {avatar ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={avatar} alt={label} className="h-full w-full object-cover" />
-        ) : (
-          <span>{initial}</span>
-        )}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="truncate">{label}</DropdownMenuLabel>
-        {adapted?.email && adapted.email !== label && (
-          <DropdownMenuLabel className="truncate text-xs font-normal text-muted-foreground">
-            {adapted.email}
-          </DropdownMenuLabel>
-        )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={() => {
-            if (typeof window !== "undefined") {
-              window.dispatchEvent(new CustomEvent("kova-open-settings", { detail: { tab: "general" } }));
-            }
-          }}
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className="inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-border bg-muted text-xs font-medium text-foreground hover:opacity-90"
+          aria-label="Account menu"
         >
-          <UserIcon className="mr-2 h-4 w-4" /> Profile &amp; settings
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => signOut()}>
-          <LogOut className="mr-2 h-4 w-4" /> Sign out
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          {avatar ? (
+            <img src={avatar} alt={label} className="h-full w-full object-cover" />
+          ) : (
+            <span>{initial}</span>
+          )}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuLabel className="truncate">{label}</DropdownMenuLabel>
+          {adapted?.email && adapted.email !== label && (
+            <DropdownMenuLabel className="truncate text-xs font-normal text-muted-foreground">
+              {adapted.email}
+            </DropdownMenuLabel>
+          )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("kova-open-settings", { detail: { tab: "general" } }));
+              }
+            }}
+          >
+            <UserIcon className="mr-2 h-4 w-4" /> Profile &amp; settings
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setConfirmOpen(true); }}>
+            <LogOut className="mr-2 h-4 w-4" /> Sign out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <LogoutConfirmDialog open={confirmOpen} onOpenChange={setConfirmOpen} onConfirm={() => signOut()} />
+    </>
   );
 }
