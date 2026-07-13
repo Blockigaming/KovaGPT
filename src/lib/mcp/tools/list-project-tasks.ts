@@ -15,7 +15,7 @@ export default defineTool({
   description: "List tasks in one of the signed-in user's KovaGPT projects.",
   inputSchema: {
     project_id: z.string().uuid().describe("The project ID."),
-    status: z.enum(["todo", "in_progress", "done"]).optional().describe("Optional status filter."),
+    status: z.enum(["todo", "doing", "done"]).optional().describe("Optional status filter."),
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ project_id, status }, ctx) => {
@@ -24,9 +24,9 @@ export default defineTool({
     }
     let q = supabaseForUser(ctx)
       .from("project_tasks")
-      .select("id, project_id, title, description, status, due_date, created_at")
+      .select("id, project_id, title, status, due_date, position, completed_at, created_at")
       .eq("project_id", project_id)
-      .order("created_at", { ascending: false });
+      .order("position", { ascending: true });
     if (status) q = q.eq("status", status);
     const { data, error } = await q;
     if (error) return { content: [{ type: "text", text: error.message }], isError: true };
