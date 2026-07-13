@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { CONNECTOR_CATALOG, type ConnectorItem, type ConnectorCategory } from "@/lib/connectors-catalog";
-import { Link2, Search, Check, Loader2, Sparkles, ShieldAlert, Plug, AlertCircle, X } from "lucide-react";
+import { Link2, Search, Check, Loader2, Sparkles, ShieldAlert, Plug, AlertCircle, X, LogIn } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AppShell } from "@/components/AppShell";
 import { toast } from "sonner";
