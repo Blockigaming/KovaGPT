@@ -13,6 +13,7 @@ import { ArtifactEditor, detectArtifactKind, extractCodeBlocks } from "./Artifac
 import { ToolConfirmCard } from "./ToolConfirmCard";
 import type { PendingConfirm } from "@/lib/chat-store";
 import { LongResponseCard, shouldWrapAsDocument } from "./LongResponseCard";
+import { InfoChip, detectInfoChip } from "./InfoChip";
 
 // Strip numbered citation markers like [1], [2], [3] that web-search-augmented
 // answers sometimes still inject, and normalize en/em dashes to a hyphen
