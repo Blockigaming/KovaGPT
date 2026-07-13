@@ -84,7 +84,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
-        onOpenHelp={() => setHelpOpen(true)}
+        onOpenHelp={openHelp}
       />
 
       <div className="flex-1 min-w-0 flex flex-col overflow-y-auto">
