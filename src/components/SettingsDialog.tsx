@@ -230,6 +230,8 @@ export function SettingsDialog({
   const [tab, setTab] = useState<string>(initialTab ?? "general");
   const [usage, setUsage] = useState<DailyUsageDto | null>(null);
   const [usageLoading, setUsageLoading] = useState(false);
+  const [subSummary, setSubSummary] = useState<SubscriptionSummary | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
     if (!open || tab !== "subscription" || !loggedIn) return;
