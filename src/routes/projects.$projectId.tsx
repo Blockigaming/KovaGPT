@@ -351,7 +351,7 @@ function ChatsTab({ projectId, chats, canEdit, onRefresh }: {
         message="This removes the chat for everyone in the project."
         confirmLabel="Delete"
         destructive
-        onConfirm={() => confirmId && handleDelete(confirmId)}
+        onConfirm={async () => { if (confirmId) await handleDelete(confirmId); }}
       />
     </div>
   );
