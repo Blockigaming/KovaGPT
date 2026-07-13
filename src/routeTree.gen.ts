@@ -24,6 +24,7 @@ import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ModesRouteImport } from './routes/modes'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LibraryRouteImport } from './routes/library'
 import { Route as ImagesRouteImport } from './routes/images'
 import { Route as HelpRouteImport } from './routes/help'
@@ -51,6 +52,8 @@ import { Route as ApiTitleRouteImport } from './routes/api/title'
 import { Route as ApiMemoryRouteImport } from './routes/api/memory'
 import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as ApiPublicHelpSubmitRouteImport } from './routes/api/public/help-submit'
 import { Route as ApiGoogleStatusRouteImport } from './routes/api/google/status'
@@ -61,6 +64,8 @@ import { Route as ApiGoogleCallbackRouteImport } from './routes/api/google/callb
 import { Route as ApiGoogleCalendarRouteImport } from './routes/api/google/calendar'
 import { Route as ApiGoogleAuthRouteImport } from './routes/api/google/auth'
 import { Route as ApiChatConfirmRouteImport } from './routes/api/chat/confirm'
+import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ProjectsProjectIdChatChatIdRouteImport } from './routes/projects.$projectId.chat.$chatId'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
@@ -142,6 +147,11 @@ const PricingRoute = PricingRouteImport.update({
 const ModesRoute = ModesRouteImport.update({
   id: '/modes',
   path: '/modes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LibraryRoute = LibraryRouteImport.update({
@@ -281,6 +291,18 @@ const ApiChatRoute = ApiChatRouteImport.update({
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotmcpChar93ListToolsRoute =
+  Char91DotmcpChar93ListToolsRouteImport.update({
+    id: '/.mcp/list-tools',
+    path: '/.mcp/list-tools',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   id: '/lovable/email/suppression',
   path: '/lovable/email/suppression',
@@ -330,6 +352,17 @@ const ApiChatConfirmRoute = ApiChatConfirmRouteImport.update({
   id: '/confirm',
   path: '/confirm',
   getParentRoute: () => ApiChatRoute,
+} as any)
+const Char91DotmcpChar93InvokeToolToolRoute =
+  Char91DotmcpChar93InvokeToolToolRouteImport.update({
+    id: '/.mcp/invoke-tool/$tool',
+    path: '/.mcp/invoke-tool/$tool',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ProjectsProjectIdChatChatIdRoute =
   ProjectsProjectIdChatChatIdRouteImport.update({
@@ -388,6 +421,7 @@ export interface FileRoutesByFullPath {
   '/help': typeof HelpRoute
   '/images': typeof ImagesRoute
   '/library': typeof LibraryRoute
+  '/mcp': typeof McpRoute
   '/modes': typeof ModesRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -403,6 +437,8 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/write': typeof WriteRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/memory': typeof ApiMemoryRoute
@@ -415,6 +451,8 @@ export interface FileRoutesByFullPath {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/google/auth': typeof ApiGoogleAuthRoute
   '/api/google/calendar': typeof ApiGoogleCalendarRoute
@@ -449,6 +487,7 @@ export interface FileRoutesByTo {
   '/help': typeof HelpRoute
   '/images': typeof ImagesRoute
   '/library': typeof LibraryRoute
+  '/mcp': typeof McpRoute
   '/modes': typeof ModesRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -464,6 +503,8 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/write': typeof WriteRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/memory': typeof ApiMemoryRoute
@@ -476,6 +517,8 @@ export interface FileRoutesByTo {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/google/auth': typeof ApiGoogleAuthRoute
   '/api/google/calendar': typeof ApiGoogleCalendarRoute
@@ -511,6 +554,7 @@ export interface FileRoutesById {
   '/help': typeof HelpRoute
   '/images': typeof ImagesRoute
   '/library': typeof LibraryRoute
+  '/mcp': typeof McpRoute
   '/modes': typeof ModesRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -526,6 +570,8 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/write': typeof WriteRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/memory': typeof ApiMemoryRoute
@@ -538,6 +584,8 @@ export interface FileRoutesById {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/google/auth': typeof ApiGoogleAuthRoute
   '/api/google/calendar': typeof ApiGoogleCalendarRoute
@@ -574,6 +622,7 @@ export interface FileRouteTypes {
     | '/help'
     | '/images'
     | '/library'
+    | '/mcp'
     | '/modes'
     | '/pricing'
     | '/privacy'
@@ -589,6 +638,8 @@ export interface FileRouteTypes {
     | '/terms'
     | '/unsubscribe'
     | '/write'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/api/chat'
     | '/api/generate-image'
     | '/api/memory'
@@ -601,6 +652,8 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/projects/$projectId'
     | '/~oauth/callback'
+    | '/.lovable/oauth/consent'
+    | '/.mcp/invoke-tool/$tool'
     | '/api/chat/confirm'
     | '/api/google/auth'
     | '/api/google/calendar'
@@ -635,6 +688,7 @@ export interface FileRouteTypes {
     | '/help'
     | '/images'
     | '/library'
+    | '/mcp'
     | '/modes'
     | '/pricing'
     | '/privacy'
@@ -650,6 +704,8 @@ export interface FileRouteTypes {
     | '/terms'
     | '/unsubscribe'
     | '/write'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/api/chat'
     | '/api/generate-image'
     | '/api/memory'
@@ -662,6 +718,8 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/projects/$projectId'
     | '/~oauth/callback'
+    | '/.lovable/oauth/consent'
+    | '/.mcp/invoke-tool/$tool'
     | '/api/chat/confirm'
     | '/api/google/auth'
     | '/api/google/calendar'
@@ -696,6 +754,7 @@ export interface FileRouteTypes {
     | '/help'
     | '/images'
     | '/library'
+    | '/mcp'
     | '/modes'
     | '/pricing'
     | '/privacy'
@@ -711,6 +770,8 @@ export interface FileRouteTypes {
     | '/terms'
     | '/unsubscribe'
     | '/write'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/api/chat'
     | '/api/generate-image'
     | '/api/memory'
@@ -723,6 +784,8 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/projects/$projectId'
     | '/~oauth/callback'
+    | '/.lovable/oauth/consent'
+    | '/.mcp/invoke-tool/$tool'
     | '/api/chat/confirm'
     | '/api/google/auth'
     | '/api/google/calendar'
@@ -758,6 +821,7 @@ export interface RootRouteChildren {
   HelpRoute: typeof HelpRoute
   ImagesRoute: typeof ImagesRoute
   LibraryRoute: typeof LibraryRoute
+  McpRoute: typeof McpRoute
   ModesRoute: typeof ModesRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -773,6 +837,8 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
   WriteRoute: typeof WriteRoute
+  Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   ApiChatRoute: typeof ApiChatRouteWithChildren
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
   ApiMemoryRoute: typeof ApiMemoryRoute
@@ -784,6 +850,8 @@ export interface RootRouteChildren {
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   Char126oauthCallbackRoute: typeof Char126oauthCallbackRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
+  Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiGoogleAuthRoute: typeof ApiGoogleAuthRoute
   ApiGoogleCalendarRoute: typeof ApiGoogleCalendarRoute
   ApiGoogleCallbackRoute: typeof ApiGoogleCallbackRoute
@@ -906,6 +974,13 @@ declare module '@tanstack/react-router' {
       path: '/modes'
       fullPath: '/modes'
       preLoaderRoute: typeof ModesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/library': {
@@ -1097,6 +1172,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/list-tools': {
+      id: '/.mcp/list-tools'
+      path: '/.mcp/list-tools'
+      fullPath: '/.mcp/list-tools'
+      preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/suppression': {
       id: '/lovable/email/suppression'
       path: '/lovable/email/suppression'
@@ -1166,6 +1255,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/chat/confirm'
       preLoaderRoute: typeof ApiChatConfirmRouteImport
       parentRoute: typeof ApiChatRoute
+    }
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/projects/$projectId/chat/$chatId': {
       id: '/projects/$projectId/chat/$chatId'
@@ -1269,6 +1372,7 @@ const rootRouteChildren: RootRouteChildren = {
   HelpRoute: HelpRoute,
   ImagesRoute: ImagesRoute,
   LibraryRoute: LibraryRoute,
+  McpRoute: McpRoute,
   ModesRoute: ModesRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
@@ -1284,6 +1388,9 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   UnsubscribeRoute: UnsubscribeRoute,
   WriteRoute: WriteRoute,
+  Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
   ApiChatRoute: ApiChatRouteWithChildren,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
   ApiMemoryRoute: ApiMemoryRoute,
@@ -1295,6 +1402,8 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutReturnRoute: CheckoutReturnRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   Char126oauthCallbackRoute: Char126oauthCallbackRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
+  Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiGoogleAuthRoute: ApiGoogleAuthRoute,
   ApiGoogleCalendarRoute: ApiGoogleCalendarRoute,
   ApiGoogleCallbackRoute: ApiGoogleCallbackRoute,
@@ -1314,3 +1423,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
