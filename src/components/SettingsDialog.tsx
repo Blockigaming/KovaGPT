@@ -253,6 +253,33 @@ export function SettingsDialog({
   }, [open, tab, loggedIn]);
 
   useEffect(() => {
+    if (!open || tab !== "subscription" || !loggedIn) return;
+    let cancelled = false;
+    getSubscriptionSummary({ data: { environment: getStripeEnvironment() } })
+      .then((s) => { if (!cancelled) setSubSummary(s); })
+      .catch(() => { if (!cancelled) setSubSummary(null); });
+    return () => { cancelled = true; };
+  }, [open, tab, loggedIn]);
+
+  const handleManageBilling = async () => {
+    setPortalLoading(true);
+    try {
+      const res = await createPortalSession({
+        data: {
+          environment: getStripeEnvironment(),
+          returnUrl: `${window.location.origin}/`,
+        },
+      });
+      if ("error" in res) throw new Error(res.error);
+      window.open(res.url, "_blank", "noopener,noreferrer");
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't open the billing portal.");
+    } finally {
+      setPortalLoading(false);
+    }
+  };
+
+
     if (open && initialTab) setTab(initialTab);
   }, [open, initialTab]);
 
