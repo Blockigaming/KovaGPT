@@ -369,7 +369,7 @@ export function SettingsDialog({
         <Tabs value={tab} onValueChange={setTab} orientation="vertical" className="flex-1 overflow-hidden flex flex-col md:flex-row">
           {/* Mobile: horizontal scrolling section nav */}
           <TabsList className="md:hidden flex w-full overflow-x-auto scrollbar-none justify-start gap-1 p-2 bg-muted/40 border-b border-border rounded-none h-auto shrink-0">
-            {TAB_GROUPS.flatMap((g) => g.tabs).map(({ v, icon: Icon, label }) => (
+            {visibleTabGroups.flatMap((g) => g.tabs).map(({ v, icon: Icon, label }) => (
               <TabsTrigger
                 key={v}
                 value={v}
