@@ -1,6 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Copy, Check, ImageIcon, Loader2, Bookmark, FileEdit, Code2, Eye, MoreHorizontal, Share2, Pencil, RefreshCw, ThumbsUp, ThumbsDown, GitBranch, Globe } from "lucide-react";
+import { Copy, Check, ImageIcon, Loader2, Bookmark, FileEdit, Code2, Eye, MoreHorizontal, Share2, Pencil, RefreshCw, ThumbsUp, ThumbsDown, GitBranch, Globe, Mail } from "lucide-react";
 import { memo, useEffect, useMemo, useState } from "react";
 import type { Message } from "@/lib/chat-store";
 import { NovaLogo } from "./NovaLogo";
@@ -23,6 +23,72 @@ function cleanAssistantText(text: string): string {
     .replace(/\s?\[\d+\](?:\[\d+\])*/g, "")
     .replace(/\s?\[\d+(?:\s*,\s*\d+)+\]/g, "")
     .replace(/[\u2013\u2014]/g, "-");
+}
+
+// Detect email-like assistant output and extract subject + body so the
+// "Send email" button can prefill Gmail / Outlook compose windows. Handles
+// three shapes: an explicit "Subject: ..." line, a fenced block labelled
+// email, or a message that opens with a greeting like Hi/Hello/Dear.
+export function extractEmailFromMessage(
+  raw: string,
+): { subject: string; body: string } | null {
+  if (!raw) return null;
+  const text = raw.replace(/\r\n/g, "\n").trim();
+
+  // 1) "Subject: ..." on its own line (case-insensitive).
+  const subjectMatch = text.match(/^\s*subject\s*:\s*(.+)$/im);
+  if (subjectMatch) {
+    const subject = subjectMatch[1].trim().replace(/^["']|["']$/g, "");
+    const body = text
+      .replace(subjectMatch[0], "")
+      .replace(/^\s*to\s*:.*$/im, "")
+      .replace(/^\s*from\s*:.*$/im, "")
+      .replace(/^\s*cc\s*:.*$/im, "")
+      .replace(/^\s*bcc\s*:.*$/im, "")
+      .replace(/^```(?:email|markdown|text)?\n?/i, "")
+      .replace(/```\s*$/i, "")
+      .trim();
+    if (body.length > 10) return { subject, body };
+  }
+
+  // 2) Fenced ```email block.
+  const fenced = text.match(/```(?:email|eml)?\s*\n([\s\S]+?)```/i);
+  if (fenced) {
+    const inner = fenced[1].trim();
+    const nested = extractEmailFromMessage(inner);
+    if (nested) return nested;
+  }
+
+  // 3) Greeting heuristic - starts with Hi/Hello/Dear/Hey <Name>, and has
+  // enough body + a signoff to feel like a real email draft.
+  const greeting = text.match(/^(hi|hello|dear|hey|good\s+(morning|afternoon|evening))\b[^\n]{0,60},?\s*\n/i);
+  const signoff = /\n\s*(best|thanks|thank you|regards|sincerely|cheers|kind regards|warmly|talk soon)[,\s]/i.test(text);
+  if (greeting && signoff && text.length > 80) {
+    return { subject: "", body: text };
+  }
+
+  return null;
+}
+
+// Open a compose window in Gmail or Outlook prefilled with subject/body, and
+// copy the body to the clipboard as a fallback so the user can paste manually.
+export async function openEmailCompose(
+  provider: "gmail" | "outlook",
+  subject: string,
+  body: string,
+) {
+  try {
+    await navigator.clipboard.writeText(body);
+  } catch {
+    /* clipboard may be blocked; the compose URL still carries the body */
+  }
+  const su = encodeURIComponent(subject);
+  const bo = encodeURIComponent(body);
+  const url =
+    provider === "gmail"
+      ? `https://mail.google.com/mail/?view=cm&fs=1&tf=1&su=${su}&body=${bo}`
+      : `https://outlook.office.com/mail/deeplink/compose?subject=${su}&body=${bo}`;
+  window.open(url, "_blank", "noopener,noreferrer");
 }
 
 // Rotating idle statuses cycled while the assistant is streaming with no
@@ -139,6 +205,11 @@ function ChatMessageInner({
       ? blocks.map((b, i) => `// --- Block ${i + 1} ---\n${b}`).join("\n\n")
       : (blocks[0] ?? message.content);
   }, [artifactKind, message.content]);
+
+  const email = useMemo(
+    () => (isUser ? null : extractEmailFromMessage(message.content || "")),
+    [isUser, message.content],
+  );
 
   const copy = async () => {
     await navigator.clipboard.writeText(message.content);
@@ -373,6 +444,45 @@ function ChatMessageInner({
               >
                 <Share2 className="w-4 h-4" />
               </button>
+
+              {email && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-foreground bg-accent hover:bg-accent/80 px-2.5 py-1.5 rounded-full transition-all hover:scale-[1.03] active:scale-95"
+                      title="Send this email"
+                      aria-label="Send this email"
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                      <span>Send email</span>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    <div className="px-2 py-1.5 text-[11px] text-muted-foreground">
+                      Body copied to clipboard. Add recipients in the compose window.
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        await openEmailCompose("gmail", email.subject, email.body);
+                        toast.success("Opening Gmail compose");
+                      }}
+                    >
+                      <Mail className="w-4 h-4 mr-2" /> Open in Gmail
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        await openEmailCompose("outlook", email.subject, email.body);
+                        toast.success("Opening Outlook compose");
+                      }}
+                    >
+                      <Mail className="w-4 h-4 mr-2" /> Open in Outlook
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+
+
 
 
               {/* Everything else lives behind the 3-dot menu */}
