@@ -599,7 +599,7 @@ function KovaGPT() {
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
-        onOpenHelp={() => setHelpOpen(true)}
+        onOpenHelp={openHelp}
         onShare={(id) => {
           if (!isSignedIn) {
             toast.message("Sign in to share chats");
