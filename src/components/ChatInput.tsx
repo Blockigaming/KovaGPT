@@ -264,14 +264,8 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={triggerSubmit}
-                  style={
-                    actionColor.toLowerCase() === "#3b82f6"
-                      ? undefined
-                      : { backgroundColor: actionColor }
-                  }
-                  className={`w-9 h-9 rounded-full text-white flex items-center justify-center hover-elevate hover:opacity-95 transition duration-150 active:scale-90 active:opacity-70 ${
-                    actionColor.toLowerCase() === "#3b82f6" ? "bg-gradient-kova shadow-[var(--shadow-elevate)]" : ""
-                  } ${sendFlash ? "scale-90 opacity-80" : ""}`}
+                  style={{ backgroundColor: actionColor }}
+                  className={`w-9 h-9 rounded-full text-white flex items-center justify-center shadow-sm hover:opacity-90 transition duration-150 active:scale-90 active:opacity-70 ${sendFlash ? "scale-90 opacity-80" : ""}`}
                   aria-label="Send"
                 >
                   <ArrowUp className={`w-5 h-5 transition-transform duration-300 ${sendFlash ? "-translate-y-1.5 opacity-0" : ""}`} />
@@ -280,14 +274,8 @@ export function ChatInput({
                 <button
                   type="button"
                   disabled
-                  style={
-                    actionColor.toLowerCase() === "#3b82f6"
-                      ? undefined
-                      : { backgroundColor: actionColor }
-                  }
-                  className={`w-9 h-9 rounded-full text-white flex items-center justify-center opacity-30 cursor-not-allowed ${
-                    actionColor.toLowerCase() === "#3b82f6" ? "bg-gradient-kova" : ""
-                  }`}
+                  style={{ backgroundColor: actionColor }}
+                  className="w-9 h-9 rounded-full text-white flex items-center justify-center opacity-30 cursor-not-allowed"
                   aria-label="Send"
                 >
                   <ArrowUp className="w-5 h-5" />
