@@ -164,14 +164,16 @@ export function Sidebar({
             </div>
 
             <div className="flex items-center gap-1 shrink-0 ml-auto">
-              <button
-                onClick={() => setSearchOpen((v) => !v)}
-                className="shrink-0 p-2 rounded-md transition-all duration-200 hover:bg-sidebar-hover hover:scale-110 active:scale-95"
-                aria-label="Search chats"
-                title="Search chats"
-              >
-                <Search className="w-[18px] h-[18px]" />
-              </button>
+              {conversations.length > 1 && (
+                <button
+                  onClick={() => setSearchOpen((v) => !v)}
+                  className="shrink-0 p-2 rounded-md transition-all duration-200 hover:bg-sidebar-hover hover:scale-110 active:scale-95"
+                  aria-label="Search chats"
+                  title="Search chats"
+                >
+                  <Search className="w-[18px] h-[18px]" />
+                </button>
+              )}
               <button
                 onClick={onToggle}
                 className="shrink-0 p-2 rounded-md transition-all duration-200 hover:bg-sidebar-hover hover:scale-110 active:scale-95"
