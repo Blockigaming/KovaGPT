@@ -89,6 +89,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       />
 
       <div className="flex-1 min-w-0 flex flex-col overflow-y-auto">
+        <OfflineBanner />
         {!sidebarOpen && (
           <button
             onClick={() => setSidebarOpen(true)}
@@ -98,7 +99,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <PanelLeft className="w-4 h-4" />
           </button>
         )}
-        {children}
+        <AppErrorBoundary>{children}</AppErrorBoundary>
       </div>
 
       {/* Mobile floating actions */}
