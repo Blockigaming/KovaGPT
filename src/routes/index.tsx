@@ -686,7 +686,15 @@ function KovaGPT() {
 
 
 
-          <div className="ml-auto flex items-center gap-2">
+          {/* AI status: live indicator to the right of the KovaGPT mark while streaming */}
+          <div className="flex items-center min-w-0 flex-1">
+            <AIStatus
+              streaming={isStreaming}
+              message={active?.messages[active.messages.length - 1]}
+            />
+          </div>
+
+          <div className="ml-auto flex items-center gap-2 shrink-0">
             {!isLoaded ? null : isSignedIn ? (
               <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
             ) : (
