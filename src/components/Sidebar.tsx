@@ -213,7 +213,7 @@ export function Sidebar({
               onClick={onNew}
               className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] hover:bg-sidebar-hover transition active:scale-[0.98]"
             >
-              <Plus className="w-[18px] h-[18px] shrink-0" />
+              <SquarePen className="w-[18px] h-[18px] shrink-0" />
               <span>New chat</span>
             </button>
             <Link to="/library" className={navItemClass(isOn("/library"))}>
@@ -234,7 +234,7 @@ export function Sidebar({
             </Link>
             <Link to="/images" className={navItemClass(isOn("/images"))}>
               <ActiveBar on={isOn("/images")} />
-              <Wand2 className="w-[18px] h-[18px] shrink-0" />
+              <ImageIcon className="w-[18px] h-[18px] shrink-0" />
               <span className="truncate">Images</span>
             </Link>
             {showSignedIn && (
