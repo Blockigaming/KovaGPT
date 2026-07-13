@@ -617,15 +617,8 @@ export function SettingsDialog({
           </TabsContent>
 
           {/* LIBRARY */}
-          <TabsContent value="library" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
-            {!loggedIn ? (
-              <SignInGate label="Library" />
-            ) : (
-              <LibraryPanel />
-            )}
-          </TabsContent>
+          {/* Library and Finances tabs intentionally removed from Settings. */}
 
-          {/* Finances tab intentionally removed from Settings. */}
 
 
 
