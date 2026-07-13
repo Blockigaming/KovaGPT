@@ -210,14 +210,12 @@ function ImagesPage() {
                         "relative w-[128px] h-[176px] rounded-2xl overflow-hidden ring-1 ring-border/60 bg-gradient-to-br transition-transform duration-200 group-hover:scale-[1.03] group-hover:ring-foreground/30",
                         p.gradient,
                       )}>
-                        <img
-                          src={`https://picsum.photos/seed/${p.seed}/256/352`}
-                          alt=""
-                          loading="lazy"
-                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                          className="absolute inset-0 w-full h-full object-cover mix-blend-luminosity opacity-90"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                        <div className="absolute inset-x-0 bottom-0 p-2">
+                          <div className="text-[11px] font-medium text-white/95 leading-tight line-clamp-3 drop-shadow-sm">
+                            {p.label}
+                          </div>
+                        </div>
                       </div>
                       <span className="mt-2 text-sm text-foreground/90 group-hover:text-foreground text-center w-full">{p.label}</span>
                     </button>
