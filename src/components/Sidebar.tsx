@@ -65,7 +65,7 @@ export function Sidebar({
     on ? (
       <span
         aria-hidden="true"
-        className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-blue-500"
+        className="absolute left-0 top-1/2 -translate-y-1/2 h-7 w-[5px] rounded-r-full bg-blue-500"
       />
     ) : null;
 
