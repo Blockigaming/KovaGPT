@@ -38,12 +38,12 @@ export function ModelSelector({
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`flex items-center gap-2 rounded-xl border border-border/60 bg-background hover:bg-accent transition shadow-sm ${
-          compact ? "px-3.5 py-1.5 text-sm" : "px-4 py-2 text-base font-medium"
+        className={`flex items-center gap-1.5 rounded-full bg-accent/70 hover:bg-accent transition ${
+          compact ? "px-3 py-1 text-xs" : "px-3.5 py-1.5 text-sm"
         }`}
       >
         <span className="text-foreground font-medium">{current.label}</span>
-        <ChevronDown className="w-4 h-4 text-muted-foreground" />
+        <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
       </button>
       {open && (
         <div className="absolute bottom-full mb-2 left-0 w-52 rounded-xl border border-border bg-popover shadow-xl z-50 p-1 animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-1 duration-150">
