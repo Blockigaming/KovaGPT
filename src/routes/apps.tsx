@@ -343,8 +343,9 @@ function AppsPage() {
   const otherList = filtered.filter((c) => !isConnected(c.id) && !RECOMMENDED_IDS.has(c.id));
 
   const stateOf = (id: string): ConnState => {
+    if (!isSignedIn) return "idle";
     if (isGoogleId(id)) {
-      if (googleLoading) return "connecting";
+      if (googleLoading) return "idle";
       if (connecting[id]) return "connecting";
       if (failed[id]) return "failed";
       return isGoogleConnected(id) ? "connected" : "idle";
