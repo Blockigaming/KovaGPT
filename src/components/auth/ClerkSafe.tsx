@@ -12,6 +12,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthDialog } from "@/components/auth/AuthDialog";
+import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import {
   clearOAuthResponseFromUrl,
   completeOAuthSessionFromUrl,
