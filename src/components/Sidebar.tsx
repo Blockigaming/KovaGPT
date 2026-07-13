@@ -121,10 +121,10 @@ export function Sidebar({
             </div>
           </div>
 
-          {/* Tight top fade – only the very top edge blends into the app background */}
+          {/* Mobile-only top fade into the app background */}
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-0 z-10 h-4 bg-gradient-to-b from-sidebar to-transparent"
+            className="md:hidden pointer-events-none absolute inset-x-0 top-0 z-10 h-6 bg-gradient-to-b from-background to-transparent"
           />
 
 
