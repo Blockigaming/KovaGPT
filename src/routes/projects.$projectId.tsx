@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -10,30 +10,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  ArrowLeft, Loader2, Users, Mail, Plus, Trash2, Send, MessageCircle, Settings as SettingsIcon, LogOut, Crown, Save,
+  ArrowLeft, Loader2, Users, Mail, Plus, Trash2, Send, MessageCircle,
+  Settings as SettingsIcon, Crown, Save, FileText, CheckSquare, Image as ImageIcon,
+  Brain, Activity, Search, Archive, ArchiveRestore, Upload, Download, GripVertical,
+  Calendar, StickyNote, X,
 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import {
-  getProject,
-  updateProject,
-  deleteProject,
-  listMembers,
-  removeMember,
-  updateMemberRole,
-  listInvites,
-  inviteMember,
-  revokeInvite,
-  listProjectChats,
-  createProjectChat,
-  getProjectChat,
-  saveProjectChat,
-  deleteProjectChat,
-  type ProjectDetail,
-  type ProjectMember,
-  type ProjectInvite,
-  type ProjectChatSummary,
-  type ProjectChatMessage,
+  getProject, updateProject, deleteProject,
+  listMembers, removeMember, updateMemberRole,
+  listInvites, inviteMember, revokeInvite,
+  listProjectChats, createProjectChat, deleteProjectChat,
+  type ProjectDetail, type ProjectMember, type ProjectInvite, type ProjectChatSummary,
 } from "@/lib/projects.functions";
+import {
+  getProjectNote, saveProjectNote,
+  listTasks, createTask, updateTask, deleteTask, reorderTasks,
+  listFiles, registerUploadedFile, deleteProjectFile,
+  listMemory, addMemory, deleteMemory,
+  listActivity, setProjectArchived, searchProject,
+  type ProjectTask, type ProjectFile, type ProjectMemoryItem,
+  type ProjectActivity, type SearchResult,
+} from "@/lib/project-workspace.functions";
 
 export const Route = createFileRoute("/projects/$projectId")({
   component: ProjectDetailPage,
@@ -50,24 +49,21 @@ function ProjectDetailPage() {
   const { isSignedIn, isLoaded } = useUser();
   const navigate = useNavigate();
 
-  const [project, setProject] = useState<ProjectDetail | null>(null);
+  const [project, setProject] = useState<ProjectDetail & { archived_at?: string | null } | null>(null);
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [invites, setInvites] = useState<ProjectInvite[]>([]);
   const [chats, setChats] = useState<ProjectChatSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState("overview");
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const fnGet = useServerFn(getProject);
   const fnUpdate = useServerFn(updateProject);
   const fnDelete = useServerFn(deleteProject);
+  const fnArchive = useServerFn(setProjectArchived);
   const fnListMembers = useServerFn(listMembers);
-  const fnRemoveMember = useServerFn(removeMember);
-  const fnUpdateRole = useServerFn(updateMemberRole);
   const fnListInvites = useServerFn(listInvites);
-  const fnInvite = useServerFn(inviteMember);
-  const fnRevoke = useServerFn(revokeInvite);
   const fnListChats = useServerFn(listProjectChats);
-  const fnCreateChat = useServerFn(createProjectChat);
-  const fnDeleteChat = useServerFn(deleteProjectChat);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -78,16 +74,10 @@ function ProjectDetailPage() {
         fnListInvites({ data: { project_id: projectId } }),
         fnListChats({ data: { project_id: projectId } }),
       ]);
-      setProject(p);
-      setMembers(m);
-      setInvites(i);
-      setChats(c);
-    } catch (e) {
-      console.error(e);
-      toast.error("Failed to load project");
-    } finally {
-      setLoading(false);
-    }
+      setProject(p as never);
+      setMembers(m); setInvites(i); setChats(c);
+    } catch (e) { console.error(e); toast.error("Failed to load project"); }
+    finally { setLoading(false); }
   }, [projectId, fnGet, fnListMembers, fnListInvites, fnListChats]);
 
   useEffect(() => { if (isSignedIn) refresh(); }, [isSignedIn, refresh]);
@@ -103,33 +93,45 @@ function ProjectDetailPage() {
       </AppShell>
     );
   }
-  if (loading) {
+  if (loading || !project) {
     return <AppShell><div className="p-8 flex items-center gap-2 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />Loading project…</div></AppShell>;
-  }
-  if (!project) {
-    return (
-      <AppShell>
-        <div className="max-w-2xl mx-auto p-8 text-center">
-          <h1 className="text-xl font-semibold mb-2">Project not found</h1>
-          <p className="text-muted-foreground mb-4">You may not have access, or it was deleted.</p>
-          <Link to="/projects"><Button variant="outline"><ArrowLeft className="w-4 h-4 mr-1.5" />Back to Projects</Button></Link>
-        </div>
-      </AppShell>
-    );
   }
 
   const canEdit = project.role === "owner" || project.role === "editor";
   const isOwner = project.role === "owner";
+  const archived = !!project.archived_at;
+
+  async function toggleArchive() {
+    await fnArchive({ data: { id: projectId, archived: !archived } });
+    toast.success(archived ? "Project restored" : "Project archived");
+    await refresh();
+  }
 
   return (
     <AppShell>
-      <div className="max-w-5xl mx-auto p-6 md:p-8 w-full">
-        <Link to="/projects" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 mb-4">
-          <ArrowLeft className="w-4 h-4" />All projects
-        </Link>
+      <div className="max-w-6xl mx-auto p-4 md:p-8 w-full">
+        <div className="flex items-center justify-between gap-2 mb-4">
+          <Link to="/projects" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5">
+            <ArrowLeft className="w-4 h-4" />All projects
+          </Link>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setSearchOpen(true)}>
+              <Search className="w-4 h-4 mr-1.5" />Search
+            </Button>
+            {isOwner && (
+              <Button variant="outline" size="sm" onClick={toggleArchive}>
+                {archived ? <><ArchiveRestore className="w-4 h-4 mr-1.5" />Restore</> : <><Archive className="w-4 h-4 mr-1.5" />Archive</>}
+              </Button>
+            )}
+          </div>
+        </div>
+
         <div className="flex items-start justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-semibold">{project.name}</h1>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl font-semibold truncate">{project.name}</h1>
+              {archived && <span className="text-xs uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/15 text-amber-600">Archived</span>}
+            </div>
             {project.description && <p className="text-muted-foreground mt-1">{project.description}</p>}
             <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
               <span className="uppercase tracking-wider px-2 py-0.5 rounded bg-muted">{project.role}</span>
@@ -138,51 +140,54 @@ function ProjectDetailPage() {
           </div>
         </div>
 
-        <Tabs defaultValue="chats">
-          <TabsList>
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList className="flex-wrap h-auto">
+            <TabsTrigger value="overview"><Activity className="w-4 h-4 mr-1.5" />Overview</TabsTrigger>
             <TabsTrigger value="chats"><MessageCircle className="w-4 h-4 mr-1.5" />Chats</TabsTrigger>
+            <TabsTrigger value="files"><FileText className="w-4 h-4 mr-1.5" />Files</TabsTrigger>
+            <TabsTrigger value="images"><ImageIcon className="w-4 h-4 mr-1.5" />Images</TabsTrigger>
+            <TabsTrigger value="notes"><StickyNote className="w-4 h-4 mr-1.5" />Notes</TabsTrigger>
+            <TabsTrigger value="tasks"><CheckSquare className="w-4 h-4 mr-1.5" />Tasks</TabsTrigger>
+            <TabsTrigger value="memory"><Brain className="w-4 h-4 mr-1.5" />Memory</TabsTrigger>
             <TabsTrigger value="members"><Users className="w-4 h-4 mr-1.5" />Members</TabsTrigger>
             {isOwner && <TabsTrigger value="settings"><SettingsIcon className="w-4 h-4 mr-1.5" />Settings</TabsTrigger>}
           </TabsList>
 
-          <TabsContent value="chats" className="mt-4">
-            <ChatsTab
-              projectId={projectId}
-              chats={chats}
-              canEdit={canEdit}
-              onCreate={async (title) => {
-                const { id } = await fnCreateChat({ data: { project_id: projectId, title, messages: [] } });
-                await refresh();
-                navigate({ to: "/projects/$projectId/chat/$chatId", params: { projectId, chatId: id } });
-              }}
-              onDelete={async (id) => {
-                await fnDeleteChat({ data: { id } });
-                setChats((prev) => prev.filter((c) => c.id !== id));
-              }}
-            />
+          <TabsContent value="overview" className="mt-4">
+            <OverviewTab projectId={projectId} onJump={(k) => setTab(k)} />
           </TabsContent>
-
+          <TabsContent value="chats" className="mt-4">
+            <ChatsTab projectId={projectId} chats={chats} canEdit={canEdit} onRefresh={refresh} />
+          </TabsContent>
+          <TabsContent value="files" className="mt-4">
+            <FilesTab projectId={projectId} canEdit={canEdit} kind="file" />
+          </TabsContent>
+          <TabsContent value="images" className="mt-4">
+            <FilesTab projectId={projectId} canEdit={canEdit} kind="image" />
+          </TabsContent>
+          <TabsContent value="notes" className="mt-4">
+            <NotesTab projectId={projectId} canEdit={canEdit} />
+          </TabsContent>
+          <TabsContent value="tasks" className="mt-4">
+            <TasksTab projectId={projectId} canEdit={canEdit} />
+          </TabsContent>
+          <TabsContent value="memory" className="mt-4">
+            <MemoryTab projectId={projectId} canEdit={canEdit} />
+          </TabsContent>
           <TabsContent value="members" className="mt-4">
             <MembersTab
-              members={members}
-              invites={invites}
-              currentUserId={project.owner_id}
-              isOwner={isOwner}
+              members={members} invites={invites} isOwner={isOwner}
               onInvite={async (email, role) => {
-                const res = await fnInvite({ data: { project_id: projectId, email, role } });
-                toast.success(res.auto_accepted ? "Member added" : "Invitation sent");
+                const fn = (await import("@/lib/projects.functions")).inviteMember;
+                const res = await useServerFnDirect(fn, { data: { project_id: projectId, email, role } });
+                toast.success((res as { auto_accepted: boolean }).auto_accepted ? "Member added" : "Invitation sent");
                 await refresh();
               }}
-              onRevoke={async (id) => { await fnRevoke({ data: { id } }); await refresh(); }}
-              onRemove={async (userId) => { await fnRemoveMember({ data: { project_id: projectId, user_id: userId } }); await refresh(); }}
-              onChangeRole={async (userId, role) => { await fnUpdateRole({ data: { project_id: projectId, user_id: userId, role } }); await refresh(); }}
-              onLeave={async () => {
-                await fnRemoveMember({ data: { project_id: projectId, user_id: (members.find(m => m.role !== "owner")?.user_id) ?? "" } }).catch(() => {});
-                navigate({ to: "/projects" });
-              }}
+              onRevoke={async (id) => { await useServerFnDirect((await import("@/lib/projects.functions")).revokeInvite, { data: { id } }); await refresh(); }}
+              onRemove={async (userId) => { await useServerFnDirect((await import("@/lib/projects.functions")).removeMember, { data: { project_id: projectId, user_id: userId } }); await refresh(); }}
+              onChangeRole={async (userId, role) => { await useServerFnDirect((await import("@/lib/projects.functions")).updateMemberRole, { data: { project_id: projectId, user_id: userId, role } }); await refresh(); }}
             />
           </TabsContent>
-
           {isOwner && (
             <TabsContent value="settings" className="mt-4">
               <SettingsTab
@@ -198,20 +203,112 @@ function ProjectDetailPage() {
           )}
         </Tabs>
       </div>
+
+      <SearchDialog projectId={projectId} open={searchOpen} onOpenChange={setSearchOpen} onNavigate={(kind) => { setSearchOpen(false); setTab(kind === "chat" ? "chats" : kind === "file" ? "files" : kind); }} />
     </AppShell>
   );
 }
 
-function ChatsTab({ projectId, chats, canEdit, onCreate, onDelete }: {
-  projectId: string;
-  chats: ProjectChatSummary[];
-  canEdit: boolean;
-  onCreate: (title: string) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
+// Helper for one-off server fn calls inside callbacks
+function useServerFnDirect<T>(fn: unknown, arg: unknown): Promise<T> {
+  return (fn as (a: unknown) => Promise<T>)(arg);
+}
+
+// ===================== OVERVIEW =====================
+function OverviewTab({ projectId, onJump }: { projectId: string; onJump: (k: string) => void }) {
+  const fnAct = useServerFn(listActivity);
+  const fnTasks = useServerFn(listTasks);
+  const [activity, setActivity] = useState<ProjectActivity[]>([]);
+  const [tasks, setTasks] = useState<ProjectTask[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const [a, t] = await Promise.all([
+          fnAct({ data: { project_id: projectId } }),
+          fnTasks({ data: { project_id: projectId } }),
+        ]);
+        setActivity(a); setTasks(t);
+      } finally { setLoading(false); }
+    })();
+  }, [projectId, fnAct, fnTasks]);
+
+  const openTasks = tasks.filter((t) => t.status !== "done").slice(0, 5);
+  const doneCount = tasks.filter((t) => t.status === "done").length;
+
+  if (loading) return <div className="text-muted-foreground text-sm flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Loading…</div>;
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      <div className="border rounded-xl p-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="font-medium flex items-center gap-2"><CheckSquare className="w-4 h-4" />Open tasks</div>
+          <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => onJump("tasks")}>View all</button>
+        </div>
+        {openTasks.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No open tasks. {doneCount > 0 && `${doneCount} completed.`}</p>
+        ) : (
+          <ul className="space-y-2">
+            {openTasks.map((t) => (
+              <li key={t.id} className="text-sm flex items-center justify-between gap-2">
+                <span className="truncate">{t.title}</span>
+                {t.due_date && <span className="text-xs text-muted-foreground shrink-0">{t.due_date}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className="border rounded-xl p-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="font-medium flex items-center gap-2"><Activity className="w-4 h-4" />Recent activity</div>
+        </div>
+        {activity.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No activity yet. Get started by adding chats, files, or tasks.</p>
+        ) : (
+          <ul className="space-y-2 max-h-80 overflow-auto">
+            {activity.slice(0, 20).map((a) => (
+              <li key={a.id} className="text-sm">
+                <div>{a.summary}</div>
+                <div className="text-xs text-muted-foreground">{new Date(a.created_at).toLocaleString()}</div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ===================== CHATS =====================
+function ChatsTab({ projectId, chats, canEdit, onRefresh }: {
+  projectId: string; chats: ProjectChatSummary[]; canEdit: boolean; onRefresh: () => Promise<void>;
 }) {
+  const navigate = useNavigate();
+  const fnCreate = useServerFn(createProjectChat);
+  const fnDelete = useServerFn(deleteProjectChat);
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("New chat");
   const [busy, setBusy] = useState(false);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+
+  async function handleCreate() {
+    if (!title.trim()) return;
+    setBusy(true);
+    try {
+      const { id } = await fnCreate({ data: { project_id: projectId, title: title.trim(), messages: [] } });
+      setCreating(false);
+      await onRefresh();
+      navigate({ to: "/projects/$projectId/chat/$chatId", params: { projectId, chatId: id } });
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+    finally { setBusy(false); }
+  }
+  async function handleDelete(id: string) {
+    await fnDelete({ data: { id } });
+    setConfirmId(null);
+    await onRefresh();
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
@@ -219,11 +316,7 @@ function ChatsTab({ projectId, chats, canEdit, onCreate, onDelete }: {
         {canEdit && <Button size="sm" onClick={() => setCreating(true)}><Plus className="w-4 h-4 mr-1.5" />New chat</Button>}
       </div>
       {chats.length === 0 ? (
-        <div className="text-center py-12 border-2 border-dashed rounded-2xl">
-          <MessageCircle className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
-          <div className="font-medium mb-1">No chats yet</div>
-          <p className="text-sm text-muted-foreground">Chats you create here are visible to everyone in this project.</p>
-        </div>
+        <EmptyState icon={<MessageCircle className="w-10 h-10" />} title="No chats yet" hint="Chats you create here are visible to everyone in this project." />
       ) : (
         <div className="border rounded-xl divide-y">
           {chats.map((c) => (
@@ -232,11 +325,7 @@ function ChatsTab({ projectId, chats, canEdit, onCreate, onDelete }: {
                 <div className="font-medium truncate">{c.title}</div>
                 <div className="text-xs text-muted-foreground">Updated {new Date(c.updated_at).toLocaleString()}</div>
               </Link>
-              {canEdit && (
-                <Button variant="ghost" size="icon" onClick={() => onDelete(c.id)} aria-label="Delete chat">
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              )}
+              {canEdit && <Button variant="ghost" size="icon" onClick={() => setConfirmId(c.id)} aria-label="Delete chat"><Trash2 className="w-4 h-4" /></Button>}
             </div>
           ))}
         </div>
@@ -248,29 +337,497 @@ function ChatsTab({ projectId, chats, canEdit, onCreate, onDelete }: {
           <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} autoFocus />
           <DialogFooter>
             <Button variant="ghost" onClick={() => setCreating(false)}>Cancel</Button>
-            <Button disabled={busy || !title.trim()} onClick={async () => {
-              setBusy(true);
-              try { await onCreate(title.trim()); setCreating(false); }
-              catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
-              finally { setBusy(false); }
-            }}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create"}</Button>
+            <Button disabled={busy || !title.trim()} onClick={handleCreate}>
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!confirmId}
+        onOpenChange={(v) => !v && setConfirmId(null)}
+        title="Delete this chat?"
+        message="This removes the chat for everyone in the project."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={async () => { if (confirmId) await handleDelete(confirmId); }}
+      />
     </div>
   );
 }
 
+// ===================== FILES / IMAGES =====================
+function FilesTab({ projectId, canEdit, kind }: { projectId: string; canEdit: boolean; kind: "file" | "image" }) {
+  const fnList = useServerFn(listFiles);
+  const fnRegister = useServerFn(registerUploadedFile);
+  const fnDelete = useServerFn(deleteProjectFile);
+  const [items, setItems] = useState<ProjectFile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try { setItems(await fnList({ data: { project_id: projectId, kind } })); }
+    catch (e) { console.error(e); toast.error("Failed to load"); }
+    finally { setLoading(false); }
+  }, [projectId, kind, fnList]);
+  useEffect(() => { refresh(); }, [refresh]);
+
+  async function handleFiles(files: FileList | null) {
+    if (!files || files.length === 0 || !canEdit) return;
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        const isImg = file.type.startsWith("image/");
+        if (kind === "image" && !isImg) { toast.error(`${file.name} is not an image`); continue; }
+        const cleanName = file.name.replace(/[^\w.\- ]+/g, "_");
+        const path = `${projectId}/${Date.now()}-${cleanName}`;
+        const { error: upErr } = await supabase.storage.from("project-files").upload(path, file, {
+          contentType: file.type || "application/octet-stream",
+          upsert: false,
+        });
+        if (upErr) { toast.error(`${file.name}: ${upErr.message}`); continue; }
+        await fnRegister({
+          data: {
+            project_id: projectId,
+            name: file.name,
+            storage_path: path,
+            mime_type: file.type || null,
+            size_bytes: file.size,
+            kind: isImg && kind === "image" ? "image" : "file",
+          },
+        });
+      }
+      await refresh();
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-sm text-muted-foreground">{items.length} {kind === "image" ? "image" : "file"}{items.length === 1 ? "" : "s"}</div>
+        {canEdit && (
+          <div>
+            <input
+              ref={inputRef} type="file" multiple hidden
+              accept={kind === "image" ? "image/*" : undefined}
+              onChange={(e) => handleFiles(e.target.files)}
+            />
+            <Button size="sm" onClick={() => inputRef.current?.click()} disabled={uploading}>
+              {uploading ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Upload className="w-4 h-4 mr-1.5" />}
+              Upload
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {canEdit && (
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
+          className={`mb-4 border-2 border-dashed rounded-xl p-4 text-center text-sm transition ${dragOver ? "border-primary bg-primary/5" : "border-border text-muted-foreground"}`}
+        >
+          Drag {kind === "image" ? "images" : "files"} here to upload
+        </div>
+      )}
+
+      {loading ? (
+        <div className="text-muted-foreground text-sm flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Loading…</div>
+      ) : items.length === 0 ? (
+        <EmptyState
+          icon={kind === "image" ? <ImageIcon className="w-10 h-10" /> : <FileText className="w-10 h-10" />}
+          title={kind === "image" ? "No images yet" : "No files yet"}
+          hint={canEdit ? `Upload ${kind === "image" ? "images" : "files"} to share with your project.` : "Nothing has been uploaded here yet."}
+        />
+      ) : kind === "image" ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {items.map((f) => (
+            <div key={f.id} className="group relative border rounded-xl overflow-hidden aspect-square bg-muted">
+              {f.signed_url ? (
+                <img src={f.signed_url} alt={f.name} className="w-full h-full object-cover" loading="lazy" />
+              ) : <div className="w-full h-full flex items-center justify-center text-muted-foreground"><ImageIcon className="w-8 h-8" /></div>}
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 text-xs text-white truncate">{f.name}</div>
+              {canEdit && (
+                <button
+                  onClick={() => setConfirmId(f.id)}
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-background/90 rounded p-1 transition"
+                  aria-label="Delete image"
+                ><Trash2 className="w-3.5 h-3.5" /></button>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="border rounded-xl divide-y">
+          {items.map((f) => (
+            <div key={f.id} className="flex items-center justify-between p-3 gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="font-medium truncate">{f.name}</div>
+                <div className="text-xs text-muted-foreground">{humanBytes(f.size_bytes)} · {new Date(f.created_at).toLocaleDateString()}</div>
+              </div>
+              <div className="flex items-center gap-1">
+                {f.signed_url && (
+                  <a href={f.signed_url} target="_blank" rel="noreferrer" className="p-2 rounded hover:bg-accent" aria-label="Download"><Download className="w-4 h-4" /></a>
+                )}
+                {canEdit && <Button variant="ghost" size="icon" onClick={() => setConfirmId(f.id)} aria-label="Delete"><Trash2 className="w-4 h-4" /></Button>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={!!confirmId}
+        onOpenChange={(v) => !v && setConfirmId(null)}
+        title={`Delete this ${kind}?`}
+        message="This can't be undone."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={async () => {
+          if (!confirmId) return;
+          await fnDelete({ data: { id: confirmId } });
+          setConfirmId(null);
+          await refresh();
+        }}
+      />
+    </div>
+  );
+}
+
+function humanBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 ** 2) return `${(n / 1024).toFixed(1)} KB`;
+  if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(1)} MB`;
+  return `${(n / 1024 ** 3).toFixed(2)} GB`;
+}
+
+// ===================== NOTES =====================
+function NotesTab({ projectId, canEdit }: { projectId: string; canEdit: boolean }) {
+  const fnGet = useServerFn(getProjectNote);
+  const fnSave = useServerFn(saveProjectNote);
+  const [content, setContent] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initialized = useRef(false);
+
+  useEffect(() => {
+    (async () => {
+      const n = await fnGet({ data: { project_id: projectId } });
+      setContent(n.content);
+      initialized.current = true;
+      setLoading(false);
+    })();
+  }, [projectId, fnGet]);
+
+  useEffect(() => {
+    if (!initialized.current || !canEdit) return;
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(async () => {
+      setSaving(true);
+      try {
+        await fnSave({ data: { project_id: projectId, content } });
+        setSaved(true);
+        if (savedTimer.current) clearTimeout(savedTimer.current);
+        savedTimer.current = setTimeout(() => setSaved(false), 1500);
+      } catch (e) { toast.error(e instanceof Error ? e.message : "Save failed"); }
+      finally { setSaving(false); }
+    }, 800);
+    return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
+  }, [content, canEdit, projectId, fnSave]);
+
+  if (loading) return <div className="text-muted-foreground text-sm flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Loading notes…</div>;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-sm text-muted-foreground">Shared notes for this project.</div>
+        <div className="text-xs text-muted-foreground h-4">
+          {saving ? <span className="flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />Saving…</span> : saved ? "Saved" : ""}
+        </div>
+      </div>
+      <Textarea
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+        placeholder={canEdit ? "Start writing shared notes for the team…" : "No notes yet."}
+        rows={16}
+        disabled={!canEdit}
+        className="font-mono text-sm"
+      />
+    </div>
+  );
+}
+
+// ===================== TASKS =====================
+function TasksTab({ projectId, canEdit }: { projectId: string; canEdit: boolean }) {
+  const fnList = useServerFn(listTasks);
+  const fnCreate = useServerFn(createTask);
+  const fnUpdate = useServerFn(updateTask);
+  const fnDelete = useServerFn(deleteTask);
+  const fnReorder = useServerFn(reorderTasks);
+  const [tasks, setTasks] = useState<ProjectTask[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [title, setTitle] = useState("");
+  const [due, setDue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const dragId = useRef<string | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try { setTasks(await fnList({ data: { project_id: projectId } })); }
+    finally { setLoading(false); }
+  }, [projectId, fnList]);
+  useEffect(() => { refresh(); }, [refresh]);
+
+  async function handleAdd() {
+    if (!title.trim() || !canEdit) return;
+    setBusy(true);
+    try {
+      await fnCreate({ data: { project_id: projectId, title: title.trim(), due_date: due || null } });
+      setTitle(""); setDue("");
+      await refresh();
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+    finally { setBusy(false); }
+  }
+
+  async function cycleStatus(t: ProjectTask) {
+    if (!canEdit) return;
+    const next = t.status === "todo" ? "doing" : t.status === "doing" ? "done" : "todo";
+    await fnUpdate({ data: { id: t.id, status: next } });
+    await refresh();
+  }
+
+  function onDragStart(id: string) { dragId.current = id; }
+  async function onDrop(overId: string) {
+    if (!canEdit || !dragId.current || dragId.current === overId) return;
+    const from = tasks.findIndex((t) => t.id === dragId.current);
+    const to = tasks.findIndex((t) => t.id === overId);
+    if (from < 0 || to < 0) return;
+    const next = tasks.slice();
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    setTasks(next);
+    dragId.current = null;
+    await fnReorder({ data: { project_id: projectId, order: next.map((t) => t.id) } });
+  }
+
+  const grouped = useMemo(() => ({
+    todo: tasks.filter((t) => t.status === "todo"),
+    doing: tasks.filter((t) => t.status === "doing"),
+    done: tasks.filter((t) => t.status === "done"),
+  }), [tasks]);
+
+  if (loading) return <div className="text-muted-foreground text-sm flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Loading tasks…</div>;
+
+  return (
+    <div>
+      {canEdit && (
+        <div className="border rounded-xl p-3 mb-4 flex flex-col sm:flex-row gap-2">
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="New task…" onKeyDown={(e) => e.key === "Enter" && handleAdd()} className="flex-1" />
+          <div className="flex gap-2">
+            <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="w-40" />
+            <Button onClick={handleAdd} disabled={busy || !title.trim()}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4 mr-1.5" />Add</>}</Button>
+          </div>
+        </div>
+      )}
+      {tasks.length === 0 ? (
+        <EmptyState icon={<CheckSquare className="w-10 h-10" />} title="No tasks yet" hint={canEdit ? "Add your first task above." : "Nothing to do here yet."} />
+      ) : (
+        <div className="space-y-4">
+          {(["todo", "doing", "done"] as const).map((k) => (
+            <div key={k}>
+              <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">{k === "todo" ? "To do" : k === "doing" ? "In progress" : "Done"} · {grouped[k].length}</div>
+              <div className="border rounded-xl divide-y">
+                {grouped[k].length === 0 && <div className="p-3 text-sm text-muted-foreground">Nothing here.</div>}
+                {grouped[k].map((t) => (
+                  <div
+                    key={t.id}
+                    draggable={canEdit}
+                    onDragStart={() => onDragStart(t.id)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={() => onDrop(t.id)}
+                    className="flex items-center gap-2 p-3 group"
+                  >
+                    {canEdit && <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab active:cursor-grabbing" />}
+                    <button
+                      onClick={() => cycleStatus(t)}
+                      disabled={!canEdit}
+                      aria-label="Cycle status"
+                      className={`w-5 h-5 rounded border-2 shrink-0 flex items-center justify-center ${t.status === "done" ? "bg-primary border-primary text-primary-foreground" : t.status === "doing" ? "border-amber-500" : "border-muted-foreground/40"}`}
+                    >{t.status === "done" && <CheckSquare className="w-3 h-3" />}</button>
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-sm truncate ${t.status === "done" ? "line-through text-muted-foreground" : ""}`}>{t.title}</div>
+                      {t.due_date && (
+                        <div className="text-xs text-muted-foreground flex items-center gap-1"><Calendar className="w-3 h-3" />{t.due_date}</div>
+                      )}
+                    </div>
+                    {canEdit && (
+                      <Button variant="ghost" size="icon" onClick={() => setConfirmId(t.id)} aria-label="Delete task">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <ConfirmDialog
+        open={!!confirmId}
+        onOpenChange={(v) => !v && setConfirmId(null)}
+        title="Delete this task?"
+        message="This can't be undone."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={async () => { if (!confirmId) return; await fnDelete({ data: { id: confirmId } }); setConfirmId(null); await refresh(); }}
+      />
+    </div>
+  );
+}
+
+// ===================== MEMORY =====================
+function MemoryTab({ projectId, canEdit }: { projectId: string; canEdit: boolean }) {
+  const fnList = useServerFn(listMemory);
+  const fnAdd = useServerFn(addMemory);
+  const fnDelete = useServerFn(deleteMemory);
+  const [items, setItems] = useState<ProjectMemoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [content, setContent] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try { setItems(await fnList({ data: { project_id: projectId } })); }
+    finally { setLoading(false); }
+  }, [projectId, fnList]);
+  useEffect(() => { refresh(); }, [refresh]);
+
+  async function handleAdd() {
+    if (!content.trim() || !canEdit) return;
+    setBusy(true);
+    try {
+      await fnAdd({ data: { project_id: projectId, content: content.trim() } });
+      setContent("");
+      await refresh();
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div>
+      <p className="text-sm text-muted-foreground mb-3">Persistent facts and preferences the team wants remembered in this project.</p>
+      {canEdit && (
+        <div className="border rounded-xl p-3 mb-4 flex flex-col sm:flex-row gap-2">
+          <Input value={content} onChange={(e) => setContent(e.target.value)} placeholder="e.g. Our brand voice is warm and concise." maxLength={2000} onKeyDown={(e) => e.key === "Enter" && handleAdd()} className="flex-1" />
+          <Button onClick={handleAdd} disabled={busy || !content.trim()}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Plus className="w-4 h-4 mr-1.5" />Add</>}</Button>
+        </div>
+      )}
+      {loading ? (
+        <div className="text-muted-foreground text-sm flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Loading…</div>
+      ) : items.length === 0 ? (
+        <EmptyState icon={<Brain className="w-10 h-10" />} title="No memories yet" hint={canEdit ? "Add facts the team wants persisted." : "Nothing here yet."} />
+      ) : (
+        <div className="border rounded-xl divide-y">
+          {items.map((m) => (
+            <div key={m.id} className="p-3 flex items-start gap-2">
+              <div className="flex-1 text-sm">{m.content}</div>
+              {canEdit && <Button variant="ghost" size="icon" onClick={() => setConfirmId(m.id)} aria-label="Delete memory"><X className="w-4 h-4" /></Button>}
+            </div>
+          ))}
+        </div>
+      )}
+      <ConfirmDialog
+        open={!!confirmId}
+        onOpenChange={(v) => !v && setConfirmId(null)}
+        title="Remove this memory?"
+        message="The team will no longer see this note in project memory."
+        confirmLabel="Remove"
+        destructive
+        onConfirm={async () => { if (!confirmId) return; await fnDelete({ data: { id: confirmId } }); setConfirmId(null); await refresh(); }}
+      />
+    </div>
+  );
+}
+
+// ===================== SEARCH =====================
+function SearchDialog({ projectId, open, onOpenChange, onNavigate }: {
+  projectId: string; open: boolean; onOpenChange: (v: boolean) => void;
+  onNavigate: (kind: SearchResult["kind"]) => void;
+}) {
+  const fn = useServerFn(searchProject);
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open) { setQ(""); setResults([]); return; }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || q.trim().length < 2) { setResults([]); return; }
+    const t = setTimeout(async () => {
+      setLoading(true);
+      try { setResults(await fn({ data: { project_id: projectId, q: q.trim() } })); }
+      catch { /* ignore */ }
+      finally { setLoading(false); }
+    }, 250);
+    return () => clearTimeout(t);
+  }, [q, open, projectId, fn]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader><DialogTitle>Search this project</DialogTitle></DialogHeader>
+        <Input autoFocus placeholder="Search chats, notes, tasks, files, memory…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <div className="max-h-80 overflow-auto -mx-1">
+          {loading ? (
+            <div className="p-4 text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" />Searching…</div>
+          ) : q.trim().length < 2 ? (
+            <div className="p-4 text-sm text-muted-foreground">Type at least 2 characters.</div>
+          ) : results.length === 0 ? (
+            <div className="p-4 text-sm text-muted-foreground">No matches.</div>
+          ) : (
+            <ul className="divide-y">
+              {results.map((r) => (
+                <li key={`${r.kind}:${r.id}`}>
+                  <button
+                    className="w-full text-left px-3 py-2 hover:bg-accent transition"
+                    onClick={() => onNavigate(r.kind)}
+                  >
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground">{r.kind}</div>
+                    <div className="font-medium truncate">{r.title}</div>
+                    {r.snippet && <div className="text-xs text-muted-foreground truncate">{r.snippet}</div>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ===================== MEMBERS =====================
 function MembersTab({ members, invites, isOwner, onInvite, onRevoke, onRemove, onChangeRole }: {
-  members: ProjectMember[];
-  invites: ProjectInvite[];
-  currentUserId: string;
-  isOwner: boolean;
+  members: ProjectMember[]; invites: ProjectInvite[]; isOwner: boolean;
   onInvite: (email: string, role: "editor" | "viewer") => Promise<void>;
   onRevoke: (id: string) => Promise<void>;
   onRemove: (userId: string) => Promise<void>;
   onChangeRole: (userId: string, role: "editor" | "viewer") => Promise<void>;
-  onLeave: () => Promise<void>;
 }) {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"editor" | "viewer">("editor");
@@ -303,9 +860,6 @@ function MembersTab({ members, invites, isOwner, onInvite, onRevoke, onRemove, o
               {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4 mr-1.5" />Invite</>}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            If they already have a KovaGPT account, they'll be added immediately. Otherwise the invite waits on their Projects page.
-          </p>
         </div>
       )}
 
@@ -358,6 +912,7 @@ function MembersTab({ members, invites, isOwner, onInvite, onRevoke, onRemove, o
   );
 }
 
+// ===================== SETTINGS =====================
 function SettingsTab({ project, onSave, onDelete }: {
   project: ProjectDetail;
   onSave: (patch: { name?: string; description?: string | null; system_prompt?: string | null }) => Promise<void>;
@@ -380,20 +935,15 @@ function SettingsTab({ project, onSave, onDelete }: {
           <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} maxLength={1000} />
         </div>
         <div>
-          <label className="text-sm font-medium mb-1 block">Project instructions</label>
+          <label className="text-sm font-medium mb-1 block">Custom instructions</label>
           <Textarea value={systemPrompt} onChange={(e) => setSystemPrompt(e.target.value)} rows={5} maxLength={4000}
-            placeholder="Persistent context added to every chat in this project (e.g. brand voice, product details)." />
+            placeholder="Persistent instructions added to every chat in this project (e.g. brand voice, product details)." />
         </div>
         <div>
           <Button disabled={saving} onClick={async () => {
             setSaving(true);
-            try {
-              await onSave({
-                name: name.trim(),
-                description: description.trim() || null,
-                system_prompt: systemPrompt.trim() || null,
-              });
-            } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+            try { await onSave({ name: name.trim(), description: description.trim() || null, system_prompt: systemPrompt.trim() || null }); }
+            catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
             finally { setSaving(false); }
           }}>
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-1.5" />Save changes</>}
@@ -403,20 +953,56 @@ function SettingsTab({ project, onSave, onDelete }: {
 
       <div className="border border-destructive/40 rounded-xl p-4">
         <div className="text-sm font-medium text-destructive mb-1">Danger zone</div>
-        <p className="text-xs text-muted-foreground mb-3">Deleting a project removes it for every member and permanently deletes all its chats.</p>
+        <p className="text-xs text-muted-foreground mb-3">Deleting a project removes it for every member and permanently deletes all its chats, files, tasks, and notes.</p>
         <Button variant="destructive" size="sm" onClick={() => setConfirming(true)}><Trash2 className="w-4 h-4 mr-1.5" />Delete project</Button>
       </div>
 
-      <Dialog open={confirming} onOpenChange={setConfirming}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Delete "{project.name}"?</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">This can't be undone. All project chats and memberships will be removed.</p>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setConfirming(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={async () => { setConfirming(false); await onDelete(); }}>Delete</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title={`Delete “${project.name}”?`}
+        message="This can't be undone. All project chats, files, tasks, notes, and memberships will be removed."
+        confirmLabel="Delete forever"
+        destructive
+        onConfirm={onDelete}
+      />
     </div>
+  );
+}
+
+// ===================== SHARED HELPERS =====================
+function EmptyState({ icon, title, hint }: { icon: React.ReactNode; title: string; hint: string }) {
+  return (
+    <div className="text-center py-12 border-2 border-dashed rounded-2xl">
+      <div className="mx-auto mb-3 text-muted-foreground flex justify-center">{icon}</div>
+      <div className="font-medium mb-1">{title}</div>
+      <p className="text-sm text-muted-foreground">{hint}</p>
+    </div>
+  );
+}
+
+function ConfirmDialog({ open, onOpenChange, title, message, confirmLabel, destructive, onConfirm }: {
+  open: boolean; onOpenChange: (v: boolean) => void;
+  title: string; message: string; confirmLabel: string; destructive?: boolean;
+  onConfirm: () => Promise<void> | void;
+}) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
+        <p className="text-sm text-muted-foreground">{message}</p>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>Cancel</Button>
+          <Button
+            variant={destructive ? "destructive" : "default"}
+            disabled={busy}
+            onClick={async () => { setBusy(true); try { await onConfirm(); } finally { setBusy(false); } }}
+          >
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : confirmLabel}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
