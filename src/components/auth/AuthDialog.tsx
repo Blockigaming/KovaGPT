@@ -1,16 +1,21 @@
-import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useEffect, useRef, useState } from "react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, LogIn, UserPlus } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowLeft, Mail, Sparkles } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { ForgotPasswordDialog } from "@/components/auth/ForgotPasswordDialog";
 import { getOAuthRedirectUri, rememberPostAuthRedirect } from "@/lib/oauth-session";
+import { cn } from "@/lib/utils";
 
 type Mode = "sign-in" | "sign-up";
+type Step = "identify" | "password" | "magic-sent";
+
+function isValidEmail(v: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+}
 
 export function AuthDialog({
   open,
@@ -22,36 +27,62 @@ export function AuthDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const [mode, setMode] = useState<Mode>(initialMode);
+  const [step, setStep] = useState<Step>("identify");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [phone] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
+  const [emailTouched, setEmailTouched] = useState(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
-    if (!open || loading) return;
+    if (!open) return;
     setMode(initialMode);
+    setStep("identify");
     setEmail("");
     setPassword("");
     setFullName("");
-    // phone intentionally not reset; field removed from signup
-  }, [initialMode, open, loading]);
+    setShowPassword(false);
+    setEmailTouched(false);
+  }, [initialMode, open]);
 
   const isSignUp = mode === "sign-up";
+  const emailValid = isValidEmail(email);
 
-  const handleEmail = async (e: React.FormEvent) => {
+  const guard = () => {
+    if (submittingRef.current) return false;
+    submittingRef.current = true;
+    setLoading(true);
+    return true;
+  };
+  const release = () => {
+    submittingRef.current = false;
+    setLoading(false);
+  };
+
+  const handleContinueEmail = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      toast.error("Please enter your email and password.");
+    setEmailTouched(true);
+    if (!emailValid) {
+      toast.error("Please enter a valid email address.");
       return;
     }
-    setLoading(true);
+    setStep("password");
+  };
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!password || password.length < 6) {
+      toast.error("Password must be at least 6 characters.");
+      return;
+    }
+    if (!guard()) return;
     try {
       if (isSignUp) {
         const metadata: Record<string, string> = {};
         if (fullName.trim()) metadata.full_name = fullName.trim();
-        if (phone.trim()) metadata.phone = phone.trim();
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -63,15 +94,14 @@ export function AuthDialog({
         if (error) throw error;
         const isRepeat = !!data.user && (data.user.identities?.length ?? 0) === 0;
         if (isRepeat) {
-          const { error: resendErr } = await supabase.auth.resend({
+          await supabase.auth.resend({
             type: "signup",
             email,
             options: { emailRedirectTo: `${window.location.origin}/` },
           });
-          if (resendErr) throw resendErr;
-          toast.success("Already registered - we resent the verification link. Check your inbox & spam.");
+          toast.success("Already registered — we resent the verification link.");
         } else {
-          toast.success("Verification email sent. Check your inbox & spam folder.");
+          toast.success("Verification email sent. Check your inbox.");
         }
         onOpenChange(false);
       } else {
@@ -83,215 +113,308 @@ export function AuthDialog({
               email,
               options: { emailRedirectTo: `${window.location.origin}/` },
             });
-            toast.error("Please verify your email - we just resent the link.");
+            toast.error("Please verify your email — we just resent the link.");
+            return;
+          }
+          if (/invalid.*credentials|invalid_grant/i.test(error.message)) {
+            toast.error("That email and password don't match.");
             return;
           }
           throw error;
         }
-        toast.success("Welcome back!");
+        toast.success("Welcome back.");
         onOpenChange(false);
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error("[KovaAuth] Email sign in failed.", err);
       toast.error(msg);
     } finally {
-      setLoading(false);
+      release();
     }
   };
 
   const handleGoogle = async () => {
-    setLoading(true);
+    if (!guard()) return;
     try {
       rememberPostAuthRedirect();
       const { lovable } = await import("@/integrations/lovable");
-      const redirectUri = getOAuthRedirectUri();
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: redirectUri,
+        redirect_uri: getOAuthRedirectUri(),
       });
       if (result.error) {
-        const msg = result.error instanceof Error ? result.error.message : String(result.error);
-        console.error("[KovaAuth] Google sign in failed before redirect.", result.error);
-        toast.error(msg);
-        setLoading(false);
+        toast.error(result.error instanceof Error ? result.error.message : String(result.error));
+        release();
         return;
       }
       if (result.redirected) return;
-      toast.success("Signed in.");
       onOpenChange(false);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error("[KovaAuth] Google sign in failed.", err);
-      toast.error(msg);
+      toast.error(err instanceof Error ? err.message : String(err));
     } finally {
-      setLoading(false);
+      release();
+    }
+  };
+
+  const handleMagicLink = async () => {
+    if (!emailValid) {
+      setEmailTouched(true);
+      toast.error("Enter a valid email first.");
+      return;
+    }
+    if (!guard()) return;
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: `${window.location.origin}/` },
+      });
+      if (error) throw error;
+      setStep("magic-sent");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    } finally {
+      release();
     }
   };
 
   return (
     <>
-    {loading && (
-      <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-4 bg-background/95 backdrop-blur-sm">
-        <div className="relative w-16 h-16 rounded-2xl bg-foreground/5 ring-1 ring-border flex items-center justify-center">
-          <NovaLogo className="w-10 h-10" />
-        </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          <span>Signing you in to KovaGPT…</span>
-        </div>
-      </div>
-    )}
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <div className="flex justify-center mb-3">
-            <div className="relative w-14 h-14 rounded-2xl bg-foreground/5 ring-1 ring-border flex items-center justify-center">
-              <NovaLogo className="w-8 h-8" />
-              <span className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-foreground flex items-center justify-center shadow-sm">
-                {isSignUp ? (
-                  <UserPlus className="w-3.5 h-3.5 text-background" />
-                ) : (
-                  <LogIn className="w-3.5 h-3.5 text-background" />
-                )}
-              </span>
-            </div>
-          </div>
-          <div className="flex justify-center mb-1">
-            <span className="text-[10px] uppercase tracking-[0.18em] font-semibold px-2 py-0.5 rounded-full bg-foreground/5 text-muted-foreground">
-              {isSignUp ? "Create account" : "Sign in"}
-            </span>
-          </div>
-          <DialogTitle className="text-center text-xl">
-            {isSignUp ? "Join KovaGPT" : "Welcome back to KovaGPT"}
-          </DialogTitle>
-          <DialogDescription className="text-center">
-            {isSignUp
-              ? "Create your free KovaGPT account to save chats, settings, and history."
-              : "Sign in to your KovaGPT account to continue where you left off."}
-          </DialogDescription>
-        </DialogHeader>
-
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          onClick={handleGoogle}
-          disabled={loading}
-          aria-busy={loading}
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent
+          className="sm:max-w-[440px] p-0 border-0 bg-transparent shadow-none overflow-visible"
+          hideClose
         >
-          {loading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.25 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.07H2.18A10.97 10.97 0 0 0 1 12c0 1.77.42 3.45 1.18 4.93l3.66-2.83z"/>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/>
-            </svg>
-          )}
-          {loading ? "Redirecting to Google…" : isSignUp ? "Sign up with Google" : "Continue with Google"}
-        </Button>
-
-
-        <div className="relative my-2">
-          <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">or use email</span>
-          </div>
-        </div>
-
-        <form onSubmit={handleEmail} className="space-y-3">
-          {isSignUp && (
-            <>
-              <div className="space-y-1.5">
-                <Label htmlFor="auth-name" className="flex items-center justify-between">
-                  <span>Name</span>
-                  <span className="text-xs font-normal text-muted-foreground">Optional</span>
-                </Label>
-                <Input
-                  id="auth-name"
-                  type="text"
-                  autoComplete="name"
-                  placeholder="What should we call you?"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  maxLength={80}
-                />
-              </div>
-            </>
-          )}
-          <div className="space-y-1.5">
-            <Label htmlFor="auth-email">Email</Label>
-            <Input
-              id="auth-email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="auth-password" className="flex items-center justify-between">
-              <span>{isSignUp ? "Create a password" : "Password"}</span>
-              {!isSignUp && (
-                <button
-                  type="button"
-                  onClick={() => setForgotOpen(true)}
-                  className="text-xs font-medium text-muted-foreground hover:text-foreground underline"
-                >
-                  Forgot password?
-                </button>
-              )}
-            </Label>
-            <Input
-              id="auth-password"
-              type="password"
-              autoComplete={isSignUp ? "new-password" : "current-password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              minLength={6}
-              placeholder={isSignUp ? "At least 6 characters" : undefined}
-              required
-            />
-          </div>
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSignUp ? (
-              <>
-                <UserPlus className="mr-2 h-4 w-4" />
-                Create my KovaGPT account
-              </>
-            ) : (
-              <>
-                <LogIn className="mr-2 h-4 w-4" />
-                Sign in to KovaGPT
-              </>
+          <div
+            className={cn(
+              "relative rounded-3xl border border-border/60 bg-card shadow-2xl",
+              "p-7 sm:p-9",
+              "animate-in fade-in-0 zoom-in-95 duration-300",
             )}
-          </Button>
-        </form>
+          >
+            {/* Header */}
+            <div className="flex flex-col items-center text-center">
+              <div className="mb-5 animate-in fade-in-0 zoom-in-75 duration-500">
+                <div className="relative w-14 h-14 rounded-2xl bg-foreground/[0.04] ring-1 ring-border flex items-center justify-center transition-transform hover:scale-105">
+                  <NovaLogo className="w-9 h-9 [animation:spin_18s_linear_infinite]" />
+                </div>
+              </div>
+              <h1 className="text-[26px] leading-tight font-semibold tracking-tight">
+                {step === "magic-sent"
+                  ? "Check your email"
+                  : isSignUp
+                    ? "Create your account"
+                    : "Log in or sign up"}
+              </h1>
+              <p className="mt-2 text-[15px] text-muted-foreground max-w-[320px]">
+                {step === "magic-sent"
+                  ? `We sent a sign-in link to ${email}. Open it on this device to continue.`
+                  : "You'll get smarter responses, save your chats, and access KovaGPT across devices."}
+              </p>
+            </div>
 
-        <div className="text-center text-sm text-muted-foreground">
-          {isSignUp ? (
-            <>
-              Already have an account?{" "}
-              <button type="button" className="text-foreground font-medium underline" onClick={() => setMode("sign-in")}>
-                Sign in instead
-              </button>
-            </>
-          ) : (
-            <>
-              New to KovaGPT?{" "}
-              <button type="button" className="text-foreground font-medium underline" onClick={() => setMode("sign-up")}>
-                Create a free account
-              </button>
-            </>
-          )}
-        </div>
-      </DialogContent>
+            {/* Body */}
+            <div className="mt-7 space-y-3">
+              {step === "identify" && (
+                <>
+                  <form onSubmit={handleContinueEmail} className="space-y-3">
+                    <div>
+                      <Input
+                        type="email"
+                        autoComplete="email"
+                        autoFocus
+                        placeholder="Email address"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        onBlur={() => setEmailTouched(true)}
+                        aria-invalid={emailTouched && !emailValid}
+                        className={cn(
+                          "h-14 rounded-2xl text-[15px] px-4",
+                          emailTouched && !emailValid && "border-destructive focus-visible:ring-destructive",
+                        )}
+                      />
+                      {emailTouched && !emailValid && email.length > 0 && (
+                        <p className="mt-1.5 text-xs text-destructive px-1">Enter a valid email address.</p>
+                      )}
+                    </div>
+                    <Button
+                      type="submit"
+                      disabled={loading || !emailValid}
+                      className="w-full h-14 rounded-2xl text-[15px] font-medium"
+                    >
+                      Continue
+                    </Button>
+                  </form>
+
+                  <div className="relative py-1">
+                    <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border/60" /></div>
+                    <div className="relative flex justify-center">
+                      <span className="bg-card px-3 text-xs tracking-wider text-muted-foreground">OR</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleGoogle}
+                    disabled={loading}
+                    className="w-full h-14 rounded-2xl border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-3 text-[15px] font-medium disabled:opacity-60"
+                  >
+                    {loading ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.25 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.1c-.22-.66-.35-1.36-.35-2.1s.13-1.44.35-2.1V7.07H2.18A10.97 10.97 0 0 0 1 12c0 1.77.42 3.45 1.18 4.93l3.66-2.83z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z"/>
+                      </svg>
+                    )}
+                    Continue with Google
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleMagicLink}
+                    disabled={loading || !emailValid}
+                    className="w-full h-14 rounded-2xl border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-3 text-[15px] font-medium disabled:opacity-60"
+                  >
+                    <Mail className="h-5 w-5" />
+                    Email me a sign-in link
+                  </button>
+                </>
+              )}
+
+              {step === "password" && (
+                <form
+                  onSubmit={handleAuth}
+                  className="space-y-3 animate-in fade-in-0 slide-in-from-right-2 duration-300"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setStep("identify")}
+                    className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition mb-1"
+                  >
+                    <ArrowLeft className="h-4 w-4" /> {email}
+                  </button>
+
+                  {isSignUp && (
+                    <Input
+                      type="text"
+                      autoComplete="name"
+                      placeholder="Your name (optional)"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      maxLength={80}
+                      className="h-14 rounded-2xl text-[15px] px-4"
+                    />
+                  )}
+
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      autoComplete={isSignUp ? "new-password" : "current-password"}
+                      autoFocus
+                      placeholder={isSignUp ? "Create a password (min 6)" : "Password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      minLength={6}
+                      className="h-14 rounded-2xl text-[15px] px-4 pr-12"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+
+                  {!isSignUp && (
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setForgotOpen(true)}
+                        className="text-sm font-medium text-foreground/80 hover:text-foreground underline underline-offset-2"
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
+                  )}
+
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full h-14 rounded-2xl text-[15px] font-medium"
+                  >
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isSignUp ? "Create account" : "Sign in"}
+                  </Button>
+
+                  <button
+                    type="button"
+                    onClick={handleMagicLink}
+                    disabled={loading}
+                    className="w-full h-12 rounded-2xl text-sm text-muted-foreground hover:text-foreground transition inline-flex items-center justify-center gap-2"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Email me a link instead
+                  </button>
+                </form>
+              )}
+
+              {step === "magic-sent" && (
+                <div className="animate-in fade-in-0 duration-300 space-y-3">
+                  <button
+                    type="button"
+                    onClick={() => setStep("identify")}
+                    className="w-full h-12 rounded-2xl text-sm text-muted-foreground hover:text-foreground transition inline-flex items-center justify-center gap-2"
+                  >
+                    <ArrowLeft className="h-4 w-4" /> Use a different email
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Footer toggle */}
+            {step !== "magic-sent" && (
+              <div className="mt-6 text-center text-sm text-muted-foreground">
+                {isSignUp ? (
+                  <>
+                    Already have an account?{" "}
+                    <button
+                      type="button"
+                      className="text-foreground font-medium underline underline-offset-2"
+                      onClick={() => { setMode("sign-in"); setStep("identify"); }}
+                    >
+                      Log in
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    New to KovaGPT?{" "}
+                    <button
+                      type="button"
+                      className="text-foreground font-medium underline underline-offset-2"
+                      onClick={() => { setMode("sign-up"); setStep("identify"); }}
+                    >
+                      Create an account
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              aria-label="Close"
+              className="absolute -top-3 -right-3 w-9 h-9 rounded-full bg-background border border-border shadow-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} />
-    </Dialog>
     </>
   );
 }
-
