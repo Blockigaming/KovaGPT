@@ -389,6 +389,7 @@ function AppsPage() {
           state={stateOf(item.id)}
           configured={CONFIGURED_CONNECTORS.has(item.id)}
           isSignedIn={!!isSignedIn}
+          comingSoon={!WORKING_IDS.has(item.id)}
           onConnect={() => handleConnect(item)}
           onDisconnect={() => handleDisconnect(item)}
           onRetry={() => handleConnect(item)}
