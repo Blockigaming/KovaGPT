@@ -305,7 +305,7 @@ export function SettingsDialog({
     }
   };
 
-  const visibleTabGroups = useMemo(() => {
+  const visibleTabGroups = useMemo<TabGroup[]>(() => {
     const hideSubscription = tier === "plus" || tier === "pro";
     if (!hideSubscription) return TAB_GROUPS;
     return TAB_GROUPS.map((g) => ({
