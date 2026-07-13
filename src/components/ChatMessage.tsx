@@ -13,6 +13,7 @@ import { ArtifactEditor, detectArtifactKind, extractCodeBlocks } from "./Artifac
 import { ToolConfirmCard } from "./ToolConfirmCard";
 import type { PendingConfirm } from "@/lib/chat-store";
 import { LongResponseCard, shouldWrapAsDocument } from "./LongResponseCard";
+import { InfoChip, detectInfoChip } from "./InfoChip";
 
 // Strip numbered citation markers like [1], [2], [3] that web-search-augmented
 // answers sometimes still inject, and normalize en/em dashes to a hyphen
@@ -292,9 +293,14 @@ function ChatMessageInner({
               ) : (
                 (() => {
                   const cleaned = cleanAssistantText(message.content);
-                  const wrap = !artifactKind && !streaming && shouldWrapAsDocument(cleaned);
                   const md = <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleaned}</ReactMarkdown>;
-                  return wrap ? <LongResponseCard content={cleaned}>{md}</LongResponseCard> : md;
+                  if (artifactKind || streaming) return md;
+                  if (shouldWrapAsDocument(cleaned)) {
+                    return <LongResponseCard content={cleaned}>{md}</LongResponseCard>;
+                  }
+                  const chip = detectInfoChip(cleaned);
+                  if (chip) return <InfoChip kind={chip}>{md}</InfoChip>;
+                  return md;
                 })()
               )}
               {streaming && message.content && <span className="cursor-blink" />}
