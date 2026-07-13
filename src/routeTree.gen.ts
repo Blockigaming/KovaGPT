@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as WriteRouteImport } from './routes/write'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as SummaryRouteImport } from './routes/summary'
 import { Route as StudyAssistantRouteImport } from './routes/study-assistant'
 import { Route as StatusRouteImport } from './routes/status'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -81,6 +82,11 @@ const UnsubscribeRoute = UnsubscribeRouteImport.update({
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SummaryRoute = SummaryRouteImport.update({
+  id: '/summary',
+  path: '/summary',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StudyAssistantRoute = StudyAssistantRouteImport.update({
@@ -393,6 +399,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/status': typeof StatusRoute
   '/study-assistant': typeof StudyAssistantRoute
+  '/summary': typeof SummaryRoute
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/write': typeof WriteRoute
@@ -453,6 +460,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/status': typeof StatusRoute
   '/study-assistant': typeof StudyAssistantRoute
+  '/summary': typeof SummaryRoute
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/write': typeof WriteRoute
@@ -514,6 +522,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/status': typeof StatusRoute
   '/study-assistant': typeof StudyAssistantRoute
+  '/summary': typeof SummaryRoute
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
   '/write': typeof WriteRoute
@@ -576,6 +585,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/status'
     | '/study-assistant'
+    | '/summary'
     | '/terms'
     | '/unsubscribe'
     | '/write'
@@ -636,6 +646,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/status'
     | '/study-assistant'
+    | '/summary'
     | '/terms'
     | '/unsubscribe'
     | '/write'
@@ -696,6 +707,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/status'
     | '/study-assistant'
+    | '/summary'
     | '/terms'
     | '/unsubscribe'
     | '/write'
@@ -757,6 +769,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StatusRoute: typeof StatusRoute
   StudyAssistantRoute: typeof StudyAssistantRoute
+  SummaryRoute: typeof SummaryRoute
   TermsRoute: typeof TermsRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
   WriteRoute: typeof WriteRoute
@@ -809,6 +822,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/summary': {
+      id: '/summary'
+      path: '/summary'
+      fullPath: '/summary'
+      preLoaderRoute: typeof SummaryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/study-assistant': {
@@ -1260,6 +1280,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StatusRoute: StatusRoute,
   StudyAssistantRoute: StudyAssistantRoute,
+  SummaryRoute: SummaryRoute,
   TermsRoute: TermsRoute,
   UnsubscribeRoute: UnsubscribeRoute,
   WriteRoute: WriteRoute,

@@ -94,6 +94,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "apple-touch-icon", href: "/favicon.svg" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      { rel: "preconnect", href: "https://accounts.google.com" },
+      { rel: "dns-prefetch", href: "https://accounts.google.com" },
+      { rel: "preconnect", href: "https://js.stripe.com" },
+      { rel: "dns-prefetch", href: "https://js.stripe.com" },
+      { rel: "preconnect", href: "https://api.stripe.com" },
+      { rel: "preconnect", href: "https://m.stripe.network" },
+      { rel: "preconnect", href: "https://zrzwkqrwurgutrmvalri.supabase.co" },
       {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap",
