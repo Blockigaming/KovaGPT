@@ -93,7 +93,24 @@ export const createScheduledTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => CreateSchema.parse(i))
   .handler(async ({ data, context }): Promise<ScheduledTask> => {
-    await ensurePlusOrAbove(context.supabase, context.userId);
+    const tier = await ensurePlusOrAbove(context.supabase, context.userId);
+    const { count, error: countError } = await context.supabase
+      .from("scheduled_tasks")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", context.userId)
+      .in("status", ["scheduled", "running", "paused"]);
+    if (countError) {
+      console.error("[serverfn]", countError.message);
+      throw new Error("Request failed. Please try again.");
+    }
+    const limit = MAX_TASKS[tier];
+    if ((count ?? 0) >= limit) {
+      throw new Error(
+        tier === "pro"
+          ? `Pro plan allows up to ${limit} ongoing scheduled tasks. Delete one to create another.`
+          : `Plus plan allows up to ${limit} ongoing scheduled tasks. Upgrade to Pro for up to ${MAX_TASKS.pro}.`,
+      );
+    }
     const { data: row, error } = await context.supabase
       .from("scheduled_tasks")
       .insert({
