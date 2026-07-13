@@ -1,4 +1,4 @@
-import { ArrowUp, Square, Plus, X } from "lucide-react";
+import { ArrowUp, Square, Plus, X, Mic } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { tryUseUpload, DAILY_UPLOAD_LIMIT, getUsage } from "@/lib/limits";
 import { toast } from "sonner";
@@ -211,6 +211,36 @@ export function ChatInput({
                 <div className="hidden sm:block">
                   <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
                 </div>
+              )}
+              {!isStreaming && !value.trim() && attachments.length === 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const w = window as unknown as {
+                      SpeechRecognition?: new () => SpeechRecognitionLike;
+                      webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+                    };
+                    const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+                    if (!Ctor) {
+                      toast.error("Voice input isn't supported in this browser.");
+                      return;
+                    }
+                    const rec = new Ctor();
+                    rec.lang = "en-US";
+                    rec.interimResults = false;
+                    rec.onresult = (e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => {
+                      const transcript = e.results[0][0].transcript;
+                      onChange((value ? value + " " : "") + transcript);
+                    };
+                    rec.onerror = () => toast.error("Couldn't hear you. Try again.");
+                    try { rec.start(); } catch { /* ignore */ }
+                  }}
+                  className="sm:hidden w-9 h-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent flex items-center justify-center transition"
+                  aria-label="Voice input"
+                  title="Voice input"
+                >
+                  <Mic className="w-5 h-5" />
+                </button>
               )}
               {isStreaming ? (
                 <button
