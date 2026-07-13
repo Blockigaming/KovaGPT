@@ -74,6 +74,19 @@
   --code-block-bg: oklch(0.28 0.006 250);
   --code-block-fg: oklch(0.96 0 0);
   --link: oklch(0.45 0.18 255);
+
+  /* Kova brand system */
+  --kova-blue: oklch(0.64 0.19 258);
+  --kova-blue-glow: oklch(0.72 0.17 258);
+  --kova-violet: oklch(0.60 0.20 295);
+  --gradient-kova: linear-gradient(135deg, var(--kova-blue), var(--kova-violet));
+  --gradient-kova-soft: linear-gradient(135deg,
+    color-mix(in oklab, var(--kova-blue) 22%, transparent),
+    color-mix(in oklab, var(--kova-violet) 22%, transparent));
+  --shadow-elevate: 0 8px 24px -12px color-mix(in oklab, var(--kova-blue) 40%, transparent),
+                    0 2px 6px -2px color-mix(in oklab, var(--color-foreground) 10%, transparent);
+  --shadow-soft: 0 1px 2px color-mix(in oklab, var(--color-foreground) 6%, transparent),
+                 0 4px 12px -6px color-mix(in oklab, var(--color-foreground) 8%, transparent);
 }
 
 .dark {
