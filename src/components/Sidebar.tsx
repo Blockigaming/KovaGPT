@@ -150,6 +150,13 @@ export function Sidebar({
           </div>
           <div className="px-3 flex flex-col gap-0.5">
             {showSignedIn && (
+              <Link to="/summary" className={navItemClass(isOn("/summary"))}>
+                <ActiveBar on={isOn("/summary")} />
+                <LayoutDashboard className="w-[18px] h-[18px] shrink-0" />
+                <span className="truncate">Summary</span>
+              </Link>
+            )}
+            {showSignedIn && (
               <Link to="/projects" className={navItemClass(isOn("/projects"))}>
                 <ActiveBar on={isOn("/projects")} />
                 <FolderKanban className="w-[18px] h-[18px] shrink-0" />
