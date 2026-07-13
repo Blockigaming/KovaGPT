@@ -279,18 +279,45 @@ export function SettingsDialog({
     });
   };
 
+  // "Saved" indicator: whenever settings change while the dialog is open, show
+  // a subtle pill for ~1.5s. Skips the very first render so it doesn't fire on
+  // open.
+  const [savedPulse, setSavedPulse] = useState(false);
+  const firstRunRef = useRef(true);
+  useEffect(() => {
+    if (!open) { firstRunRef.current = true; return; }
+    if (firstRunRef.current) { firstRunRef.current = false; return; }
+    setSavedPulse(true);
+    const t = setTimeout(() => setSavedPulse(false), 1500);
+    return () => clearTimeout(t);
+  }, [settings, open]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-background border border-border max-w-4xl max-h-[90vh] overflow-hidden flex flex-col gap-0 p-0 rounded-2xl">
-        <DialogHeader className="px-7 pt-6 pb-5 border-b border-border">
-          <DialogTitle className="text-xl font-semibold tracking-tight font-display">
-            Settings
-          </DialogTitle>
-          <p className="text-xs text-muted-foreground mt-1.5">
-            {loggedIn
-              ? "Changes save automatically."
-              : "Sign in to view and change your settings."}
-          </p>
+      <DialogContent className="bg-background border border-border max-w-4xl max-h-[92vh] overflow-hidden flex flex-col gap-0 p-0 rounded-2xl">
+        <DialogHeader className="px-5 sm:px-7 pt-5 pb-4 border-b border-border">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <DialogTitle className="text-xl font-semibold tracking-tight font-display">
+                Settings
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                {loggedIn ? "Changes save automatically." : "Sign in to view and change your settings."}
+              </p>
+            </div>
+            {loggedIn && (
+              <div
+                aria-live="polite"
+                className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition-all duration-300 ${
+                  savedPulse
+                    ? "opacity-100 translate-y-0 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                    : "opacity-0 -translate-y-1 border-transparent bg-transparent text-transparent pointer-events-none"
+                }`}
+              >
+                <Check className="inline w-3 h-3 mr-1 -mt-0.5" />Saved
+              </div>
+            )}
+          </div>
         </DialogHeader>
 
         {!loggedIn ? (
@@ -301,8 +328,23 @@ export function SettingsDialog({
             onSignIn={() => clerk?.openSignIn()}
           />
         ) : (
-        <Tabs value={tab} onValueChange={setTab} orientation="vertical" className="flex-1 overflow-hidden flex flex-row">
-          <TabsList className="flex flex-col h-full w-64 shrink-0 overflow-y-auto items-stretch justify-start gap-4 p-3 bg-muted/40 border-r border-border rounded-none">
+        <Tabs value={tab} onValueChange={setTab} orientation="vertical" className="flex-1 overflow-hidden flex flex-col md:flex-row">
+          {/* Mobile: horizontal scrolling section nav */}
+          <TabsList className="md:hidden flex w-full overflow-x-auto scrollbar-none justify-start gap-1 p-2 bg-muted/40 border-b border-border rounded-none h-auto shrink-0">
+            {TAB_GROUPS.flatMap((g) => g.tabs).map(({ v, icon: Icon, label }) => (
+              <TabsTrigger
+                key={v}
+                value={v}
+                className="shrink-0 gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{label}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          {/* Desktop: grouped sidebar */}
+          <TabsList className="hidden md:flex flex-col h-full w-64 shrink-0 overflow-y-auto items-stretch justify-start gap-4 p-3 bg-muted/40 border-r border-border rounded-none">
             {TAB_GROUPS.map((group) => (
               <div key={group.title} className="flex flex-col gap-0.5">
                 <div className="px-2 pt-1 pb-1.5">
@@ -328,6 +370,7 @@ export function SettingsDialog({
               </div>
             ))}
           </TabsList>
+
 
 
           <div className="flex-1 overflow-hidden flex flex-col">
