@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
-import { PanelLeft, Search } from "lucide-react";
+import { PanelLeft, Search, MessageSquareDashed, Check } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
@@ -100,6 +100,9 @@ function KovaGPT() {
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
   const [mode, setMode] = useState<ModeId>("medium");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [tempChat, setTempChat] = useState(false);
+  const [tempChatConfirmed, setTempChatConfirmed] = useState(false);
+
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     if (typeof window === "undefined") return true;
     return window.innerWidth >= 768;
@@ -692,14 +695,41 @@ function KovaGPT() {
               streaming={isStreaming}
               message={active?.messages[active.messages.length - 1]}
             />
-            {!isStreaming && (
-              <div className="sm:hidden absolute left-1/2 -translate-x-1/2 text-sm font-semibold text-foreground pointer-events-none">
-                Chat
-              </div>
-            )}
           </div>
 
           <div className="ml-auto flex items-center gap-2 shrink-0">
+            {isLoaded && isSignedIn && (
+              <button
+                onClick={() => {
+                  const next = !tempChat;
+                  setTempChat(next);
+                  if (next) {
+                    setTempChatConfirmed(true);
+                    setTimeout(() => setTempChatConfirmed(false), 1400);
+                    toast.success("Temporary chat enabled", {
+                      description:
+                        "Memory is off for this chat. It's private and won't be saved to your history.",
+                    });
+                  } else {
+                    toast.message("Temporary chat disabled", {
+                      description: "New chats will be saved and use memory again.",
+                    });
+                  }
+                }}
+                aria-label="Toggle temporary chat"
+                title={tempChat ? "Temporary chat on" : "Start temporary chat"}
+                className={`md:hidden relative shrink-0 p-2 rounded-lg transition ${
+                  tempChat ? "bg-primary/15 text-primary" : "hover:bg-accent text-foreground"
+                }`}
+              >
+                <MessageSquareDashed className="w-5 h-5" />
+                {tempChatConfirmed && (
+                  <span className="absolute inset-0 flex items-center justify-center">
+                    <Check className="w-4 h-4 text-primary drop-shadow" />
+                  </span>
+                )}
+              </button>
+            )}
             {!isLoaded ? null : isSignedIn ? (
               <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
             ) : (
@@ -718,6 +748,7 @@ function KovaGPT() {
             )}
           </div>
         </header>
+
 
 
         {!active || active.messages.length === 0 ? (
