@@ -129,10 +129,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           } catch { /* ignore */ }
           setConversations([]);
         }}
-        onOpenHelp={() => setHelpOpen(true)}
+        onOpenHelp={openHelp}
         initialTab={settingsTab}
       />
-      <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
       <OnboardingDialog />
       <TimersWidget />
     </div>
