@@ -57,7 +57,8 @@ import {
 } from "@/lib/connectors-catalog";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { getMyDailyUsage, type DailyUsageDto } from "@/utils/usage.functions";
 import { createPortalSession, getSubscriptionSummary, type SubscriptionSummary } from "@/utils/payments.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
