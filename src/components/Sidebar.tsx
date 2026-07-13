@@ -1,4 +1,4 @@
-import { Trash2, PanelLeft, Search, HelpCircle, Plus, Share2, Settings as SettingsIcon, FolderOpen, Link2, MoreHorizontal, MessageCircle, Copy as CopyIcon, Archive, Pin, PinOff, Users, Image as ImageIcon, CreditCard, Calendar, Activity, PenLine, FolderKanban, LayoutDashboard } from "lucide-react";
+import { Trash2, PanelLeft, Search, HelpCircle, Plus, Share2, Settings as SettingsIcon, FolderOpen, Link2, MoreHorizontal, MessageCircle, Copy as CopyIcon, Archive, Pin, PinOff, Users, CreditCard, Calendar, Activity, PenLine, FolderKanban, LayoutDashboard, Wand2, Plug } from "lucide-react";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { NovaLogo } from "@/components/NovaLogo";
@@ -65,7 +65,7 @@ export function Sidebar({
     on ? (
       <span
         aria-hidden="true"
-        className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-primary"
+        className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-blue-500"
       />
     ) : null;
 
@@ -164,14 +164,16 @@ export function Sidebar({
             </div>
 
             <div className="flex items-center gap-1 shrink-0 ml-auto">
-              <button
-                onClick={() => setSearchOpen((v) => !v)}
-                className="shrink-0 p-2 rounded-md transition-all duration-200 hover:bg-sidebar-hover hover:scale-110 active:scale-95"
-                aria-label="Search chats"
-                title="Search chats"
-              >
-                <Search className="w-[18px] h-[18px]" />
-              </button>
+              {conversations.length > 1 && (
+                <button
+                  onClick={() => setSearchOpen((v) => !v)}
+                  className="shrink-0 p-2 rounded-md transition-all duration-200 hover:bg-sidebar-hover hover:scale-110 active:scale-95"
+                  aria-label="Search chats"
+                  title="Search chats"
+                >
+                  <Search className="w-[18px] h-[18px]" />
+                </button>
+              )}
               <button
                 onClick={onToggle}
                 className="shrink-0 p-2 rounded-md transition-all duration-200 hover:bg-sidebar-hover hover:scale-110 active:scale-95"
@@ -218,20 +220,6 @@ export function Sidebar({
             Workspace
           </div>
           <div className="px-3 flex flex-col gap-0.5">
-            {showSignedIn && (
-              <Link to="/summary" className={navItemClass(isOn("/summary"))}>
-                <ActiveBar on={isOn("/summary")} />
-                <LayoutDashboard className="w-[18px] h-[18px] shrink-0" />
-                <span className="truncate">Summary</span>
-              </Link>
-            )}
-            {showSignedIn && (
-              <Link to="/projects" className={navItemClass(isOn("/projects"))}>
-                <ActiveBar on={isOn("/projects")} />
-                <FolderKanban className="w-[18px] h-[18px] shrink-0" />
-                <span className="truncate">Projects</span>
-              </Link>
-            )}
             <Link to="/library" className={navItemClass(isOn("/library"))}>
               <ActiveBar on={isOn("/library")} />
               <FolderOpen className="w-[18px] h-[18px] shrink-0" />
@@ -239,14 +227,27 @@ export function Sidebar({
             </Link>
             <Link to="/apps" className={navItemClass(isOn("/apps"))}>
               <ActiveBar on={isOn("/apps")} />
-              <Link2 className="w-[18px] h-[18px] shrink-0" />
-              <span className="truncate">Apps</span>
+              {(tier === "plus" || tier === "pro") ? (
+                <Plug className="w-[18px] h-[18px] shrink-0" />
+              ) : (
+                <Link2 className="w-[18px] h-[18px] shrink-0" />
+              )}
+              <span className="truncate">
+                {(tier === "plus" || tier === "pro") ? "Plugins" : "Apps"}
+              </span>
             </Link>
             <Link to="/images" className={navItemClass(isOn("/images"))}>
               <ActiveBar on={isOn("/images")} />
-              <ImageIcon className="w-[18px] h-[18px] shrink-0" />
+              <Wand2 className="w-[18px] h-[18px] shrink-0" />
               <span className="truncate">Images</span>
             </Link>
+            {showSignedIn && (
+              <Link to="/projects" className={navItemClass(isOn("/projects"))}>
+                <ActiveBar on={isOn("/projects")} />
+                <FolderKanban className="w-[18px] h-[18px] shrink-0" />
+                <span className="truncate">Projects</span>
+              </Link>
+            )}
             {showSignedIn && (tier === "plus" || tier === "pro") && (
               <Link to="/scheduled-tasks" className={navItemClass(isOn("/scheduled-tasks"))}>
                 <ActiveBar on={isOn("/scheduled-tasks")} />
@@ -254,13 +255,13 @@ export function Sidebar({
                 <span className="truncate">Scheduled Tasks</span>
               </Link>
             )}
-            {/* Activity Log intentionally lives only in Settings; removed from sidebar. */}
-
-            <Link to="/pricing" className={navItemClass(isOn("/pricing"))}>
-              <ActiveBar on={isOn("/pricing")} />
-              <CreditCard className="w-[18px] h-[18px] shrink-0" />
-              <span className="truncate">Subscriptions</span>
-            </Link>
+            {tier !== "plus" && tier !== "pro" && (
+              <Link to="/pricing" className={navItemClass(isOn("/pricing"))}>
+                <ActiveBar on={isOn("/pricing")} />
+                <CreditCard className="w-[18px] h-[18px] shrink-0" />
+                <span className="truncate">Subscriptions</span>
+              </Link>
+            )}
           </div>
 
           {/* Combined scrollable area: Pinned + Recents */}
