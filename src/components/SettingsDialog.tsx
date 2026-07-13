@@ -677,15 +677,29 @@ export function SettingsDialog({
               <div>
                 <div className="text-sm font-medium">Current plan</div>
                 <div className="text-xs text-muted-foreground mt-1">
-                  You're on the {tier === "free" ? "Free" : tier === "plus" ? "Plus" : "Pro"} plan.
+                  You're on the {tier === "free" ? "Free" : tier === "plus" ? "Plus" : "Pro"} plan
+                  {subSummary?.trialing ? " (free trial)" : ""}
+                  {subSummary?.status === "past_due" ? " — payment past due" : ""}
+                  {subSummary?.status === "unpaid" ? " — payment failed" : ""}
+                  {subSummary?.status === "incomplete" ? " — awaiting first payment" : ""}
+                  .
                 </div>
+                {subSummary?.currentPeriodEnd && (
+                  <div className="text-[11px] text-muted-foreground mt-1">
+                    {subSummary.trialing
+                      ? `Trial ends ${new Date(subSummary.currentPeriodEnd).toLocaleDateString()} — billing starts then unless you cancel.`
+                      : subSummary.cancelAtPeriodEnd
+                        ? `Cancels on ${new Date(subSummary.currentPeriodEnd).toLocaleDateString()}. You keep access until then.`
+                        : `Renews on ${new Date(subSummary.currentPeriodEnd).toLocaleDateString()}.`}
+                  </div>
+                )}
               </div>
               <Link
                 to="/pricing"
                 onClick={() => onOpenChange(false)}
                 className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition whitespace-nowrap"
               >
-                <Sparkles className="w-4 h-4" /> Upgrade
+                <Sparkles className="w-4 h-4" /> {tier === "free" ? "Start free month" : "Change plan"}
               </Link>
             </div>
 
@@ -726,18 +740,21 @@ export function SettingsDialog({
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <a
-                href="https://billing.stripe.com/p/login"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-md border border-border hover:bg-accent transition"
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleManageBilling}
+                disabled={portalLoading || !subSummary?.hasBillingAccount}
+                title={!subSummary?.hasBillingAccount ? "Start a subscription to manage billing" : undefined}
               >
-                <ExternalLink className="w-4 h-4" /> Manage subscription / billing portal
-              </a>
+                <ExternalLink className="w-4 h-4 mr-2" />
+                {portalLoading ? "Opening…" : "Manage subscription"}
+              </Button>
               <Button variant="outline" size="sm" onClick={handleRestore}>
                 <RefreshCw className="w-4 h-4 mr-2" /> Restore purchases
               </Button>
             </div>
+
 
             <div className="rounded-lg border border-border p-4 space-y-2">
               <div className="text-sm font-medium">Cancel subscription</div>
