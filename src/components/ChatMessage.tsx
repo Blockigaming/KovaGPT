@@ -393,7 +393,11 @@ function ChatMessageInner({
                 title={copied ? "Copied" : "Copy"}
                 aria-label={copied ? "Copied" : "Copy"}
               >
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copied ? (
+                  <Check className="w-4 h-4 text-[color:var(--kova-blue)] animate-check-pop" />
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
               </button>
               <button
                 onClick={() => {
