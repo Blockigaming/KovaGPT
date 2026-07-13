@@ -193,7 +193,7 @@ export function ChatInput({
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
-                className="w-9 h-9 rounded-full hover:bg-accent flex items-center justify-center transition"
+                className="w-9 h-9 rounded-full bg-accent/50 hover:bg-accent hover-elevate flex items-center justify-center transition"
                 aria-label="Attach file"
                 title="Attach image or text file"
 
@@ -243,7 +243,7 @@ export function ChatInput({
                     rec.onerror = () => toast.error("Couldn't hear you. Try again.");
                     try { rec.start(); } catch { /* ignore */ }
                   }}
-                  className="sm:hidden w-9 h-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent flex items-center justify-center transition"
+                  className="sm:hidden w-9 h-9 rounded-full text-muted-foreground bg-accent/50 hover:text-foreground hover:bg-accent hover-elevate flex items-center justify-center transition"
                   aria-label="Voice input"
                   title="Voice input"
                 >
@@ -264,10 +264,14 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={triggerSubmit}
-                  style={{ backgroundColor: actionColor }}
-                  className={`w-9 h-9 rounded-full text-white flex items-center justify-center hover:opacity-90 transition duration-150 active:scale-90 active:opacity-70 ${
-                    sendFlash ? "scale-90 opacity-80" : ""
-                  }`}
+                  style={
+                    actionColor.toLowerCase() === "#3b82f6"
+                      ? undefined
+                      : { backgroundColor: actionColor }
+                  }
+                  className={`w-9 h-9 rounded-full text-white flex items-center justify-center hover-elevate hover:opacity-95 transition duration-150 active:scale-90 active:opacity-70 ${
+                    actionColor.toLowerCase() === "#3b82f6" ? "bg-gradient-kova shadow-[var(--shadow-elevate)]" : ""
+                  } ${sendFlash ? "scale-90 opacity-80" : ""}`}
                   aria-label="Send"
                 >
                   <ArrowUp className={`w-5 h-5 transition-transform duration-300 ${sendFlash ? "-translate-y-1.5 opacity-0" : ""}`} />
@@ -276,8 +280,14 @@ export function ChatInput({
                 <button
                   type="button"
                   disabled
-                  style={{ backgroundColor: actionColor }}
-                  className="w-9 h-9 rounded-full text-white flex items-center justify-center opacity-30 cursor-not-allowed"
+                  style={
+                    actionColor.toLowerCase() === "#3b82f6"
+                      ? undefined
+                      : { backgroundColor: actionColor }
+                  }
+                  className={`w-9 h-9 rounded-full text-white flex items-center justify-center opacity-30 cursor-not-allowed ${
+                    actionColor.toLowerCase() === "#3b82f6" ? "bg-gradient-kova" : ""
+                  }`}
                   aria-label="Send"
                 >
                   <ArrowUp className="w-5 h-5" />

@@ -75,7 +75,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="flex h-[100dvh] w-full bg-background text-foreground overflow-hidden">
+    <div className="relative flex h-[100dvh] w-full bg-background text-foreground overflow-hidden">
+      {/* Animated brand mesh background - sits behind everything, no pointer events. */}
+      <div aria-hidden="true" className="kova-bg" />
       <Sidebar
         conversations={conversations}
         activeId={null}

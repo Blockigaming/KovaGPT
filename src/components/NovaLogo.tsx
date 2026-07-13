@@ -1,18 +1,27 @@
 /**
  * KovaGPT logo: refined compass star inside a thin ring with inner cross detail.
  * Pure SVG so it stays sharp at any size and adds zero network/image cost.
+ *
+ * animated: applies a gentle vertical float (used in the sidebar brand row
+ *           and the empty-state hero).
+ * pulse:    wraps in a soft brand halo that pulses (used on the assistant
+ *           avatar while a response is streaming).
  */
 export function NovaLogo({
   className = "w-6 h-6",
+  animated = false,
+  pulse = false,
 }: {
   className?: string;
+  animated?: boolean;
+  pulse?: boolean;
   /** @deprecated kept for backwards compat */
   bare?: boolean;
 }) {
-  return (
+  const svg = (
     <svg
       viewBox="0 0 48 48"
-      className={className}
+      className={`${className} ${animated ? "animate-kova-float" : ""}`}
       aria-label="KovaGPT logo"
       role="img"
       fill="none"
@@ -49,4 +58,17 @@ export function NovaLogo({
       />
     </svg>
   );
+
+  if (pulse) {
+    return (
+      <span className="relative inline-flex">
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 rounded-full animate-kova-pulse"
+        />
+        {svg}
+      </span>
+    );
+  }
+  return svg;
 }

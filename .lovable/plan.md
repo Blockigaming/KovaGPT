@@ -1,65 +1,81 @@
-# Refactor Plan
+## Scope
 
-You picked all four clusters. This is ~2 days of focused work; I'll ship it in four sequenced phases so each is verifiable in the preview before the next lands. Each phase ends in a working app.
+This turn tackles a large polish + fixes pass. To ship real quality (not a shallow surface pass) I'll split it into two waves. Wave 1 is what I'll build this turn. Wave 2 lists the items I want to confirm before spending credits on them, because they conflict with existing decisions or need scanner output first.
 
-## Phase 1 — Critical bug fixes (ship first)
+## Wave 1 — Ship this turn
 
-**1a. Voice session "Could not start"**
-- Read `src/routes/api/realtime-session.ts` + `VoiceMode.tsx` to identify the actual failure (likely OPENAI_API_KEY / tier gate / model name). Add specific error surfacing so we stop guessing.
-- Verify with `invoke-server-function` and `server-function-logs`.
+### Sidebar & background
+- Add a 1px vertical divider on the sidebar's right edge so it separates cleanly from the main surface (both now share the same `--background`).
+- Add a subtle, animated mesh-gradient background layer behind the app shell (fixed, `pointer-events-none`, low-opacity `--kova-blue` and violet radial blobs with a slow 20s float). Works in light + dark.
 
-**1b. Image generation broken**
-- Audit `src/routes/api/generate-image.ts` + the chat's image-intent detection. Fix the pipeline (likely SSE parsing or model body shape drift).
+### Global type scale
+- Reduce the app's base font-size from `16px` to `15.2px` (~5% smaller) on `html`. All Tailwind rem-based sizes scale with it, so headings/inputs/buttons shrink proportionally without touching every component.
 
-**1c. LLM instruction adherence (negative constraints)**
-- System prompt in `src/routes/api/chat.ts`: add an explicit rule that user negative constraints ("don't generate an image", "don't search") override tool triggers for the remainder of the turn.
-- Fix intent parser so keywords like "image" inside a *denial* don't trigger the image tool. Use a lightweight classifier pass or regex negation guard.
+### Brand system ("Kova" visual language)
+- Add signature tokens in `src/styles.css`:
+  - `--kova-blue: oklch(0.62 0.19 255)` — primary brand accent
+  - `--kova-blue-glow` — soft radial glow variant
+  - `--gradient-kova: linear-gradient(135deg, kova-blue → violet)` — the signature Kova gradient (used on send button, active states, logo halo).
+  - `--shadow-elevate` — premium hover elevation shadow (used everywhere elevated).
+- Standardize border radius via existing `--radius` (already `0.875rem`); nudge cards/inputs to use `rounded-2xl` consistently.
 
-## Phase 2 — Voice Mode UX overhaul
+### Kova logo
+- Gentle floating animation (`@keyframes kova-float`: `translateY(0 → -3px → 0)` over 4s, ease-in-out infinite) applied on `NovaLogo` in the sidebar brand row + empty-state hero.
 
-Depends on 1a. In voice session:
-- Hide the "KovaGPT" hero + landing centerpiece; render the standard chat transcript instead. User speech = sent bubble, assistant speech = received bubble (already partially wired via `onTurn`).
-- Move ChatInput to the bottom.
-- Center a large NovaLogo above the input with a continuous wave/pulse animation driven by an `AnalyserNode` on the mic stream + on the incoming audio element (real audio-reactive scale, not just CSS pulse).
-- Barge-in: on `input_audio_buffer.speech_started`, send a `response.cancel` event over the data channel and mute the remote audio element until the next `response.created`.
+### Chat composer (ChatInput)
+- Larger, more rounded pill container (`rounded-3xl`, more padding, deeper `--shadow-elevate` on focus).
+- Attachment / voice / image icon buttons become floating circular chips inside the composer with hover elevation.
+- Textarea already auto-expands via `rows` + `useLayoutEffect` — verify and tighten min/max height.
+- Send button uses the signature `--gradient-kova` with a scale + glow "send" animation on submit.
 
-## Phase 3 — Sidebar / Modes / Library
+### Messages & action bar
+- Copy / Save / Share / Edit action row on assistant messages becomes sticky at the message's bottom-left with a subtle backdrop-blur pill so it stays visible while scrolling long responses.
+- Animated checkmark on copy (already partially there — upgrade `Check` swap with a spring scale-in via `animate-in zoom-in`).
+- AI icon (`NovaLogo` on streaming assistant row) gets a soft pulsing halo while `streaming` is true.
+- Skeleton loaders (thin bars using `animate-pulse` + brand-tinted bg) replace the spinner in message idle states.
 
-- **Scheduled Tasks**: gate the nav item behind `useTier()` — hide for `free`.
-- **Mode selector**: remove the Kova icon in the trigger; keep text only. Verify `ModelSelector.tsx`.
-- **Library responsive**: currently width-capped. Switch to a fluid grid (`grid-cols-[repeat(auto-fill,minmax(220px,1fr))]`) with a `max-w-7xl` container instead of a fixed narrow column.
-- **Library query perf**: run `supabase--slow_queries`; expected fixes: add index on `user_library_items(user_id, created_at desc)`, paginate/limit initial load, drop N+1 by joining images in one query.
+### Motion system
+- Add reusable utility classes in `src/styles.css`:
+  - `.animate-kova-float` (logo)
+  - `.animate-kova-pulse` (assistant-thinking halo)
+  - `.hover-elevate` (translateY(-1px) + shadow-elevate on hover)
+  - `.animate-fade-up` (fade + 6px rise on mount — used on empty state, message groups, cards)
+- Wire these into: message bubbles on mount, sidebar nav items on route change, settings dialog sections, hero on `/`.
 
-## Phase 4 — Settings, Family Sharing, Integrations
+### Shared cards / spacing / headings
+- Introduce a shared `.kova-card` utility (rounded-2xl, border, `bg-card`, `hover:shadow-elevate`, `transition`) — retrofit Apps, Library, Projects, Scheduled-tasks, Pricing tier cards.
+- Bump `<h1>` empty-state greeting +10% + tighter tracking; conversation titles in the sidebar go from `text-[14px]` → `text-[15px]` semibold when active.
+- More whitespace: bump `space-y` between message groups by one step; more section padding in Settings.
 
-**4a. Settings redesign**
-- Rework `SettingsDialog.tsx` into a two-pane layout (left rail sections: Account, Appearance, Voice, Usage, Family, Integrations, Danger). Cleaner typography, glass surfaces consistent with the app's dark aesthetic. No feature removal — pure UI polish.
+### Icon sizing
+- Standardize on `w-4 h-4` (inline) / `w-[18px] h-[18px]` (nav) / `w-5 h-5` (composer). Sweep AppShell, Sidebar, ChatMessage, ChatInput, SettingsDialog.
 
-**4b. Persistence audit**
-- Every setting currently in localStorage: mirror to a new `user_preferences` table (theme, voice, mode, personality sliders). Load on sign-in, write-through on change. Local-only for guests.
+## Wave 2 — Confirm with user before spending on
 
-**4c. Usage Today tracker fix**
-- Read `try_increment_daily_usage` (visible in db functions) — the "latest row" logic is buggy: it uses `ORDER BY updated_at` instead of `WHERE usage_date = today`, so a stale row from yesterday can block today's writes. Rewrite to key strictly on `(user_id, usage_date=today)`. Update the client tracker to sum from the same source of truth.
+These are the items I don't want to build blind. Answer inline and I'll do them in the next turn:
 
-**4d. Family Sharing (new feature — "make it perfect")**
-My interpretation, tell me if this is wrong before I build it:
-- Plus/Pro subscribers get a "Family" section in Settings.
-- Owner generates an invite link (single-use, 7-day expiry, max 5 accepted invites).
-- Invitees who sign up via the link are linked to the owner's plan → inherit Plus features + share the daily quota pool (or independent quotas — pick one, I'd suggest **independent** so one member doesn't starve another).
-- Owner sees member list with remove button.
-- New tables: `family_groups`, `family_members`, `family_invites`. RLS scoped so members only see their own group.
-- Subscription tier check in `useTier()` treats "member of family group with active Plus owner" as Plus.
+1. **"Fix all SEO bugs"** — I'll trigger the SEO scan now so we see the real findings list; the fixes then take a follow-up turn (they depend on what the scanner reports for the current homepage/title/meta setup, which was already customized).
+2. **"Fix all security bugs"** — same shape: I'll run the Supabase linter + security scan, share the list, and fix them next turn rather than guess. Fixing every RLS/policy row blindly can break auth flows.
+3. **"Fix all bugs"** — too broad to action safely. If there's a specific broken behavior (e.g. a route that errors, a button that no-ops, a mobile layout that clips), name it and it goes in the next turn. Otherwise I'll only fix bugs I hit while doing Wave 1.
+4. **Custom illustrations** — takes image-gen credits and needs a direction (empty-state hero? 404? Apps grid?). Which surface should get one first?
+5. **Distinctive icons** — Lucide is used everywhere. Full custom set is a big cost; a middle path is custom for the 6 highest-visibility icons (send, new chat, sidebar toggle, model selector, mic, image). OK to do just those?
 
-**4e. Red destructive buttons**
-- Sign Out + Remove Connection → `bg-destructive text-destructive-foreground` (semantic token, already themed red).
+## Technical notes
 
-**4f. Integrations privacy investigation (report-before-changing)**
-- I'll read whatever integration code exists (Plaid, school portals, etc.) and post findings + a proposed scoping plan back to you *before* touching auth flows. No blind changes to OAuth.
+- No dashes anywhere in new copy (project rule).
+- Homepage `<h1>` and titles stay exactly "KovaGPT" (project memory rule).
+- Every new color/shadow/gradient goes in `src/styles.css` as a token — no hardcoded hex in components.
+- Font-size shrink is applied at `html`, not per-component, so it survives future edits.
+- Floating background layer sits at `-z-10` under `AppShell` so it never eats clicks.
+- Assistant messages keep no bubble background (chat-ui rule); user bubble keeps the existing `--user-bubble` token.
 
----
+## Files touched (Wave 1)
 
-## Confirm before I start
-
-1. Kick off with **Phase 1** now?
-2. Family Sharing scope above — good, or adjust (quota pool vs independent, member cap, who can invite)?
-3. Integrations phase: OK that I'll read + report before changing anything?
+- `src/styles.css` — brand tokens, gradient, shadow, keyframes, utilities, base font-size.
+- `src/components/AppShell.tsx` — animated background layer, shared spacing.
+- `src/components/Sidebar.tsx` — right-edge divider, logo float class, nav item mount fade, tighter type.
+- `src/components/NovaLogo.tsx` — accept `animated` prop (float + pulse).
+- `src/components/ChatInput.tsx` — larger rounded composer, floating icon buttons, gradient send, focus shadow.
+- `src/components/ChatMessage.tsx` — sticky action bar, animated copy check, streaming halo, skeleton loader.
+- `src/components/SettingsDialog.tsx` — shared card class, tighter Apple spacing pass.
+- Route pages (Apps, Library, Projects, Pricing) — swap ad-hoc card wrappers for `.kova-card`.
