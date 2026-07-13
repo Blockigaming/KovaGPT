@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
@@ -8,7 +8,7 @@ import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
 
 import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
-import { HelpDialog } from "@/components/HelpDialog";
+
 import { OnboardingDialog } from "@/components/OnboardingDialog";
 
 import { LimitReachedDialog } from "@/components/LimitReachedDialog";
@@ -144,7 +144,8 @@ function KovaGPT() {
       }
     })();
   }, [isSignedIn, openSignUp]);
-  const [helpOpen, setHelpOpen] = useState(false);
+  const navigate = useNavigate();
+  const openHelp = useCallback(() => { navigate({ to: "/help" as never }); }, [navigate]);
   const [shareChatId, setShareChatId] = useState<string | null>(null);
   const [membersChatId, setMembersChatId] = useState<string | null>(null);
   
@@ -598,7 +599,7 @@ function KovaGPT() {
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
-        onOpenHelp={() => setHelpOpen(true)}
+        onOpenHelp={openHelp}
         onShare={(id) => {
           if (!isSignedIn) {
             toast.message("Sign in to share chats");
@@ -864,11 +865,11 @@ function KovaGPT() {
         settings={settings}
         onChange={setSettings}
         onClearAll={() => setConversations([])}
-        onOpenHelp={() => setHelpOpen(true)}
+        onOpenHelp={openHelp}
         initialTab={settingsTab}
       />
 
-      <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+
       <OnboardingDialog />
 
 

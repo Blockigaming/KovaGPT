@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { PanelLeft, ArrowUp, Loader2, Download, Trash2, Paperclip, Sparkles } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
-import { HelpDialog } from "@/components/HelpDialog";
+
 import { LoginPromptDialog } from "@/components/LoginPromptDialog";
 import { LimitReachedDialog } from "@/components/LimitReachedDialog";
 import { getUsage } from "@/lib/limits";
@@ -77,7 +77,7 @@ function ImagesPage() {
     window.addEventListener("kova-open-settings", h);
     return () => window.removeEventListener("kova-open-settings", h);
   }, []);
-  const [helpOpen, setHelpOpen] = useState(false);
+  const openHelp = () => navigate({ to: "/help" as never });
 
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
@@ -161,7 +161,7 @@ function ImagesPage() {
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
-        onOpenHelp={() => setHelpOpen(true)}
+        onOpenHelp={openHelp}
       />
 
       <main className="flex-1 flex flex-col min-w-0">
@@ -343,7 +343,7 @@ function ImagesPage() {
           setHistory([]);
         }}
       />
-      <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+      
       <LoginPromptDialog
         open={loginOpen}
         onOpenChange={setLoginOpen}

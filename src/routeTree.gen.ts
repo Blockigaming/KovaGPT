@@ -25,6 +25,7 @@ import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ModesRouteImport } from './routes/modes'
 import { Route as LibraryRouteImport } from './routes/library'
 import { Route as ImagesRouteImport } from './routes/images'
+import { Route as HelpRouteImport } from './routes/help'
 import { Route as GettingStartedRouteImport } from './routes/getting-started'
 import { Route as ContactSupportRouteImport } from './routes/contact-support'
 import { Route as CodeHelperRouteImport } from './routes/code-helper'
@@ -145,6 +146,11 @@ const LibraryRoute = LibraryRouteImport.update({
 const ImagesRoute = ImagesRouteImport.update({
   id: '/images',
   path: '/images',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HelpRoute = HelpRouteImport.update({
+  id: '/help',
+  path: '/help',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GettingStartedRoute = GettingStartedRouteImport.update({
@@ -373,6 +379,7 @@ export interface FileRoutesByFullPath {
   '/code-helper': typeof CodeHelperRoute
   '/contact-support': typeof ContactSupportRoute
   '/getting-started': typeof GettingStartedRoute
+  '/help': typeof HelpRoute
   '/images': typeof ImagesRoute
   '/library': typeof LibraryRoute
   '/modes': typeof ModesRoute
@@ -432,6 +439,7 @@ export interface FileRoutesByTo {
   '/code-helper': typeof CodeHelperRoute
   '/contact-support': typeof ContactSupportRoute
   '/getting-started': typeof GettingStartedRoute
+  '/help': typeof HelpRoute
   '/images': typeof ImagesRoute
   '/library': typeof LibraryRoute
   '/modes': typeof ModesRoute
@@ -492,6 +500,7 @@ export interface FileRoutesById {
   '/code-helper': typeof CodeHelperRoute
   '/contact-support': typeof ContactSupportRoute
   '/getting-started': typeof GettingStartedRoute
+  '/help': typeof HelpRoute
   '/images': typeof ImagesRoute
   '/library': typeof LibraryRoute
   '/modes': typeof ModesRoute
@@ -553,6 +562,7 @@ export interface FileRouteTypes {
     | '/code-helper'
     | '/contact-support'
     | '/getting-started'
+    | '/help'
     | '/images'
     | '/library'
     | '/modes'
@@ -612,6 +622,7 @@ export interface FileRouteTypes {
     | '/code-helper'
     | '/contact-support'
     | '/getting-started'
+    | '/help'
     | '/images'
     | '/library'
     | '/modes'
@@ -671,6 +682,7 @@ export interface FileRouteTypes {
     | '/code-helper'
     | '/contact-support'
     | '/getting-started'
+    | '/help'
     | '/images'
     | '/library'
     | '/modes'
@@ -731,6 +743,7 @@ export interface RootRouteChildren {
   CodeHelperRoute: typeof CodeHelperRoute
   ContactSupportRoute: typeof ContactSupportRoute
   GettingStartedRoute: typeof GettingStartedRoute
+  HelpRoute: typeof HelpRoute
   ImagesRoute: typeof ImagesRoute
   LibraryRoute: typeof LibraryRoute
   ModesRoute: typeof ModesRoute
@@ -887,6 +900,13 @@ declare module '@tanstack/react-router' {
       path: '/images'
       fullPath: '/images'
       preLoaderRoute: typeof ImagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/help': {
+      id: '/help'
+      path: '/help'
+      fullPath: '/help'
+      preLoaderRoute: typeof HelpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/getting-started': {
@@ -1226,6 +1246,7 @@ const rootRouteChildren: RootRouteChildren = {
   CodeHelperRoute: CodeHelperRoute,
   ContactSupportRoute: ContactSupportRoute,
   GettingStartedRoute: GettingStartedRoute,
+  HelpRoute: HelpRoute,
   ImagesRoute: ImagesRoute,
   LibraryRoute: LibraryRoute,
   ModesRoute: ModesRoute,

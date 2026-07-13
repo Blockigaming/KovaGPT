@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
-import { HelpDialog } from "@/components/HelpDialog";
+
 import { OnboardingDialog } from "@/components/OnboardingDialog";
 import { TimersWidget } from "@/components/TimersWidget";
 import { installShortcutListener } from "@/lib/shortcuts";
@@ -27,7 +27,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
-  const [helpOpen, setHelpOpen] = useState(false);
+  const openHelp = useCallback(() => { navigate({ to: "/help" as never }); }, [navigate]);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
@@ -84,7 +84,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
-        onOpenHelp={() => setHelpOpen(true)}
+        onOpenHelp={openHelp}
       />
 
       <div className="flex-1 min-w-0 flex flex-col overflow-y-auto">
@@ -129,10 +129,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           } catch { /* ignore */ }
           setConversations([]);
         }}
-        onOpenHelp={() => setHelpOpen(true)}
+        onOpenHelp={openHelp}
         initialTab={settingsTab}
       />
-      <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
       <OnboardingDialog />
       <TimersWidget />
     </div>
