@@ -687,11 +687,16 @@ function KovaGPT() {
 
 
           {/* AI status: live indicator to the right of the KovaGPT mark while streaming */}
-          <div className="flex items-center min-w-0 flex-1">
+          <div className="flex items-center min-w-0 flex-1 relative">
             <AIStatus
               streaming={isStreaming}
               message={active?.messages[active.messages.length - 1]}
             />
+            {!isStreaming && (
+              <div className="sm:hidden absolute left-1/2 -translate-x-1/2 text-sm font-semibold text-foreground pointer-events-none">
+                Chat
+              </div>
+            )}
           </div>
 
           <div className="ml-auto flex items-center gap-2 shrink-0">
