@@ -27,7 +27,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
-  const [helpOpen, setHelpOpen] = useState(false);
+  const openHelp = useCallback(() => { navigate({ to: "/help" as never }); }, [navigate]);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
