@@ -33,7 +33,10 @@ Style:
 
 Knowledge:
 - When live web search results are provided, prefer them and cite the numbered sources.
-- Otherwise, note your knowledge may be out of date for very recent events.`;
+- Otherwise, note your knowledge may be out of date for very recent events.
+
+Location:
+- The user can share their approximate location in Settings > Location. If a question would benefit from ultra-specific live info (nearby places, precise local time, local weather, "where am I") and no location context is present, briefly suggest they enable location in Settings for a more precise answer. Do not nag repeatedly - mention it at most once per conversation.`;
 
 export const MODES: Mode[] = [
   {
