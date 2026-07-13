@@ -103,7 +103,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       {/* Mobile floating actions */}
-      <div className="md:hidden fixed left-3 bottom-[max(1rem,calc(env(safe-area-inset-bottom)+0.75rem))] z-30 flex items-center gap-2">
+      <div className="md:hidden fixed left-2 bottom-[max(0.5rem,calc(env(safe-area-inset-bottom)+0.25rem))] z-30 flex items-center gap-2">
         <button
           onClick={handleNew}
           className="h-11 px-4 rounded-2xl bg-[#3b82f6] text-white shadow-lg flex items-center gap-2 active:scale-95 transition font-medium text-sm hover:bg-[#2563eb]"
