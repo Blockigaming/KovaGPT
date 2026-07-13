@@ -180,8 +180,7 @@ export function AuthDialog({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          className="sm:max-w-[440px] p-0 border-0 bg-transparent shadow-none overflow-visible"
-          hideClose
+          className="sm:max-w-[440px] p-0 border-0 bg-transparent shadow-none overflow-visible [&>button.absolute]:hidden"
         >
           <div
             className={cn(
