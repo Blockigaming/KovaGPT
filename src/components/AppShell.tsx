@@ -1,9 +1,9 @@
-import { useEffect, useState, useCallback, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useState, useCallback, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Sidebar } from "@/components/Sidebar";
-import { SettingsDialog, type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
-
-import { OnboardingDialog } from "@/components/OnboardingDialog";
+import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
+const SettingsDialog = lazy(() => import("@/components/SettingsDialog").then(m => ({ default: m.SettingsDialog })));
+const OnboardingDialog = lazy(() => import("@/components/OnboardingDialog").then(m => ({ default: m.OnboardingDialog })));
 import { TimersWidget } from "@/components/TimersWidget";
 import { installShortcutListener } from "@/lib/shortcuts";
 import { PanelLeft, Plus, Settings as SettingsIcon } from "lucide-react";
