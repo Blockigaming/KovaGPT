@@ -46,7 +46,7 @@ export type ProjectActivity = {
 };
 
 async function logActivity(
-  supabase: { from: (t: string) => { insert: (v: unknown) => Promise<{ error: unknown }> } },
+  supabase: any,
   project_id: string,
   actor_id: string,
   kind: string,
@@ -56,6 +56,7 @@ async function logActivity(
     await supabase.from("project_activity").insert({ project_id, actor_id, kind, summary });
   } catch { /* ignore */ }
 }
+
 
 // ============= NOTES =============
 export const getProjectNote = createServerFn({ method: "GET" })
