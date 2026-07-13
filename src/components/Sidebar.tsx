@@ -1,5 +1,5 @@
 import { Trash2, PanelLeft, Search, HelpCircle, Plus, Share2, Settings as SettingsIcon, FolderOpen, Link2, MoreHorizontal, MessageCircle, Copy as CopyIcon, Archive, Pin, PinOff, Users, Image as ImageIcon, CreditCard, Calendar, Activity, PenLine, FolderKanban, LayoutDashboard } from "lucide-react";
-import { Link as RouterLink } from "@tanstack/react-router";
+
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { NovaLogo } from "@/components/NovaLogo";
 import { Link, useRouterState } from "@tanstack/react-router";
