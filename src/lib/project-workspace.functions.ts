@@ -150,9 +150,10 @@ export const updateTask = createServerFn({ method: "POST" })
     const patch: Record<string, unknown> = { ...rest };
     if (rest.status === "done") patch.completed_at = new Date().toISOString();
     if (rest.status && rest.status !== "done") patch.completed_at = null;
-    const { data: row, error } = await context.supabase
+    const { data: row, error } = await (context.supabase as any)
       .from("project_tasks")
       .update(patch)
+
       .eq("id", id)
       .select("project_id, title")
       .single();
