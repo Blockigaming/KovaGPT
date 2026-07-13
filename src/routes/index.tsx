@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
