@@ -93,7 +93,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {!sidebarOpen && (
           <button
             onClick={() => setSidebarOpen(true)}
-            className="md:hidden fixed top-3 left-3 z-30 p-2 rounded-md bg-background/90 border border-border hover:bg-accent transition shadow-sm"
+            className="fixed top-3 left-3 z-30 p-2 rounded-md bg-background/90 border border-border hover:bg-accent transition shadow-sm"
             aria-label="Open sidebar"
           >
             <PanelLeft className="w-4 h-4" />
@@ -103,7 +103,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       {/* Mobile floating actions */}
-      <div className="md:hidden fixed right-3 bottom-[max(5.5rem,calc(env(safe-area-inset-bottom)+5rem))] z-30 flex items-center gap-2">
+      <div className="md:hidden fixed left-3 bottom-[max(1rem,calc(env(safe-area-inset-bottom)+0.75rem))] z-30 flex items-center gap-2">
         <button
           onClick={handleNew}
           className="h-11 px-4 rounded-2xl bg-[#3b82f6] text-white shadow-lg flex items-center gap-2 active:scale-95 transition font-medium text-sm hover:bg-[#2563eb]"
