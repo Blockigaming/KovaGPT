@@ -1654,39 +1654,32 @@ function SignedOutSettings({
 }) {
   return (
     <div className="overflow-y-auto max-h-[78vh]">
-      {/* Hero sign-in card */}
-      <div className="px-6 pt-6">
-        <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-accent/40 via-background to-background p-5">
-          <div className="flex items-start gap-4">
-            <div className="w-11 h-11 rounded-xl bg-foreground text-background flex items-center justify-center shrink-0 shadow-sm">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-base font-semibold tracking-tight">Sign in to unlock KovaGPT</div>
-              <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                Save chats, sync across devices, use Library, Apps, and personal memory.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Button size="sm" onClick={onSignIn} className="rounded-full px-4">
-                  Sign in
-                </Button>
-                <Button size="sm" variant="outline" onClick={onSignIn} className="rounded-full px-4">
-                  Create account
-                </Button>
-              </div>
-            </div>
+      {/* Hero sign-in card - compact, Apple-style */}
+      <div className="px-6 pt-5">
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/40 p-4">
+          <div className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center shrink-0">
+            <Sparkles className="w-4 h-4" />
           </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-semibold tracking-tight">Sign in to KovaGPT</div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Sync chats, memory, and apps across your devices.
+            </p>
+          </div>
+          <Button size="sm" onClick={onSignIn} className="rounded-full px-4 shrink-0">
+            Sign in
+          </Button>
         </div>
       </div>
 
-      <div className="px-6 py-6 space-y-6">
+      <div className="px-6 py-5 space-y-5">
         {/* Appearance */}
-        <section className="rounded-2xl border border-border bg-card/50 p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Palette className="w-4 h-4 text-muted-foreground" />
-            <h3 className="text-sm font-semibold tracking-tight">Appearance</h3>
+        <section>
+          <div className="flex items-center gap-2 mb-2.5 px-1">
+            <Palette className="w-3.5 h-3.5 text-muted-foreground" />
+            <h3 className="text-[13px] font-semibold tracking-tight">Appearance</h3>
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-muted/50 p-1">
             {(["system", "light", "dark"] as ThemeMode[]).map((m) => {
               const active = settings.mode === m;
               const Icon = m === "system" ? Monitor : m === "light" ? Sun : Moon;
@@ -1694,14 +1687,14 @@ function SignedOutSettings({
                 <button
                   key={m}
                   onClick={() => setMode(m)}
-                  className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border px-3 py-3 text-xs capitalize transition ${
+                  className={`flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs capitalize transition ${
                     active
-                      ? "border-foreground bg-foreground text-background shadow-sm"
-                      : "border-border hover:bg-muted"
+                      ? "bg-background text-foreground shadow-sm font-medium"
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
-                  <span className="font-medium">{m}</span>
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{m}</span>
                 </button>
               );
             })}
@@ -1709,68 +1702,65 @@ function SignedOutSettings({
         </section>
 
         {/* Language */}
-        <section className="rounded-2xl border border-border bg-card/50 p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Info className="w-4 h-4 text-muted-foreground" />
-            <h3 className="text-sm font-semibold tracking-tight">Language</h3>
+        <section>
+          <div className="flex items-center gap-2 mb-2.5 px-1">
+            <Info className="w-3.5 h-3.5 text-muted-foreground" />
+            <h3 className="text-[13px] font-semibold tracking-tight">Language</h3>
           </div>
           <GuestLanguageSelect />
-          <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-            KovaGPT replies in the language you write in. Auto detect uses your browser language.
+          <p className="text-[11px] text-muted-foreground mt-1.5 px-1">
+            KovaGPT replies in the language you write in.
           </p>
         </section>
 
         {/* Privacy */}
-        <section className="rounded-2xl border border-border bg-card/50 p-5">
-          <div className="flex items-center gap-2 mb-1">
-            <ShieldCheck className="w-4 h-4 text-muted-foreground" />
-            <h3 className="text-sm font-semibold tracking-tight">Privacy</h3>
+        <section>
+          <div className="flex items-center gap-2 mb-2.5 px-1">
+            <ShieldCheck className="w-3.5 h-3.5 text-muted-foreground" />
+            <h3 className="text-[13px] font-semibold tracking-tight">Privacy</h3>
           </div>
-          <p className="text-xs text-muted-foreground mb-4">
-            Control how your data is used while browsing as a guest.
-          </p>
-          <div className="divide-y divide-border">
-            <div className="pb-3">
+          <div className="rounded-xl border border-border bg-card/40 divide-y divide-border overflow-hidden">
+            <div className="px-4 py-3">
               <ToggleRow
-                title="Help Improve Kova"
-                hint="Allow your content to help improve Kova's models and overall experience. We apply privacy protections to help keep your data safe."
+                title="Help improve Kova"
+                hint="Allow your content to help improve Kova's models."
                 checked={settings.trainingOptOut !== true}
                 onCheckedChange={(v) => onChange({ ...settings, trainingOptOut: !v })}
               />
             </div>
-            <div className="py-3">
+            <div className="px-4 py-3">
               <GuestToggleRow
                 storageKey="kova-guest-campaign-measurement"
-                title="Campaign Measurement"
-                hint="Allow cookies that help Kova measure how well our marketing campaigns are performing."
+                title="Campaign measurement"
+                hint="Help Kova measure marketing performance."
               />
             </div>
-            <div className="py-3">
+            <div className="px-4 py-3">
               <GuestToggleRow
                 storageKey="kova-guest-personalized-marketing"
-                title="Personalized Marketing"
-                hint="Allow Kova to personalize and measure our marketing on third-party platforms."
+                title="Personalized marketing"
+                hint="Personalize marketing on third party platforms."
               />
             </div>
-            <div className="py-3">
+            <div className="px-4 py-3">
               <GuestToggleRow
                 storageKey="kova-guest-ad-personalization"
-                title="Ad Personalization"
-                hint="Use relevant activity, interests, and conversation context to make ads more useful to you."
+                title="Ad personalization"
+                hint="Use recent activity to make ads more relevant."
               />
             </div>
-            <div className="pt-3">
+            <div className="px-4 py-3">
               <GuestToggleRow
                 storageKey="kova-guest-past-chat-relevance"
-                title="Past Chat Relevance"
-                hint="Use past conversations and memory to improve ad relevance. Your chats and memories are not shared with advertisers."
+                title="Past chat relevance"
+                hint="Use past chats to improve ad relevance. Chats are never shared with advertisers."
               />
             </div>
           </div>
         </section>
 
-        <p className="text-[11px] text-muted-foreground text-center pt-2">
-          Guest preferences are stored on this device only.
+        <p className="text-[11px] text-muted-foreground text-center pt-1">
+          Guest preferences are saved on this device only.
         </p>
       </div>
     </div>
