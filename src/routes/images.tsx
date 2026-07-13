@@ -351,7 +351,11 @@ function ImagesPage() {
                 }}
                 rows={1}
                 placeholder="Describe an image"
-                className="flex-1 bg-transparent outline-none text-[15px] placeholder:text-muted-foreground resize-none py-1.5 max-h-40"
+                spellCheck={false}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                className="flex-1 bg-transparent outline-none border-0 focus:ring-0 focus:outline-none text-[15px] placeholder:text-muted-foreground resize-none py-1.5 max-h-40"
               />
               <button
                 type="submit"
