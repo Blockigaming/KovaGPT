@@ -72,14 +72,14 @@ export const getSummaryTasks = createServerFn({ method: "POST" })
       context.supabase.from("project_members").select("project_id").eq("user_id", context.userId),
     ]);
     const projectIds = (mem.data ?? []).map((m) => m.project_id);
-    let projectRows: Array<{ id: string; title: string; due_at: string | null; project_id: string }> = [];
+    let projectRows: Array<{ id: string; title: string; due_date: string | null; project_id: string }> = [];
     if (projectIds.length) {
       const { data } = await context.supabase
         .from("project_tasks")
-        .select("id, title, due_at, project_id, status")
+        .select("id, title, due_date, project_id, status")
         .in("project_id", projectIds)
         .neq("status", "done")
-        .order("due_at", { ascending: true, nullsFirst: false })
+        .order("due_date", { ascending: true, nullsFirst: false })
         .limit(6);
       projectRows = (data ?? []) as typeof projectRows;
     }
@@ -92,7 +92,7 @@ export const getSummaryTasks = createServerFn({ method: "POST" })
     const projTasks: SummaryTask[] = projectRows.map((p) => ({
       id: p.id,
       title: p.title,
-      due_at: p.due_at,
+      due_at: p.due_date,
       source: "project" as const,
       project_id: p.project_id,
     }));
