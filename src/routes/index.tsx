@@ -6,6 +6,7 @@ import { PanelLeft, Search } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
+import { AIStatus } from "@/components/AIStatus";
 
 import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 
