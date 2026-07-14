@@ -310,29 +310,87 @@ export function ChatInput({
               {!isStreaming && (
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
+                    // Toggle off if already listening.
+                    if (listening && recRef.current) {
+                      try { recRef.current.stop(); } catch { /* ignore */ }
+                      setListening(false);
+                      return;
+                    }
                     const w = window as unknown as {
                       SpeechRecognition?: new () => SpeechRecognitionLike;
                       webkitSpeechRecognition?: new () => SpeechRecognitionLike;
                     };
                     const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
                     if (!Ctor) {
-                      toast.error("Voice input isn't supported in this browser.");
+                      toast.error("Voice input isn't supported in this browser. Try Chrome, Edge, or Safari.");
                       return;
                     }
+                    // Proactively check permission (skip on Safari which lacks Permissions API for microphone).
+                    try {
+                      const permsApi = (navigator as Navigator & { permissions?: { query: (d: { name: PermissionName }) => Promise<{ state: string }> } }).permissions;
+                      if (permsApi?.query) {
+                        const status = await permsApi.query({ name: "microphone" as PermissionName });
+                        if (status.state === "denied") {
+                          toast.error("Microphone is blocked. Enable it in your browser settings.");
+                          return;
+                        }
+                      }
+                    } catch { /* Safari: proceed anyway */ }
+
                     const rec = new Ctor();
-                    rec.lang = "en-US";
-                    rec.interimResults = false;
-                    rec.onresult = (e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => {
-                      const transcript = e.results[0][0].transcript;
-                      onChange((value ? value + " " : "") + transcript);
+                    rec.lang = navigator.language || "en-US";
+                    rec.interimResults = true;
+                    rec.continuous = true;
+                    dictationBaseRef.current = value ? value.replace(/\s*$/, "") + " " : "";
+                    rec.onresult = (e) => {
+                      let finalText = "";
+                      let interimText = "";
+                      for (let i = e.resultIndex; i < e.results.length; i++) {
+                        const res = e.results[i] as ArrayLike<{ transcript: string }> & { isFinal?: boolean };
+                        const chunk = res[0]?.transcript ?? "";
+                        if (res.isFinal) finalText += chunk;
+                        else interimText += chunk;
+                      }
+                      if (finalText) {
+                        dictationBaseRef.current = (dictationBaseRef.current + finalText).replace(/\s+/g, " ");
+                        if (!/\s$/.test(dictationBaseRef.current)) dictationBaseRef.current += " ";
+                      }
+                      onChange((dictationBaseRef.current + interimText).trimStart());
                     };
-                    rec.onerror = () => toast.error("Couldn't hear you. Try again.");
-                    try { rec.start(); } catch { /* ignore */ }
+                    rec.onerror = (e) => {
+                      const err = e?.error ?? "";
+                      if (err === "not-allowed" || err === "service-not-allowed") {
+                        toast.error("Microphone permission denied.");
+                      } else if (err === "no-speech") {
+                        // Silent fail — just stop.
+                      } else if (err === "audio-capture") {
+                        toast.error("No microphone found.");
+                      } else if (err && err !== "aborted") {
+                        toast.error("Voice input failed. Try again.");
+                      }
+                      setListening(false);
+                    };
+                    rec.onend = () => {
+                      setListening(false);
+                      recRef.current = null;
+                    };
+                    try {
+                      rec.start();
+                      recRef.current = rec;
+                      setListening(true);
+                    } catch {
+                      toast.error("Couldn't start voice input. Try again.");
+                    }
                   }}
-                  className="w-9 h-9 rounded-full bg-accent/60 text-muted-foreground hover:text-foreground hover:bg-accent flex items-center justify-center transition"
-                  aria-label="Voice input"
-                  title="Voice input"
+                  className={`w-9 h-9 rounded-full flex items-center justify-center transition ${
+                    listening
+                      ? "bg-red-500/90 text-white animate-pulse"
+                      : "bg-accent/60 text-muted-foreground hover:text-foreground hover:bg-accent"
+                  }`}
+                  aria-label={listening ? "Stop voice input" : "Voice input"}
+                  aria-pressed={listening}
+                  title={listening ? "Stop dictation" : "Voice input"}
                 >
                   <Mic className="w-5 h-5" />
                 </button>
