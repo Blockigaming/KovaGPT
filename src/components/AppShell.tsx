@@ -91,12 +91,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         onOpenHelp={openHelp}
       />
 
-      <div className="flex-1 min-w-0 flex flex-col overflow-y-auto">
+      <div className="flex-1 min-w-0 flex flex-col overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+56px)] md:pb-0">
         <OfflineBanner />
         {!sidebarOpen && (
           <button
             onClick={() => setSidebarOpen(true)}
-            className="fixed top-3 left-3 z-30 p-2 rounded-md bg-background/90 border border-border hover:bg-accent transition shadow-sm"
+            className="hidden md:flex fixed top-3 left-3 z-30 p-2 rounded-md bg-background/90 border border-border hover:bg-accent transition shadow-sm items-center justify-center"
             aria-label="Open sidebar"
           >
             <PanelLeft className="w-4 h-4" />
@@ -105,24 +105,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         <AppErrorBoundary>{children}</AppErrorBoundary>
       </div>
 
-      {/* Mobile floating actions */}
-      <div className="md:hidden fixed left-2 bottom-[max(0.5rem,calc(env(safe-area-inset-bottom)+0.25rem))] z-30 flex items-center gap-2">
-        <button
-          onClick={handleNew}
-          className="h-11 px-4 rounded-2xl bg-[#3b82f6] text-white shadow-lg flex items-center gap-2 active:scale-95 transition font-medium text-sm hover:bg-[#2563eb]"
-          aria-label="New chat"
-        >
-          <Plus className="w-4 h-4" />
-          <span>New Chat</span>
-        </button>
-        <button
-          onClick={() => openSettings()}
-          className="w-11 h-11 rounded-2xl bg-background border border-border shadow-lg flex items-center justify-center active:scale-95 transition"
-          aria-label="Open settings"
-        >
-          <SettingsIcon className="w-5 h-5" />
-        </button>
-      </div>
+      {/* Mobile-only bottom tab bar — replaces the previous floating FAB pair. */}
+      <MobileBottomNav onOpenSettings={() => openSettings()} />
+
 
 
       <Suspense fallback={null}>
