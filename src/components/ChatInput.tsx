@@ -286,7 +286,7 @@ export function ChatInput({
               value={value}
               onChange={(e) => onChange(e.target.value)}
               onKeyDown={handleKey}
-              placeholder={placeholder ?? "Message KovaGPT…"}
+              placeholder={placeholder ?? "Ask Kova"}
               rows={1}
               spellCheck={false}
               autoComplete="off"
