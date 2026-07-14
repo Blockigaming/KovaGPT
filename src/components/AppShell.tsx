@@ -7,6 +7,7 @@ const OnboardingDialog = lazy(() => import("@/components/OnboardingDialog").then
 import { TimersWidget } from "@/components/TimersWidget";
 import { AppErrorBoundary, OfflineBanner } from "@/components/states";
 import { MobileFabs } from "@/components/MobileFabs";
+import { MobileTopBar } from "@/components/MobileTopBar";
 import { installShortcutListener } from "@/lib/shortcuts";
 import { PanelLeft } from "lucide-react";
 import {
