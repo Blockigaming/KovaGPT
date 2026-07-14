@@ -1654,23 +1654,29 @@ function SignedOutSettings({
 }) {
   return (
     <div className="overflow-y-auto max-h-[78vh]">
-      {/* Hero sign-in card - compact, Apple-style */}
+      {/* Hero sign-in card */}
       <div className="px-6 pt-5">
-        <div className="flex items-center gap-3 rounded-2xl border border-border bg-muted/40 p-4">
-          <div className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center shrink-0">
-            <Sparkles className="w-4 h-4" />
+        <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-accent/40 via-background to-background p-5">
+          <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-foreground/5 blur-2xl pointer-events-none" />
+          <div className="relative flex items-start gap-4">
+            <div className="w-11 h-11 rounded-2xl bg-foreground text-background flex items-center justify-center shrink-0 shadow-sm">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-base font-semibold tracking-tight font-display">Sign in to KovaGPT</div>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                Sync your chats, memory, and connected apps across every device. Guest settings below are saved on this device only.
+              </p>
+              <div className="mt-3">
+                <Button size="sm" onClick={onSignIn} className="rounded-full px-5 shadow-sm">
+                  Sign in
+                </Button>
+              </div>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold tracking-tight">Sign in to KovaGPT</div>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Sync chats, memory, and apps across your devices.
-            </p>
-          </div>
-          <Button size="sm" onClick={onSignIn} className="rounded-full px-4 shrink-0">
-            Sign in
-          </Button>
         </div>
       </div>
+
 
       <div className="px-6 py-5 space-y-5">
         {/* Appearance */}
