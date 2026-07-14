@@ -40,7 +40,6 @@ import {
   saveConversations,
 } from "@/lib/chat-store";
 import { toast } from "sonner";
-import { Toaster } from "@/components/ui/sonner";
 import { loadPersonality, personalityToInstruction } from "@/components/PersonalitySliders";
 
 export const Route = createFileRoute("/")({
@@ -632,7 +631,7 @@ function KovaGPT() {
 
   return (
     <div className="flex h-screen w-full bg-background text-foreground" style={{ height: "100dvh" }}>
-      <Toaster />
+      
       <Sidebar
         conversations={conversations}
         activeId={activeId}

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useServerFn } from "@tanstack/react-start";
-import { FolderKanban, Plus, Users, Check, X as XIcon, Loader2 } from "lucide-react";
+import { FolderKanban, Plus, Users, Check, X as XIcon, Loader2, Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { SkeletonGrid, EmptyState, ErrorState } from "@/components/states";
 import {
@@ -77,9 +77,36 @@ function ProjectsPage() {
       toast.success("Project created");
       navigate({ to: "/projects/$projectId", params: { projectId: id } });
     } catch (e) {
+      console.error("[createProject]", e);
       toast.error(e instanceof Error ? e.message : "Failed to create project");
     } finally {
       setBusy(false);
+    }
+  }
+
+  const suggestions: { name: string; description: string }[] = [
+    { name: "Marketing Campaign", description: "Plan, draft, and coordinate launch content across channels." },
+    { name: "Product Research", description: "User interviews, competitive notes, and opportunity briefs." },
+    { name: "Content Calendar", description: "Track posts, deadlines, and drafts for the upcoming quarter." },
+    { name: "Team Onboarding", description: "Docs, checklists, and resources for new hires." },
+  ];
+  const [aiBusy, setAiBusy] = useState(false);
+  async function generateWithKova() {
+    setAiBusy(true);
+    try {
+      const res = await fetch("/api/project-suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hint: name || description || "" }),
+      });
+      if (!res.ok) throw new Error("Suggestion service unavailable");
+      const data = (await res.json()) as { name?: string; description?: string };
+      if (data.name) setName(data.name);
+      if (data.description) setDescription(data.description);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't generate suggestion");
+    } finally {
+      setAiBusy(false);
     }
   }
 
@@ -198,22 +225,53 @@ function ProjectsPage() {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>New project</DialogTitle></DialogHeader>
-          <div className="space-y-3">
+          <form
+            onSubmit={(e) => { e.preventDefault(); if (!busy && name.trim()) handleCreate(); }}
+            className="space-y-4"
+          >
             <div>
-              <label className="text-sm font-medium mb-1 block">Name</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-sm font-medium">Name</label>
+                <button
+                  type="button"
+                  onClick={generateWithKova}
+                  disabled={aiBusy}
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline disabled:opacity-60"
+                >
+                  {aiBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+                  Generate with Kova
+                </button>
+              </div>
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Marketing campaign" maxLength={100} autoFocus />
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Description (optional)</label>
               <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What's this project about?" rows={3} maxLength={1000} />
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreate} disabled={busy || !name.trim()}>
-              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create"}
-            </Button>
-          </DialogFooter>
+            <div>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
+                <Sparkles className="w-3 h-3" /> Suggestions
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {suggestions.map((s) => (
+                  <button
+                    key={s.name}
+                    type="button"
+                    onClick={() => { setName(s.name); setDescription(s.description); }}
+                    className="text-xs px-2.5 py-1 rounded-full border border-border hover:bg-accent transition"
+                  >
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={busy || !name.trim()}>
+                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </AppShell>

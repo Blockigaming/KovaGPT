@@ -49,6 +49,7 @@ import { Route as BlogBestAiAssistantsRouteImport } from './routes/blog.best-ai-
 import { Route as BlogAiMarketResearchGuideRouteImport } from './routes/blog.ai-market-research-guide'
 import { Route as ApiWriteRouteImport } from './routes/api/write'
 import { Route as ApiTitleRouteImport } from './routes/api/title'
+import { Route as ApiProjectSuggestRouteImport } from './routes/api/project-suggest'
 import { Route as ApiMemoryRouteImport } from './routes/api/memory'
 import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
@@ -276,6 +277,11 @@ const ApiTitleRoute = ApiTitleRouteImport.update({
   path: '/api/title',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiProjectSuggestRoute = ApiProjectSuggestRouteImport.update({
+  id: '/api/project-suggest',
+  path: '/api/project-suggest',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMemoryRoute = ApiMemoryRouteImport.update({
   id: '/api/memory',
   path: '/api/memory',
@@ -442,6 +448,7 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/memory': typeof ApiMemoryRoute
+  '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/title': typeof ApiTitleRoute
   '/api/write': typeof ApiWriteRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
@@ -508,6 +515,7 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/memory': typeof ApiMemoryRoute
+  '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/title': typeof ApiTitleRoute
   '/api/write': typeof ApiWriteRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
@@ -575,6 +583,7 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/memory': typeof ApiMemoryRoute
+  '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/title': typeof ApiTitleRoute
   '/api/write': typeof ApiWriteRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
@@ -643,6 +652,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/generate-image'
     | '/api/memory'
+    | '/api/project-suggest'
     | '/api/title'
     | '/api/write'
     | '/blog/ai-market-research-guide'
@@ -709,6 +719,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/generate-image'
     | '/api/memory'
+    | '/api/project-suggest'
     | '/api/title'
     | '/api/write'
     | '/blog/ai-market-research-guide'
@@ -775,6 +786,7 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/generate-image'
     | '/api/memory'
+    | '/api/project-suggest'
     | '/api/title'
     | '/api/write'
     | '/blog/ai-market-research-guide'
@@ -842,6 +854,7 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRouteWithChildren
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
   ApiMemoryRoute: typeof ApiMemoryRoute
+  ApiProjectSuggestRoute: typeof ApiProjectSuggestRoute
   ApiTitleRoute: typeof ApiTitleRoute
   ApiWriteRoute: typeof ApiWriteRoute
   BlogAiMarketResearchGuideRoute: typeof BlogAiMarketResearchGuideRoute
@@ -1151,6 +1164,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTitleRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/project-suggest': {
+      id: '/api/project-suggest'
+      path: '/api/project-suggest'
+      fullPath: '/api/project-suggest'
+      preLoaderRoute: typeof ApiProjectSuggestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/memory': {
       id: '/api/memory'
       path: '/api/memory'
@@ -1394,6 +1414,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRouteWithChildren,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
   ApiMemoryRoute: ApiMemoryRoute,
+  ApiProjectSuggestRoute: ApiProjectSuggestRoute,
   ApiTitleRoute: ApiTitleRoute,
   ApiWriteRoute: ApiWriteRoute,
   BlogAiMarketResearchGuideRoute: BlogAiMarketResearchGuideRoute,
