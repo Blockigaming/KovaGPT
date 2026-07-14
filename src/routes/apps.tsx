@@ -107,11 +107,8 @@ function AppLogo({ domain, label }: { domain: string; label: string }) {
 
 function StatusBadge({ state, configured, comingSoon }: { state: ConnState; configured: boolean; comingSoon?: boolean }) {
   if (comingSoon) {
-    return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">
-        Coming soon
-      </span>
-    );
+    // The "Coming soon" button on the card already communicates status; avoid duplicating it as a badge.
+    return null;
   }
   if (!configured) {
     return (
