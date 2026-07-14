@@ -9,6 +9,7 @@ import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
 import { AIStatus } from "@/components/AIStatus";
 import { MobileFabs } from "@/components/MobileFabs";
+import { MobileTopBar } from "@/components/MobileTopBar";
 
 import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 
@@ -574,9 +575,31 @@ function KovaGPT() {
 
       } catch (e: unknown) {
         if ((e as Error).name !== "AbortError") {
-          const msg = e instanceof Error ? e.message : "Something went wrong";
-          toast.error(msg);
-          updateAssistant(`\n\n_Error: ${msg}_`);
+          const raw = e instanceof Error ? e.message : "Something went wrong";
+          // Safari surfaces network / streaming failures as bare "Load failed".
+          // Rewrite these to something actionable so users know to retry.
+          const isNetwork = /load failed|networkerror|failed to fetch|network request failed/i.test(raw)
+            || (e instanceof TypeError);
+          const msg = isNetwork
+            ? "Connection lost while generating a response. Check your internet and tap retry."
+            : raw;
+          toast.error(msg, {
+            action: {
+              label: "Retry",
+              onClick: () => {
+                // Drop the empty assistant placeholder and resend the last user prompt.
+                setConversations((prev) =>
+                  prev.map((c) =>
+                    c.id === nextConvId
+                      ? { ...c, messages: c.messages.filter((m) => m.id !== assistantMsg.id) }
+                      : c,
+                  ),
+                );
+                setTimeout(() => send(text, atts), 100);
+              },
+            },
+          });
+          updateAssistant(`\n\n_${msg}_`);
         }
       } finally {
         setIsStreaming(false);
@@ -667,7 +690,12 @@ function KovaGPT() {
       />
 
       <main className="flex-1 flex flex-col min-w-0" data-sidebar={sidebarOpen ? "open" : "closed"}>
-        <header className="h-14 flex items-center px-3 relative gap-1">
+        <MobileTopBar
+          onOpenSidebar={() => setSidebarOpen(true)}
+          onNewChat={newChat}
+          title={active?.title}
+        />
+        <header className="hidden md:flex h-14 items-center px-3 relative gap-1">
           {!sidebarOpen && (
             <div className="flex items-center gap-1 mr-2 shrink-0">
               <button

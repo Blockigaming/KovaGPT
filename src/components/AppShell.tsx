@@ -7,6 +7,7 @@ const OnboardingDialog = lazy(() => import("@/components/OnboardingDialog").then
 import { TimersWidget } from "@/components/TimersWidget";
 import { AppErrorBoundary, OfflineBanner } from "@/components/states";
 import { MobileFabs } from "@/components/MobileFabs";
+import { MobileTopBar } from "@/components/MobileTopBar";
 import { installShortcutListener } from "@/lib/shortcuts";
 import { PanelLeft } from "lucide-react";
 import {
@@ -95,6 +96,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">
         <OfflineBanner />
+        <MobileTopBar
+          onOpenSidebar={() => setSidebarOpen(true)}
+          onNewChat={handleNew}
+        />
         {!sidebarOpen && (
           <button
             onClick={() => setSidebarOpen(true)}
