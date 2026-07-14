@@ -78,11 +78,13 @@ function deriveStatus(
 export function AIStatus({
   message,
   streaming,
+  lastUserPrompt,
 }: {
   message?: Message;
   streaming: boolean;
+  lastUserPrompt?: string;
 }) {
-  const status = deriveStatus(message, streaming);
+  const status = deriveStatus(message, streaming, lastUserPrompt);
   const [display, setDisplay] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
   const [animKey, setAnimKey] = useState(0);
