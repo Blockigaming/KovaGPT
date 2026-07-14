@@ -380,6 +380,32 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
   { id: "looker", label: "Looker", description: "Reference assignments, grades, remaining work, and class updates.", category: "Education", status: "live", domain: "lookerstudio.google.com" },
   { id: "metabase", label: "Metabase", description: "Reference tasks, records, and workspace updates.", category: "Productivity", status: "live", domain: "metabase.com" },
   { id: "mode", label: "Mode", description: "Reference messages, labels, and mailbox context.", category: "Email", status: "live", domain: "mode.com" },
+
+  // --- Top popular picks across four sections ---
+  // Productivity
+  { id: "airtable", label: "Airtable", description: "Reference bases, records, and views.", category: "Productivity", status: "live", domain: "airtable.com" },
+  { id: "coda", label: "Coda", description: "Reference Coda docs and tables.", category: "Productivity", status: "live", domain: "coda.io" },
+  { id: "confluence", label: "Confluence", description: "Reference team wiki pages.", category: "Productivity", status: "live", domain: "atlassian.com" },
+  { id: "basecamp", label: "Basecamp", description: "Reference projects and to-dos.", category: "Productivity", status: "live", domain: "basecamp.com" },
+  { id: "hubspot", label: "HubSpot", description: "Reference CRM contacts and deals.", category: "Productivity", status: "live", domain: "hubspot.com" },
+  // Communication
+  { id: "signal", label: "Signal", description: "Reference Signal message context.", category: "Communication", status: "live", domain: "signal.org" },
+  { id: "webex", label: "Webex", description: "Reference Webex meetings.", category: "Communication", status: "live", domain: "webex.com" },
+  { id: "google-meet", label: "Google Meet", description: "Reference Meet calls and recaps.", category: "Communication", status: "live", domain: "meet.google.com" },
+  { id: "facetime", label: "FaceTime", description: "Reference FaceTime calls.", category: "Communication", status: "live", domain: "apple.com" },
+  { id: "messenger", label: "Messenger", description: "Reference Messenger chats.", category: "Communication", status: "live", domain: "messenger.com" },
+  // Social & Media
+  { id: "youtube-music", label: "YouTube Music", description: "Reference your playlists and history.", category: "Social & Media", status: "live", domain: "music.youtube.com" },
+  { id: "soundcloud", label: "SoundCloud", description: "Reference tracks and likes.", category: "Social & Media", status: "live", domain: "soundcloud.com" },
+  { id: "twitch", label: "Twitch", description: "Reference streams and followed channels.", category: "Social & Media", status: "live", domain: "twitch.tv" },
+  { id: "snapchat", label: "Snapchat", description: "Reference memories and saved content.", category: "Social & Media", status: "live", domain: "snapchat.com" },
+  { id: "threads", label: "Threads", description: "Reference posts and replies.", category: "Social & Media", status: "live", domain: "threads.net" },
+  // Development
+  { id: "bitbucket", label: "Bitbucket", description: "Read repos and pull requests.", category: "Development", status: "live", domain: "bitbucket.org" },
+  { id: "netlify", label: "Netlify", description: "Read deployments and sites.", category: "Development", status: "live", domain: "netlify.com" },
+  { id: "cloudflare", label: "Cloudflare", description: "Read Workers and Pages projects.", category: "Development", status: "live", domain: "cloudflare.com" },
+  { id: "aws", label: "AWS", description: "Read resource summaries.", category: "Development", status: "live", domain: "aws.amazon.com" },
+  { id: "sentry", label: "Sentry", description: "Read error reports and issues.", category: "Development", status: "live", domain: "sentry.io" },
 ];
 
 export const CONNECTOR_CATEGORIES: ConnectorCategory[] = [
