@@ -1,4 +1,4 @@
-import { ArrowUp, Square, Plus, X, Mic } from "lucide-react";
+import { ArrowUp, Square, Plus, X, Mic, Image as ImageIcon, FileText } from "lucide-react";
 
 type SpeechRecognitionLike = {
   lang: string;
@@ -49,9 +49,27 @@ export function ChatInput({
 
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  
+  const photoRef = useRef<HTMLInputElement>(null);
+  const plusWrapRef = useRef<HTMLDivElement>(null);
+
   const [sendFlash, setSendFlash] = useState(false);
   const [actionColor, setActionColor] = useState<string>("#3b82f6");
+  const [plusOpen, setPlusOpen] = useState(false);
+
+  useEffect(() => {
+    if (!plusOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!plusWrapRef.current?.contains(e.target as Node)) setPlusOpen(false);
+    };
+    const onEsc = (e: KeyboardEvent) => { if (e.key === "Escape") setPlusOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [plusOpen]);
+
 
 
   useEffect(() => {
