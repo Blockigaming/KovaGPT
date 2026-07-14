@@ -323,7 +323,7 @@ export function ChatInput({
                     rec.onerror = () => toast.error("Couldn't hear you. Try again.");
                     try { rec.start(); } catch { /* ignore */ }
                   }}
-                  className="w-9 h-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent/60 flex items-center justify-center transition"
+                  className="w-9 h-9 rounded-full bg-accent/60 text-muted-foreground hover:text-foreground hover:bg-accent flex items-center justify-center transition"
                   aria-label="Voice input"
                   title="Voice input"
                 >
