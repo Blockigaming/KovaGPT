@@ -832,7 +832,7 @@ function KovaGPT() {
           <div className="flex-1 flex flex-col overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
             <div className="flex-1 flex flex-col items-center justify-center w-full py-10">
               <div className="flex flex-col items-center gap-4 mb-6">
-                <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight text-center">
+                <h1 className="font-display text-2xl sm:text-4xl font-semibold tracking-tight text-center">
                   {greeting}
                 </h1>
               </div>
@@ -995,6 +995,11 @@ function KovaGPT() {
                 }
                 placeholder="Ask Kova"
               />
+              <div className="hidden md:flex justify-center gap-3 text-[11px] text-muted-foreground/70 mt-2 select-none">
+                <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">Enter</kbd> to send</span>
+                <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">Shift+Enter</kbd> newline</span>
+                <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">⌘K</kbd> search</span>
+              </div>
             </div>
           </>
         )}

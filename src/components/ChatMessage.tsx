@@ -279,7 +279,7 @@ function ChatMessageInner({
 
 
   return (
-    <div className="w-full px-6 sm:px-12 lg:px-20 py-3 group animate-fade-in text-[15px] [[data-sidebar=closed]_&]:text-[17px] [[data-sidebar=closed]_&]:py-4">
+    <div className="w-full px-3 sm:px-8 md:px-12 lg:px-20 py-2 md:py-3 group animate-fade-in text-[14px] leading-[1.55] md:text-[15px] md:leading-[1.65] lg:text-[16px] [[data-sidebar=closed]_&]:md:text-[17px] [[data-sidebar=closed]_&]:md:py-4">
       {isUser ? (
         <div className="mx-auto max-w-3xl [[data-sidebar=closed]_&]:max-w-4xl flex justify-end">
           <div className="max-w-[80%] sm:max-w-[70%] flex flex-col items-end min-w-0">

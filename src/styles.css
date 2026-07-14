@@ -208,10 +208,15 @@ textarea, input {
   background: var(--code-block-bg);
   color: var(--code-block-fg);
   border-radius: 0.5em;
-  padding: 1em;
+  padding: 0.7em;
   overflow-x: auto;
-  margin: 0.8em 0;
-  font-size: 0.875em;
+  margin: 0.6em 0;
+  font-size: 0.8em;
+  line-height: 1.5;
+  -webkit-overflow-scrolling: touch;
+}
+@media (min-width: 768px) {
+  .prose-chat pre { padding: 1em; margin: 0.8em 0; font-size: 0.875em; }
 }
 .prose-chat pre code {
   background: transparent;

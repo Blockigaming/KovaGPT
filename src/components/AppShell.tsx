@@ -79,7 +79,30 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="relative flex h-[100dvh] w-full bg-background text-foreground overflow-hidden">
+    <div
+      className="relative flex h-[100dvh] w-full bg-background text-foreground overflow-hidden"
+      onTouchStart={(e) => {
+        const t = e.touches[0];
+        if (t && t.clientX < 24 && window.innerWidth < 768) {
+          (e.currentTarget as HTMLDivElement).dataset.swipeStart = String(t.clientX);
+          (e.currentTarget as HTMLDivElement).dataset.swipeY = String(t.clientY);
+        }
+      }}
+      onTouchMove={(e) => {
+        const el = e.currentTarget as HTMLDivElement;
+        const start = el.dataset.swipeStart ? parseFloat(el.dataset.swipeStart) : NaN;
+        const startY = el.dataset.swipeY ? parseFloat(el.dataset.swipeY) : NaN;
+        if (!isNaN(start) && e.touches[0]) {
+          const dx = e.touches[0].clientX - start;
+          const dy = Math.abs(e.touches[0].clientY - startY);
+          if (dx > 60 && dy < 40) {
+            setSidebarOpen(true);
+            delete el.dataset.swipeStart;
+          }
+        }
+      }}
+      onTouchEnd={(e) => { delete (e.currentTarget as HTMLDivElement).dataset.swipeStart; }}
+    >
       {/* Animated brand mesh background - sits behind everything, no pointer events. */}
       <div aria-hidden="true" className="kova-bg" />
       <Sidebar
