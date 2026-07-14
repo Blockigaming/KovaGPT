@@ -77,9 +77,36 @@ function ProjectsPage() {
       toast.success("Project created");
       navigate({ to: "/projects/$projectId", params: { projectId: id } });
     } catch (e) {
+      console.error("[createProject]", e);
       toast.error(e instanceof Error ? e.message : "Failed to create project");
     } finally {
       setBusy(false);
+    }
+  }
+
+  const suggestions: { name: string; description: string }[] = [
+    { name: "Marketing Campaign", description: "Plan, draft, and coordinate launch content across channels." },
+    { name: "Product Research", description: "User interviews, competitive notes, and opportunity briefs." },
+    { name: "Content Calendar", description: "Track posts, deadlines, and drafts for the upcoming quarter." },
+    { name: "Team Onboarding", description: "Docs, checklists, and resources for new hires." },
+  ];
+  const [aiBusy, setAiBusy] = useState(false);
+  async function generateWithKova() {
+    setAiBusy(true);
+    try {
+      const res = await fetch("/api/project-suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hint: name || description || "" }),
+      });
+      if (!res.ok) throw new Error("Suggestion service unavailable");
+      const data = (await res.json()) as { name?: string; description?: string };
+      if (data.name) setName(data.name);
+      if (data.description) setDescription(data.description);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't generate suggestion");
+    } finally {
+      setAiBusy(false);
     }
   }
 
