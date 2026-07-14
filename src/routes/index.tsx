@@ -911,7 +911,7 @@ function KovaGPT() {
                 );
               })}
             </div>
-            <div className="pb-[calc(env(safe-area-inset-bottom)+56px)] md:pb-0">
+            <div className="pb-[calc(env(safe-area-inset-bottom)+56px)] md:pb-2 md:pt-2">
               <ChatInput
                 value={input}
                 onChange={setInput}
