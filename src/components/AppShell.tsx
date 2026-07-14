@@ -96,6 +96,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">
         <OfflineBanner />
+        <MobileTopBar
+          onOpenSidebar={() => setSidebarOpen(true)}
+          onNewChat={handleNew}
+        />
         {!sidebarOpen && (
           <button
             onClick={() => setSidebarOpen(true)}
