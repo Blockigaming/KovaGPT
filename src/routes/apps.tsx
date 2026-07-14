@@ -223,7 +223,7 @@ function AppCard({
   }
 
   return (
-    <li className="rounded-xl border border-border bg-card p-4 flex items-start gap-3 hover:border-foreground/20 transition">
+    <li className="rounded-xl border border-border bg-card p-4 flex items-start gap-3 hover:border-foreground/20 transition h-full">
       <AppLogo domain={item.domain} label={item.label} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
@@ -378,7 +378,7 @@ function AppsPage() {
 
 
   const renderGrid = (items: ConnectorItem[]) => (
-    <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+    <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 auto-rows-fr">
       {items.map((item) => (
         <AppCard
           key={item.id}
