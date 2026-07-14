@@ -99,17 +99,15 @@ export function LongResponseCard({
   };
 
   return (
-    <div className="relative my-3 rounded-2xl border border-border/60 bg-[#0a0a0a] text-neutral-100 shadow-md overflow-visible">
-      <div className="sticky top-2 z-10 flex items-center justify-between gap-2 px-4 py-2 mx-2 mt-2 rounded-xl bg-[#0a0a0a]/95 backdrop-blur border border-white/5">
-        <div className="min-w-0">
-          <div className="text-[10px] uppercase tracking-wider text-neutral-500">Document</div>
-          <div className="text-sm font-medium truncate text-neutral-100">{title}</div>
-        </div>
-        <div className="flex items-center gap-0.5 shrink-0">
+    <div className="relative my-3 rounded-2xl border border-white/5 bg-[#0a0a0a] text-neutral-100 shadow-md overflow-visible">
+      {/* Sticky copy button, pinned to the top-right of the card. Stays put
+          as the user scrolls the long response. */}
+      <div className="sticky top-2 z-10 flex justify-end px-2 pt-2 pointer-events-none">
+        <div className="pointer-events-auto flex items-center gap-0.5 rounded-full bg-black/70 backdrop-blur border border-white/10 px-1 py-1">
           <button
             onClick={copy}
             title={copied ? "Copied" : "Copy"}
-            className="p-1.5 rounded-md text-neutral-400 hover:text-white hover:bg-white/10 transition"
+            className="p-1.5 rounded-full text-neutral-300 hover:text-white hover:bg-white/10 transition"
             aria-label="Copy"
           >
             {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -117,7 +115,7 @@ export function LongResponseCard({
           <button
             onClick={selectAll}
             title="Select all"
-            className="p-1.5 rounded-md text-neutral-400 hover:text-white hover:bg-white/10 transition"
+            className="p-1.5 rounded-full text-neutral-400 hover:text-white hover:bg-white/10 transition"
             aria-label="Select all"
           >
             <MousePointerClick className="w-4 h-4" />
@@ -125,7 +123,7 @@ export function LongResponseCard({
           <button
             onClick={openInWriting}
             title="Open in Writing"
-            className="p-1.5 rounded-md text-neutral-400 hover:text-white hover:bg-white/10 transition"
+            className="p-1.5 rounded-full text-neutral-400 hover:text-white hover:bg-white/10 transition"
             aria-label="Open in Writing"
           >
             <FileEdit className="w-4 h-4" />
@@ -133,14 +131,17 @@ export function LongResponseCard({
           <button
             onClick={dl}
             title="Download (.md)"
-            className="p-1.5 rounded-md text-neutral-400 hover:text-white hover:bg-white/10 transition"
+            className="p-1.5 rounded-full text-neutral-400 hover:text-white hover:bg-white/10 transition"
             aria-label="Download"
           >
             <Download className="w-4 h-4" />
           </button>
         </div>
       </div>
-      <div ref={bodyRef} className="px-5 py-4 prose-chat prose-invert max-w-none text-neutral-100">
+      <div className="px-2 -mt-8 mb-2 text-[10px] uppercase tracking-wider text-neutral-500 pl-5">
+        {title}
+      </div>
+      <div ref={bodyRef} className="px-5 pb-5 pt-1 prose-chat prose-invert max-w-none text-neutral-100 leading-relaxed [&>p]:my-3 [&>h1]:mt-4 [&>h2]:mt-4 [&>h3]:mt-3">
         {children}
       </div>
     </div>
