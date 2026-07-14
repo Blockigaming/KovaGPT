@@ -199,26 +199,61 @@ export function ChatInput({
             </div>
           )}
           <div className="flex items-end">
-            <div className="flex items-center pl-2 pb-2">
+            <div className="flex items-center pl-2 pb-2 relative" ref={plusWrapRef}>
               <input
                 ref={fileRef}
                 type="file"
-                accept="image/*,text/*,.md,.markdown,.csv,.tsv,.json,.jsonl,.yml,.yaml,.toml,.xml,.html,.htm,.css,.scss,.less,.js,.jsx,.ts,.tsx,.mjs,.cjs,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cc,.cpp,.hpp,.cs,.php,.sql,.sh,.bash,.env,.log,.srt,.vtt"
+                accept="text/*,.md,.markdown,.csv,.tsv,.json,.jsonl,.yml,.yaml,.toml,.xml,.html,.htm,.css,.scss,.less,.js,.jsx,.ts,.tsx,.mjs,.cjs,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cc,.cpp,.hpp,.cs,.php,.sql,.sh,.bash,.env,.log,.srt,.vtt"
+                multiple
+                className="hidden"
+                onChange={onFileChange}
+              />
+              <input
+                ref={photoRef}
+                type="file"
+                accept="image/*"
                 multiple
                 className="hidden"
                 onChange={onFileChange}
               />
               <button
                 type="button"
-                onClick={() => fileRef.current?.click()}
-                className="w-9 h-9 rounded-full bg-accent/50 hover:bg-accent hover-elevate flex items-center justify-center transition"
-                aria-label="Attach file"
-                title="Attach image or text file"
-
+                onClick={() => setPlusOpen((v) => !v)}
+                className={`w-9 h-9 rounded-full bg-accent/50 hover:bg-accent flex items-center justify-center transition ${plusOpen ? "rotate-45" : ""}`}
+                aria-label="Attach"
+                aria-haspopup="menu"
+                aria-expanded={plusOpen}
+                title="Attach photo or file"
               >
-                <Plus className="w-5 h-5" />
+                <Plus className="w-5 h-5 transition-transform" />
               </button>
+              {plusOpen && (
+                <div
+                  role="menu"
+                  className="absolute bottom-11 left-0 z-50 min-w-[180px] rounded-xl border border-border bg-popover shadow-xl p-1 animate-in fade-in slide-in-from-bottom-1"
+                >
+                  <button
+                    role="menuitem"
+                    type="button"
+                    onClick={() => { setPlusOpen(false); photoRef.current?.click(); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm hover:bg-accent text-left"
+                  >
+                    <ImageIcon className="w-4 h-4 text-muted-foreground" />
+                    <span>Photos</span>
+                  </button>
+                  <button
+                    role="menuitem"
+                    type="button"
+                    onClick={() => { setPlusOpen(false); fileRef.current?.click(); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm hover:bg-accent text-left"
+                  >
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                    <span>Files</span>
+                  </button>
+                </div>
+              )}
             </div>
+
             <textarea
               ref={ref}
               value={value}
