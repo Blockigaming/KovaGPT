@@ -225,22 +225,53 @@ function ProjectsPage() {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>New project</DialogTitle></DialogHeader>
-          <div className="space-y-3">
+          <form
+            onSubmit={(e) => { e.preventDefault(); if (!busy && name.trim()) handleCreate(); }}
+            className="space-y-4"
+          >
             <div>
-              <label className="text-sm font-medium mb-1 block">Name</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-sm font-medium">Name</label>
+                <button
+                  type="button"
+                  onClick={generateWithKova}
+                  disabled={aiBusy}
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline disabled:opacity-60"
+                >
+                  {aiBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+                  Generate with Kova
+                </button>
+              </div>
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Marketing campaign" maxLength={100} autoFocus />
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Description (optional)</label>
               <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What's this project about?" rows={3} maxLength={1000} />
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreate} disabled={busy || !name.trim()}>
-              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create"}
-            </Button>
-          </DialogFooter>
+            <div>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
+                <Sparkles className="w-3 h-3" /> Suggestions
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {suggestions.map((s) => (
+                  <button
+                    key={s.name}
+                    type="button"
+                    onClick={() => { setName(s.name); setDescription(s.description); }}
+                    className="text-xs px-2.5 py-1 rounded-full border border-border hover:bg-accent transition"
+                  >
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={busy || !name.trim()}>
+                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </AppShell>
