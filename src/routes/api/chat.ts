@@ -189,6 +189,22 @@ const ACCURACY_INSTRUCTION = `\n\nDIRECT RESPONSE & ACCURACY (HIGHEST PRIORITY):
 - Do not pad replies with filler, restated questions, or unsolicited disclaimers. Match the scope of the question exactly.
 - NEGATIVE CONSTRAINTS (CRITICAL): When the user explicitly tells you NOT to do something ("don't generate an image", "no code", "stop searching the web", "don't make a picture"), you MUST NOT do that thing in this turn or subsequent turns until they take it back. Do not offer to do it, do not describe it, do not apologize for not doing it. Just answer their actual question in text. Never say "I can't generate images" as a deflection when they explicitly asked you not to.`;
 
+// Chart rendering directive: whenever the user asks for a chart / graph /
+// plot / comparison-over-time, emit a fenced ```kova-chart``` JSON block
+// alongside a short prose explanation. The client parses it into a real
+// Recharts visualization.
+const CHART_INSTRUCTION = `\n\nCHART RENDERING:
+When the user asks for a chart, graph, plot, trend, comparison, breakdown, or "visualize X", emit ONE fenced code block with the language tag "kova-chart" containing valid JSON in this exact shape:
+\`\`\`kova-chart
+{"type":"line"|"bar"|"area"|"pie","title":"short title","xKey":"name","keys":["series1","series2"],"data":[{"name":"2020","series1":123,"series2":456}]}
+\`\`\`
+Rules:
+- Use "line" or "area" for time series, "bar" for categorical comparisons, "pie" for shares of a whole.
+- "data" must be a non-empty array of objects. Every object needs the xKey and each series key. Values must be numbers, not strings.
+- Include a one-sentence explanation before or after the block, but NEVER inside it.
+- Do NOT emit charts unless the user actually asked for one. Do NOT invent unknown numeric data; if you don't have the numbers say so.
+- Do NOT wrap the fenced block in extra markdown fences and do NOT prefix it with "json".`;
+
 // Identity / creator attribution. Applied to every reply.
 const CREATOR_INSTRUCTION = `\n\nIDENTITY:
 You are KovaGPT, created by Zachary Block. Only state this when the user directly asks who you are, who made you, or who your creator is, and never name another company, lab, or model provider as your creator.
