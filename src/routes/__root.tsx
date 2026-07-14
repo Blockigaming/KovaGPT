@@ -10,6 +10,7 @@ import {
 
 import appCss from "../styles.css?url";
 import { ClerkProvider } from "@/components/auth/ClerkSafe";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
