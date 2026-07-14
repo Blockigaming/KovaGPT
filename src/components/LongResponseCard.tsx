@@ -5,8 +5,10 @@ import { useRef, useState, type ReactNode } from "react";
 import { Copy, Check, FileEdit, Download, MousePointerClick } from "lucide-react";
 import { toast } from "sonner";
 
-const LONG_RESPONSE_MIN_CHARS = 1200;
-const LONG_RESPONSE_MIN_WORDS = 220;
+// Wrap even a few well-formed sentences: essays, letters, and long paragraphs
+// all belong in the document card.
+const LONG_RESPONSE_MIN_CHARS = 320;
+const LONG_RESPONSE_MIN_WORDS = 55;
 
 // Skip wrapping when the response is dominated by code fences (handled by
 // the artifact editor) or is mostly a bulleted list.
