@@ -300,7 +300,7 @@ export function ChatInput({
                   <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
                 </div>
               )}
-              {!isStreaming && !value.trim() && attachments.length === 0 && (
+              {!isStreaming && (
                 <button
                   type="button"
                   onClick={() => {
@@ -323,7 +323,7 @@ export function ChatInput({
                     rec.onerror = () => toast.error("Couldn't hear you. Try again.");
                     try { rec.start(); } catch { /* ignore */ }
                   }}
-                  className="sm:hidden w-9 h-9 rounded-full text-muted-foreground bg-accent/50 hover:text-foreground hover:bg-accent hover-elevate flex items-center justify-center transition"
+                  className="w-9 h-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent/60 flex items-center justify-center transition"
                   aria-label="Voice input"
                   title="Voice input"
                 >
