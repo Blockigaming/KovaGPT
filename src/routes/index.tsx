@@ -949,8 +949,8 @@ function KovaGPT() {
 
       <SignUpPrompt open={signupPromptOpen} onOpenChange={setSignupPromptOpen} />
 
+      <MobileBottomNav onOpenSettings={() => setSettingsOpen(true)} />
 
-      
     </div>
   );
 }
