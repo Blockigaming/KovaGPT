@@ -976,7 +976,13 @@ function KovaGPT() {
 
       <SignUpPrompt open={signupPromptOpen} onOpenChange={setSignupPromptOpen} />
 
-      <MobileBottomNav onOpenSettings={() => setSettingsOpen(true)} />
+      <MobileFabs
+        onNewChat={() => {
+          try { localStorage.removeItem("nova-gpt-pending-active"); } catch { /* ignore */ }
+          window.location.assign("/");
+        }}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
 
     </div>
   );
