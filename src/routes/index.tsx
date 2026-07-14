@@ -753,7 +753,7 @@ function KovaGPT() {
 
 
         {!active || active.messages.length === 0 ? (
-          <div className="flex-1 flex flex-col overflow-y-auto px-4">
+          <div className="flex-1 flex flex-col overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
             <div className="flex-1 flex flex-col items-center justify-center w-full py-10">
               <div className="flex flex-col items-center gap-4 mb-6">
                 <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight text-center">
@@ -775,10 +775,11 @@ function KovaGPT() {
                   onUploadLimit={() =>
                     setLimitDialog({ open: true, kind: "upload" })
                   }
-                  placeholder="Ask anything"
+                  placeholder="Ask Kova"
                 />
 
-                <div className="mt-3 flex flex-wrap gap-2 justify-center">
+                {/* Suggestion chips — horizontal pill row on desktop, tall touch cards on mobile. */}
+                <div className="mt-3 hidden sm:flex flex-wrap gap-2 justify-center">
                   {[
                     "Track the World Cup",
                     "Search Current Trends",
@@ -794,9 +795,26 @@ function KovaGPT() {
                     </button>
                   ))}
                 </div>
+                <div className="mt-4 sm:hidden flex flex-col gap-2">
+                  {[
+                    "Track the World Cup",
+                    "Search Current Trends",
+                    "Flash Sales Near Me",
+                  ].map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setInput((v) => (v ? v : p))}
+                      className="w-full text-left text-[15px] px-4 py-3 rounded-2xl border border-border bg-card/60 text-foreground active:scale-[0.98] transition"
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
+
         ) : (
           <>
             <div ref={scrollRef} className="flex-1 overflow-y-auto">
