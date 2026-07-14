@@ -574,9 +574,31 @@ function KovaGPT() {
 
       } catch (e: unknown) {
         if ((e as Error).name !== "AbortError") {
-          const msg = e instanceof Error ? e.message : "Something went wrong";
-          toast.error(msg);
-          updateAssistant(`\n\n_Error: ${msg}_`);
+          const raw = e instanceof Error ? e.message : "Something went wrong";
+          // Safari surfaces network / streaming failures as bare "Load failed".
+          // Rewrite these to something actionable so users know to retry.
+          const isNetwork = /load failed|networkerror|failed to fetch|network request failed/i.test(raw)
+            || (e instanceof TypeError);
+          const msg = isNetwork
+            ? "Connection lost while generating a response. Check your internet and tap retry."
+            : raw;
+          toast.error(msg, {
+            action: {
+              label: "Retry",
+              onClick: () => {
+                // Drop the empty assistant placeholder and resend the last user prompt.
+                setConversations((prev) =>
+                  prev.map((c) =>
+                    c.id === nextConvId
+                      ? { ...c, messages: c.messages.filter((m) => m.id !== assistantMsg.id) }
+                      : c,
+                  ),
+                );
+                setTimeout(() => send(text, files), 100);
+              },
+            },
+          });
+          updateAssistant(`\n\n_${msg}_`);
         }
       } finally {
         setIsStreaming(false);
