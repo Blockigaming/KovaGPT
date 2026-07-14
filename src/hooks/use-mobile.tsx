@@ -1,6 +1,7 @@
 import * as React from "react";
 
-const MOBILE_BREAKPOINT = 768;
+// Treat phones AND tablets as "mobile" so the touch UI applies up through iPad width.
+const MOBILE_BREAKPOINT = 1024;
 
 type NavigatorUAData = {
   mobile?: boolean;

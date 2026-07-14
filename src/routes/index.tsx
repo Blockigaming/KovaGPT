@@ -4,10 +4,11 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { SignUpPrompt } from "@/components/SignUpPrompt";
 import { PanelLeft, Search, MessageSquareDashed, Check } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
-import { MobileBottomNav } from "@/components/MobileBottomNav";
+
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
 import { AIStatus } from "@/components/AIStatus";
+import { MobileFabs } from "@/components/MobileFabs";
 
 import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 
@@ -695,6 +696,13 @@ function KovaGPT() {
             <AIStatus
               streaming={isStreaming}
               message={active?.messages[active.messages.length - 1]}
+              lastUserPrompt={(() => {
+                const msgs = active?.messages ?? [];
+                for (let i = msgs.length - 1; i >= 0; i--) {
+                  if (msgs[i].role === "user") return msgs[i].content;
+                }
+                return undefined;
+              })()}
             />
           </div>
 
@@ -969,7 +977,13 @@ function KovaGPT() {
 
       <SignUpPrompt open={signupPromptOpen} onOpenChange={setSignupPromptOpen} />
 
-      <MobileBottomNav onOpenSettings={() => setSettingsOpen(true)} />
+      <MobileFabs
+        onNewChat={() => {
+          try { localStorage.removeItem("nova-gpt-pending-active"); } catch { /* ignore */ }
+          window.location.assign("/");
+        }}
+        onOpenSettings={() => setSettingsOpen(true)}
+      />
 
     </div>
   );

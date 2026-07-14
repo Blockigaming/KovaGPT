@@ -6,7 +6,7 @@ const SettingsDialog = lazy(() => import("@/components/SettingsDialog").then(m =
 const OnboardingDialog = lazy(() => import("@/components/OnboardingDialog").then(m => ({ default: m.OnboardingDialog })));
 import { TimersWidget } from "@/components/TimersWidget";
 import { AppErrorBoundary, OfflineBanner } from "@/components/states";
-import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { MobileFabs } from "@/components/MobileFabs";
 import { installShortcutListener } from "@/lib/shortcuts";
 import { PanelLeft } from "lucide-react";
 import {
@@ -91,7 +91,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         onOpenHelp={openHelp}
       />
 
-      <div className="flex-1 min-w-0 flex flex-col overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+56px)] md:pb-0">
+      <div className="flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">
         <OfflineBanner />
         {!sidebarOpen && (
           <button
@@ -105,8 +105,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         <AppErrorBoundary>{children}</AppErrorBoundary>
       </div>
 
-      {/* Mobile-only bottom tab bar — replaces the previous floating FAB pair. */}
-      <MobileBottomNav onOpenSettings={() => openSettings()} />
+      {/* Mobile/tablet floating actions: bottom-left New Chat + Settings.
+          Replaces the previous bottom tab bar so the phone/tablet UX feels
+          native — thumb-reachable, unobtrusive, no fixed chrome strip. */}
+      <MobileFabs
+        onNewChat={handleNew}
+        onOpenSettings={() => openSettings()}
+      />
 
 
 
