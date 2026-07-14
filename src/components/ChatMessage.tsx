@@ -368,7 +368,21 @@ function ChatMessageInner({
               ) : (
                 (() => {
                   const cleaned = cleanAssistantText(message.content);
-                  const md = <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleaned}</ReactMarkdown>;
+                  const parts = extractCharts(cleaned);
+                  const hasChart = parts.some((p) => p.kind === "chart");
+                  const md = hasChart ? (
+                    <div className="space-y-2">
+                      {parts.map((p, i) =>
+                        p.kind === "chart" ? (
+                          <ChatChart key={i} spec={p.spec} />
+                        ) : p.value.trim() ? (
+                          <ReactMarkdown key={i} remarkPlugins={[remarkGfm]}>{p.value}</ReactMarkdown>
+                        ) : null,
+                      )}
+                    </div>
+                  ) : (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleaned}</ReactMarkdown>
+                  );
                   if (artifactKind || streaming) return md;
                   if (shouldWrapAsDocument(cleaned)) {
                     return <LongResponseCard content={cleaned}>{md}</LongResponseCard>;
