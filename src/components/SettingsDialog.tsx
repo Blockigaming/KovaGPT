@@ -1653,80 +1653,72 @@ function SignedOutSettings({
   onSignIn: () => void;
 }) {
   return (
-    <div className="overflow-y-auto max-h-[78vh]">
+    <div className="overflow-y-auto max-h-[78vh] bg-background">
       {/* Hero sign-in card */}
-      <div className="px-6 pt-5">
-        <div className="relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-accent/40 via-background to-background p-5">
-          <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-foreground/5 blur-2xl pointer-events-none" />
-          <div className="relative flex items-start gap-4">
-            <div className="w-11 h-11 rounded-2xl bg-foreground text-background flex items-center justify-center shrink-0 shadow-sm">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-base font-semibold tracking-tight font-display">Sign in to KovaGPT</div>
-              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                Sync your chats, memory, and connected apps across every device. Guest settings below are saved on this device only.
-              </p>
-              <div className="mt-3">
-                <Button size="sm" onClick={onSignIn} className="rounded-full px-5 shadow-sm">
-                  Sign in
-                </Button>
-              </div>
-            </div>
+      <div className="px-6 pt-8 pb-2">
+        <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-b from-muted/40 to-background p-7 text-center">
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-foreground text-background flex items-center justify-center shadow-sm mb-4">
+            <Sparkles className="w-6 h-6" />
           </div>
+          <h2 className="text-[19px] font-semibold tracking-tight font-display">Sign in to KovaGPT</h2>
+          <p className="text-[13px] text-muted-foreground mt-2 leading-relaxed max-w-sm mx-auto">
+            Sync your chats, memory, and connected apps across every device.
+          </p>
+          <div className="mt-5">
+            <Button onClick={onSignIn} className="rounded-full px-6 h-10 text-sm font-medium shadow-sm">
+              Sign in
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground/80 mt-4">
+            Guest preferences below are saved on this device only.
+          </p>
         </div>
       </div>
 
-
-      <div className="px-6 py-5 space-y-5">
+      <div className="px-6 py-6 space-y-8">
         {/* Appearance */}
         <section>
-          <div className="flex items-center gap-2 mb-2.5 px-1">
-            <Palette className="w-3.5 h-3.5 text-muted-foreground" />
-            <h3 className="text-[13px] font-semibold tracking-tight">Appearance</h3>
-          </div>
-          <div className="grid grid-cols-3 gap-1.5 rounded-xl bg-muted/50 p-1">
-            {(["system", "light", "dark"] as ThemeMode[]).map((m) => {
-              const active = settings.mode === m;
-              const Icon = m === "system" ? Monitor : m === "light" ? Sun : Moon;
-              return (
-                <button
-                  key={m}
-                  onClick={() => setMode(m)}
-                  className={`flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs capitalize transition ${
-                    active
-                      ? "bg-background text-foreground shadow-sm font-medium"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{m}</span>
-                </button>
-              );
-            })}
+          <h3 className="text-[11px] uppercase tracking-[0.08em] font-medium text-muted-foreground px-1 mb-2.5">Appearance</h3>
+          <div className="rounded-2xl border border-border/60 bg-card/40 p-2">
+            <div className="grid grid-cols-3 gap-1">
+              {(["system", "light", "dark"] as ThemeMode[]).map((m) => {
+                const active = settings.mode === m;
+                const Icon = m === "system" ? Monitor : m === "light" ? Sun : Moon;
+                return (
+                  <button
+                    key={m}
+                    onClick={() => setMode(m)}
+                    className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[13px] capitalize transition ${
+                      active
+                        ? "bg-background text-foreground shadow-sm font-medium"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{m}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </section>
 
         {/* Language */}
         <section>
-          <div className="flex items-center gap-2 mb-2.5 px-1">
-            <Info className="w-3.5 h-3.5 text-muted-foreground" />
-            <h3 className="text-[13px] font-semibold tracking-tight">Language</h3>
+          <h3 className="text-[11px] uppercase tracking-[0.08em] font-medium text-muted-foreground px-1 mb-2.5">Language</h3>
+          <div className="rounded-2xl border border-border/60 bg-card/40 p-3">
+            <GuestLanguageSelect />
+            <p className="text-[12px] text-muted-foreground mt-2.5 px-0.5">
+              KovaGPT replies in the language you write in.
+            </p>
           </div>
-          <GuestLanguageSelect />
-          <p className="text-[11px] text-muted-foreground mt-1.5 px-1">
-            KovaGPT replies in the language you write in.
-          </p>
         </section>
 
         {/* Privacy */}
         <section>
-          <div className="flex items-center gap-2 mb-2.5 px-1">
-            <ShieldCheck className="w-3.5 h-3.5 text-muted-foreground" />
-            <h3 className="text-[13px] font-semibold tracking-tight">Privacy</h3>
-          </div>
-          <div className="rounded-xl border border-border bg-card/40 divide-y divide-border overflow-hidden">
-            <div className="px-4 py-3">
+          <h3 className="text-[11px] uppercase tracking-[0.08em] font-medium text-muted-foreground px-1 mb-2.5">Privacy</h3>
+          <div className="rounded-2xl border border-border/60 bg-card/40 divide-y divide-border/60 overflow-hidden">
+            <div className="px-4 py-3.5">
               <ToggleRow
                 title="Help improve Kova"
                 hint="Allow your content to help improve Kova's models."
@@ -1734,28 +1726,28 @@ function SignedOutSettings({
                 onCheckedChange={(v) => onChange({ ...settings, trainingOptOut: !v })}
               />
             </div>
-            <div className="px-4 py-3">
+            <div className="px-4 py-3.5">
               <GuestToggleRow
                 storageKey="kova-guest-campaign-measurement"
                 title="Campaign measurement"
                 hint="Help Kova measure marketing performance."
               />
             </div>
-            <div className="px-4 py-3">
+            <div className="px-4 py-3.5">
               <GuestToggleRow
                 storageKey="kova-guest-personalized-marketing"
                 title="Personalized marketing"
                 hint="Personalize marketing on third party platforms."
               />
             </div>
-            <div className="px-4 py-3">
+            <div className="px-4 py-3.5">
               <GuestToggleRow
                 storageKey="kova-guest-ad-personalization"
                 title="Ad personalization"
                 hint="Use recent activity to make ads more relevant."
               />
             </div>
-            <div className="px-4 py-3">
+            <div className="px-4 py-3.5">
               <GuestToggleRow
                 storageKey="kova-guest-past-chat-relevance"
                 title="Past chat relevance"
@@ -1764,10 +1756,6 @@ function SignedOutSettings({
             </div>
           </div>
         </section>
-
-        <p className="text-[11px] text-muted-foreground text-center pt-1">
-          Guest preferences are saved on this device only.
-        </p>
       </div>
     </div>
   );

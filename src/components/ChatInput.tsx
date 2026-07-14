@@ -1,4 +1,4 @@
-import { ArrowUp, Square, Plus, X, Mic, Image as ImageIcon, FileText } from "lucide-react";
+import { ArrowUp, Square, Plus, X, Mic, Image as ImageIcon, FileText, Camera, Puzzle } from "lucide-react";
 
 type SpeechRecognitionLike = {
   lang: string;
@@ -50,6 +50,7 @@ export function ChatInput({
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const photoRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const plusWrapRef = useRef<HTMLDivElement>(null);
 
   const [sendFlash, setSendFlash] = useState(false);
@@ -216,27 +217,44 @@ export function ChatInput({
                 className="hidden"
                 onChange={onFileChange}
               />
+              <input
+                ref={cameraRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={onFileChange}
+              />
               <button
                 type="button"
                 onClick={() => setPlusOpen((v) => !v)}
-                className={`w-9 h-9 rounded-full bg-accent/50 hover:bg-accent flex items-center justify-center transition ${plusOpen ? "rotate-45" : ""}`}
+                className={`w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/60 transition ${plusOpen ? "rotate-45 text-foreground" : ""}`}
                 aria-label="Attach"
                 aria-haspopup="menu"
                 aria-expanded={plusOpen}
-                title="Attach photo or file"
+                title="Add"
               >
                 <Plus className="w-5 h-5 transition-transform" />
               </button>
               {plusOpen && (
                 <div
                   role="menu"
-                  className="absolute bottom-11 left-0 z-50 min-w-[180px] rounded-xl border border-border bg-popover shadow-xl p-1 animate-in fade-in slide-in-from-bottom-1"
+                  className="absolute bottom-11 left-0 z-50 min-w-[200px] rounded-2xl border border-border bg-popover shadow-xl p-1.5 animate-in fade-in slide-in-from-bottom-1"
                 >
                   <button
                     role="menuitem"
                     type="button"
+                    onClick={() => { setPlusOpen(false); cameraRef.current?.click(); }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left"
+                  >
+                    <Camera className="w-4 h-4 text-muted-foreground" />
+                    <span>Camera</span>
+                  </button>
+                  <button
+                    role="menuitem"
+                    type="button"
                     onClick={() => { setPlusOpen(false); photoRef.current?.click(); }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm hover:bg-accent text-left"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left"
                   >
                     <ImageIcon className="w-4 h-4 text-muted-foreground" />
                     <span>Photos</span>
@@ -244,8 +262,17 @@ export function ChatInput({
                   <button
                     role="menuitem"
                     type="button"
+                    onClick={() => { setPlusOpen(false); window.location.href = "/apps"; }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left"
+                  >
+                    <Puzzle className="w-4 h-4 text-muted-foreground" />
+                    <span>Plugins</span>
+                  </button>
+                  <button
+                    role="menuitem"
+                    type="button"
                     onClick={() => { setPlusOpen(false); fileRef.current?.click(); }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm hover:bg-accent text-left"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left"
                   >
                     <FileText className="w-4 h-4 text-muted-foreground" />
                     <span>Files</span>
@@ -259,7 +286,7 @@ export function ChatInput({
               value={value}
               onChange={(e) => onChange(e.target.value)}
               onKeyDown={handleKey}
-              placeholder={placeholder ?? "Message KovaGPT…"}
+              placeholder={placeholder ?? "Ask Kova"}
               rows={1}
               spellCheck={false}
               autoComplete="off"
@@ -273,7 +300,7 @@ export function ChatInput({
                   <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
                 </div>
               )}
-              {!isStreaming && !value.trim() && attachments.length === 0 && (
+              {!isStreaming && (
                 <button
                   type="button"
                   onClick={() => {
@@ -296,7 +323,7 @@ export function ChatInput({
                     rec.onerror = () => toast.error("Couldn't hear you. Try again.");
                     try { rec.start(); } catch { /* ignore */ }
                   }}
-                  className="sm:hidden w-9 h-9 rounded-full text-muted-foreground bg-accent/50 hover:text-foreground hover:bg-accent hover-elevate flex items-center justify-center transition"
+                  className="w-9 h-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent/60 flex items-center justify-center transition"
                   aria-label="Voice input"
                   title="Voice input"
                 >
