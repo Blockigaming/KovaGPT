@@ -903,21 +903,23 @@ function KovaGPT() {
                 );
               })}
             </div>
-            <ChatInput
-              value={input}
-              onChange={setInput}
-              onSubmit={() => send(input, attachments)}
-              onStop={stop}
-              isStreaming={isStreaming}
-              attachments={attachments}
-              onAttachmentsChange={setAttachments}
-              mode={mode}
-              onModeChange={setMode}
-              onUploadLimit={() =>
-                setLimitDialog({ open: true, kind: "upload" })
-              }
-              placeholder="Ask anything"
-            />
+            <div className="pb-[calc(env(safe-area-inset-bottom)+56px)] md:pb-0">
+              <ChatInput
+                value={input}
+                onChange={setInput}
+                onSubmit={() => send(input, attachments)}
+                onStop={stop}
+                isStreaming={isStreaming}
+                attachments={attachments}
+                onAttachmentsChange={setAttachments}
+                mode={mode}
+                onModeChange={setMode}
+                onUploadLimit={() =>
+                  setLimitDialog({ open: true, kind: "upload" })
+                }
+                placeholder="Ask Kova"
+              />
+            </div>
           </>
         )}
       </main>
