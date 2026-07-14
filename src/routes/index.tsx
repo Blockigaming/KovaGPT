@@ -690,7 +690,12 @@ function KovaGPT() {
       />
 
       <main className="flex-1 flex flex-col min-w-0" data-sidebar={sidebarOpen ? "open" : "closed"}>
-        <header className="h-14 flex items-center px-3 relative gap-1">
+        <MobileTopBar
+          onOpenSidebar={() => setSidebarOpen(true)}
+          onNewChat={newChat}
+          title={active?.title}
+        />
+        <header className="hidden md:flex h-14 items-center px-3 relative gap-1">
           {!sidebarOpen && (
             <div className="flex items-center gap-1 mr-2 shrink-0">
               <button
