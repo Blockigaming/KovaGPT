@@ -594,7 +594,7 @@ function KovaGPT() {
                       : c,
                   ),
                 );
-                setTimeout(() => send(text, files), 100);
+                setTimeout(() => send(text, atts), 100);
               },
             },
           });
