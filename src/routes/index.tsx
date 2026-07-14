@@ -9,6 +9,7 @@ import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
 import { AIStatus } from "@/components/AIStatus";
 import { MobileFabs } from "@/components/MobileFabs";
+import { MobileTopBar } from "@/components/MobileTopBar";
 
 import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 
