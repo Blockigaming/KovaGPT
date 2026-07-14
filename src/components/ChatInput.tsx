@@ -217,27 +217,44 @@ export function ChatInput({
                 className="hidden"
                 onChange={onFileChange}
               />
+              <input
+                ref={cameraRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={onFileChange}
+              />
               <button
                 type="button"
                 onClick={() => setPlusOpen((v) => !v)}
-                className={`w-9 h-9 rounded-full bg-accent/50 hover:bg-accent flex items-center justify-center transition ${plusOpen ? "rotate-45" : ""}`}
+                className={`w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/60 transition ${plusOpen ? "rotate-45 text-foreground" : ""}`}
                 aria-label="Attach"
                 aria-haspopup="menu"
                 aria-expanded={plusOpen}
-                title="Attach photo or file"
+                title="Add"
               >
                 <Plus className="w-5 h-5 transition-transform" />
               </button>
               {plusOpen && (
                 <div
                   role="menu"
-                  className="absolute bottom-11 left-0 z-50 min-w-[180px] rounded-xl border border-border bg-popover shadow-xl p-1 animate-in fade-in slide-in-from-bottom-1"
+                  className="absolute bottom-11 left-0 z-50 min-w-[200px] rounded-2xl border border-border bg-popover shadow-xl p-1.5 animate-in fade-in slide-in-from-bottom-1"
                 >
                   <button
                     role="menuitem"
                     type="button"
+                    onClick={() => { setPlusOpen(false); cameraRef.current?.click(); }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left"
+                  >
+                    <Camera className="w-4 h-4 text-muted-foreground" />
+                    <span>Camera</span>
+                  </button>
+                  <button
+                    role="menuitem"
+                    type="button"
                     onClick={() => { setPlusOpen(false); photoRef.current?.click(); }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm hover:bg-accent text-left"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left"
                   >
                     <ImageIcon className="w-4 h-4 text-muted-foreground" />
                     <span>Photos</span>
@@ -245,8 +262,17 @@ export function ChatInput({
                   <button
                     role="menuitem"
                     type="button"
+                    onClick={() => { setPlusOpen(false); window.location.href = "/apps"; }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left"
+                  >
+                    <Puzzle className="w-4 h-4 text-muted-foreground" />
+                    <span>Plugins</span>
+                  </button>
+                  <button
+                    role="menuitem"
+                    type="button"
                     onClick={() => { setPlusOpen(false); fileRef.current?.click(); }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm hover:bg-accent text-left"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left"
                   >
                     <FileText className="w-4 h-4 text-muted-foreground" />
                     <span>Files</span>
