@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { newRequestId, buildErrorEnvelope, categorizeError } from "@/lib/request-id";
 import {
   getMode,
   type ModeId,
@@ -440,6 +441,41 @@ export const Route = createFileRoute("/api/chat")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const requestId = newRequestId();
+        const startedAt = Date.now();
+        const withRequestId = (res: Response): Response => {
+          try {
+            const h = new Headers(res.headers);
+            if (!h.has("X-Request-Id")) h.set("X-Request-Id", requestId);
+            const ct = h.get("Content-Type") ?? "";
+            // Enrich JSON error bodies with requestId + category envelope.
+            if (
+              (res.status >= 400) &&
+              ct.includes("application/json") &&
+              res.body
+            ) {
+              return new Response(
+                new ReadableStream({
+                  async start(controller) {
+                    const text = await res.clone().text();
+                    let parsed: Record<string, unknown> = {};
+                    try { parsed = JSON.parse(text); } catch { parsed = { error: text || "Request failed" }; }
+                    if (!parsed.requestId) parsed.requestId = requestId;
+                    if (!parsed.category) parsed.category = categorizeError(parsed.error, res.status);
+                    if (!parsed.timestamp) parsed.timestamp = new Date().toISOString();
+                    controller.enqueue(new TextEncoder().encode(JSON.stringify(parsed)));
+                    controller.close();
+                  },
+                }),
+                { status: res.status, headers: h },
+              );
+            }
+            return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
+          } catch {
+            return res;
+          }
+        };
+        const run = async (): Promise<Response> => {
         try {
           const auth = await optionalUser(request);
           if (auth instanceof Response) return auth;
@@ -1119,12 +1155,20 @@ export const Route = createFileRoute("/api/chat")({
             headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
           });
         } catch (e) {
-          console.error("[chat] handler error", e);
-          return new Response(
-            JSON.stringify({ error: "An unexpected error occurred. Please try again." }),
-            { status: 500, headers: { "Content-Type": "application/json" } },
-          );
+          const envelope = buildErrorEnvelope(e, requestId, 500);
+          console.error("[chat] handler error", {
+            requestId,
+            category: envelope.category,
+            durationMs: Date.now() - startedAt,
+            error: e instanceof Error ? { name: e.name, message: e.message, stack: e.stack } : e,
+          });
+          return new Response(JSON.stringify(envelope), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
         }
+        };
+        return withRequestId(await run());
       },
     },
   },

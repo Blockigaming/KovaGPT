@@ -487,11 +487,17 @@ function KovaGPT() {
         if (!resp.ok || !resp.body) {
           const errJson = await resp.json().catch(() => ({ error: "Request failed" }));
           const errMsg = errJson.error || `HTTP ${resp.status}`;
+          const requestId = errJson.requestId || resp.headers.get("x-request-id") || undefined;
+          const category = errJson.category || undefined;
           if (resp.status === 429 && /limit/i.test(errMsg)) {
             const kind: "image" | "chat" = /image/i.test(errMsg) ? "image" : "chat";
             setLimitDialog({ open: true, kind, message: errMsg });
           }
-          throw new Error(errMsg);
+          const err = new Error(errMsg) as Error & { requestId?: string; category?: string; retryable?: boolean };
+          err.requestId = requestId;
+          err.category = category;
+          err.retryable = Boolean(errJson.retryable);
+          throw err;
         }
 
 
@@ -575,19 +581,27 @@ function KovaGPT() {
 
       } catch (e: unknown) {
         if ((e as Error).name !== "AbortError") {
-          const raw = e instanceof Error ? e.message : "Something went wrong";
-          // Safari surfaces network / streaming failures as bare "Load failed".
-          // Rewrite these to something actionable so users know to retry.
+          const err = e as Error & { requestId?: string; category?: string; retryable?: boolean };
+          const raw = err.message || "Something went wrong";
           const isNetwork = /load failed|networkerror|failed to fetch|network request failed/i.test(raw)
             || (e instanceof TypeError);
-          const msg = isNetwork
-            ? "Connection lost while generating a response. Check your internet and tap retry."
-            : raw;
-          toast.error(msg, {
+          const category = err.category
+            || (isNetwork ? "network_failure" : undefined);
+          const requestId = err.requestId;
+          const friendly =
+            category === "rate_limit" ? "You're going a bit fast — try again in a moment." :
+            category === "quota_exceeded" ? "You've hit your plan's limit. Try again later or upgrade." :
+            category === "model_timeout" ? "The model took too long to respond. Tap retry." :
+            category === "model_provider_failure" ? "The AI provider had a hiccup. Tap retry." :
+            category === "streaming_interruption" ? "The connection dropped mid-response. Tap retry." :
+            isNetwork ? "Connection lost while generating a response. Check your internet and tap retry." :
+            raw;
+          const detail = requestId ? `${friendly} (ref: ${requestId})` : friendly;
+          toast.error(friendly, {
+            description: requestId ? `Reference ID: ${requestId}` : undefined,
             action: {
               label: "Retry",
               onClick: () => {
-                // Drop the empty assistant placeholder and resend the last user prompt.
                 setConversations((prev) =>
                   prev.map((c) =>
                     c.id === nextConvId
@@ -599,7 +613,7 @@ function KovaGPT() {
               },
             },
           });
-          updateAssistant(`\n\n_${msg}_`);
+          updateAssistant(`\n\n_${detail}_`);
         }
       } finally {
         setIsStreaming(false);

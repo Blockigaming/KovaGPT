@@ -14,7 +14,7 @@ type SpeechRecognitionLike = {
 import { useEffect, useRef, useState } from "react";
 import { tryUseUpload, DAILY_UPLOAD_LIMIT, getUsage } from "@/lib/limits";
 import { toast } from "sonner";
-import { ModelSelector } from "@/components/ModelSelector";
+import { ResponsiveModelSelector as ModelSelector } from "@/components/ResponsiveModelSelector";
 import type { ModeId, Tier } from "@/lib/modes";
 
 export type PendingAttachment = { kind: "image"; dataUrl: string; name: string };
