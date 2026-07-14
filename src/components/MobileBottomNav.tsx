@@ -1,5 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { MessageCircle, LayoutGrid, Library as LibraryIcon, FolderKanban, Settings as SettingsIcon } from "lucide-react";
+import { useUser } from "@/components/auth/ClerkSafe";
 
 /**
  * Native-feeling mobile bottom tab bar. Rendered only under md breakpoint.
@@ -12,6 +13,8 @@ export function MobileBottomNav({
   onOpenSettings?: () => void;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { isSignedIn, isLoaded } = useUser();
+  const signedIn = isLoaded && !!isSignedIn;
 
   const tabs: Array<{
     label: string;
@@ -23,9 +26,12 @@ export function MobileBottomNav({
     { label: "Chat", to: "/", match: (p) => p === "/", icon: MessageCircle },
     { label: "Apps", to: "/apps", match: (p) => p.startsWith("/apps"), icon: LayoutGrid },
     { label: "Library", to: "/library", match: (p) => p.startsWith("/library"), icon: LibraryIcon },
-    { label: "Projects", to: "/projects", match: (p) => p.startsWith("/projects"), icon: FolderKanban },
+    ...(signedIn
+      ? [{ label: "Projects", to: "/projects" as const, match: (p: string) => p.startsWith("/projects"), icon: FolderKanban }]
+      : []),
     { label: "Settings", match: () => false, icon: SettingsIcon, action: onOpenSettings },
   ];
+
 
   return (
     <nav
