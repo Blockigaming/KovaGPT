@@ -695,6 +695,13 @@ function KovaGPT() {
             <AIStatus
               streaming={isStreaming}
               message={active?.messages[active.messages.length - 1]}
+              lastUserPrompt={(() => {
+                const msgs = active?.messages ?? [];
+                for (let i = msgs.length - 1; i >= 0; i--) {
+                  if (msgs[i].role === "user") return msgs[i].content;
+                }
+                return undefined;
+              })()}
             />
           </div>
 
