@@ -346,7 +346,8 @@ function KovaGPT() {
   }, []);
 
   const send = useCallback(
-    async (text: string, atts: PendingAttachment[]) => {
+    async (text: string, atts: PendingAttachment[], _retryAttempt = 0) => {
+      const MAX_AUTO_RETRIES = 2;
       const trimmed = text.trim();
       if ((!trimmed && atts.length === 0) || isStreaming) return;
 
