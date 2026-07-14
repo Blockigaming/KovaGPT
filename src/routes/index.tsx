@@ -825,7 +825,7 @@ function KovaGPT() {
 
         ) : (
           <>
-            <div ref={scrollRef} className="flex-1 overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+64px)] md:pb-0">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+64px)] md:pb-6">
               {active.messages.map((m, i) => {
                 const isLastAssistant =
                   m.role === "assistant" && i === active.messages.length - 1;
@@ -911,7 +911,7 @@ function KovaGPT() {
                 );
               })}
             </div>
-            <div className="pb-[calc(env(safe-area-inset-bottom)+56px)] md:pb-0">
+            <div className="pb-[calc(env(safe-area-inset-bottom)+56px)] md:pb-2 md:pt-2">
               <ChatInput
                 value={input}
                 onChange={setInput}

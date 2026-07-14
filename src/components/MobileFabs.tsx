@@ -1,9 +1,9 @@
 import { Plus, Settings as SettingsIcon } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useLayout } from "@/hooks/use-mobile";
 
 /**
- * Bottom-left floating actions used on phone + tablet. Replaces the old
- * mobile bottom tab bar so the touch experience feels native and unobtrusive.
+ * Bottom-left floating actions shown ONLY on phones. Tablets and desktops
+ * use their native chrome (sidebar / header) and never see these FABs.
  */
 export function MobileFabs({
   onNewChat,
@@ -12,11 +12,11 @@ export function MobileFabs({
   onNewChat: () => void;
   onOpenSettings: () => void;
 }) {
-  const isMobile = useIsMobile();
+  const { isMobile } = useLayout();
   if (!isMobile) return null;
   return (
     <div
-      className="fixed left-3 z-40 flex items-center gap-2"
+      className="fixed left-3 z-40 flex items-center gap-2 md:hidden"
       style={{ bottom: "calc(env(safe-area-inset-bottom) + 12px)" }}
     >
       <button
