@@ -4,6 +4,7 @@ import { Copy, Check, ImageIcon, Loader2, Bookmark, FileEdit, Code2, Eye, MoreHo
 import { memo, useEffect, useMemo, useState } from "react";
 import type { Message } from "@/lib/chat-store";
 import { NovaLogo } from "./NovaLogo";
+import { ChatChart, extractCharts } from "./ChatChart";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
