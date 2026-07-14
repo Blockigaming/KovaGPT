@@ -832,7 +832,7 @@ function KovaGPT() {
           <div className="flex-1 flex flex-col overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
             <div className="flex-1 flex flex-col items-center justify-center w-full py-10">
               <div className="flex flex-col items-center gap-4 mb-6">
-                <h1 className="font-display text-3xl sm:text-4xl font-semibold tracking-tight text-center">
+                <h1 className="font-display text-2xl sm:text-4xl font-semibold tracking-tight text-center">
                   {greeting}
                 </h1>
               </div>
