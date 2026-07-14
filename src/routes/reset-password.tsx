@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { NovaLogo } from "@/components/NovaLogo";
 import { Loader2, KeyRound } from "lucide-react";
 import { toast } from "sonner";
-import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createFileRoute("/reset-password")({
   component: ResetPassword,
@@ -84,7 +83,7 @@ function ResetPassword() {
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-background">
-      <Toaster />
+      
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="flex flex-col items-center text-center mb-6">
           <div className="w-12 h-12 rounded-2xl bg-foreground text-background flex items-center justify-center mb-3">
