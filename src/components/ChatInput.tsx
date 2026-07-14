@@ -60,6 +60,9 @@ export function ChatInput({
   const [sendFlash, setSendFlash] = useState(false);
   const [actionColor, setActionColor] = useState<string>("#3b82f6");
   const [plusOpen, setPlusOpen] = useState(false);
+  const [listening, setListening] = useState(false);
+  const recRef = useRef<SpeechRecognitionLike | null>(null);
+  const dictationBaseRef = useRef<string>("");
 
   useEffect(() => {
     if (!plusOpen) return;
