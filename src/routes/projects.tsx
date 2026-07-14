@@ -74,8 +74,24 @@ function ProjectsPage() {
       const { id } = await fnCreate({ data: { name: name.trim(), description: description.trim() || null } });
       setCreateOpen(false);
       setName(""); setDescription("");
+      // Optimistically prepend so the list is fresh if the user navigates back.
+      setProjects((prev) => [
+        {
+          id,
+          name: name.trim(),
+          description: description.trim() || null,
+          color: "blue",
+          owner_id: "",
+          role: "owner" as const,
+          member_count: 1,
+          updated_at: new Date().toISOString(),
+        },
+        ...prev.filter((p) => p.id !== id),
+      ]);
       toast.success("Project created");
-      navigate({ to: "/projects/$projectId", params: { projectId: id } });
+      // Fire-and-forget authoritative refresh; navigation happens immediately.
+      void refresh();
+      await navigate({ to: "/projects/$projectId", params: { projectId: id } });
     } catch (e) {
       console.error("[createProject]", e);
       toast.error(e instanceof Error ? e.message : "Failed to create project");
