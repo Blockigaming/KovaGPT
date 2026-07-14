@@ -63,14 +63,20 @@ export function InfoChip({ kind, children, rawText }: { kind: ChipKind; children
           {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
         </button>
       </div>
-      <div className="px-4 pb-4 pt-2 flex items-start gap-4">
+      <div className="px-4 pb-4 pt-2 flex items-center gap-4">
         {kind === "time" ? (
           <ClockWidget size={72} />
         ) : null}
         <div className="prose-chat prose-invert max-w-none text-neutral-100 text-[15px] leading-relaxed flex-1 min-w-0">
           {children}
+          {kind === "time" && (
+            <div className="mt-1 text-[12px] text-neutral-500">
+              {Intl.DateTimeFormat().resolvedOptions().timeZone.replace(/_/g, " ")} · {new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
+            </div>
+          )}
         </div>
       </div>
+
       {kind === "location" && (
         <div className="px-4 pb-4">
           <MapWidget height={180} />
