@@ -121,11 +121,13 @@ export function Sidebar({
             </div>
           </div>
 
-          {/* Mobile-only top fade into the app background */}
+          {/* Top fade from the sidebar tone into the app background. Sized to
+              cover the full brand row so the transition feels gradual, not abrupt. */}
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-0 z-10 h-6 bg-gradient-to-b from-background to-transparent"
+            className="pointer-events-none absolute inset-x-0 top-0 z-10 h-24 bg-gradient-to-b from-background via-background/70 to-transparent"
           />
+
 
 
           {searchOpen && (
