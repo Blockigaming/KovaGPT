@@ -800,6 +800,7 @@ export const Route = createFileRoute("/api/chat")({
                   ADAPTIVE_INSTRUCTION +
                   UNRESTRICTED_INSTRUCTION +
                   ACCURACY_INSTRUCTION +
+                  CHART_INSTRUCTION +
                   CREATOR_INSTRUCTION +
                   buildUserContextBlock(user) +
                   personalityBlock +
