@@ -346,7 +346,8 @@ function KovaGPT() {
   }, []);
 
   const send = useCallback(
-    async (text: string, atts: PendingAttachment[]) => {
+    async (text: string, atts: PendingAttachment[], _retryAttempt = 0) => {
+      const MAX_AUTO_RETRIES = 2;
       const trimmed = text.trim();
       if ((!trimmed && atts.length === 0) || isStreaming) return;
 
@@ -586,6 +587,32 @@ function KovaGPT() {
             || (e instanceof TypeError);
           const category = err.category
             || (isNetwork ? "network_failure" : undefined);
+          const retryableCategory =
+            category === "model_timeout" ||
+            category === "streaming_interruption" ||
+            category === "network_failure" ||
+            category === "model_provider_failure";
+          const canAutoRetry = retryableCategory && _retryAttempt < MAX_AUTO_RETRIES;
+
+          if (canAutoRetry) {
+            // Silent exponential backoff: 600ms, 1800ms. Strip the empty
+            // assistant + user bubble so the retry recreates them cleanly.
+            const backoffMs = 600 * Math.pow(3, _retryAttempt);
+            const attemptLabel = _retryAttempt + 1;
+            updateAssistant(`\n\n_Reconnecting… (attempt ${attemptLabel + 1}/${MAX_AUTO_RETRIES + 1})_`);
+            setConversations((prev) =>
+              prev.map((c) =>
+                c.id === nextConvId
+                  ? { ...c, messages: c.messages.filter((m) => m.id !== assistantMsg.id && m.id !== userMsg.id) }
+                  : c,
+              ),
+            );
+            setIsStreaming(false);
+            abortRef.current = null;
+            setTimeout(() => { void send(text, atts, _retryAttempt + 1); }, backoffMs);
+            return;
+          }
+
           const requestId = err.requestId;
           const friendly =
             category === "rate_limit" ? "You're going a bit fast — try again in a moment." :
@@ -608,7 +635,7 @@ function KovaGPT() {
                       : c,
                   ),
                 );
-                setTimeout(() => send(text, atts), 100);
+                setTimeout(() => send(text, atts, 0), 100);
               },
             },
           });

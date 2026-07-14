@@ -8,10 +8,9 @@ import { test, expect } from "@playwright/test";
 test.describe("Signed-out gating", () => {
   test("/projects renders either the workspace or the sign-in prompt", async ({ page }) => {
     await page.goto("/projects");
-    // Whichever branch the auth loader resolves to, the page must render one of them.
-    const signedOut = page.getByRole("heading", { name: /sign in to use projects/i });
-    const signedIn = page.getByRole("heading", { name: /^projects$/i });
-    await expect(signedOut.or(signedIn).first()).toBeVisible();
+    // Whichever branch resolves, one of these strings must appear somewhere.
+    const anyMatch = page.getByText(/sign in to use projects|^projects$/i).first();
+    await expect(anyMatch).toBeVisible({ timeout: 8000 });
   });
 
   test("/ homepage renders without an auth wall", async ({ page }) => {

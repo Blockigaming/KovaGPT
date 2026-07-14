@@ -4,6 +4,7 @@ import { Copy, Check, ImageIcon, Loader2, Bookmark, FileEdit, Code2, Eye, MoreHo
 import { memo, useEffect, useMemo, useState } from "react";
 import type { Message } from "@/lib/chat-store";
 import { NovaLogo } from "./NovaLogo";
+import { ChatChart, extractCharts } from "./ChatChart";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
@@ -367,7 +368,21 @@ function ChatMessageInner({
               ) : (
                 (() => {
                   const cleaned = cleanAssistantText(message.content);
-                  const md = <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleaned}</ReactMarkdown>;
+                  const parts = extractCharts(cleaned);
+                  const hasChart = parts.some((p) => p.kind === "chart");
+                  const md = hasChart ? (
+                    <div className="space-y-2">
+                      {parts.map((p, i) =>
+                        p.kind === "chart" ? (
+                          <ChatChart key={i} spec={p.spec} />
+                        ) : p.value.trim() ? (
+                          <ReactMarkdown key={i} remarkPlugins={[remarkGfm]}>{p.value}</ReactMarkdown>
+                        ) : null,
+                      )}
+                    </div>
+                  ) : (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleaned}</ReactMarkdown>
+                  );
                   if (artifactKind || streaming) return md;
                   if (shouldWrapAsDocument(cleaned)) {
                     return <LongResponseCard content={cleaned}>{md}</LongResponseCard>;
