@@ -25,18 +25,18 @@ export function MobileTopBar({
       style={{ paddingTop: "env(safe-area-inset-top)" }}
       role="banner"
     >
-      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 h-12 px-2">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 h-14 px-2">
         <button
           type="button"
           onClick={onOpenSidebar}
           aria-label="Open menu"
-          className="w-10 h-10 rounded-full flex items-center justify-center text-foreground hover:bg-accent/60 active:scale-95 transition"
+          className="w-11 h-11 rounded-full flex items-center justify-center text-foreground hover:bg-accent/60 active:scale-95 transition"
         >
-          <Menu className="w-5 h-5" />
+          <Menu className="w-6 h-6" />
         </button>
         <div className="flex items-center justify-center gap-2 min-w-0">
           <NovaLogo className="w-5 h-5 shrink-0" />
-          <span className="font-display font-semibold tracking-tight text-[15px] truncate">
+          <span className="font-display font-semibold tracking-tight text-[16px] truncate">
             {title || "KovaGPT"}
           </span>
         </div>
@@ -44,9 +44,9 @@ export function MobileTopBar({
           type="button"
           onClick={onNewChat}
           aria-label="New chat"
-          className="w-10 h-10 rounded-full flex items-center justify-center text-foreground hover:bg-accent/60 active:scale-95 transition"
+          className="w-11 h-11 rounded-full flex items-center justify-center text-foreground hover:bg-accent/60 active:scale-95 transition"
         >
-          <SquarePen className="w-5 h-5" />
+          <SquarePen className="w-6 h-6" />
         </button>
       </div>
     </header>

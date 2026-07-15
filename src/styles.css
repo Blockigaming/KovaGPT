@@ -629,3 +629,40 @@ html, body { overscroll-behavior-y: none; }
   .kova-skeleton::after { animation: none !important; }
   .hover-elevate:hover { transform: none; }
 }
+
+/* ============================================================
+   Mobile-only polish (phones, <768px)
+   Desktop rules above are untouched.
+   ============================================================ */
+@media (max-width: 767px) {
+  /* Horizontal-scrolling tables in chat responses with edge fade. */
+  .prose-chat table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-collapse: collapse;
+  }
+  .prose-chat table thead th,
+  .prose-chat table tbody td {
+    white-space: nowrap;
+  }
+
+  /* Code blocks: hint scrollability with momentum and a subtle shadow. */
+  .prose-chat pre {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+  /* Larger tap targets for inline chat action buttons. */
+  .prose-chat a,
+  .prose-chat button {
+    min-height: 32px;
+  }
+
+  /* Compact but readable message body on mobile. */
+  .prose-chat p,
+  .prose-chat li {
+    line-height: 1.55;
+  }
+}
