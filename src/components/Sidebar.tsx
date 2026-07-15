@@ -3,7 +3,7 @@ import { Trash2, PanelLeft, Search, HelpCircle, Plus, Share2, Settings as Settin
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { NovaLogo } from "@/components/NovaLogo";
 import { Link, useRouterState } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { SignInButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
 import { useTier } from "@/hooks/useTier";
 
@@ -69,30 +69,12 @@ export function Sidebar({
       />
     ) : null;
 
-  // Swipe-left-to-close on mobile drawer.
-  const dragStartX = useRef<number | null>(null);
-  const [dragDx, setDragDx] = useState(0);
-  const onTouchStart = (e: React.TouchEvent) => {
-    if (typeof window !== "undefined" && window.innerWidth >= 768) return;
-    dragStartX.current = e.touches[0].clientX;
-  };
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (dragStartX.current == null) return;
-    const dx = e.touches[0].clientX - dragStartX.current;
-    if (dx < 0) setDragDx(dx);
-  };
-  const onTouchEnd = () => {
-    if (dragDx < -70) onToggle();
-    setDragDx(0);
-    dragStartX.current = null;
-  };
-
   return (
     <>
       {open && (
         <div
           onClick={onToggle}
-          className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm md:hidden animate-in fade-in-0 duration-200"
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
           aria-hidden="true"
         />
       )}
@@ -101,17 +83,10 @@ export function Sidebar({
 
 
       <aside
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-        style={{
-          width: open ? SIDEBAR_WIDTH : 0,
-          transform: dragDx < 0 ? `translateX(${dragDx}px)` : undefined,
-          transition: dragDx < 0 ? "none" : undefined,
-        }}
-        className="relative shrink-0 overflow-hidden transition-[width,transform] duration-200 bg-sidebar text-sidebar-foreground flex flex-col max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:h-[100dvh] max-md:shadow-2xl md:border-r md:border-border/70"
+        style={{ width: open ? SIDEBAR_WIDTH : 0 }}
+        className="relative shrink-0 overflow-hidden transition-[width] duration-150 bg-sidebar text-sidebar-foreground flex flex-col max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:h-[100dvh] md:border-r md:border-border/70"
       >
-        <div style={{ width: SIDEBAR_WIDTH, paddingTop: "env(safe-area-inset-top)" }} className="flex flex-col h-full">
+        <div style={{ width: SIDEBAR_WIDTH }} className="flex flex-col h-full">
 
           {/* Brand row */}
           <div className="relative z-20 flex items-center gap-2 px-3 sm:px-4 pt-4 pb-3 bg-sidebar">
@@ -238,10 +213,10 @@ export function Sidebar({
               const renderRow = (c: Conversation) => (
                 <div
                   key={c.id}
-                  className={`group mx-2 my-0.5 flex items-center gap-1 rounded-xl px-3 py-2 max-md:py-3.5 text-[14px] max-md:text-[15px] cursor-pointer transition ${
-                    activeId === c.id ? "bg-sidebar-hover" : "hover:bg-sidebar-hover/60 active:bg-sidebar-hover"
+                  className={`group mx-2 my-0.5 flex items-center gap-1 rounded-xl px-3 py-2 text-[14px] cursor-pointer transition ${
+                    activeId === c.id ? "bg-sidebar-hover" : "hover:bg-sidebar-hover/60"
                   }`}
-                  onClick={() => { onSelect(c.id); if (typeof window !== "undefined" && window.innerWidth < 768) onToggle(); }}
+                  onClick={() => onSelect(c.id)}
                 >
                   {c.pinned && (
                     <Pin className="w-3 h-3 mr-1 shrink-0 text-muted-foreground fill-current" />

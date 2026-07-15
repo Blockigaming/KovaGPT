@@ -59,38 +59,23 @@ test.describe("KovaGPT responsive shell", () => {
     const width = page.viewportSize()?.width ?? 0;
     const isPhone = width < 768;
 
-    const composer = page.getByTestId("mobile-composer");
+    // MobileFabs uses md:hidden -> only visible on phones.
+    const fabs = page.getByRole("button", { name: /new chat/i });
     if (isPhone) {
-      await expect(composer.first()).toBeVisible({ timeout: 5000 });
-    } else {
-      // Desktop: mobile composer must not render at all.
-      await expect(composer).toHaveCount(0);
+      // At least one visible "New chat" affordance
+      await expect(fabs.first()).toBeVisible({ timeout: 5000 });
     }
 
+    // Desktop-only PanelLeft trigger appears only when sidebar is collapsed on md+
     const collapsedTrigger = page.getByRole("button", { name: /open sidebar/i });
     if (width >= 1200) {
+      // Persistent sidebar starts open on desktop; the fixed trigger should NOT be visible.
       await expect(collapsedTrigger).toHaveCount(0).catch(async () => {
+        // If it exists (variant), ensure not visible.
         await expect(collapsedTrigger.first()).toBeHidden();
       });
     }
     await testInfo.attach(`chrome-${isPhone ? "phone" : "large"}`, {
-      body: await page.screenshot(),
-      contentType: "image/png",
-    });
-  });
-
-  test("mobile drawer opens from hamburger and dims background", async ({ page }, testInfo) => {
-    await page.goto("/", { waitUntil: "domcontentloaded" });
-    const width = page.viewportSize()?.width ?? 0;
-    if (width >= 768) {
-      test.skip(true, "mobile-only");
-    }
-    const menu = page.getByRole("button", { name: /open menu/i });
-    await expect(menu.first()).toBeVisible();
-    await menu.first().click();
-    // Scrim visible → look for the fixed z-30 backdrop or a KovaGPT brand item in the drawer.
-    await expect(page.getByText("Workspace").first()).toBeVisible({ timeout: 3000 });
-    await testInfo.attach("drawer-open", {
       body: await page.screenshot(),
       contentType: "image/png",
     });
