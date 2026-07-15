@@ -8,8 +8,8 @@ import { Sidebar } from "@/components/Sidebar";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
 import { AIStatus } from "@/components/AIStatus";
-import { MobileFabs } from "@/components/MobileFabs";
 import { MobileTopBar } from "@/components/MobileTopBar";
+import { MobileComposer } from "@/components/mobile/MobileComposer";
 
 import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 
@@ -109,6 +109,13 @@ function KovaGPT() {
     if (typeof window === "undefined") return true;
     return window.innerWidth >= 768;
   });
+  // On mobile mount, always start closed (drawer). Runs once after hydration.
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
   const openSettings = useCallback((tab?: string) => {
@@ -837,22 +844,43 @@ function KovaGPT() {
                 </h1>
               </div>
 
-              <div className="w-full max-w-3xl mx-auto">
-                <ChatInput
-                  value={input}
-                  onChange={setInput}
-                  onSubmit={() => send(input, attachments)}
-                  onStop={stop}
-                  isStreaming={isStreaming}
-                  attachments={attachments}
-                  onAttachmentsChange={setAttachments}
-                  mode={mode}
-                  onModeChange={setMode}
-                  onUploadLimit={() =>
-                    setLimitDialog({ open: true, kind: "upload" })
-                  }
-                  placeholder="Ask Kova"
-                />
+              <div className="w-full max-w-3xl mx-auto md:contents">
+                <div className="hidden md:block">
+                  <ChatInput
+                    value={input}
+                    onChange={setInput}
+                    onSubmit={() => send(input, attachments)}
+                    onStop={stop}
+                    isStreaming={isStreaming}
+                    attachments={attachments}
+                    onAttachmentsChange={setAttachments}
+                    mode={mode}
+                    onModeChange={setMode}
+                    onUploadLimit={() =>
+                      setLimitDialog({ open: true, kind: "upload" })
+                    }
+                    placeholder="Ask Kova"
+                  />
+                </div>
+                <div className="md:hidden">
+                  <MobileComposer>
+                    <ChatInput
+                      value={input}
+                      onChange={setInput}
+                      onSubmit={() => send(input, attachments)}
+                      onStop={stop}
+                      isStreaming={isStreaming}
+                      attachments={attachments}
+                      onAttachmentsChange={setAttachments}
+                      mode={mode}
+                      onModeChange={setMode}
+                      onUploadLimit={() =>
+                        setLimitDialog({ open: true, kind: "upload" })
+                      }
+                      placeholder="Ask Kova"
+                    />
+                  </MobileComposer>
+                </div>
 
                 {/* Suggestion chips — horizontal pill row on desktop, tall touch cards on mobile. */}
                 <div className="mt-3 hidden sm:flex flex-wrap gap-2 justify-center">
@@ -979,7 +1007,7 @@ function KovaGPT() {
                 );
               })}
             </div>
-            <div className="pb-[calc(env(safe-area-inset-bottom)+56px)] md:pb-2 md:pt-2">
+            <div className="hidden md:block md:pb-2 md:pt-2">
               <ChatInput
                 value={input}
                 onChange={setInput}
@@ -995,12 +1023,29 @@ function KovaGPT() {
                 }
                 placeholder="Ask Kova"
               />
-              <div className="hidden md:flex justify-center gap-3 text-[11px] text-muted-foreground/70 mt-2 select-none">
+              <div className="flex justify-center gap-3 text-[11px] text-muted-foreground/70 mt-2 select-none">
                 <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">Enter</kbd> to send</span>
                 <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">Shift+Enter</kbd> newline</span>
                 <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">⌘K</kbd> search</span>
               </div>
             </div>
+            <MobileComposer>
+              <ChatInput
+                value={input}
+                onChange={setInput}
+                onSubmit={() => send(input, attachments)}
+                onStop={stop}
+                isStreaming={isStreaming}
+                attachments={attachments}
+                onAttachmentsChange={setAttachments}
+                mode={mode}
+                onModeChange={setMode}
+                onUploadLimit={() =>
+                  setLimitDialog({ open: true, kind: "upload" })
+                }
+                placeholder="Ask Kova"
+              />
+            </MobileComposer>
           </>
         )}
       </main>
@@ -1050,13 +1095,7 @@ function KovaGPT() {
 
       <SignUpPrompt open={signupPromptOpen} onOpenChange={setSignupPromptOpen} />
 
-      <MobileFabs
-        onNewChat={() => {
-          try { localStorage.removeItem("nova-gpt-pending-active"); } catch { /* ignore */ }
-          window.location.assign("/");
-        }}
-        onOpenSettings={() => setSettingsOpen(true)}
-      />
+      {/* Mobile FABs removed — replaced by top-bar hamburger + docked composer. */}
 
     </div>
   );
