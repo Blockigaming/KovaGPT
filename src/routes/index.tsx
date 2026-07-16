@@ -4,6 +4,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { SignUpPrompt } from "@/components/SignUpPrompt";
 import { PanelLeft, Search, MessageSquareDashed, Check } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
+import { NovaLogo } from "@/components/NovaLogo";
 
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
