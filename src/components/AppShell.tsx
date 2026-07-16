@@ -26,9 +26,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     if (typeof window === "undefined") return true;
-    // Only auto-open the persistent sidebar on desktop (>=1200). Tablets and
-    // phones start with the sidebar closed and open it via drawer/trigger.
-    return window.innerWidth >= 1200;
+    // Auto-open the persistent sidebar only on desktop-class widths (>=1024).
+    // Phones and tablets start with the sidebar closed and open it via
+    // the top-bar menu button, edge-swipe, or floating trigger.
+    return window.innerWidth >= 1024;
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
