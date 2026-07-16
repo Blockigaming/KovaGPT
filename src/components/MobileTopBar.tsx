@@ -3,10 +3,10 @@ import { NovaLogo } from "@/components/NovaLogo";
 import { useLayout } from "@/hooks/use-mobile";
 
 /**
- * Compact sticky top bar shown ONLY on phones (mobile layout mode).
- * Provides a menu trigger to open the off-canvas sidebar, brand identity,
- * and a quick "new chat" action. Honors safe-area-inset-top and uses
- * translucent blur so content underneath eases through as it scrolls.
+ * Compact sticky top bar shown on phones and tablets (any viewport below the
+ * desktop breakpoint). Provides a menu trigger to open the off-canvas sidebar,
+ * brand identity, and a quick "new chat" action. Honors safe-area-inset-top
+ * and uses translucent blur so content underneath eases through as it scrolls.
  */
 export function MobileTopBar({
   onOpenSidebar,
@@ -17,11 +17,11 @@ export function MobileTopBar({
   onNewChat: () => void;
   title?: string;
 }) {
-  const { isMobile } = useLayout();
-  if (!isMobile) return null;
+  const { isDesktop } = useLayout();
+  if (isDesktop) return null;
   return (
     <header
-      className="sticky top-0 z-30 md:hidden bg-background/85 backdrop-blur-lg border-b border-border/60"
+      className="sticky top-0 z-30 lg:hidden bg-background/85 backdrop-blur-lg border-b border-border/60"
       style={{ paddingTop: "env(safe-area-inset-top)" }}
       role="banner"
     >
