@@ -28,6 +28,8 @@ export function ResponsiveModelSelector({
   const { isDesktop, interaction } = useLayout();
   const useSheet = !isDesktop || interaction === "touch";
   const [open, setOpen] = useState(false);
+  const [version, setVersion] = useState<KovaVersion>("3.5");
+  useEffect(() => { setVersion(getKovaVersion()); }, []);
   const current = MODES.find((m) => m.id === mode) ?? MODES[0];
 
   if (!useSheet) {
