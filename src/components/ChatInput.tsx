@@ -377,7 +377,7 @@ export function ChatInput({
                   <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
                 </div>
               )}
-              {!isStreaming && (
+              {!isStreaming && !(value.trim() || attachments.length > 0) && (
                 <button
                   type="button"
                   onClick={async () => {
