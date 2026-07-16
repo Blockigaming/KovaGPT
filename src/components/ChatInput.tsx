@@ -53,6 +53,9 @@ export function ChatInput({
   placeholder?: string;
 }) {
 
+  const { isDesktop } = useLayout();
+  const isMobileLayout = !isDesktop;
+
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const photoRef = useRef<HTMLInputElement>(null);
@@ -62,6 +65,7 @@ export function ChatInput({
   const [sendFlash, setSendFlash] = useState(false);
   const [actionColor, setActionColor] = useState<string>("#3b82f6");
   const [plusOpen, setPlusOpen] = useState(false);
+  const [kbOffset, setKbOffset] = useState(0);
   const [listening, setListening] = useState(false);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
   const dictationBaseRef = useRef<string>("");
