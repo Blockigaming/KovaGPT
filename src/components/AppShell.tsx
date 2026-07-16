@@ -84,7 +84,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       className="relative flex h-[100dvh] w-full bg-background text-foreground overflow-hidden"
       onTouchStart={(e) => {
         const t = e.touches[0];
-        if (t && t.clientX < 24 && window.innerWidth < 768) {
+        if (t && t.clientX < 24 && window.innerWidth < 1024) {
           (e.currentTarget as HTMLDivElement).dataset.swipeStart = String(t.clientX);
           (e.currentTarget as HTMLDivElement).dataset.swipeY = String(t.clientY);
         }
