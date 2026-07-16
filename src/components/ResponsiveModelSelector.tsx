@@ -108,7 +108,7 @@ export function ResponsiveModelSelector({
               </button>
             );
           })}
-        </div>
+        </div>) : null}
         <div className="mt-3 pt-3 border-t border-border">
           <div className="px-1 pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Kova version</div>
           <div className="flex flex-wrap gap-1.5">
