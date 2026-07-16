@@ -107,7 +107,7 @@ export function LongResponseCard({
           <button
             onClick={copy}
             title={copied ? "Copied" : "Copy"}
-            className="p-1.5 rounded-full text-neutral-300 hover:text-white hover:bg-white/10 transition"
+            className="p-2 lg:p-1.5 rounded-full text-neutral-300 hover:text-white hover:bg-white/10 active:scale-95 transition"
             aria-label="Copy"
           >
             {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -115,7 +115,7 @@ export function LongResponseCard({
           <button
             onClick={selectAll}
             title="Select all"
-            className="p-1.5 rounded-full text-neutral-400 hover:text-white hover:bg-white/10 transition"
+            className="p-2 lg:p-1.5 rounded-full text-neutral-400 hover:text-white hover:bg-white/10 active:scale-95 transition"
             aria-label="Select all"
           >
             <MousePointerClick className="w-4 h-4" />
@@ -123,7 +123,7 @@ export function LongResponseCard({
           <button
             onClick={openInWriting}
             title="Open in Writing"
-            className="p-1.5 rounded-full text-neutral-400 hover:text-white hover:bg-white/10 transition"
+            className="p-2 lg:p-1.5 rounded-full text-neutral-400 hover:text-white hover:bg-white/10 active:scale-95 transition"
             aria-label="Open in Writing"
           >
             <FileEdit className="w-4 h-4" />
@@ -131,7 +131,7 @@ export function LongResponseCard({
           <button
             onClick={dl}
             title="Download (.md)"
-            className="p-1.5 rounded-full text-neutral-400 hover:text-white hover:bg-white/10 transition"
+            className="p-2 lg:p-1.5 rounded-full text-neutral-400 hover:text-white hover:bg-white/10 active:scale-95 transition"
             aria-label="Download"
           >
             <Download className="w-4 h-4" />

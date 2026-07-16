@@ -1,7 +1,9 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Copy, Check, ImageIcon, Loader2, Bookmark, FileEdit, Code2, Eye, MoreHorizontal, Share2, Pencil, RefreshCw, ThumbsUp, ThumbsDown, GitBranch, Globe, Mail } from "lucide-react";
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { MobileBottomSheet } from "./MobileBottomSheet";
+import { useLayout } from "@/hooks/use-mobile";
 import type { Message } from "@/lib/chat-store";
 import { NovaLogo } from "./NovaLogo";
 import { ChatChart, extractCharts } from "./ChatChart";
@@ -130,6 +132,7 @@ function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store
   }
   return (
     <div className="flex items-center gap-2 py-1" aria-live="polite">
+      <NovaLogo className="w-5 h-5 shrink-0" pulse />
       <span
         key={label}
         className="text-sm font-medium bg-clip-text text-transparent animate-in fade-in duration-300"
@@ -182,6 +185,26 @@ function ChatMessageInner({
   };
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
+  const { isMobile } = useLayout();
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+  const pressTimer = useRef<number | null>(null);
+  const pressFired = useRef(false);
+  const startLongPress = useCallback(() => {
+    if (!isMobile) return;
+    pressFired.current = false;
+    if (pressTimer.current) window.clearTimeout(pressTimer.current);
+    pressTimer.current = window.setTimeout(() => {
+      pressFired.current = true;
+      try { navigator.vibrate?.(12); } catch { /* ignore */ }
+      setMobileSheetOpen(true);
+    }, 480);
+  }, [isMobile]);
+  const cancelLongPress = useCallback(() => {
+    if (pressTimer.current) {
+      window.clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
+  }, []);
 
 
   const [saving, setSaving] = useState(false);
@@ -310,7 +333,19 @@ function ChatMessageInner({
               pulse={!!streaming}
             />
           </div>
-          <div className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center">
+          <div
+            className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text"
+            onTouchStart={startLongPress}
+            onTouchEnd={cancelLongPress}
+            onTouchMove={cancelLongPress}
+            onTouchCancel={cancelLongPress}
+            onContextMenu={(e) => {
+              if (isMobile) {
+                e.preventDefault();
+                setMobileSheetOpen(true);
+              }
+            }}
+          >
             {message.activities && message.activities.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-1.5">
                 {message.activities.map((a, i) => (
@@ -616,6 +651,47 @@ function ChatMessageInner({
           onImprove={onFollowUp}
           initialMode={editorMode}
         />
+      )}
+      {!isUser && message.content && (
+        <MobileBottomSheet
+          open={mobileSheetOpen}
+          onOpenChange={setMobileSheetOpen}
+          title="Message actions"
+        >
+          <div className="flex flex-col py-1">
+            {[
+              { label: copied ? "Copied" : "Copy", icon: Copy, onClick: () => { copy(); setMobileSheetOpen(false); } },
+              { label: feedback === "up" ? "Remove good rating" : "Good response", icon: ThumbsUp, onClick: () => { persistFeedback(feedback === "up" ? null : "up"); setMobileSheetOpen(false); } },
+              { label: feedback === "down" ? "Remove bad rating" : "Bad response", icon: ThumbsDown, onClick: () => { persistFeedback(feedback === "down" ? null : "down"); setMobileSheetOpen(false); } },
+              { label: "Share", icon: Share2, onClick: async () => {
+                  setMobileSheetOpen(false);
+                  const text = message.content;
+                  if (typeof navigator !== "undefined" && navigator.share) {
+                    try { await navigator.share({ text, title: "KovaGPT response" }); return; } catch { /* cancel */ }
+                  }
+                  try { await navigator.clipboard.writeText(text); toast.success("Response copied"); } catch { toast.error("Couldn't share"); }
+                } },
+              ...(onEdit ? [{ label: "Edit", icon: Pencil, onClick: () => { onEdit(); setMobileSheetOpen(false); } }] : []),
+              ...(onRetry ? [{ label: "Retry", icon: RefreshCw, onClick: () => { onRetry(); setMobileSheetOpen(false); } }] : []),
+              ...(onBranch ? [{ label: "Branch in new chat", icon: GitBranch, onClick: () => { onBranch(); setMobileSheetOpen(false); } }] : []),
+              { label: "Search the web", icon: Globe, onClick: () => {
+                  const q = encodeURIComponent(message.content.slice(0, 300));
+                  window.open(`https://www.google.com/search?q=${q}`, "_blank", "noopener,noreferrer");
+                  setMobileSheetOpen(false);
+                } },
+              { label: saved ? "Saved" : "Save to Library", icon: Bookmark, onClick: () => { saveItem(); setMobileSheetOpen(false); } },
+            ].map((a) => (
+              <button
+                key={a.label}
+                onClick={a.onClick}
+                className="flex items-center gap-3 px-4 py-3 text-left text-[15px] rounded-lg hover:bg-accent active:bg-accent/70 transition"
+              >
+                <a.icon className="w-5 h-5 text-muted-foreground shrink-0" />
+                <span className="flex-1">{a.label}</span>
+              </button>
+            ))}
+          </div>
+        </MobileBottomSheet>
       )}
     </div>
   );

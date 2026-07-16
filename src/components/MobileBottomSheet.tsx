@@ -99,7 +99,10 @@ export function MobileBottomSheet({
     if (dy > 0) setDragY(dy);
   };
   const onTouchEnd = () => {
-    if (dragY > 90) onOpenChange(false);
+    if (dragY > 90) {
+      try { navigator.vibrate?.(10); } catch { /* ignore */ }
+      onOpenChange(false);
+    }
     setDragY(0);
     dragStart.current = null;
   };
