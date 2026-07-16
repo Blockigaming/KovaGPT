@@ -869,19 +869,19 @@ function KovaGPT() {
           <div className="flex-1 flex flex-col overflow-y-auto overscroll-contain">
             {/* SR-only stable H1 so crawlers see a static product heading even when the visible greeting is dynamic. */}
             <h1 className="sr-only">KovaGPT</h1>
-            <div className="flex-1 flex flex-col items-center justify-center w-full px-4 lg:px-6 pt-4 pb-2 lg:py-12">
-              <div className="flex flex-col items-center gap-2.5 mb-4 lg:mb-8 animate-fade-in">
+            <div className="flex-1 flex flex-col items-center justify-center w-full px-4 lg:px-6 pt-6 pb-4 lg:py-12">
+              <div className="flex flex-col items-center gap-3 mb-6 lg:mb-8 animate-fade-in">
                 <div className="relative">
                   <div
                     aria-hidden="true"
-                    className="absolute inset-0 -m-5 rounded-full bg-primary/15 blur-3xl opacity-70"
+                    className="hidden lg:block absolute inset-0 -m-5 rounded-full bg-primary/15 blur-3xl opacity-70"
                   />
-                  <NovaLogo className="relative w-10 h-10 lg:w-16 lg:h-16" animated />
+                  <NovaLogo className="relative w-9 h-9 lg:w-16 lg:h-16" animated />
                 </div>
 
                 <p
                   aria-hidden={!isSignedIn ? "true" : undefined}
-                  className="font-display text-[20px] leading-[1.2] lg:text-[40px] lg:leading-[1.05] font-semibold tracking-tight text-center text-balance text-foreground"
+                  className="font-display text-[22px] leading-[1.15] lg:text-[40px] lg:leading-[1.05] font-semibold tracking-tight text-center text-balance text-foreground"
                 >
                   {isSignedIn ? greeting : "What can I help with?"}
                 </p>
@@ -904,8 +904,8 @@ function KovaGPT() {
                   placeholder="Message KovaGPT"
                 />
 
-                {/* ChatGPT-style horizontally scrolling suggestion pills on mobile; centered wrap on desktop. */}
-                <div className="mt-3 lg:mt-4 -mx-4 lg:mx-0 px-4 lg:px-0 flex gap-2 overflow-x-auto scrollbar-none lg:flex-wrap lg:justify-center lg:overflow-visible snap-x snap-mandatory">
+                {/* Suggestion pills: hidden on mobile (ChatGPT mobile parity); shown centered on desktop. */}
+                <div className="hidden lg:flex mt-4 gap-2 flex-wrap justify-center">
                   {[
                     "Track the World Cup",
                     "Search current trends",
@@ -917,7 +917,7 @@ function KovaGPT() {
                       key={p}
                       type="button"
                       onClick={() => setInput((v) => (v ? v : p))}
-                      className="shrink-0 snap-start text-[13.5px] lg:text-sm px-3.5 py-2 rounded-full border border-border/70 text-muted-foreground bg-card/40 backdrop-blur-sm hover:text-foreground hover:bg-accent hover:border-foreground/20 active:scale-95 transition-all whitespace-nowrap"
+                      className="text-sm px-3.5 py-2 rounded-full border border-border/70 text-muted-foreground bg-card/40 backdrop-blur-sm hover:text-foreground hover:bg-accent hover:border-foreground/20 active:scale-95 transition-all whitespace-nowrap"
                     >
                       {p}
                     </button>
@@ -926,6 +926,7 @@ function KovaGPT() {
               </div>
             </div>
           </div>
+
 
 
 
