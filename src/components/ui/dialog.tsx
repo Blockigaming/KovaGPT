@@ -39,13 +39,14 @@ const DialogContent = React.forwardRef<
       ref={ref}
       className={cn(
         // Base + animation shared across viewports
-        "fixed z-50 grid gap-4 border bg-background shadow-lg duration-200",
+        "fixed z-50 flex flex-col gap-4 border bg-background shadow-lg duration-200",
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-        // Mobile: bottom sheet with rounded top, edge-to-edge, safe-area padded
+        // Mobile: bottom sheet — cap height and scroll body, respect safe areas
         "inset-x-0 bottom-0 top-auto w-full max-w-full rounded-t-2xl rounded-b-none border-b-0 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]",
+        "max-h-[92dvh] overflow-y-auto overscroll-contain",
         "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
-        // Tablet/desktop (lg+): centered modal with all corners rounded
-        "lg:inset-auto lg:left-[50%] lg:top-[50%] lg:bottom-auto lg:w-full lg:max-w-lg lg:translate-x-[-50%] lg:translate-y-[-50%] lg:rounded-lg lg:border-b lg:p-6 lg:pb-6",
+        // Tablet/desktop (lg+): centered modal, capped height, scroll body
+        "lg:inset-auto lg:left-[50%] lg:top-[50%] lg:bottom-auto lg:w-[calc(100vw-2rem)] lg:max-w-lg lg:translate-x-[-50%] lg:translate-y-[-50%] lg:rounded-lg lg:border-b lg:p-6 lg:pb-6 lg:max-h-[85dvh]",
         "lg:data-[state=closed]:zoom-out-95 lg:data-[state=open]:zoom-in-95 lg:data-[state=closed]:slide-out-to-bottom-0 lg:data-[state=open]:slide-in-from-bottom-0",
         className,
       )}
