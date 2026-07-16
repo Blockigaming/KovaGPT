@@ -739,7 +739,7 @@ function KovaGPT() {
           onNewChat={newChat}
           title={active?.title}
         />
-        <header className="hidden md:flex h-14 items-center px-3 relative gap-1">
+        <header className="hidden lg:flex h-14 items-center px-3 relative gap-1">
           {!sidebarOpen && (
             <div className="flex items-center gap-1 mr-2 shrink-0">
               <button
