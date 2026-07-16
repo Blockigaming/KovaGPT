@@ -1,4 +1,4 @@
-import { Trash2, PanelLeft, Search, HelpCircle, Plus, Share2, Settings as SettingsIcon, FolderOpen, Link2, MoreHorizontal, MessageCircle, Copy as CopyIcon, Archive, Pin, PinOff, Users, CreditCard, Calendar, Activity, PenLine, FolderKanban, LayoutDashboard, Wand2, Plug, SquarePen, ImageIcon } from "lucide-react";
+import { Trash2, PanelLeft, Search, HelpCircle, Share2, Settings as SettingsIcon, FolderOpen, Link2, MoreHorizontal, MessageCircle, Copy as CopyIcon, Archive, Pin, PinOff, Users, CreditCard, Calendar, FolderKanban, Plug, SquarePen, ImageIcon } from "lucide-react";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { NovaLogo } from "@/components/NovaLogo";
@@ -6,11 +6,12 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
 import { SignInButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
 import { useTier } from "@/hooks/useTier";
+import { useLayout } from "@/hooks/use-mobile";
 
 import type { Conversation } from "@/lib/chat-store";
 
 
-const SIDEBAR_WIDTH = 264;
+const SIDEBAR_WIDTH = 288;
 
 
 export function Sidebar({
@@ -46,6 +47,7 @@ export function Sidebar({
 }) {
   const { user, isSignedIn, isLoaded } = useUser();
   const { tier } = useTier();
+  const { isDesktop } = useLayout();
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -56,7 +58,7 @@ export function Sidebar({
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isOn = (p: string) => pathname === p;
   const navItemClass = (active: boolean) =>
-    `relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] transition active:scale-[0.98] min-w-0 ${
+    `relative flex items-center gap-3 rounded-lg px-3 py-2.5 max-lg:py-3 text-[15px] transition active:scale-[0.98] min-w-0 ${
       active
         ? "bg-sidebar-active text-foreground font-medium"
         : "hover:bg-sidebar-hover text-sidebar-foreground"
@@ -74,7 +76,7 @@ export function Sidebar({
       {open && (
         <div
           onClick={onToggle}
-          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden animate-in fade-in-0 duration-200"
           aria-hidden="true"
         />
       )}
@@ -83,10 +85,11 @@ export function Sidebar({
 
 
       <aside
-        style={{ width: open ? SIDEBAR_WIDTH : 0 }}
-        className="relative shrink-0 overflow-hidden transition-[width] duration-150 bg-sidebar text-sidebar-foreground flex flex-col max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-40 max-lg:h-[100dvh] max-lg:shadow-2xl max-lg:rounded-r-2xl lg:border-r lg:border-border/70"
+        style={isDesktop ? { width: open ? SIDEBAR_WIDTH : 0 } : { width: SIDEBAR_WIDTH }}
+        data-state={open ? "open" : "closed"}
+        className="relative shrink-0 overflow-hidden bg-sidebar text-sidebar-foreground flex flex-col lg:transition-[width] lg:duration-150 max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-40 max-lg:h-[100dvh] max-lg:shadow-2xl max-lg:rounded-r-2xl max-lg:transition-transform max-lg:duration-[220ms] max-lg:ease-[cubic-bezier(0.32,0.72,0,1)] max-lg:data-[state=closed]:-translate-x-full lg:border-r lg:border-border/70"
       >
-        <div style={{ width: SIDEBAR_WIDTH }} className="flex flex-col h-full">
+        <div style={{ width: SIDEBAR_WIDTH }} className="flex flex-col h-full max-lg:pt-[env(safe-area-inset-top)] max-lg:pb-[env(safe-area-inset-bottom)]">
 
           {/* Brand row */}
           <div className="relative z-20 flex items-center gap-2 px-3 sm:px-4 pt-4 pb-3 bg-sidebar">
@@ -148,18 +151,18 @@ export function Sidebar({
           </div>
           <div className="px-3 flex flex-col gap-0.5">
             <button
-              onClick={onNew}
-              className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] hover:bg-sidebar-hover transition active:scale-[0.98]"
+              onClick={() => { onNew(); if (!isDesktop) onToggle(); }}
+              className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 max-lg:py-3 text-[15px] hover:bg-sidebar-hover active:bg-sidebar-hover transition active:scale-[0.98]"
             >
               <SquarePen className="w-[18px] h-[18px] shrink-0" />
               <span>New chat</span>
             </button>
-            <Link to="/library" className={navItemClass(isOn("/library"))}>
+            <Link to="/library" onClick={() => { if (!isDesktop) onToggle(); }} className={navItemClass(isOn("/library"))}>
               <ActiveBar on={isOn("/library")} />
               <FolderOpen className="w-[18px] h-[18px] shrink-0" />
               <span className="truncate">Library</span>
             </Link>
-            <Link to="/apps" className={navItemClass(isOn("/apps"))}>
+            <Link to="/apps" onClick={() => { if (!isDesktop) onToggle(); }} className={navItemClass(isOn("/apps"))}>
               <ActiveBar on={isOn("/apps")} />
               {(tier === "plus" || tier === "pro") ? (
                 <Plug className="w-[18px] h-[18px] shrink-0" />
@@ -170,27 +173,27 @@ export function Sidebar({
                 {(tier === "plus" || tier === "pro") ? "Plugins" : "Apps"}
               </span>
             </Link>
-            <Link to="/images" className={navItemClass(isOn("/images"))}>
+            <Link to="/images" onClick={() => { if (!isDesktop) onToggle(); }} className={navItemClass(isOn("/images"))}>
               <ActiveBar on={isOn("/images")} />
               <ImageIcon className="w-[18px] h-[18px] shrink-0" />
               <span className="truncate">Images</span>
             </Link>
             {showSignedIn && (
-              <Link to="/projects" className={navItemClass(isOn("/projects"))}>
+              <Link to="/projects" onClick={() => { if (!isDesktop) onToggle(); }} className={navItemClass(isOn("/projects"))}>
                 <ActiveBar on={isOn("/projects")} />
                 <FolderKanban className="w-[18px] h-[18px] shrink-0" />
                 <span className="truncate">Projects</span>
               </Link>
             )}
             {showSignedIn && (tier === "plus" || tier === "pro") && (
-              <Link to="/scheduled-tasks" className={navItemClass(isOn("/scheduled-tasks"))}>
+              <Link to="/scheduled-tasks" onClick={() => { if (!isDesktop) onToggle(); }} className={navItemClass(isOn("/scheduled-tasks"))}>
                 <ActiveBar on={isOn("/scheduled-tasks")} />
                 <Calendar className="w-[18px] h-[18px] shrink-0" />
                 <span className="truncate">Scheduled Tasks</span>
               </Link>
             )}
             {tier !== "plus" && tier !== "pro" && (
-              <Link to="/pricing" className={navItemClass(isOn("/pricing"))}>
+              <Link to="/pricing" onClick={() => { if (!isDesktop) onToggle(); }} className={navItemClass(isOn("/pricing"))}>
                 <ActiveBar on={isOn("/pricing")} />
                 <CreditCard className="w-[18px] h-[18px] shrink-0" />
                 <span className="truncate">Subscriptions</span>
@@ -213,10 +216,13 @@ export function Sidebar({
               const renderRow = (c: Conversation) => (
                 <div
                   key={c.id}
-                  className={`group mx-2 my-0.5 flex items-center gap-1 rounded-xl px-3 py-2 text-[14px] cursor-pointer transition ${
-                    activeId === c.id ? "bg-sidebar-hover" : "hover:bg-sidebar-hover/60"
+                  className={`group mx-2 my-0.5 flex items-center gap-1 rounded-xl px-3 py-2 max-lg:py-3 text-[14px] max-lg:text-[15px] cursor-pointer transition ${
+                    activeId === c.id ? "bg-sidebar-hover" : "hover:bg-sidebar-hover/60 active:bg-sidebar-hover"
                   }`}
-                  onClick={() => onSelect(c.id)}
+                  onClick={() => {
+                    onSelect(c.id);
+                    if (!isDesktop) onToggle();
+                  }}
                 >
                   {c.pinned && (
                     <Pin className="w-3 h-3 mr-1 shrink-0 text-muted-foreground fill-current" />
