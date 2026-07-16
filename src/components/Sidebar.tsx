@@ -56,7 +56,7 @@ export function Sidebar({
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isOn = (p: string) => pathname === p;
   const navItemClass = (active: boolean) =>
-    `relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] transition active:scale-[0.98] min-w-0 ${
+    `relative flex items-center gap-3 rounded-lg px-2.5 py-2 text-[14px] transition-colors duration-150 active:scale-[0.99] min-w-0 ${
       active
         ? "bg-sidebar-active text-foreground font-medium"
         : "hover:bg-sidebar-hover text-sidebar-foreground"
@@ -65,7 +65,7 @@ export function Sidebar({
     on ? (
       <span
         aria-hidden="true"
-        className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-blue-500"
+        className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-[2px] rounded-r-full bg-foreground/50"
       />
     ) : null;
 
