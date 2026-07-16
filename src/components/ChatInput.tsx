@@ -489,11 +489,7 @@ export function ChatInput({
               ) : null}
             </div>
           </div>
-          {mode && onModeChange && (
-            <div className="flex items-center px-2 pb-2 lg:hidden">
-              <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
-            </div>
-          )}
+          {/* Mobile: model selector lives in the top bar; no in-composer picker. */}
         </div>
       </div>
     </div>
