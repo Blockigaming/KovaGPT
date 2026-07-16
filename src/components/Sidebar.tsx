@@ -151,18 +151,18 @@ export function Sidebar({
           </div>
           <div className="px-3 flex flex-col gap-0.5">
             <button
-              onClick={onNew}
-              className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] hover:bg-sidebar-hover transition active:scale-[0.98]"
+              onClick={() => { onNew(); if (!isDesktop) onToggle(); }}
+              className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 max-lg:py-3 text-[15px] hover:bg-sidebar-hover active:bg-sidebar-hover transition active:scale-[0.98]"
             >
               <SquarePen className="w-[18px] h-[18px] shrink-0" />
               <span>New chat</span>
             </button>
-            <Link to="/library" className={navItemClass(isOn("/library"))}>
+            <Link to="/library" onClick={() => { if (!isDesktop) onToggle(); }} className={navItemClass(isOn("/library"))}>
               <ActiveBar on={isOn("/library")} />
               <FolderOpen className="w-[18px] h-[18px] shrink-0" />
               <span className="truncate">Library</span>
             </Link>
-            <Link to="/apps" className={navItemClass(isOn("/apps"))}>
+            <Link to="/apps" onClick={() => { if (!isDesktop) onToggle(); }} className={navItemClass(isOn("/apps"))}>
               <ActiveBar on={isOn("/apps")} />
               {(tier === "plus" || tier === "pro") ? (
                 <Plug className="w-[18px] h-[18px] shrink-0" />
@@ -173,27 +173,27 @@ export function Sidebar({
                 {(tier === "plus" || tier === "pro") ? "Plugins" : "Apps"}
               </span>
             </Link>
-            <Link to="/images" className={navItemClass(isOn("/images"))}>
+            <Link to="/images" onClick={() => { if (!isDesktop) onToggle(); }} className={navItemClass(isOn("/images"))}>
               <ActiveBar on={isOn("/images")} />
               <ImageIcon className="w-[18px] h-[18px] shrink-0" />
               <span className="truncate">Images</span>
             </Link>
             {showSignedIn && (
-              <Link to="/projects" className={navItemClass(isOn("/projects"))}>
+              <Link to="/projects" onClick={() => { if (!isDesktop) onToggle(); }} className={navItemClass(isOn("/projects"))}>
                 <ActiveBar on={isOn("/projects")} />
                 <FolderKanban className="w-[18px] h-[18px] shrink-0" />
                 <span className="truncate">Projects</span>
               </Link>
             )}
             {showSignedIn && (tier === "plus" || tier === "pro") && (
-              <Link to="/scheduled-tasks" className={navItemClass(isOn("/scheduled-tasks"))}>
+              <Link to="/scheduled-tasks" onClick={() => { if (!isDesktop) onToggle(); }} className={navItemClass(isOn("/scheduled-tasks"))}>
                 <ActiveBar on={isOn("/scheduled-tasks")} />
                 <Calendar className="w-[18px] h-[18px] shrink-0" />
                 <span className="truncate">Scheduled Tasks</span>
               </Link>
             )}
             {tier !== "plus" && tier !== "pro" && (
-              <Link to="/pricing" className={navItemClass(isOn("/pricing"))}>
+              <Link to="/pricing" onClick={() => { if (!isDesktop) onToggle(); }} className={navItemClass(isOn("/pricing"))}>
                 <ActiveBar on={isOn("/pricing")} />
                 <CreditCard className="w-[18px] h-[18px] shrink-0" />
                 <span className="truncate">Subscriptions</span>
