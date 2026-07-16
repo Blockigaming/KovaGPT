@@ -16,7 +16,7 @@ export function MobileFabs({
   if (!isMobile) return null;
   return (
     <div
-      className="fixed left-3 z-40 flex items-center gap-2 md:hidden"
+      className="fixed left-3 z-40 flex items-center gap-2 lg:hidden"
       style={{ bottom: "calc(env(safe-area-inset-bottom) + 12px)" }}
     >
       <button

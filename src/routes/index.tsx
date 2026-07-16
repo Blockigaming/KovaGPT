@@ -833,10 +833,10 @@ function KovaGPT() {
 
 
         {!active || active.messages.length === 0 ? (
-          <div className="flex-1 flex flex-col overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
+          <div className="flex-1 flex flex-col overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+72px)] lg:pb-0">
             <div className="flex-1 flex flex-col items-center justify-center w-full py-10">
               <div className="flex flex-col items-center gap-4 mb-6">
-                <h1 className="font-display text-2xl sm:text-4xl font-semibold tracking-tight text-center">
+                <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight text-center">
                   {greeting}
                 </h1>
               </div>
@@ -859,7 +859,7 @@ function KovaGPT() {
                 />
 
                 {/* Suggestion chips — horizontal pill row on desktop, tall touch cards on mobile. */}
-                <div className="mt-3 hidden sm:flex flex-wrap gap-2 justify-center">
+                <div className="mt-3 hidden lg:flex flex-wrap gap-2 justify-center">
                   {[
                     "Track the World Cup",
                     "Search Current Trends",
@@ -875,7 +875,7 @@ function KovaGPT() {
                     </button>
                   ))}
                 </div>
-                <div className="mt-4 sm:hidden flex flex-col gap-2">
+                <div className="mt-4 lg:hidden flex flex-col gap-2">
                   {[
                     "Track the World Cup",
                     "Search Current Trends",
@@ -897,7 +897,7 @@ function KovaGPT() {
 
         ) : (
           <>
-            <div ref={scrollRef} className="flex-1 overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+64px)] md:pb-6">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+64px)] lg:pb-6">
               {active.messages.map((m, i) => {
                 const isLastAssistant =
                   m.role === "assistant" && i === active.messages.length - 1;
@@ -983,7 +983,7 @@ function KovaGPT() {
                 );
               })}
             </div>
-            <div className="pb-[calc(env(safe-area-inset-bottom)+56px)] md:pb-2 md:pt-2">
+            <div className="pb-[calc(env(safe-area-inset-bottom)+56px)] lg:pb-2 lg:pt-2">
               <ChatInput
                 value={input}
                 onChange={setInput}
@@ -999,7 +999,7 @@ function KovaGPT() {
                 }
                 placeholder="Ask Kova"
               />
-              <div className="hidden md:flex justify-center gap-3 text-[11px] text-muted-foreground/70 mt-2 select-none">
+              <div className="hidden lg:flex justify-center gap-3 text-[11px] text-muted-foreground/70 mt-2 select-none">
                 <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">Enter</kbd> to send</span>
                 <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">Shift+Enter</kbd> newline</span>
                 <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">⌘K</kbd> search</span>
