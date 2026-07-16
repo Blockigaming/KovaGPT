@@ -769,7 +769,8 @@ function KovaGPT() {
         <MobileTopBar
           onOpenSidebar={() => setSidebarOpen(true)}
           onNewChat={newChat}
-          title={active?.title}
+          mode={mode}
+          onModeChange={setMode}
         />
         <header className="hidden lg:flex h-14 items-center px-4 relative gap-1 border-b border-border/40 bg-background/70 backdrop-blur-xl">
           {!sidebarOpen && (
