@@ -24,12 +24,14 @@ import {
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [sidebarOpen, setSidebarOpen] = useState(() => {
-    if (typeof window === "undefined") return true;
-    // Only auto-open the persistent sidebar on desktop (>=1200). Tablets and
-    // phones start with the sidebar closed and open it via drawer/trigger.
-    return window.innerWidth >= 1200;
-  });
+  // Default closed to avoid a flash-of-open sidebar during SSR/hydration on
+  // narrow viewports; a mount effect below opens it on desktop-class widths.
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth >= 1024) {
+      setSidebarOpen(true);
+    }
+  }, []);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
   const openHelp = useCallback(() => { navigate({ to: "/help" as never }); }, [navigate]);
@@ -83,7 +85,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       className="relative flex h-[100dvh] w-full bg-background text-foreground overflow-hidden"
       onTouchStart={(e) => {
         const t = e.touches[0];
-        if (t && t.clientX < 24 && window.innerWidth < 768) {
+        if (t && t.clientX < 24 && window.innerWidth < 1024) {
           (e.currentTarget as HTMLDivElement).dataset.swipeStart = String(t.clientX);
           (e.currentTarget as HTMLDivElement).dataset.swipeY = String(t.clientY);
         }
@@ -126,7 +128,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {!sidebarOpen && (
           <button
             onClick={() => setSidebarOpen(true)}
-            className="hidden md:flex fixed top-3 left-3 z-30 p-2 rounded-md bg-background/90 border border-border hover:bg-accent transition shadow-sm items-center justify-center"
+            className="hidden lg:flex fixed top-3 left-3 z-30 p-2 rounded-md bg-background/90 border border-border hover:bg-accent transition shadow-sm items-center justify-center"
             aria-label="Open sidebar"
           >
             <PanelLeft className="w-4 h-4" />

@@ -105,10 +105,14 @@ function KovaGPT() {
   const [tempChat, setTempChat] = useState(false);
   const [tempChatConfirmed, setTempChatConfirmed] = useState(false);
 
-  const [sidebarOpen, setSidebarOpen] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return window.innerWidth >= 768;
-  });
+  // Start closed to avoid a flash-of-open sidebar on narrow viewports during
+  // SSR/hydration. A mount effect opens it on desktop-class widths (>=1024).
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth >= 1024) {
+      setSidebarOpen(true);
+    }
+  }, []);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
   const openSettings = useCallback((tab?: string) => {
@@ -735,7 +739,7 @@ function KovaGPT() {
           onNewChat={newChat}
           title={active?.title}
         />
-        <header className="hidden md:flex h-14 items-center px-3 relative gap-1">
+        <header className="hidden lg:flex h-14 items-center px-3 relative gap-1">
           {!sidebarOpen && (
             <div className="flex items-center gap-1 mr-2 shrink-0">
               <button
@@ -795,7 +799,7 @@ function KovaGPT() {
                 }}
                 aria-label="Toggle temporary chat"
                 title={tempChat ? "Temporary chat on" : "Start temporary chat"}
-                className={`md:hidden relative shrink-0 p-2 rounded-lg transition ${
+                className={`lg:hidden relative shrink-0 p-2 rounded-lg transition ${
                   tempChat ? "bg-primary/15 text-primary" : "hover:bg-accent text-foreground"
                 }`}
               >
