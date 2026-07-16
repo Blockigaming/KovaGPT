@@ -18,6 +18,8 @@ export function ModelSelector({
   compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [version, setVersion] = useState<KovaVersion>("3.5");
+  useEffect(() => { setVersion(getKovaVersion()); }, []);
   const ref = useRef<HTMLDivElement>(null);
   const current = MODES.find((m) => m.id === mode) ?? MODES[0];
 
