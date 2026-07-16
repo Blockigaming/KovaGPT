@@ -209,14 +209,15 @@ export function ChatInput({
               ? ({ boxShadow: `0 0 0 2px ${actionColor}33`, borderColor: `${actionColor}99` } as React.CSSProperties)
               : undefined
           }
-          className={`rounded-3xl border bg-card shadow-lg transition-all duration-200 focus-within:border-muted-foreground/50 ${
+          className={`rounded-[28px] border bg-card shadow-sm transition-all duration-200 focus-within:border-muted-foreground/50 ${
             sendFlash
               ? "scale-[0.995]"
               : isStreaming
                 ? "border-foreground/40 ring-1 ring-foreground/10"
-                : "border-border"
+                : "border-border/70"
           }`}
         >
+
           {attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 p-3 pb-0">
               {attachments.map((a, i) => (
