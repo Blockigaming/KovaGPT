@@ -51,6 +51,7 @@ export function ResponsiveModelSelector({
         }`}
       >
         <span className="text-foreground font-medium leading-none">{current.label}</span>
+        <span className="text-muted-foreground leading-none text-[11px]">Kova {version}</span>
         <ChevronDown className="w-4 h-4 text-muted-foreground" />
       </button>
       <MobileBottomSheet open={open} onOpenChange={setOpen} title="Intelligence" ariaLabel="Choose model">
