@@ -185,6 +185,26 @@ function ChatMessageInner({
   };
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
+  const { isMobile } = useLayout();
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
+  const pressTimer = useRef<number | null>(null);
+  const pressFired = useRef(false);
+  const startLongPress = useCallback(() => {
+    if (!isMobile) return;
+    pressFired.current = false;
+    if (pressTimer.current) window.clearTimeout(pressTimer.current);
+    pressTimer.current = window.setTimeout(() => {
+      pressFired.current = true;
+      try { navigator.vibrate?.(12); } catch { /* ignore */ }
+      setMobileSheetOpen(true);
+    }, 480);
+  }, [isMobile]);
+  const cancelLongPress = useCallback(() => {
+    if (pressTimer.current) {
+      window.clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
+  }, []);
 
 
   const [saving, setSaving] = useState(false);
