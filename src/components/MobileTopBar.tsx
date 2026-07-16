@@ -1,12 +1,15 @@
 import { Menu, SquarePen } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { useLayout } from "@/hooks/use-mobile";
+import { useUser, SignInButton, SignUpButton, clerkEnabled } from "@/components/auth/ClerkSafe";
 
 /**
  * Compact sticky top bar shown on phones and tablets (any viewport below the
  * desktop breakpoint). Provides a menu trigger to open the off-canvas sidebar,
- * brand identity, and a quick "new chat" action. Honors safe-area-inset-top
- * and uses translucent blur so content underneath eases through as it scrolls.
+ * brand identity, and a quick "new chat" action. Signed-out users see a
+ * compact "Sign up" pill instead of the new-chat icon so they can always
+ * reach auth from the top bar. Honors safe-area-inset-top and uses
+ * translucent blur so content underneath eases through as it scrolls.
  */
 export function MobileTopBar({
   onOpenSidebar,
@@ -18,10 +21,12 @@ export function MobileTopBar({
   title?: string;
 }) {
   const { isDesktop } = useLayout();
+  const { isLoaded, isSignedIn } = useUser();
   if (isDesktop) return null;
+  const showAuth = isLoaded && clerkEnabled && !isSignedIn;
   return (
     <header
-      className="sticky top-0 z-30 lg:hidden bg-background/85 backdrop-blur-lg border-b border-border/60"
+      className="sticky top-0 z-30 lg:hidden bg-background/80 backdrop-blur-xl border-b border-border/50"
       style={{ paddingTop: "env(safe-area-inset-top)" }}
       role="banner"
     >
@@ -40,14 +45,29 @@ export function MobileTopBar({
             {title || "KovaGPT"}
           </span>
         </div>
-        <button
-          type="button"
-          onClick={onNewChat}
-          aria-label="New chat"
-          className="w-10 h-10 rounded-full flex items-center justify-center text-foreground hover:bg-accent/60 active:scale-95 transition"
-        >
-          <SquarePen className="w-5 h-5" />
-        </button>
+        {showAuth ? (
+          <div className="flex items-center gap-1.5 pr-1">
+            <SignInButton mode="modal">
+              <button className="text-[13px] font-medium px-3 h-8 rounded-full text-foreground hover:bg-accent/60 active:scale-95 transition">
+                Log in
+              </button>
+            </SignInButton>
+            <SignUpButton mode="modal">
+              <button className="text-[13px] font-semibold px-3 h-8 rounded-full bg-foreground text-background hover:opacity-90 active:scale-95 transition whitespace-nowrap">
+                Sign up
+              </button>
+            </SignUpButton>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onNewChat}
+            aria-label="New chat"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-foreground hover:bg-accent/60 active:scale-95 transition"
+          >
+            <SquarePen className="w-5 h-5" />
+          </button>
+        )}
       </div>
     </header>
   );
