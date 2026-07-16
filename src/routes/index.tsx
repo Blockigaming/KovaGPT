@@ -942,7 +942,7 @@ function KovaGPT() {
 
         ) : (
           <>
-            <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain scroll-smooth pb-2 lg:pb-6">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain scroll-smooth pt-6 lg:pt-10 pb-2 lg:pb-6">
               {active.messages.map((m, i) => {
                 const isLastAssistant =
                   m.role === "assistant" && i === active.messages.length - 1;
