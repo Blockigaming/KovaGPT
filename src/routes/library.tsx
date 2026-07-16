@@ -88,22 +88,22 @@ function LibraryPage() {
   return (
     <AppShell>
       <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
-        <div className="w-full px-4 sm:px-6 lg:px-10 py-3 flex items-center gap-3">
-          <h1 className="font-display font-semibold tracking-tight text-base flex items-center gap-2">
+        <div className="w-full px-4 sm:px-6 lg:px-10 h-14 lg:h-auto lg:py-3 flex items-center gap-3">
+          <h1 className="font-display font-semibold tracking-tight text-[17px] lg:text-base flex items-center gap-2">
             <FolderOpen className="w-4 h-4" /> Library
           </h1>
           <div className="ml-auto">
-            <Button size="sm" variant="ghost" onClick={load} disabled={loading}>
+            <Button size="sm" variant="ghost" onClick={load} disabled={loading} className="rounded-full">
               <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
-              Refresh
+              <span className="hidden sm:inline">Refresh</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="w-full px-4 sm:px-6 lg:px-10 py-6 space-y-4">
+      <main className="w-full px-4 sm:px-6 lg:px-10 py-4 lg:py-6 space-y-4 pb-[env(safe-area-inset-bottom)]">
         {!isSignedIn && isLoaded && (
-          <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm">
+          <div className="rounded-2xl border border-border bg-muted/30 p-4 text-sm">
             <div className="font-medium mb-1">You are browsing as a guest.</div>
             <p className="text-muted-foreground text-xs mb-3">
               Items you save stay in this browser. Sign in to keep them across devices and free up
@@ -111,14 +111,14 @@ function LibraryPage() {
             </p>
 
             <SignInButton mode="modal">
-              <button className="px-3 py-1.5 rounded-full bg-foreground text-background text-xs font-medium hover:opacity-90 transition">
+              <button className="px-4 py-2 rounded-full bg-foreground text-background text-xs font-medium hover:opacity-90 transition active:scale-[0.98]">
                 Sign in to save permanently
               </button>
             </SignInButton>
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2 -mx-4 sm:mx-0 px-4 sm:px-0 overflow-x-auto scrollbar-none">
           {([
             { id: "all" as const, label: "All" },
             { id: "images" as const, label: "Images" },
@@ -128,7 +128,7 @@ function LibraryPage() {
               key={t.id}
               type="button"
               onClick={() => setTab(t.id)}
-              className={`rounded-full border px-4 py-1.5 text-xs font-medium transition ${
+              className={`shrink-0 rounded-full border px-4 py-2 text-[13px] font-medium transition active:scale-[0.97] ${
                 tab === t.id
                   ? "bg-foreground text-background border-foreground"
                   : "bg-muted/40 text-muted-foreground border-border hover:text-foreground"
@@ -137,13 +137,13 @@ function LibraryPage() {
               {t.label}
             </button>
           ))}
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search your library..."
-            className="h-10 max-w-md"
-          />
         </div>
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search your library..."
+          className="h-11 lg:h-10 rounded-full lg:rounded-md max-w-md bg-muted/40 border-border/60"
+        />
 
         {loading && items.length === 0 ? (
           <ul className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(260px,1fr))]" aria-hidden>
