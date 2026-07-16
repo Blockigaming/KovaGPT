@@ -4,6 +4,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { SignUpPrompt } from "@/components/SignUpPrompt";
 import { PanelLeft, Search, MessageSquareDashed, Check } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
+import { NovaLogo } from "@/components/NovaLogo";
 
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
@@ -662,6 +663,37 @@ function KovaGPT() {
 
   return (
     <div className="flex h-screen w-full bg-background text-foreground" style={{ height: "100dvh" }}>
+      {/* Mobile edge-swipe zone: swipe right from the left edge to open the sidebar. */}
+      {!sidebarOpen && (
+        <div
+          aria-hidden="true"
+          className="lg:hidden fixed left-0 top-0 bottom-0 w-4 z-20"
+          onTouchStart={(e) => {
+            const startX = e.touches[0].clientX;
+            const startY = e.touches[0].clientY;
+            if (startX > 24) return;
+            let opened = false;
+            const onMove = (ev: TouchEvent) => {
+              const dx = ev.touches[0].clientX - startX;
+              const dy = Math.abs(ev.touches[0].clientY - startY);
+              if (!opened && dx > 40 && dy < 40) {
+                opened = true;
+                setSidebarOpen(true);
+                cleanup();
+              }
+            };
+            const cleanup = () => {
+              window.removeEventListener("touchmove", onMove);
+              window.removeEventListener("touchend", cleanup);
+              window.removeEventListener("touchcancel", cleanup);
+            };
+            window.addEventListener("touchmove", onMove, { passive: true });
+            window.addEventListener("touchend", cleanup);
+            window.addEventListener("touchcancel", cleanup);
+          }}
+        />
+      )}
+      
       
       <Sidebar
         conversations={conversations}
@@ -833,10 +865,11 @@ function KovaGPT() {
 
 
         {!active || active.messages.length === 0 ? (
-          <div className="flex-1 flex flex-col overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+72px)] lg:pb-0">
-            <div className="flex-1 flex flex-col items-center justify-center w-full py-10">
-              <div className="flex flex-col items-center gap-4 mb-6">
-                <h1 className="font-display text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight text-center">
+          <div className="flex-1 flex flex-col overflow-y-auto px-4 lg:px-6">
+            <div className="flex-1 flex flex-col items-center justify-center w-full py-8 lg:py-10">
+              <div className="flex flex-col items-center gap-3 mb-5 lg:mb-6 animate-fade-in">
+                <NovaLogo className="w-11 h-11 lg:hidden" />
+                <h1 className="font-display text-[26px] leading-tight lg:text-4xl font-semibold tracking-tight text-center text-balance px-4">
                   {greeting}
                 </h1>
               </div>
@@ -858,7 +891,7 @@ function KovaGPT() {
                   placeholder="Ask Kova"
                 />
 
-                {/* Suggestion chips — horizontal pill row on desktop, tall touch cards on mobile. */}
+                {/* Suggestion chips — pill row on desktop, tap-target cards on mobile. */}
                 <div className="mt-3 hidden lg:flex flex-wrap gap-2 justify-center">
                   {[
                     "Track the World Cup",
@@ -875,19 +908,20 @@ function KovaGPT() {
                     </button>
                   ))}
                 </div>
-                <div className="mt-4 lg:hidden flex flex-col gap-2">
+                <div className="mt-3 lg:hidden grid grid-cols-1 gap-2">
                   {[
-                    "Track the World Cup",
-                    "Search Current Trends",
-                    "Flash Sales Near Me",
+                    { label: "Track the World Cup", hint: "Live scores & fixtures" },
+                    { label: "Search Current Trends", hint: "What's happening now" },
+                    { label: "Flash Sales Near Me", hint: "Deals in your area" },
                   ].map((p) => (
                     <button
-                      key={p}
+                      key={p.label}
                       type="button"
-                      onClick={() => setInput((v) => (v ? v : p))}
-                      className="w-full text-left text-[15px] px-4 py-3 rounded-2xl border border-border bg-card/60 text-foreground active:scale-[0.98] transition"
+                      onClick={() => setInput((v) => (v ? v : p.label))}
+                      className="w-full text-left px-4 py-3 rounded-2xl border border-border bg-card/70 backdrop-blur-sm active:scale-[0.985] active:bg-accent/60 transition-all"
                     >
-                      {p}
+                      <div className="text-[15px] font-medium text-foreground">{p.label}</div>
+                      <div className="text-[12.5px] text-muted-foreground mt-0.5">{p.hint}</div>
                     </button>
                   ))}
                 </div>
@@ -897,7 +931,7 @@ function KovaGPT() {
 
         ) : (
           <>
-            <div ref={scrollRef} className="flex-1 overflow-y-auto pb-[calc(env(safe-area-inset-bottom)+64px)] lg:pb-6">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain scroll-smooth pb-2 lg:pb-6">
               {active.messages.map((m, i) => {
                 const isLastAssistant =
                   m.role === "assistant" && i === active.messages.length - 1;
@@ -983,7 +1017,7 @@ function KovaGPT() {
                 );
               })}
             </div>
-            <div className="pb-[calc(env(safe-area-inset-bottom)+56px)] lg:pb-2 lg:pt-2">
+            <div className="lg:pb-2 lg:pt-2">
               <ChatInput
                 value={input}
                 onChange={setInput}

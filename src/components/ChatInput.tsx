@@ -377,7 +377,7 @@ export function ChatInput({
                   <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
                 </div>
               )}
-              {!isStreaming && (
+              {!isStreaming && !(value.trim() || attachments.length > 0) && (
                 <button
                   type="button"
                   onClick={async () => {
@@ -485,17 +485,7 @@ export function ChatInput({
                 >
                   <ArrowUp className={`w-5 h-5 transition-transform duration-300 ${sendFlash ? "-translate-y-1.5 opacity-0" : ""}`} />
                 </button>
-              ) : (
-                <button
-                  type="button"
-                  disabled
-                  style={{ backgroundColor: actionColor }}
-                  className="w-11 h-11 lg:w-9 lg:h-9 rounded-full text-white flex items-center justify-center opacity-30 cursor-not-allowed"
-                  aria-label="Send"
-                >
-                  <ArrowUp className="w-5 h-5" />
-                </button>
-              )}
+              ) : null}
             </div>
           </div>
           {mode && onModeChange && (
