@@ -373,7 +373,7 @@ export function ChatInput({
             />
             <div className="flex items-center gap-1 p-2">
               {mode && onModeChange && (
-                <div className="hidden sm:block">
+                <div className="hidden lg:block">
                   <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
                 </div>
               )}
