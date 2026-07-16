@@ -870,20 +870,20 @@ function KovaGPT() {
             {/* SR-only stable H1 so crawlers see a static product heading even when the visible greeting is dynamic. */}
             <h1 className="sr-only">KovaGPT</h1>
             <div className="flex-1 flex flex-col items-center justify-center w-full px-4 lg:px-6 pt-4 pb-2 lg:py-12">
-              <div className="flex flex-col items-center gap-3 mb-5 lg:mb-8 animate-fade-in">
+              <div className="flex flex-col items-center gap-2.5 mb-4 lg:mb-8 animate-fade-in">
                 <div className="relative">
                   <div
                     aria-hidden="true"
-                    className="absolute inset-0 -m-6 rounded-full bg-primary/15 blur-3xl opacity-70"
+                    className="absolute inset-0 -m-5 rounded-full bg-primary/15 blur-3xl opacity-70"
                   />
-                  <NovaLogo className="relative w-12 h-12 lg:w-16 lg:h-16" animated />
+                  <NovaLogo className="relative w-10 h-10 lg:w-16 lg:h-16" animated />
                 </div>
 
                 <p
                   aria-hidden={!isSignedIn ? "true" : undefined}
-                  className="font-display text-[22px] leading-[1.15] lg:text-[40px] lg:leading-[1.05] font-semibold tracking-tight text-center text-balance text-foreground"
+                  className="font-display text-[20px] leading-[1.2] lg:text-[40px] lg:leading-[1.05] font-semibold tracking-tight text-center text-balance text-foreground"
                 >
-                  {isSignedIn ? greeting : "How can I help you today?"}
+                  {isSignedIn ? greeting : "What can I help with?"}
                 </p>
               </div>
 
