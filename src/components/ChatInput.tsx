@@ -1,4 +1,6 @@
 import { ArrowUp, Square, Plus, X, Mic, Image as ImageIcon, FileText, Camera, Puzzle } from "lucide-react";
+import { MobileBottomSheet } from "@/components/MobileBottomSheet";
+import { useLayout } from "@/hooks/use-mobile";
 
 type SpeechRecognitionLike = {
   lang: string;
@@ -51,6 +53,9 @@ export function ChatInput({
   placeholder?: string;
 }) {
 
+  const { isDesktop } = useLayout();
+  const isMobileLayout = !isDesktop;
+
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const photoRef = useRef<HTMLInputElement>(null);
@@ -60,6 +65,7 @@ export function ChatInput({
   const [sendFlash, setSendFlash] = useState(false);
   const [actionColor, setActionColor] = useState<string>("#3b82f6");
   const [plusOpen, setPlusOpen] = useState(false);
+  const [kbOffset, setKbOffset] = useState(0);
   const [listening, setListening] = useState(false);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
   const dictationBaseRef = useRef<string>("");
@@ -108,6 +114,24 @@ export function ChatInput({
     el.style.height = "auto";
     el.style.height = Math.min(el.scrollHeight, 200) + "px";
   }, [value]);
+
+  // Track on-screen keyboard on mobile so the composer floats above it.
+  useEffect(() => {
+    if (!isMobileLayout || typeof window === "undefined") return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      const bottomGap = window.innerHeight - (vv.height + vv.offsetTop);
+      setKbOffset(bottomGap > 40 ? bottomGap : 0);
+    };
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    update();
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, [isMobileLayout]);
 
   const triggerSubmit = () => {
     setSendFlash(true);
@@ -174,7 +198,10 @@ export function ChatInput({
 
 
   return (
-    <div className="w-full px-3 sm:px-6 lg:px-8 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
+    <div
+      className="w-full px-3 sm:px-6 lg:px-8 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 transition-[padding] duration-150"
+      style={isMobileLayout && kbOffset > 0 ? { paddingBottom: `${kbOffset + 8}px` } : undefined}
+    >
       <div className="mx-auto max-w-4xl [[data-sidebar=closed]_&]:max-w-5xl">
         <div
           style={
@@ -235,7 +262,7 @@ export function ChatInput({
               <button
                 type="button"
                 onClick={() => setPlusOpen((v) => !v)}
-                className={`w-9 h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/60 transition ${plusOpen ? "rotate-45 text-foreground" : ""}`}
+                className={`w-11 h-11 lg:w-9 lg:h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/60 active:scale-95 transition ${plusOpen && !isMobileLayout ? "rotate-45 text-foreground" : ""}`}
                 aria-label="Attach"
                 aria-haspopup="menu"
                 aria-expanded={plusOpen}
@@ -243,7 +270,7 @@ export function ChatInput({
               >
                 <Plus className="w-5 h-5 transition-transform" />
               </button>
-              {plusOpen && (
+              {plusOpen && !isMobileLayout && (
                 <div
                   role="menu"
                   className="absolute bottom-11 left-0 z-50 min-w-[200px] rounded-2xl border border-border bg-popover shadow-xl p-1.5 animate-in fade-in slide-in-from-bottom-1"
@@ -287,6 +314,49 @@ export function ChatInput({
                 </div>
               )}
             </div>
+            {isMobileLayout && (
+              <MobileBottomSheet
+                open={plusOpen}
+                onOpenChange={setPlusOpen}
+                title="Attach"
+                ariaLabel="Attach media or files"
+              >
+                <div className="flex flex-col gap-1 p-1">
+                  <button
+                    type="button"
+                    onClick={() => { setPlusOpen(false); cameraRef.current?.click(); }}
+                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left"
+                  >
+                    <Camera className="w-5 h-5 text-muted-foreground" />
+                    <span>Camera</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setPlusOpen(false); photoRef.current?.click(); }}
+                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left"
+                  >
+                    <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                    <span>Photos</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setPlusOpen(false); fileRef.current?.click(); }}
+                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left"
+                  >
+                    <FileText className="w-5 h-5 text-muted-foreground" />
+                    <span>Files</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setPlusOpen(false); window.location.href = "/apps"; }}
+                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left"
+                  >
+                    <Puzzle className="w-5 h-5 text-muted-foreground" />
+                    <span>Plugins</span>
+                  </button>
+                </div>
+              </MobileBottomSheet>
+            )}
 
             <textarea
               ref={ref}
@@ -299,7 +369,7 @@ export function ChatInput({
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="off"
-              className="flex-1 resize-none bg-transparent px-3 py-3 outline-none border-0 focus:ring-0 focus:outline-none text-foreground placeholder:text-muted-foreground max-h-[200px] leading-relaxed"
+              className="flex-1 resize-none bg-transparent px-3 py-3 outline-none border-0 focus:ring-0 focus:outline-none text-foreground placeholder:text-muted-foreground max-h-[200px] leading-relaxed text-base lg:text-sm"
             />
             <div className="flex items-center gap-1 p-2">
               {mode && onModeChange && (
@@ -383,7 +453,7 @@ export function ChatInput({
                       toast.error("Couldn't start voice input. Try again.");
                     }
                   }}
-                  className={`w-9 h-9 rounded-full flex items-center justify-center transition ${
+                  className={`w-11 h-11 lg:w-9 lg:h-9 rounded-full flex items-center justify-center transition ${
                     listening
                       ? "bg-red-500/90 text-white animate-pulse"
                       : "bg-accent/60 text-muted-foreground hover:text-foreground hover:bg-accent"
@@ -400,7 +470,7 @@ export function ChatInput({
                   type="button"
                   onClick={onStop}
                   style={{ backgroundColor: actionColor }}
-                  className="w-9 h-9 rounded-full text-white flex items-center justify-center hover:opacity-80 transition"
+                  className="w-11 h-11 lg:w-9 lg:h-9 rounded-full text-white flex items-center justify-center hover:opacity-80 transition"
                   aria-label="Stop"
                 >
                   <Square className="w-4 h-4 fill-current" />
@@ -410,7 +480,7 @@ export function ChatInput({
                   type="button"
                   onClick={triggerSubmit}
                   style={{ backgroundColor: actionColor }}
-                  className={`w-9 h-9 rounded-full text-white flex items-center justify-center shadow-sm hover:opacity-90 transition duration-150 active:scale-90 active:opacity-70 ${sendFlash ? "scale-90 opacity-80" : ""}`}
+                  className={`w-11 h-11 lg:w-9 lg:h-9 rounded-full text-white flex items-center justify-center shadow-sm hover:opacity-90 transition duration-150 active:scale-90 active:opacity-70 ${sendFlash ? "scale-90 opacity-80" : ""}`}
                   aria-label="Send"
                 >
                   <ArrowUp className={`w-5 h-5 transition-transform duration-300 ${sendFlash ? "-translate-y-1.5 opacity-0" : ""}`} />
@@ -420,7 +490,7 @@ export function ChatInput({
                   type="button"
                   disabled
                   style={{ backgroundColor: actionColor }}
-                  className="w-9 h-9 rounded-full text-white flex items-center justify-center opacity-30 cursor-not-allowed"
+                  className="w-11 h-11 lg:w-9 lg:h-9 rounded-full text-white flex items-center justify-center opacity-30 cursor-not-allowed"
                   aria-label="Send"
                 >
                   <ArrowUp className="w-5 h-5" />
