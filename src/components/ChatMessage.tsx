@@ -130,6 +130,7 @@ function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store
   }
   return (
     <div className="flex items-center gap-2 py-1" aria-live="polite">
+      <NovaLogo className="w-5 h-5 shrink-0" pulse />
       <span
         key={label}
         className="text-sm font-medium bg-clip-text text-transparent animate-in fade-in duration-300"
