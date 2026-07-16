@@ -10,7 +10,10 @@ import * as React from "react";
  * Tablets get their own layout mode.
  */
 export const PHONE_MAX = 768;
-export const TABLET_MAX = 1200;
+// Tablet upper bound aligns with Tailwind's `lg:` (1024) so mobile/tablet
+// shell (drawer sidebar, top bar, bottom sheets) applies consistently below
+// desktop, and utility classes prefixed with `lg:` mark the desktop shell.
+export const TABLET_MAX = 1024;
 
 export type LayoutMode = "mobile" | "tablet" | "desktop";
 export type InteractionMode = "touch" | "pointer";
