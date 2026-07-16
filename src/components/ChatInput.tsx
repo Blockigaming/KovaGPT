@@ -1,4 +1,6 @@
 import { ArrowUp, Square, Plus, X, Mic, Image as ImageIcon, FileText, Camera, Puzzle } from "lucide-react";
+import { MobileBottomSheet } from "@/components/MobileBottomSheet";
+import { useLayout } from "@/hooks/use-mobile";
 
 type SpeechRecognitionLike = {
   lang: string;
