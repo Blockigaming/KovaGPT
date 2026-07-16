@@ -663,6 +663,37 @@ function KovaGPT() {
 
   return (
     <div className="flex h-screen w-full bg-background text-foreground" style={{ height: "100dvh" }}>
+      {/* Mobile edge-swipe zone: swipe right from the left edge to open the sidebar. */}
+      {!sidebarOpen && (
+        <div
+          aria-hidden="true"
+          className="lg:hidden fixed left-0 top-0 bottom-0 w-4 z-20"
+          onTouchStart={(e) => {
+            const startX = e.touches[0].clientX;
+            const startY = e.touches[0].clientY;
+            if (startX > 24) return;
+            let opened = false;
+            const onMove = (ev: TouchEvent) => {
+              const dx = ev.touches[0].clientX - startX;
+              const dy = Math.abs(ev.touches[0].clientY - startY);
+              if (!opened && dx > 40 && dy < 40) {
+                opened = true;
+                setSidebarOpen(true);
+                cleanup();
+              }
+            };
+            const cleanup = () => {
+              window.removeEventListener("touchmove", onMove);
+              window.removeEventListener("touchend", cleanup);
+              window.removeEventListener("touchcancel", cleanup);
+            };
+            window.addEventListener("touchmove", onMove, { passive: true });
+            window.addEventListener("touchend", cleanup);
+            window.addEventListener("touchcancel", cleanup);
+          }}
+        />
+      )}
+      
       
       <Sidebar
         conversations={conversations}
