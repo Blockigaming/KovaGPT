@@ -115,6 +115,24 @@ export function ChatInput({
     el.style.height = Math.min(el.scrollHeight, 200) + "px";
   }, [value]);
 
+  // Track on-screen keyboard on mobile so the composer floats above it.
+  useEffect(() => {
+    if (!isMobileLayout || typeof window === "undefined") return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      const bottomGap = window.innerHeight - (vv.height + vv.offsetTop);
+      setKbOffset(bottomGap > 40 ? bottomGap : 0);
+    };
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    update();
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, [isMobileLayout]);
+
   const triggerSubmit = () => {
     setSendFlash(true);
     window.setTimeout(() => setSendFlash(false), 380);
