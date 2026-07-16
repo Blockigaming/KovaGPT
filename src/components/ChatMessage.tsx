@@ -1,7 +1,9 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Copy, Check, ImageIcon, Loader2, Bookmark, FileEdit, Code2, Eye, MoreHorizontal, Share2, Pencil, RefreshCw, ThumbsUp, ThumbsDown, GitBranch, Globe, Mail } from "lucide-react";
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { MobileBottomSheet } from "./MobileBottomSheet";
+import { useLayout } from "@/hooks/use-mobile";
 import type { Message } from "@/lib/chat-store";
 import { NovaLogo } from "./NovaLogo";
 import { ChatChart, extractCharts } from "./ChatChart";
