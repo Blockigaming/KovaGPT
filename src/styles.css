@@ -61,10 +61,10 @@
   --input: oklch(0 0 0 / 10%);
   --ring: oklch(0.45 0 0);
 
-  --sidebar: oklch(0.965 0.002 250);
+  --sidebar: var(--background);
   --sidebar-foreground: oklch(0.24 0 0);
-  --sidebar-hover: oklch(0.94 0.002 250);
-  --sidebar-active: oklch(0.905 0.003 250);
+  --sidebar-hover: oklch(0 0 0 / 5%);
+  --sidebar-active: oklch(0 0 0 / 8%);
   --user-bubble: oklch(0.93 0.003 250);
 
 
@@ -111,10 +111,10 @@
   --input: oklch(1 0 0 / 10%);
   --ring: oklch(0.65 0.01 250);
 
-  --sidebar: oklch(0.165 0.003 250);
+  --sidebar: var(--background);
   --sidebar-foreground: oklch(0.92 0 0);
-  --sidebar-hover: oklch(0.235 0.003 250);
-  --sidebar-active: oklch(0.29 0.003 250);
+  --sidebar-hover: oklch(1 0 0 / 5%);
+  --sidebar-active: oklch(1 0 0 / 9%);
   --user-bubble: oklch(0.29 0.003 250);
 
   --scrollbar-thumb: oklch(1 0 0 / 12%);

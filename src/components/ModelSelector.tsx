@@ -2,6 +2,7 @@ import { ChevronDown, Check, Lock } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { MODES, type ModeId, type Tier } from "@/lib/modes";
 import { Link } from "@tanstack/react-router";
+import { KOVA_VERSIONS, getKovaVersion, setKovaVersion, type KovaVersion } from "@/lib/kova-version";
 
 const TIER_RANK: Record<Tier, number> = { free: 0, plus: 1, pro: 2 };
 
@@ -17,6 +18,8 @@ export function ModelSelector({
   compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [version, setVersion] = useState<KovaVersion>("3.5");
+  useEffect(() => { setVersion(getKovaVersion()); }, []);
   const ref = useRef<HTMLDivElement>(null);
   const current = MODES.find((m) => m.id === mode) ?? MODES[0];
 
@@ -43,6 +46,7 @@ export function ModelSelector({
         }`}
       >
         <span className="text-foreground font-medium leading-none">{current.label}</span>
+        <span className="text-muted-foreground leading-none text-[11px]">Kova {version}</span>
         <ChevronDown className="w-4 h-4 text-muted-foreground" />
       </button>
       {open && (
@@ -96,6 +100,25 @@ export function ModelSelector({
               </button>
             );
           })}
+          <div className="mt-1 pt-2 border-t border-border">
+            <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Kova version</div>
+            <div className="flex flex-wrap gap-1 px-2 pb-1.5">
+              {KOVA_VERSIONS.map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => { setKovaVersion(v); setVersion(v); }}
+                  className={`text-[11px] px-2 py-1 rounded-full border transition ${
+                    v === version
+                      ? "bg-foreground text-background border-foreground"
+                      : "bg-transparent text-foreground border-border hover:bg-accent"
+                  }`}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, Check, Lock } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { MODES, type ModeId, type Tier } from "@/lib/modes";
 import { useLayout } from "@/hooks/use-mobile";
 import { ModelSelector } from "@/components/ModelSelector";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
+import { KOVA_VERSIONS, getKovaVersion, setKovaVersion, type KovaVersion } from "@/lib/kova-version";
 
 const TIER_RANK: Record<Tier, number> = { free: 0, plus: 1, pro: 2 };
 
@@ -27,6 +28,8 @@ export function ResponsiveModelSelector({
   const { isDesktop, interaction } = useLayout();
   const useSheet = !isDesktop || interaction === "touch";
   const [open, setOpen] = useState(false);
+  const [version, setVersion] = useState<KovaVersion>("3.5");
+  useEffect(() => { setVersion(getKovaVersion()); }, []);
   const current = MODES.find((m) => m.id === mode) ?? MODES[0];
 
   if (!useSheet) {
@@ -48,6 +51,7 @@ export function ResponsiveModelSelector({
         }`}
       >
         <span className="text-foreground font-medium leading-none">{current.label}</span>
+        <span className="text-muted-foreground leading-none text-[11px]">Kova {version}</span>
         <ChevronDown className="w-4 h-4 text-muted-foreground" />
       </button>
       <MobileBottomSheet open={open} onOpenChange={setOpen} title="Intelligence" ariaLabel="Choose model">
@@ -104,6 +108,25 @@ export function ResponsiveModelSelector({
               </button>
             );
           })}
+        </div>
+        <div className="mt-3 pt-3 border-t border-border">
+          <div className="px-1 pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Kova version</div>
+          <div className="flex flex-wrap gap-1.5">
+            {KOVA_VERSIONS.map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => { setKovaVersion(v); setVersion(v); }}
+                className={`text-sm px-3 py-1.5 rounded-full border transition ${
+                  v === version
+                    ? "bg-foreground text-background border-foreground"
+                    : "bg-transparent text-foreground border-border active:bg-accent"
+                }`}
+              >
+                Kova {v}
+              </button>
+            ))}
+          </div>
         </div>
       </MobileBottomSheet>
     </>

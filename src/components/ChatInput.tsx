@@ -234,7 +234,7 @@ export function ChatInput({
             </div>
           )}
           <div className="flex items-end">
-            <div className="flex items-center pl-2 pb-2 relative" ref={plusWrapRef}>
+            <div className="flex items-center pl-1.5 pb-1.5 relative" ref={plusWrapRef}>
               <input
                 ref={fileRef}
                 type="file"
@@ -369,9 +369,10 @@ export function ChatInput({
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="off"
-              className="flex-1 resize-none bg-transparent px-3 py-3 outline-none border-0 focus:ring-0 focus:outline-none text-foreground placeholder:text-muted-foreground max-h-[200px] leading-relaxed text-base lg:text-sm"
+              className="flex-1 resize-none bg-transparent px-2 py-[0.65rem] outline-none border-0 focus:ring-0 focus:outline-none text-foreground placeholder:text-muted-foreground max-h-[200px] leading-relaxed text-base lg:text-sm"
             />
-            <div className="flex items-center gap-1 p-2">
+            <div className="flex items-center gap-1 pr-1.5 pb-1.5">
+
               {mode && onModeChange && (
                 <div className="hidden lg:block">
                   <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
