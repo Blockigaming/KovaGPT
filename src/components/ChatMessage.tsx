@@ -333,7 +333,19 @@ function ChatMessageInner({
               pulse={!!streaming}
             />
           </div>
-          <div className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center">
+          <div
+            className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text"
+            onTouchStart={startLongPress}
+            onTouchEnd={cancelLongPress}
+            onTouchMove={cancelLongPress}
+            onTouchCancel={cancelLongPress}
+            onContextMenu={(e) => {
+              if (isMobile) {
+                e.preventDefault();
+                setMobileSheetOpen(true);
+              }
+            }}
+          >
             {message.activities && message.activities.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-1.5">
                 {message.activities.map((a, i) => (
