@@ -453,7 +453,7 @@ export function ChatInput({
                       toast.error("Couldn't start voice input. Try again.");
                     }
                   }}
-                  className={`w-9 h-9 rounded-full flex items-center justify-center transition ${
+                  className={`w-11 h-11 lg:w-9 lg:h-9 rounded-full flex items-center justify-center transition ${
                     listening
                       ? "bg-red-500/90 text-white animate-pulse"
                       : "bg-accent/60 text-muted-foreground hover:text-foreground hover:bg-accent"
@@ -470,7 +470,7 @@ export function ChatInput({
                   type="button"
                   onClick={onStop}
                   style={{ backgroundColor: actionColor }}
-                  className="w-9 h-9 rounded-full text-white flex items-center justify-center hover:opacity-80 transition"
+                  className="w-11 h-11 lg:w-9 lg:h-9 rounded-full text-white flex items-center justify-center hover:opacity-80 transition"
                   aria-label="Stop"
                 >
                   <Square className="w-4 h-4 fill-current" />
@@ -480,7 +480,7 @@ export function ChatInput({
                   type="button"
                   onClick={triggerSubmit}
                   style={{ backgroundColor: actionColor }}
-                  className={`w-9 h-9 rounded-full text-white flex items-center justify-center shadow-sm hover:opacity-90 transition duration-150 active:scale-90 active:opacity-70 ${sendFlash ? "scale-90 opacity-80" : ""}`}
+                  className={`w-11 h-11 lg:w-9 lg:h-9 rounded-full text-white flex items-center justify-center shadow-sm hover:opacity-90 transition duration-150 active:scale-90 active:opacity-70 ${sendFlash ? "scale-90 opacity-80" : ""}`}
                   aria-label="Send"
                 >
                   <ArrowUp className={`w-5 h-5 transition-transform duration-300 ${sendFlash ? "-translate-y-1.5 opacity-0" : ""}`} />
@@ -490,7 +490,7 @@ export function ChatInput({
                   type="button"
                   disabled
                   style={{ backgroundColor: actionColor }}
-                  className="w-9 h-9 rounded-full text-white flex items-center justify-center opacity-30 cursor-not-allowed"
+                  className="w-11 h-11 lg:w-9 lg:h-9 rounded-full text-white flex items-center justify-center opacity-30 cursor-not-allowed"
                   aria-label="Send"
                 >
                   <ArrowUp className="w-5 h-5" />
