@@ -198,7 +198,10 @@ export function ChatInput({
 
 
   return (
-    <div className="w-full px-3 sm:px-6 lg:px-8 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
+    <div
+      className="w-full px-3 sm:px-6 lg:px-8 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 transition-[padding] duration-150"
+      style={isMobileLayout && kbOffset > 0 ? { paddingBottom: `${kbOffset + 8}px` } : undefined}
+    >
       <div className="mx-auto max-w-4xl [[data-sidebar=closed]_&]:max-w-5xl">
         <div
           style={
