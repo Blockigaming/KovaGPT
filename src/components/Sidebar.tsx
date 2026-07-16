@@ -216,10 +216,13 @@ export function Sidebar({
               const renderRow = (c: Conversation) => (
                 <div
                   key={c.id}
-                  className={`group mx-2 my-0.5 flex items-center gap-1 rounded-xl px-3 py-2 text-[14px] cursor-pointer transition ${
-                    activeId === c.id ? "bg-sidebar-hover" : "hover:bg-sidebar-hover/60"
+                  className={`group mx-2 my-0.5 flex items-center gap-1 rounded-xl px-3 py-2 max-lg:py-3 text-[14px] max-lg:text-[15px] cursor-pointer transition ${
+                    activeId === c.id ? "bg-sidebar-hover" : "hover:bg-sidebar-hover/60 active:bg-sidebar-hover"
                   }`}
-                  onClick={() => onSelect(c.id)}
+                  onClick={() => {
+                    onSelect(c.id);
+                    if (!isDesktop) onToggle();
+                  }}
                 >
                   {c.pinned && (
                     <Pin className="w-3 h-3 mr-1 shrink-0 text-muted-foreground fill-current" />
