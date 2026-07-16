@@ -74,7 +74,7 @@ export function Sidebar({
       {open && (
         <div
           onClick={onToggle}
-          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
           aria-hidden="true"
         />
       )}
@@ -84,7 +84,7 @@ export function Sidebar({
 
       <aside
         style={{ width: open ? SIDEBAR_WIDTH : 0 }}
-        className="relative shrink-0 overflow-hidden transition-[width] duration-150 bg-sidebar text-sidebar-foreground flex flex-col max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:h-[100dvh] md:border-r md:border-border/70"
+        className="relative shrink-0 overflow-hidden transition-[width] duration-150 bg-sidebar text-sidebar-foreground flex flex-col max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-40 max-lg:h-[100dvh] max-lg:shadow-2xl max-lg:rounded-r-2xl lg:border-r lg:border-border/70"
       >
         <div style={{ width: SIDEBAR_WIDTH }} className="flex flex-col h-full">
 
