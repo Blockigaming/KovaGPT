@@ -302,7 +302,8 @@ function ChatMessageInner({
 
 
   return (
-    <div className="w-full px-4 lg:px-20 py-2.5 lg:py-3 group animate-fade-in text-[15px] leading-[1.6] lg:text-[16px] lg:leading-[1.65] [[data-sidebar=closed]_&]:lg:text-[17px] [[data-sidebar=closed]_&]:lg:py-4">
+    <div className="w-full px-3 lg:px-20 py-2 lg:py-3 group animate-fade-in text-[15px] leading-[1.55] lg:text-[16px] lg:leading-[1.65] [[data-sidebar=closed]_&]:lg:text-[17px] [[data-sidebar=closed]_&]:lg:py-4">
+
       {isUser ? (
         <div className="mx-auto max-w-3xl [[data-sidebar=closed]_&]:max-w-4xl flex justify-end">
           <div className="max-w-[85%] lg:max-w-[70%] flex flex-col items-end min-w-0">
@@ -319,7 +320,7 @@ function ChatMessageInner({
               </div>
             )}
             {message.content && (
-              <div className="rounded-[22px] bg-[hsl(var(--muted))] text-foreground px-4 py-2 whitespace-pre-wrap break-words prose-chat text-[15px] leading-[1.45] max-w-[85%] ml-auto">
+              <div className="rounded-[20px] bg-[hsl(var(--user-bubble))] text-foreground px-3.5 py-2 whitespace-pre-wrap break-words prose-chat text-[15px] leading-[1.45]">
                 {message.content}
               </div>
             )}
