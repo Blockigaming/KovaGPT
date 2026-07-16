@@ -279,10 +279,10 @@ function ChatMessageInner({
 
 
   return (
-    <div className="w-full px-3 sm:px-8 md:px-12 lg:px-20 py-2 md:py-3 group animate-fade-in text-[14px] leading-[1.55] md:text-[15px] md:leading-[1.65] lg:text-[16px] [[data-sidebar=closed]_&]:md:text-[17px] [[data-sidebar=closed]_&]:md:py-4">
+    <div className="w-full px-4 lg:px-20 py-2.5 lg:py-3 group animate-fade-in text-[15px] leading-[1.6] lg:text-[16px] lg:leading-[1.65] [[data-sidebar=closed]_&]:lg:text-[17px] [[data-sidebar=closed]_&]:lg:py-4">
       {isUser ? (
         <div className="mx-auto max-w-3xl [[data-sidebar=closed]_&]:max-w-4xl flex justify-end">
-          <div className="max-w-[80%] sm:max-w-[70%] flex flex-col items-end min-w-0">
+          <div className="max-w-[85%] lg:max-w-[70%] flex flex-col items-end min-w-0">
             {message.attachments && message.attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2 justify-end">
                 {message.attachments.map((a, i) => (
@@ -296,14 +296,14 @@ function ChatMessageInner({
               </div>
             )}
             {message.content && (
-              <div className="rounded-3xl bg-accent text-foreground px-4 py-2.5 whitespace-pre-wrap break-words prose-chat">
+              <div className="rounded-3xl bg-accent text-foreground px-4 py-2.5 lg:py-2.5 whitespace-pre-wrap break-words prose-chat shadow-sm">
                 {message.content}
               </div>
             )}
           </div>
         </div>
       ) : (
-        <div className="mx-auto max-w-3xl [[data-sidebar=closed]_&]:max-w-4xl flex items-start gap-3 sm:gap-4 justify-start animate-fade-up">
+        <div className="mx-auto max-w-3xl [[data-sidebar=closed]_&]:max-w-4xl flex items-start gap-3 lg:gap-4 justify-start animate-fade-up">
           <div className="flex-shrink-0 w-8 h-8 [[data-sidebar=closed]_&]:w-9 [[data-sidebar=closed]_&]:h-9 rounded-full flex items-center justify-center mt-0.5">
             <NovaLogo
               className="w-8 h-8 [[data-sidebar=closed]_&]:w-9 [[data-sidebar=closed]_&]:h-9"
@@ -398,7 +398,7 @@ function ChatMessageInner({
         </div>
       )}
       <div className="mx-auto max-w-3xl [[data-sidebar=closed]_&]:max-w-4xl">
-        <div className={isUser ? "flex justify-end" : "pl-11 sm:pl-12"}>
+        <div className={isUser ? "flex justify-end" : "pl-11 lg:pl-12"}>
           {!streaming && !isUser && message.content && (
             <div className="mt-2 flex flex-wrap items-center gap-1 transition-opacity">
               {/* Visible: Copy, Thumbs up, Thumbs down, Share */}
