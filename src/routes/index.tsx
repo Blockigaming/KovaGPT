@@ -771,7 +771,7 @@ function KovaGPT() {
           onNewChat={newChat}
           title={active?.title}
         />
-        <header className="hidden lg:flex h-14 items-center px-3 relative gap-1">
+        <header className="hidden lg:flex h-14 items-center px-4 relative gap-1 border-b border-border/40 bg-background/70 backdrop-blur-xl">
           {!sidebarOpen && (
             <div className="flex items-center gap-1 mr-2 shrink-0">
               <button
@@ -848,12 +848,12 @@ function KovaGPT() {
             ) : (
               <>
                 <SignInButton mode="modal">
-                  <button className="text-sm font-medium px-4 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition">
+                  <button className="text-sm font-medium px-4 h-9 rounded-full text-foreground hover:bg-accent transition">
                     Log in
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full bg-neutral-300 text-neutral-900 hover:bg-neutral-400 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700 transition whitespace-nowrap">
+                  <button className="text-sm font-semibold px-4 h-9 rounded-full bg-foreground text-background hover:opacity-90 active:scale-[0.98] transition whitespace-nowrap shadow-sm">
                     Sign up for free
                   </button>
                 </SignUpButton>
@@ -861,6 +861,7 @@ function KovaGPT() {
             )}
           </div>
         </header>
+
 
 
 
