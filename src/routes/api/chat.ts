@@ -528,7 +528,7 @@ export const Route = createFileRoute("/api/chat")({
               { status: 413, headers: { "Content-Type": "application/json" } },
             );
           }
-          const { messages, mode, user, voice, timezone, locale, chatId, personality } = JSON.parse(rawBody) as {
+          const { messages, mode, user, voice, timezone, locale, chatId, personality, kovaVersion } = JSON.parse(rawBody) as {
             messages: IncomingMessage[];
             mode?: ModeId;
             user?: UserContext;
@@ -537,7 +537,10 @@ export const Route = createFileRoute("/api/chat")({
             locale?: string;
             chatId?: string;
             personality?: string;
+            kovaVersion?: string;
           };
+          const KOVA_VERSION = typeof kovaVersion === "string" ? kovaVersion : "3.5";
+          const IS_LEGACY_KOVA = KOVA_VERSION !== "3.5";
           const personalityBlock = (() => {
             const p = sanitizeLong(personality, 500);
             return p ? `\n\n--- User personality preferences ---\n${p}\n--- End personality ---` : "";
