@@ -102,6 +102,8 @@ export function ModelSelector({
               </button>
             );
           })}
+              </>
+            )}
           <div className="mt-1 pt-2 border-t border-border">
             <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Kova version</div>
             <div className="flex flex-wrap gap-1 px-2 pb-1.5">
