@@ -878,9 +878,10 @@ function KovaGPT() {
                   <NovaLogo className="relative w-14 h-14 lg:w-16 lg:h-16" animated />
                 </div>
 
-                <h1 className="font-display text-[28px] leading-[1.1] lg:text-[44px] lg:leading-[1.05] font-semibold tracking-tight text-center text-balance px-4 bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
+                <h1 className="font-display text-[28px] leading-[1.1] lg:text-[44px] lg:leading-[1.05] font-semibold tracking-tight text-center text-balance px-4 text-foreground">
                   {greeting}
                 </h1>
+
               </div>
 
               <div className="w-full max-w-3xl mx-auto">
