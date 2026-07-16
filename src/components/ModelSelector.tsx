@@ -2,6 +2,7 @@ import { ChevronDown, Check, Lock } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { MODES, type ModeId, type Tier } from "@/lib/modes";
 import { Link } from "@tanstack/react-router";
+import { KOVA_VERSIONS, getKovaVersion, setKovaVersion, type KovaVersion } from "@/lib/kova-version";
 
 const TIER_RANK: Record<Tier, number> = { free: 0, plus: 1, pro: 2 };
 
