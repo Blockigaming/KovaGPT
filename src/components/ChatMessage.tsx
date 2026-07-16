@@ -320,7 +320,7 @@ function ChatMessageInner({
               </div>
             )}
             {message.content && (
-              <div className="rounded-[22px] bg-[hsl(var(--muted))] text-foreground px-4 py-2 whitespace-pre-wrap break-words prose-chat text-[15px] leading-[1.45] max-w-[85%] ml-auto">
+              <div className="rounded-[20px] bg-[hsl(var(--user-bubble))] text-foreground px-3.5 py-2 whitespace-pre-wrap break-words prose-chat text-[15px] leading-[1.45]">
                 {message.content}
               </div>
             )}
