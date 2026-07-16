@@ -109,6 +109,25 @@ export function ResponsiveModelSelector({
             );
           })}
         </div>
+        <div className="mt-3 pt-3 border-t border-border">
+          <div className="px-1 pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Kova version</div>
+          <div className="flex flex-wrap gap-1.5">
+            {KOVA_VERSIONS.map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => { setKovaVersion(v); setVersion(v); }}
+                className={`text-sm px-3 py-1.5 rounded-full border transition ${
+                  v === version
+                    ? "bg-foreground text-background border-foreground"
+                    : "bg-transparent text-foreground border-border active:bg-accent"
+                }`}
+              >
+                Kova {v}
+              </button>
+            ))}
+          </div>
+        </div>
       </MobileBottomSheet>
     </>
   );
