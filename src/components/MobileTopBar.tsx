@@ -1,15 +1,13 @@
-import { Menu, SquarePen } from "lucide-react";
+import { Menu, SquarePen, ChevronDown } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { useLayout } from "@/hooks/use-mobile";
 import { useUser, SignInButton, SignUpButton, clerkEnabled } from "@/components/auth/ClerkSafe";
 
 /**
- * Compact sticky top bar shown on phones and tablets (any viewport below the
- * desktop breakpoint). Provides a menu trigger to open the off-canvas sidebar,
- * brand identity, and a quick "new chat" action. Signed-out users see a
- * compact "Sign up" pill instead of the new-chat icon so they can always
- * reach auth from the top bar. Honors safe-area-inset-top and uses
- * translucent blur so content underneath eases through as it scrolls.
+ * ChatGPT-style compact top bar for phones/tablets. Left: sidebar menu.
+ * Center: brand + subtle chevron (visual hint of active model). Right:
+ * new-chat pencil, or Log in / Sign up when auth is available and the
+ * user is signed out. Honors safe-area-inset-top.
  */
 export function MobileTopBar({
   onOpenSidebar,
@@ -24,31 +22,35 @@ export function MobileTopBar({
   const { isLoaded, isSignedIn } = useUser();
   if (isDesktop) return null;
   const showAuth = isLoaded && clerkEnabled && !isSignedIn;
+  const label = title || "KovaGPT";
   return (
     <header
-      className="sticky top-0 z-30 lg:hidden bg-background/80 backdrop-blur-xl border-b border-border/50"
+      className="sticky top-0 z-30 lg:hidden bg-background/85 backdrop-blur-xl border-b border-border/40"
       style={{ paddingTop: "env(safe-area-inset-top)" }}
       role="banner"
     >
-      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 h-12 px-2">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1 h-12 px-1.5">
         <button
           type="button"
           onClick={onOpenSidebar}
           aria-label="Open menu"
           className="w-10 h-10 rounded-full flex items-center justify-center text-foreground hover:bg-accent/60 active:scale-95 transition"
         >
-          <Menu className="w-5 h-5" />
+          <Menu className="w-[22px] h-[22px]" />
         </button>
-        <div className="flex items-center justify-center gap-2 min-w-0">
-          <NovaLogo className="w-5 h-5 shrink-0" />
-          <span className="font-display font-semibold tracking-tight text-[15px] truncate">
-            {title || "KovaGPT"}
-          </span>
+        <div className="flex items-center justify-center min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0 px-2 py-1 rounded-full active:bg-accent/60 transition">
+            <NovaLogo className="w-4 h-4 shrink-0" />
+            <span className="font-display font-semibold tracking-tight text-[15px] truncate">
+              {label}
+            </span>
+            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
+          </div>
         </div>
         {showAuth ? (
-          <div className="flex items-center gap-1.5 pr-1">
+          <div className="flex items-center gap-1 pr-1">
             <SignInButton mode="modal">
-              <button className="text-[13px] font-medium px-3 h-8 rounded-full text-foreground hover:bg-accent/60 active:scale-95 transition">
+              <button className="text-[13px] font-medium px-2.5 h-8 rounded-full text-foreground hover:bg-accent/60 active:scale-95 transition">
                 Log in
               </button>
             </SignInButton>
@@ -65,10 +67,11 @@ export function MobileTopBar({
             aria-label="New chat"
             className="w-10 h-10 rounded-full flex items-center justify-center text-foreground hover:bg-accent/60 active:scale-95 transition"
           >
-            <SquarePen className="w-5 h-5" />
+            <SquarePen className="w-[22px] h-[22px]" />
           </button>
         )}
       </div>
     </header>
   );
 }
+
