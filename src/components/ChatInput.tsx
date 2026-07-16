@@ -369,7 +369,7 @@ export function ChatInput({
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="off"
-              className="flex-1 resize-none bg-transparent px-3 py-3 outline-none border-0 focus:ring-0 focus:outline-none text-foreground placeholder:text-muted-foreground max-h-[200px] leading-relaxed"
+              className="flex-1 resize-none bg-transparent px-3 py-3 outline-none border-0 focus:ring-0 focus:outline-none text-foreground placeholder:text-muted-foreground max-h-[200px] leading-relaxed text-base lg:text-sm"
             />
             <div className="flex items-center gap-1 p-2">
               {mode && onModeChange && (
