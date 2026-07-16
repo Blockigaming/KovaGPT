@@ -217,13 +217,7 @@ export function ChatInput({
                 : "border-border/70"
           }`}
         >
-            sendFlash
-              ? "scale-[0.995]"
-              : isStreaming
-                ? "border-foreground/40 ring-1 ring-foreground/10"
-                : "border-border"
-          }`}
-        >
+
           {attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 p-3 pb-0">
               {attachments.map((a, i) => (
