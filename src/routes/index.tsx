@@ -769,8 +769,7 @@ function KovaGPT() {
         <MobileTopBar
           onOpenSidebar={() => setSidebarOpen(true)}
           onNewChat={newChat}
-          mode={mode}
-          onModeChange={setMode}
+          title={active?.title}
         />
         <header className="hidden lg:flex h-14 items-center px-4 relative gap-1 border-b border-border/40 bg-background/70 backdrop-blur-xl">
           {!sidebarOpen && (
@@ -867,25 +866,22 @@ function KovaGPT() {
 
 
         {!active || active.messages.length === 0 ? (
-          <div className="flex-1 flex flex-col overflow-y-auto overscroll-contain">
-            {/* SR-only stable H1 so crawlers see a static product heading even when the visible greeting is dynamic. */}
-            <h1 className="sr-only">KovaGPT</h1>
-            <div className="flex-1 flex flex-col items-center justify-center w-full px-4 lg:px-6 pt-6 pb-4 lg:py-12">
-              <div className="flex flex-col items-center gap-3 mb-6 lg:mb-8 animate-fade-in">
+          <div className="flex-1 flex flex-col overflow-y-auto px-4 lg:px-6">
+            <div className="flex-1 flex flex-col items-center justify-center w-full py-8 lg:py-12">
+              <div className="flex flex-col items-center gap-4 mb-6 lg:mb-8 animate-fade-in">
                 <div className="relative">
+                  {/* Soft brand glow behind the logo. */}
                   <div
                     aria-hidden="true"
-                    className="hidden lg:block absolute inset-0 -m-5 rounded-full bg-primary/15 blur-3xl opacity-70"
+                    className="absolute inset-0 -m-8 rounded-full bg-primary/20 blur-3xl opacity-70"
                   />
-                  <NovaLogo className="relative w-9 h-9 lg:w-16 lg:h-16" animated />
+                  <NovaLogo className="relative w-14 h-14 lg:w-16 lg:h-16" animated />
                 </div>
 
-                <p
-                  aria-hidden={!isSignedIn ? "true" : undefined}
-                  className="font-display text-[22px] leading-[1.15] lg:text-[40px] lg:leading-[1.05] font-semibold tracking-tight text-center text-balance text-foreground"
-                >
-                  {isSignedIn ? greeting : "What can I help with?"}
-                </p>
+                <h1 className="font-display text-[28px] leading-[1.1] lg:text-[44px] lg:leading-[1.05] font-semibold tracking-tight text-center text-balance px-4 text-foreground">
+                  {greeting}
+                </h1>
+
               </div>
 
               <div className="w-full max-w-3xl mx-auto">
@@ -902,33 +898,46 @@ function KovaGPT() {
                   onUploadLimit={() =>
                     setLimitDialog({ open: true, kind: "upload" })
                   }
-                  placeholder="Message KovaGPT"
+                  placeholder="Ask Kova"
                 />
 
-                {/* Suggestion pills: hidden on mobile (ChatGPT mobile parity); shown centered on desktop. */}
-                <div className="hidden lg:flex mt-4 gap-2 flex-wrap justify-center">
+                {/* Suggestion chips — pill row on desktop, tap-target cards on mobile. */}
+                <div className="mt-4 hidden lg:flex flex-wrap gap-2 justify-center">
                   {[
                     "Track the World Cup",
-                    "Search current trends",
-                    "Flash sales near me",
-                    "Explain a topic",
-                    "Draft an email",
+                    "Search Current Trends",
+                    "Flash Sales Near Me",
                   ].map((p) => (
                     <button
                       key={p}
                       type="button"
                       onClick={() => setInput((v) => (v ? v : p))}
-                      className="text-sm px-3.5 py-2 rounded-full border border-border/70 text-muted-foreground bg-card/40 backdrop-blur-sm hover:text-foreground hover:bg-accent hover:border-foreground/20 active:scale-95 transition-all whitespace-nowrap"
+                      className="text-sm px-4 py-2 rounded-full border border-border/70 text-muted-foreground bg-card/40 backdrop-blur-sm hover:text-foreground hover:bg-accent hover:border-foreground/20 transition-all hover:scale-[1.02] active:scale-95"
                     >
                       {p}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-3 lg:hidden grid grid-cols-1 gap-2">
+                  {[
+                    { label: "Track the World Cup", hint: "Live scores & fixtures" },
+                    { label: "Search Current Trends", hint: "What's happening now" },
+                    { label: "Flash Sales Near Me", hint: "Deals in your area" },
+                  ].map((p) => (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => setInput((v) => (v ? v : p.label))}
+                      className="w-full text-left px-4 py-3 rounded-2xl border border-border bg-card/70 backdrop-blur-sm active:scale-[0.985] active:bg-accent/60 transition-all"
+                    >
+                      <div className="text-[15px] font-medium text-foreground">{p.label}</div>
+                      <div className="text-[12.5px] text-muted-foreground mt-0.5">{p.hint}</div>
                     </button>
                   ))}
                 </div>
               </div>
             </div>
           </div>
-
-
 
 
         ) : (

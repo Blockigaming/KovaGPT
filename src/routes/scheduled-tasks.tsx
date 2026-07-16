@@ -117,17 +117,17 @@ function ScheduledTasksPage() {
     <AppShell>
     <div className="min-h-screen bg-background text-foreground">
       
-      <div className="max-w-3xl mx-auto px-4 py-5 lg:py-8 pb-[env(safe-area-inset-bottom)]">
+      <div className="max-w-3xl mx-auto px-4 py-8">
 
-        <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-5 lg:mb-6">
+        <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6">
           <ArrowLeft className="w-4 h-4" /> Back to chat
         </Link>
 
         <div className="flex items-center gap-3 mb-2">
           <Calendar className="w-6 h-6" />
-          <h1 className="font-display text-[22px] lg:text-2xl font-semibold tracking-tight">Scheduled Tasks</h1>
+          <h1 className="font-display text-2xl font-semibold tracking-tight">Scheduled Tasks</h1>
         </div>
-        <p className="text-[13.5px] lg:text-sm text-muted-foreground mb-6 lg:mb-8 leading-relaxed">
+        <p className="text-sm text-muted-foreground mb-8">
           Ask KovaGPT to do something at a specific time. Results show up in your task history.
         </p>
 

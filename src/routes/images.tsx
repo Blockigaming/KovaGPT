@@ -278,7 +278,7 @@ function ImagesPage() {
                 )}
                 {result && (
                   <div className="max-w-md mx-auto">
-                    <img src={result} alt={resultPrompt || "AI-generated visual result"} className="w-full rounded-3xl ring-1 ring-border" />
+                    <img src={result} alt={resultPrompt || "Generated image"} className="w-full rounded-3xl ring-1 ring-border" />
                     <div className="flex justify-center mt-3 gap-2 flex-wrap">
                       <a href={result} download="kovagpt-image.png" className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full border border-border hover:bg-accent transition">
                         <Download className="w-4 h-4" /> Download

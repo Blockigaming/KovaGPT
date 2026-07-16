@@ -199,25 +199,24 @@ export function ChatInput({
 
   return (
     <div
-      className="w-full px-2.5 sm:px-6 lg:px-8 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 lg:pt-2 transition-[padding] duration-150"
-      style={isMobileLayout && kbOffset > 0 ? { paddingBottom: `${kbOffset + 6}px` } : undefined}
+      className="w-full px-3 sm:px-6 lg:px-8 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 transition-[padding] duration-150"
+      style={isMobileLayout && kbOffset > 0 ? { paddingBottom: `${kbOffset + 8}px` } : undefined}
     >
       <div className="mx-auto max-w-4xl [[data-sidebar=closed]_&]:max-w-5xl">
         <div
           style={
             sendFlash
-              ? ({ boxShadow: `0 0 0 2px ${actionColor}33` } as React.CSSProperties)
+              ? ({ boxShadow: `0 0 0 2px ${actionColor}33`, borderColor: `${actionColor}99` } as React.CSSProperties)
               : undefined
           }
-          className={`rounded-[26px] bg-[hsl(var(--muted))] border border-border/40 lg:bg-card lg:border-border/70 lg:shadow-sm transition-all duration-200 lg:focus-within:border-muted-foreground/50 ${
+          className={`rounded-3xl border bg-card shadow-lg transition-all duration-200 focus-within:border-muted-foreground/50 ${
             sendFlash
               ? "scale-[0.995]"
               : isStreaming
-                ? "lg:ring-1 lg:ring-foreground/10"
-                : ""
+                ? "border-foreground/40 ring-1 ring-foreground/10"
+                : "border-border"
           }`}
         >
-
           {attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 p-3 pb-0">
               {attachments.map((a, i) => (
@@ -489,7 +488,11 @@ export function ChatInput({
               ) : null}
             </div>
           </div>
-          {/* Mobile: model selector lives in the top bar; no in-composer picker. */}
+          {mode && onModeChange && (
+            <div className="flex items-center px-2 pb-2 lg:hidden">
+              <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
+            </div>
+          )}
         </div>
       </div>
     </div>

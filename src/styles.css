@@ -207,20 +207,16 @@ textarea, input {
 .prose-chat pre {
   background: var(--code-block-bg);
   color: var(--code-block-fg);
-  border-radius: 0.85em;
-  padding: 0.85em 1em;
+  border-radius: 0.5em;
+  padding: 0.7em;
   overflow-x: auto;
-  margin: 0.7em 0;
-  font-size: 0.82em;
-  line-height: 1.55;
+  margin: 0.6em 0;
+  font-size: 0.8em;
+  line-height: 1.5;
   -webkit-overflow-scrolling: touch;
-  border: 1px solid color-mix(in oklch, var(--color-border) 60%, transparent);
 }
 @media (min-width: 768px) {
-  .prose-chat pre { padding: 1em 1.15em; margin: 0.9em 0; font-size: 0.875em; border-radius: 0.75em; }
-}
-@media (max-width: 767px) {
-  .prose-chat table { display: block; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+  .prose-chat pre { padding: 1em; margin: 0.8em 0; font-size: 0.875em; }
 }
 .prose-chat pre code {
   background: transparent;
@@ -632,10 +628,4 @@ html, body { overscroll-behavior-y: none; }
   .animate-check-pop,
   .kova-skeleton::after { animation: none !important; }
   .hover-elevate:hover { transform: none; }
-}
-
-@utility scrollbar-none {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  &::-webkit-scrollbar { display: none; }
 }

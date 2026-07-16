@@ -423,13 +423,13 @@ function AppsPage() {
 
   return (
     <AppShell>
-      <main className="max-w-5xl mx-auto w-full px-4 py-5 lg:py-8 space-y-6 lg:space-y-8 pb-[env(safe-area-inset-bottom)]">
-        <header className="space-y-2 lg:space-y-3">
+      <main className="max-w-5xl mx-auto w-full px-4 py-8 space-y-8">
+        <header className="space-y-3">
           <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <Link2 className="w-3.5 h-3.5" /> Apps
           </div>
-          <h1 className="text-[22px] lg:text-2xl font-semibold tracking-tight">Your KovaGPT workspace</h1>
-          <p className="text-[13.5px] lg:text-sm text-muted-foreground max-w-2xl leading-relaxed">
+          <h1 className="text-2xl font-semibold tracking-tight">Your KovaGPT workspace</h1>
+          <p className="text-sm text-muted-foreground max-w-2xl">
             Link the tools you already use so KovaGPT can reference your files, messages, and schedule in chat.
             You stay in control. Disconnect any app at any time.
           </p>
@@ -442,7 +442,7 @@ function AppsPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search apps"
-              className="h-11 lg:h-10 pl-9 rounded-full lg:rounded-md bg-muted/40 border-border/60"
+              className="h-10 pl-9"
             />
           </div>
           <div className="flex flex-wrap gap-1.5">
