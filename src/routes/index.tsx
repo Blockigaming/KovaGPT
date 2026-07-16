@@ -870,13 +870,14 @@ function KovaGPT() {
             <div className="flex-1 flex flex-col items-center justify-center w-full py-8 lg:py-12">
               <div className="flex flex-col items-center gap-4 mb-6 lg:mb-8 animate-fade-in">
                 <div className="relative">
-                  {/* Soft brand glow behind the logo — pure CSS, no image cost. */}
+                  {/* Soft brand glow behind the logo. */}
                   <div
                     aria-hidden="true"
-                    className="absolute inset-0 -m-6 rounded-full bg-[radial-gradient(circle,theme(colors.primary/25)_0%,transparent_70%)] blur-2xl"
+                    className="absolute inset-0 -m-8 rounded-full bg-primary/20 blur-3xl opacity-70"
                   />
                   <NovaLogo className="relative w-14 h-14 lg:w-16 lg:h-16" animated />
                 </div>
+
                 <h1 className="font-display text-[28px] leading-[1.1] lg:text-[44px] lg:leading-[1.05] font-semibold tracking-tight text-center text-balance px-4 bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
                   {greeting}
                 </h1>
