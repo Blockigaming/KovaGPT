@@ -652,6 +652,47 @@ function ChatMessageInner({
           initialMode={editorMode}
         />
       )}
+      {!isUser && message.content && (
+        <MobileBottomSheet
+          open={mobileSheetOpen}
+          onOpenChange={setMobileSheetOpen}
+          title="Message actions"
+        >
+          <div className="flex flex-col py-1">
+            {[
+              { label: copied ? "Copied" : "Copy", icon: Copy, onClick: () => { copy(); setMobileSheetOpen(false); } },
+              { label: feedback === "up" ? "Remove good rating" : "Good response", icon: ThumbsUp, onClick: () => { persistFeedback(feedback === "up" ? null : "up"); setMobileSheetOpen(false); } },
+              { label: feedback === "down" ? "Remove bad rating" : "Bad response", icon: ThumbsDown, onClick: () => { persistFeedback(feedback === "down" ? null : "down"); setMobileSheetOpen(false); } },
+              { label: "Share", icon: Share2, onClick: async () => {
+                  setMobileSheetOpen(false);
+                  const text = message.content;
+                  if (typeof navigator !== "undefined" && navigator.share) {
+                    try { await navigator.share({ text, title: "KovaGPT response" }); return; } catch { /* cancel */ }
+                  }
+                  try { await navigator.clipboard.writeText(text); toast.success("Response copied"); } catch { toast.error("Couldn't share"); }
+                } },
+              ...(onEdit ? [{ label: "Edit", icon: Pencil, onClick: () => { onEdit(); setMobileSheetOpen(false); } }] : []),
+              ...(onRetry ? [{ label: "Retry", icon: RefreshCw, onClick: () => { onRetry(); setMobileSheetOpen(false); } }] : []),
+              ...(onBranch ? [{ label: "Branch in new chat", icon: GitBranch, onClick: () => { onBranch(); setMobileSheetOpen(false); } }] : []),
+              { label: "Search the web", icon: Globe, onClick: () => {
+                  const q = encodeURIComponent(message.content.slice(0, 300));
+                  window.open(`https://www.google.com/search?q=${q}`, "_blank", "noopener,noreferrer");
+                  setMobileSheetOpen(false);
+                } },
+              { label: saved ? "Saved" : "Save to Library", icon: Bookmark, onClick: () => { saveItem(); setMobileSheetOpen(false); } },
+            ].map((a) => (
+              <button
+                key={a.label}
+                onClick={a.onClick}
+                className="flex items-center gap-3 px-4 py-3 text-left text-[15px] rounded-lg hover:bg-accent active:bg-accent/70 transition"
+              >
+                <a.icon className="w-5 h-5 text-muted-foreground shrink-0" />
+                <span className="flex-1">{a.label}</span>
+              </button>
+            ))}
+          </div>
+        </MobileBottomSheet>
+      )}
     </div>
   );
 }
