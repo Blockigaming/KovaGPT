@@ -867,10 +867,17 @@ function KovaGPT() {
 
         {!active || active.messages.length === 0 ? (
           <div className="flex-1 flex flex-col overflow-y-auto px-4 lg:px-6">
-            <div className="flex-1 flex flex-col items-center justify-center w-full py-8 lg:py-10">
-              <div className="flex flex-col items-center gap-3 mb-5 lg:mb-6 animate-fade-in">
-                <NovaLogo className="w-11 h-11 lg:hidden" />
-                <h1 className="font-display text-[26px] leading-tight lg:text-4xl font-semibold tracking-tight text-center text-balance px-4">
+            <div className="flex-1 flex flex-col items-center justify-center w-full py-8 lg:py-12">
+              <div className="flex flex-col items-center gap-4 mb-6 lg:mb-8 animate-fade-in">
+                <div className="relative">
+                  {/* Soft brand glow behind the logo — pure CSS, no image cost. */}
+                  <div
+                    aria-hidden="true"
+                    className="absolute inset-0 -m-6 rounded-full bg-[radial-gradient(circle,theme(colors.primary/25)_0%,transparent_70%)] blur-2xl"
+                  />
+                  <NovaLogo className="relative w-14 h-14 lg:w-16 lg:h-16" animated />
+                </div>
+                <h1 className="font-display text-[28px] leading-[1.1] lg:text-[44px] lg:leading-[1.05] font-semibold tracking-tight text-center text-balance px-4 bg-gradient-to-b from-foreground to-foreground/70 bg-clip-text text-transparent">
                   {greeting}
                 </h1>
               </div>
@@ -893,7 +900,7 @@ function KovaGPT() {
                 />
 
                 {/* Suggestion chips — pill row on desktop, tap-target cards on mobile. */}
-                <div className="mt-3 hidden lg:flex flex-wrap gap-2 justify-center">
+                <div className="mt-4 hidden lg:flex flex-wrap gap-2 justify-center">
                   {[
                     "Track the World Cup",
                     "Search Current Trends",
@@ -903,7 +910,7 @@ function KovaGPT() {
                       key={p}
                       type="button"
                       onClick={() => setInput((v) => (v ? v : p))}
-                      className="text-sm px-3.5 py-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:bg-accent hover:border-foreground/20 transition-all hover:scale-[1.02] active:scale-95"
+                      className="text-sm px-4 py-2 rounded-full border border-border/70 text-muted-foreground bg-card/40 backdrop-blur-sm hover:text-foreground hover:bg-accent hover:border-foreground/20 transition-all hover:scale-[1.02] active:scale-95"
                     >
                       {p}
                     </button>
@@ -929,6 +936,7 @@ function KovaGPT() {
               </div>
             </div>
           </div>
+
 
         ) : (
           <>
