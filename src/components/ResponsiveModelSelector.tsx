@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, Check, Lock } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { MODES, type ModeId, type Tier } from "@/lib/modes";
 import { useLayout } from "@/hooks/use-mobile";
 import { ModelSelector } from "@/components/ModelSelector";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
+import { KOVA_VERSIONS, getKovaVersion, setKovaVersion, type KovaVersion } from "@/lib/kova-version";
 
 const TIER_RANK: Record<Tier, number> = { free: 0, plus: 1, pro: 2 };
 
