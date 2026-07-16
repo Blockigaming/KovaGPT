@@ -817,8 +817,20 @@ export const Route = createFileRoute("/api/chat")({
           };
           // Only enable reasoning when the user explicitly chose the
           // reason mode  -  reasoning adds significant latency.
-          if (m.reasoning && !voice && m.id === "high") {
+          // Legacy Kova versions (<3.5) never use extended reasoning:
+          // they are intentionally "slightly less smart" than 3.5.
+          if (m.reasoning && !voice && m.id === "high" && !IS_LEGACY_KOVA) {
             body.reasoning = { effort: m.reasoning };
+          }
+          if (IS_LEGACY_KOVA) {
+            // Slightly nerf legacy versions and add an authentic-feeling
+            // 3-7s "thinking" delay before we start streaming.
+            const sys = body.messages as { role: string; content: string }[];
+            const rank: Record<string, number> = { "3.4": 1, "3.3": 2, "3.2": 3, "3.1": 4, "3.0": 5 };
+            const gap = rank[KOVA_VERSION] ?? 1;
+            sys[0].content += `\n\nYou are running as Kova ${KOVA_VERSION}, a previous-generation model. You are slightly less capable than Kova 3.5 (about ${gap * 6}% less accurate on complex reasoning). Keep answers correct and helpful, but avoid extended chain-of-thought, deep multi-step reasoning, or long structured breakdowns unless explicitly asked. Prefer shorter, more direct responses than Kova 3.5 would give.`;
+            const delayMs = 3000 + Math.floor(Math.random() * 4000); // 3-7s
+            await new Promise((r) => setTimeout(r, delayMs));
           }
 
           // === TOOL-CALLING PRE-LOOP ============================================
