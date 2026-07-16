@@ -504,7 +504,7 @@ html, body { overscroll-behavior-y: none; }
     color-mix(in oklab, var(--kova-blue) 55%, transparent),
     transparent 65%);
   animation: kova-mesh-drift 22s ease-in-out infinite;
-  opacity: 0.32;
+  opacity: 0;
 }
 .kova-bg::after {
   bottom: -18%;
@@ -515,10 +515,10 @@ html, body { overscroll-behavior-y: none; }
     color-mix(in oklab, var(--kova-violet) 45%, transparent),
     transparent 65%);
   animation: kova-mesh-drift-alt 26s ease-in-out infinite;
-  opacity: 0.25;
+  opacity: 0;
 }
-.dark .kova-bg::before { opacity: 0.30; }
-.dark .kova-bg::after  { opacity: 0.24; }
+.dark .kova-bg::before { opacity: 0; }
+.dark .kova-bg::after  { opacity: 0; }
 
 @keyframes kova-float {
   0%   { transform: translateY(0); }
