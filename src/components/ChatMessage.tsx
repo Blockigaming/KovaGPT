@@ -306,7 +306,7 @@ function ChatMessageInner({
 
       {isUser ? (
         <div className="mx-auto max-w-3xl [[data-sidebar=closed]_&]:max-w-4xl flex justify-end">
-          <div className="max-w-[85%] lg:max-w-[70%] flex flex-col items-end min-w-0">
+          <div className="max-w-[80%] lg:max-w-[70%] flex flex-col items-end min-w-0">
             {message.attachments && message.attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2 justify-end">
                 {message.attachments.map((a, i) => (
@@ -320,7 +320,7 @@ function ChatMessageInner({
               </div>
             )}
             {message.content && (
-              <div className="rounded-[20px] bg-[hsl(var(--user-bubble))] text-foreground px-3.5 py-2 whitespace-pre-wrap break-words prose-chat text-[15px] leading-[1.45]">
+              <div className="rounded-[22px] bg-[hsl(var(--user-bubble))] text-foreground px-4 py-2.5 whitespace-pre-wrap break-words prose-chat text-[15.5px] leading-[1.45] lg:text-[15px]">
                 {message.content}
               </div>
             )}
