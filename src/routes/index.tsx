@@ -799,7 +799,7 @@ function KovaGPT() {
                 }}
                 aria-label="Toggle temporary chat"
                 title={tempChat ? "Temporary chat on" : "Start temporary chat"}
-                className={`md:hidden relative shrink-0 p-2 rounded-lg transition ${
+                className={`lg:hidden relative shrink-0 p-2 rounded-lg transition ${
                   tempChat ? "bg-primary/15 text-primary" : "hover:bg-accent text-foreground"
                 }`}
               >
