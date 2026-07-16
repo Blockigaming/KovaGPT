@@ -1,4 +1,4 @@
-import { Trash2, PanelLeft, Search, HelpCircle, Plus, Share2, Settings as SettingsIcon, FolderOpen, Link2, MoreHorizontal, MessageCircle, Copy as CopyIcon, Archive, Pin, PinOff, Users, CreditCard, Calendar, Activity, PenLine, FolderKanban, LayoutDashboard, Wand2, Plug, SquarePen, ImageIcon } from "lucide-react";
+import { Trash2, PanelLeft, Search, HelpCircle, Share2, Settings as SettingsIcon, FolderOpen, Link2, MoreHorizontal, MessageCircle, Copy as CopyIcon, Archive, Pin, PinOff, Users, CreditCard, Calendar, FolderKanban, Plug, SquarePen, ImageIcon } from "lucide-react";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { NovaLogo } from "@/components/NovaLogo";
@@ -6,11 +6,12 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
 import { SignInButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
 import { useTier } from "@/hooks/useTier";
+import { useLayout } from "@/hooks/use-mobile";
 
 import type { Conversation } from "@/lib/chat-store";
 
 
-const SIDEBAR_WIDTH = 264;
+const SIDEBAR_WIDTH = 288;
 
 
 export function Sidebar({
@@ -46,6 +47,7 @@ export function Sidebar({
 }) {
   const { user, isSignedIn, isLoaded } = useUser();
   const { tier } = useTier();
+  const { isDesktop } = useLayout();
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -56,7 +58,7 @@ export function Sidebar({
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isOn = (p: string) => pathname === p;
   const navItemClass = (active: boolean) =>
-    `relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] transition active:scale-[0.98] min-w-0 ${
+    `relative flex items-center gap-3 rounded-lg px-3 py-2.5 max-lg:py-3 text-[15px] transition active:scale-[0.98] min-w-0 ${
       active
         ? "bg-sidebar-active text-foreground font-medium"
         : "hover:bg-sidebar-hover text-sidebar-foreground"
@@ -74,7 +76,7 @@ export function Sidebar({
       {open && (
         <div
           onClick={onToggle}
-          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden animate-in fade-in-0 duration-200"
           aria-hidden="true"
         />
       )}
@@ -83,10 +85,11 @@ export function Sidebar({
 
 
       <aside
-        style={{ width: open ? SIDEBAR_WIDTH : 0 }}
-        className="relative shrink-0 overflow-hidden transition-[width] duration-150 bg-sidebar text-sidebar-foreground flex flex-col max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-40 max-lg:h-[100dvh] max-lg:shadow-2xl max-lg:rounded-r-2xl lg:border-r lg:border-border/70"
+        style={isDesktop ? { width: open ? SIDEBAR_WIDTH : 0 } : { width: SIDEBAR_WIDTH }}
+        data-state={open ? "open" : "closed"}
+        className="relative shrink-0 overflow-hidden bg-sidebar text-sidebar-foreground flex flex-col lg:transition-[width] lg:duration-150 max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-40 max-lg:h-[100dvh] max-lg:shadow-2xl max-lg:rounded-r-2xl max-lg:transition-transform max-lg:duration-[220ms] max-lg:ease-[cubic-bezier(0.32,0.72,0,1)] max-lg:data-[state=closed]:-translate-x-full lg:border-r lg:border-border/70"
       >
-        <div style={{ width: SIDEBAR_WIDTH }} className="flex flex-col h-full">
+        <div style={{ width: SIDEBAR_WIDTH }} className="flex flex-col h-full max-lg:pt-[env(safe-area-inset-top)] max-lg:pb-[env(safe-area-inset-bottom)]">
 
           {/* Brand row */}
           <div className="relative z-20 flex items-center gap-2 px-3 sm:px-4 pt-4 pb-3 bg-sidebar">
