@@ -105,10 +105,14 @@ function KovaGPT() {
   const [tempChat, setTempChat] = useState(false);
   const [tempChatConfirmed, setTempChatConfirmed] = useState(false);
 
-  const [sidebarOpen, setSidebarOpen] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return window.innerWidth >= 768;
-  });
+  // Start closed to avoid a flash-of-open sidebar on narrow viewports during
+  // SSR/hydration. A mount effect opens it on desktop-class widths (>=1024).
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth >= 1024) {
+      setSidebarOpen(true);
+    }
+  }, []);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
   const openSettings = useCallback((tab?: string) => {
