@@ -45,12 +45,14 @@ export function ModelSelector({
           compact ? "h-8 px-3.5 text-[13px]" : "h-9 px-4 text-sm"
         }`}
       >
-        <span className="text-foreground font-medium leading-none">{current.label}</span>
+        <span className="text-foreground font-medium leading-none">{version === "3.5" ? current.label : `Kova ${version}`}</span>
         <span className="text-muted-foreground leading-none text-[11px]">Kova {version}</span>
         <ChevronDown className="w-4 h-4 text-muted-foreground" />
       </button>
       {open && (
-        <div className="absolute bottom-full mb-2 left-0 w-52 rounded-xl border border-border bg-popover shadow-xl z-50 p-1 animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-1 duration-150">
+        <div className="absolute bottom-full mb-2 left-0 w-56 rounded-xl border border-border bg-popover shadow-xl z-50 p-1 animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-1 duration-150">
+            {version === "3.5" && (
+              <>
           <div className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             Intelligence
           </div>
