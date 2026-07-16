@@ -629,3 +629,9 @@ html, body { overscroll-behavior-y: none; }
   .kova-skeleton::after { animation: none !important; }
   .hover-elevate:hover { transform: none; }
 }
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar { display: none; }
+}
