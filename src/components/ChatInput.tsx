@@ -234,7 +234,7 @@ export function ChatInput({
             </div>
           )}
           <div className="flex items-end">
-            <div className="flex items-center pl-2 pb-2 relative" ref={plusWrapRef}>
+            <div className="flex items-center pl-1.5 pb-1.5 relative" ref={plusWrapRef}>
               <input
                 ref={fileRef}
                 type="file"
