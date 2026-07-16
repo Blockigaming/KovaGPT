@@ -24,13 +24,14 @@ import {
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [sidebarOpen, setSidebarOpen] = useState(() => {
-    if (typeof window === "undefined") return true;
-    // Auto-open the persistent sidebar only on desktop-class widths (>=1024).
-    // Phones and tablets start with the sidebar closed and open it via
-    // the top-bar menu button, edge-swipe, or floating trigger.
-    return window.innerWidth >= 1024;
-  });
+  // Default closed to avoid a flash-of-open sidebar during SSR/hydration on
+  // narrow viewports; a mount effect below opens it on desktop-class widths.
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.innerWidth >= 1024) {
+      setSidebarOpen(true);
+    }
+  }, []);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
   const openHelp = useCallback(() => { navigate({ to: "/help" as never }); }, [navigate]);
