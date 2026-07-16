@@ -209,7 +209,7 @@ export function ChatInput({
               ? ({ boxShadow: `0 0 0 2px ${actionColor}33` } as React.CSSProperties)
               : undefined
           }
-          className={`rounded-[26px] bg-[hsl(var(--muted))] lg:bg-card lg:border lg:border-border/70 lg:shadow-sm transition-all duration-200 lg:focus-within:border-muted-foreground/50 ${
+          className={`rounded-[26px] bg-[hsl(var(--muted))] border border-border/40 lg:bg-card lg:border-border/70 lg:shadow-sm transition-all duration-200 lg:focus-within:border-muted-foreground/50 ${
             sendFlash
               ? "scale-[0.995]"
               : isStreaming
