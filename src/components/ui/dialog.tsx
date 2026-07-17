@@ -41,19 +41,19 @@ const DialogContent = React.forwardRef<
         // Base + animation shared across viewports
         "fixed z-50 flex flex-col gap-4 border bg-background shadow-lg duration-200",
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-        // Mobile: bottom sheet — cap height and scroll body, respect safe areas
+        // Mobile (<sm): bottom sheet — cap height and scroll body, respect safe areas
         "inset-x-0 bottom-0 top-auto w-full max-w-full rounded-t-2xl rounded-b-none border-b-0 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]",
         "max-h-[92dvh] overflow-y-auto overscroll-contain",
         "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
-        // Tablet/desktop (lg+): centered modal, capped height, scroll body
-        "lg:inset-auto lg:left-[50%] lg:top-[50%] lg:bottom-auto lg:w-[min(92vw,900px)] lg:max-w-[92vw] lg:translate-x-[-50%] lg:translate-y-[-50%] lg:rounded-2xl lg:border-b lg:p-6 lg:pb-6 lg:max-h-[88dvh]",
-        "lg:data-[state=closed]:zoom-out-95 lg:data-[state=open]:zoom-in-95 lg:data-[state=closed]:slide-out-to-bottom-0 lg:data-[state=open]:slide-in-from-bottom-0",
+        // sm+ (tablet/desktop/preview iframe): centered modal
+        "sm:inset-auto sm:left-[50%] sm:top-[50%] sm:bottom-auto sm:w-[min(92vw,900px)] sm:max-w-[92vw] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:border-b sm:p-6 sm:pb-6 sm:max-h-[88dvh]",
+        "sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0",
         className,
       )}
       {...props}
     >
       {/* Mobile/tablet drag handle affordance */}
-      <div aria-hidden className="mx-auto mb-1 h-1.5 w-10 rounded-full bg-muted-foreground/30 lg:hidden" />
+      <div aria-hidden className="mx-auto mb-1 h-1.5 w-10 rounded-full bg-muted-foreground/30 sm:hidden" />
       {children}
       <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background cursor-pointer transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
         <X className="h-4 w-4" />
