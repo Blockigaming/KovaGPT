@@ -180,24 +180,18 @@ function KovaGPT() {
     const loaded = loadSettings(userKey);
     setSettings(loaded);
     applyThemeMode(loaded.mode ?? "system");
-    if (clerkEnabled && !isSignedIn) {
-      try {
-        localStorage.removeItem("nova-gpt-conversations-v2");
-      } catch {
-        /* ignore */
+    // Never wipe conversations on sign-out — memory persists across sessions
+    // and logins. Only a fully signed-out user refreshing a fresh tab starts
+    // clean (handled implicitly by empty localStorage on a fresh device).
+    const loadedConvs = loadConversations();
+    setConversations(loadedConvs);
+    try {
+      const pending = localStorage.getItem("nova-gpt-pending-active");
+      if (pending && loadedConvs.some((c) => c.id === pending)) {
+        setActiveId(pending);
       }
-      setConversations([]);
-    } else {
-      const loadedConvs = loadConversations();
-      setConversations(loadedConvs);
-      try {
-        const pending = localStorage.getItem("nova-gpt-pending-active");
-        if (pending && loadedConvs.some((c) => c.id === pending)) {
-          setActiveId(pending);
-        }
-        localStorage.removeItem("nova-gpt-pending-active");
-      } catch { /* ignore */ }
-    }
+      localStorage.removeItem("nova-gpt-pending-active");
+    } catch { /* ignore */ }
   }, [isLoaded, userKey, isSignedIn]);
 
   // Re-apply theme mode whenever it changes
