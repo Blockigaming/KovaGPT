@@ -101,7 +101,7 @@ function KovaGPT() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
-  const [mode, setMode] = useState<ModeId>("medium");
+  const [mode, setMode] = useState<ModeId>("instant");
   const [isStreaming, setIsStreaming] = useState(false);
   const [tempChat, setTempChat] = useState(false);
   const [tempChatConfirmed, setTempChatConfirmed] = useState(false);
@@ -254,24 +254,19 @@ function KovaGPT() {
     const name = firstName;
     const prompts = name
       ? [
-          `Let's jump in, ${name}.`,
-          `Ready when you are, ${name}.`,
-          `What's next, ${name}?`,
-          `Pick up where you left off, ${name}.`,
-          `Where should we begin, ${name}?`,
-          `Let's make something, ${name}.`,
-          `Ready to create, ${name}?`,
-          `Start anywhere, ${name}.`,
+          `Welcome back, ${name}.`,
+          `Hey, ${name}.`,
+          `Good to see you, ${name}.`,
+          `Ready, ${name}?`,
+          `Let's go, ${name}.`,
         ]
       : [
+          "Welcome back.",
+          "Hey there.",
           "Ready when you are.",
-          "Let's get started.",
-          "What are we working on?",
-          "Let's make something.",
-          "Where should we begin?",
-          "Start anywhere.",
+          "Let's begin.",
+          "Good to see you.",
         ];
-    // Pick once per mount so it doesn't flicker on every render.
     return prompts[Math.floor(Math.random() * prompts.length)];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [firstName, isLoaded, isSignedIn]);
@@ -772,7 +767,7 @@ function KovaGPT() {
           onNewChat={newChat}
           title={active?.title}
         />
-        <header className="hidden lg:flex h-14 items-center px-4 relative gap-1 border-b border-border/40 bg-background/70 backdrop-blur-xl">
+        <header className="hidden lg:flex h-14 items-center px-4 relative gap-1 border-b border-border bg-background">
           {!sidebarOpen && (
             <div className="flex items-center gap-1 mr-2 shrink-0">
               <button
@@ -943,7 +938,7 @@ function KovaGPT() {
 
         ) : (
           <>
-            <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain scroll-smooth pt-6 lg:pt-10 pb-2 lg:pb-6">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain scroll-smooth pt-8 lg:pt-12 pb-6 lg:pb-8">
               {active.messages.map((m, i) => {
                 const isLastAssistant =
                   m.role === "assistant" && i === active.messages.length - 1;
