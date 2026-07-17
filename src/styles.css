@@ -390,6 +390,17 @@ a {
   100% { background-position: 200% 0; }
 }
 
+@keyframes floatUp {
+  0% { transform: translateY(0) scale(0.9); opacity: 0; }
+  20% { opacity: 0.9; }
+  100% { transform: translateY(-140%) scale(1.1); opacity: 0; }
+}
+
+@keyframes imgAura {
+  0%, 100% { transform: scale(1) rotate(0deg); filter: hue-rotate(0deg); }
+  50% { transform: scale(1.1) rotate(180deg); filter: hue-rotate(60deg); }
+}
+
 /* --- Global UI polish pass --- */
 
 /* Consistent focus ring across the app (respects theme). */

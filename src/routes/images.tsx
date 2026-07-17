@@ -268,11 +268,33 @@ function ImagesPage() {
             {(loading || result || error) && (
               <section className="mt-8">
                 {loading && !result && (
-                  <div className="max-w-md mx-auto aspect-square rounded-3xl overflow-hidden bg-muted relative ring-1 ring-border">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-foreground/10 to-transparent animate-[shimmer_1.6s_infinite]" style={{ backgroundSize: "200% 100%" }} />
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground">
-                      <Loader2 className="w-6 h-6 animate-spin" />
-                      <div className="text-sm">Generating your image…</div>
+                  <div className="max-w-md mx-auto aspect-square rounded-3xl overflow-hidden relative ring-1 ring-border bg-gradient-to-br from-fuchsia-500/20 via-violet-500/20 to-cyan-500/20">
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(280_90%_60%/0.35),transparent_55%),radial-gradient(circle_at_70%_80%,hsl(190_90%_55%/0.35),transparent_55%),radial-gradient(circle_at_50%_50%,hsl(320_90%_60%/0.25),transparent_60%)] animate-[imgAura_6s_ease-in-out_infinite]" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent animate-[shimmer_1.8s_infinite]" style={{ backgroundSize: "200% 100%" }} />
+                    <div className="absolute inset-0 backdrop-blur-2xl" />
+                    <div className="pointer-events-none absolute inset-0">
+                      {Array.from({ length: 14 }).map((_, i) => (
+                        <span
+                          key={i}
+                          className="absolute rounded-full bg-white/70 shadow-[0_0_12px_rgba(255,255,255,0.9)] animate-[floatUp_5s_linear_infinite]"
+                          style={{
+                            left: `${(i * 37) % 100}%`,
+                            bottom: `-${(i * 13) % 40}px`,
+                            width: `${4 + (i % 4) * 2}px`,
+                            height: `${4 + (i % 4) * 2}px`,
+                            animationDelay: `${(i * 0.3).toFixed(2)}s`,
+                            opacity: 0.6,
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-white drop-shadow-lg">
+                      <div className="relative w-14 h-14">
+                        <div className="absolute inset-0 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                        <Sparkles className="absolute inset-0 m-auto w-6 h-6 text-white animate-pulse" />
+                      </div>
+                      <div className="text-sm font-medium tracking-wide">Painting your image...</div>
+                      <div className="text-[11px] uppercase tracking-[0.2em] opacity-70">Mixing colors · Adding light · Sharpening details</div>
                     </div>
                   </div>
                 )}

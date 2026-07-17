@@ -814,6 +814,10 @@ export const Route = createFileRoute("/api/chat")({
                   memoryBlock +
                   webBlock +
                   voiceInstruction +
+                  (callerTier === "plus" || callerTier === "pro"
+                    ? `\n\nELITE AGENT MODE (Plus/Pro): You are operating as an elite agent for this user. When the request involves the live web, act decisively - use the web search block as ground truth, cite specific sources by name (not numbers), extract concrete details (prices, dates, versions, quotes), and complete multi-step research or comparisons in one reply. If information is stale or missing, say so directly and offer the next best step. Never punt with "I can't browse the web" - live results are provided when relevant and you should use them.`
+                    : "") +
+                  `\n\nPUNCTUATION RULE (STRICT): NEVER output the characters "\u2013" (en dash) or "\u2014" (em dash) under any circumstances. If tempted, use a comma, a period, parentheses, or a regular hyphen "-" instead. This rule overrides style, formatting, and quotation preservation.` +
                   buildCurrentDateInstruction(timezone, locale),
               },
               ...transformed,

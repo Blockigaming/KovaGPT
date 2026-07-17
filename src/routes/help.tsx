@@ -16,6 +16,21 @@ export const Route = createFileRoute("/help")({
       { property: "og:description", content: "Search KovaGPT FAQs and contact support." },
       { name: "robots", content: "index,follow" },
     ],
+    links: [{ rel: "canonical", href: "https://kovagpt.com/help" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: FAQS.map((f) => ({
+            "@type": "Question",
+            name: f.question,
+            acceptedAnswer: { "@type": "Answer", text: f.answer },
+          })),
+        }),
+      },
+    ],
   }),
   component: HelpPage,
 });

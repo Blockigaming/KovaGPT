@@ -10,11 +10,15 @@ import { DAILY_IMAGE_LIMIT_BY_TIER } from "@/lib/modes";
 
 // Tries a list of image models in order. Returns the first successful image.
 // Falls back gracefully so a single model outage doesn't break the page.
+// Fastest model first so users get a result before any Worker timeout.
+// GPT-image is highest quality but slowest; keep it as a fallback.
 const MODELS = [
-  "openai/gpt-image-2",
   "google/gemini-3.1-flash-image",
   "google/gemini-2.5-flash-image",
+  "openai/gpt-image-2",
 ] as const;
+
+const MODEL_TIMEOUT_MS = 22_000;
 
 function jsonError(message: string, status: number) {
   return new Response(JSON.stringify({ error: message }), {
@@ -49,14 +53,25 @@ async function tryModel(
     ? "https://ai.gateway.lovable.dev/v1/images/generations"
     : "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-  const upstream = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), MODEL_TIMEOUT_MS);
+  let upstream: Response;
+  try {
+    upstream = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } catch (e) {
+    clearTimeout(timer);
+    const aborted = (e as { name?: string } | null)?.name === "AbortError";
+    return { status: 504, error: aborted ? "Model timed out" : "Network error" };
+  }
+  clearTimeout(timer);
 
   if (!upstream.ok) {
     const text = await upstream.text().catch(() => "");

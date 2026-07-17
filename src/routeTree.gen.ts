@@ -27,6 +27,7 @@ import { Route as ModesRouteImport } from './routes/modes'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LibraryRouteImport } from './routes/library'
 import { Route as ImagesRouteImport } from './routes/images'
+import { Route as HumanizeAiTextRouteImport } from './routes/humanize-ai-text'
 import { Route as HelpRouteImport } from './routes/help'
 import { Route as GettingStartedRouteImport } from './routes/getting-started'
 import { Route as ContactSupportRouteImport } from './routes/contact-support'
@@ -163,6 +164,11 @@ const LibraryRoute = LibraryRouteImport.update({
 const ImagesRoute = ImagesRouteImport.update({
   id: '/images',
   path: '/images',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HumanizeAiTextRoute = HumanizeAiTextRouteImport.update({
+  id: '/humanize-ai-text',
+  path: '/humanize-ai-text',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HelpRoute = HelpRouteImport.update({
@@ -425,6 +431,7 @@ export interface FileRoutesByFullPath {
   '/contact-support': typeof ContactSupportRoute
   '/getting-started': typeof GettingStartedRoute
   '/help': typeof HelpRoute
+  '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
   '/library': typeof LibraryRoute
   '/mcp': typeof McpRoute
@@ -492,6 +499,7 @@ export interface FileRoutesByTo {
   '/contact-support': typeof ContactSupportRoute
   '/getting-started': typeof GettingStartedRoute
   '/help': typeof HelpRoute
+  '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
   '/library': typeof LibraryRoute
   '/mcp': typeof McpRoute
@@ -560,6 +568,7 @@ export interface FileRoutesById {
   '/contact-support': typeof ContactSupportRoute
   '/getting-started': typeof GettingStartedRoute
   '/help': typeof HelpRoute
+  '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
   '/library': typeof LibraryRoute
   '/mcp': typeof McpRoute
@@ -629,6 +638,7 @@ export interface FileRouteTypes {
     | '/contact-support'
     | '/getting-started'
     | '/help'
+    | '/humanize-ai-text'
     | '/images'
     | '/library'
     | '/mcp'
@@ -696,6 +706,7 @@ export interface FileRouteTypes {
     | '/contact-support'
     | '/getting-started'
     | '/help'
+    | '/humanize-ai-text'
     | '/images'
     | '/library'
     | '/mcp'
@@ -763,6 +774,7 @@ export interface FileRouteTypes {
     | '/contact-support'
     | '/getting-started'
     | '/help'
+    | '/humanize-ai-text'
     | '/images'
     | '/library'
     | '/mcp'
@@ -831,6 +843,7 @@ export interface RootRouteChildren {
   ContactSupportRoute: typeof ContactSupportRoute
   GettingStartedRoute: typeof GettingStartedRoute
   HelpRoute: typeof HelpRoute
+  HumanizeAiTextRoute: typeof HumanizeAiTextRoute
   ImagesRoute: typeof ImagesRoute
   LibraryRoute: typeof LibraryRoute
   McpRoute: typeof McpRoute
@@ -1008,6 +1021,13 @@ declare module '@tanstack/react-router' {
       path: '/images'
       fullPath: '/images'
       preLoaderRoute: typeof ImagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/humanize-ai-text': {
+      id: '/humanize-ai-text'
+      path: '/humanize-ai-text'
+      fullPath: '/humanize-ai-text'
+      preLoaderRoute: typeof HumanizeAiTextRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/help': {
@@ -1390,6 +1410,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactSupportRoute: ContactSupportRoute,
   GettingStartedRoute: GettingStartedRoute,
   HelpRoute: HelpRoute,
+  HumanizeAiTextRoute: HumanizeAiTextRoute,
   ImagesRoute: ImagesRoute,
   LibraryRoute: LibraryRoute,
   McpRoute: McpRoute,

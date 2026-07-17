@@ -262,7 +262,7 @@ export function ChatInput({
               <button
                 type="button"
                 onClick={() => setPlusOpen((v) => !v)}
-                className={`w-11 h-11 lg:w-9 lg:h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/60 active:scale-95 transition ${plusOpen && !isMobileLayout ? "rotate-45 text-foreground" : ""}`}
+                className={`w-11 h-11 lg:w-9 lg:h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/60 active:scale-95 transition outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${plusOpen && !isMobileLayout ? "rotate-45 text-foreground" : ""}`}
                 aria-label="Attach"
                 aria-haspopup="menu"
                 aria-expanded={plusOpen}
@@ -279,7 +279,7 @@ export function ChatInput({
                     role="menuitem"
                     type="button"
                     onClick={() => { setPlusOpen(false); cameraRef.current?.click(); }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
                   >
                     <Camera className="w-4 h-4 text-muted-foreground" />
                     <span>Camera</span>
@@ -288,7 +288,7 @@ export function ChatInput({
                     role="menuitem"
                     type="button"
                     onClick={() => { setPlusOpen(false); photoRef.current?.click(); }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
                   >
                     <ImageIcon className="w-4 h-4 text-muted-foreground" />
                     <span>Photos</span>
@@ -297,7 +297,7 @@ export function ChatInput({
                     role="menuitem"
                     type="button"
                     onClick={() => { setPlusOpen(false); window.location.href = "/apps"; }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
                   >
                     <Puzzle className="w-4 h-4 text-muted-foreground" />
                     <span>Plugins</span>
@@ -306,7 +306,7 @@ export function ChatInput({
                     role="menuitem"
                     type="button"
                     onClick={() => { setPlusOpen(false); fileRef.current?.click(); }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
                   >
                     <FileText className="w-4 h-4 text-muted-foreground" />
                     <span>Files</span>
@@ -325,7 +325,7 @@ export function ChatInput({
                   <button
                     type="button"
                     onClick={() => { setPlusOpen(false); cameraRef.current?.click(); }}
-                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left"
+                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
                   >
                     <Camera className="w-5 h-5 text-muted-foreground" />
                     <span>Camera</span>
@@ -333,7 +333,7 @@ export function ChatInput({
                   <button
                     type="button"
                     onClick={() => { setPlusOpen(false); photoRef.current?.click(); }}
-                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left"
+                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
                   >
                     <ImageIcon className="w-5 h-5 text-muted-foreground" />
                     <span>Photos</span>
@@ -341,7 +341,7 @@ export function ChatInput({
                   <button
                     type="button"
                     onClick={() => { setPlusOpen(false); fileRef.current?.click(); }}
-                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left"
+                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
                   >
                     <FileText className="w-5 h-5 text-muted-foreground" />
                     <span>Files</span>
@@ -349,7 +349,7 @@ export function ChatInput({
                   <button
                     type="button"
                     onClick={() => { setPlusOpen(false); window.location.href = "/apps"; }}
-                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left"
+                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
                   >
                     <Puzzle className="w-5 h-5 text-muted-foreground" />
                     <span>Plugins</span>
