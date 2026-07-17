@@ -59,8 +59,9 @@ export function ModelSelector({
           {MODES.map((m) => {
             const locked = TIER_RANK[m.tier] > TIER_RANK[userTier];
             const badge = tierBadge(m.tier);
+            const selected = m.id === mode;
             const inner = (
-              <div className="w-full text-left px-3 py-2 rounded-lg hover:bg-accent transition flex items-center gap-2">
+              <div className={`w-full text-left px-3 py-2 rounded-lg transition flex items-center gap-2 ${selected ? "bg-accent" : "hover:bg-accent/60"}`}>
                 <span className="font-medium text-sm flex-1">{m.label}</span>
                 {badge && (
                   <span
@@ -74,7 +75,7 @@ export function ModelSelector({
                   </span>
                 )}
                 {locked && <Lock className="w-3 h-3 text-muted-foreground" />}
-                {m.id === mode && !locked && <Check className="w-4 h-4 text-foreground" />}
+                {selected && !locked && <Check className="w-4 h-4 text-foreground" />}
               </div>
             );
             if (locked) {
@@ -83,7 +84,7 @@ export function ModelSelector({
                   key={m.id}
                   to="/pricing"
                   onClick={() => setOpen(false)}
-                  className="block opacity-70 hover:opacity-100"
+                  className="block opacity-70 hover:opacity-100 outline-none focus:outline-none focus-visible:ring-0"
                 >
                   {inner}
                 </Link>
@@ -96,7 +97,7 @@ export function ModelSelector({
                   onChange(m.id);
                   setOpen(false);
                 }}
-                className="w-full"
+                className="w-full outline-none focus:outline-none focus-visible:ring-0"
               >
                 {inner}
               </button>
