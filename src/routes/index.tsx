@@ -215,7 +215,6 @@ function KovaGPT() {
   }, [conversations]);
 
   // Memory is retained across sign-in/sign-out transitions per user request.
-  }, [isLoaded, isSignedIn]);
 
   const active = useMemo(
     () => conversations.find((c) => c.id === activeId) ?? null,
