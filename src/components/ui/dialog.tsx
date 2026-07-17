@@ -46,7 +46,7 @@ const DialogContent = React.forwardRef<
         "max-h-[92dvh] overflow-y-auto overscroll-contain",
         "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
         // Tablet/desktop (lg+): centered modal, capped height, scroll body
-        "lg:inset-auto lg:left-[50%] lg:top-[50%] lg:bottom-auto lg:w-[calc(100vw-2rem)] lg:max-w-lg lg:translate-x-[-50%] lg:translate-y-[-50%] lg:rounded-lg lg:border-b lg:p-6 lg:pb-6 lg:max-h-[85dvh]",
+        "lg:inset-auto lg:left-[50%] lg:top-[50%] lg:bottom-auto lg:w-[min(92vw,900px)] lg:max-w-[92vw] lg:translate-x-[-50%] lg:translate-y-[-50%] lg:rounded-2xl lg:border-b lg:p-6 lg:pb-6 lg:max-h-[88dvh]",
         "lg:data-[state=closed]:zoom-out-95 lg:data-[state=open]:zoom-in-95 lg:data-[state=closed]:slide-out-to-bottom-0 lg:data-[state=open]:slide-in-from-bottom-0",
         className,
       )}
