@@ -742,10 +742,10 @@ export const Route = createFileRoute("/api/chat")({
           const model = voice
             ? "google/gemini-3.5-flash"
             : m.id === "high"
-              ? "openai/gpt-5.5-pro"
+              ? "openai/gpt-5.5"
               : m.id === "instant"
-                ? "google/gemini-3.1-flash-lite"
-                : "google/gemini-3.1-pro-preview";
+                ? "openai/gpt-5.4-mini"
+                : "openai/gpt-5.4";
 
           // TODO(routing): add per-request classification (rewrite/summary/coding)
           // and an explicit "Improve answer" client action that re-runs with a
@@ -801,6 +801,7 @@ export const Route = createFileRoute("/api/chat")({
               {
                 role: "system",
                 content:
+                  `\n\nKOVA_VERSION: The user is currently talking to Kova ${KOVA_VERSION}. If they ask what version/model you are, answer with "Kova ${KOVA_VERSION}".` +
                   m.systemPrompt +
                   TONE_INSTRUCTION +
                   ADAPTIVE_INSTRUCTION +
