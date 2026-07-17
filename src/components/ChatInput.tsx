@@ -262,7 +262,7 @@ export function ChatInput({
               <button
                 type="button"
                 onClick={() => setPlusOpen((v) => !v)}
-                className={`w-11 h-11 lg:w-9 lg:h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/60 active:scale-95 transition ${plusOpen && !isMobileLayout ? "rotate-45 text-foreground" : ""}`}
+                className={`w-11 h-11 lg:w-9 lg:h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/60 active:scale-95 transition outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${plusOpen && !isMobileLayout ? "rotate-45 text-foreground" : ""}`}
                 aria-label="Attach"
                 aria-haspopup="menu"
                 aria-expanded={plusOpen}
