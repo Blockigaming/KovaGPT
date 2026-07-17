@@ -214,16 +214,7 @@ function KovaGPT() {
     return () => clearTimeout(t);
   }, [conversations]);
 
-  // If the user signs out mid-session, clear stored chats immediately.
-  useEffect(() => {
-    if (!isLoaded) return;
-    if (clerkEnabled && !isSignedIn) {
-      try {
-        localStorage.removeItem("nova-gpt-conversations-v2");
-      } catch {
-        /* ignore */
-      }
-    }
+  // Memory is retained across sign-in/sign-out transitions per user request.
   }, [isLoaded, isSignedIn]);
 
   const active = useMemo(
