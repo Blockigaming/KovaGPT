@@ -53,14 +53,25 @@ async function tryModel(
     ? "https://ai.gateway.lovable.dev/v1/images/generations"
     : "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-  const upstream = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), MODEL_TIMEOUT_MS);
+  let upstream: Response;
+  try {
+    upstream = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } catch (e) {
+    clearTimeout(timer);
+    const aborted = (e as { name?: string } | null)?.name === "AbortError";
+    return { status: 504, error: aborted ? "Model timed out" : "Network error" };
+  }
+  clearTimeout(timer);
 
   if (!upstream.ok) {
     const text = await upstream.text().catch(() => "");
