@@ -94,7 +94,13 @@ export function AIStatus({
   streaming: boolean;
   lastUserPrompt?: string;
 }) {
-  const status = deriveStatus(message, streaming, lastUserPrompt);
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (!streaming) return;
+    const id = window.setInterval(() => setTick((t) => t + 1), 2200);
+    return () => window.clearInterval(id);
+  }, [streaming]);
+  const status = deriveStatus(message, streaming, lastUserPrompt, tick);
   const [display, setDisplay] = useState<string | null>(null);
   const [visible, setVisible] = useState(false);
   const [animKey, setAnimKey] = useState(0);
