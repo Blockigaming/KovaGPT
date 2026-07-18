@@ -788,7 +788,9 @@ export const Route = createFileRoute("/api/chat")({
               }
             } catch (e) {
               console.warn("[chat] memory fetch failed", e);
+            }
           }
+
 
           // Project workspace context: only for signed-in members of `projectId`.
           // Injects project instructions, project memory, and top-k retrieved
