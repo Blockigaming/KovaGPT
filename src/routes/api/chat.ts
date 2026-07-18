@@ -631,6 +631,14 @@ export const Route = createFileRoute("/api/chat")({
           // image but a keyword still slipped past the negation guard).
           if (isImageRequest && auth) {
             if (!isOwner) {
+              if (!auth.emailVerified) {
+                return new Response(
+                  JSON.stringify({
+                    error: "Please verify your email address before generating images. Check your inbox for the confirmation link.",
+                  }),
+                  { status: 403, headers: { "Content-Type": "application/json" } },
+                );
+              }
               const maint = await assertFeatureEnabled(auth, "images");
               if (maint) return maint;
               const imgLimit = DAILY_IMAGE_LIMIT_BY_TIER[callerTier];
@@ -639,6 +647,7 @@ export const Route = createFileRoute("/api/chat")({
             }
             return handleImageRequest(lastText, apiKey);
           }
+
 
           // Anonymous chat is allowed; signed-in users get per-user daily quotas + maintenance check.
           if (auth && !isOwner) {
