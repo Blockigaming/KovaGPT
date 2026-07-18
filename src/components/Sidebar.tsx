@@ -159,17 +159,8 @@ export function Sidebar({
               <FolderOpen className="w-[18px] h-[18px] shrink-0" />
               <span className="truncate">Library</span>
             </Link>
-            <Link to="/apps" className={navItemClass(isOn("/apps"))}>
-              <ActiveBar on={isOn("/apps")} />
-              {(tier === "plus" || tier === "pro") ? (
-                <Plug className="w-[18px] h-[18px] shrink-0" />
-              ) : (
-                <Link2 className="w-[18px] h-[18px] shrink-0" />
-              )}
-              <span className="truncate">
-                {(tier === "plus" || tier === "pro") ? "Plugins" : "Apps"}
-              </span>
-            </Link>
+            {/* Apps entry hidden for now (Step 6). */}
+
             <Link to="/images" className={navItemClass(isOn("/images"))}>
               <ActiveBar on={isOn("/images")} />
               <ImageIcon className="w-[18px] h-[18px] shrink-0" />

@@ -1,10 +1,39 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+// Per-IP sliding window rate limit; keeps this public AI endpoint from
+// becoming an unlimited free LLM call. Lower cap than /api/title since
+// there's no signal of legitimate use.
+const RATE_LIMIT_MAX = 10;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const bucket = rateLimitBuckets.get(ip);
+  if (!bucket || bucket.resetAt < now) {
+    rateLimitBuckets.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  if (bucket.count >= RATE_LIMIT_MAX) return false;
+  bucket.count += 1;
+  return true;
+}
+
 export const Route = createFileRoute("/api/project-suggest")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         try {
+          const ip =
+            request.headers.get("cf-connecting-ip") ??
+            request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+            "unknown";
+          if (!checkRateLimit(ip)) {
+            return new Response(JSON.stringify(fallback()), {
+              status: 429,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
           const body = await request.json().catch(() => ({})) as { hint?: string };
           const hint = (body.hint ?? "").toString().slice(0, 400);
           const apiKey = process.env.LOVABLE_API_KEY;
