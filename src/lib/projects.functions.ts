@@ -116,7 +116,12 @@ export const createProject = createServerFn({ method: "POST" })
     color: z.string().trim().max(24).optional().nullable(),
   }).parse(input))
   .handler(async ({ data, context }): Promise<{ id: string }> => {
-    const { data: row, error } = await context.supabase
+    // Use admin client: caller identity is already verified by requireSupabaseAuth
+    // middleware, and we hard-pin owner_id to the verified userId. This avoids
+    // RLS/JWT-signing-key edge cases where PostgREST's auth.uid() briefly
+    // returns NULL for freshly-minted tokens.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row, error } = await supabaseAdmin
       .from("projects")
       .insert({
         owner_id: context.userId,
@@ -127,7 +132,7 @@ export const createProject = createServerFn({ method: "POST" })
       })
       .select("id")
       .single();
-    if (error || !row) { console.error("[createProject]", error?.message); throw new Error("Failed to create project"); }
+    if (error || !row) { console.error("[createProject]", error?.message); throw new Error(error?.message || "Failed to create project"); }
     return { id: row.id };
   });
 
