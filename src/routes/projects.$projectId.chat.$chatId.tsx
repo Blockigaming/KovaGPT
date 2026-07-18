@@ -108,6 +108,7 @@ function ProjectChatPage() {
           user: {},
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           locale: typeof navigator !== "undefined" ? navigator.language : "en-US",
+          projectId,
         }),
       });
       if (!resp.ok || !resp.body) {
