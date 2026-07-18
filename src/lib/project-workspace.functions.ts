@@ -268,7 +268,45 @@ export const registerUploadedFile = createServerFn({ method: "POST" })
       data.kind === "image" ? "image_added" : "file_added",
       `Uploaded ${data.kind === "image" ? "image" : "file"} “${data.name}”`,
     );
+    // Extract + embed text for RAG (best-effort; supported text types only).
+    try {
+      const { indexProjectFile, isTextIndexable } = await import("./project-rag.server");
+      if (data.kind === "file" && isTextIndexable(data.mime_type ?? null, data.name)) {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        await indexProjectFile({
+          supabaseAdmin: supabaseAdmin as unknown as Parameters<typeof indexProjectFile>[0]["supabaseAdmin"],
+          project_id: data.project_id,
+          file_id: row.id,
+          storage_path: data.storage_path,
+          name: data.name,
+          mime_type: data.mime_type ?? null,
+        });
+      }
+    } catch (e) { console.warn("[registerUploadedFile] index", (e as Error)?.message); }
     return { id: row.id };
+  });
+
+export const reindexProjectFile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
+  .handler(async ({ data, context }): Promise<{ indexed: boolean; chunks: number; reason?: string }> => {
+    const { data: row, error } = await context.supabase
+      .from("project_files")
+      .select("id, project_id, name, storage_path, mime_type, kind")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error || !row) throw new Error("File not found");
+    if (row.kind !== "file") return { indexed: false, chunks: 0, reason: "not_a_document" };
+    const { indexProjectFile } = await import("./project-rag.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    return indexProjectFile({
+      supabaseAdmin: supabaseAdmin as unknown as Parameters<typeof indexProjectFile>[0]["supabaseAdmin"],
+      project_id: row.project_id,
+      file_id: row.id,
+      storage_path: row.storage_path,
+      name: row.name,
+      mime_type: row.mime_type ?? null,
+    });
   });
 
 export const deleteProjectFile = createServerFn({ method: "POST" })
