@@ -684,6 +684,14 @@ export const Route = createFileRoute("/api/chat")({
           // Server-side daily upload quota + maintenance flag. The
           // localStorage counter is only a UX hint; this is real enforcement.
           if (auth && !isOwner && totalAttachments > 0) {
+            if (!auth.emailVerified) {
+              return new Response(
+                JSON.stringify({
+                  error: "Please verify your email address before uploading files or photos. Check your inbox for the confirmation link.",
+                }),
+                { status: 403, headers: { "Content-Type": "application/json" } },
+              );
+            }
             const maint = await assertFeatureEnabled(auth, "uploads");
             if (maint) return maint;
             const quota = await enforceQuota(
