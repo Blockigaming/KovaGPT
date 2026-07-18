@@ -318,7 +318,7 @@ function ChatMessageInner({
               </div>
             )}
             {message.content && (
-              <div className="rounded-3xl bg-accent text-foreground px-4 py-2.5 lg:py-2.5 whitespace-pre-wrap break-words prose-chat shadow-sm">
+              <div className="rounded-[20px] bg-accent text-foreground px-4 py-3 whitespace-pre-wrap break-words prose-chat">
                 {message.content}
               </div>
             )}
