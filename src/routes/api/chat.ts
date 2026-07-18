@@ -798,60 +798,61 @@ export const Route = createFileRoute("/api/chat")({
           let projectBlock = "";
           if (auth && typeof projectId === "string" && /^[0-9a-f-]{36}$/i.test(projectId)) {
             try {
-              const sb = auth.supabase as unknown as {
-                from: (t: string) => {
-                  select: (c: string) => {
-                    eq: (a: string, b: unknown) => {
-                      maybeSingle?: () => Promise<{ data: any; error: unknown }>;
-                      order?: (c: string, o: { ascending: boolean }) => {
-                        limit: (n: number) => Promise<{ data: any; error: unknown }>;
-                      };
-                    };
-                  };
-                };
+              const admin = auth.supabaseAdmin as unknown as {
+                from: (t: string) => any;
                 rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
               };
-              // Verify membership implicitly via RLS by fetching the project row.
-              const projRes = await sb
-                .from("projects")
-                .select("id, name, system_prompt")
-                .eq("id", projectId)
-                .maybeSingle!();
-              const proj = projRes.data as { id: string; name: string; system_prompt: string | null } | null;
-              if (proj) {
-                const parts: string[] = [];
-                parts.push(`You are working inside the KovaGPT project "${proj.name}". Everything below applies only to this project workspace.`);
-                if (proj.system_prompt && proj.system_prompt.trim()) {
-                  parts.push(`Project instructions (highest priority for this workspace):\n${proj.system_prompt.trim()}`);
-                }
-                const memRes = await sb.from("project_memory")
-                  .select("content")
-                  .eq("project_id", projectId)
-                  .order!("created_at", { ascending: false })
-                  .limit(20);
-                const memRows = (memRes.data as Array<{ content: string }> | null) ?? [];
-                if (memRows.length > 0) {
-                  parts.push(
-                    "Project memory (facts the user has saved about this project - honor them):\n" +
-                    memRows.map((r, i) => `${i + 1}. ${r.content}`).join("\n"),
-                  );
-                }
-                // RAG over uploaded documents.
-                const lastUser = [...messages].reverse().find((mm) => mm.role === "user");
-                const q = typeof lastUser?.content === "string"
-                  ? lastUser.content
-                  : Array.isArray(lastUser?.content)
-                    ? lastUser?.content.map((p: any) => (typeof p?.text === "string" ? p.text : "")).join(" ")
-                    : "";
-                if (q.trim()) {
-                  const { retrieveProjectContext } = await import("@/lib/project-rag.server");
-                  const chunks = await retrieveProjectContext({
-                    supabase: sb,
-                    project_id: projectId,
-                    query: q,
-                    k: 6,
-                  });
-                  if (chunks.length > 0) {
+              // Verify caller is a member of the project.
+              const { data: isMember } = await admin.rpc("is_project_member", {
+                _user_id: auth.userId,
+                _project_id: projectId,
+              });
+              if (isMember === true) {
+                const projRes = await admin
+                  .from("projects")
+                  .select("id, name, system_prompt")
+                  .eq("id", projectId)
+                  .maybeSingle();
+                const proj = projRes?.data as { id: string; name: string; system_prompt: string | null } | null;
+                if (proj) {
+                  const parts: string[] = [];
+                  parts.push(`You are working inside the KovaGPT project "${proj.name}". Everything below applies only to this project workspace.`);
+                  if (proj.system_prompt && proj.system_prompt.trim()) {
+                    parts.push(`Project instructions (highest priority for this workspace):\n${proj.system_prompt.trim()}`);
+                  }
+                  const memRes = await admin.from("project_memory")
+                    .select("content")
+                    .eq("project_id", projectId)
+                    .order("created_at", { ascending: false })
+                    .limit(20);
+                  const memRows = (memRes?.data as Array<{ content: string }> | null) ?? [];
+                  if (memRows.length > 0) {
+                    parts.push(
+                      "Project memory (facts the user has saved about this project - honor them):\n" +
+                      memRows.map((r, i) => `${i + 1}. ${r.content}`).join("\n"),
+                    );
+                  }
+                  // RAG over uploaded documents. Build a plain-text query.
+                  const lastUser = [...messages].reverse().find((mm) => mm.role === "user");
+                  let q = "";
+                  if (lastUser) {
+                    const c: unknown = (lastUser as { content: unknown }).content;
+                    if (typeof c === "string") q = c;
+                    else if (Array.isArray(c)) {
+                      q = c.map((p) => {
+                        const part = p as { text?: unknown } | null;
+                        return typeof part?.text === "string" ? part.text : "";
+                      }).join(" ");
+                    }
+                  }
+                  if (q.trim()) {
+                    const { retrieveProjectContext } = await import("@/lib/project-rag.server");
+                    const chunks = await retrieveProjectContext({
+                      supabase: admin,
+                      project_id: projectId,
+                      query: q,
+                      k: 6,
+                    });
                     const rel = chunks.filter((c) => c.similarity > 0.15).slice(0, 6);
                     if (rel.length > 0) {
                       parts.push(
@@ -860,16 +861,17 @@ export const Route = createFileRoute("/api/chat")({
                       );
                     }
                   }
+                  projectBlock =
+                    "\n\n--- PROJECT CONTEXT ---\n" +
+                    parts.join("\n\n") +
+                    "\n--- END PROJECT CONTEXT ---";
                 }
-                projectBlock =
-                  "\n\n--- PROJECT CONTEXT ---\n" +
-                  parts.join("\n\n") +
-                  "\n--- END PROJECT CONTEXT ---";
               }
             } catch (e) {
               console.warn("[chat] project context failed", (e as Error)?.message);
             }
           }
+
 
           const voiceInstruction = voice
             ? `\n\nVOICE MODE: Your reply will be spoken aloud by a text-to-speech engine. Reply in natural, conversational spoken English with complete grammatical sentences. Use proper punctuation so sentences flow. Do NOT use markdown, bullet points, headings, code blocks, emojis, URLs, or symbols. Keep answers concise  -  usually 1 to 3 sentences unless the user explicitly asks for detail.`
