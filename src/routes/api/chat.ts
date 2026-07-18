@@ -788,6 +788,84 @@ export const Route = createFileRoute("/api/chat")({
               }
             } catch (e) {
               console.warn("[chat] memory fetch failed", e);
+          }
+
+          // Project workspace context: only for signed-in members of `projectId`.
+          // Injects project instructions, project memory, and top-k retrieved
+          // knowledge-base chunks matched against the user's last message.
+          let projectBlock = "";
+          if (auth && typeof projectId === "string" && /^[0-9a-f-]{36}$/i.test(projectId)) {
+            try {
+              const sb = auth.supabase as unknown as {
+                from: (t: string) => {
+                  select: (c: string) => {
+                    eq: (a: string, b: unknown) => {
+                      maybeSingle?: () => Promise<{ data: any; error: unknown }>;
+                      order?: (c: string, o: { ascending: boolean }) => {
+                        limit: (n: number) => Promise<{ data: any; error: unknown }>;
+                      };
+                    };
+                  };
+                };
+                rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
+              };
+              // Verify membership implicitly via RLS by fetching the project row.
+              const projRes = await sb
+                .from("projects")
+                .select("id, name, system_prompt")
+                .eq("id", projectId)
+                .maybeSingle!();
+              const proj = projRes.data as { id: string; name: string; system_prompt: string | null } | null;
+              if (proj) {
+                const parts: string[] = [];
+                parts.push(`You are working inside the KovaGPT project "${proj.name}". Everything below applies only to this project workspace.`);
+                if (proj.system_prompt && proj.system_prompt.trim()) {
+                  parts.push(`Project instructions (highest priority for this workspace):\n${proj.system_prompt.trim()}`);
+                }
+                const memRes = await sb.from("project_memory")
+                  .select("content")
+                  .eq("project_id", projectId)
+                  .order!("created_at", { ascending: false })
+                  .limit(20);
+                const memRows = (memRes.data as Array<{ content: string }> | null) ?? [];
+                if (memRows.length > 0) {
+                  parts.push(
+                    "Project memory (facts the user has saved about this project - honor them):\n" +
+                    memRows.map((r, i) => `${i + 1}. ${r.content}`).join("\n"),
+                  );
+                }
+                // RAG over uploaded documents.
+                const lastUser = [...messages].reverse().find((mm) => mm.role === "user");
+                const q = typeof lastUser?.content === "string"
+                  ? lastUser.content
+                  : Array.isArray(lastUser?.content)
+                    ? lastUser?.content.map((p: any) => (typeof p?.text === "string" ? p.text : "")).join(" ")
+                    : "";
+                if (q.trim()) {
+                  const { retrieveProjectContext } = await import("@/lib/project-rag.server");
+                  const chunks = await retrieveProjectContext({
+                    supabase: sb,
+                    project_id: projectId,
+                    query: q,
+                    k: 6,
+                  });
+                  if (chunks.length > 0) {
+                    const rel = chunks.filter((c) => c.similarity > 0.15).slice(0, 6);
+                    if (rel.length > 0) {
+                      parts.push(
+                        "Relevant excerpts from this project's uploaded files (use as ground truth when the user's question maps to them; never invent content not present):\n" +
+                        rel.map((c, i) => `[Excerpt ${i + 1}]\n${c.content}`).join("\n\n"),
+                      );
+                    }
+                  }
+                }
+                projectBlock =
+                  "\n\n--- PROJECT CONTEXT ---\n" +
+                  parts.join("\n\n") +
+                  "\n--- END PROJECT CONTEXT ---";
+              }
+            } catch (e) {
+              console.warn("[chat] project context failed", (e as Error)?.message);
             }
           }
 
