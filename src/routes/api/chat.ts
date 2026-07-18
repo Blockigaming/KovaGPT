@@ -895,6 +895,7 @@ export const Route = createFileRoute("/api/chat")({
                   buildUserContextBlock(user) +
                   personalityBlock +
                   memoryBlock +
+                  projectBlock +
                   webBlock +
                   voiceInstruction +
                   (callerTier === "plus" || callerTier === "pro"
