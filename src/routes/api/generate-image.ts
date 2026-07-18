@@ -112,7 +112,7 @@ export const Route = createFileRoute("/api/generate-image")({
     handlers: {
       POST: async ({ request }) => {
         try {
-          const auth = await requireUser(request);
+          const auth = await requireVerifiedUser(request);
           if (auth instanceof Response) return auth;
           const MAX_BODY = 1 * 1024 * 1024;
           const contentLength = Number(request.headers.get("content-length") ?? "0");
