@@ -6,19 +6,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useServerFn } from "@tanstack/react-start";
-import { FolderKanban, Plus, Users, Check, X as XIcon, Loader2, Sparkles, Wand2 } from "lucide-react";
+import { FolderKanban, Plus, Users, Check, X as XIcon, Loader2, Sparkles, Wand2, MoreHorizontal, Pin, PinOff, Copy as CopyIcon, Archive, ArchiveRestore, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { SkeletonGrid, EmptyState, ErrorState } from "@/components/states";
 import {
   listProjects,
   createProject,
+  updateProject,
+  deleteProject,
+  pinProject,
+  duplicateProject,
   listMyPendingInvites,
   acceptInvite,
   declineInvite,
   type ProjectSummary,
   type PendingInvite,
 } from "@/lib/projects.functions";
+import { setProjectArchived } from "@/lib/project-workspace.functions";
 
 export const Route = createFileRoute("/projects")({
   component: ProjectsPage,
@@ -48,6 +54,67 @@ function ProjectsPage() {
   const fnCreate = useServerFn(createProject);
   const fnAccept = useServerFn(acceptInvite);
   const fnDecline = useServerFn(declineInvite);
+  const fnUpdate = useServerFn(updateProject);
+  const fnDelete = useServerFn(deleteProject);
+  const fnPin = useServerFn(pinProject);
+  const fnDuplicate = useServerFn(duplicateProject);
+  const fnArchive = useServerFn(setProjectArchived);
+
+  const [renameFor, setRenameFor] = useState<ProjectSummary | null>(null);
+  const [renameName, setRenameName] = useState("");
+  const [renameDesc, setRenameDesc] = useState("");
+  const [renameBusy, setRenameBusy] = useState(false);
+
+  async function togglePin(p: ProjectSummary) {
+    const next = !p.pinned_at;
+    setProjects((prev) => prev.map((x) => x.id === p.id ? { ...x, pinned_at: next ? new Date().toISOString() : null } : x));
+    try { await fnPin({ data: { id: p.id, pinned: next } }); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Failed to pin"); void refresh(); }
+  }
+  async function toggleArchive(p: ProjectSummary) {
+    const archive = !p.archived_at;
+    setProjects((prev) => prev.map((x) => x.id === p.id ? { ...x, archived_at: archive ? new Date().toISOString() : null } : x));
+    try {
+      await fnArchive({ data: { id: p.id, archived: archive } });
+      toast.success(archive ? "Project archived" : "Project restored");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); void refresh(); }
+  }
+  async function handleDuplicate(p: ProjectSummary) {
+    try {
+      const { id } = await fnDuplicate({ data: { id: p.id } });
+      toast.success("Project duplicated");
+      void refresh();
+      await navigate({ to: "/projects/$projectId", params: { projectId: id } });
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed to duplicate"); }
+  }
+  async function handleDelete(p: ProjectSummary) {
+    if (!confirm(`Delete “${p.name}”? This cannot be undone.`)) return;
+    const prev = projects;
+    setProjects((cur) => cur.filter((x) => x.id !== p.id));
+    try { await fnDelete({ data: { id: p.id } }); toast.success("Project deleted"); }
+    catch (e) { setProjects(prev); toast.error(e instanceof Error ? e.message : "Failed to delete"); }
+  }
+  function openRename(p: ProjectSummary) {
+    setRenameFor(p);
+    setRenameName(p.name);
+    setRenameDesc(p.description ?? "");
+  }
+  async function saveRename() {
+    if (!renameFor || !renameName.trim()) return;
+    setRenameBusy(true);
+    const target = renameFor;
+    const nextName = renameName.trim();
+    const nextDesc = renameDesc.trim();
+    setProjects((prev) => prev.map((x) => x.id === target.id ? { ...x, name: nextName, description: nextDesc || null } : x));
+    try {
+      await fnUpdate({ data: { id: target.id, name: nextName, description: nextDesc || null } });
+      setRenameFor(null);
+      toast.success("Project updated");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to update");
+      void refresh();
+    } finally { setRenameBusy(false); }
+  }
 
   async function refresh() {
     if (!isSignedIn) return;
@@ -85,6 +152,8 @@ function ProjectsPage() {
           role: "owner" as const,
           member_count: 1,
           updated_at: new Date().toISOString(),
+          pinned_at: null,
+          archived_at: null,
         },
         ...prev.filter((p) => p.id !== id),
       ]);
@@ -219,24 +288,109 @@ function ProjectsPage() {
             }
           />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projects.map((p) => (
-              <Link key={p.id} to="/projects/$projectId" params={{ projectId: p.id }}
-                className="block border rounded-xl p-4 hover:bg-accent transition group">
-                <div className="flex items-start justify-between mb-2">
-                  <FolderKanban className="w-6 h-6 text-primary" />
-                  <span className="text-[11px] uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground">{p.role}</span>
+          (() => {
+            const pinned = projects.filter((p) => p.pinned_at && !p.archived_at);
+            const active = projects.filter((p) => !p.pinned_at && !p.archived_at);
+            const archived = projects.filter((p) => p.archived_at);
+
+            const Card = ({ p }: { p: ProjectSummary }) => (
+              <div className="relative block border rounded-xl p-4 hover:bg-accent/50 transition group">
+                <Link to="/projects/$projectId" params={{ projectId: p.id }} className="block">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <FolderKanban className="w-6 h-6 text-primary" />
+                      {p.pinned_at && <Pin className="w-3.5 h-3.5 text-muted-foreground fill-current" />}
+                    </div>
+                    <span className="text-[11px] uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground">{p.role}</span>
+                  </div>
+                  <div className="font-semibold truncate pr-8">{p.name}</div>
+                  {p.description && <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{p.description}</p>}
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-3">
+                    <Users className="w-3.5 h-3.5" />{p.member_count} member{p.member_count === 1 ? "" : "s"}
+                  </div>
+                </Link>
+                <div className="absolute top-3 right-3">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-1.5 rounded-md hover:bg-background/70 opacity-70 hover:opacity-100 data-[state=open]:opacity-100 transition"
+                        aria-label="Project options"
+                      >
+                        <MoreHorizontal className="w-4 h-4" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={() => togglePin(p)} disabled={p.role === "viewer"}>
+                        {p.pinned_at ? <><PinOff className="w-4 h-4 mr-2" />Unpin</> : <><Pin className="w-4 h-4 mr-2" />Pin to top</>}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openRename(p)} disabled={p.role === "viewer"}>
+                        <Pencil className="w-4 h-4 mr-2" />Rename
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDuplicate(p)}>
+                        <CopyIcon className="w-4 h-4 mr-2" />Duplicate
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => toggleArchive(p)} disabled={p.role !== "owner"}>
+                        {p.archived_at ? <><ArchiveRestore className="w-4 h-4 mr-2" />Restore</> : <><Archive className="w-4 h-4 mr-2" />Archive</>}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => handleDelete(p)}
+                        disabled={p.role !== "owner"}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-                <div className="font-semibold truncate">{p.name}</div>
-                {p.description && <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{p.description}</p>}
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-3">
-                  <Users className="w-3.5 h-3.5" />{p.member_count} member{p.member_count === 1 ? "" : "s"}
-                </div>
-              </Link>
-            ))}
-          </div>
+              </div>
+            );
+
+            const Section = ({ title, items }: { title: string; items: ProjectSummary[] }) => (
+              items.length === 0 ? null : (
+                <section className="mb-6">
+                  <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2 px-1">{title}</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {items.map((p) => <Card key={p.id} p={p} />)}
+                  </div>
+                </section>
+              )
+            );
+
+            return (
+              <div>
+                <Section title="Pinned" items={pinned} />
+                <Section title={pinned.length ? "All projects" : ""} items={active} />
+                <Section title="Archived" items={archived} />
+              </div>
+            );
+          })()
         )}
       </div>
+
+      <Dialog open={!!renameFor} onOpenChange={(o) => !o && setRenameFor(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Rename project</DialogTitle></DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); if (!renameBusy) saveRename(); }} className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Name</label>
+              <Input value={renameName} onChange={(e) => setRenameName(e.target.value)} maxLength={100} autoFocus />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Description</label>
+              <Textarea value={renameDesc} onChange={(e) => setRenameDesc(e.target.value)} rows={3} maxLength={1000} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setRenameFor(null)}>Cancel</Button>
+              <Button type="submit" disabled={renameBusy || !renameName.trim()}>
+                {renameBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
