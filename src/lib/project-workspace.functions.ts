@@ -232,6 +232,23 @@ export const registerUploadedFile = createServerFn({ method: "POST" })
     kind: z.enum(["file", "image"]).default("file"),
   }).parse(i))
   .handler(async ({ data, context }): Promise<{ id: string }> => {
+    // Enforce per-plan file cap per project
+    const { PROJECT_LIMITS } = await import("./projects.functions");
+    const s = context.supabase as unknown as { rpc: (n: string, a: Record<string, unknown>) => Promise<{ data: unknown }> };
+    let tier: "free" | "plus" | "pro" = "free";
+    try {
+      const { data: t } = await s.rpc("user_plan_tier", { _user_id: context.userId });
+      const v = String(t ?? "free");
+      if (v === "pro" || v === "plus") tier = v;
+    } catch { /* ignore */ }
+    const cap = PROJECT_LIMITS[tier].filesPerProject;
+    const { count } = await context.supabase
+      .from("project_files")
+      .select("id", { count: "exact", head: true })
+      .eq("project_id", data.project_id);
+    if ((count ?? 0) >= cap) {
+      throw new Error(`Your plan allows up to ${cap} files per project. Remove one or upgrade to add more.`);
+    }
     const { data: row, error } = await context.supabase
       .from("project_files")
       .insert({

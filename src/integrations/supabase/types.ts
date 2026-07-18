@@ -828,6 +828,7 @@ export type Database = {
           id: string
           name: string
           owner_id: string
+          pinned_at: string | null
           system_prompt: string | null
           updated_at: string
         }
@@ -839,6 +840,7 @@ export type Database = {
           id?: string
           name: string
           owner_id: string
+          pinned_at?: string | null
           system_prompt?: string | null
           updated_at?: string
         }
@@ -850,6 +852,7 @@ export type Database = {
           id?: string
           name?: string
           owner_id?: string
+          pinned_at?: string | null
           system_prompt?: string | null
           updated_at?: string
         }
@@ -1175,6 +1178,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      user_plan_tier: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {
       project_role: "owner" | "editor" | "viewer"

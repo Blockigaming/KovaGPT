@@ -13,7 +13,25 @@ export type ProjectSummary = {
   role: ProjectRole;
   member_count: number;
   updated_at: string;
+  pinned_at: string | null;
+  archived_at: string | null;
 };
+
+export const PROJECT_LIMITS: Record<"free" | "plus" | "pro", { projects: number; filesPerProject: number }> = {
+  free: { projects: 3, filesPerProject: 5 },
+  plus: { projects: 25, filesPerProject: 25 },
+  pro: { projects: 200, filesPerProject: 40 },
+};
+
+async function planTier(supabase: unknown, userId: string): Promise<"free" | "plus" | "pro"> {
+  try {
+    const s = supabase as { rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown }> };
+    const { data } = await s.rpc("user_plan_tier", { _user_id: userId });
+    const t = String(data ?? "free");
+    if (t === "pro" || t === "plus") return t;
+  } catch { /* ignore */ }
+  return "free";
+}
 
 export type ProjectDetail = {
   id: string;
@@ -83,8 +101,9 @@ export const listProjects = createServerFn({ method: "GET" })
     if (ids.length === 0) return [];
     const { data: projects, error: pErr } = await context.supabase
       .from("projects")
-      .select("id, name, description, color, owner_id, updated_at")
+      .select("id, name, description, color, owner_id, updated_at, pinned_at, archived_at")
       .in("id", ids)
+      .order("pinned_at", { ascending: false, nullsFirst: false })
       .order("updated_at", { ascending: false });
     if (pErr) { console.error("[listProjects] p", pErr.message); return []; }
     const { data: counts } = await context.supabase
@@ -95,15 +114,17 @@ export const listProjects = createServerFn({ method: "GET" })
     for (const r of counts ?? []) countMap.set(r.project_id, (countMap.get(r.project_id) ?? 0) + 1);
     const roleMap = new Map<string, ProjectRole>();
     for (const m of memberships ?? []) roleMap.set(m.project_id, m.role as ProjectRole);
-    return (projects ?? []).map((p) => ({
-      id: p.id,
-      name: p.name,
-      description: p.description,
-      color: p.color,
-      owner_id: p.owner_id,
-      role: roleMap.get(p.id) ?? "viewer",
-      member_count: countMap.get(p.id) ?? 1,
-      updated_at: p.updated_at,
+    return (projects ?? []).map((p: Record<string, unknown>) => ({
+      id: p.id as string,
+      name: p.name as string,
+      description: (p.description as string | null) ?? null,
+      color: (p.color as string | null) ?? null,
+      owner_id: p.owner_id as string,
+      role: roleMap.get(p.id as string) ?? "viewer",
+      member_count: countMap.get(p.id as string) ?? 1,
+      updated_at: p.updated_at as string,
+      pinned_at: (p.pinned_at as string | null) ?? null,
+      archived_at: (p.archived_at as string | null) ?? null,
     }));
   });
 
@@ -116,6 +137,19 @@ export const createProject = createServerFn({ method: "POST" })
     color: z.string().trim().max(24).optional().nullable(),
   }).parse(input))
   .handler(async ({ data, context }): Promise<{ id: string }> => {
+    // Enforce per-plan active-project cap (owned by user).
+    const tier = await planTier(context.supabase, context.userId);
+    const cap = PROJECT_LIMITS[tier].projects;
+    const { count } = await context.supabase
+      .from("projects")
+      .select("id", { count: "exact", head: true })
+      .eq("owner_id", context.userId)
+      .is("archived_at", null);
+    if ((count ?? 0) >= cap) {
+      throw new Error(
+        `You've reached your ${tier === "free" ? "Free" : tier === "plus" ? "Plus" : "Pro"} plan limit of ${cap} active projects. Archive one or upgrade to add more.`,
+      );
+    }
     // Use admin client: caller identity is already verified by requireSupabaseAuth
     // middleware, and we hard-pin owner_id to the verified userId. This avoids
     // RLS/JWT-signing-key edge cases where PostgREST's auth.uid() briefly
@@ -133,6 +167,64 @@ export const createProject = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (error || !row) { console.error("[createProject]", error?.message); throw new Error(error?.message || "Failed to create project"); }
+    return { id: row.id };
+  });
+
+export const pinProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({
+    id: z.string().uuid(),
+    pinned: z.boolean(),
+  }).parse(input))
+  .handler(async ({ data, context }): Promise<{ ok: true }> => {
+    const { error } = await context.supabase
+      .from("projects")
+      .update({ pinned_at: data.pinned ? new Date().toISOString() : null })
+      .eq("id", data.id);
+    if (error) { console.error("[pinProject]", error.message); throw new Error("Failed to pin"); }
+    return { ok: true };
+  });
+
+export const duplicateProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }): Promise<{ id: string }> => {
+    // Load source (must be visible under RLS = caller is a member)
+    const { data: src, error: sErr } = await context.supabase
+      .from("projects")
+      .select("name, description, system_prompt, color")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (sErr || !src) throw new Error("Project not found");
+
+    // Enforce plan cap
+    const tier = await planTier(context.supabase, context.userId);
+    const cap = PROJECT_LIMITS[tier].projects;
+    const { count } = await context.supabase
+      .from("projects")
+      .select("id", { count: "exact", head: true })
+      .eq("owner_id", context.userId)
+      .is("archived_at", null);
+    if ((count ?? 0) >= cap) {
+      throw new Error(
+        `You've reached your plan limit of ${cap} active projects. Archive one or upgrade to duplicate.`,
+      );
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const newName = `${src.name} (copy)`.slice(0, 100);
+    const { data: row, error } = await supabaseAdmin
+      .from("projects")
+      .insert({
+        owner_id: context.userId,
+        name: newName,
+        description: src.description,
+        system_prompt: src.system_prompt,
+        color: src.color ?? "blue",
+      })
+      .select("id")
+      .single();
+    if (error || !row) { console.error("[duplicateProject]", error?.message); throw new Error("Failed to duplicate"); }
     return { id: row.id };
   });
 
