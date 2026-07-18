@@ -4,7 +4,7 @@ import {
   assertNotBanned,
   enforceQuota,
   getCallerTier,
-  requireUser,
+  requireVerifiedUser,
 } from "@/lib/api-auth.server";
 import { DAILY_IMAGE_LIMIT_BY_TIER } from "@/lib/modes";
 
