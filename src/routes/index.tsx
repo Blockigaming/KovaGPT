@@ -107,13 +107,41 @@ function KovaGPT() {
   const [tempChatConfirmed, setTempChatConfirmed] = useState(false);
 
   // Start closed to avoid a flash-of-open sidebar on narrow viewports during
-  // SSR/hydration. A mount effect opens it on desktop-class widths (>=1024).
+  // SSR/hydration. On desktop we honor the persisted user preference so the
+  // sidebar remembers its collapsed state across reloads.
   const [sidebarOpen, setSidebarOpen] = useState(false);
   useEffect(() => {
-    if (typeof window !== "undefined" && window.innerWidth >= 1024) {
-      setSidebarOpen(true);
-    }
+    if (typeof window === "undefined" || window.innerWidth < 1024) return;
+    let saved: string | null = null;
+    try { saved = localStorage.getItem("kova-sidebar-open"); } catch { /* ignore */ }
+    setSidebarOpen(saved === null ? true : saved === "1");
   }, []);
+  useEffect(() => {
+    if (typeof window === "undefined" || window.innerWidth < 1024) return;
+    try { localStorage.setItem("kova-sidebar-open", sidebarOpen ? "1" : "0"); } catch { /* ignore */ }
+  }, [sidebarOpen]);
+
+  // Draft persistence: keep an unsent message per conversation so users don't
+  // lose typing when switching chats.
+  const lastLoadedDraftRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (lastLoadedDraftRef.current === activeId) return;
+    lastLoadedDraftRef.current = activeId;
+    try {
+      const saved = localStorage.getItem(`kova-draft:${activeId ?? "__new__"}`);
+      setInput(saved ?? "");
+    } catch { setInput(""); }
+  }, [activeId]);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (lastLoadedDraftRef.current !== activeId) return;
+    const key = `kova-draft:${activeId ?? "__new__"}`;
+    try {
+      if (input) localStorage.setItem(key, input);
+      else localStorage.removeItem(key);
+    } catch { /* ignore */ }
+  }, [input, activeId]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
   const openSettings = useCallback((tab?: string) => {
