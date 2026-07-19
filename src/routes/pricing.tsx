@@ -235,7 +235,7 @@ function PricingPage() {
             icon={Building2}
             name="Enterprise"
             price="Custom"
-            period="contact us"
+            period="pricing"
             description="Built around your team's needs."
             cta="Contact sales"
             onCta={() => setEnterpriseOpen(true)}
