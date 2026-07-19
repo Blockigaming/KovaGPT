@@ -288,6 +288,20 @@ export function Sidebar({
                 </div>
               );
 
+              if (!isLoaded && conversations.length === 0) {
+                return (
+                  <div className="px-3 pt-4 space-y-2" aria-hidden="true">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="mx-2 h-8 rounded-xl bg-sidebar-hover/50 animate-pulse"
+                        style={{ opacity: 1 - i * 0.15 }}
+                      />
+                    ))}
+                  </div>
+                );
+              }
+
               if (filtered.length === 0) {
                 return (
                   <div className="px-5 py-3 text-sm text-muted-foreground">
