@@ -25,13 +25,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   // Default closed to avoid a flash-of-open sidebar during SSR/hydration on
-  // narrow viewports; a mount effect below opens it on desktop-class widths.
+  // narrow viewports; on desktop we restore the persisted user preference.
   const [sidebarOpen, setSidebarOpen] = useState(false);
   useEffect(() => {
-    if (typeof window !== "undefined" && window.innerWidth >= 1024) {
-      setSidebarOpen(true);
-    }
+    if (typeof window === "undefined" || window.innerWidth < 1024) return;
+    let saved: string | null = null;
+    try { saved = localStorage.getItem("kova-sidebar-open"); } catch { /* ignore */ }
+    setSidebarOpen(saved === null ? true : saved === "1");
   }, []);
+  useEffect(() => {
+    if (typeof window === "undefined" || window.innerWidth < 1024) return;
+    try { localStorage.setItem("kova-sidebar-open", sidebarOpen ? "1" : "0"); } catch { /* ignore */ }
+  }, [sidebarOpen]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
   const openHelp = useCallback(() => { navigate({ to: "/help" as never }); }, [navigate]);
