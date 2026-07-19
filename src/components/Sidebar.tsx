@@ -154,34 +154,34 @@ export function Sidebar({
               <SquarePen className="w-[18px] h-[18px] shrink-0" />
               <span>New chat</span>
             </button>
-            <Link to="/library" className={navItemClass(isOn("/library"))}>
+            <Link to="/library" className={navItemClass(isOn("/library"))} title="Library">
               <ActiveBar on={isOn("/library")} />
               <FolderOpen className="w-[18px] h-[18px] shrink-0" />
               <span className="truncate">Library</span>
             </Link>
             {/* Apps entry hidden for now (Step 6). */}
 
-            <Link to="/images" className={navItemClass(isOn("/images"))}>
+            <Link to="/images" className={navItemClass(isOn("/images"))} title="Images">
               <ActiveBar on={isOn("/images")} />
               <ImageIcon className="w-[18px] h-[18px] shrink-0" />
               <span className="truncate">Images</span>
             </Link>
             {showSignedIn && (
-              <Link to="/projects" className={navItemClass(isOn("/projects"))}>
+              <Link to="/projects" className={navItemClass(isOn("/projects"))} title="Projects">
                 <ActiveBar on={isOn("/projects")} />
                 <FolderKanban className="w-[18px] h-[18px] shrink-0" />
                 <span className="truncate">Projects</span>
               </Link>
             )}
             {showSignedIn && (tier === "plus" || tier === "pro") && (
-              <Link to="/scheduled-tasks" className={navItemClass(isOn("/scheduled-tasks"))}>
+              <Link to="/scheduled-tasks" className={navItemClass(isOn("/scheduled-tasks"))} title="Scheduled Tasks">
                 <ActiveBar on={isOn("/scheduled-tasks")} />
                 <Calendar className="w-[18px] h-[18px] shrink-0" />
                 <span className="truncate">Scheduled Tasks</span>
               </Link>
             )}
             {tier !== "plus" && tier !== "pro" && (
-              <Link to="/pricing" className={navItemClass(isOn("/pricing"))}>
+              <Link to="/pricing" className={navItemClass(isOn("/pricing"))} title="Subscriptions">
                 <ActiveBar on={isOn("/pricing")} />
                 <CreditCard className="w-[18px] h-[18px] shrink-0" />
                 <span className="truncate">Subscriptions</span>
