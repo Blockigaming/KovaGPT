@@ -2,17 +2,54 @@ import { Component, useEffect, useState, type ReactNode } from "react";
 import { AlertCircle, WifiOff, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-/* ---------- Online / offline ---------- */
+/* ---------- Online / offline ----------
+   Hardened against false positives:
+   - Never renders during initial hydration (avoids SSR/CSR flicker).
+   - Trusts the browser's `offline` event but confirms with a real network
+     probe before showing the banner (some networks/VPNs mis-report).
+   - Debounces the transition so a 1-2s hiccup doesn't push layout down.
+   - Auto-clears on the `online` event and on a successful probe.
+*/
 export function useOnline() {
-  const [online, setOnline] = useState(
-    typeof navigator === "undefined" ? true : navigator.onLine,
-  );
+  const [online, setOnline] = useState(true);
   useEffect(() => {
-    const on = () => setOnline(true);
-    const off = () => setOnline(false);
+    let cancelled = false;
+    let debounce: ReturnType<typeof setTimeout> | undefined;
+
+    async function probe(): Promise<boolean> {
+      try {
+        const res = await fetch("/favicon.svg", {
+          method: "HEAD",
+          cache: "no-store",
+          signal: AbortSignal.timeout(4000),
+        });
+        return res.ok || res.status < 500;
+      } catch {
+        return false;
+      }
+    }
+
+    const off = () => {
+      clearTimeout(debounce);
+      debounce = setTimeout(async () => {
+        const alive = await probe();
+        if (!cancelled) setOnline(alive);
+      }, 1500);
+    };
+    const on = () => {
+      clearTimeout(debounce);
+      if (!cancelled) setOnline(true);
+    };
+
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      off();
+    }
+
     window.addEventListener("online", on);
     window.addEventListener("offline", off);
     return () => {
+      cancelled = true;
+      clearTimeout(debounce);
       window.removeEventListener("online", on);
       window.removeEventListener("offline", off);
     };
@@ -26,7 +63,8 @@ export function OfflineBanner() {
   return (
     <div
       role="status"
-      className="sticky top-0 z-40 w-full bg-amber-500/95 text-amber-50 text-xs font-medium px-4 py-1.5 flex items-center justify-center gap-2 shadow-sm"
+      aria-live="polite"
+      className="sticky top-0 z-40 w-full bg-amber-500/95 text-amber-50 text-xs font-medium px-4 py-1.5 flex items-center justify-center gap-2 shadow-sm animate-fade-in"
     >
       <WifiOff className="w-3.5 h-3.5" />
       You're offline. Changes will retry when you're back online.
