@@ -447,7 +447,14 @@ export async function runGoogleTool(
         content = `(Binary file: ${mt}. Cannot preview inline; open ${meta.webViewLink} to view.)`;
       }
       void logAudit({ userId, provider: "drive", action: "read", resourceId: id, summary: `Read Drive file: ${meta.name}` });
-      return { id: meta.id, name: meta.name, mime_type: meta.mimeType, link: meta.webViewLink, content };
+      return {
+        _warning: UNTRUSTED_WARNING,
+        id: meta.id,
+        name: fenceUntrusted("file_name", meta.name),
+        mime_type: meta.mimeType,
+        link: meta.webViewLink,
+        content: fenceUntrusted("file_content", content),
+      };
     }
 
     return { error: "unknown_tool", name };
