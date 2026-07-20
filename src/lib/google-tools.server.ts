@@ -393,16 +393,16 @@ export async function runGoogleTool(
       };
       const events = (j.items ?? []).map((e) => ({
         id: e.id,
-        summary: e.summary ?? "(no title)",
+        summary: fenceUntrusted("event_summary", e.summary ?? "(no title)"),
         start: e.start,
         end: e.end,
-        location: e.location,
-        description: (e.description ?? "").slice(0, 500),
+        location: fenceUntrusted("event_location", e.location ?? ""),
+        description: fenceUntrusted("event_description", (e.description ?? "").slice(0, 500)),
         link: e.htmlLink,
         attendees: (e.attendees ?? []).slice(0, 10).map((a) => a.email),
       }));
       void logAudit({ userId, provider: "calendar", action: "list", summary: `Listed ${events.length} calendar event(s)` });
-      return { events };
+      return { _warning: UNTRUSTED_WARNING, events };
     }
 
     if (name === "drive_search") {
