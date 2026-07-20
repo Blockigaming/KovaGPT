@@ -49,6 +49,18 @@ export const Route = createFileRoute("/api/write")({
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
 
+        // Same protections as /api/chat and /api/generate-image: refuse banned
+        // users, respect the chat maintenance flag, and enforce a per-user
+        // daily cap so this endpoint can't be scripted into an unlimited
+        // AI-gateway spender.
+        const banned = await assertNotBanned(auth);
+        if (banned) return banned;
+        const maint = await assertFeatureEnabled(auth, "chat");
+        if (maint) return maint;
+        const tier = await getCallerTier(auth);
+        const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[tier]);
+        if (quota) return quota;
+
         let body: Body = {};
         try {
           body = (await request.json()) as Body;
