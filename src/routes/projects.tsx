@@ -318,9 +318,21 @@ function ProjectsPage() {
           />
         ) : (
           (() => {
-            const pinned = projects.filter((p) => p.pinned_at && !p.archived_at);
-            const active = projects.filter((p) => !p.pinned_at && !p.archived_at);
-            const archived = projects.filter((p) => p.archived_at);
+            const q = query.trim().toLowerCase();
+            const matches = (p: ProjectSummary) =>
+              !q ||
+              p.name.toLowerCase().includes(q) ||
+              (p.description ?? "").toLowerCase().includes(q);
+            const cmp = (a: ProjectSummary, b: ProjectSummary) => {
+              if (sortBy === "name") return a.name.localeCompare(b.name);
+              if (sortBy === "members") return b.member_count - a.member_count;
+              return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+            };
+            const filtered = projects.filter(matches).sort(cmp);
+            const pinned = filtered.filter((p) => p.pinned_at && !p.archived_at);
+            const active = filtered.filter((p) => !p.pinned_at && !p.archived_at);
+            const archived = filtered.filter((p) => p.archived_at);
+            const noMatches = q && pinned.length === 0 && active.length === 0 && archived.length === 0;
 
             const Card = ({ p }: { p: ProjectSummary }) => (
               <div className="relative block border rounded-xl p-4 hover:bg-accent/50 transition group">
