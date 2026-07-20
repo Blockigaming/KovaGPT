@@ -44,11 +44,38 @@ function isHostAllowed(hostname: string): boolean {
 
 async function fetchRemoteImage(url: string): Promise<{ bytes: Uint8Array; contentType: string } | null> {
   try {
-    const u = new URL(url);
-    if (u.protocol !== "https:") return null; // require TLS
-    if (!isHostAllowed(u.hostname)) return null;
-    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
-    if (!res.ok) return null;
+    let current = new URL(url);
+    if (current.protocol !== "https:") return null;
+    if (!isHostAllowed(current.hostname)) return null;
+
+    // Follow redirects manually so every hop's host is re-validated against
+    // the allowlist. An open redirect on an allowed host must not be able to
+    // send the fetch to an unvalidated destination (e.g. an internal IP).
+    const MAX_HOPS = 3;
+    let res: Response | null = null;
+    for (let hop = 0; hop <= MAX_HOPS; hop++) {
+      res = await fetch(current.toString(), {
+        redirect: "manual",
+        signal: AbortSignal.timeout(5000),
+      });
+      // 3xx with a Location header: validate the next hop before following.
+      if (res.status >= 300 && res.status < 400) {
+        const loc = res.headers.get("location");
+        if (!loc) return null;
+        let next: URL;
+        try {
+          next = new URL(loc, current);
+        } catch {
+          return null;
+        }
+        if (next.protocol !== "https:") return null;
+        if (!isHostAllowed(next.hostname)) return null;
+        current = next;
+        continue;
+      }
+      break;
+    }
+    if (!res || !res.ok) return null;
     const contentType = res.headers.get("content-type") ?? "image/png";
     if (!/^image\//i.test(contentType)) return null;
     const buf = new Uint8Array(await res.arrayBuffer());

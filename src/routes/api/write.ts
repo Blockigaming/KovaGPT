@@ -1,7 +1,14 @@
 // Non-streaming text transformation endpoint for the Writing workspace.
 // Accepts { text, action, instructions?, tone? } and returns { text }.
 import { createFileRoute } from "@tanstack/react-router";
-import { requireUser } from "@/lib/api-auth.server";
+import {
+  requireUser,
+  assertNotBanned,
+  assertFeatureEnabled,
+  enforceQuota,
+  getCallerTier,
+} from "@/lib/api-auth.server";
+import { DAILY_CHAT_LIMIT_BY_TIER } from "@/lib/modes";
 
 type Action =
   | "improve"
@@ -41,6 +48,18 @@ export const Route = createFileRoute("/api/write")({
       POST: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
+
+        // Same protections as /api/chat and /api/generate-image: refuse banned
+        // users, respect the chat maintenance flag, and enforce a per-user
+        // daily cap so this endpoint can't be scripted into an unlimited
+        // AI-gateway spender.
+        const banned = await assertNotBanned(auth);
+        if (banned) return banned;
+        const maint = await assertFeatureEnabled(auth, "chat");
+        if (maint) return maint;
+        const tier = await getCallerTier(auth);
+        const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[tier]);
+        if (quota) return quota;
 
         let body: Body = {};
         try {
