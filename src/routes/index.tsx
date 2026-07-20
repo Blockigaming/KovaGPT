@@ -909,53 +909,40 @@ function KovaGPT() {
                   placeholder="Ask Kova"
                 />
 
-                {/* Suggestion chips - rotating set covering research, writing, coding, planning. */}
-                {(() => {
-                  const pool = [
-                    { label: "Draft a launch announcement", hint: "Punchy copy for X and email" },
-                    { label: "Explain a concept simply", hint: "Turn jargon into plain English" },
-                    { label: "Debug this error", hint: "Paste a stack trace, get a fix" },
-                    { label: "Plan my week", hint: "Turn goals into a schedule" },
-                    { label: "Summarize a long article", hint: "Key points in seconds" },
-                    { label: "Compare two options", hint: "Side by side pros and cons" },
-                    { label: "Brainstorm names", hint: "Ten strong ideas, on brand" },
-                    { label: "Search current trends", hint: "What is happening now" },
-                  ];
-                  // Rotate daily so returning users see fresh prompts, but stable within a session.
-                  const seed = Math.floor(Date.now() / 86400000) % pool.length;
-                  const rotated = [...pool.slice(seed), ...pool.slice(0, seed)];
-                  const desktop = rotated.slice(0, 4);
-                  const mobile = rotated.slice(0, 3);
-                  return (
-                    <>
-                      <div className="mt-4 hidden lg:flex flex-wrap gap-2 justify-center">
-                        {desktop.map((p) => (
-                          <button
-                            key={p.label}
-                            type="button"
-                            onClick={() => setInput((v) => (v ? v : p.label))}
-                            className="text-sm px-4 py-2 rounded-full border border-border/70 text-muted-foreground bg-card/40 backdrop-blur-sm hover:text-foreground hover:bg-accent hover:border-foreground/20 transition-all hover:scale-[1.02] active:scale-95"
-                          >
-                            {p.label}
-                          </button>
-                        ))}
-                      </div>
-                      <div className="mt-3 lg:hidden grid grid-cols-1 gap-2">
-                        {mobile.map((p) => (
-                          <button
-                            key={p.label}
-                            type="button"
-                            onClick={() => setInput((v) => (v ? v : p.label))}
-                            className="w-full text-left px-4 py-3 rounded-2xl border border-border bg-card/70 backdrop-blur-sm active:scale-[0.985] active:bg-accent/60 transition-all"
-                          >
-                            <div className="text-[15px] font-medium text-foreground">{p.label}</div>
-                            <div className="text-[12.5px] text-muted-foreground mt-0.5">{p.hint}</div>
-                          </button>
-                        ))}
-                      </div>
-                    </>
-                  );
-                })()}
+                {/* Suggestion chips — pill row on desktop, tap-target cards on mobile. */}
+                <div className="mt-4 hidden lg:flex flex-wrap gap-2 justify-center">
+                  {[
+                    "Track the World Cup",
+                    "Search Current Trends",
+                    "Flash Sales Near Me",
+                  ].map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setInput((v) => (v ? v : p))}
+                      className="text-sm px-4 py-2 rounded-full border border-border/70 text-muted-foreground bg-card/40 backdrop-blur-sm hover:text-foreground hover:bg-accent hover:border-foreground/20 transition-all hover:scale-[1.02] active:scale-95"
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-3 lg:hidden grid grid-cols-1 gap-2">
+                  {[
+                    { label: "Track the World Cup", hint: "Live scores & fixtures" },
+                    { label: "Search Current Trends", hint: "What's happening now" },
+                    { label: "Flash Sales Near Me", hint: "Deals in your area" },
+                  ].map((p) => (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => setInput((v) => (v ? v : p.label))}
+                      className="w-full text-left px-4 py-3 rounded-2xl border border-border bg-card/70 backdrop-blur-sm active:scale-[0.985] active:bg-accent/60 transition-all"
+                    >
+                      <div className="text-[15px] font-medium text-foreground">{p.label}</div>
+                      <div className="text-[12.5px] text-muted-foreground mt-0.5">{p.hint}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

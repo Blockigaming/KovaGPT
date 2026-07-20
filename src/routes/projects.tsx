@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useServerFn } from "@tanstack/react-start";
-import { FolderKanban, Plus, Users, Check, X as XIcon, Loader2, Sparkles, Wand2, MoreHorizontal, Pin, PinOff, Copy as CopyIcon, Archive, ArchiveRestore, Pencil, Trash2, Search } from "lucide-react";
+import { FolderKanban, Plus, Users, Check, X as XIcon, Loader2, Sparkles, Wand2, MoreHorizontal, Pin, PinOff, Copy as CopyIcon, Archive, ArchiveRestore, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { SkeletonGrid, EmptyState, ErrorState } from "@/components/states";
 import {
@@ -64,8 +64,6 @@ function ProjectsPage() {
   const [renameName, setRenameName] = useState("");
   const [renameDesc, setRenameDesc] = useState("");
   const [renameBusy, setRenameBusy] = useState(false);
-  const [query, setQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"recent" | "name" | "members">("recent");
 
   async function togglePin(p: ProjectSummary) {
     const next = !p.pinned_at;
@@ -241,40 +239,13 @@ function ProjectsPage() {
   return (
     <AppShell>
       <div className="max-w-5xl mx-auto p-6 md:p-8 w-full">
-        <div className="flex items-center justify-between mb-4 gap-3">
+        <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-semibold">Projects</h1>
             <p className="text-sm text-muted-foreground">Shared workspaces for you and your team.</p>
           </div>
           <Button onClick={() => setCreateOpen(true)}><Plus className="w-4 h-4 mr-1.5" />New project</Button>
         </div>
-
-        {projects.length > 0 && (
-          <div className="mb-6 flex flex-col sm:flex-row gap-2">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search projects…"
-                className="pl-9"
-                aria-label="Search projects"
-              />
-            </div>
-            <div className="flex items-center gap-1 text-xs bg-muted/50 rounded-full p-1 self-start">
-              {(["recent", "name", "members"] as const).map((k) => (
-                <button
-                  key={k}
-                  type="button"
-                  onClick={() => setSortBy(k)}
-                  className={`px-3 h-7 rounded-full transition ${sortBy === k ? "bg-background shadow-sm font-medium text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                >
-                  {k === "recent" ? "Recent" : k === "name" ? "Name" : "Members"}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {invites.length > 0 && (
           <div className="mb-6 border rounded-xl p-4 bg-accent/30">
@@ -318,21 +289,9 @@ function ProjectsPage() {
           />
         ) : (
           (() => {
-            const q = query.trim().toLowerCase();
-            const matches = (p: ProjectSummary) =>
-              !q ||
-              p.name.toLowerCase().includes(q) ||
-              (p.description ?? "").toLowerCase().includes(q);
-            const cmp = (a: ProjectSummary, b: ProjectSummary) => {
-              if (sortBy === "name") return a.name.localeCompare(b.name);
-              if (sortBy === "members") return b.member_count - a.member_count;
-              return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
-            };
-            const filtered = projects.filter(matches).sort(cmp);
-            const pinned = filtered.filter((p) => p.pinned_at && !p.archived_at);
-            const active = filtered.filter((p) => !p.pinned_at && !p.archived_at);
-            const archived = filtered.filter((p) => p.archived_at);
-            const noMatches = q && pinned.length === 0 && active.length === 0 && archived.length === 0;
+            const pinned = projects.filter((p) => p.pinned_at && !p.archived_at);
+            const active = projects.filter((p) => !p.pinned_at && !p.archived_at);
+            const archived = projects.filter((p) => p.archived_at);
 
             const Card = ({ p }: { p: ProjectSummary }) => (
               <div className="relative block border rounded-xl p-4 hover:bg-accent/50 transition group">
@@ -401,17 +360,9 @@ function ProjectsPage() {
 
             return (
               <div>
-                {noMatches ? (
-                  <div className="text-center py-16 text-sm text-muted-foreground">
-                    No projects match &ldquo;{query}&rdquo;.
-                  </div>
-                ) : (
-                  <>
-                    <Section title="Pinned" items={pinned} />
-                    <Section title={pinned.length ? "All projects" : ""} items={active} />
-                    <Section title="Archived" items={archived} />
-                  </>
-                )}
+                <Section title="Pinned" items={pinned} />
+                <Section title={pinned.length ? "All projects" : ""} items={active} />
+                <Section title="Archived" items={archived} />
               </div>
             );
           })()
