@@ -359,13 +359,14 @@ export async function runGoogleTool(
       const body = extractPlainText(j.payload as GmailPart | undefined).slice(0, 20000);
       void logAudit({ userId, provider: "gmail", action: "read", resourceId: id, summary: `Read email: ${headerValue(j.payload?.headers, "Subject")}` });
       return {
+        _warning: UNTRUSTED_WARNING,
         id: j.id,
         from: headerValue(j.payload?.headers, "From"),
         to: headerValue(j.payload?.headers, "To"),
-        subject: headerValue(j.payload?.headers, "Subject") || "(no subject)",
+        subject: fenceUntrusted("subject", headerValue(j.payload?.headers, "Subject") || "(no subject)"),
         date: headerValue(j.payload?.headers, "Date"),
-        snippet: j.snippet ?? "",
-        body,
+        snippet: fenceUntrusted("snippet", j.snippet ?? ""),
+        body: fenceUntrusted("email_body", body),
         link: `https://mail.google.com/mail/u/0/#inbox/${j.id}`,
       };
     }
