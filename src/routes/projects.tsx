@@ -401,9 +401,17 @@ function ProjectsPage() {
 
             return (
               <div>
-                <Section title="Pinned" items={pinned} />
-                <Section title={pinned.length ? "All projects" : ""} items={active} />
-                <Section title="Archived" items={archived} />
+                {noMatches ? (
+                  <div className="text-center py-16 text-sm text-muted-foreground">
+                    No projects match &ldquo;{query}&rdquo;.
+                  </div>
+                ) : (
+                  <>
+                    <Section title="Pinned" items={pinned} />
+                    <Section title={pinned.length ? "All projects" : ""} items={active} />
+                    <Section title="Archived" items={archived} />
+                  </>
+                )}
               </div>
             );
           })()
