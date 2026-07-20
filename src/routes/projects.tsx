@@ -64,6 +64,8 @@ function ProjectsPage() {
   const [renameName, setRenameName] = useState("");
   const [renameDesc, setRenameDesc] = useState("");
   const [renameBusy, setRenameBusy] = useState(false);
+  const [query, setQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"recent" | "name" | "members">("recent");
 
   async function togglePin(p: ProjectSummary) {
     const next = !p.pinned_at;
