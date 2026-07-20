@@ -1,7 +1,14 @@
 // Non-streaming text transformation endpoint for the Writing workspace.
 // Accepts { text, action, instructions?, tone? } and returns { text }.
 import { createFileRoute } from "@tanstack/react-router";
-import { requireUser } from "@/lib/api-auth.server";
+import {
+  requireUser,
+  assertNotBanned,
+  assertFeatureEnabled,
+  enforceQuota,
+  getCallerTier,
+} from "@/lib/api-auth.server";
+import { DAILY_CHAT_LIMIT_BY_TIER } from "@/lib/modes";
 
 type Action =
   | "improve"
