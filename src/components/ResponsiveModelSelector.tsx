@@ -50,8 +50,12 @@ export function ResponsiveModelSelector({
           compact ? "h-8 px-3.5 text-[13px]" : "h-9 px-4 text-sm"
         }`}
       >
-        <span className="text-foreground font-medium leading-none">{version === "3.5" ? current.label : `Kova ${version}`}</span>
-        <span className="text-muted-foreground leading-none text-[11px]">Kova {version}</span>
+        <span className="text-foreground font-medium leading-none tabular-nums">
+          Kova {version}
+          {version === "3.5" && (
+            <span className="text-muted-foreground font-normal"> · {current.label}</span>
+          )}
+        </span>
         <ChevronDown className="w-4 h-4 text-muted-foreground" />
       </button>
       <MobileBottomSheet open={open} onOpenChange={setOpen} title="Intelligence" ariaLabel="Choose model">
