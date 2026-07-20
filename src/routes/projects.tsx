@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { useServerFn } from "@tanstack/react-start";
-import { FolderKanban, Plus, Users, Check, X as XIcon, Loader2, Sparkles, Wand2, MoreHorizontal, Pin, PinOff, Copy as CopyIcon, Archive, ArchiveRestore, Pencil, Trash2 } from "lucide-react";
+import { FolderKanban, Plus, Users, Check, X as XIcon, Loader2, Sparkles, Wand2, MoreHorizontal, Pin, PinOff, Copy as CopyIcon, Archive, ArchiveRestore, Pencil, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { SkeletonGrid, EmptyState, ErrorState } from "@/components/states";
 import {
