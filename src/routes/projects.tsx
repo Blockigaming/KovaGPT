@@ -241,13 +241,40 @@ function ProjectsPage() {
   return (
     <AppShell>
       <div className="max-w-5xl mx-auto p-6 md:p-8 w-full">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4 gap-3">
           <div>
             <h1 className="text-2xl font-semibold">Projects</h1>
             <p className="text-sm text-muted-foreground">Shared workspaces for you and your team.</p>
           </div>
           <Button onClick={() => setCreateOpen(true)}><Plus className="w-4 h-4 mr-1.5" />New project</Button>
         </div>
+
+        {projects.length > 0 && (
+          <div className="mb-6 flex flex-col sm:flex-row gap-2">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search projects…"
+                className="pl-9"
+                aria-label="Search projects"
+              />
+            </div>
+            <div className="flex items-center gap-1 text-xs bg-muted/50 rounded-full p-1 self-start">
+              {(["recent", "name", "members"] as const).map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setSortBy(k)}
+                  className={`px-3 h-7 rounded-full transition ${sortBy === k ? "bg-background shadow-sm font-medium text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  {k === "recent" ? "Recent" : k === "name" ? "Name" : "Members"}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {invites.length > 0 && (
           <div className="mb-6 border rounded-xl p-4 bg-accent/30">
