@@ -335,15 +335,15 @@ export async function runGoogleTool(
             id: j.id,
             threadId: j.threadId,
             from: headerValue(j.payload?.headers, "From"),
-            subject: headerValue(j.payload?.headers, "Subject") || "(no subject)",
+            subject: fenceUntrusted("subject", headerValue(j.payload?.headers, "Subject") || "(no subject)"),
             date: headerValue(j.payload?.headers, "Date"),
-            snippet: (j.snippet ?? "").slice(0, 240),
+            snippet: fenceUntrusted("snippet", (j.snippet ?? "").slice(0, 240)),
           };
         }),
       );
       const messages = details.filter(Boolean);
       void logAudit({ userId, provider: "gmail", action: "search", summary: `Searched Gmail: "${q}" (${messages.length} results)` });
-      return { messages };
+      return { _warning: UNTRUSTED_WARNING, messages };
     }
 
     if (name === "gmail_read_message") {
