@@ -572,12 +572,26 @@ export async function executePendingAction(
   if (error || !row) return { ok: false, error: "Pending action not found." };
   if (row.user_id !== userId) return { ok: false, error: "Not your action." };
   if (row.status === "confirmed") return { ok: true, result_text: "Already sent." };
+  if (row.status === "processing") return { ok: false, error: "Action is already being processed." };
   if (row.status === "cancelled") return { ok: false, error: "Action was cancelled." };
   if (new Date(row.expires_at).getTime() < Date.now()) {
     await (db as unknown as { from: (t: string) => any })
       .from("pending_tool_actions").update({ status: "expired" }).eq("id", actionId);
     return { ok: false, error: "Action expired. Ask me to prepare it again." };
   }
+
+  // Atomically claim the row BEFORE performing the external side effect.
+  // Without this, a duplicate confirmation request that races the first one
+  // would see status still 'pending' and send the same email / create the
+  // same event twice. Only the request whose UPDATE affects a row proceeds.
+  const { data: claimed } = await (db as unknown as { from: (t: string) => any })
+    .from("pending_tool_actions")
+    .update({ status: "processing" })
+    .eq("id", actionId)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
+  if (!claimed) return { ok: false, error: "Action is already being processed." };
 
   let token: string;
   try {
