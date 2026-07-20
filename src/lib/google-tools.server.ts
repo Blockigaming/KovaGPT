@@ -417,7 +417,7 @@ export async function runGoogleTool(
       };
       const files = (j.files ?? []).map((f) => ({
         id: f.id,
-        name: f.name,
+        name: fenceUntrusted("file_name", f.name),
         mime_type: f.mimeType,
         modified: f.modifiedTime,
         link: f.webViewLink,
@@ -425,7 +425,7 @@ export async function runGoogleTool(
         owner: f.owners?.[0]?.displayName,
       }));
       void logAudit({ userId, provider: "drive", action: "search", summary: `Searched Drive: "${q}" (${files.length} files)` });
-      return { files };
+      return { _warning: UNTRUSTED_WARNING, files };
     }
 
     if (name === "drive_read_file") {
