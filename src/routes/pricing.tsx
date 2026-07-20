@@ -184,8 +184,7 @@ function PricingPage() {
               "Access to KovaGPT",
               "Basic Mode",
               "Limited image generations",
-              "Limited file uploads",
-              "File & image uploads",
+              "File & image uploads (daily limit)",
               "Conversation history saved when signed in",
             ]}
           />
