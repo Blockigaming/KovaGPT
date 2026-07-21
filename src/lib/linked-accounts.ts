@@ -85,8 +85,8 @@ export async function connectProvider(
 ): Promise<{ redirected: boolean; error?: string }> {
   const meta = PROVIDER_META[provider];
   try {
-    const { lovable } = await import("@/integrations/lovable");
-    const result = await lovable.auth.signInWithOAuth(meta.oauthProvider, {
+    const { providerAuth } = await import("@/integrations/provider-auth");
+    const result = await providerAuth.auth.signInWithOAuth(meta.oauthProvider, {
       redirect_uri: window.location.origin,
       extraParams: meta.scope ? { scope: meta.scope } : undefined,
     });

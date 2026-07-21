@@ -2,7 +2,7 @@ import * as React from 'react'
 import { Img, Section, Text } from '@react-email/components'
 
 // Logo is served from the deployed KovaGPT domain so email clients can fetch it
-// over a stable, branded URL (not a Lovable preview host).
+// over a stable, branded URL (not a preview host).
 export const KOVA_LOGO_URL = 'https://kovagpt.com/email-logo.png'
 export const KOVA_SITE_URL = 'https://kovagpt.com'
 

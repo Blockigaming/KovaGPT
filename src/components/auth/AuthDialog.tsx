@@ -137,8 +137,8 @@ export function AuthDialog({
     if (!guard()) return;
     try {
       rememberPostAuthRedirect();
-      const { lovable } = await import("@/integrations/lovable");
-      const result = await lovable.auth.signInWithOAuth("google", {
+      const { providerAuth } = await import("@/integrations/provider-auth");
+      const result = await providerAuth.auth.signInWithOAuth("google", {
         redirect_uri: getOAuthRedirectUri(),
       });
       if (result.error) {

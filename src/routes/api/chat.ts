@@ -25,6 +25,7 @@ import {
   stagePendingAction,
   userHasGoogle,
 } from "@/lib/google-tools.server";
+import { chatCompletions, chatModel, imageGenerations, imageModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
 
 type IncomingMessage = {
   role: "user" | "assistant" | "system";
@@ -352,7 +353,7 @@ function sseDone() {
   return `data: [DONE]\n\n`;
 }
 
-async function handleImageRequest(prompt: string, apiKey: string): Promise<Response> {
+async function handleImageRequest(prompt: string): Promise<Response> {
   const stream = new ReadableStream({
     async start(controller) {
       const enc = new TextEncoder();
@@ -360,14 +361,12 @@ async function handleImageRequest(prompt: string, apiKey: string): Promise<Respo
       controller.enqueue(enc.encode(sseEvent({ kind: "image_pending" })));
 
       try {
-        const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "google/gemini-3.1-flash-image",
-            messages: [{ role: "user", content: prompt }],
-            modalities: ["image", "text"],
-          }),
+        const upstream = await imageGenerations({
+          model: imageModel(),
+          prompt,
+          size: "1024x1024",
+          quality: "low",
+          n: 1,
         });
 
         if (!upstream.ok) {
@@ -378,7 +377,7 @@ async function handleImageRequest(prompt: string, apiKey: string): Promise<Respo
             status === 429
               ? "Rate limit exceeded. Please wait a moment."
               : status === 402
-                ? "AI credits exhausted."
+                ? "Image provider quota exhausted."
                 : "Image generation failed. Please try a different prompt or try again later.";
           controller.enqueue(enc.encode(sseChunk(`Sorry - ${err}`)));
           controller.enqueue(enc.encode(sseDone()));
@@ -391,27 +390,8 @@ async function handleImageRequest(prompt: string, apiKey: string): Promise<Respo
         // .from(<bucket>).remove([path]) with a server-side ownership check.
 
         const data = await upstream.json();
-        const msg = data.choices?.[0]?.message;
-        let imageUrl: string | null = null;
-        if (msg?.images && Array.isArray(msg.images) && msg.images.length > 0) {
-          imageUrl = msg.images[0]?.image_url?.url ?? msg.images[0]?.url ?? null;
-        }
-        if (!imageUrl && Array.isArray(msg?.content)) {
-          for (const p of msg.content) {
-            if (p.type === "image_url" && p.image_url?.url) {
-              imageUrl = p.image_url.url;
-              break;
-            }
-            if (p.type === "output_image" && p.image_url) {
-              imageUrl = typeof p.image_url === "string" ? p.image_url : p.image_url.url;
-              break;
-            }
-          }
-        }
-        if (!imageUrl && typeof msg?.content === "string") {
-          const m = msg.content.match(/!\[[^\]]*\]\(([^)]+)\)/);
-          if (m) imageUrl = m[1];
-        }
+        const item = (data as { data?: Array<{ b64_json?: string; url?: string }> }).data?.[0];
+        const imageUrl = item?.b64_json ? `data:image/png;base64,${item.b64_json}` : item?.url ?? null;
 
         if (imageUrl) {
           controller.enqueue(enc.encode(sseChunk(`![generated image](${imageUrl})`)));
@@ -531,7 +511,7 @@ export const Route = createFileRoute("/api/chat")({
               { status: 413, headers: { "Content-Type": "application/json" } },
             );
           }
-          const { messages, mode, user, voice, timezone, locale, chatId, personality, kovaVersion, projectId } = JSON.parse(rawBody) as {
+          const { messages, mode, user, voice, timezone, locale, chatId, personality, kovaVersion, projectId, clientTool } = JSON.parse(rawBody) as {
             messages: IncomingMessage[];
             mode?: ModeId;
             user?: UserContext;
@@ -588,13 +568,8 @@ export const Route = createFileRoute("/api/chat")({
             }
           }
 
-          const apiKey = process.env.LOVABLE_API_KEY;
-          if (!apiKey) {
-            return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
-              status: 500,
-              headers: { "Content-Type": "application/json" },
-            });
-          }
+          const missingProvider = missingAiProviderResponse();
+          if (missingProvider) return missingProvider;
 
           // Detect image-generation intent on the latest user message
           const lastUser = [...messages].reverse().find((m) => m.role === "user");
@@ -646,7 +621,7 @@ export const Route = createFileRoute("/api/chat")({
               const quota = await enforceQuota(auth, "images", imgLimit);
               if (quota) return quota;
             }
-            return handleImageRequest(lastText, apiKey);
+            return handleImageRequest(lastText);
           }
 
 
@@ -759,12 +734,12 @@ export const Route = createFileRoute("/api/chat")({
           // - medium:  balanced quality/speed (Gemini 3.1 Pro preview).
           // - high:    smartest available (GPT-5.5 Pro extended reasoning).
           const model = voice
-            ? "google/gemini-3.5-flash"
+            ? chatModel("fast")
             : m.id === "high"
-              ? "openai/gpt-5.5"
+              ? chatModel("deep")
               : m.id === "instant"
-                ? "openai/gpt-5.4-mini"
-                : "openai/gpt-5.4";
+                ? chatModel("fast")
+                : chatModel("balanced");
 
           // TODO(routing): add per-request classification (rewrite/summary/coding)
           // and an explicit "Improve answer" client action that re-runs with a
@@ -1018,23 +993,15 @@ export const Route = createFileRoute("/api/chat")({
               request.signal?.addEventListener("abort", onReqAbort, { once: true });
               let hopRes: Response;
               try {
-                hopRes = await fetch(
-                  "https://ai.gateway.lovable.dev/v1/chat/completions",
+                hopRes = await chatCompletions(
                   {
-                    method: "POST",
-                    headers: {
-                      Authorization: `Bearer ${apiKey}`,
-                      "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                      model,
-                      messages: workingMessages,
-                      tools: ALL_TOOLS,
-                      tool_choice: "auto",
-                      stream: false,
-                    }),
-                    signal: hopCtl.signal,
+                    model,
+                    messages: workingMessages,
+                    tools: ALL_TOOLS,
+                    tool_choice: "auto",
+                    stream: false,
                   },
+                  { signal: hopCtl.signal },
                 );
               } catch (e) {
                 clearTimeout(hopTimer);
@@ -1203,15 +1170,7 @@ export const Route = createFileRoute("/api/chat")({
           const hasStreamedActivity = activityCount > 0 || pendingCount > 0;
           let upstream: Response;
           try {
-            upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${apiKey}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(finalBody),
-              signal: request.signal,
-            });
+            upstream = await chatCompletions(finalBody, { signal: request.signal });
           } catch (e) {
             if (request.signal?.aborted) return new Response(null, { status: 499 });
             console.error("[chat] final call network error", e);
@@ -1226,7 +1185,7 @@ export const Route = createFileRoute("/api/chat")({
               upstream.status === 429
                 ? "Rate limit exceeded. Please wait a moment."
                 : upstream.status === 402
-                  ? "AI credits exhausted."
+                  ? "Image provider quota exhausted."
                   : "AI service is temporarily unavailable. Please try again.";
             const status = upstream.status === 429 ? 429 : upstream.status === 402 ? 402 : 502;
             const txt = upstream.ok ? "" : await upstream.text().catch(() => "");

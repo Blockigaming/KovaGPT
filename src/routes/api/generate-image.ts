@@ -7,16 +7,7 @@ import {
   requireVerifiedUser,
 } from "@/lib/api-auth.server";
 import { DAILY_IMAGE_LIMIT_BY_TIER } from "@/lib/modes";
-
-// Tries a list of image models in order. Returns the first successful image.
-// Falls back gracefully so a single model outage doesn't break the page.
-// Fastest model first so users get a result before any Worker timeout.
-// GPT-image is highest quality but slowest; keep it as a fallback.
-const MODELS = [
-  "google/gemini-3.1-flash-image",
-  "google/gemini-2.5-flash-image",
-  "openai/gpt-image-2",
-] as const;
+import { imageGenerations, imageModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
 
 const MODEL_TIMEOUT_MS = 22_000;
 
@@ -30,42 +21,16 @@ function jsonError(message: string, status: number) {
 async function tryModel(
   model: string,
   prompt: string,
-  apiKey: string,
   size: string,
 ): Promise<{ imageUrl?: string; status: number; error?: string }> {
-  const isOpenAI = model.startsWith("openai/");
-  const body = isOpenAI
-    ? {
-        model,
-        prompt,
-        size,
-        quality: "low",
-        n: 1,
-      }
-    : {
-        model,
-        messages: [{ role: "user", content: `${prompt}\n\n(Target aspect ratio / size: ${size})` }],
-        modalities: ["image", "text"],
-      };
-
-
-  const endpoint = isOpenAI
-    ? "https://ai.gateway.lovable.dev/v1/images/generations"
-    : "https://ai.gateway.lovable.dev/v1/chat/completions";
-
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), MODEL_TIMEOUT_MS);
   let upstream: Response;
   try {
-    upstream = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
+    upstream = await imageGenerations(
+      { model, prompt, size, quality: "low", n: 1 },
+      { signal: controller.signal },
+    );
   } catch (e) {
     clearTimeout(timer);
     const aborted = (e as { name?: string } | null)?.name === "AbortError";
@@ -78,33 +43,12 @@ async function tryModel(
     return { status: upstream.status, error: text || `Upstream ${upstream.status}` };
   }
 
-  const data = await upstream.json().catch(() => null as any);
-  if (!data) return { status: 500, error: "Invalid upstream response" };
-
-  // OpenAI images endpoint: { data: [{ b64_json | url }] }
-  if (isOpenAI) {
-    const item = data?.data?.[0];
-    if (item?.b64_json) {
-      return { imageUrl: `data:image/png;base64,${item.b64_json}`, status: 200 };
-    }
-    if (item?.url) {
-      return { imageUrl: item.url, status: 200 };
-    }
-    return { status: 500, error: "No image in OpenAI response" };
-  }
-
-  // Gemini via chat completions: image lives in choices[0].message.images
-  const msg = data?.choices?.[0]?.message;
-  const fromImages = msg?.images?.[0]?.image_url?.url;
-  if (fromImages) return { imageUrl: fromImages, status: 200 };
-  if (Array.isArray(msg?.content)) {
-    for (const p of msg.content) {
-      if (p?.type === "image_url" && p?.image_url?.url) {
-        return { imageUrl: p.image_url.url, status: 200 };
-      }
-    }
-  }
-  return { status: 500, error: "No image in Gemini response" };
+  const data = await upstream.json().catch(() => null);
+  if (!data || typeof data !== "object") return { status: 500, error: "Invalid upstream response" };
+  const item = (data as { data?: Array<{ b64_json?: string; url?: string }> }).data?.[0];
+  if (item?.b64_json) return { imageUrl: `data:image/png;base64,${item.b64_json}`, status: 200 };
+  if (item?.url) return { imageUrl: item.url, status: 200 };
+  return { status: 500, error: "No image in provider response" };
 }
 
 export const Route = createFileRoute("/api/generate-image")({
@@ -125,8 +69,8 @@ export const Route = createFileRoute("/api/generate-image")({
           }
           const ALLOWED_SIZES = new Set(["1024x1024", "1024x1536", "1536x1024", "1792x1024"]);
           const chosenSize = ALLOWED_SIZES.has(size ?? "") ? (size as string) : "1024x1024";
-          const apiKey = process.env.LOVABLE_API_KEY;
-          if (!apiKey) return jsonError("AI service not configured", 500);
+          const missingProvider = missingAiProviderResponse();
+          if (missingProvider) return missingProvider;
 
           const banned = await assertNotBanned(auth);
           if (banned) return banned;
@@ -138,23 +82,16 @@ export const Route = createFileRoute("/api/generate-image")({
           if (quota) return quota;
 
 
-          let lastStatus = 500;
-          for (const model of MODELS) {
-            const result = await tryModel(model, prompt.trim(), apiKey, chosenSize);
-
-            if (result.imageUrl) {
-              return new Response(
-                JSON.stringify({ imageUrl: result.imageUrl, model }),
-                { headers: { "Content-Type": "application/json" } },
-              );
-            }
-            // Stop early on rate-limit / payment so the user gets a clear signal.
-            if (result.status === 429) return jsonError("Rate limit  -  try again in a moment.", 429);
-            if (result.status === 402) return jsonError("AI credits exhausted.", 402);
-            if (result.error) console.error("[generate-image] model error", model, result.status, result.error);
-            lastStatus = result.status;
+          const model = imageModel();
+          const result = await tryModel(model, prompt.trim(), chosenSize);
+          if (result.imageUrl) {
+            return new Response(JSON.stringify({ imageUrl: result.imageUrl, model }), {
+              headers: { "Content-Type": "application/json" },
+            });
           }
-          return jsonError("Image service is temporarily unavailable. Please try again.", lastStatus);
+          if (result.status === 429) return jsonError("Rate limit - try again in a moment.", 429);
+          if (result.error) console.error("[generate-image] provider error", model, result.status, result.error);
+          return jsonError("Image service is temporarily unavailable. Please try again.", result.status);
         } catch (e) {
           console.error("[generate-image] handler error", e);
           return jsonError("An unexpected error occurred. Please try again.", 500);

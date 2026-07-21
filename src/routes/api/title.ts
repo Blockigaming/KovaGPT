@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { chatCompletions, chatModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
 
 const RATE_LIMIT_MAX = 30;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
@@ -51,12 +52,8 @@ export const Route = createFileRoute("/api/title")({
           const { messages } = JSON.parse(raw) as {
             messages: { role: string; content: string }[];
           };
-          const apiKey = process.env.LOVABLE_API_KEY;
-          if (!apiKey) {
-            return new Response(JSON.stringify({ title: "New chat" }), {
-              headers: { "Content-Type": "application/json" },
-            });
-          }
+          const missingProvider = missingAiProviderResponse({ title: "New chat" });
+          if (missingProvider) return missingProvider;
 
           const excerpt = messages
             .slice(0, 8)
@@ -65,14 +62,8 @@ export const Route = createFileRoute("/api/title")({
             .slice(0, 4000);
 
 
-          const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: "google/gemini-2.5-flash-lite",
+          const upstream = await chatCompletions({
+              model: chatModel("fast"),
               messages: [
                 {
                   role: "system",
@@ -82,8 +73,7 @@ export const Route = createFileRoute("/api/title")({
                 },
                 { role: "user", content: excerpt },
               ],
-            }),
-          });
+            });
 
           if (!upstream.ok) {
             return new Response(JSON.stringify({ title: "New chat" }), {

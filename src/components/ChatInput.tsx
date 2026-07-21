@@ -630,7 +630,6 @@ export function ChatInput({
               </div>
             </MobileBottomSheet>
           )}
-          </div>
         </div>
       </div>
     </div>

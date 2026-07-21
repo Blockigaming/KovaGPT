@@ -5,6 +5,7 @@ import {
   requireUser,
   type AuthedCaller,
 } from "@/lib/api-auth.server";
+import { chatCompletions, chatModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
 
 const MAX_SUMMARIES_RETURNED = 8;
 const MAX_MEMORIES_PER_USER = 100;
@@ -23,16 +24,13 @@ function tbl(auth: AuthedCaller) {
   }).from("chat_memories");
 }
 
-async function summarize(apiKey: string, messages: { role: string; content: string }[]) {
+async function summarize(messages: { role: string; content: string }[]) {
   const transcript = messages
     .slice(-30)
     .map((m) => `${m.role === "user" ? "User" : "KovaGPT"}: ${String(m.content).slice(0, 2000)}`)
     .join("\n");
-  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "google/gemini-3.1-flash-lite",
+  const resp = await chatCompletions({
+      model: chatModel("fast"),
       messages: [
         {
           role: "system",
@@ -41,8 +39,7 @@ async function summarize(apiKey: string, messages: { role: string; content: stri
         },
         { role: "user", content: transcript },
       ],
-    }),
-  });
+    });
   if (!resp.ok) return null;
   const data = await resp.json();
   const text = data?.choices?.[0]?.message?.content;
@@ -107,14 +104,9 @@ export const Route = createFileRoute("/api/memory")({
         const chatId = body.chatId.slice(0, 100);
         const title = typeof body.title === "string" ? body.title.slice(0, 120) : null;
 
-        const apiKey = process.env.LOVABLE_API_KEY;
-        if (!apiKey) {
-          return new Response(JSON.stringify({ error: "LOVABLE_API_KEY missing" }), {
-            status: 500,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-        const summary = await summarize(apiKey, body.messages);
+        const missingProvider = missingAiProviderResponse();
+        if (missingProvider) return missingProvider;
+        const summary = await summarize(body.messages);
         if (!summary) return new Response(null, { status: 204 });
 
         await tbl(auth).upsert(
