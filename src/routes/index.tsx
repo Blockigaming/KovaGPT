@@ -11,6 +11,7 @@ import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
 import { AIStatus } from "@/components/AIStatus";
 import { MobileFabs } from "@/components/MobileFabs";
 import { MobileTopBar } from "@/components/MobileTopBar";
+import { CommandPalette } from "@/components/CommandPalette";
 
 import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 
@@ -105,6 +106,8 @@ function KovaGPT() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [tempChat, setTempChat] = useState(false);
   const [tempChatConfirmed, setTempChatConfirmed] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [commandQuery, setCommandQuery] = useState("");
 
   // Start closed to avoid a flash-of-open sidebar on narrow viewports during
   // SSR/hydration. On desktop we honor the persisted user preference so the
@@ -330,6 +333,22 @@ function KovaGPT() {
     setInput("");
     setAttachments([]);
   }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      if ((event.metaKey || event.ctrlKey) && key === "k") {
+        event.preventDefault();
+        setCommandOpen((value) => !value);
+      }
+      if ((event.metaKey || event.ctrlKey) && event.shiftKey && key === "o") {
+        event.preventDefault();
+        newChat();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [newChat]);
 
   const deleteChat = useCallback(
     (id: string) => {
@@ -801,7 +820,7 @@ function KovaGPT() {
                 <PanelLeft className="w-5 h-5" />
               </button>
               <button
-                onClick={() => setSidebarOpen(true)}
+                onClick={() => setCommandOpen(true)}
                 className="shrink-0 p-2 rounded-lg hover:bg-accent transition"
                 aria-label="Search chats"
                 title="Search chats"
@@ -853,7 +872,7 @@ function KovaGPT() {
                 }}
                 aria-label="Toggle temporary chat"
                 title={tempChat ? "Temporary chat on" : "Start temporary chat"}
-                className={`lg:hidden relative shrink-0 p-2 rounded-lg transition ${
+                className={`relative shrink-0 p-2 rounded-lg transition ${
                   tempChat ? "bg-primary/15 text-primary" : "hover:bg-accent text-foreground"
                 }`}
               >
@@ -1068,10 +1087,13 @@ function KovaGPT() {
                 placeholder="Message KovaGPT"
                 onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
               />
-              <div className="hidden lg:flex justify-center gap-3 text-[11px] text-muted-foreground/70 mt-2 select-none">
-                <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">Enter</kbd> to send</span>
-                <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">Shift+Enter</kbd> newline</span>
-                <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">⌘K</kbd> search</span>
+              <div className="hidden lg:flex flex-col items-center gap-2 text-[11px] text-muted-foreground/70 mt-2 select-none">
+                <div className="flex justify-center gap-3">
+                  <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">Enter</kbd> to send</span>
+                  <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">Shift+Enter</kbd> newline</span>
+                  <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">⌘K</kbd> search</span>
+                </div>
+                <p>KovaGPT can make mistakes. Check important info.</p>
               </div>
             </div>
           </>
@@ -1122,6 +1144,17 @@ function KovaGPT() {
       </Suspense>
 
       <SignUpPrompt open={signupPromptOpen} onOpenChange={setSignupPromptOpen} />
+
+      <CommandPalette
+        open={commandOpen}
+        query={commandQuery}
+        onQueryChange={setCommandQuery}
+        conversations={conversations}
+        onClose={() => setCommandOpen(false)}
+        onNewChat={newChat}
+        onSelectChat={setActiveId}
+        onOpenSettings={() => openSettings("general")}
+      />
 
       <MobileFabs
         onNewChat={() => {

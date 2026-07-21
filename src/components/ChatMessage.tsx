@@ -5,7 +5,6 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileBottomSheet } from "./MobileBottomSheet";
 import { useLayout } from "@/hooks/use-mobile";
 import type { Message } from "@/lib/chat-store";
-import { NovaLogo } from "./NovaLogo";
 import { ChatChart, extractCharts } from "./ChatChart";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
@@ -325,13 +324,7 @@ function ChatMessageInner({
           </div>
         </div>
       ) : (
-        <div className="mx-auto max-w-3xl [[data-sidebar=closed]_&]:max-w-4xl flex items-start gap-3 lg:gap-4 justify-start animate-fade-up">
-          <div className="flex-shrink-0 w-8 h-8 [[data-sidebar=closed]_&]:w-9 [[data-sidebar=closed]_&]:h-9 rounded-full flex items-center justify-center mt-0.5">
-            <NovaLogo
-              className="w-8 h-8 [[data-sidebar=closed]_&]:w-9 [[data-sidebar=closed]_&]:h-9"
-              pulse={!!streaming}
-            />
-          </div>
+        <div className="mx-auto max-w-3xl [[data-sidebar=closed]_&]:max-w-4xl flex items-start justify-start animate-fade-up">
           <div
             className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text"
             onTouchStart={startLongPress}
@@ -432,7 +425,7 @@ function ChatMessageInner({
         </div>
       )}
       <div className="mx-auto max-w-3xl [[data-sidebar=closed]_&]:max-w-4xl">
-        <div className={isUser ? "flex justify-end" : "pl-11 lg:pl-12"}>
+        <div className={isUser ? "flex justify-end" : "flex justify-start"}>
           {!streaming && !isUser && message.content && (
             <div className="mt-2 flex flex-wrap items-center gap-1 transition-opacity">
               {/* Visible: Copy, Thumbs up, Thumbs down, Share */}
