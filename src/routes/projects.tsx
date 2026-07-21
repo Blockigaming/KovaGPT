@@ -48,6 +48,23 @@ function ProjectsPage() {
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
+  const [query, setQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"recent" | "name" | "members">("recent");
+  const [showArchived, setShowArchived] = useState(false);
+
+  const colorClass = (c?: string | null) => {
+    const map: Record<string, string> = {
+      blue: "text-blue-500 bg-blue-500/10",
+      green: "text-emerald-500 bg-emerald-500/10",
+      red: "text-red-500 bg-red-500/10",
+      orange: "text-orange-500 bg-orange-500/10",
+      yellow: "text-amber-500 bg-amber-500/10",
+      purple: "text-violet-500 bg-violet-500/10",
+      pink: "text-pink-500 bg-pink-500/10",
+      teal: "text-teal-500 bg-teal-500/10",
+    };
+    return map[c ?? "blue"] ?? map.blue;
+  };
 
   const fnList = useServerFn(listProjects);
   const fnInvites = useServerFn(listMyPendingInvites);
