@@ -490,6 +490,8 @@ function KovaGPT() {
             messages: payloadMessages,
             mode: activeTool === "deep_research" ? "high" : mode,
             clientTool: activeTool,
+            chatId: nextConvId,
+            temporary: tempChat,
             user: {
               name: settings.displayName,
               pronouns: settings.preferredPronouns,

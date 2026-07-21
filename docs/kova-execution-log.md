@@ -76,3 +76,86 @@
 - Remaining failures: clean dependency installation, dev server, build, typecheck, lint, Playwright discovery, browser tests, visual tests, accessibility tests.
 - Next non-PASS row: Lovable dependency/runtime removal, but it cannot be fully verified until the engineering environment dependency gate is unblocked.
 - Exact next command after external service unblock: `npm ci --ignore-scripts --no-audit --no-fund`.
+
+
+## 2026-07-21 — Provider architecture static advancement
+
+- Starting commit: `8557062`.
+- Ending commit: pending at time of log entry.
+- Matrix rows changed: Provider architecture evidence updated while remaining `IN PROGRESS` because runtime/browser/build verification is still blocked by npm registry access.
+- Files changed: `src/lib/ai/provider.server.ts`, `.env.example`, `tests/unit/provider-architecture.test.mjs`, `docs/kova-final-completion-matrix.md`, `docs/kova-execution-log.md`.
+- Migrations added: none.
+- RLS changes: none.
+- Commands run:
+  - `git status --short && git branch --show-current && git log --oneline -5 && sed -n '1,80p' docs/kova-final-completion-matrix.md && tail -80 docs/kova-execution-log.md` → clean at start, branch `work`, current HEAD `8557062`, durable state inspected.
+  - `npm ci --ignore-scripts --no-audit --no-fund` → still failed with `E403 403 Forbidden - GET https://registry.npmjs.org/@playwright%2ftest`.
+  - `npm test` → passed 7 Node built-in tests across Lovable-removal and provider-architecture static coverage.
+  - `git diff --check` → passed.
+- Browser checks: still not possible because install is blocked and Vite is unavailable.
+- Failure-path checks: provider adapter now contains static coverage for missing-key, timeout, auth, rate-limit, bad-response, and network-error envelopes; npm registry failure path remains reproduced.
+- Screenshot locations: none.
+- Remaining failures: clean install, dev server, build, typecheck, lint, Playwright discovery, browser tests, visual tests, accessibility tests.
+- Next non-PASS row: Lovable dependency/runtime removal remains blocked from full verification by the engineering environment dependency gate.
+- Exact next command after external service unblock: `npm ci --ignore-scripts --no-audit --no-fund`.
+
+
+## 2026-07-21 — Search provider boundary advancement
+
+- Starting commit: `29fe6fd`.
+- Ending commit: pending at time of log entry.
+- Matrix rows changed: Web search and citations evidence updated while remaining `IN PROGRESS` until persistence/browser/citation verification can run.
+- Files changed: `src/lib/ai/search.server.ts`, `src/routes/api/chat.ts`, `.env.example`, `tests/unit/search-provider.test.mjs`, `docs/kova-final-completion-matrix.md`, `docs/kova-execution-log.md`.
+- Migrations added: none.
+- RLS changes: none.
+- Commands run:
+  - `sed -n '180,460p' src/routes/api/chat.ts && sed -n '520,820p' src/routes/api/chat.ts && sed -n '940,1220p' src/routes/api/chat.ts` → inspected chat search/tool/final streaming flow.
+  - `npm test` → passed 10 Node built-in tests across Lovable-removal, provider architecture, and search-provider static coverage.
+  - `git diff --check` → passed.
+- Browser checks: still not possible because install is blocked and Vite is unavailable.
+- Failure-path checks: search provider static coverage now checks timeout/env knobs and centralization away from inline Firecrawl fetches; npm registry failure path remains reproduced.
+- Screenshot locations: none.
+- Remaining failures: clean install, dev server, build, typecheck, lint, Playwright discovery, browser tests, visual tests, accessibility tests.
+- Next non-PASS row: Lovable dependency/runtime removal remains blocked from full verification by the engineering environment dependency gate.
+- Exact next command after external service unblock: `npm ci --ignore-scripts --no-audit --no-fund`.
+
+
+## 2026-07-21 — Deep Research workflow advancement
+
+- Starting commit: `06dab94`.
+- Ending commit: pending at time of log entry.
+- Matrix rows changed: Deep Research evidence updated while remaining `IN PROGRESS` until persistence, API mocks, browser checks, and screenshots can run.
+- Files changed: `src/lib/ai/deep-research.server.ts`, `src/routes/api/chat.ts`, `tests/unit/deep-research.test.mjs`, `docs/kova-final-completion-matrix.md`, `docs/kova-execution-log.md`.
+- Migrations added: none.
+- RLS changes: none.
+- Commands run:
+  - `rg -n "hasImages|clientTool === \"deep_research\"|handleDeepResearchRequest|research_progress" src/routes/api/chat.ts | head -40 && sed -n '300,430p' src/routes/api/chat.ts && sed -n '620,720p' src/routes/api/chat.ts` → inspected insertion points and found/fixed an early `hasImages` reference.
+  - `npm test` → passed 13 Node built-in tests across Lovable-removal, provider architecture, search-provider, and deep-research static coverage.
+  - `git diff --check` → passed.
+- Browser checks: still not possible because install is blocked and Vite is unavailable.
+- Failure-path checks: deep research static coverage verifies a separate route path, progress event emission, evidence-only citation instruction, and partial-failure support; npm registry failure path remains reproduced.
+- Screenshot locations: none.
+- Remaining failures: clean install, dev server, build, typecheck, lint, Playwright discovery, browser tests, visual tests, accessibility tests.
+- Next non-PASS row: Lovable dependency/runtime removal remains blocked from full verification by the engineering environment dependency gate.
+- Exact next command after external service unblock: `npm ci --ignore-scripts --no-audit --no-fund`.
+
+
+## 2026-07-21 — Deep Research persistence and RLS advancement
+
+- Starting commit: `8f65f9e`.
+- Ending commit: pending at time of log entry.
+- Matrix rows changed: Deep Research persistence and Database/security evidence updated while remaining `IN PROGRESS` until Supabase/browser/API verification can run.
+- Files changed: `supabase/migrations/20260721211500_deep_research_runs.sql`, `src/lib/ai/deep-research.server.ts`, `src/routes/api/chat.ts`, `src/routes/index.tsx`, `tests/unit/deep-research-persistence.test.mjs`, `docs/kova-final-completion-matrix.md`, `docs/kova-execution-log.md`.
+- Migrations added: `supabase/migrations/20260721211500_deep_research_runs.sql` for `deep_research_runs` and `deep_research_evidence`.
+- RLS changes: enabled RLS and added authenticated owner CRUD policies for both Deep Research tables.
+- Commands run:
+  - `find supabase -maxdepth 3 -type f | sort | head -200 && find supabase/migrations -maxdepth 1 -type f | sort | tail -20` → inspected migration layout.
+  - `rg -n "create table|enable row level security|auth\.uid\(\)|policy" supabase/migrations | head -120` → inspected RLS conventions.
+  - `npm test` → initially failed one new assertion because the client did not yet send `chatId`; fixed the payload.
+  - `npm test` → passed 16 Node built-in tests across Lovable-removal, provider architecture, search-provider, deep-research, and persistence/RLS static coverage.
+  - `git diff --check` → passed.
+- Browser checks: still not possible because install is blocked and Vite is unavailable.
+- Failure-path checks: static tests cover temporary-chat persistence exclusion and owned-table RLS policy presence; npm registry failure path remains reproduced.
+- Screenshot locations: none.
+- Remaining failures: clean install, dev server, build, typecheck, lint, Playwright discovery, browser tests, visual tests, accessibility tests.
+- Next non-PASS row: Lovable dependency/runtime removal remains blocked from full verification by the engineering environment dependency gate.
+- Exact next command after external service unblock: `npm ci --ignore-scripts --no-audit --no-fund`.
