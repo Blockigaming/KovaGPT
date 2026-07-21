@@ -1,11 +1,10 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Copy, Check, ImageIcon, Loader2, Bookmark, FileEdit, Code2, Eye, MoreHorizontal, Share2, Pencil, RefreshCw, ThumbsUp, ThumbsDown, GitBranch, Globe, Mail } from "lucide-react";
+import { Copy, Check, ImageIcon, Loader2, Bookmark, FileEdit, Code2, Eye, MoreHorizontal, Share2, Pencil, RefreshCw, ThumbsUp, ThumbsDown, GitBranch, Globe, Mail, Volume2 } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileBottomSheet } from "./MobileBottomSheet";
 import { useLayout } from "@/hooks/use-mobile";
 import type { Message } from "@/lib/chat-store";
-import { NovaLogo } from "./NovaLogo";
 import { ChatChart, extractCharts } from "./ChatChart";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
@@ -240,6 +239,18 @@ function ChatMessageInner({
     setTimeout(() => setCopied(false), 1500);
   };
 
+  const readAloud = () => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      toast.error("Read aloud is not supported in this browser.");
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(cleanAssistantText(message.content));
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    window.speechSynthesis.speak(utterance);
+  };
+
   const saveItem = async () => {
     // Guests can save to a local-only library (kept in localStorage). The
     // ClerkSafe sign-in prompt is no longer shown here.
@@ -325,13 +336,7 @@ function ChatMessageInner({
           </div>
         </div>
       ) : (
-        <div className="mx-auto max-w-3xl [[data-sidebar=closed]_&]:max-w-4xl flex items-start gap-3 lg:gap-4 justify-start animate-fade-up">
-          <div className="flex-shrink-0 w-8 h-8 [[data-sidebar=closed]_&]:w-9 [[data-sidebar=closed]_&]:h-9 rounded-full flex items-center justify-center mt-0.5">
-            <NovaLogo
-              className="w-8 h-8 [[data-sidebar=closed]_&]:w-9 [[data-sidebar=closed]_&]:h-9"
-              pulse={!!streaming}
-            />
-          </div>
+        <div className="mx-auto max-w-3xl [[data-sidebar=closed]_&]:max-w-4xl flex items-start justify-start animate-fade-up">
           <div
             className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text"
             onTouchStart={startLongPress}
@@ -432,7 +437,7 @@ function ChatMessageInner({
         </div>
       )}
       <div className="mx-auto max-w-3xl [[data-sidebar=closed]_&]:max-w-4xl">
-        <div className={isUser ? "flex justify-end" : "pl-11 lg:pl-12"}>
+        <div className={isUser ? "flex justify-end" : "flex justify-start"}>
           {!streaming && !isUser && message.content && (
             <div className="mt-2 flex flex-wrap items-center gap-1 transition-opacity">
               {/* Visible: Copy, Thumbs up, Thumbs down, Share */}
@@ -447,6 +452,14 @@ function ChatMessageInner({
                 ) : (
                   <Copy className="w-4 h-4" />
                 )}
+              </button>
+              <button
+                onClick={readAloud}
+                className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
+                title="Read aloud"
+                aria-label="Read aloud"
+              >
+                <Volume2 className="w-4 h-4" />
               </button>
               <button
                 onClick={() => {
@@ -660,6 +673,7 @@ function ChatMessageInner({
           <div className="flex flex-col py-1">
             {[
               { label: copied ? "Copied" : "Copy", icon: Copy, onClick: () => { copy(); setMobileSheetOpen(false); } },
+              { label: "Read aloud", icon: Volume2, onClick: () => { readAloud(); setMobileSheetOpen(false); } },
               { label: feedback === "up" ? "Remove good rating" : "Good response", icon: ThumbsUp, onClick: () => { persistFeedback(feedback === "up" ? null : "up"); setMobileSheetOpen(false); } },
               { label: feedback === "down" ? "Remove bad rating" : "Bad response", icon: ThumbsDown, onClick: () => { persistFeedback(feedback === "down" ? null : "down"); setMobileSheetOpen(false); } },
               { label: "Share", icon: Share2, onClick: async () => {

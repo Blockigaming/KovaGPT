@@ -22,12 +22,10 @@ function decodeDataUrl(dataUrl: string): { bytes: Uint8Array; contentType: strin
 }
 
 // Allowlisted hosts the library can save images from. These are the only
-// domains we expect (AI gateway CDN, Supabase storage, OpenAI image CDN).
+// domains we expect (Supabase storage and direct provider image CDNs).
 // User-supplied URLs to anything else are rejected to prevent SSRF against
 // internal/cloud-metadata endpoints.
 const ALLOWED_IMAGE_HOST_SUFFIXES = [
-  ".lovable.dev",
-  ".lovable.app",
   ".supabase.co",
   ".supabase.in",
   ".oaiusercontent.com",

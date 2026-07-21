@@ -1,9 +1,8 @@
 // Server-only helpers for project knowledge indexing + retrieval (RAG).
-// Uses Lovable AI Gateway `/v1/embeddings` with openai/text-embedding-3-small
-// (1536 dims, cheap, fits pgvector HNSW natively).
+// Uses the configured direct embedding provider through the server-side AI adapter.
 
-const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/embeddings";
-const EMBED_MODEL = "openai/text-embedding-3-small";
+import { embeddingModel, embeddings } from "@/lib/ai/provider.server";
+
 const EMBED_DIMS = 1536;
 
 // Chunking: ~1200 chars with ~200 char overlap.
@@ -65,16 +64,8 @@ function chunkText(text: string): string[] {
 }
 
 async function embedBatch(inputs: string[]): Promise<number[][]> {
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) throw new Error("Missing LOVABLE_API_KEY");
-  const resp = await fetch(GATEWAY_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Lovable-API-Key": key,
-    },
-    body: JSON.stringify({ model: EMBED_MODEL, input: inputs, dimensions: EMBED_DIMS }),
-  });
+  if (!process.env.OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
+  const resp = await embeddings({ model: embeddingModel(), input: inputs, dimensions: EMBED_DIMS });
   if (!resp.ok) {
     const text = await resp.text().catch(() => "");
     throw new Error(`Embedding failed: ${resp.status} ${text.slice(0, 200)}`);

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { chatCompletions, chatModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
 
 // Per-IP sliding window rate limit; keeps this public AI endpoint from
 // becoming an unlimited free LLM call. Lower cap than /api/title since
@@ -36,15 +37,10 @@ export const Route = createFileRoute("/api/project-suggest")({
           }
           const body = await request.json().catch(() => ({})) as { hint?: string };
           const hint = (body.hint ?? "").toString().slice(0, 400);
-          const apiKey = process.env.LOVABLE_API_KEY;
-          if (!apiKey) {
-            return new Response(JSON.stringify(fallback()), { headers: { "Content-Type": "application/json" } });
-          }
-          const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              model: "google/gemini-2.5-flash-lite",
+          const missingProvider = missingAiProviderResponse(fallback());
+          if (missingProvider) return missingProvider;
+          const upstream = await chatCompletions({
+              model: chatModel("fast"),
               messages: [
                 {
                   role: "system",
@@ -53,8 +49,7 @@ export const Route = createFileRoute("/api/project-suggest")({
                 },
                 { role: "user", content: hint || "Suggest a creative, useful project idea." },
               ],
-            }),
-          });
+            });
           if (!upstream.ok) {
             return new Response(JSON.stringify(fallback()), { headers: { "Content-Type": "application/json" } });
           }
