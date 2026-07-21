@@ -129,8 +129,16 @@ function ImagesPage() {
   const [limitOpen, setLimitOpen] = useState(false);
   const [limitMessage, setLimitMessage] = useState<string | undefined>(undefined);
   const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [lightbox, setLightbox] = useState<HistoryItem | null>(null);
   const submittingRef = useRef(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setLightbox(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightbox]);
 
   useEffect(() => {
     if (isSignedIn && userKey) setHistory(loadHistory(userKey));
