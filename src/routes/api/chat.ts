@@ -542,6 +542,7 @@ export const Route = createFileRoute("/api/chat")({
             personality?: string;
             kovaVersion?: string;
             projectId?: string;
+            clientTool?: "web_search" | "deep_research" | "image" | "study" | "data_analysis" | "file_analysis" | null;
           };
           const KOVA_VERSION = typeof kovaVersion === "string" ? kovaVersion : "3.5";
           const IS_LEGACY_KOVA = KOVA_VERSION !== "3.5";
@@ -602,7 +603,7 @@ export const Route = createFileRoute("/api/chat")({
             !voice &&
             lastText.length > 0 &&
             (!lastUser?.attachments || lastUser.attachments.length === 0) &&
-            detectImageIntent(lastText);
+            (clientTool === "image" || detectImageIntent(lastText));
 
 
           // Detect the owner account - gets highest tier with no quotas.
@@ -773,9 +774,9 @@ export const Route = createFileRoute("/api/chat")({
           // out in settings except for explicit/time-sensitive search asks.
           // Fast mode skips web search entirely to stay instant.
           let webBlock = "";
-          if (lastText && !hasImages && m.id !== "instant") {
-            if (shouldRunWebSearch(lastText, user?.webSearch) || voice) {
-              const result = await runWebSearch(lastText, NEWS_TRIGGER.test(lastText) || !!voice);
+          if (lastText && !hasImages && (m.id !== "instant" || clientTool === "web_search" || clientTool === "deep_research")) {
+            if (clientTool === "web_search" || clientTool === "deep_research" || shouldRunWebSearch(lastText, user?.webSearch) || voice) {
+              const result = await runWebSearch(lastText, clientTool === "deep_research" || NEWS_TRIGGER.test(lastText) || !!voice);
               if (result) webBlock = result;
             }
           }
@@ -890,6 +891,16 @@ export const Route = createFileRoute("/api/chat")({
           }
 
 
+          const toolInstruction = clientTool === "deep_research"
+            ? "\n\nDEEP RESEARCH MODE: Create a structured research report. Use live web results above as sources when present, state uncertainty clearly, compare sources, and include a concise sources section with domains and URLs. If live results are unavailable, say exactly that and proceed without fabricated citations."
+            : clientTool === "web_search"
+              ? "\n\nWEB SEARCH MODE: Use live web results above when present, cite source titles/domains naturally, and never fabricate links or citations."
+              : clientTool === "study"
+                ? "\n\nSTUDY MODE: Teach step by step, check understanding, and end with a short quiz."
+                : clientTool === "data_analysis" || clientTool === "file_analysis"
+                  ? "\n\nANALYSIS MODE: Inspect provided text, images, or tabular data carefully. Summarize findings, caveats, and next steps. Use charts only when useful and supported by data."
+                  : "";
+
           const voiceInstruction = voice
             ? `\n\nVOICE MODE: Your reply will be spoken aloud by a text-to-speech engine. Reply in natural, conversational spoken English with complete grammatical sentences. Use proper punctuation so sentences flow. Do NOT use markdown, bullet points, headings, code blocks, emojis, URLs, or symbols. Keep answers concise  -  usually 1 to 3 sentences unless the user explicitly asks for detail.`
             : "";
@@ -914,6 +925,7 @@ export const Route = createFileRoute("/api/chat")({
                   memoryBlock +
                   projectBlock +
                   webBlock +
+                  toolInstruction +
                   voiceInstruction +
                   (callerTier === "plus" || callerTier === "pro"
                     ? `\n\nELITE AGENT MODE (Plus/Pro): You are operating as an elite agent for this user. When the request involves the live web, act decisively - use the web search block as ground truth, cite specific sources by name (not numbers), extract concrete details (prices, dates, versions, quotes), and complete multi-step research or comparisons in one reply. If information is stale or missing, say so directly and offer the next best step. Never punt with "I can't browse the web" - live results are provided when relevant and you should use them.`

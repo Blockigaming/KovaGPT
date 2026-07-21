@@ -6,7 +6,7 @@ import { PanelLeft, Search, MessageSquareDashed, Check, Sparkles, Globe2, Code2,
 import { Sidebar } from "@/components/Sidebar";
 
 import { ChatMessage } from "@/components/ChatMessage";
-import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
+import { ChatInput, type ComposerToolId, type PendingAttachment } from "@/components/ChatInput";
 import { AIStatus } from "@/components/AIStatus";
 import { MobileFabs } from "@/components/MobileFabs";
 import { MobileTopBar } from "@/components/MobileTopBar";
@@ -107,6 +107,7 @@ function KovaGPT() {
   const [tempChatConfirmed, setTempChatConfirmed] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
+  const [selectedTool, setSelectedTool] = useState<ComposerToolId | null>(null);
 
   // Start closed to avoid a flash-of-open sidebar on narrow viewports during
   // SSR/hydration. On desktop we honor the persisted user preference so the
@@ -240,7 +241,7 @@ function KovaGPT() {
   }, [settings, userKey]);
 
   useEffect(() => {
-    const t = setTimeout(() => saveConversations(conversations), 400);
+    const t = setTimeout(() => saveConversations(conversations.filter((c) => !c.temporary)), 400);
     return () => clearTimeout(t);
   }, [conversations]);
 
@@ -295,7 +296,7 @@ function KovaGPT() {
   // endpoint silently no-ops for free users.
   useEffect(() => {
     if (!isSignedIn || isStreaming) return;
-    if (!active || active.messages.length < 4) return;
+    if (!active || active.temporary || active.messages.length < 4) return;
     const handle = setTimeout(() => {
       const payload = {
         chatId: active.id,
@@ -384,6 +385,8 @@ function KovaGPT() {
       const nextConvId = activeId ?? newId();
       const isNewConversation = !activeId;
 
+      const activeTool = selectedTool;
+
       const userMsg: Message = {
         id: newId(),
         role: "user",
@@ -403,6 +406,7 @@ function KovaGPT() {
             mode,
             createdAt: Date.now(),
             updatedAt: Date.now(),
+            temporary: tempChat,
           };
           priorMessages = [];
           return [c, ...prev];
@@ -431,6 +435,7 @@ function KovaGPT() {
                     mode,
                     createdAt: Date.now(),
                     updatedAt: Date.now(),
+                    temporary: tempChat,
                   },
                 ],
           );
@@ -483,7 +488,8 @@ function KovaGPT() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             messages: payloadMessages,
-            mode,
+            mode: activeTool === "deep_research" ? "high" : mode,
+            clientTool: activeTool,
             user: {
               name: settings.displayName,
               pronouns: settings.preferredPronouns,
@@ -674,10 +680,11 @@ function KovaGPT() {
         }
       } finally {
         setIsStreaming(false);
+        setSelectedTool(null);
         abortRef.current = null;
       }
     },
-    [activeId, isStreaming, mode, autoTitle, settings],
+    [activeId, isStreaming, mode, autoTitle, settings, selectedTool, tempChat],
   );
 
   const stop = useCallback(() => {
@@ -984,6 +991,7 @@ function KovaGPT() {
                   }
                   placeholder="Message KovaGPT"
                   onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
+                  onToolSelect={setSelectedTool}
                 />
 
                 <div className="mt-5 hidden lg:flex flex-wrap items-center justify-center gap-2 max-w-3xl mx-auto">
@@ -1129,6 +1137,7 @@ function KovaGPT() {
                 }
                 placeholder="Message KovaGPT"
                 onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
+                onToolSelect={setSelectedTool}
               />
               <div className="hidden lg:flex flex-col items-center gap-2 text-[11px] text-muted-foreground/70 mt-2 select-none">
                 <div className="flex justify-center gap-3">

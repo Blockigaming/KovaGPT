@@ -1,4 +1,4 @@
-import { ArrowUp, Square, Plus, X, Mic, Image as ImageIcon, FileText, Camera, Puzzle, Search, Lightbulb, Sparkles, GraduationCap, SlidersHorizontal, Brain, Bot, PenTool } from "lucide-react";
+import { ArrowUp, Square, Plus, X, Mic, Image as ImageIcon, FileText, Camera, Puzzle, Search, Lightbulb, Sparkles, GraduationCap, SlidersHorizontal, Brain, type LucideIcon } from "lucide-react";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { useLayout } from "@/hooks/use-mobile";
 
@@ -20,6 +20,7 @@ import { ResponsiveModelSelector as ModelSelector } from "@/components/Responsiv
 import type { ModeId, Tier } from "@/lib/modes";
 
 export type PendingAttachment = { kind: "image"; dataUrl: string; name: string };
+export type ComposerToolId = "web_search" | "deep_research" | "image" | "study" | "data_analysis" | "file_analysis";
 
 const TEXT_LIKE_EXT = /\.(txt|md|markdown|csv|tsv|json|jsonl|ya?ml|toml|xml|html?|css|scss|less|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|h|cc|cpp|hpp|cs|php|sql|sh|bash|zsh|fish|env|ini|conf|log|srt|vtt)$/i;
 const MAX_TEXT_FILE_BYTES = 256 * 1024; // 256 KB inline cap to keep prompts reasonable
@@ -38,6 +39,7 @@ export function ChatInput({
   onUploadLimit,
   placeholder,
   onPromptShortcut,
+  onToolSelect,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -53,6 +55,7 @@ export function ChatInput({
   onUploadLimit?: () => void;
   placeholder?: string;
   onPromptShortcut?: (prompt: string) => void;
+  onToolSelect?: (tool: ComposerToolId) => void;
 }) {
 
   const { isDesktop } = useLayout();
@@ -173,13 +176,13 @@ export function ChatInput({
     },
   ];
 
-  const toolActions = [
-    { label: "Search the web", icon: Search, prompt: "Use web search and cite sources for: " },
-    { label: "Think longer", icon: Brain, prompt: "Think carefully and solve this with detailed reasoning: " },
-    { label: "Deep research", icon: GraduationCap, prompt: "Do deep research and produce a sourced report on: " },
-    { label: "Create an image", icon: ImageIcon, prompt: "Create an image of: " },
-    { label: "Canvas", icon: PenTool, prompt: "Open this as an editable draft/canvas and improve it: " },
-    { label: "Agent mode", icon: Bot, prompt: "Act like an agent: make a plan, execute the steps you can, and report progress for: " },
+  const toolActions: Array<{ id: ComposerToolId; label: string; icon: LucideIcon; prompt: string }> = [
+    { id: "web_search", label: "Search the web", icon: Search, prompt: "Search the web and cite sources for: " },
+    { id: "deep_research", label: "Deep research", icon: GraduationCap, prompt: "Research this deeply with sources and a structured report: " },
+    { id: "image", label: "Create an image", icon: ImageIcon, prompt: "Create an image of: " },
+    { id: "data_analysis", label: "Analyze data", icon: Brain, prompt: "Analyze this data and show the key findings: " },
+    { id: "study", label: "Study mode", icon: Lightbulb, prompt: "Tutor me on this step by step, then quiz me: " },
+    { id: "file_analysis", label: "Analyze files", icon: FileText, prompt: "Analyze the attached file and summarize the important details." },
   ];
 
   const applyShortcut = (prompt: string) => {
@@ -187,6 +190,11 @@ export function ChatInput({
     if (!value.trim()) onChange(prompt);
     setToolsOpen(false);
     ref.current?.focus();
+  };
+
+  const applyTool = (tool: ComposerToolId, prompt: string) => {
+    onToolSelect?.(tool);
+    applyShortcut(prompt);
   };
 
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -568,7 +576,7 @@ export function ChatInput({
                         key={tool.label}
                         role="menuitem"
                         type="button"
-                        onClick={() => applyShortcut(tool.prompt)}
+                        onClick={() => applyTool(tool.id, tool.prompt)}
                         className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent"
                       >
                         <Icon className="h-4 w-4 text-muted-foreground" />
@@ -611,7 +619,7 @@ export function ChatInput({
                     <button
                       key={tool.label}
                       type="button"
-                      onClick={() => applyShortcut(tool.prompt)}
+                      onClick={() => applyTool(tool.id, tool.prompt)}
                       className="flex min-h-14 w-full items-center gap-3 rounded-xl px-4 py-4 text-left text-base hover:bg-accent active:bg-accent"
                     >
                       <Icon className="h-5 w-5 text-muted-foreground" />

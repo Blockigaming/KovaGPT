@@ -155,13 +155,11 @@ export function Sidebar({
               <FolderOpen className="w-[18px] h-[18px] shrink-0" />
               <span className="truncate">Library</span>
             </Link>
-            <Link to="/apps" className={navItemClass(isOn("/apps"))} title="Explore GPTs">
+            <Link to="/apps" className={navItemClass(isOn("/apps"))} title="Apps">
               <ActiveBar on={isOn("/apps")} />
               <Plug className="w-[18px] h-[18px] shrink-0" />
-              <span className="truncate">Explore GPTs</span>
+              <span className="truncate">Apps</span>
             </Link>
-            {/* Apps entry hidden for now (Step 6). */}
-
             <Link to="/images" className={navItemClass(isOn("/images"))} title="Images">
               <ActiveBar on={isOn("/images")} />
               <ImageIcon className="w-[18px] h-[18px] shrink-0" />

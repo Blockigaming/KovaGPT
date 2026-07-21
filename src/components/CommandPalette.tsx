@@ -1,10 +1,11 @@
 import { Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 import { Search, SquarePen, Settings, Image as ImageIcon, FolderOpen, Plug, Calendar, X } from "lucide-react";
 import type { Conversation } from "@/lib/chat-store";
 
 const quickActions = [
   { label: "New chat", href: "/", icon: SquarePen },
-  { label: "Explore GPTs", href: "/apps", icon: Plug },
+  { label: "Apps", href: "/apps", icon: Plug },
   { label: "Library", href: "/library", icon: FolderOpen },
   { label: "Images", href: "/images", icon: ImageIcon },
   { label: "Scheduled tasks", href: "/scheduled-tasks", icon: Calendar },
@@ -29,15 +30,44 @@ export function CommandPalette({
   onSelectChat: (id: string) => void;
   onOpenSettings: () => void;
 }) {
-  if (!open) return null;
-
   const normalized = query.trim().toLowerCase();
   const matches = normalized
     ? conversations.filter((chat) => chat.title.toLowerCase().includes(normalized)).slice(0, 8)
     : conversations.slice(0, 6);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const actionItems = useMemo(() => ["new-chat", "settings", ...quickActions.slice(1).map((action) => action.href)], []);
+  const totalItems = actionItems.length + matches.length;
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [query, open]);
+
+  const chooseActive = () => {
+    const action = actionItems[activeIndex];
+    if (action === "new-chat") { onNewChat(); onClose(); return; }
+    if (action === "settings") { onOpenSettings(); onClose(); return; }
+    if (typeof action === "string" && action.startsWith("/")) { window.location.assign(action); onClose(); return; }
+    if (!action) {
+      const chat = matches[activeIndex - actionItems.length];
+      if (chat) { onSelectChat(chat.id); onClose(); }
+    }
+  };
+
+  if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-start justify-center bg-black/35 px-3 pt-[12vh] backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Search chats and actions">
+    <div
+      className="fixed inset-0 z-[70] flex items-start justify-center bg-black/35 px-3 pt-[12vh] backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Search chats and actions"
+      onKeyDown={(event) => {
+        if (event.key === "Escape") { event.preventDefault(); onClose(); }
+        if (event.key === "ArrowDown") { event.preventDefault(); setActiveIndex((i) => Math.min(totalItems - 1, i + 1)); }
+        if (event.key === "ArrowUp") { event.preventDefault(); setActiveIndex((i) => Math.max(0, i - 1)); }
+        if (event.key === "Enter") { event.preventDefault(); chooseActive(); }
+      }}
+    >
       <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-border bg-popover text-popover-foreground shadow-2xl animate-in fade-in zoom-in-95 duration-150">
         <div className="flex items-center gap-3 border-b border-border px-4 py-3">
           <Search className="h-5 w-5 text-muted-foreground" />
@@ -45,7 +75,7 @@ export function CommandPalette({
             autoFocus
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
-            placeholder="Search chats, GPTs, files, and actions"
+            placeholder="Search chats, apps, files, and actions"
             className="h-10 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
           />
           <button type="button" onClick={onClose} className="rounded-full p-2 text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="Close command palette">
@@ -58,7 +88,7 @@ export function CommandPalette({
           <button
             type="button"
             onClick={() => { onNewChat(); onClose(); }}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent"
+            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 0 ? "bg-accent" : ""}`}
           >
             <SquarePen className="h-4 w-4 text-muted-foreground" />
             <span>Start a new chat</span>
@@ -67,19 +97,19 @@ export function CommandPalette({
           <button
             type="button"
             onClick={() => { onOpenSettings(); onClose(); }}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent"
+            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 1 ? "bg-accent" : ""}`}
           >
             <Settings className="h-4 w-4 text-muted-foreground" />
             <span>Open settings</span>
           </button>
-          {quickActions.slice(1).map((action) => {
+          {quickActions.slice(1).map((action, actionIndex) => {
             const Icon = action.icon;
             return (
               <Link
                 key={action.href}
                 to={action.href as never}
                 onClick={onClose}
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent"
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === actionIndex + 2 ? "bg-accent" : ""}`}
               >
                 <Icon className="h-4 w-4 text-muted-foreground" />
                 <span>{action.label}</span>
@@ -91,12 +121,12 @@ export function CommandPalette({
           {matches.length === 0 ? (
             <div className="px-3 py-6 text-center text-sm text-muted-foreground">No chats found</div>
           ) : (
-            matches.map((chat) => (
+            matches.map((chat, chatIndex) => (
               <button
                 key={chat.id}
                 type="button"
                 onClick={() => { onSelectChat(chat.id); onClose(); }}
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent"
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === actionItems.length + chatIndex ? "bg-accent" : ""}`}
               >
                 <span className="h-2 w-2 rounded-full bg-muted-foreground/50" />
                 <span className="min-w-0 flex-1 truncate">{chat.title}</span>
