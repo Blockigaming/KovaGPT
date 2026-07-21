@@ -1,4 +1,4 @@
-import { ArrowUp, Square, Plus, X, Mic, Image as ImageIcon, FileText, Camera, Puzzle, Search, Lightbulb, Sparkles, GraduationCap } from "lucide-react";
+import { ArrowUp, Square, Plus, X, Mic, Image as ImageIcon, FileText, Camera, Puzzle, Search, Lightbulb, Sparkles, GraduationCap, SlidersHorizontal, Brain, Bot, PenTool } from "lucide-react";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { useLayout } from "@/hooks/use-mobile";
 
@@ -63,28 +63,37 @@ export function ChatInput({
   const photoRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const plusWrapRef = useRef<HTMLDivElement>(null);
+  const toolsWrapRef = useRef<HTMLDivElement>(null);
 
   const [sendFlash, setSendFlash] = useState(false);
   const [actionColor, setActionColor] = useState<string>("#3b82f6");
   const [plusOpen, setPlusOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [kbOffset, setKbOffset] = useState(0);
   const [listening, setListening] = useState(false);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
   const dictationBaseRef = useRef<string>("");
 
   useEffect(() => {
-    if (!plusOpen) return;
+    if (!plusOpen && !toolsOpen) return;
     const onDoc = (e: MouseEvent) => {
-      if (!plusWrapRef.current?.contains(e.target as Node)) setPlusOpen(false);
+      const target = e.target as Node;
+      if (!plusWrapRef.current?.contains(target)) setPlusOpen(false);
+      if (!toolsWrapRef.current?.contains(target)) setToolsOpen(false);
     };
-    const onEsc = (e: KeyboardEvent) => { if (e.key === "Escape") setPlusOpen(false); };
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setPlusOpen(false);
+        setToolsOpen(false);
+      }
+    };
     document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onEsc);
     return () => {
       document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onEsc);
     };
-  }, [plusOpen]);
+  }, [plusOpen, toolsOpen]);
 
 
 
@@ -164,9 +173,19 @@ export function ChatInput({
     },
   ];
 
+  const toolActions = [
+    { label: "Search the web", icon: Search, prompt: "Use web search and cite sources for: " },
+    { label: "Think longer", icon: Brain, prompt: "Think carefully and solve this with detailed reasoning: " },
+    { label: "Deep research", icon: GraduationCap, prompt: "Do deep research and produce a sourced report on: " },
+    { label: "Create an image", icon: ImageIcon, prompt: "Create an image of: " },
+    { label: "Canvas", icon: PenTool, prompt: "Open this as an editable draft/canvas and improve it: " },
+    { label: "Agent mode", icon: Bot, prompt: "Act like an agent: make a plan, execute the steps you can, and report progress for: " },
+  ];
+
   const applyShortcut = (prompt: string) => {
     onPromptShortcut?.(prompt);
     if (!value.trim()) onChange(prompt);
+    setToolsOpen(false);
     ref.current?.focus();
   };
 
@@ -521,6 +540,45 @@ export function ChatInput({
             </div>
           </div>
           <div className="flex items-center justify-between gap-2 px-2 pb-2">
+            <div className="relative flex items-center gap-1.5" ref={toolsWrapRef}>
+              <button
+                type="button"
+                onClick={() => setToolsOpen((value) => !value)}
+                className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[13px] font-medium transition ${
+                  toolsOpen
+                    ? "border-foreground/20 bg-accent text-foreground"
+                    : "border-border/70 bg-background/55 text-muted-foreground hover:bg-accent hover:text-foreground"
+                }`}
+                aria-label="Open tools"
+                aria-haspopup="menu"
+                aria-expanded={toolsOpen}
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span>Tools</span>
+              </button>
+              {toolsOpen && !isMobileLayout && (
+                <div
+                  role="menu"
+                  className="absolute bottom-10 left-0 z-50 w-64 rounded-2xl border border-border bg-popover p-1.5 shadow-2xl animate-in fade-in slide-in-from-bottom-1"
+                >
+                  {toolActions.map((tool) => {
+                    const Icon = tool.icon;
+                    return (
+                      <button
+                        key={tool.label}
+                        role="menuitem"
+                        type="button"
+                        onClick={() => applyShortcut(tool.prompt)}
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent"
+                      >
+                        <Icon className="h-4 w-4 text-muted-foreground" />
+                        <span>{tool.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               {shortcutActions.map((action) => {
                 const Icon = action.icon;
@@ -543,6 +601,27 @@ export function ChatInput({
                 <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
               </div>
             )}
+          </div>
+          {isMobileLayout && (
+            <MobileBottomSheet open={toolsOpen} onOpenChange={setToolsOpen} title="Tools" ariaLabel="Choose a tool">
+              <div className="flex flex-col gap-1 p-1">
+                {toolActions.map((tool) => {
+                  const Icon = tool.icon;
+                  return (
+                    <button
+                      key={tool.label}
+                      type="button"
+                      onClick={() => applyShortcut(tool.prompt)}
+                      className="flex min-h-14 w-full items-center gap-3 rounded-xl px-4 py-4 text-left text-base hover:bg-accent active:bg-accent"
+                    >
+                      <Icon className="h-5 w-5 text-muted-foreground" />
+                      <span>{tool.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </MobileBottomSheet>
+          )}
           </div>
         </div>
       </div>

@@ -4,7 +4,6 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { SignUpPrompt } from "@/components/SignUpPrompt";
 import { PanelLeft, Search, MessageSquareDashed, Check, Sparkles, Globe2, Code2, GraduationCap, Image as ImageIcon, FileText, Mic } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
-import { NovaLogo } from "@/components/NovaLogo";
 
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
@@ -906,23 +905,27 @@ function KovaGPT() {
 
 
 
+
+        {tempChat && (
+          <div className="mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-3xl items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm shadow-sm">
+            <div className="flex min-w-0 items-center gap-2">
+              <MessageSquareDashed className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="truncate">Temporary chat is on. This chat will not use or update memory.</span>
+            </div>
+            <button type="button" onClick={() => setTempChat(false)} className="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium hover:bg-accent">Turn off</button>
+          </div>
+        )}
+
         {!active || active.messages.length === 0 ? (
           <div className="flex-1 flex flex-col overflow-y-auto px-4 lg:px-6">
             <div className="flex-1 flex flex-col items-center justify-center w-full py-8 lg:py-12">
-              <div className="flex flex-col items-center gap-4 mb-6 lg:mb-8 animate-fade-in">
-                <div className="relative">
-                  {/* Soft brand glow behind the logo. */}
-                  <div
-                    aria-hidden="true"
-                    className="absolute inset-0 -m-8 rounded-full bg-primary/20 blur-3xl opacity-70"
-                  />
-                  <NovaLogo className="relative w-14 h-14 lg:w-16 lg:h-16" animated />
-                </div>
-
-                <h1 className="font-display text-[28px] leading-[1.1] lg:text-[44px] lg:leading-[1.05] font-semibold tracking-tight text-center text-balance px-4 text-foreground">
+              <div className="flex flex-col items-center gap-4 mb-5 lg:mb-7 animate-fade-in">
+                <h1 className="font-display text-[28px] leading-[1.1] lg:text-[36px] lg:leading-[1.08] font-semibold tracking-tight text-center text-balance px-4 text-foreground">
                   {greeting}
                 </h1>
-
+                <p className="max-w-xl text-center text-sm text-muted-foreground">
+                  Chat, search, reason, create images, analyze files, write code, make plans, and keep working across your chats.
+                </p>
               </div>
 
               <div className="w-full max-w-3xl mx-auto">
