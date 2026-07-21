@@ -255,13 +255,13 @@ function ProjectsPage() {
 
   return (
     <AppShell>
-      <div className="max-w-5xl mx-auto p-6 md:p-8 w-full">
-        <div className="flex items-center justify-between mb-6">
-          <div>
+      <div className="max-w-5xl mx-auto p-4 sm:p-6 md:p-8 w-full pb-24 lg:pb-8">
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <div className="min-w-0">
             <h1 className="text-2xl font-semibold">Projects</h1>
             <p className="text-sm text-muted-foreground">Shared workspaces for you and your team.</p>
           </div>
-          <Button onClick={() => setCreateOpen(true)}><Plus className="w-4 h-4 mr-1.5" />New project</Button>
+          <Button onClick={() => setCreateOpen(true)} className="hidden lg:inline-flex"><Plus className="w-4 h-4 mr-1.5" />New project</Button>
         </div>
 
         {invites.length > 0 && (
@@ -306,16 +306,27 @@ function ProjectsPage() {
           />
         ) : (
           (() => {
-            const pinned = projects.filter((p) => p.pinned_at && !p.archived_at);
-            const active = projects.filter((p) => !p.pinned_at && !p.archived_at);
-            const archived = projects.filter((p) => p.archived_at);
+            const q = query.trim().toLowerCase();
+            const matches = (p: ProjectSummary) =>
+              !q || p.name.toLowerCase().includes(q) || (p.description ?? "").toLowerCase().includes(q);
+            const sortFn = (a: ProjectSummary, b: ProjectSummary) => {
+              if (sortBy === "name") return a.name.localeCompare(b.name);
+              if (sortBy === "members") return b.member_count - a.member_count;
+              return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+            };
+            const pinned = projects.filter((p) => p.pinned_at && !p.archived_at && matches(p)).sort(sortFn);
+            const active = projects.filter((p) => !p.pinned_at && !p.archived_at && matches(p)).sort(sortFn);
+            const archived = projects.filter((p) => p.archived_at && matches(p)).sort(sortFn);
+            const noMatches = q && pinned.length + active.length + archived.length === 0;
 
             const Card = ({ p }: { p: ProjectSummary }) => (
               <div className="relative block border rounded-xl p-4 hover:bg-accent/50 transition group">
                 <Link to="/projects/$projectId" params={{ projectId: p.id }} className="block">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <FolderKanban className="w-6 h-6 text-primary" />
+                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${colorClass(p.color)}`}>
+                        <FolderKanban className="w-5 h-5" />
+                      </div>
                       {p.pinned_at && <Pin className="w-3.5 h-3.5 text-muted-foreground fill-current" />}
                     </div>
                     <span className="text-[11px] uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground">{p.role}</span>
@@ -367,7 +378,7 @@ function ProjectsPage() {
             const Section = ({ title, items }: { title: string; items: ProjectSummary[] }) => (
               items.length === 0 ? null : (
                 <section className="mb-6">
-                  <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2 px-1">{title}</div>
+                  {title && <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2 px-1">{title}</div>}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {items.map((p) => <Card key={p.id} p={p} />)}
                   </div>
@@ -377,14 +388,72 @@ function ProjectsPage() {
 
             return (
               <div>
-                <Section title="Pinned" items={pinned} />
-                <Section title={pinned.length ? "All projects" : ""} items={active} />
-                <Section title="Archived" items={archived} />
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="relative flex-1">
+                    <SearchIcon className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <Input
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Search projects"
+                      className="pl-9"
+                    />
+                  </div>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                    className="h-9 px-3 rounded-md border border-input bg-background text-sm"
+                    aria-label="Sort projects"
+                  >
+                    <option value="recent">Recent</option>
+                    <option value="name">Name</option>
+                    <option value="members">Members</option>
+                  </select>
+                </div>
+
+                {noMatches ? (
+                  <EmptyState
+                    icon={SearchIcon}
+                    title="No matches"
+                    description={`Nothing matches "${query}". Try a different search.`}
+                  />
+                ) : (
+                  <>
+                    <Section title="Pinned" items={pinned} />
+                    <Section title={pinned.length ? "All projects" : ""} items={active} />
+                    {archived.length > 0 && (
+                      <section className="mb-6">
+                        <button
+                          type="button"
+                          onClick={() => setShowArchived((v) => !v)}
+                          className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground mb-2 px-1"
+                        >
+                          {showArchived ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                          Archived ({archived.length})
+                        </button>
+                        {showArchived && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 opacity-80">
+                            {archived.map((p) => <Card key={p.id} p={p} />)}
+                          </div>
+                        )}
+                      </section>
+                    )}
+                  </>
+                )}
               </div>
             );
           })()
         )}
       </div>
+
+      {/* Mobile floating new-project button */}
+      <button
+        onClick={() => setCreateOpen(true)}
+        className="lg:hidden fixed bottom-24 right-4 z-40 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center active:scale-95 transition"
+        aria-label="New project"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
+
 
       <Dialog open={!!renameFor} onOpenChange={(o) => !o && setRenameFor(null)}>
         <DialogContent>
