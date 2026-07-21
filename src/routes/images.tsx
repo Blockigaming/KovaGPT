@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
 import { useEffect, useRef, useState } from "react";
-import { PanelLeft, ArrowUp, Loader2, Download, Trash2, Paperclip, Sparkles } from "lucide-react";
+import { PanelLeft, ArrowUp, Loader2, Download, Trash2, Paperclip, Sparkles, X as XIcon } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
 
