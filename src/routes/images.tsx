@@ -436,6 +436,56 @@ function ImagesPage() {
         message={limitMessage}
         resetsAt={getUsage().resetsAt}
       />
+
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-8 animate-in fade-in duration-150"
+          onClick={() => setLightbox(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Image preview"
+        >
+          <button
+            onClick={() => setLightbox(null)}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"
+            aria-label="Close"
+          >
+            <XIcon className="w-5 h-5" />
+          </button>
+          <div
+            className="relative max-w-4xl w-full flex flex-col items-center gap-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={lightbox.imageUrl}
+              alt={lightbox.prompt}
+              className="max-h-[75dvh] w-auto max-w-full rounded-2xl shadow-2xl object-contain"
+            />
+            <p className="text-sm text-white/85 text-center max-w-2xl px-4 line-clamp-3">{lightbox.prompt}</p>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <button
+                onClick={() => { setPrompt(lightbox.prompt); setLightbox(null); inputRef.current?.focus(); }}
+                className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white text-black font-medium hover:opacity-90 transition"
+              >
+                <Sparkles className="w-4 h-4" /> Reuse prompt
+              </button>
+              <a
+                href={lightbox.imageUrl}
+                download={`kovagpt-${lightbox.id}.png`}
+                className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
+              >
+                <Download className="w-4 h-4" /> Download
+              </a>
+              <button
+                onClick={() => { removeFromHistory(lightbox.id); setLightbox(null); }}
+                className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-destructive text-white transition"
+              >
+                <Trash2 className="w-4 h-4" /> Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
