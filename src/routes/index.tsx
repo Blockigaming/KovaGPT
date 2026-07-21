@@ -2,15 +2,15 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
-import { PanelLeft, Search, MessageSquareDashed, Check } from "lucide-react";
+import { PanelLeft, Search, MessageSquareDashed, Check, Sparkles, Globe2, Code2, GraduationCap, Image as ImageIcon, FileText, Mic, Share2, Download } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
-import { NovaLogo } from "@/components/NovaLogo";
 
 import { ChatMessage } from "@/components/ChatMessage";
-import { ChatInput, type PendingAttachment } from "@/components/ChatInput";
+import { ChatInput, type ComposerToolId, type PendingAttachment } from "@/components/ChatInput";
 import { AIStatus } from "@/components/AIStatus";
 import { MobileFabs } from "@/components/MobileFabs";
 import { MobileTopBar } from "@/components/MobileTopBar";
+import { CommandPalette } from "@/components/CommandPalette";
 
 import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 
@@ -105,6 +105,9 @@ function KovaGPT() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [tempChat, setTempChat] = useState(false);
   const [tempChatConfirmed, setTempChatConfirmed] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [commandQuery, setCommandQuery] = useState("");
+  const [selectedTool, setSelectedTool] = useState<ComposerToolId | null>(null);
 
   // Start closed to avoid a flash-of-open sidebar on narrow viewports during
   // SSR/hydration. On desktop we honor the persisted user preference so the
@@ -238,7 +241,7 @@ function KovaGPT() {
   }, [settings, userKey]);
 
   useEffect(() => {
-    const t = setTimeout(() => saveConversations(conversations), 400);
+    const t = setTimeout(() => saveConversations(conversations.filter((c) => !c.temporary)), 400);
     return () => clearTimeout(t);
   }, [conversations]);
 
@@ -261,8 +264,8 @@ function KovaGPT() {
   }, [settings.displayName, user]);
 
   const greeting = useMemo(() => {
-    if (!isLoaded) return "KovaGPT";
-    if (clerkEnabled && !isSignedIn) return "KovaGPT";
+    if (!isLoaded) return "What can I help with?";
+    if (clerkEnabled && !isSignedIn) return "What can I help with?";
     const name = firstName;
     const prompts = name
       ? [
@@ -273,11 +276,11 @@ function KovaGPT() {
           `Let's go, ${name}.`,
         ]
       : [
-          "Welcome back.",
-          "Hey there.",
+          "What can I help with?",
+          "How can I help you today?",
           "Ready when you are.",
-          "Let's begin.",
-          "Good to see you.",
+          "What are we working on?",
+          "Ask anything.",
         ];
     return prompts[Math.floor(Math.random() * prompts.length)];
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -293,7 +296,7 @@ function KovaGPT() {
   // endpoint silently no-ops for free users.
   useEffect(() => {
     if (!isSignedIn || isStreaming) return;
-    if (!active || active.messages.length < 4) return;
+    if (!active || active.temporary || active.messages.length < 4) return;
     const handle = setTimeout(() => {
       const payload = {
         chatId: active.id,
@@ -331,6 +334,22 @@ function KovaGPT() {
     setAttachments([]);
   }, []);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      if ((event.metaKey || event.ctrlKey) && key === "k") {
+        event.preventDefault();
+        setCommandOpen((value) => !value);
+      }
+      if ((event.metaKey || event.ctrlKey) && event.shiftKey && key === "o") {
+        event.preventDefault();
+        newChat();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [newChat]);
+
   const deleteChat = useCallback(
     (id: string) => {
       setConversations((prev) => prev.filter((c) => c.id !== id));
@@ -366,6 +385,8 @@ function KovaGPT() {
       const nextConvId = activeId ?? newId();
       const isNewConversation = !activeId;
 
+      const activeTool = selectedTool;
+
       const userMsg: Message = {
         id: newId(),
         role: "user",
@@ -385,6 +406,7 @@ function KovaGPT() {
             mode,
             createdAt: Date.now(),
             updatedAt: Date.now(),
+            temporary: tempChat,
           };
           priorMessages = [];
           return [c, ...prev];
@@ -413,6 +435,7 @@ function KovaGPT() {
                     mode,
                     createdAt: Date.now(),
                     updatedAt: Date.now(),
+                    temporary: tempChat,
                   },
                 ],
           );
@@ -465,7 +488,8 @@ function KovaGPT() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             messages: payloadMessages,
-            mode,
+            mode: activeTool === "deep_research" ? "high" : mode,
+            clientTool: activeTool,
             user: {
               name: settings.displayName,
               pronouns: settings.preferredPronouns,
@@ -656,16 +680,27 @@ function KovaGPT() {
         }
       } finally {
         setIsStreaming(false);
+        setSelectedTool(null);
         abortRef.current = null;
       }
     },
-    [activeId, isStreaming, mode, autoTitle, settings],
+    [activeId, isStreaming, mode, autoTitle, settings, selectedTool, tempChat],
   );
 
   const stop = useCallback(() => {
     abortRef.current?.abort();
     setIsStreaming(false);
   }, []);
+
+  const assistantCapabilities = [
+    { label: "Create image", icon: ImageIcon, prompt: "Create a detailed image prompt for: " },
+    { label: "Summarize text", icon: FileText, prompt: "Summarize this into clear bullet points: " },
+    { label: "Analyze data", icon: Sparkles, prompt: "Analyze this data and explain the key insights: " },
+    { label: "Write code", icon: Code2, prompt: "Help me write code for: " },
+    { label: "Learn", icon: GraduationCap, prompt: "Teach me this topic like a patient tutor: " },
+    { label: "Web research", icon: Globe2, prompt: "Research this online and cite sources: " },
+    { label: "Voice", icon: Mic, prompt: "Draft a spoken-friendly response about: " },
+  ];
 
   // Image generation removed; can be reintroduced when user explicitly asks.
 
@@ -773,13 +808,13 @@ function KovaGPT() {
         }}
       />
 
-      <main className="flex-1 flex flex-col min-w-0" data-sidebar={sidebarOpen ? "open" : "closed"}>
+      <main className="flex-1 flex flex-col min-w-0 bg-background" data-sidebar={sidebarOpen ? "open" : "closed"}>
         <MobileTopBar
           onOpenSidebar={() => setSidebarOpen(true)}
           onNewChat={newChat}
           title={active?.title}
         />
-        <header className="hidden lg:flex h-14 items-center px-4 relative gap-1 border-b border-border bg-background">
+        <header className="hidden lg:flex h-14 items-center px-4 relative gap-1 bg-background">
           {!sidebarOpen && (
             <div className="flex items-center gap-1 mr-2 shrink-0">
               <button
@@ -791,7 +826,7 @@ function KovaGPT() {
                 <PanelLeft className="w-5 h-5" />
               </button>
               <button
-                onClick={() => setSidebarOpen(true)}
+                onClick={() => setCommandOpen(true)}
                 className="shrink-0 p-2 rounded-lg hover:bg-accent transition"
                 aria-label="Search chats"
                 title="Search chats"
@@ -805,6 +840,10 @@ function KovaGPT() {
 
           {/* AI status: live indicator to the right of the KovaGPT mark while streaming */}
           <div className="flex items-center min-w-0 flex-1 relative">
+            <div className="mr-3 flex items-center gap-2 rounded-full px-2.5 py-1.5 text-sm font-semibold text-foreground hover:bg-accent transition">
+              <span>KovaGPT</span>
+              <span className="text-muted-foreground">⌄</span>
+            </div>
             <AIStatus
               streaming={isStreaming}
               message={active?.messages[active.messages.length - 1]}
@@ -819,6 +858,46 @@ function KovaGPT() {
           </div>
 
           <div className="ml-auto flex items-center gap-2 shrink-0">
+            {active && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const transcript = active.messages.map((m) => `${m.role === "user" ? "You" : "KovaGPT"}: ${m.content}`).join("\n\n");
+                    const blob = new Blob([transcript], { type: "text/markdown;charset=utf-8" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `${active.title || "chat"}.md`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="hidden xl:inline-flex h-9 items-center gap-2 rounded-full px-3 text-sm font-medium text-foreground hover:bg-accent"
+                  aria-label="Export chat"
+                  title="Export chat"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Export</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isSignedIn) {
+                      toast.message("Sign in to share chats");
+                      openSignUp();
+                      return;
+                    }
+                    setShareChatId(active.id);
+                  }}
+                  className="hidden lg:inline-flex h-9 items-center gap-2 rounded-full border border-border px-3 text-sm font-medium text-foreground hover:bg-accent"
+                  aria-label="Share chat"
+                  title="Share chat"
+                >
+                  <Share2 className="h-4 w-4" />
+                  <span>Share</span>
+                </button>
+              </>
+            )}
             {isLoaded && isSignedIn && (
               <button
                 onClick={() => {
@@ -839,7 +918,7 @@ function KovaGPT() {
                 }}
                 aria-label="Toggle temporary chat"
                 title={tempChat ? "Temporary chat on" : "Start temporary chat"}
-                className={`lg:hidden relative shrink-0 p-2 rounded-lg transition ${
+                className={`relative shrink-0 p-2 rounded-lg transition ${
                   tempChat ? "bg-primary/15 text-primary" : "hover:bg-accent text-foreground"
                 }`}
               >
@@ -873,23 +952,27 @@ function KovaGPT() {
 
 
 
+
+        {tempChat && (
+          <div className="mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-3xl items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm shadow-sm">
+            <div className="flex min-w-0 items-center gap-2">
+              <MessageSquareDashed className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="truncate">Temporary chat is on. This chat will not use or update memory.</span>
+            </div>
+            <button type="button" onClick={() => setTempChat(false)} className="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium hover:bg-accent">Turn off</button>
+          </div>
+        )}
+
         {!active || active.messages.length === 0 ? (
           <div className="flex-1 flex flex-col overflow-y-auto px-4 lg:px-6">
             <div className="flex-1 flex flex-col items-center justify-center w-full py-8 lg:py-12">
-              <div className="flex flex-col items-center gap-4 mb-6 lg:mb-8 animate-fade-in">
-                <div className="relative">
-                  {/* Soft brand glow behind the logo. */}
-                  <div
-                    aria-hidden="true"
-                    className="absolute inset-0 -m-8 rounded-full bg-primary/20 blur-3xl opacity-70"
-                  />
-                  <NovaLogo className="relative w-14 h-14 lg:w-16 lg:h-16" animated />
-                </div>
-
-                <h1 className="font-display text-[28px] leading-[1.1] lg:text-[44px] lg:leading-[1.05] font-semibold tracking-tight text-center text-balance px-4 text-foreground">
+              <div className="flex flex-col items-center gap-4 mb-5 lg:mb-7 animate-fade-in">
+                <h1 className="font-display text-[28px] leading-[1.1] lg:text-[36px] lg:leading-[1.08] font-semibold tracking-tight text-center text-balance px-4 text-foreground">
                   {greeting}
                 </h1>
-
+                <p className="max-w-xl text-center text-sm text-muted-foreground">
+                  Chat, search, reason, create images, analyze files, write code, make plans, and keep working across your chats.
+                </p>
               </div>
 
               <div className="w-full max-w-3xl mx-auto">
@@ -906,27 +989,26 @@ function KovaGPT() {
                   onUploadLimit={() =>
                     setLimitDialog({ open: true, kind: "upload" })
                   }
-                  placeholder="Ask Kova"
+                  placeholder="Message KovaGPT"
+                  onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
+                  onToolSelect={setSelectedTool}
                 />
 
-                {/* Evergreen, task-oriented starters tied to Kova's strongest modes. */}
-                <div className="mt-4 hidden lg:grid grid-cols-2 gap-2 max-w-2xl mx-auto">
-                  {[
-                    { label: "Summarize a file", hint: "Upload a PDF or doc for key points", prompt: "Summarize the attached file into the key points, decisions, and action items." },
-                    { label: "Research a topic", hint: "Get a briefing with sources", prompt: "Research this topic and give me a concise briefing with sources: " },
-                    { label: "Improve my writing", hint: "Clearer, tighter, on-tone", prompt: "Improve the clarity and tone of this text without changing its meaning:\n\n" },
-                    { label: "Debug my code", hint: "Explain the bug and fix it", prompt: "Here's my code and the error I'm seeing. Explain what's wrong and give a corrected version.\n\n" },
-                  ].map((p) => (
-                    <button
-                      key={p.label}
-                      type="button"
-                      onClick={() => setInput((v) => (v ? v : p.prompt))}
-                      className="text-left px-4 py-3 rounded-2xl border border-border/70 bg-card/40 backdrop-blur-sm hover:bg-accent hover:border-foreground/20 transition-colors"
-                    >
-                      <div className="text-[14px] font-medium text-foreground">{p.label}</div>
-                      <div className="text-[12.5px] text-muted-foreground mt-0.5">{p.hint}</div>
-                    </button>
-                  ))}
+                <div className="mt-5 hidden lg:flex flex-wrap items-center justify-center gap-2 max-w-3xl mx-auto">
+                  {assistantCapabilities.map((p) => {
+                    const Icon = p.icon;
+                    return (
+                      <button
+                        key={p.label}
+                        type="button"
+                        onClick={() => setInput((v) => (v.trim() ? v : p.prompt))}
+                        className="inline-flex h-10 items-center gap-2 rounded-full border border-border/70 bg-card/55 px-3.5 text-[14px] font-medium text-foreground shadow-sm hover:bg-accent hover:border-foreground/20"
+                      >
+                        <Icon className="h-4 w-4 text-muted-foreground" />
+                        <span>{p.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
                 <div className="mt-3 lg:hidden flex gap-2 overflow-x-auto -mx-4 px-4 snap-x snap-mandatory no-scrollbar">
                   {[
@@ -1053,12 +1135,17 @@ function KovaGPT() {
                 onUploadLimit={() =>
                   setLimitDialog({ open: true, kind: "upload" })
                 }
-                placeholder="Ask Kova"
+                placeholder="Message KovaGPT"
+                onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
+                onToolSelect={setSelectedTool}
               />
-              <div className="hidden lg:flex justify-center gap-3 text-[11px] text-muted-foreground/70 mt-2 select-none">
-                <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">Enter</kbd> to send</span>
-                <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">Shift+Enter</kbd> newline</span>
-                <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">⌘K</kbd> search</span>
+              <div className="hidden lg:flex flex-col items-center gap-2 text-[11px] text-muted-foreground/70 mt-2 select-none">
+                <div className="flex justify-center gap-3">
+                  <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">Enter</kbd> to send</span>
+                  <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">Shift+Enter</kbd> newline</span>
+                  <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">⌘K</kbd> search</span>
+                </div>
+                <p>KovaGPT can make mistakes. Check important info.</p>
               </div>
             </div>
           </>
@@ -1109,6 +1196,17 @@ function KovaGPT() {
       </Suspense>
 
       <SignUpPrompt open={signupPromptOpen} onOpenChange={setSignupPromptOpen} />
+
+      <CommandPalette
+        open={commandOpen}
+        query={commandQuery}
+        onQueryChange={setCommandQuery}
+        conversations={conversations}
+        onClose={() => setCommandOpen(false)}
+        onNewChat={newChat}
+        onSelectChat={setActiveId}
+        onOpenSettings={() => openSettings("general")}
+      />
 
       <MobileFabs
         onNewChat={() => {

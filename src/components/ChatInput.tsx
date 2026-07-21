@@ -1,4 +1,4 @@
-import { ArrowUp, Square, Plus, X, Mic, Image as ImageIcon, FileText, Camera, Puzzle } from "lucide-react";
+import { ArrowUp, Square, Plus, X, Mic, Image as ImageIcon, FileText, Camera, Puzzle, Search, Lightbulb, Sparkles, GraduationCap, SlidersHorizontal, Brain, type LucideIcon } from "lucide-react";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { useLayout } from "@/hooks/use-mobile";
 
@@ -20,6 +20,7 @@ import { ResponsiveModelSelector as ModelSelector } from "@/components/Responsiv
 import type { ModeId, Tier } from "@/lib/modes";
 
 export type PendingAttachment = { kind: "image"; dataUrl: string; name: string };
+export type ComposerToolId = "web_search" | "deep_research" | "image" | "study" | "data_analysis" | "file_analysis";
 
 const TEXT_LIKE_EXT = /\.(txt|md|markdown|csv|tsv|json|jsonl|ya?ml|toml|xml|html?|css|scss|less|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|h|cc|cpp|hpp|cs|php|sql|sh|bash|zsh|fish|env|ini|conf|log|srt|vtt)$/i;
 const MAX_TEXT_FILE_BYTES = 256 * 1024; // 256 KB inline cap to keep prompts reasonable
@@ -37,6 +38,8 @@ export function ChatInput({
   userTier = "free",
   onUploadLimit,
   placeholder,
+  onPromptShortcut,
+  onToolSelect,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -51,6 +54,8 @@ export function ChatInput({
   /** Called when the user hits their daily upload quota. */
   onUploadLimit?: () => void;
   placeholder?: string;
+  onPromptShortcut?: (prompt: string) => void;
+  onToolSelect?: (tool: ComposerToolId) => void;
 }) {
 
   const { isDesktop } = useLayout();
@@ -61,28 +66,37 @@ export function ChatInput({
   const photoRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const plusWrapRef = useRef<HTMLDivElement>(null);
+  const toolsWrapRef = useRef<HTMLDivElement>(null);
 
   const [sendFlash, setSendFlash] = useState(false);
   const [actionColor, setActionColor] = useState<string>("#3b82f6");
   const [plusOpen, setPlusOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [kbOffset, setKbOffset] = useState(0);
   const [listening, setListening] = useState(false);
   const recRef = useRef<SpeechRecognitionLike | null>(null);
   const dictationBaseRef = useRef<string>("");
 
   useEffect(() => {
-    if (!plusOpen) return;
+    if (!plusOpen && !toolsOpen) return;
     const onDoc = (e: MouseEvent) => {
-      if (!plusWrapRef.current?.contains(e.target as Node)) setPlusOpen(false);
+      const target = e.target as Node;
+      if (!plusWrapRef.current?.contains(target)) setPlusOpen(false);
+      if (!toolsWrapRef.current?.contains(target)) setToolsOpen(false);
     };
-    const onEsc = (e: KeyboardEvent) => { if (e.key === "Escape") setPlusOpen(false); };
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setPlusOpen(false);
+        setToolsOpen(false);
+      }
+    };
     document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onEsc);
     return () => {
       document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onEsc);
     };
-  }, [plusOpen]);
+  }, [plusOpen, toolsOpen]);
 
 
 
@@ -137,6 +151,50 @@ export function ChatInput({
     setSendFlash(true);
     window.setTimeout(() => setSendFlash(false), 380);
     onSubmit();
+  };
+
+  const shortcutActions = [
+    {
+      label: "Search",
+      icon: Search,
+      prompt: "Search the web and cite sources for this: ",
+    },
+    {
+      label: "Reason",
+      icon: Lightbulb,
+      prompt: "Think step by step and solve this carefully: ",
+    },
+    {
+      label: "Create image",
+      icon: Sparkles,
+      prompt: "Create an image prompt for: ",
+    },
+    {
+      label: "Study",
+      icon: GraduationCap,
+      prompt: "Tutor me on this topic with examples and a short quiz: ",
+    },
+  ];
+
+  const toolActions: Array<{ id: ComposerToolId; label: string; icon: LucideIcon; prompt: string }> = [
+    { id: "web_search", label: "Search the web", icon: Search, prompt: "Search the web and cite sources for: " },
+    { id: "deep_research", label: "Deep research", icon: GraduationCap, prompt: "Research this deeply with sources and a structured report: " },
+    { id: "image", label: "Create an image", icon: ImageIcon, prompt: "Create an image of: " },
+    { id: "data_analysis", label: "Analyze data", icon: Brain, prompt: "Analyze this data and show the key findings: " },
+    { id: "study", label: "Study mode", icon: Lightbulb, prompt: "Tutor me on this step by step, then quiz me: " },
+    { id: "file_analysis", label: "Analyze files", icon: FileText, prompt: "Analyze the attached file and summarize the important details." },
+  ];
+
+  const applyShortcut = (prompt: string) => {
+    onPromptShortcut?.(prompt);
+    if (!value.trim()) onChange(prompt);
+    setToolsOpen(false);
+    ref.current?.focus();
+  };
+
+  const applyTool = (tool: ComposerToolId, prompt: string) => {
+    onToolSelect?.(tool);
+    applyShortcut(prompt);
   };
 
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -202,14 +260,14 @@ export function ChatInput({
       className="w-full px-3 sm:px-6 lg:px-8 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 transition-[padding] duration-150"
       style={isMobileLayout && kbOffset > 0 ? { paddingBottom: `${kbOffset + 8}px` } : undefined}
     >
-      <div className="mx-auto max-w-4xl [[data-sidebar=closed]_&]:max-w-5xl">
+      <div className="mx-auto max-w-3xl [[data-sidebar=closed]_&]:max-w-4xl">
         <div
           style={
             sendFlash
               ? ({ boxShadow: `0 0 0 2px ${actionColor}33`, borderColor: `${actionColor}99` } as React.CSSProperties)
               : undefined
           }
-          className={`rounded-3xl border bg-card shadow-lg transition-all duration-200 focus-within:border-muted-foreground/50 ${
+          className={`rounded-[28px] border bg-card shadow-[0_12px_32px_-20px_rgba(0,0,0,0.45),0_1px_2px_rgba(0,0,0,0.08)] transition-all duration-200 focus-within:border-muted-foreground/50 ${
             sendFlash
               ? "scale-[0.995]"
               : isStreaming
@@ -363,7 +421,7 @@ export function ChatInput({
               value={value}
               onChange={(e) => onChange(e.target.value)}
               onKeyDown={handleKey}
-              placeholder={placeholder ?? "Ask Kova"}
+              placeholder={placeholder ?? "Message KovaGPT"}
               rows={1}
               spellCheck={false}
               autoComplete="off"
@@ -489,10 +547,88 @@ export function ChatInput({
               ) : null}
             </div>
           </div>
-          {mode && onModeChange && (
-            <div className="flex items-center px-2 pb-2 lg:hidden">
-              <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
+          <div className="flex items-center justify-between gap-2 px-2 pb-2">
+            <div className="relative flex items-center gap-1.5" ref={toolsWrapRef}>
+              <button
+                type="button"
+                onClick={() => setToolsOpen((value) => !value)}
+                className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[13px] font-medium transition ${
+                  toolsOpen
+                    ? "border-foreground/20 bg-accent text-foreground"
+                    : "border-border/70 bg-background/55 text-muted-foreground hover:bg-accent hover:text-foreground"
+                }`}
+                aria-label="Open tools"
+                aria-haspopup="menu"
+                aria-expanded={toolsOpen}
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span>Tools</span>
+              </button>
+              {toolsOpen && !isMobileLayout && (
+                <div
+                  role="menu"
+                  className="absolute bottom-10 left-0 z-50 w-64 rounded-2xl border border-border bg-popover p-1.5 shadow-2xl animate-in fade-in slide-in-from-bottom-1"
+                >
+                  {toolActions.map((tool) => {
+                    const Icon = tool.icon;
+                    return (
+                      <button
+                        key={tool.label}
+                        role="menuitem"
+                        type="button"
+                        onClick={() => applyTool(tool.id, tool.prompt)}
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent"
+                      >
+                        <Icon className="h-4 w-4 text-muted-foreground" />
+                        <span>{tool.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+              {shortcutActions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <button
+                    key={action.label}
+                    type="button"
+                    onClick={() => applyShortcut(action.prompt)}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border/70 bg-background/55 px-2.5 text-[12.5px] font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+                    aria-label={`${action.label} shortcut`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">{action.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {mode && onModeChange && (
+              <div className="flex items-center lg:hidden">
+                <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
+              </div>
+            )}
+          </div>
+          {isMobileLayout && (
+            <MobileBottomSheet open={toolsOpen} onOpenChange={setToolsOpen} title="Tools" ariaLabel="Choose a tool">
+              <div className="flex flex-col gap-1 p-1">
+                {toolActions.map((tool) => {
+                  const Icon = tool.icon;
+                  return (
+                    <button
+                      key={tool.label}
+                      type="button"
+                      onClick={() => applyTool(tool.id, tool.prompt)}
+                      className="flex min-h-14 w-full items-center gap-3 rounded-xl px-4 py-4 text-left text-base hover:bg-accent active:bg-accent"
+                    >
+                      <Icon className="h-5 w-5 text-muted-foreground" />
+                      <span>{tool.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </MobileBottomSheet>
           )}
         </div>
       </div>

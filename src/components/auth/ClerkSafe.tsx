@@ -1,4 +1,4 @@
-// Auth shim backed by Lovable Cloud (Supabase) auth.
+// Auth shim backed by Supabase auth.
 //
 // Historically this file wrapped Clerk; consumers across the app import
 // `useUser`, `SignInButton`, `SignUpButton`, `UserButton`, `SignedIn`,

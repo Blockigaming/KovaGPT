@@ -16,8 +16,8 @@ import {
 const STORAGE_KEY = "kova-connected-apps-v1";
 const GOOGLE_IDS = new Set(["google", "gmail", "google-drive", "google-calendar"]);
 
-// Apps that are actually wired up end-to-end today. Everything else is
-// surfaced as "Coming soon" until its backend integration ships.
+// Apps that are actually wired up end-to-end today. Non-working connectors are
+// intentionally hidden so navigation never exposes fake or decorative controls.
 const WORKING_IDS = new Set<string>([
   "google",
   "gmail",
@@ -105,11 +105,7 @@ function AppLogo({ domain, label }: { domain: string; label: string }) {
 }
 
 
-function StatusBadge({ state, configured, comingSoon }: { state: ConnState; configured: boolean; comingSoon?: boolean }) {
-  if (comingSoon) {
-    // The "Coming soon" button on the card already communicates status; avoid duplicating it as a badge.
-    return null;
-  }
+function StatusBadge({ state, configured }: { state: ConnState; configured: boolean }) {
   if (!configured) {
     return (
       <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
@@ -146,7 +142,6 @@ function AppCard({
   state,
   configured,
   isSignedIn,
-  comingSoon,
   onConnect,
   onDisconnect,
   onRetry,
@@ -155,7 +150,6 @@ function AppCard({
   state: ConnState;
   configured: boolean;
   isSignedIn: boolean;
-  comingSoon: boolean;
   onConnect: () => void;
   onDisconnect: () => void;
   onRetry: () => void;
@@ -164,17 +158,7 @@ function AppCard({
     "text-xs px-3 py-1.5 rounded-full transition active:scale-[0.97] shrink-0 font-medium";
 
   let action: React.ReactNode;
-  if (comingSoon) {
-    action = (
-      <button
-        disabled
-        title="This integration is coming soon."
-        className={`${baseBtn} border border-border text-muted-foreground cursor-not-allowed opacity-70`}
-      >
-        Coming soon
-      </button>
-    );
-  } else if (!configured) {
+  if (!configured) {
     action = (
       <button
         disabled
@@ -228,7 +212,7 @@ function AppCard({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="text-sm font-semibold truncate">{item.label}</div>
-          <StatusBadge state={state} configured={configured} comingSoon={comingSoon} />
+          <StatusBadge state={state} configured={configured} />
         </div>
         <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{item.description}</div>
       </div>
@@ -349,7 +333,7 @@ function AppsPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return CONNECTOR_CATALOG.filter((c) => {
+    return CONNECTOR_CATALOG.filter((c) => WORKING_IDS.has(c.id)).filter((c) => {
       if (category !== "All" && c.category !== category) return false;
       if (!q) return true;
       return (
@@ -386,7 +370,6 @@ function AppsPage() {
           state={stateOf(item.id)}
           configured={CONFIGURED_CONNECTORS.has(item.id)}
           isSignedIn={!!isSignedIn}
-          comingSoon={!WORKING_IDS.has(item.id)}
           onConnect={() => handleConnect(item)}
           onDisconnect={() => handleDisconnect(item)}
           onRetry={() => handleConnect(item)}
@@ -417,8 +400,6 @@ function AppsPage() {
     );
   };
 
-  // "All apps" is only revealed when the user searches or picks a specific category.
-  // Otherwise we intentionally show Connected + Recommended only.
   const showAllApps = query.trim().length > 0 || category !== "All";
 
   return (
@@ -508,7 +489,7 @@ function AppsPage() {
             {showAllApps ? (
               <Section
                 title={category === "All" ? "All apps" : category}
-                subtitle="Apps marked Setup needed will be available once their provider credentials are configured."
+                subtitle="Connected Google apps are available to the assistant in chat."
                 icon={<Link2 className="w-3.5 h-3.5 text-foreground/60" />}
                 items={otherList}
               />
