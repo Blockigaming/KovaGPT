@@ -41,9 +41,9 @@
 :root {
   --radius: 0.75rem;
   /* KovaGPT light theme - ChatGPT-like restrained neutrals */
-  --background: oklch(0.985 0.001 250);
-  --foreground: oklch(0.20 0 0);
-  --card: oklch(0.99 0.001 250);
+  --background: oklch(0.982 0 0);
+  --foreground: oklch(0.19 0 0);
+  --card: oklch(1 0 0);
   --card-foreground: oklch(0.20 0 0);
   --popover: oklch(0.995 0.001 250);
   --popover-foreground: oklch(0.20 0 0);
@@ -61,11 +61,11 @@
   --input: oklch(0 0 0 / 10%);
   --ring: oklch(0.45 0 0);
 
-  --sidebar: var(--background);
+  --sidebar: oklch(0.955 0.002 250);
   --sidebar-foreground: oklch(0.24 0 0);
-  --sidebar-hover: oklch(0 0 0 / 5%);
-  --sidebar-active: oklch(0 0 0 / 8%);
-  --user-bubble: oklch(0.93 0.003 250);
+  --sidebar-hover: oklch(0 0 0 / 6%);
+  --sidebar-active: oklch(0 0 0 / 9%);
+  --user-bubble: oklch(0.925 0.002 250);
 
 
   --scrollbar-thumb: oklch(0 0 0 / 14%);
@@ -91,9 +91,9 @@
 
 .dark {
   /* KovaGPT dark theme - ChatGPT-like restrained charcoal */
-  --background: oklch(0.185 0.003 250);
+  --background: oklch(0.17 0.002 250);
   --foreground: oklch(0.965 0 0);
-  --card: oklch(0.225 0.003 250);
+  --card: oklch(0.215 0.003 250);
   --card-foreground: oklch(0.965 0 0);
   --popover: oklch(0.235 0.003 250);
   --popover-foreground: oklch(0.965 0 0);
@@ -111,11 +111,11 @@
   --input: oklch(1 0 0 / 10%);
   --ring: oklch(0.65 0.01 250);
 
-  --sidebar: var(--background);
+  --sidebar: oklch(0.205 0.003 250);
   --sidebar-foreground: oklch(0.92 0 0);
-  --sidebar-hover: oklch(1 0 0 / 5%);
-  --sidebar-active: oklch(1 0 0 / 9%);
-  --user-bubble: oklch(0.29 0.003 250);
+  --sidebar-hover: oklch(1 0 0 / 6%);
+  --sidebar-active: oklch(1 0 0 / 10%);
+  --user-bubble: oklch(0.275 0.003 250);
 
   --scrollbar-thumb: oklch(1 0 0 / 12%);
   --scrollbar-thumb-hover: oklch(1 0 0 / 22%);
@@ -143,8 +143,8 @@
     border-color: var(--color-border);
   }
   html {
-    /* ~5% smaller base type so more content fits per screen. */
-    font-size: 15.2px;
+    /* ChatGPT-like density: compact, readable, and desktop-friendly. */
+    font-size: 15.5px;
   }
   html, body, #root {
     height: 100%;
@@ -640,3 +640,8 @@ html, body { overscroll-behavior-y: none; }
   .kova-skeleton::after { animation: none !important; }
   .hover-elevate:hover { transform: none; }
 }
+
+
+/* ChatGPT-like utility: hide horizontal starter-card scrollbars on mobile. */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

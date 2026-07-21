@@ -10,7 +10,7 @@ import { useTier } from "@/hooks/useTier";
 import type { Conversation } from "@/lib/chat-store";
 
 
-const SIDEBAR_WIDTH = 264;
+const SIDEBAR_WIDTH = 260;
 
 
 export function Sidebar({
@@ -84,17 +84,17 @@ export function Sidebar({
 
       <aside
         style={{ width: open ? SIDEBAR_WIDTH : 0 }}
-        className="relative shrink-0 overflow-hidden transition-[width] duration-150 bg-sidebar text-sidebar-foreground flex flex-col max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-40 max-lg:h-[100dvh] max-lg:shadow-2xl max-lg:rounded-r-2xl lg:border-r lg:border-border/70"
+        className="relative shrink-0 overflow-hidden transition-[width] duration-150 bg-sidebar text-sidebar-foreground flex flex-col max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-40 max-lg:h-[100dvh] max-lg:shadow-2xl max-lg:rounded-r-2xl lg:border-r lg:border-border/60"
       >
         <div style={{ width: SIDEBAR_WIDTH }} className="flex flex-col h-full">
 
           {/* Brand row */}
-          <div className="relative z-20 flex items-center gap-2 px-3 sm:px-4 pt-4 pb-3 bg-sidebar">
+          <div className="relative z-20 flex items-center gap-2 px-3 sm:px-3 pt-3 pb-2 bg-sidebar">
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <span className="inline-flex shrink-0 rounded-full dark:bg-black dark:p-[2px] dark:ring-1 dark:ring-black">
                 <NovaLogo className="w-7 h-7" animated />
               </span>
-              <span className="font-display font-semibold tracking-tight text-[18px] truncate">
+              <span className="font-display font-semibold tracking-tight text-[17px] truncate">
                 KovaGPT
               </span>
             </div>
@@ -142,11 +142,7 @@ export function Sidebar({
             </div>
           )}
 
-          {/* Workspace nav */}
-          <div className="px-5 pt-2 pb-2 text-[11px] font-semibold tracking-wider uppercase text-muted-foreground/80">
-            Workspace
-          </div>
-          <div className="px-3 flex flex-col gap-0.5">
+          <div className="px-3 pt-2 flex flex-col gap-1">
             <button
               onClick={onNew}
               className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] hover:bg-sidebar-hover transition active:scale-[0.98]"
@@ -158,6 +154,11 @@ export function Sidebar({
               <ActiveBar on={isOn("/library")} />
               <FolderOpen className="w-[18px] h-[18px] shrink-0" />
               <span className="truncate">Library</span>
+            </Link>
+            <Link to="/apps" className={navItemClass(isOn("/apps"))} title="Explore GPTs">
+              <ActiveBar on={isOn("/apps")} />
+              <Plug className="w-[18px] h-[18px] shrink-0" />
+              <span className="truncate">Explore GPTs</span>
             </Link>
             {/* Apps entry hidden for now (Step 6). */}
 
@@ -321,7 +322,7 @@ export function Sidebar({
                     </>
                   )}
                   <div className="px-5 pt-4 pb-1.5 text-[13px] font-medium text-muted-foreground">
-                    {showSignedIn ? "Recents" : "Chats"}
+                    Chats
                   </div>
                   {recents.length === 0 ? (
                     <div className="px-5 py-2 text-sm text-muted-foreground">No recent chats</div>
@@ -343,7 +344,7 @@ export function Sidebar({
                 className="flex-1 flex items-center justify-center gap-2 rounded-full bg-primary text-primary-foreground hover:opacity-90 px-4 py-2.5 text-sm font-medium transition active:scale-[0.98]"
               >
                 <MessageCircle className="w-4 h-4" />
-                <span>Chat</span>
+                <span>New chat</span>
               </button>
               <button
                 onClick={() => onOpenSettings("general")}

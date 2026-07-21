@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
-import { PanelLeft, Search, MessageSquareDashed, Check } from "lucide-react";
+import { PanelLeft, Search, MessageSquareDashed, Check, Sparkles, Globe2, Code2, GraduationCap, Image as ImageIcon, FileText, Mic } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { NovaLogo } from "@/components/NovaLogo";
 
@@ -261,8 +261,8 @@ function KovaGPT() {
   }, [settings.displayName, user]);
 
   const greeting = useMemo(() => {
-    if (!isLoaded) return "KovaGPT";
-    if (clerkEnabled && !isSignedIn) return "KovaGPT";
+    if (!isLoaded) return "What can I help with?";
+    if (clerkEnabled && !isSignedIn) return "What can I help with?";
     const name = firstName;
     const prompts = name
       ? [
@@ -273,11 +273,11 @@ function KovaGPT() {
           `Let's go, ${name}.`,
         ]
       : [
-          "Welcome back.",
-          "Hey there.",
+          "What can I help with?",
+          "How can I help you today?",
           "Ready when you are.",
-          "Let's begin.",
-          "Good to see you.",
+          "What are we working on?",
+          "Ask anything.",
         ];
     return prompts[Math.floor(Math.random() * prompts.length)];
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -667,6 +667,16 @@ function KovaGPT() {
     setIsStreaming(false);
   }, []);
 
+  const assistantCapabilities = [
+    { label: "Create image", icon: ImageIcon, prompt: "Create a detailed image prompt for: " },
+    { label: "Summarize text", icon: FileText, prompt: "Summarize this into clear bullet points: " },
+    { label: "Analyze data", icon: Sparkles, prompt: "Analyze this data and explain the key insights: " },
+    { label: "Write code", icon: Code2, prompt: "Help me write code for: " },
+    { label: "Learn", icon: GraduationCap, prompt: "Teach me this topic like a patient tutor: " },
+    { label: "Web research", icon: Globe2, prompt: "Research this online and cite sources: " },
+    { label: "Voice", icon: Mic, prompt: "Draft a spoken-friendly response about: " },
+  ];
+
   // Image generation removed; can be reintroduced when user explicitly asks.
 
   return (
@@ -773,13 +783,13 @@ function KovaGPT() {
         }}
       />
 
-      <main className="flex-1 flex flex-col min-w-0" data-sidebar={sidebarOpen ? "open" : "closed"}>
+      <main className="flex-1 flex flex-col min-w-0 bg-background" data-sidebar={sidebarOpen ? "open" : "closed"}>
         <MobileTopBar
           onOpenSidebar={() => setSidebarOpen(true)}
           onNewChat={newChat}
           title={active?.title}
         />
-        <header className="hidden lg:flex h-14 items-center px-4 relative gap-1 border-b border-border bg-background">
+        <header className="hidden lg:flex h-14 items-center px-4 relative gap-1 bg-background">
           {!sidebarOpen && (
             <div className="flex items-center gap-1 mr-2 shrink-0">
               <button
@@ -805,6 +815,10 @@ function KovaGPT() {
 
           {/* AI status: live indicator to the right of the KovaGPT mark while streaming */}
           <div className="flex items-center min-w-0 flex-1 relative">
+            <div className="mr-3 flex items-center gap-2 rounded-full px-2.5 py-1.5 text-sm font-semibold text-foreground hover:bg-accent transition">
+              <span>KovaGPT</span>
+              <span className="text-muted-foreground">⌄</span>
+            </div>
             <AIStatus
               streaming={isStreaming}
               message={active?.messages[active.messages.length - 1]}
@@ -906,27 +920,25 @@ function KovaGPT() {
                   onUploadLimit={() =>
                     setLimitDialog({ open: true, kind: "upload" })
                   }
-                  placeholder="Ask Kova"
+                  placeholder="Message KovaGPT"
+                  onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
                 />
 
-                {/* Evergreen, task-oriented starters tied to Kova's strongest modes. */}
-                <div className="mt-4 hidden lg:grid grid-cols-2 gap-2 max-w-2xl mx-auto">
-                  {[
-                    { label: "Summarize a file", hint: "Upload a PDF or doc for key points", prompt: "Summarize the attached file into the key points, decisions, and action items." },
-                    { label: "Research a topic", hint: "Get a briefing with sources", prompt: "Research this topic and give me a concise briefing with sources: " },
-                    { label: "Improve my writing", hint: "Clearer, tighter, on-tone", prompt: "Improve the clarity and tone of this text without changing its meaning:\n\n" },
-                    { label: "Debug my code", hint: "Explain the bug and fix it", prompt: "Here's my code and the error I'm seeing. Explain what's wrong and give a corrected version.\n\n" },
-                  ].map((p) => (
-                    <button
-                      key={p.label}
-                      type="button"
-                      onClick={() => setInput((v) => (v ? v : p.prompt))}
-                      className="text-left px-4 py-3 rounded-2xl border border-border/70 bg-card/40 backdrop-blur-sm hover:bg-accent hover:border-foreground/20 transition-colors"
-                    >
-                      <div className="text-[14px] font-medium text-foreground">{p.label}</div>
-                      <div className="text-[12.5px] text-muted-foreground mt-0.5">{p.hint}</div>
-                    </button>
-                  ))}
+                <div className="mt-5 hidden lg:flex flex-wrap items-center justify-center gap-2 max-w-3xl mx-auto">
+                  {assistantCapabilities.map((p) => {
+                    const Icon = p.icon;
+                    return (
+                      <button
+                        key={p.label}
+                        type="button"
+                        onClick={() => setInput((v) => (v.trim() ? v : p.prompt))}
+                        className="inline-flex h-10 items-center gap-2 rounded-full border border-border/70 bg-card/55 px-3.5 text-[14px] font-medium text-foreground shadow-sm hover:bg-accent hover:border-foreground/20"
+                      >
+                        <Icon className="h-4 w-4 text-muted-foreground" />
+                        <span>{p.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
                 <div className="mt-3 lg:hidden flex gap-2 overflow-x-auto -mx-4 px-4 snap-x snap-mandatory no-scrollbar">
                   {[
@@ -1053,7 +1065,8 @@ function KovaGPT() {
                 onUploadLimit={() =>
                   setLimitDialog({ open: true, kind: "upload" })
                 }
-                placeholder="Ask Kova"
+                placeholder="Message KovaGPT"
+                onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
               />
               <div className="hidden lg:flex justify-center gap-3 text-[11px] text-muted-foreground/70 mt-2 select-none">
                 <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">Enter</kbd> to send</span>

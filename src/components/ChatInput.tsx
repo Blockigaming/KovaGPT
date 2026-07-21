@@ -1,4 +1,4 @@
-import { ArrowUp, Square, Plus, X, Mic, Image as ImageIcon, FileText, Camera, Puzzle } from "lucide-react";
+import { ArrowUp, Square, Plus, X, Mic, Image as ImageIcon, FileText, Camera, Puzzle, Search, Lightbulb, Sparkles, GraduationCap } from "lucide-react";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { useLayout } from "@/hooks/use-mobile";
 
@@ -37,6 +37,7 @@ export function ChatInput({
   userTier = "free",
   onUploadLimit,
   placeholder,
+  onPromptShortcut,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -51,6 +52,7 @@ export function ChatInput({
   /** Called when the user hits their daily upload quota. */
   onUploadLimit?: () => void;
   placeholder?: string;
+  onPromptShortcut?: (prompt: string) => void;
 }) {
 
   const { isDesktop } = useLayout();
@@ -139,6 +141,35 @@ export function ChatInput({
     onSubmit();
   };
 
+  const shortcutActions = [
+    {
+      label: "Search",
+      icon: Search,
+      prompt: "Search the web and cite sources for this: ",
+    },
+    {
+      label: "Reason",
+      icon: Lightbulb,
+      prompt: "Think step by step and solve this carefully: ",
+    },
+    {
+      label: "Create image",
+      icon: Sparkles,
+      prompt: "Create an image prompt for: ",
+    },
+    {
+      label: "Study",
+      icon: GraduationCap,
+      prompt: "Tutor me on this topic with examples and a short quiz: ",
+    },
+  ];
+
+  const applyShortcut = (prompt: string) => {
+    onPromptShortcut?.(prompt);
+    if (!value.trim()) onChange(prompt);
+    ref.current?.focus();
+  };
+
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -202,14 +233,14 @@ export function ChatInput({
       className="w-full px-3 sm:px-6 lg:px-8 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 transition-[padding] duration-150"
       style={isMobileLayout && kbOffset > 0 ? { paddingBottom: `${kbOffset + 8}px` } : undefined}
     >
-      <div className="mx-auto max-w-4xl [[data-sidebar=closed]_&]:max-w-5xl">
+      <div className="mx-auto max-w-3xl [[data-sidebar=closed]_&]:max-w-4xl">
         <div
           style={
             sendFlash
               ? ({ boxShadow: `0 0 0 2px ${actionColor}33`, borderColor: `${actionColor}99` } as React.CSSProperties)
               : undefined
           }
-          className={`rounded-3xl border bg-card shadow-lg transition-all duration-200 focus-within:border-muted-foreground/50 ${
+          className={`rounded-[28px] border bg-card shadow-[0_12px_32px_-20px_rgba(0,0,0,0.45),0_1px_2px_rgba(0,0,0,0.08)] transition-all duration-200 focus-within:border-muted-foreground/50 ${
             sendFlash
               ? "scale-[0.995]"
               : isStreaming
@@ -363,7 +394,7 @@ export function ChatInput({
               value={value}
               onChange={(e) => onChange(e.target.value)}
               onKeyDown={handleKey}
-              placeholder={placeholder ?? "Ask Kova"}
+              placeholder={placeholder ?? "Message KovaGPT"}
               rows={1}
               spellCheck={false}
               autoComplete="off"
@@ -489,11 +520,30 @@ export function ChatInput({
               ) : null}
             </div>
           </div>
-          {mode && onModeChange && (
-            <div className="flex items-center px-2 pb-2 lg:hidden">
-              <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
+          <div className="flex items-center justify-between gap-2 px-2 pb-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+              {shortcutActions.map((action) => {
+                const Icon = action.icon;
+                return (
+                  <button
+                    key={action.label}
+                    type="button"
+                    onClick={() => applyShortcut(action.prompt)}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border/70 bg-background/55 px-2.5 text-[12.5px] font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+                    aria-label={`${action.label} shortcut`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">{action.label}</span>
+                  </button>
+                );
+              })}
             </div>
-          )}
+            {mode && onModeChange && (
+              <div className="flex items-center lg:hidden">
+                <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
