@@ -159,3 +159,31 @@
 - Remaining failures: clean install, dev server, build, typecheck, lint, Playwright discovery, browser tests, visual tests, accessibility tests.
 - Next non-PASS row: Lovable dependency/runtime removal remains blocked from full verification by the engineering environment dependency gate.
 - Exact next command after external service unblock: `npm ci --ignore-scripts --no-audit --no-fund`.
+
+
+## 2026-07-21 — GitHub synchronization gate inspection
+
+- Starting commit: `b6d1e7f`.
+- Ending commit: pending at time of log entry.
+- Matrix rows changed: added `GitHub synchronization and Lovable recovery` as `BLOCKED — EXTERNAL CREDENTIAL`.
+- Files changed: `docs/kova-final-completion-matrix.md`, `docs/kova-execution-log.md`.
+- Migrations added: none.
+- RLS changes: none.
+- Commands run:
+  - `git status --short && git branch --show-current && git log --oneline -20 && git remote -v && git config --get remote.origin.url || true` → working tree clean at start, branch `work`, latest commit `b6d1e7f`, no configured git remote/origin output.
+  - `gh auth status || true` → `gh: command not found`.
+  - `gh repo view || true` → `gh: command not found`.
+  - `gh repo list --limit 100 || true` → `gh: command not found`.
+  - `find .. -name AGENTS.md -print` → no AGENTS.md returned.
+  - `find . -maxdepth 3 (README/CONTRIBUTING/AGENTS/.github)` → no repository instruction files or `.github` workflow directory returned before package/config inspection.
+  - `git remote -v || true` → no remotes configured.
+  - `git config --get remote.origin.url || true` → no origin URL configured.
+  - `sed -n '1,220p' package.json` → inspected package scripts/dependencies.
+  - `find . -maxdepth 3 (package locks/env/build config)` → found `package-lock.json`, `bunfig.toml`, `.env.example`, `vite.config.ts`, and `package.json`.
+  - `rg -n "lovable|Lovable|LOVABLE|@lovable|@Lovable|github|GitHub|deploy|health|SENTRY|VERCEL|NETLIFY" ... | head -200` → inspected deployment/GitHub/Lovable references; no remote identity found.
+- Browser checks: not possible because the GitHub/Lovable source-of-truth gate is blocked and the local dependency install gate remains blocked.
+- Failure-path checks: confirmed absent git remote/origin and missing `gh` executable.
+- Screenshot locations: none.
+- Remaining failures: cannot identify repository, push commits, create real GitHub PR, inspect Actions, confirm Lovable branch/commit, inspect Lovable logs, or reproduce the deployed internal server error against a known commit.
+- Next non-PASS row: GitHub synchronization and Lovable recovery.
+- Exact next command after external credential/config unblock: `git remote add origin <KOVAGPT_REPO_URL> && git fetch --all --tags`.
