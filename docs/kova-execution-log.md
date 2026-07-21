@@ -187,3 +187,35 @@
 - Remaining failures: cannot identify repository, push commits, create real GitHub PR, inspect Actions, confirm Lovable branch/commit, inspect Lovable logs, or reproduce the deployed internal server error against a known commit.
 - Next non-PASS row: GitHub synchronization and Lovable recovery.
 - Exact next command after external credential/config unblock: `git remote add origin <KOVAGPT_REPO_URL> && git fetch --all --tags`.
+
+## 2026-07-21 — Lovable internal-server-error recovery attempt
+
+- Starting commit: `ade6365`.
+- Ending commit: pending at time of log entry.
+- Matrix rows changed: no status promotions; recovery remains blocked on unavailable Lovable/GitHub access and local dependency installation remains blocked by npm proxy policy.
+- Files changed: `docs/kova-execution-log.md`.
+- Migrations added: none.
+- RLS changes: none.
+- Commands run:
+  - `git status --short && git branch --show-current && git log --oneline -20 && git remote -v && git config --get remote.origin.url || true` → branch `work`, current commit `ade6365`, working tree clean before this log entry, and no configured git remote/origin output.
+  - `gh auth status || true` → `/bin/bash: line 3: gh: command not found`.
+  - `gh repo view || true` → `/bin/bash: line 4: gh: command not found`.
+  - `gh repo list --limit 100 || true` → `/bin/bash: line 5: gh: command not found`.
+  - `find .. -name AGENTS.md -print` → no AGENTS.md returned.
+  - `node -e "const p=require('./package.json'); console.log(p.scripts);"` → inspected package scripts; no `format:check`, `test:api`, `test:integration`, or `test:a11y` scripts yet.
+  - `npm ci --ignore-scripts --no-audit --no-fund` → failed with `E403 403 Forbidden - GET https://registry.npmjs.org/@playwright%2ftest`.
+  - `env | cut -d= -f1 | sort | rg -n 'LOVABLE|SUPABASE|OPENAI|FIRECRAWL|GITHUB|GH_|VERCEL|NETLIFY|URL|PROJECT|TOKEN|KEY|SECRET' || true` → only safe environment variable names were inspected; no Lovable preview URL, GitHub token, or Supabase runtime secret names were available.
+  - `find . -maxdepth 2 -type f (...)` → inspected available project/config files and found `.lovable/project.json`, package/config files, and Supabase config.
+  - `sed -n '1,200p' .lovable/project.json` → Lovable template metadata present but no preview URL, deployment branch, or active commit.
+  - `sed -n '1,220p' playwright.config.ts` → Playwright is configured for localhost/sandbox URL but cannot run without dependencies.
+  - `sed -n '1,220p' supabase/config.toml` → Supabase project id metadata present; no credentials are available for production database log or migration inspection.
+  - `sed -n '1,200p' vite.config.ts` → public Vite plugin stack inspected.
+  - `npm cache ls @playwright/test || true` → only request-cache metadata found, not an installable dependency tree.
+  - `npm config get registry`, `npm config get proxy`, `npm config get https-proxy`, `npm config get http-proxy` → registry is public npm; proxy settings route through `http://proxy:8080`.
+  - `curl -I https://registry.npmjs.org/@playwright%2ftest || true` → failed with `CONNECT tunnel failed, response 403`.
+- Browser checks: cannot reproduce the Lovable preview internal server error from this environment because no Lovable preview URL, deployment logs, active Lovable commit, GitHub remote, GitHub CLI, GitHub token, or Lovable deployment credential is available; local browser startup is also blocked because dependencies cannot be installed and Vite is missing.
+- Failure-path checks: confirmed missing GitHub CLI, missing git remote/origin, missing local build/test binaries, unavailable dependency installation, and absent Lovable preview/deployment metadata in the checked files/environment.
+- Screenshot locations: none.
+- Remaining failures: cannot identify the exact Lovable failing request or stack trace; cannot confirm Lovable active commit; cannot push or create a real GitHub PR; cannot inspect remote CI; cannot install dependencies; cannot start dev server; cannot run build/typecheck/lint/Playwright/browser/visual/accessibility checks.
+- Next non-PASS row: GitHub synchronization and Lovable recovery.
+- Exact next command after external credential/config unblock: `git remote add origin <KOVAGPT_REPO_URL> && git fetch --all --tags`.
