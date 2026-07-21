@@ -1,0 +1,69 @@
+name: KovaGPT CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - work
+      - "codex/**"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Formatting
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: API tests
+        run: npm run test:api
+
+      - name: Integration tests
+        run: npm run test:integration
+
+      - name: Production build
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser tests
+        run: npm run test:e2e
+
+      - name: Accessibility checks
+        run: npm run test:a11y
+
+      - name: Visual checks
+        run: npm run test:visual
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            test-results
+            playwright-report
+          if-no-files-found: ignore

@@ -219,3 +219,70 @@
 - Remaining failures: cannot identify the exact Lovable failing request or stack trace; cannot confirm Lovable active commit; cannot push or create a real GitHub PR; cannot inspect remote CI; cannot install dependencies; cannot start dev server; cannot run build/typecheck/lint/Playwright/browser/visual/accessibility checks.
 - Next non-PASS row: GitHub synchronization and Lovable recovery.
 - Exact next command after external credential/config unblock: `git remote add origin <KOVAGPT_REPO_URL> && git fetch --all --tags`.
+
+
+## 2026-07-21 — Source-of-truth reinspection and engineering script recovery
+
+- Starting commit: `c372ccf`.
+- Ending commit: `bf8ee3c`.
+- Matrix rows changed: Engineering environment evidence updated; Health and diagnostics row added as `IN PROGRESS`; GitHub/Lovable recovery remains blocked.
+- Files changed: `.gitignore`, `.github/workflows/ci.yml`, `package.json`, `playwright.config.ts`, `src/lib/config/diagnostics.server.ts`, `src/routes/api/health.ts`, `tests/api/health-route.test.mjs`, `tests/integration/recovery-surface.test.mjs`, `tests/a11y/root-accessibility.test.mjs`, `tests/visual/playwright-viewports.test.mjs`, `docs/kova-final-completion-matrix.md`, `docs/kova-execution-log.md`.
+- Migrations added: none.
+- RLS changes: none.
+- Commands run:
+  - `pwd` → `/workspace/kovagpt-790c8a3a`.
+  - `git status --short` → clean before edits.
+  - `git branch --show-current` → `work`.
+  - `git log --oneline -20` → latest commit was `c372ccf Replace Lovable gateway with direct provider adapters; add AI provider, search, deep-research, UI tools, and remove private deps`.
+  - `git remote -v` and `git config --get remote.origin.url || true` → no configured remote/origin output.
+  - `git worktree list` → `/workspace/kovagpt-790c8a3a  c372ccf [work]`.
+  - `node --version` → `v24.15.0`.
+  - `npm --version` → `11.4.2`.
+  - `cat package.json` → inspected package scripts and dependencies.
+  - `find . -maxdepth 3 -name AGENTS.md -o -name README.md -o -name CONTRIBUTING.md` → no repo instruction files returned.
+  - `find .github -maxdepth 3 -type f 2>/dev/null || true` → no workflow files existed before this checkpoint.
+  - `ls -la package-lock.json bun.lock bun.lockb pnpm-lock.yaml yarn.lock 2>/dev/null || true` → only `package-lock.json` exists, so npm remains authoritative.
+  - `git log --oneline -- package.json package-lock.json bun.lock bunfig.toml` → inspected package/lockfile history.
+  - `npm config get registry`, `npm config get proxy`, `npm config get https-proxy`, `npm config get http-proxy` → registry is public npm, proxy/https-proxy point at `http://proxy:8080`.
+  - `npm ci --ignore-scripts --no-audit --no-fund` → failed with `E403 403 Forbidden - GET https://registry.npmjs.org/@playwright%2ftest`.
+  - `command -v gh || true` and `gh auth status || true` → `gh` is unavailable.
+  - `git check-ignore -v .env || true` → after `.gitignore` repair, `.env` is ignored by `.gitignore`.
+  - `git log --all --oneline -- .env` → `.env` exists in prior history; current tree removes it from tracking, but repository-history remediation may be needed if any historical secret values existed. Secret values were not printed.
+  - `rg -n "@lovable\.dev|@Lovable\.dev|LOVABLE_API_KEY|lovable\.dev|Lovable\.dev" ...` → no forbidden runtime/private dependency matches outside docs/tests exclusions.
+  - `npm test` → passed 16 unit tests.
+  - `npm run test:api` → passed 2 API/static health tests.
+  - `npm run test:integration` → passed 2 integration/static recovery tests.
+  - `npm run test:a11y` → passed 1 static accessibility shell test.
+  - `npm run test:visual` → passed 1 static Playwright viewport coverage test.
+  - `npm run format:check` → failed with repository-wide Prettier issues in 156 files; only touched files were formatted in this checkpoint to avoid unreviewed mass formatting.
+  - `npm run lint` → failed because `@eslint/js` is not installed due the blocked dependency tree.
+  - `npm run typecheck` → failed because `vite/client` type definitions are unavailable due the blocked dependency tree.
+  - `npm run build` → failed because `vite` is unavailable due the blocked dependency tree.
+  - `npm run test:e2e` → failed because `playwright` is unavailable due the blocked dependency tree.
+  - `prettier --write package.json playwright.config.ts src/lib/config/diagnostics.server.ts src/routes/api/health.ts tests/api/health-route.test.mjs tests/integration/recovery-surface.test.mjs tests/a11y/root-accessibility.test.mjs tests/visual/playwright-viewports.test.mjs .github/workflows/ci.yml` → formatted touched files.
+  - `git diff --check` → passed.
+- Browser checks: still not possible because no Lovable preview access is available and local dependencies cannot be installed.
+- Failure-path checks: safe health diagnostics intentionally reports missing variable names/booleans only and imports no Supabase/OpenAI clients, so missing optional provider keys cannot crash that endpoint.
+- Screenshot locations: none.
+- Remaining failures: no git remote/origin, no GitHub CLI, cannot push or create a real PR, cannot inspect Lovable active commit/logs, cannot install dependencies, cannot run full formatting/lint/typecheck/build/e2e/browser/visual/a11y gates.
+- Next non-PASS row: GitHub synchronization and Lovable recovery.
+- Exact next command after external credential/config unblock: `git remote add origin <KOVAGPT_REPO_URL> && git fetch --all --tags`.
+
+
+## 2026-07-21 — Post-commit push attempt for health/CI checkpoint
+
+- Starting commit: `bf8ee3c`.
+- Ending commit: pending at time of log entry.
+- Matrix rows changed: none.
+- Files changed: `docs/kova-execution-log.md`.
+- Migrations added: none.
+- RLS changes: none.
+- Commands run:
+  - `git push` → failed with `fatal: No configured push destination.`
+  - `git status --short` → clean after the push attempt.
+- Browser checks: still blocked by missing Lovable preview access and unavailable local dependency installation.
+- Failure-path checks: confirmed the source-of-truth blocker remains after the health/CI checkpoint commit.
+- Screenshot locations: none.
+- Remaining failures: no git remote/origin; cannot push, create a real PR, inspect CI, or verify Lovable deployment state.
+- Next non-PASS row: GitHub synchronization and Lovable recovery.
+- Exact next command after external credential/config unblock: `git remote add origin <KOVAGPT_REPO_URL> && git fetch --all --tags`.
