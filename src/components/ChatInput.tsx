@@ -44,12 +44,26 @@ import { ResponsiveModelSelector as ModelSelector } from "@/components/Responsiv
 import type { ModeId, Tier } from "@/lib/modes";
 
 export type PendingAttachment = {
-  kind: "image";
+  kind: "image" | "library_file";
   dataUrl: string;
   name: string;
   size?: number;
   status?: "selected" | "uploading" | "complete" | "failed";
   error?: string;
+  libraryItemId?: string;
+  fileType?: string | null;
+  sourceProject?: string | null;
+  createdAt?: string | null;
+};
+
+export type RecentLibraryFile = {
+  id: string;
+  title: string;
+  fileName?: string | null;
+  fileType?: string | null;
+  fileSize?: number | null;
+  createdAt?: string | null;
+  projectName?: string | null;
 };
 export type ComposerToolId =
   | "web_search"
@@ -79,6 +93,10 @@ export function ChatInput({
   placeholder,
   onPromptShortcut,
   onToolSelect,
+  recentLibraryFiles = [],
+  recentLibraryLoading = false,
+  recentLibraryError = null,
+  onRecentLibraryRetry,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -95,6 +113,10 @@ export function ChatInput({
   placeholder?: string;
   onPromptShortcut?: (prompt: string) => void;
   onToolSelect?: (tool: ComposerToolId) => void;
+  recentLibraryFiles?: RecentLibraryFile[];
+  recentLibraryLoading?: boolean;
+  recentLibraryError?: string | null;
+  onRecentLibraryRetry?: () => void;
 }) {
   const { isDesktop } = useLayout();
   const isMobileLayout = !isDesktop;
@@ -117,6 +139,7 @@ export function ChatInput({
   const submittingRef = useRef(false);
   const composingRef = useRef(false);
   const [uploadAnnouncement, setUploadAnnouncement] = useState("");
+  const [recentQuery, setRecentQuery] = useState("");
 
   useEffect(() => {
     if (!plusOpen && !toolsOpen) return;
@@ -415,6 +438,111 @@ export function ChatInput({
     if (e.dataTransfer.types.includes("Files")) e.preventDefault();
   };
 
+  const attachLibraryFile = (item: RecentLibraryFile) => {
+    const name = item.fileName || item.title;
+    const duplicate = attachments.some((a) => a.libraryItemId === item.id);
+    if (duplicate) {
+      setUploadAnnouncement(`${name} is already attached`);
+      toast.message(`${name} is already attached.`);
+      return;
+    }
+    onAttachmentsChange([
+      ...attachments,
+      {
+        kind: "library_file",
+        dataUrl: "",
+        name,
+        size: item.fileSize ?? undefined,
+        status: "complete",
+        libraryItemId: item.id,
+        fileType: item.fileType ?? null,
+        sourceProject: item.projectName ?? null,
+        createdAt: item.createdAt ?? null,
+      },
+    ]);
+    setPlusOpen(false);
+    setUploadAnnouncement(`${name} attached from Library`);
+    ref.current?.focus();
+  };
+
+  const visibleRecentLibraryFiles = recentLibraryFiles
+    .filter((item) => {
+      const q = recentQuery.trim().toLowerCase();
+      if (!q) return true;
+      return (
+        (item.fileName || item.title).toLowerCase().includes(q) ||
+        (item.fileType ?? "").toLowerCase().includes(q) ||
+        (item.projectName ?? "").toLowerCase().includes(q)
+      );
+    })
+    .slice(0, 8);
+
+  const renderRecentLibraryFiles = () => (
+    <div className="mt-1 border-t border-border/70 pt-1" aria-label="Recent Library files">
+      <div className="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        Recent Library files
+      </div>
+      {recentLibraryFiles.length > 4 ? (
+        <label className="mx-2 mb-1 block">
+          <span className="sr-only">Search recent Library files</span>
+          <input
+            value={recentQuery}
+            onChange={(event) => setRecentQuery(event.target.value)}
+            placeholder="Search files"
+            className="h-10 w-full rounded-[var(--kova-radius-input)] border border-border bg-[var(--surface-input)] px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </label>
+      ) : null}
+      {recentLibraryLoading ? (
+        <div className="px-3 py-3 text-sm text-muted-foreground">Loading recent files…</div>
+      ) : recentLibraryError ? (
+        <div className="px-3 py-2 text-sm text-muted-foreground">
+          <div>{recentLibraryError}</div>
+          {onRecentLibraryRetry ? (
+            <button
+              type="button"
+              className="mt-1 text-xs font-medium text-foreground underline"
+              onClick={onRecentLibraryRetry}
+            >
+              Retry
+            </button>
+          ) : null}
+        </div>
+      ) : visibleRecentLibraryFiles.length === 0 ? (
+        <div className="px-3 py-3 text-sm text-muted-foreground">No reusable files yet.</div>
+      ) : (
+        <div className="max-h-64 overflow-y-auto p-1">
+          {visibleRecentLibraryFiles.map((item) => {
+            const name = item.fileName || item.title;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="menuitem"
+                onClick={() => attachLibraryFile(item)}
+                className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">{name}</span>
+                  <span className="block truncate text-[11px] text-muted-foreground">
+                    {[
+                      item.fileType || "Library file",
+                      item.projectName,
+                      item.createdAt ? new Date(item.createdAt).toLocaleDateString() : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div
       className="w-full px-3 sm:px-6 lg:px-8 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 transition-[padding] duration-150"
@@ -448,7 +576,12 @@ export function ChatInput({
                   key={`${a.name}:${a.size ?? i}:${i}`}
                   className="relative min-h-16 w-20 overflow-hidden rounded-xl border border-border bg-muted/30"
                 >
-                  {a.dataUrl ? (
+                  {a.kind === "library_file" ? (
+                    <div className="flex h-16 w-full flex-col items-center justify-center gap-1 text-muted-foreground">
+                      <FileText className="h-5 w-5" />
+                      <span className="text-[9px] uppercase">Library</span>
+                    </div>
+                  ) : a.dataUrl ? (
                     <img
                       src={a.dataUrl}
                       alt={`Attachment preview: ${a.name}`}
@@ -466,6 +599,11 @@ export function ChatInput({
                   <div className="truncate px-1.5 pb-1 text-[10px] text-muted-foreground">
                     {a.name}
                   </div>
+                  {a.kind === "library_file" && a.sourceProject ? (
+                    <div className="truncate px-1.5 pb-1 text-[9px] text-muted-foreground">
+                      {a.sourceProject}
+                    </div>
+                  ) : null}
                   {a.status === "uploading" ? (
                     <span className="absolute inset-x-1 bottom-5 h-1 overflow-hidden rounded-full bg-background/70">
                       <span className="block h-full w-1/2 animate-pulse rounded-full bg-primary" />
@@ -590,6 +728,7 @@ export function ChatInput({
                     <FileText className="w-4 h-4 text-muted-foreground" />
                     <span>Files</span>
                   </button>
+                  {renderRecentLibraryFiles()}
                 </div>
               )}
             </div>
@@ -645,6 +784,7 @@ export function ChatInput({
                     <Puzzle className="w-5 h-5 text-muted-foreground" />
                     <span>Plugins</span>
                   </button>
+                  {renderRecentLibraryFiles()}
                 </div>
               </MobileBottomSheet>
             )}

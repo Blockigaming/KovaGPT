@@ -320,3 +320,46 @@
 - Remaining failures: no git remote/origin, no real GitHub PR, no Lovable active-commit/log access, blocked dependency install, repository-wide formatting drift, and missing installed dev tooling for lint/typecheck/build/e2e.
 - First next executable non-PASS row after this checkpoint: `Observable reference audit`.
 - Exact next code task: document the authorized observable UI reference measurements before making pixel-close claims, while continuing to keep external GitHub/Lovable/npm rows blocked until credentials/service access are restored.
+
+## 2026-07-21 — Projects and Library workspace checkpoint
+
+- Starting commit: `92544bd`.
+- Ending commit: pending until checkpoint commit is created.
+- Matrix rows changed: Observable reference audit; Design system and responsive shell; Projects; Files, vision, data analysis; Library; Accessibility, performance, resilience; Automated and visual testing.
+- Files changed: `docs/kova-observable-reference.md`, `src/styles.css`, `src/routes/projects.tsx`, `src/routes/projects.$projectId.tsx`, `src/routes/library.tsx`, `src/lib/projects.functions.ts`, `src/lib/chat-store.ts`, `src/components/ChatInput.tsx`, `src/routes/index.tsx`, `src/routes/api/chat.ts`, `tests/integration/projects-library-source.test.mjs`, `tests/e2e/projects-library-workspaces.spec.ts`, `docs/kova-final-completion-matrix.md`, `docs/kova-execution-log.md`.
+- Migrations added: none.
+- RLS changes: none; existing project membership/RLS and Library owner-scoped server functions are reused.
+- External blocker retry:
+  - `npm ci --ignore-scripts --no-audit --no-fund` → failed again with `E403 403 Forbidden - GET https://registry.npmjs.org/@playwright%2ftest`.
+  - `git push` → failed with `fatal: No configured push destination.`
+- Implementation notes:
+  - Added a short public-observable workspace reference for Projects, project detail, Library, and composer file reuse.
+  - Added semantic Kova workspace tokens and component classes for surfaces, input/card radii, page widths, touch targets, motion, skeletons, and reduced motion.
+  - Advanced Projects overview with instructions-preview search, recently active/name/created/member sorting, persisted grid/list view, real member/chat/file counts from server data, role-aware actions, and compact cards/rows.
+  - Added a Project instructions tab with debounced autosave, saving/saved/failed states, retry, unsaved draft preservation, and explanation that instructions affect project chats and authorized project file context.
+  - Kept project context/RAG server-side: chat route verifies project membership, injects project instructions/memory, retrieves only active-project chunks, and treats retrieved excerpts as project-scoped context.
+  - Rebuilt the Library workspace around search, filters, sorting, persisted grid/list view, truthful storage-gap messaging, guest handling, authenticated delete rollback, favorite UI state, mobile overflow actions, and accessible empty/error/loading states.
+  - Extended the shared composer with a Recent Library files section, search, loading/error/empty/retry states, duplicate prevention, removable Library attachment chips, and outgoing `library_file` attachment metadata that avoids private URL exposure.
+  - Added source-level integration tests and Playwright scaffolding for Projects/Library desktop/mobile/search/tabs/instructions/grid/list flows.
+- Commands run:
+  - `git status --short` → clean at checkpoint start.
+  - `git branch --show-current` → `work`.
+  - `git log --oneline -10` → latest commit was `92544bd Codex-generated pull request`.
+  - `git remote -v` → no output; no remote configured.
+  - `sed -n '1,280p' docs/kova-final-completion-matrix.md` and `tail -220 docs/kova-execution-log.md` → durable state read.
+  - `npm test` → passed 16 unit tests.
+  - `npm run test:api` → passed 2 API/static tests.
+  - `npm run test:integration` → passed 14 integration/static tests, including 7 Projects/Library source-contract tests.
+  - `npm run test:a11y` → passed 1 static accessibility test.
+  - `npm run test:visual` → passed 1 static viewport coverage test.
+  - `git diff --check` → passed.
+  - `npm run format:check` → failed with repository-wide Prettier drift in 143 files; only intentionally touched files were formatted.
+  - `npm run lint` → failed because `@eslint/js` is unavailable while dependency installation is blocked.
+  - `npm run typecheck` → failed because `vite/client` types are unavailable while dependency installation is blocked.
+  - `npm run build` → failed because `vite` is unavailable while dependency installation is blocked.
+  - `npm run test:e2e` → failed because `playwright` is unavailable while dependency installation is blocked.
+- Browser checks: Playwright specs were added but could not execute because `@playwright/test`/`playwright` are not installed and `npm ci` is blocked by HTTP 403.
+- Screenshot locations: none; runtime browser/screenshot verification remains blocked.
+- Remaining failures: no git remote/origin, no real GitHub PR, no Lovable active-commit/log access, blocked dependency install, repository-wide formatting drift, and missing installed dev tooling for lint/typecheck/build/e2e.
+- First next executable non-PASS row after this checkpoint: `Provider architecture`.
+- Exact next code task: continue provider envelope adoption and runtime mock/API coverage while keeping external GitHub/Lovable/npm rows blocked until credentials/service access are restored.

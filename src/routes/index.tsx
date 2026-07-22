@@ -20,7 +20,12 @@ import {
 import { Sidebar } from "@/components/Sidebar";
 
 import { ChatMessage } from "@/components/ChatMessage";
-import { ChatInput, type ComposerToolId, type PendingAttachment } from "@/components/ChatInput";
+import {
+  ChatInput,
+  type ComposerToolId,
+  type PendingAttachment,
+  type RecentLibraryFile,
+} from "@/components/ChatInput";
 import { AIStatus } from "@/components/AIStatus";
 import { MobileFabs } from "@/components/MobileFabs";
 import { MobileTopBar } from "@/components/MobileTopBar";
@@ -134,6 +139,9 @@ function KovaGPT() {
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
   const [selectedTool, setSelectedTool] = useState<ComposerToolId | null>(null);
+  const [recentLibraryFiles, setRecentLibraryFiles] = useState<RecentLibraryFile[]>([]);
+  const [recentLibraryLoading, setRecentLibraryLoading] = useState(false);
+  const [recentLibraryError, setRecentLibraryError] = useState<string | null>(null);
 
   // Start closed to avoid a flash-of-open sidebar on narrow viewports during
   // SSR/hydration. On desktop we honor the persisted user preference so the
@@ -157,6 +165,39 @@ function KovaGPT() {
       /* ignore */
     }
   }, [sidebarOpen]);
+
+  const loadRecentLibraryFiles = useCallback(async () => {
+    if (!isLoaded) return;
+    setRecentLibraryLoading(true);
+    setRecentLibraryError(null);
+    try {
+      const { listMyLibrary } = await import("@/lib/library.functions");
+      const rows = isSignedIn ? await listMyLibrary() : [];
+      setRecentLibraryFiles(
+        rows
+          .filter((item) => item.file_name || item.content_text || item.file_type)
+          .slice(0, 12)
+          .map((item) => ({
+            id: item.id,
+            title: item.title,
+            fileName: item.file_name || item.title,
+            fileType: item.file_type || item.item_type,
+            fileSize: item.file_size,
+            createdAt: item.created_at,
+            projectName: item.source === "chat" ? "Saved from chat" : null,
+          })),
+      );
+    } catch (error) {
+      console.warn("[recentLibraryFiles]", error);
+      setRecentLibraryError("Recent Library files are unavailable.");
+    } finally {
+      setRecentLibraryLoading(false);
+    }
+  }, [isLoaded, isSignedIn]);
+
+  useEffect(() => {
+    void loadRecentLibraryFiles();
+  }, [loadRecentLibraryFiles]);
 
   // Draft persistence: keep an unsent message per conversation so users don't
   // lose typing when switching chats.
@@ -450,7 +491,18 @@ function KovaGPT() {
         id: newId(),
         role: "user",
         content: trimmed,
-        attachments: atts.map((a) => ({ kind: "image", dataUrl: a.dataUrl })),
+        attachments: atts.map((a) =>
+          a.kind === "library_file"
+            ? {
+                kind: "library_file" as const,
+                libraryItemId: a.libraryItemId || "",
+                name: a.name,
+                fileType: a.fileType ?? null,
+                size: a.size ?? null,
+                sourceProject: a.sourceProject ?? null,
+              }
+            : { kind: "image" as const, dataUrl: a.dataUrl },
+        ),
       };
       const assistantMsg: Message = { id: newId(), role: "assistant", content: "" };
 
@@ -1100,6 +1152,10 @@ function KovaGPT() {
                   placeholder="Message KovaGPT"
                   onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
                   onToolSelect={setSelectedTool}
+                  recentLibraryFiles={recentLibraryFiles}
+                  recentLibraryLoading={recentLibraryLoading}
+                  recentLibraryError={recentLibraryError}
+                  onRecentLibraryRetry={loadRecentLibraryFiles}
                 />
 
                 <div className="mx-auto mt-5 hidden max-w-3xl grid-cols-2 gap-2 lg:grid">
@@ -1276,6 +1332,10 @@ function KovaGPT() {
                 placeholder="Message KovaGPT"
                 onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
                 onToolSelect={setSelectedTool}
+                recentLibraryFiles={recentLibraryFiles}
+                recentLibraryLoading={recentLibraryLoading}
+                recentLibraryError={recentLibraryError}
+                onRecentLibraryRetry={loadRecentLibraryFiles}
               />
               <div className="hidden lg:flex flex-col items-center gap-2 text-[11px] text-muted-foreground/70 mt-2 select-none">
                 <div className="flex justify-center gap-3">
