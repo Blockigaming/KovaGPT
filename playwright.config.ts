@@ -1,9 +1,9 @@
-import { defineConfig, devices } from "@playwright/test";
+import { defineConfig } from "@playwright/test";
 
 /**
- * Playwright config for KovaGPT responsive smoke tests.
- * The Lovable sandbox already runs the Vite dev server on :8080, so we
- * point Playwright at it directly instead of spawning one.
+ * Playwright config for KovaGPT responsive smoke and visual checks.
+ * The Lovable sandbox can provide PLAYWRIGHT_BASE_URL; otherwise tests use
+ * the conventional local dev-server URL.
  */
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -20,29 +20,25 @@ export default defineConfig({
   },
   projects: [
     {
-      name: "iphone-small",
-      use: { ...devices["iPhone SE (3rd generation)"] ?? devices["iPhone SE"] },
-    },
-    { name: "iphone-standard", use: { ...devices["iPhone 13"] } },
-    { name: "iphone-large", use: { ...devices["iPhone 14 Pro Max"] } },
-    { name: "android-phone", use: { ...devices["Pixel 7"] } },
-    { name: "ipad-portrait", use: { ...devices["iPad (gen 7)"] } },
-    { name: "ipad-landscape", use: { ...devices["iPad (gen 7) landscape"] } },
-    {
-      name: "tablet-large",
-      use: { viewport: { width: 1180, height: 820 }, hasTouch: true, isMobile: false },
+      name: "phone-320x700",
+      use: { viewport: { width: 320, height: 700 }, isMobile: true, hasTouch: true },
     },
     {
-      name: "desktop-narrow",
-      use: { viewport: { width: 1280, height: 800 } },
+      name: "phone-375x812",
+      use: { viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true },
     },
     {
-      name: "desktop-standard",
-      use: { viewport: { width: 1440, height: 900 } },
+      name: "phone-390x844",
+      use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
     },
     {
-      name: "desktop-large",
-      use: { viewport: { width: 1920, height: 1080 } },
+      name: "phone-430x932",
+      use: { viewport: { width: 430, height: 932 }, isMobile: true, hasTouch: true },
     },
+    { name: "tablet-768x1024", use: { viewport: { width: 768, height: 1024 }, hasTouch: true } },
+    { name: "tablet-1024x768", use: { viewport: { width: 1024, height: 768 }, hasTouch: true } },
+    { name: "desktop-1280x800", use: { viewport: { width: 1280, height: 800 } } },
+    { name: "desktop-1440x900", use: { viewport: { width: 1440, height: 900 } } },
+    { name: "desktop-1728x1117", use: { viewport: { width: 1728, height: 1117 } } },
   ],
 });

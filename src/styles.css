@@ -33,40 +33,89 @@
   --color-sidebar-hover: var(--sidebar-hover);
   --color-sidebar-active: var(--sidebar-active);
   --color-user-bubble: var(--user-bubble);
-   --font-sans: "OpenAI Sans", "SoehneBuch", "Söhne", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-   --font-display: "OpenAI Sans", "SoehneBuch", "Söhne", "Inter", "DM Sans", ui-sans-serif, system-ui, sans-serif;
-
+  --font-sans:
+    "OpenAI Sans", "SoehneBuch", "Söhne", "Inter", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display:
+    "OpenAI Sans", "SoehneBuch", "Söhne", "Inter", "DM Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
 :root {
   --radius: 0.75rem;
   /* KovaGPT light theme - ChatGPT-like restrained neutrals */
-  --background: oklch(0.985 0.001 250);
-  --foreground: oklch(0.20 0 0);
-  --card: oklch(0.99 0.001 250);
-  --card-foreground: oklch(0.20 0 0);
+  --background: oklch(0.982 0 0);
+  --foreground: oklch(0.19 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0 0);
   --popover: oklch(0.995 0.001 250);
-  --popover-foreground: oklch(0.20 0 0);
-  --primary: oklch(0.20 0 0);
+  --popover-foreground: oklch(0.2 0 0);
+  --primary: oklch(0.2 0 0);
   --primary-foreground: oklch(0.99 0 0);
   --secondary: oklch(0.965 0.002 250);
-  --secondary-foreground: oklch(0.20 0 0);
+  --secondary-foreground: oklch(0.2 0 0);
   --muted: oklch(0.955 0.002 250);
   --muted-foreground: oklch(0.48 0 0);
   --accent: oklch(0.945 0.002 250);
-  --accent-foreground: oklch(0.20 0 0);
+  --accent-foreground: oklch(0.2 0 0);
   --destructive: oklch(0.58 0.22 25);
   --destructive-foreground: oklch(0.995 0 0);
   --border: oklch(0 0 0 / 8%);
   --input: oklch(0 0 0 / 10%);
   --ring: oklch(0.45 0 0);
 
-  --sidebar: var(--background);
+  --sidebar: oklch(0.955 0.002 250);
   --sidebar-foreground: oklch(0.24 0 0);
-  --sidebar-hover: oklch(0 0 0 / 5%);
-  --sidebar-active: oklch(0 0 0 / 8%);
-  --user-bubble: oklch(0.93 0.003 250);
+  --sidebar-hover: oklch(0 0 0 / 6%);
+  --sidebar-active: oklch(0 0 0 / 9%);
+  --user-bubble: oklch(0.925 0.002 250);
 
+  /* Semantic Kova workspace surfaces */
+  --surface-app: var(--background);
+  --surface-workspace: oklch(0.985 0.001 250);
+  --surface-raised: var(--card);
+  --surface-secondary: oklch(0.955 0.002 250);
+  --surface-hover: oklch(0 0 0 / 6%);
+  --surface-selected: oklch(0 0 0 / 9%);
+  --surface-composer: var(--card);
+  --surface-input: oklch(1 0 0);
+  --surface-modal: var(--popover);
+  --surface-scrim: oklch(0 0 0 / 45%);
+  --text-secondary: oklch(0.34 0 0);
+  --text-disabled: oklch(0.62 0 0);
+  --text-inverse: oklch(0.99 0 0);
+  --text-success: oklch(0.52 0.14 150);
+  --text-warning: oklch(0.62 0.14 75);
+  --border-subtle: var(--border);
+  --border-strong: oklch(0 0 0 / 18%);
+  --border-selected: oklch(0.36 0 0);
+  --border-destructive: color-mix(in oklab, var(--destructive) 45%, transparent);
+  --status-success: oklch(0.68 0.16 150);
+  --status-warning: oklch(0.76 0.15 75);
+  --status-error: var(--destructive);
+  --skeleton-base: oklch(0.92 0.002 250);
+  --skeleton-highlight: oklch(0.97 0.001 250);
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --kova-radius-compact: 8px;
+  --kova-radius-input: 12px;
+  --kova-radius-card: 16px;
+  --kova-radius-panel: 20px;
+  --kova-control-sm: 36px;
+  --kova-control-md: 40px;
+  --kova-touch: 44px;
+  --kova-header: 56px;
+  --kova-page-max: 1120px;
+  --kova-content-max: 820px;
+  --kova-drawer-width: min(88vw, 340px);
+  --motion-fast: 140ms;
+  --motion-standard: 180ms;
+  --motion-menu: 220ms;
+  --motion-reveal: 280ms;
 
   --scrollbar-thumb: oklch(0 0 0 / 14%);
   --scrollbar-thumb-hover: oklch(0 0 0 / 26%);
@@ -78,22 +127,26 @@
   /* Kova brand system */
   --kova-blue: oklch(0.64 0.19 258);
   --kova-blue-glow: oklch(0.72 0.17 258);
-  --kova-violet: oklch(0.60 0.20 295);
+  --kova-violet: oklch(0.6 0.2 295);
   --gradient-kova: linear-gradient(135deg, var(--kova-blue), var(--kova-violet));
-  --gradient-kova-soft: linear-gradient(135deg,
+  --gradient-kova-soft: linear-gradient(
+    135deg,
     color-mix(in oklab, var(--kova-blue) 22%, transparent),
-    color-mix(in oklab, var(--kova-violet) 22%, transparent));
-  --shadow-elevate: 0 8px 24px -12px color-mix(in oklab, var(--kova-blue) 40%, transparent),
-                    0 2px 6px -2px color-mix(in oklab, var(--color-foreground) 10%, transparent);
-  --shadow-soft: 0 1px 2px color-mix(in oklab, var(--color-foreground) 6%, transparent),
-                 0 4px 12px -6px color-mix(in oklab, var(--color-foreground) 8%, transparent);
+    color-mix(in oklab, var(--kova-violet) 22%, transparent)
+  );
+  --shadow-elevate:
+    0 8px 24px -12px color-mix(in oklab, var(--kova-blue) 40%, transparent),
+    0 2px 6px -2px color-mix(in oklab, var(--color-foreground) 10%, transparent);
+  --shadow-soft:
+    0 1px 2px color-mix(in oklab, var(--color-foreground) 6%, transparent),
+    0 4px 12px -6px color-mix(in oklab, var(--color-foreground) 8%, transparent);
 }
 
 .dark {
   /* KovaGPT dark theme - ChatGPT-like restrained charcoal */
-  --background: oklch(0.185 0.003 250);
+  --background: oklch(0.17 0.002 250);
   --foreground: oklch(0.965 0 0);
-  --card: oklch(0.225 0.003 250);
+  --card: oklch(0.215 0.003 250);
   --card-foreground: oklch(0.965 0 0);
   --popover: oklch(0.235 0.003 250);
   --popover-foreground: oklch(0.965 0 0);
@@ -102,7 +155,7 @@
   --secondary: oklch(0.255 0.003 250);
   --secondary-foreground: oklch(0.965 0 0);
   --muted: oklch(0.25 0.003 250);
-  --muted-foreground: oklch(0.70 0.004 250);
+  --muted-foreground: oklch(0.7 0.004 250);
   --accent: oklch(0.28 0.003 250);
   --accent-foreground: oklch(0.965 0 0);
   --destructive: oklch(0.62 0.22 25);
@@ -111,11 +164,36 @@
   --input: oklch(1 0 0 / 10%);
   --ring: oklch(0.65 0.01 250);
 
-  --sidebar: var(--background);
+  --sidebar: oklch(0.205 0.003 250);
   --sidebar-foreground: oklch(0.92 0 0);
-  --sidebar-hover: oklch(1 0 0 / 5%);
-  --sidebar-active: oklch(1 0 0 / 9%);
-  --user-bubble: oklch(0.29 0.003 250);
+  --sidebar-hover: oklch(1 0 0 / 6%);
+  --sidebar-active: oklch(1 0 0 / 10%);
+  --user-bubble: oklch(0.275 0.003 250);
+
+  --surface-app: var(--background);
+  --surface-workspace: oklch(0.18 0.003 250);
+  --surface-raised: var(--card);
+  --surface-secondary: oklch(0.245 0.003 250);
+  --surface-hover: oklch(1 0 0 / 6%);
+  --surface-selected: oklch(1 0 0 / 10%);
+  --surface-composer: var(--card);
+  --surface-input: oklch(0.22 0.003 250);
+  --surface-modal: var(--popover);
+  --surface-scrim: oklch(0 0 0 / 62%);
+  --text-secondary: oklch(0.84 0.003 250);
+  --text-disabled: oklch(0.54 0.003 250);
+  --text-inverse: oklch(0.18 0.003 250);
+  --text-success: oklch(0.78 0.13 150);
+  --text-warning: oklch(0.82 0.14 75);
+  --border-subtle: var(--border);
+  --border-strong: oklch(1 0 0 / 18%);
+  --border-selected: oklch(0.74 0.004 250);
+  --border-destructive: color-mix(in oklab, var(--destructive) 55%, transparent);
+  --status-success: oklch(0.74 0.15 150);
+  --status-warning: oklch(0.78 0.16 75);
+  --status-error: var(--destructive);
+  --skeleton-base: oklch(0.28 0.003 250);
+  --skeleton-highlight: oklch(0.34 0.003 250);
 
   --scrollbar-thumb: oklch(1 0 0 / 12%);
   --scrollbar-thumb-hover: oklch(1 0 0 / 22%);
@@ -126,16 +204,18 @@
 
   /* Kova brand system - dark */
   --kova-blue: oklch(0.72 0.18 258);
-  --kova-blue-glow: oklch(0.80 0.16 258);
-  --kova-violet: oklch(0.70 0.20 295);
+  --kova-blue-glow: oklch(0.8 0.16 258);
+  --kova-violet: oklch(0.7 0.2 295);
   --gradient-kova: linear-gradient(135deg, var(--kova-blue), var(--kova-violet));
-  --gradient-kova-soft: linear-gradient(135deg,
+  --gradient-kova-soft: linear-gradient(
+    135deg,
     color-mix(in oklab, var(--kova-blue) 20%, transparent),
-    color-mix(in oklab, var(--kova-violet) 20%, transparent));
-  --shadow-elevate: 0 12px 32px -14px color-mix(in oklab, var(--kova-blue) 55%, transparent),
-                    0 2px 6px -2px rgba(0,0,0,0.5);
-  --shadow-soft: 0 1px 2px rgba(0,0,0,0.4),
-                 0 6px 16px -8px rgba(0,0,0,0.6);
+    color-mix(in oklab, var(--kova-violet) 20%, transparent)
+  );
+  --shadow-elevate:
+    0 12px 32px -14px color-mix(in oklab, var(--kova-blue) 55%, transparent),
+    0 2px 6px -2px rgba(0, 0, 0, 0.5);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 16px -8px rgba(0, 0, 0, 0.6);
 }
 
 @layer base {
@@ -143,10 +223,12 @@
     border-color: var(--color-border);
   }
   html {
-    /* ~5% smaller base type so more content fits per screen. */
-    font-size: 15.2px;
+    /* ChatGPT-like density: compact, readable, and desktop-friendly. */
+    font-size: 15.5px;
   }
-  html, body, #root {
+  html,
+  body,
+  #root {
     height: 100%;
   }
   body {
@@ -167,7 +249,8 @@ input[type="text"]:focus-visible {
   outline: none !important;
   box-shadow: none;
 }
-textarea, input {
+textarea,
+input {
   -webkit-tap-highlight-color: transparent;
   -webkit-appearance: none;
 }
@@ -179,24 +262,52 @@ textarea, input {
   color: var(--color-foreground);
   word-wrap: break-word;
 }
-.prose-chat p { margin: 0.5em 0; }
-.prose-chat p:first-child { margin-top: 0; }
-.prose-chat p:last-child { margin-bottom: 0; }
-.prose-chat h1, .prose-chat h2, .prose-chat h3, .prose-chat h4 {
+.prose-chat p {
+  margin: 0.5em 0;
+}
+.prose-chat p:first-child {
+  margin-top: 0;
+}
+.prose-chat p:last-child {
+  margin-bottom: 0;
+}
+.prose-chat h1,
+.prose-chat h2,
+.prose-chat h3,
+.prose-chat h4 {
   font-family: var(--font-display);
   font-weight: 600;
   margin: 1.2em 0 0.5em;
   line-height: 1.3;
   letter-spacing: -0.01em;
 }
-.prose-chat h1 { font-size: 1.5em; }
-.prose-chat h2 { font-size: 1.3em; }
-.prose-chat h3 { font-size: 1.15em; }
-.prose-chat ul, .prose-chat ol { margin: 0.5em 0; padding-left: 1.5em; }
-.prose-chat li { margin: 0.25em 0; }
-.prose-chat ul li { list-style: disc; }
-.prose-chat ol li { list-style: decimal; }
-.prose-chat a { color: var(--link); text-decoration: underline; }
+.prose-chat h1 {
+  font-size: 1.5em;
+}
+.prose-chat h2 {
+  font-size: 1.3em;
+}
+.prose-chat h3 {
+  font-size: 1.15em;
+}
+.prose-chat ul,
+.prose-chat ol {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+.prose-chat li {
+  margin: 0.25em 0;
+}
+.prose-chat ul li {
+  list-style: disc;
+}
+.prose-chat ol li {
+  list-style: decimal;
+}
+.prose-chat a {
+  color: var(--link);
+  text-decoration: underline;
+}
 .prose-chat code:not(pre code) {
   background: var(--code-bg);
   padding: 0.15em 0.4em;
@@ -216,7 +327,11 @@ textarea, input {
   -webkit-overflow-scrolling: touch;
 }
 @media (min-width: 768px) {
-  .prose-chat pre { padding: 1em; margin: 0.8em 0; font-size: 0.875em; }
+  .prose-chat pre {
+    padding: 1em;
+    margin: 0.8em 0;
+    font-size: 0.875em;
+  }
 }
 .prose-chat pre code {
   background: transparent;
@@ -234,12 +349,16 @@ textarea, input {
   margin: 0.8em 0;
   width: 100%;
 }
-.prose-chat th, .prose-chat td {
+.prose-chat th,
+.prose-chat td {
   border: 1px solid var(--color-border);
   padding: 0.5em 0.75em;
   text-align: left;
 }
-.prose-chat th { background: var(--color-muted); font-weight: 600; }
+.prose-chat th {
+  background: var(--color-muted);
+  font-weight: 600;
+}
 .prose-chat img {
   display: block;
   width: 100%;
@@ -251,7 +370,6 @@ textarea, input {
   background: var(--color-muted);
 }
 
-
 /* Blinking cursor while streaming text */
 .cursor-blink::after {
   content: "▋";
@@ -261,7 +379,9 @@ textarea, input {
   color: var(--color-muted-foreground);
 }
 @keyframes blink {
-  to { visibility: hidden; }
+  to {
+    visibility: hidden;
+  }
 }
 
 /* Peaceful pulsing dots  -  shown before the first token arrives */
@@ -279,25 +399,53 @@ textarea, input {
   opacity: 0.35;
   animation: peaceful-pulse 1.4s ease-in-out infinite;
 }
-.thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
-.thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+.thinking-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.thinking-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
 @keyframes peaceful-pulse {
-  0%, 80%, 100% { opacity: 0.25; transform: scale(0.85); }
-  40% { opacity: 0.9; transform: scale(1); }
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.85);
+  }
+  40% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
 
 /* Display font helper */
-.font-display { font-family: var(--font-display); letter-spacing: -0.01em; }
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
 
 /* Gentle attention pulse for primary CTAs */
 @keyframes pulse-slow {
-  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-primary) 35%, transparent); }
-  50% { box-shadow: 0 0 0 8px color-mix(in oklab, var(--color-primary) 0%, transparent); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-primary) 35%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in oklab, var(--color-primary) 0%, transparent);
+  }
 }
 .animate-pulse-slow {
   animation: pulse-slow 2.4s ease-in-out infinite;
@@ -305,16 +453,30 @@ textarea, input {
 
 /* AI status indicator: label enter animation + animated ellipsis */
 @keyframes ai-status-in {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .ai-status-label {
   animation: ai-status-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
   will-change: opacity, transform;
 }
 @keyframes ai-status-dot {
-  0%, 80%, 100% { opacity: 0.2; transform: translateY(0); }
-  40% { opacity: 1; transform: translateY(-1px); }
+  0%,
+  80%,
+  100% {
+    opacity: 0.2;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-1px);
+  }
 }
 .ai-status-dots {
   display: inline-flex;
@@ -325,12 +487,20 @@ textarea, input {
   display: inline-block;
   animation: ai-status-dot 1.3s infinite ease-in-out both;
 }
-.ai-status-dots > span:nth-child(1) { animation-delay: 0s; }
-.ai-status-dots > span:nth-child(2) { animation-delay: 0.16s; }
-.ai-status-dots > span:nth-child(3) { animation-delay: 0.32s; }
+.ai-status-dots > span:nth-child(1) {
+  animation-delay: 0s;
+}
+.ai-status-dots > span:nth-child(2) {
+  animation-delay: 0.16s;
+}
+.ai-status-dots > span:nth-child(3) {
+  animation-delay: 0.32s;
+}
 @media (prefers-reduced-motion: reduce) {
   .ai-status-label,
-  .ai-status-dots > span { animation: none; }
+  .ai-status-dots > span {
+    animation: none;
+  }
 }
 
 /* Global button hover/click feedback. Buttons keep their existing
@@ -338,7 +508,13 @@ textarea, input {
    pointer + active states, even those without hover classes set. */
 button:not(:disabled),
 [role="button"]:not([aria-disabled="true"]) {
-  transition: transform 120ms ease, background-color 150ms ease, color 150ms ease, opacity 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+  transition:
+    transform 120ms ease,
+    background-color 150ms ease,
+    color 150ms ease,
+    opacity 150ms ease,
+    box-shadow 150ms ease,
+    border-color 150ms ease;
 }
 button:not(:disabled):hover,
 [role="button"]:not([aria-disabled="true"]):hover {
@@ -364,7 +540,10 @@ button:not(:disabled):active,
   }
 }
 a {
-  transition: color 150ms ease, opacity 150ms ease, background-color 150ms ease;
+  transition:
+    color 150ms ease,
+    opacity 150ms ease,
+    background-color 150ms ease;
 }
 
 /* Clean glassy surfaces - subtle translucent borders, no reflections */
@@ -384,21 +563,39 @@ a {
   }
 }
 
-
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 @keyframes floatUp {
-  0% { transform: translateY(0) scale(0.9); opacity: 0; }
-  20% { opacity: 0.9; }
-  100% { transform: translateY(-140%) scale(1.1); opacity: 0; }
+  0% {
+    transform: translateY(0) scale(0.9);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(-140%) scale(1.1);
+    opacity: 0;
+  }
 }
 
 @keyframes imgAura {
-  0%, 100% { transform: scale(1) rotate(0deg); filter: hue-rotate(0deg); }
-  50% { transform: scale(1.1) rotate(180deg); filter: hue-rotate(60deg); }
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    transform: scale(1.1) rotate(180deg);
+    filter: hue-rotate(60deg);
+  }
 }
 
 /* --- Global UI polish pass --- */
@@ -411,7 +608,9 @@ a {
 }
 
 /* Smoother hover transitions on all interactive surfaces. */
-button, [role="button"], a {
+button,
+[role="button"],
+a {
   transition:
     background-color 160ms ease,
     color 160ms ease,
@@ -422,17 +621,27 @@ button, [role="button"], a {
 }
 
 /* Kill Safari's tap highlight color everywhere; use ring on focus instead. */
-* { -webkit-tap-highlight-color: transparent; }
+* {
+  -webkit-tap-highlight-color: transparent;
+}
 
 /* Smoother scrolling everywhere (except when the user prefers reduced motion). */
 @media (prefers-reduced-motion: no-preference) {
-  html { scroll-behavior: smooth; }
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
 /* Custom scrollbars - subtle in light, softer in dark. */
 @media (pointer: fine) {
-  * { scrollbar-width: thin; scrollbar-color: color-mix(in oklab, var(--color-foreground) 20%, transparent) transparent; }
-  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--color-foreground) 20%, transparent) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
   *::-webkit-scrollbar-thumb {
     background: color-mix(in oklab, var(--color-foreground) 18%, transparent);
     border-radius: 999px;
@@ -443,32 +652,54 @@ button, [role="button"], a {
     background: color-mix(in oklab, var(--color-foreground) 30%, transparent);
     background-clip: padding-box;
   }
-  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
 }
 
 /* Prevent long words / URLs from breaking layout in chat bubbles. */
-.prose-chat { overflow-wrap: anywhere; word-break: break-word; }
+.prose-chat {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
 
 /* Loading flicker: fade-in for content that lands async. */
-.animate-fade-in { animation: fadeIn 220ms ease-out both; }
+.animate-fade-in {
+  animation: fadeIn 220ms ease-out both;
+}
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(3px); }
-  to   { opacity: 1; transform: none; }
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* Safari + iPad: avoid double-scrollbars and awkward bounce on shells. */
-html, body { overscroll-behavior-y: none; }
+html,
+body {
+  overscroll-behavior-y: none;
+}
 
 /* Consistent card shadow */
-.card, [data-slot="card"], .bg-card {
+.card,
+[data-slot="card"],
+.bg-card {
   box-shadow: 0 1px 2px color-mix(in oklab, var(--color-foreground) 4%, transparent);
 }
-.dark .card, .dark [data-slot="card"], .dark .bg-card {
-  box-shadow: 0 1px 2px rgba(0,0,0,0.35);
+.dark .card,
+.dark [data-slot="card"],
+.dark .bg-card {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
@@ -476,20 +707,31 @@ html, body { overscroll-behavior-y: none; }
   }
 }
 
-
 /* ============================================================
    Kova motion + brand utilities
    ============================================================ */
 
 @keyframes kova-mesh-drift {
-  0%   { transform: translate3d(0, 0, 0) scale(1); }
-  50%  { transform: translate3d(3%, -2%, 0) scale(1.06); }
-  100% { transform: translate3d(0, 0, 0) scale(1); }
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(3%, -2%, 0) scale(1.06);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
 }
 @keyframes kova-mesh-drift-alt {
-  0%   { transform: translate3d(0, 0, 0) scale(1); }
-  50%  { transform: translate3d(-4%, 3%, 0) scale(1.08); }
-  100% { transform: translate3d(0, 0, 0) scale(1); }
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(-4%, 3%, 0) scale(1.08);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
 }
 .kova-bg {
   position: fixed;
@@ -511,9 +753,11 @@ html, body { overscroll-behavior-y: none; }
   left: -8%;
   width: 55vw;
   height: 55vw;
-  background: radial-gradient(circle at 30% 30%,
+  background: radial-gradient(
+    circle at 30% 30%,
     color-mix(in oklab, var(--kova-blue) 55%, transparent),
-    transparent 65%);
+    transparent 65%
+  );
   animation: kova-mesh-drift 22s ease-in-out infinite;
   opacity: 0;
 }
@@ -522,19 +766,31 @@ html, body { overscroll-behavior-y: none; }
   right: -10%;
   width: 60vw;
   height: 60vw;
-  background: radial-gradient(circle at 70% 70%,
+  background: radial-gradient(
+    circle at 70% 70%,
     color-mix(in oklab, var(--kova-violet) 45%, transparent),
-    transparent 65%);
+    transparent 65%
+  );
   animation: kova-mesh-drift-alt 26s ease-in-out infinite;
   opacity: 0;
 }
-.dark .kova-bg::before { opacity: 0; }
-.dark .kova-bg::after  { opacity: 0; }
+.dark .kova-bg::before {
+  opacity: 0;
+}
+.dark .kova-bg::after {
+  opacity: 0;
+}
 
 @keyframes kova-float {
-  0%   { transform: translateY(0); }
-  50%  { transform: translateY(-2.5px); }
-  100% { transform: translateY(0); }
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2.5px);
+  }
+  100% {
+    transform: translateY(0);
+  }
 }
 .animate-kova-float {
   animation: kova-float 4.5s ease-in-out infinite;
@@ -542,7 +798,8 @@ html, body { overscroll-behavior-y: none; }
 }
 
 @keyframes kova-pulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 0 0 color-mix(in oklab, var(--kova-blue) 55%, transparent);
   }
   50% {
@@ -555,26 +812,42 @@ html, body { overscroll-behavior-y: none; }
 }
 
 @keyframes kova-fade-up {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: none; }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 .animate-fade-up {
   animation: kova-fade-up 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @keyframes kova-check-pop {
-  0%   { transform: scale(0.4) rotate(-8deg); opacity: 0; }
-  60%  { transform: scale(1.15) rotate(2deg); opacity: 1; }
-  100% { transform: scale(1) rotate(0); opacity: 1; }
+  0% {
+    transform: scale(0.4) rotate(-8deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15) rotate(2deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
 }
 .animate-check-pop {
   animation: kova-check-pop 340ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .hover-elevate {
-  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
-              background-color 200ms ease;
+  transition:
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 200ms ease;
   will-change: transform;
 }
 .hover-elevate:hover {
@@ -588,9 +861,10 @@ html, body { overscroll-behavior-y: none; }
   border-radius: 1rem;
   padding: 1.25rem;
   box-shadow: var(--shadow-soft);
-  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
-              box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 200ms ease;
+  transition:
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 200ms ease;
 }
 .kova-card:hover {
   transform: translateY(-2px);
@@ -604,8 +878,12 @@ html, body { overscroll-behavior-y: none; }
   background-clip: text;
   color: transparent;
 }
-.bg-gradient-kova { background: var(--gradient-kova); }
-.bg-gradient-kova-soft { background: var(--gradient-kova-soft); }
+.bg-gradient-kova {
+  background: var(--gradient-kova);
+}
+.bg-gradient-kova-soft {
+  background: var(--gradient-kova-soft);
+}
 
 .kova-skeleton {
   position: relative;
@@ -627,7 +905,9 @@ html, body { overscroll-behavior-y: none; }
   animation: kova-shimmer 1.6s ease-in-out infinite;
 }
 @keyframes kova-shimmer {
-  100% { transform: translateX(100%); }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -637,6 +917,138 @@ html, body { overscroll-behavior-y: none; }
   .animate-kova-pulse,
   .animate-fade-up,
   .animate-check-pop,
-  .kova-skeleton::after { animation: none !important; }
-  .hover-elevate:hover { transform: none; }
+  .kova-skeleton::after {
+    animation: none !important;
+  }
+  .hover-elevate:hover {
+    transform: none;
+  }
+}
+
+/* ChatGPT-like utility: hide horizontal starter-card scrollbars on mobile. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@layer components {
+  .kova-page {
+    width: 100%;
+    max-width: var(--kova-page-max);
+    margin-inline: auto;
+    padding: var(--space-4);
+    padding-bottom: calc(var(--space-8) + env(safe-area-inset-bottom));
+  }
+  @media (min-width: 640px) {
+    .kova-page {
+      padding: var(--space-6);
+    }
+  }
+  @media (min-width: 1024px) {
+    .kova-page {
+      padding: var(--space-8);
+    }
+  }
+  .kova-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-5);
+  }
+  @media (max-width: 640px) {
+    .kova-page-header {
+      flex-direction: column;
+    }
+  }
+  .kova-page-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.45rem, 1.1rem + 1vw, 1.85rem);
+    line-height: 1.12;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+  }
+  .kova-page-description {
+    margin-top: 0.35rem;
+    color: var(--color-muted-foreground);
+    font-size: 0.92rem;
+  }
+  .kova-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+  }
+  .kova-card {
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--kova-radius-card);
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-soft);
+    transition:
+      background-color var(--motion-fast),
+      border-color var(--motion-fast),
+      transform var(--motion-fast);
+  }
+  .kova-card:hover {
+    border-color: var(--border-strong);
+  }
+  .kova-row {
+    display: flex;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--kova-radius-card);
+    background: var(--surface-raised);
+    padding: var(--space-3);
+  }
+  .kova-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+    gap: var(--space-4);
+  }
+  .kova-list {
+    display: grid;
+    gap: var(--space-2);
+  }
+  .kova-select {
+    min-height: var(--kova-control-md);
+    border-radius: var(--kova-radius-input);
+    border: 1px solid var(--border-subtle);
+    background: var(--surface-input);
+    padding-inline: var(--space-3);
+    font-size: 0.875rem;
+  }
+  .kova-icon-button {
+    min-width: var(--kova-touch);
+    min-height: var(--kova-touch);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--kova-radius-input);
+    transition:
+      background-color var(--motion-fast),
+      transform var(--motion-fast);
+  }
+  .kova-icon-button:active {
+    transform: scale(0.98);
+  }
+  .kova-empty-state {
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--kova-radius-panel);
+    background: var(--surface-secondary);
+    padding: clamp(2rem, 5vw, 4rem);
+    text-align: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

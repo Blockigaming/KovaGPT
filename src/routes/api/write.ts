@@ -1,6 +1,7 @@
 // Non-streaming text transformation endpoint for the Writing workspace.
 // Accepts { text, action, instructions?, tone? } and returns { text }.
 import { createFileRoute } from "@tanstack/react-router";
+import { chatCompletions, chatModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
 import {
   requireUser,
   assertNotBanned,
@@ -85,17 +86,11 @@ export const Route = createFileRoute("/api/write")({
           instruction = PROMPTS[action];
         }
 
-        const apiKey = process.env.LOVABLE_API_KEY;
-        if (!apiKey) return Response.json({ error: "no_api_key" }, { status: 500 });
+        const missingProvider = missingAiProviderResponse();
+        if (missingProvider) return missingProvider;
 
-        const upstream = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
+        const upstream = await chatCompletions({
+            model: chatModel("balanced"),
             messages: [
               {
                 role: "system",
@@ -107,8 +102,7 @@ export const Route = createFileRoute("/api/write")({
                 content: `${instruction}\n\n---\n${text}`,
               },
             ],
-          }),
-        });
+          });
 
         if (!upstream.ok) {
           const errBody = await upstream.text();

@@ -6,7 +6,6 @@ export type DailyUsageDto = {
   chats: number;
   images: number;
   uploads: number;
-  voice: number;
   resetsAt: string; // next UTC midnight ISO
 };
 
@@ -21,7 +20,7 @@ export const getMyDailyUsage = createServerFn({ method: "GET" })
 
     const { data, error } = await context.supabase
       .from("daily_usage")
-      .select("usage_date, chats, images, uploads, voice")
+      .select("usage_date, chats, images, uploads")
       .eq("user_id", context.userId)
       .eq("usage_date", ymd)
       .maybeSingle();
@@ -33,7 +32,6 @@ export const getMyDailyUsage = createServerFn({ method: "GET" })
         chats: 0,
         images: 0,
         uploads: 0,
-        voice: 0,
         resetsAt: nextMidnight.toISOString(),
       };
     }
@@ -44,19 +42,15 @@ export const getMyDailyUsage = createServerFn({ method: "GET" })
         chats: 0,
         images: 0,
         uploads: 0,
-        voice: 0,
         resetsAt: nextMidnight.toISOString(),
       };
     }
-
-
 
     return {
       date: ymd,
       chats: data.chats ?? 0,
       images: data.images ?? 0,
       uploads: data.uploads ?? 0,
-      voice: data.voice ?? 0,
       resetsAt: nextMidnight.toISOString(),
     };
   });

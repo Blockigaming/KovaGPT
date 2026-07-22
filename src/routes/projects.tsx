@@ -5,10 +5,42 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { useServerFn } from "@tanstack/react-start";
-import { FolderKanban, Plus, Users, Check, X as XIcon, Loader2, Sparkles, Wand2, MoreHorizontal, Pin, PinOff, Copy as CopyIcon, Archive, ArchiveRestore, Pencil, Trash2, Search as SearchIcon, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  FolderKanban,
+  Plus,
+  Users,
+  Check,
+  X as XIcon,
+  Loader2,
+  Sparkles,
+  Wand2,
+  MoreHorizontal,
+  Pin,
+  PinOff,
+  Copy as CopyIcon,
+  Archive,
+  ArchiveRestore,
+  Pencil,
+  Trash2,
+  Search as SearchIcon,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 import { toast } from "sonner";
 import { SkeletonGrid, EmptyState, ErrorState } from "@/components/states";
 import {
@@ -49,8 +81,16 @@ function ProjectsPage() {
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"recent" | "name" | "members">("recent");
+  const [sortBy, setSortBy] = useState<"recent" | "name" | "created" | "members">("recent");
+  const [view, setView] = useState<"grid" | "list">(() => {
+    if (typeof window === "undefined") return "grid";
+    return localStorage.getItem("kova-projects-view") === "list" ? "list" : "grid";
+  });
   const [showArchived, setShowArchived] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("kova-projects-view", view);
+  }, [view]);
 
   const colorClass = (c?: string | null) => {
     const map: Record<string, string> = {
@@ -84,17 +124,32 @@ function ProjectsPage() {
 
   async function togglePin(p: ProjectSummary) {
     const next = !p.pinned_at;
-    setProjects((prev) => prev.map((x) => x.id === p.id ? { ...x, pinned_at: next ? new Date().toISOString() : null } : x));
-    try { await fnPin({ data: { id: p.id, pinned: next } }); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Failed to pin"); void refresh(); }
+    setProjects((prev) =>
+      prev.map((x) =>
+        x.id === p.id ? { ...x, pinned_at: next ? new Date().toISOString() : null } : x,
+      ),
+    );
+    try {
+      await fnPin({ data: { id: p.id, pinned: next } });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to pin");
+      void refresh();
+    }
   }
   async function toggleArchive(p: ProjectSummary) {
     const archive = !p.archived_at;
-    setProjects((prev) => prev.map((x) => x.id === p.id ? { ...x, archived_at: archive ? new Date().toISOString() : null } : x));
+    setProjects((prev) =>
+      prev.map((x) =>
+        x.id === p.id ? { ...x, archived_at: archive ? new Date().toISOString() : null } : x,
+      ),
+    );
     try {
       await fnArchive({ data: { id: p.id, archived: archive } });
       toast.success(archive ? "Project archived" : "Project restored");
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); void refresh(); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+      void refresh();
+    }
   }
   async function handleDuplicate(p: ProjectSummary) {
     try {
@@ -102,14 +157,21 @@ function ProjectsPage() {
       toast.success("Project duplicated");
       void refresh();
       await navigate({ to: "/projects/$projectId", params: { projectId: id } });
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed to duplicate"); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to duplicate");
+    }
   }
   async function handleDelete(p: ProjectSummary) {
     if (!confirm(`Delete “${p.name}”? This cannot be undone.`)) return;
     const prev = projects;
     setProjects((cur) => cur.filter((x) => x.id !== p.id));
-    try { await fnDelete({ data: { id: p.id } }); toast.success("Project deleted"); }
-    catch (e) { setProjects(prev); toast.error(e instanceof Error ? e.message : "Failed to delete"); }
+    try {
+      await fnDelete({ data: { id: p.id } });
+      toast.success("Project deleted");
+    } catch (e) {
+      setProjects(prev);
+      toast.error(e instanceof Error ? e.message : "Failed to delete");
+    }
   }
   function openRename(p: ProjectSummary) {
     setRenameFor(p);
@@ -122,7 +184,11 @@ function ProjectsPage() {
     const target = renameFor;
     const nextName = renameName.trim();
     const nextDesc = renameDesc.trim();
-    setProjects((prev) => prev.map((x) => x.id === target.id ? { ...x, name: nextName, description: nextDesc || null } : x));
+    setProjects((prev) =>
+      prev.map((x) =>
+        x.id === target.id ? { ...x, name: nextName, description: nextDesc || null } : x,
+      ),
+    );
     try {
       await fnUpdate({ data: { id: target.id, name: nextName, description: nextDesc || null } });
       setRenameFor(null);
@@ -130,7 +196,9 @@ function ProjectsPage() {
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to update");
       void refresh();
-    } finally { setRenameBusy(false); }
+    } finally {
+      setRenameBusy(false);
+    }
   }
 
   async function refresh() {
@@ -149,15 +217,20 @@ function ProjectsPage() {
     }
   }
 
-  useEffect(() => { if (isLoaded && isSignedIn) refresh(); /* eslint-disable-next-line */ }, [isLoaded, isSignedIn]);
+  useEffect(() => {
+    if (isLoaded && isSignedIn) refresh(); /* eslint-disable-next-line */
+  }, [isLoaded, isSignedIn]);
 
   async function handleCreate() {
     if (!name.trim()) return;
     setBusy(true);
     try {
-      const { id } = await fnCreate({ data: { name: name.trim(), description: description.trim() || null } });
+      const { id } = await fnCreate({
+        data: { name: name.trim(), description: description.trim() || null },
+      });
       setCreateOpen(false);
-      setName(""); setDescription("");
+      setName("");
+      setDescription("");
       // Optimistically prepend so the list is fresh if the user navigates back.
       setProjects((prev) => [
         {
@@ -168,6 +241,10 @@ function ProjectsPage() {
           owner_id: "",
           role: "owner" as const,
           member_count: 1,
+          chat_count: 0,
+          file_count: 0,
+          instructions_preview: null,
+          created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           pinned_at: null,
           archived_at: null,
@@ -187,9 +264,18 @@ function ProjectsPage() {
   }
 
   const suggestions: { name: string; description: string }[] = [
-    { name: "Marketing Campaign", description: "Plan, draft, and coordinate launch content across channels." },
-    { name: "Product Research", description: "User interviews, competitive notes, and opportunity briefs." },
-    { name: "Content Calendar", description: "Track posts, deadlines, and drafts for the upcoming quarter." },
+    {
+      name: "Marketing Campaign",
+      description: "Plan, draft, and coordinate launch content across channels.",
+    },
+    {
+      name: "Product Research",
+      description: "User interviews, competitive notes, and opportunity briefs.",
+    },
+    {
+      name: "Content Calendar",
+      description: "Track posts, deadlines, and drafts for the upcoming quarter.",
+    },
     { name: "Team Onboarding", description: "Docs, checklists, and resources for new hires." },
   ];
   const [aiBusy, setAiBusy] = useState(false);
@@ -246,8 +332,12 @@ function ProjectsPage() {
         <div className="max-w-2xl mx-auto p-8 text-center">
           <FolderKanban className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
           <h1 className="text-2xl font-semibold mb-2">Sign in to use Projects</h1>
-          <p className="text-muted-foreground mb-6">Create shared workspaces, invite teammates, and collaborate on chats.</p>
-          <SignInButton mode="modal"><Button>Sign in</Button></SignInButton>
+          <p className="text-muted-foreground mb-6">
+            Create shared workspaces, invite teammates, and collaborate on chats.
+          </p>
+          <SignInButton mode="modal">
+            <Button>Sign in</Button>
+          </SignInButton>
         </div>
       </AppShell>
     );
@@ -255,13 +345,18 @@ function ProjectsPage() {
 
   return (
     <AppShell>
-      <div className="max-w-5xl mx-auto p-4 sm:p-6 md:p-8 w-full pb-24 lg:pb-8">
+      <div className="kova-page pb-24 lg:pb-8">
         <div className="flex items-center justify-between mb-4 sm:mb-6">
           <div className="min-w-0">
             <h1 className="text-2xl font-semibold">Projects</h1>
-            <p className="text-sm text-muted-foreground">Shared workspaces for you and your team.</p>
+            <p className="text-sm text-muted-foreground">
+              Shared workspaces for you and your team.
+            </p>
           </div>
-          <Button onClick={() => setCreateOpen(true)} className="hidden lg:inline-flex"><Plus className="w-4 h-4 mr-1.5" />New project</Button>
+          <Button onClick={() => setCreateOpen(true)} className="hidden lg:inline-flex">
+            <Plus className="w-4 h-4 mr-1.5" />
+            New project
+          </Button>
         </div>
 
         {invites.length > 0 && (
@@ -269,14 +364,23 @@ function ProjectsPage() {
             <div className="text-sm font-medium mb-3">Pending invitations</div>
             <div className="space-y-2">
               {invites.map((inv) => (
-                <div key={inv.invite_id} className="flex items-center justify-between gap-2 bg-background rounded-lg px-3 py-2">
+                <div
+                  key={inv.invite_id}
+                  className="flex items-center justify-between gap-2 bg-background rounded-lg px-3 py-2"
+                >
                   <div>
                     <div className="font-medium">{inv.project_name}</div>
                     <div className="text-xs text-muted-foreground">Role: {inv.role}</div>
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={() => handleAccept(inv.invite_id)}><Check className="w-3.5 h-3.5 mr-1" />Accept</Button>
-                    <Button size="sm" variant="ghost" onClick={() => handleDecline(inv.invite_id)}><XIcon className="w-3.5 h-3.5 mr-1" />Decline</Button>
+                    <Button size="sm" onClick={() => handleAccept(inv.invite_id)}>
+                      <Check className="w-3.5 h-3.5 mr-1" />
+                      Accept
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => handleDecline(inv.invite_id)}>
+                      <XIcon className="w-3.5 h-3.5 mr-1" />
+                      Decline
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -300,7 +404,8 @@ function ProjectsPage() {
             tip="Press N to start a new chat, or click New project to begin."
             action={
               <Button onClick={() => setCreateOpen(true)}>
-                <Plus className="w-4 h-4 mr-1.5" />Create project
+                <Plus className="w-4 h-4 mr-1.5" />
+                Create project
               </Button>
             }
           />
@@ -308,33 +413,71 @@ function ProjectsPage() {
           (() => {
             const q = query.trim().toLowerCase();
             const matches = (p: ProjectSummary) =>
-              !q || p.name.toLowerCase().includes(q) || (p.description ?? "").toLowerCase().includes(q);
+              !q ||
+              p.name.toLowerCase().includes(q) ||
+              (p.description ?? "").toLowerCase().includes(q) ||
+              (p.instructions_preview ?? "").toLowerCase().includes(q);
             const sortFn = (a: ProjectSummary, b: ProjectSummary) => {
               if (sortBy === "name") return a.name.localeCompare(b.name);
               if (sortBy === "members") return b.member_count - a.member_count;
+              if (sortBy === "created")
+                return (
+                  new Date(b.created_at ?? b.updated_at).getTime() -
+                  new Date(a.created_at ?? a.updated_at).getTime()
+                );
               return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
             };
-            const pinned = projects.filter((p) => p.pinned_at && !p.archived_at && matches(p)).sort(sortFn);
-            const active = projects.filter((p) => !p.pinned_at && !p.archived_at && matches(p)).sort(sortFn);
+            const pinned = projects
+              .filter((p) => p.pinned_at && !p.archived_at && matches(p))
+              .sort(sortFn);
+            const active = projects
+              .filter((p) => !p.pinned_at && !p.archived_at && matches(p))
+              .sort(sortFn);
             const archived = projects.filter((p) => p.archived_at && matches(p)).sort(sortFn);
             const noMatches = q && pinned.length + active.length + archived.length === 0;
 
             const Card = ({ p }: { p: ProjectSummary }) => (
-              <div className="relative block border rounded-xl p-4 hover:bg-accent/50 transition group">
+              <div
+                className={
+                  view === "list"
+                    ? "relative kova-row items-center gap-3 group"
+                    : "relative kova-card block p-4 group"
+                }
+              >
                 <Link to="/projects/$projectId" params={{ projectId: p.id }} className="block">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${colorClass(p.color)}`}>
+                      <div
+                        className={`w-9 h-9 rounded-lg flex items-center justify-center ${colorClass(p.color)}`}
+                      >
                         <FolderKanban className="w-5 h-5" />
                       </div>
-                      {p.pinned_at && <Pin className="w-3.5 h-3.5 text-muted-foreground fill-current" />}
+                      {p.pinned_at && (
+                        <Pin className="w-3.5 h-3.5 text-muted-foreground fill-current" />
+                      )}
                     </div>
-                    <span className="text-[11px] uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground">{p.role}</span>
+                    <span className="text-[11px] uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                      {p.role}
+                    </span>
                   </div>
                   <div className="font-semibold truncate pr-8">{p.name}</div>
-                  {p.description && <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{p.description}</p>}
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-3">
-                    <Users className="w-3.5 h-3.5" />{p.member_count} member{p.member_count === 1 ? "" : "s"}
+                  {(p.description || p.instructions_preview) && (
+                    <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                      {p.description || p.instructions_preview}
+                    </p>
+                  )}
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-3">
+                    <span className="flex items-center gap-1">
+                      <Users className="w-3.5 h-3.5" />
+                      {p.member_count} member{p.member_count === 1 ? "" : "s"}
+                    </span>
+                    <span>
+                      {p.chat_count ?? 0} chat{(p.chat_count ?? 0) === 1 ? "" : "s"}
+                    </span>
+                    <span>
+                      {p.file_count ?? 0} file{(p.file_count ?? 0) === 1 ? "" : "s"}
+                    </span>
+                    <span>Updated {new Date(p.updated_at).toLocaleDateString()}</span>
                   </div>
                 </Link>
                 <div className="absolute top-3 right-3">
@@ -350,16 +493,44 @@ function ProjectsPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
                       <DropdownMenuItem onClick={() => togglePin(p)} disabled={p.role === "viewer"}>
-                        {p.pinned_at ? <><PinOff className="w-4 h-4 mr-2" />Unpin</> : <><Pin className="w-4 h-4 mr-2" />Pin to top</>}
+                        {p.pinned_at ? (
+                          <>
+                            <PinOff className="w-4 h-4 mr-2" />
+                            Unpin
+                          </>
+                        ) : (
+                          <>
+                            <Pin className="w-4 h-4 mr-2" />
+                            Pin to top
+                          </>
+                        )}
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => openRename(p)} disabled={p.role === "viewer"}>
-                        <Pencil className="w-4 h-4 mr-2" />Rename
+                      <DropdownMenuItem
+                        onClick={() => openRename(p)}
+                        disabled={p.role === "viewer"}
+                      >
+                        <Pencil className="w-4 h-4 mr-2" />
+                        Rename
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleDuplicate(p)}>
-                        <CopyIcon className="w-4 h-4 mr-2" />Duplicate
+                        <CopyIcon className="w-4 h-4 mr-2" />
+                        Duplicate
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => toggleArchive(p)} disabled={p.role !== "owner"}>
-                        {p.archived_at ? <><ArchiveRestore className="w-4 h-4 mr-2" />Restore</> : <><Archive className="w-4 h-4 mr-2" />Archive</>}
+                      <DropdownMenuItem
+                        onClick={() => toggleArchive(p)}
+                        disabled={p.role !== "owner"}
+                      >
+                        {p.archived_at ? (
+                          <>
+                            <ArchiveRestore className="w-4 h-4 mr-2" />
+                            Restore
+                          </>
+                        ) : (
+                          <>
+                            <Archive className="w-4 h-4 mr-2" />
+                            Archive
+                          </>
+                        )}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
@@ -367,7 +538,8 @@ function ProjectsPage() {
                         disabled={p.role !== "owner"}
                         className="text-destructive focus:text-destructive"
                       >
-                        <Trash2 className="w-4 h-4 mr-2" />Delete
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -375,20 +547,25 @@ function ProjectsPage() {
               </div>
             );
 
-            const Section = ({ title, items }: { title: string; items: ProjectSummary[] }) => (
+            const Section = ({ title, items }: { title: string; items: ProjectSummary[] }) =>
               items.length === 0 ? null : (
                 <section className="mb-6">
-                  {title && <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2 px-1">{title}</div>}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {items.map((p) => <Card key={p.id} p={p} />)}
+                  {title && (
+                    <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2 px-1">
+                      {title}
+                    </div>
+                  )}
+                  <div className={view === "list" ? "kova-list" : "kova-grid"}>
+                    {items.map((p) => (
+                      <Card key={p.id} p={p} />
+                    ))}
                   </div>
                 </section>
-              )
-            );
+              );
 
             return (
               <div>
-                <div className="flex items-center gap-2 mb-4">
+                <div className="kova-toolbar">
                   <div className="relative flex-1">
                     <SearchIcon className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                     <Input
@@ -406,8 +583,31 @@ function ProjectsPage() {
                   >
                     <option value="recent">Recent</option>
                     <option value="name">Name</option>
+                    <option value="created">Created</option>
                     <option value="members">Members</option>
                   </select>
+                  <div
+                    className="flex rounded-[var(--kova-radius-input)] border border-border p-1"
+                    role="group"
+                    aria-label="Projects view"
+                  >
+                    <button
+                      type="button"
+                      className={`kova-icon-button ${view === "grid" ? "bg-[var(--surface-selected)]" : ""}`}
+                      onClick={() => setView("grid")}
+                      aria-label="Grid view"
+                    >
+                      Grid
+                    </button>
+                    <button
+                      type="button"
+                      className={`kova-icon-button ${view === "list" ? "bg-[var(--surface-selected)]" : ""}`}
+                      onClick={() => setView("list")}
+                      aria-label="List view"
+                    >
+                      List
+                    </button>
+                  </div>
                 </div>
 
                 {noMatches ? (
@@ -427,12 +627,22 @@ function ProjectsPage() {
                           onClick={() => setShowArchived((v) => !v)}
                           className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground mb-2 px-1"
                         >
-                          {showArchived ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                          {showArchived ? (
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          ) : (
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          )}
                           Archived ({archived.length})
                         </button>
                         {showArchived && (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 opacity-80">
-                            {archived.map((p) => <Card key={p.id} p={p} />)}
+                          <div
+                            className={
+                              view === "list" ? "kova-list opacity-80" : "kova-grid opacity-80"
+                            }
+                          >
+                            {archived.map((p) => (
+                              <Card key={p.id} p={p} />
+                            ))}
                           </div>
                         )}
                       </section>
@@ -454,21 +664,40 @@ function ProjectsPage() {
         <Plus className="w-6 h-6" />
       </button>
 
-
       <Dialog open={!!renameFor} onOpenChange={(o) => !o && setRenameFor(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Rename project</DialogTitle></DialogHeader>
-          <form onSubmit={(e) => { e.preventDefault(); if (!renameBusy) saveRename(); }} className="space-y-4">
+          <DialogHeader>
+            <DialogTitle>Rename project</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!renameBusy) saveRename();
+            }}
+            className="space-y-4"
+          >
             <div>
               <label className="text-sm font-medium mb-1 block">Name</label>
-              <Input value={renameName} onChange={(e) => setRenameName(e.target.value)} maxLength={100} autoFocus />
+              <Input
+                value={renameName}
+                onChange={(e) => setRenameName(e.target.value)}
+                maxLength={100}
+                autoFocus
+              />
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Description</label>
-              <Textarea value={renameDesc} onChange={(e) => setRenameDesc(e.target.value)} rows={3} maxLength={1000} />
+              <Textarea
+                value={renameDesc}
+                onChange={(e) => setRenameDesc(e.target.value)}
+                rows={3}
+                maxLength={1000}
+              />
             </div>
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setRenameFor(null)}>Cancel</Button>
+              <Button type="button" variant="ghost" onClick={() => setRenameFor(null)}>
+                Cancel
+              </Button>
               <Button type="submit" disabled={renameBusy || !renameName.trim()}>
                 {renameBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}
               </Button>
@@ -477,12 +706,16 @@ function ProjectsPage() {
         </DialogContent>
       </Dialog>
 
-
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>New project</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>New project</DialogTitle>
+          </DialogHeader>
           <form
-            onSubmit={(e) => { e.preventDefault(); if (!busy && name.trim()) handleCreate(); }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!busy && name.trim()) handleCreate();
+            }}
             className="space-y-4"
           >
             <div>
@@ -494,15 +727,31 @@ function ProjectsPage() {
                   disabled={aiBusy}
                   className="inline-flex items-center gap-1 text-xs text-primary hover:underline disabled:opacity-60"
                 >
-                  {aiBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+                  {aiBusy ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Wand2 className="w-3 h-3" />
+                  )}
                   Generate with Kova
                 </button>
               </div>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Marketing campaign" maxLength={100} autoFocus />
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Marketing campaign"
+                maxLength={100}
+                autoFocus
+              />
             </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Description (optional)</label>
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What's this project about?" rows={3} maxLength={1000} />
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="What's this project about?"
+                rows={3}
+                maxLength={1000}
+              />
             </div>
             <div>
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
@@ -513,7 +762,10 @@ function ProjectsPage() {
                   <button
                     key={s.name}
                     type="button"
-                    onClick={() => { setName(s.name); setDescription(s.description); }}
+                    onClick={() => {
+                      setName(s.name);
+                      setDescription(s.description);
+                    }}
                     className="text-xs px-2.5 py-1 rounded-full border border-border hover:bg-accent transition"
                   >
                     {s.name}
@@ -522,7 +774,9 @@ function ProjectsPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button>
+              <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
+                Cancel
+              </Button>
               <Button type="submit" disabled={busy || !name.trim()}>
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create"}
               </Button>

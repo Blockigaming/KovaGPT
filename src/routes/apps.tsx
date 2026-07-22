@@ -1,8 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
-import { CONNECTOR_CATALOG, type ConnectorItem, type ConnectorCategory } from "@/lib/connectors-catalog";
-import { Link2, Search, Check, Loader2, Sparkles, ShieldAlert, Plug, AlertCircle, X, LogIn } from "lucide-react";
+import {
+  CONNECTOR_CATALOG,
+  type ConnectorItem,
+  type ConnectorCategory,
+} from "@/lib/connectors-catalog";
+import {
+  Link2,
+  Search,
+  Check,
+  Loader2,
+  Sparkles,
+  ShieldAlert,
+  Plug,
+  AlertCircle,
+  X,
+  LogIn,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AppShell } from "@/components/AppShell";
 import { toast } from "sonner";
@@ -16,14 +31,9 @@ import {
 const STORAGE_KEY = "kova-connected-apps-v1";
 const GOOGLE_IDS = new Set(["google", "gmail", "google-drive", "google-calendar"]);
 
-// Apps that are actually wired up end-to-end today. Everything else is
-// surfaced as "Coming soon" until its backend integration ships.
-const WORKING_IDS = new Set<string>([
-  "google",
-  "gmail",
-  "google-drive",
-  "google-calendar",
-]);
+// Apps that are actually wired up end-to-end today. Non-working connectors are
+// intentionally hidden so navigation never exposes fake or decorative controls.
+const WORKING_IDS = new Set<string>(["google", "gmail", "google-drive", "google-calendar"]);
 
 // Every catalog app is linkable from KovaGPT. Providers with native OAuth
 // (Google family, Apple) go through the real sign-in flow; the rest use a
@@ -60,13 +70,25 @@ export const Route = createFileRoute("/apps")({
   head: () => ({
     meta: [
       { title: "Apps | KovaGPT" },
-      { name: "description", content: "Connect KovaGPT to Google, Drive, Gmail, Notion, Slack, and more." },
+      {
+        name: "description",
+        content: "Connect KovaGPT to Google, Drive, Gmail, Notion, Slack, and more.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
 });
 
-type ConnState = "idle" | "connecting" | "connected" | "failed";
+type ConnState =
+  | "idle"
+  | "connecting"
+  | "connected"
+  | "failed"
+  | "expired"
+  | "reauthorize"
+  | "permission_incomplete"
+  | "syncing"
+  | "temporarily_unavailable";
 
 function loadConnected(): Record<string, true> {
   if (typeof window === "undefined") return {};
@@ -78,7 +100,11 @@ function loadConnected(): Record<string, true> {
 }
 
 function saveConnected(map: Record<string, true>) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(map)); } catch { /* ignore */ }
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
+  } catch {
+    /* ignore */
+  }
 }
 
 function AppLogo({ domain, label }: { domain: string; label: string }) {
@@ -104,12 +130,7 @@ function AppLogo({ domain, label }: { domain: string; label: string }) {
   );
 }
 
-
-function StatusBadge({ state, configured, comingSoon }: { state: ConnState; configured: boolean; comingSoon?: boolean }) {
-  if (comingSoon) {
-    // The "Coming soon" button on the card already communicates status; avoid duplicating it as a badge.
-    return null;
-  }
+function StatusBadge({ state, configured }: { state: ConnState; configured: boolean }) {
   if (!configured) {
     return (
       <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
@@ -131,6 +152,47 @@ function StatusBadge({ state, configured, comingSoon }: { state: ConnState; conf
       </span>
     );
   }
+
+  if (state === "expired" || state === "reauthorize") {
+    return (
+      <span
+        className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20"
+        aria-label="Reauthorization required"
+      >
+        <ShieldAlert className="w-3 h-3" /> Reconnect
+      </span>
+    );
+  }
+  if (state === "permission_incomplete") {
+    return (
+      <span
+        className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/20"
+        aria-label="Permission incomplete"
+      >
+        <ShieldAlert className="w-3 h-3" /> More access needed
+      </span>
+    );
+  }
+  if (state === "syncing") {
+    return (
+      <span
+        className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20"
+        aria-live="polite"
+      >
+        <Loader2 className="w-3 h-3 animate-spin" /> Syncing
+      </span>
+    );
+  }
+  if (state === "temporarily_unavailable") {
+    return (
+      <span
+        className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground border border-border"
+        aria-label="Temporarily unavailable"
+      >
+        <AlertCircle className="w-3 h-3" /> Temporarily unavailable
+      </span>
+    );
+  }
   if (state === "failed") {
     return (
       <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
@@ -146,7 +208,6 @@ function AppCard({
   state,
   configured,
   isSignedIn,
-  comingSoon,
   onConnect,
   onDisconnect,
   onRetry,
@@ -155,7 +216,6 @@ function AppCard({
   state: ConnState;
   configured: boolean;
   isSignedIn: boolean;
-  comingSoon: boolean;
   onConnect: () => void;
   onDisconnect: () => void;
   onRetry: () => void;
@@ -164,17 +224,7 @@ function AppCard({
     "text-xs px-3 py-1.5 rounded-full transition active:scale-[0.97] shrink-0 font-medium";
 
   let action: React.ReactNode;
-  if (comingSoon) {
-    action = (
-      <button
-        disabled
-        title="This integration is coming soon."
-        className={`${baseBtn} border border-border text-muted-foreground cursor-not-allowed opacity-70`}
-      >
-        Coming soon
-      </button>
-    );
-  } else if (!configured) {
+  if (!configured) {
     action = (
       <button
         disabled
@@ -187,20 +237,24 @@ function AppCard({
   } else if (!isSignedIn) {
     action = (
       <SignInButton mode="modal">
-        <button className={`${baseBtn} bg-[#3b82f6] text-white hover:bg-[#2563eb]`}>
-          Connect
-        </button>
+        <button className={`${baseBtn} bg-[#3b82f6] text-white hover:bg-[#2563eb]`}>Connect</button>
       </SignInButton>
     );
   } else if (state === "connecting") {
     action = (
-      <button disabled className={`${baseBtn} bg-muted text-muted-foreground inline-flex items-center gap-1.5`}>
+      <button
+        disabled
+        className={`${baseBtn} bg-muted text-muted-foreground inline-flex items-center gap-1.5`}
+      >
         <Loader2 className="w-3 h-3 animate-spin" /> Connecting
       </button>
     );
   } else if (state === "failed") {
     action = (
-      <button onClick={onRetry} className={`${baseBtn} border border-rose-500/30 text-rose-300 hover:bg-rose-500/10`}>
+      <button
+        onClick={onRetry}
+        className={`${baseBtn} border border-rose-500/30 text-rose-300 hover:bg-rose-500/10`}
+      >
         Try again
       </button>
     );
@@ -216,7 +270,10 @@ function AppCard({
     );
   } else {
     action = (
-      <button onClick={onConnect} className={`${baseBtn} bg-[#3b82f6] text-white hover:bg-[#2563eb]`}>
+      <button
+        onClick={onConnect}
+        className={`${baseBtn} bg-[#3b82f6] text-white hover:bg-[#2563eb]`}
+      >
         Connect
       </button>
     );
@@ -228,7 +285,7 @@ function AppCard({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="text-sm font-semibold truncate">{item.label}</div>
-          <StatusBadge state={state} configured={configured} comingSoon={comingSoon} />
+          <StatusBadge state={state} configured={configured} />
         </div>
         <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{item.description}</div>
       </div>
@@ -240,14 +297,16 @@ function AppCard({
 function AppsPage() {
   const { isSignedIn } = useUser();
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<(ConnectorCategory | "All")>("All");
+  const [category, setCategory] = useState<ConnectorCategory | "All">("All");
   const [connected, setConnected] = useState<Record<string, true>>({});
   const [connecting, setConnecting] = useState<Record<string, true>>({});
   const [failed, setFailed] = useState<Record<string, true>>({});
   const [googleStatus, setGoogleStatus] = useState<GoogleStatus | null>(null);
   const [googleLoading, setGoogleLoading] = useState(true);
 
-  useEffect(() => { setConnected(loadConnected()); }, []);
+  useEffect(() => {
+    setConnected(loadConnected());
+  }, []);
 
   const refreshGoogle = useCallback(async () => {
     try {
@@ -261,7 +320,11 @@ function AppsPage() {
   }, []);
 
   useEffect(() => {
-    if (!isSignedIn) { setGoogleLoading(false); setGoogleStatus({ connected: false }); return; }
+    if (!isSignedIn) {
+      setGoogleLoading(false);
+      setGoogleStatus({ connected: false });
+      return;
+    }
     refreshGoogle();
   }, [isSignedIn, refreshGoogle]);
 
@@ -276,10 +339,13 @@ function AppsPage() {
       refreshGoogle();
     } else if (err) {
       const msg =
-        err === "access_denied" ? "Authentication canceled" :
-        err === "invalid_state" ? "Session expired, try again" :
-        err === "exchange_failed" ? "Google sign-in failed, try again" :
-        `Google error: ${err}`;
+        err === "access_denied"
+          ? "Authentication canceled"
+          : err === "invalid_state"
+            ? "Session expired, try again"
+            : err === "exchange_failed"
+              ? "Google sign-in failed, try again"
+              : `Google error: ${err}`;
       toast.error(msg);
     }
     if (ok || err) {
@@ -298,7 +364,11 @@ function AppsPage() {
       try {
         await startGoogleConnect();
       } catch (e) {
-        setConnecting((c) => { const n = { ...c }; delete n[item.id]; return n; });
+        setConnecting((c) => {
+          const n = { ...c };
+          delete n[item.id];
+          return n;
+        });
         setFailed((f) => ({ ...f, [item.id]: true }));
         toast.error(e instanceof Error ? e.message : "Could not start Google connection");
       }
@@ -308,11 +378,19 @@ function AppsPage() {
       toast.error(`${item.label} needs provider setup before it can be linked.`);
       return;
     }
-    setFailed((f) => { const n = { ...f }; delete n[item.id]; return n; });
+    setFailed((f) => {
+      const n = { ...f };
+      delete n[item.id];
+      return n;
+    });
     setConnecting((c) => ({ ...c, [item.id]: true }));
     toast(`Opening secure connection to ${item.label}…`);
     window.setTimeout(() => {
-      setConnecting((c) => { const n = { ...c }; delete n[item.id]; return n; });
+      setConnecting((c) => {
+        const n = { ...c };
+        delete n[item.id];
+        return n;
+      });
       const next = { ...connected, [item.id]: true as const };
       setConnected(next);
       saveConnected(next);
@@ -349,7 +427,7 @@ function AppsPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return CONNECTOR_CATALOG.filter((c) => {
+    return CONNECTOR_CATALOG.filter((c) => WORKING_IDS.has(c.id)).filter((c) => {
       if (category !== "All" && c.category !== category) return false;
       if (!q) return true;
       return (
@@ -373,9 +451,14 @@ function AppsPage() {
       if (failed[id]) return "failed";
       return isGoogleConnected(id) ? "connected" : "idle";
     }
-    return connecting[id] ? "connecting" : failed[id] ? "failed" : connected[id] ? "connected" : "idle";
+    return connecting[id]
+      ? "connecting"
+      : failed[id]
+        ? "failed"
+        : connected[id]
+          ? "connected"
+          : "idle";
   };
-
 
   const renderGrid = (items: ConnectorItem[]) => (
     <ul className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 auto-rows-fr">
@@ -386,7 +469,6 @@ function AppsPage() {
           state={stateOf(item.id)}
           configured={CONFIGURED_CONNECTORS.has(item.id)}
           isSignedIn={!!isSignedIn}
-          comingSoon={!WORKING_IDS.has(item.id)}
           onConnect={() => handleConnect(item)}
           onDisconnect={() => handleDisconnect(item)}
           onRetry={() => handleConnect(item)}
@@ -400,14 +482,20 @@ function AppsPage() {
     subtitle,
     icon,
     items,
-  }: { title: string; subtitle?: string; icon?: React.ReactNode; items: ConnectorItem[] }) => {
+  }: {
+    title: string;
+    subtitle?: string;
+    icon?: React.ReactNode;
+    items: ConnectorItem[];
+  }) => {
     if (items.length === 0) return null;
     return (
       <section>
         <div className="flex items-baseline justify-between mb-3">
           <div>
             <h2 className="text-sm font-semibold tracking-wide inline-flex items-center gap-1.5">
-              {icon}{title}
+              {icon}
+              {title}
             </h2>
             {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
           </div>
@@ -417,8 +505,6 @@ function AppsPage() {
     );
   };
 
-  // "All apps" is only revealed when the user searches or picks a specific category.
-  // Otherwise we intentionally show Connected + Recommended only.
   const showAllApps = query.trim().length > 0 || category !== "All";
 
   return (
@@ -430,8 +516,9 @@ function AppsPage() {
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">Your KovaGPT workspace</h1>
           <p className="text-sm text-muted-foreground max-w-2xl">
-            Link the tools you already use so KovaGPT can reference your files, messages, and schedule in chat.
-            You stay in control. Disconnect any app at any time.
+            Link Google once to enable Gmail, Calendar, and Drive capabilities according to the
+            scopes you grant. KovaGPT never stores connector tokens in browser storage, and write
+            actions require confirmation.
           </p>
         </header>
 
@@ -469,7 +556,8 @@ function AppsPage() {
           <div className="rounded-xl border border-border bg-card/50 p-4 text-sm text-muted-foreground flex items-start gap-3">
             <LogIn className="w-4 h-4 mt-0.5 text-[#3b82f6] shrink-0" />
             <div>
-              Sign in to connect apps. Your connections are saved to your KovaGPT account so they follow you across devices.
+              Sign in to connect apps. Your connections are saved to your KovaGPT account so they
+              follow you across devices.
             </div>
           </div>
         )}
@@ -480,7 +568,10 @@ function AppsPage() {
             <p className="text-sm font-medium">No apps match your filters</p>
             <p className="text-xs text-muted-foreground mt-1">Try a different name or category.</p>
             <button
-              onClick={() => { setQuery(""); setCategory("All"); }}
+              onClick={() => {
+                setQuery("");
+                setCategory("All");
+              }}
               className="mt-3 text-xs px-3 py-1.5 rounded-full border border-border hover:bg-accent"
             >
               Clear filters
@@ -508,7 +599,7 @@ function AppsPage() {
             {showAllApps ? (
               <Section
                 title={category === "All" ? "All apps" : category}
-                subtitle="Apps marked Setup needed will be available once their provider credentials are configured."
+                subtitle="Connected Google apps are available to the assistant in chat."
                 icon={<Link2 className="w-3.5 h-3.5 text-foreground/60" />}
                 items={otherList}
               />

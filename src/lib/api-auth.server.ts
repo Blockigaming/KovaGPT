@@ -6,10 +6,6 @@ import type { Database } from "@/integrations/supabase/types";
 export const DAILY_IMAGE_LIMIT = 1;
 export const DAILY_CHAT_LIMIT = 50;
 export const DAILY_UPLOAD_LIMIT = 2;
-export const DAILY_TTS_LIMIT = 50;
-
-
-
 export type AuthedCaller = {
   userId: string;
   supabaseAdmin: SupabaseClient<Database>;
@@ -31,9 +27,7 @@ export function tooMany(message = "Daily limit reached") {
   return jsonError(message, 429);
 }
 
-export async function requireUser(
-  request: Request,
-): Promise<AuthedCaller | Response> {
+export async function requireUser(request: Request): Promise<AuthedCaller | Response> {
   const result = await optionalUser(request);
   if (!result) return unauthorized();
   if (result instanceof Response) return result;
@@ -45,9 +39,7 @@ export async function requireUser(
  * `null` if the request is anonymous (no token at all), or a Response when
  * the token is present but invalid/expired.
  */
-export async function optionalUser(
-  request: Request,
-): Promise<AuthedCaller | null | Response> {
+export async function optionalUser(request: Request): Promise<AuthedCaller | null | Response> {
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
   const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -76,11 +68,9 @@ export async function optionalUser(
 
 /**
  * Like requireUser, but additionally requires a verified email address.
- * Use for high-cost / abuse-prone actions (image gen, voice, uploads).
+ * Use for high-cost / abuse-prone actions (image generation and uploads).
  */
-export async function requireVerifiedUser(
-  request: Request,
-): Promise<AuthedCaller | Response> {
+export async function requireVerifiedUser(request: Request): Promise<AuthedCaller | Response> {
   const auth = await requireUser(request);
   if (auth instanceof Response) return auth;
   if (!auth.emailVerified) {
@@ -94,7 +84,7 @@ export async function requireVerifiedUser(
 
 export async function enforceQuota(
   caller: AuthedCaller,
-  kind: "images" | "chats" | "uploads" | "voice",
+  kind: "images" | "chats" | "uploads",
   limit: number,
   increment = 1,
 ): Promise<Response | null> {
@@ -112,14 +102,7 @@ export async function enforceQuota(
     return jsonError("Quota check failed", 500);
   }
   if (data === false) {
-    const label =
-      kind === "images"
-        ? "image"
-        : kind === "uploads"
-        ? "file upload"
-        : kind === "voice"
-        ? "voice"
-        : "message";
+    const label = kind === "images" ? "image" : kind === "uploads" ? "file upload" : "message";
     return tooMany(
       `Daily ${label} limit reached (${limit}/day). Resets in 24 hours or upgrade for more.`,
     );
@@ -137,17 +120,20 @@ export async function enforceStorage(
   limitBytes: number,
 ): Promise<Response | null> {
   if (bytes <= 0) return null;
-  const { data, error } = await caller.supabaseAdmin.rpc("try_add_storage_bytes" as never, {
-    _user_id: caller.userId,
-    _bytes: bytes,
-    _limit: limitBytes,
-  } as never);
+  const { data, error } = await caller.supabaseAdmin.rpc(
+    "try_add_storage_bytes" as never,
+    {
+      _user_id: caller.userId,
+      _bytes: bytes,
+      _limit: limitBytes,
+    } as never,
+  );
   if (error) {
     console.error("[enforceStorage] rpc error", error);
     return jsonError("Storage check failed", 500);
   }
   if (data === false) {
-    const gb = (limitBytes / (1024 ** 3)).toFixed(0);
+    const gb = (limitBytes / 1024 ** 3).toFixed(0);
     return jsonError(
       `Storage limit reached (${gb} GB). Delete some files or upgrade for more.`,
       413,
@@ -175,7 +161,8 @@ export async function getCallerTier(caller: AuthedCaller): Promise<CallerTier> {
   for (const row of data) {
     const end = row.current_period_end ? new Date(row.current_period_end).getTime() : 0;
     const active =
-      (["active", "trialing", "past_due"].includes(row.status) && (!row.current_period_end || end > now)) ||
+      (["active", "trialing", "past_due"].includes(row.status) &&
+        (!row.current_period_end || end > now)) ||
       (row.status === "canceled" && end > now);
     if (!active) continue;
     const id = (row.price_id ?? "").toLowerCase();
@@ -209,11 +196,11 @@ export async function assertNotBanned(caller: AuthedCaller): Promise<Response | 
 
 /**
  * Returns 503 if the named maintenance flag has been turned off by ops.
- * Flags: 'chat' | 'images' | 'uploads' | 'voice' | 'signups'
+ * Flags: 'chat' | 'images' | 'uploads' | 'signups'
  */
 export async function assertFeatureEnabled(
   caller: AuthedCaller,
-  feature: "chat" | "images" | "uploads" | "voice" | "signups",
+  feature: "chat" | "images" | "uploads" | "signups",
 ): Promise<Response | null> {
   const { data } = await caller.supabaseAdmin
     .from("feature_flags")
@@ -228,6 +215,3 @@ export async function assertFeatureEnabled(
   }
   return null;
 }
-
-
-

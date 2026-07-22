@@ -1,7 +1,16 @@
 import type { ModeId } from "./modes";
 
 export type Role = "user" | "assistant";
-export type Attachment = { kind: "image"; dataUrl: string };
+export type Attachment =
+  | { kind: "image"; dataUrl: string }
+  | {
+      kind: "library_file";
+      libraryItemId: string;
+      name: string;
+      fileType?: string | null;
+      size?: number | null;
+      sourceProject?: string | null;
+    };
 export type Activity = { tool: string; label: string; status: "done" | "running" };
 export type PendingConfirm = {
   actionId: string;
@@ -29,6 +38,7 @@ export type Conversation = {
   updatedAt: number;
   pinned?: boolean;
   pinnedAt?: number;
+  temporary?: boolean;
 };
 
 const KEY = "nova-gpt-conversations-v2";
