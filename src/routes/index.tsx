@@ -2,7 +2,21 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
-import { PanelLeft, Search, MessageSquareDashed, Check, Sparkles, Globe2, Code2, GraduationCap, Image as ImageIcon, FileText, Mic, Share2, Download } from "lucide-react";
+import {
+  PanelLeft,
+  Search,
+  MessageSquareDashed,
+  Check,
+  Sparkles,
+  Globe2,
+  Code2,
+  GraduationCap,
+  Image as ImageIcon,
+  FileText,
+  Mic,
+  Share2,
+  Download,
+} from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 
 import { ChatMessage } from "@/components/ChatMessage";
@@ -14,11 +28,21 @@ import { CommandPalette } from "@/components/CommandPalette";
 
 import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 
-const SettingsDialog = lazy(() => import("@/components/SettingsDialog").then(m => ({ default: m.SettingsDialog })));
-const OnboardingDialog = lazy(() => import("@/components/OnboardingDialog").then(m => ({ default: m.OnboardingDialog })));
-const LimitReachedDialog = lazy(() => import("@/components/LimitReachedDialog").then(m => ({ default: m.LimitReachedDialog })));
-const ShareChatDialog = lazy(() => import("@/components/ShareChatDialog").then(m => ({ default: m.ShareChatDialog })));
-const AddMembersDialog = lazy(() => import("@/components/AddMembersDialog").then(m => ({ default: m.AddMembersDialog })));
+const SettingsDialog = lazy(() =>
+  import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog })),
+);
+const OnboardingDialog = lazy(() =>
+  import("@/components/OnboardingDialog").then((m) => ({ default: m.OnboardingDialog })),
+);
+const LimitReachedDialog = lazy(() =>
+  import("@/components/LimitReachedDialog").then((m) => ({ default: m.LimitReachedDialog })),
+);
+const ShareChatDialog = lazy(() =>
+  import("@/components/ShareChatDialog").then((m) => ({ default: m.ShareChatDialog })),
+);
+const AddMembersDialog = lazy(() =>
+  import("@/components/AddMembersDialog").then((m) => ({ default: m.AddMembersDialog })),
+);
 import { applyThemeMode } from "@/lib/theme";
 
 import { getUsage } from "@/lib/limits";
@@ -50,12 +74,14 @@ export const Route = createFileRoute("/")({
       { title: "KovaGPT" },
       {
         name: "description",
-        content: "KovaGPT - a multimodal AI assistant for chat, code, research, and image generation.",
+        content:
+          "KovaGPT - a multimodal AI assistant for chat, code, research, and image generation.",
       },
       { property: "og:title", content: "KovaGPT" },
       {
         property: "og:description",
-        content: "KovaGPT - a multimodal AI assistant for chat, code, research, and image generation.",
+        content:
+          "KovaGPT - a multimodal AI assistant for chat, code, research, and image generation.",
       },
       { property: "og:url", content: "https://kovagpt.com/" },
       { property: "og:image", content: "https://kovagpt.com/og/home.jpg" },
@@ -65,14 +91,14 @@ export const Route = createFileRoute("/")({
       { name: "twitter:title", content: "KovaGPT" },
       {
         name: "twitter:description",
-        content: "KovaGPT - a multimodal AI assistant for chat, code, research, and image generation.",
+        content:
+          "KovaGPT - a multimodal AI assistant for chat, code, research, and image generation.",
       },
       { name: "twitter:image", content: "https://kovagpt.com/og/home.jpg" },
     ],
     links: [{ rel: "canonical", href: "https://kovagpt.com/" }],
   }),
 });
-
 
 const SETTINGS_KEY_BASE = "nova-gpt-settings-v1";
 function settingsKey(userKey: string | null) {
@@ -116,12 +142,20 @@ function KovaGPT() {
   useEffect(() => {
     if (typeof window === "undefined" || window.innerWidth < 1024) return;
     let saved: string | null = null;
-    try { saved = localStorage.getItem("kova-sidebar-open"); } catch { /* ignore */ }
+    try {
+      saved = localStorage.getItem("kova-sidebar-open");
+    } catch {
+      /* ignore */
+    }
     setSidebarOpen(saved === null ? true : saved === "1");
   }, []);
   useEffect(() => {
     if (typeof window === "undefined" || window.innerWidth < 1024) return;
-    try { localStorage.setItem("kova-sidebar-open", sidebarOpen ? "1" : "0"); } catch { /* ignore */ }
+    try {
+      localStorage.setItem("kova-sidebar-open", sidebarOpen ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
   }, [sidebarOpen]);
 
   // Draft persistence: keep an unsent message per conversation so users don't
@@ -134,7 +168,9 @@ function KovaGPT() {
     try {
       const saved = localStorage.getItem(`kova-draft:${activeId ?? "__new__"}`);
       setInput(saved ?? "");
-    } catch { setInput(""); }
+    } catch {
+      setInput("");
+    }
   }, [activeId]);
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -143,7 +179,9 @@ function KovaGPT() {
     try {
       if (input) localStorage.setItem(key, input);
       else localStorage.removeItem(key);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [input, activeId]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
@@ -187,10 +225,12 @@ function KovaGPT() {
     })();
   }, [isSignedIn, openSignUp]);
   const navigate = useNavigate();
-  const openHelp = useCallback(() => { navigate({ to: "/help" as never }); }, [navigate]);
+  const openHelp = useCallback(() => {
+    navigate({ to: "/help" as never });
+  }, [navigate]);
   const [shareChatId, setShareChatId] = useState<string | null>(null);
   const [membersChatId, setMembersChatId] = useState<string | null>(null);
-  
+
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [signupPromptOpen, setSignupPromptOpen] = useState(false);
   const [signupPromptShown, setSignupPromptShown] = useState(false);
@@ -201,8 +241,8 @@ function KovaGPT() {
   }>({ open: false, kind: "image" });
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-
-
+  const nearBottomRef = useRef(true);
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
 
   // Load (or reload) settings whenever the signed-in user changes so each
   // account gets its own personalization, behavior, appearance, etc.
@@ -222,7 +262,9 @@ function KovaGPT() {
         setActiveId(pending);
       }
       localStorage.removeItem("nova-gpt-pending-active");
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [isLoaded, userKey, isSignedIn]);
 
   // Re-apply theme mode whenever it changes
@@ -286,10 +328,25 @@ function KovaGPT() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [firstName, isLoaded, isSignedIn]);
 
+  const updateNearBottom = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const near = distance < 120;
+    nearBottomRef.current = near;
+    setShowJumpToLatest(!near && Boolean(active?.messages.length));
+  }, [active?.messages.length]);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
-  }, [active?.messages.length, isStreaming]);
+    const el = scrollRef.current;
+    if (!el) return;
+    if (nearBottomRef.current) {
+      el.scrollTo({ top: el.scrollHeight, behavior: isStreaming ? "auto" : "smooth" });
+      setShowJumpToLatest(false);
+    } else {
+      setShowJumpToLatest(true);
+    }
+  }, [active?.messages.length, active?.messages.at(-1)?.content, isStreaming]);
 
   // Cross-chat memory: when an active conversation has been updated and
   // we're not mid-stream, debounce a summary save server-side. The
@@ -307,7 +364,9 @@ function KovaGPT() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      }).catch(() => { /* best-effort */ });
+      }).catch(() => {
+        /* best-effort */
+      });
     }, 4000);
     return () => clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -518,7 +577,9 @@ function KovaGPT() {
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             locale: typeof navigator !== "undefined" ? navigator.language : "en-US",
             personality: personalityToInstruction(loadPersonality()) || undefined,
-            kovaVersion: (typeof window !== "undefined" && (localStorage.getItem("kova-version") ?? "3.5")) || "3.5",
+            kovaVersion:
+              (typeof window !== "undefined" && (localStorage.getItem("kova-version") ?? "3.5")) ||
+              "3.5",
           }),
           signal: controller.signal,
         });
@@ -532,13 +593,16 @@ function KovaGPT() {
             const kind: "image" | "chat" = /image/i.test(errMsg) ? "image" : "chat";
             setLimitDialog({ open: true, kind, message: errMsg });
           }
-          const err = new Error(errMsg) as Error & { requestId?: string; category?: string; retryable?: boolean };
+          const err = new Error(errMsg) as Error & {
+            requestId?: string;
+            category?: string;
+            retryable?: boolean;
+          };
           err.requestId = requestId;
           err.category = category;
           err.retryable = Boolean(errJson.retryable);
           throw err;
         }
-
 
         const reader = resp.body.getReader();
         const decoder = new TextDecoder();
@@ -572,7 +636,14 @@ function KovaGPT() {
                     if (c.id !== nextConvId) return c;
                     const msgs = c.messages.map((m) => {
                       if (m.id !== assistantMsg.id) return m;
-                      const activities = [...(m.activities ?? []), { tool: String(delta.tool ?? ""), label: String(delta.label), status: "done" as const }];
+                      const activities = [
+                        ...(m.activities ?? []),
+                        {
+                          tool: String(delta.tool ?? ""),
+                          label: String(delta.label),
+                          status: "done" as const,
+                        },
+                      ];
                       return { ...m, activities };
                     });
                     return { ...c, messages: msgs };
@@ -614,18 +685,21 @@ function KovaGPT() {
 
         // Always re-summarize so the chat name in the sidebar reflects the conversation
         if (assembledReply) {
-          const fullMsgs = [...priorMessages, userMsg, { ...assistantMsg, content: assembledReply }];
+          const fullMsgs = [
+            ...priorMessages,
+            userMsg,
+            { ...assistantMsg, content: assembledReply },
+          ];
           autoTitle(nextConvId, fullMsgs);
         }
-
       } catch (e: unknown) {
         if ((e as Error).name !== "AbortError") {
           const err = e as Error & { requestId?: string; category?: string; retryable?: boolean };
           const raw = err.message || "Something went wrong";
-          const isNetwork = /load failed|networkerror|failed to fetch|network request failed/i.test(raw)
-            || (e instanceof TypeError);
-          const category = err.category
-            || (isNetwork ? "network_failure" : undefined);
+          const isNetwork =
+            /load failed|networkerror|failed to fetch|network request failed/i.test(raw) ||
+            e instanceof TypeError;
+          const category = err.category || (isNetwork ? "network_failure" : undefined);
           const retryableCategory =
             category === "model_timeout" ||
             category === "streaming_interruption" ||
@@ -638,29 +712,44 @@ function KovaGPT() {
             // assistant + user bubble so the retry recreates them cleanly.
             const backoffMs = 600 * Math.pow(3, _retryAttempt);
             const attemptLabel = _retryAttempt + 1;
-            updateAssistant(`\n\n_Reconnecting… (attempt ${attemptLabel + 1}/${MAX_AUTO_RETRIES + 1})_`);
+            updateAssistant(
+              `\n\n_Reconnecting… (attempt ${attemptLabel + 1}/${MAX_AUTO_RETRIES + 1})_`,
+            );
             setConversations((prev) =>
               prev.map((c) =>
                 c.id === nextConvId
-                  ? { ...c, messages: c.messages.filter((m) => m.id !== assistantMsg.id && m.id !== userMsg.id) }
+                  ? {
+                      ...c,
+                      messages: c.messages.filter(
+                        (m) => m.id !== assistantMsg.id && m.id !== userMsg.id,
+                      ),
+                    }
                   : c,
               ),
             );
             setIsStreaming(false);
             abortRef.current = null;
-            setTimeout(() => { void send(text, atts, _retryAttempt + 1); }, backoffMs);
+            setTimeout(() => {
+              void send(text, atts, _retryAttempt + 1);
+            }, backoffMs);
             return;
           }
 
           const requestId = err.requestId;
           const friendly =
-            category === "rate_limit" ? "You're going a bit fast — try again in a moment." :
-            category === "quota_exceeded" ? "You've hit your plan's limit. Try again later or upgrade." :
-            category === "model_timeout" ? "The model took too long to respond. Tap retry." :
-            category === "model_provider_failure" ? "The AI provider had a hiccup. Tap retry." :
-            category === "streaming_interruption" ? "The connection dropped mid-response. Tap retry." :
-            isNetwork ? "Connection lost while generating a response. Check your internet and tap retry." :
-            raw;
+            category === "rate_limit"
+              ? "You're going a bit fast — try again in a moment."
+              : category === "quota_exceeded"
+                ? "You've hit your plan's limit. Try again later or upgrade."
+                : category === "model_timeout"
+                  ? "The model took too long to respond. Tap retry."
+                  : category === "model_provider_failure"
+                    ? "The AI provider had a hiccup. Tap retry."
+                    : category === "streaming_interruption"
+                      ? "The connection dropped mid-response. Tap retry."
+                      : isNetwork
+                        ? "Connection lost while generating a response. Check your internet and tap retry."
+                        : raw;
           const detail = requestId ? `${friendly} (ref: ${requestId})` : friendly;
           toast.error(friendly, {
             description: requestId ? `Reference ID: ${requestId}` : undefined,
@@ -696,8 +785,16 @@ function KovaGPT() {
 
   const assistantCapabilities = [
     { label: "Create image", icon: ImageIcon, prompt: "Create a detailed image prompt for: " },
-    { label: "Summarize text", icon: FileText, prompt: "Summarize this into clear bullet points: " },
-    { label: "Analyze data", icon: Sparkles, prompt: "Analyze this data and explain the key insights: " },
+    {
+      label: "Summarize text",
+      icon: FileText,
+      prompt: "Summarize this into clear bullet points: ",
+    },
+    {
+      label: "Analyze data",
+      icon: Sparkles,
+      prompt: "Analyze this data and explain the key insights: ",
+    },
     { label: "Write code", icon: Code2, prompt: "Help me write code for: " },
     { label: "Learn", icon: GraduationCap, prompt: "Teach me this topic like a patient tutor: " },
     { label: "Web research", icon: Globe2, prompt: "Research this online and cite sources: " },
@@ -707,7 +804,10 @@ function KovaGPT() {
   // Image generation removed; can be reintroduced when user explicitly asks.
 
   return (
-    <div className="flex h-screen w-full bg-background text-foreground" style={{ height: "100dvh" }}>
+    <div
+      className="flex h-screen w-full bg-background text-foreground"
+      style={{ height: "100dvh" }}
+    >
       {/* Mobile edge-swipe zone: swipe right from the left edge to open the sidebar. */}
       {!sidebarOpen && (
         <div
@@ -738,8 +838,7 @@ function KovaGPT() {
           }}
         />
       )}
-      
-      
+
       <Sidebar
         conversations={conversations}
         activeId={activeId}
@@ -784,7 +883,9 @@ function KovaGPT() {
                 const arr = JSON.parse(raw);
                 arr.unshift(target);
                 localStorage.setItem("kovagpt:archived", JSON.stringify(arr.slice(0, 200)));
-              } catch { /* ignore */ }
+              } catch {
+                /* ignore */
+              }
             }
             return prev.filter((c) => c.id !== id);
           });
@@ -810,7 +911,10 @@ function KovaGPT() {
         }}
       />
 
-      <main className="flex-1 flex flex-col min-w-0 bg-background" data-sidebar={sidebarOpen ? "open" : "closed"}>
+      <main
+        className="flex-1 flex flex-col min-w-0 bg-background"
+        data-sidebar={sidebarOpen ? "open" : "closed"}
+      >
         <MobileTopBar
           onOpenSidebar={() => setSidebarOpen(true)}
           onNewChat={newChat}
@@ -838,8 +942,6 @@ function KovaGPT() {
             </div>
           )}
 
-
-
           {/* AI status: live indicator to the right of the KovaGPT mark while streaming */}
           <div className="flex items-center min-w-0 flex-1 relative">
             <div className="mr-3 flex items-center gap-2 rounded-full px-2.5 py-1.5 text-sm font-semibold text-foreground hover:bg-accent transition">
@@ -865,7 +967,9 @@ function KovaGPT() {
                 <button
                   type="button"
                   onClick={() => {
-                    const transcript = active.messages.map((m) => `${m.role === "user" ? "You" : "KovaGPT"}: ${m.content}`).join("\n\n");
+                    const transcript = active.messages
+                      .map((m) => `${m.role === "user" ? "You" : "KovaGPT"}: ${m.content}`)
+                      .join("\n\n");
                     const blob = new Blob([transcript], { type: "text/markdown;charset=utf-8" });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement("a");
@@ -951,17 +1055,21 @@ function KovaGPT() {
           </div>
         </header>
 
-
-
-
-
         {tempChat && (
           <div className="mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-3xl items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm shadow-sm">
             <div className="flex min-w-0 items-center gap-2">
               <MessageSquareDashed className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="truncate">Temporary chat is on. This chat will not use or update memory.</span>
+              <span className="truncate">
+                Temporary chat is on. This chat will not use or update memory.
+              </span>
             </div>
-            <button type="button" onClick={() => setTempChat(false)} className="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium hover:bg-accent">Turn off</button>
+            <button
+              type="button"
+              onClick={() => setTempChat(false)}
+              className="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium hover:bg-accent"
+            >
+              Turn off
+            </button>
           </div>
         )}
 
@@ -973,7 +1081,7 @@ function KovaGPT() {
                   {greeting}
                 </h1>
                 <p className="max-w-xl text-center text-sm text-muted-foreground">
-                  Chat, search, reason, create images, analyze files, write code, make plans, and keep working across your chats.
+                  Ask, search, analyze, create, or keep working from a previous chat.
                 </p>
               </div>
 
@@ -988,15 +1096,13 @@ function KovaGPT() {
                   onAttachmentsChange={setAttachments}
                   mode={mode}
                   onModeChange={setMode}
-                  onUploadLimit={() =>
-                    setLimitDialog({ open: true, kind: "upload" })
-                  }
+                  onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
                   placeholder="Message KovaGPT"
                   onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
                   onToolSelect={setSelectedTool}
                 />
 
-                <div className="mt-5 hidden lg:flex flex-wrap items-center justify-center gap-2 max-w-3xl mx-auto">
+                <div className="mx-auto mt-5 hidden max-w-3xl grid-cols-2 gap-2 lg:grid">
                   {assistantCapabilities.map((p) => {
                     const Icon = p.icon;
                     return (
@@ -1004,7 +1110,7 @@ function KovaGPT() {
                         key={p.label}
                         type="button"
                         onClick={() => setInput((v) => (v.trim() ? v : p.prompt))}
-                        className="inline-flex h-10 items-center gap-2 rounded-full border border-border/70 bg-card/55 px-3.5 text-[14px] font-medium text-foreground shadow-sm hover:bg-accent hover:border-foreground/20"
+                        className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-border/70 bg-card/55 px-3.5 text-left text-[14px] font-medium text-foreground shadow-sm hover:border-foreground/20 hover:bg-accent"
                       >
                         <Icon className="h-4 w-4 text-muted-foreground" />
                         <span>{p.label}</span>
@@ -1014,10 +1120,29 @@ function KovaGPT() {
                 </div>
                 <div className="mt-3 lg:hidden flex gap-2 overflow-x-auto -mx-4 px-4 snap-x snap-mandatory no-scrollbar">
                   {[
-                    { label: "Summarize a file", hint: "PDF or doc to key points", prompt: "Summarize the attached file into the key points, decisions, and action items." },
-                    { label: "Research a topic", hint: "Briefing with sources", prompt: "Research this topic and give me a concise briefing with sources: " },
-                    { label: "Improve my writing", hint: "Clearer and tighter", prompt: "Improve the clarity and tone of this text without changing its meaning:\n\n" },
-                    { label: "Debug my code", hint: "Find and fix the bug", prompt: "Here's my code and the error I'm seeing. Explain what's wrong and give a corrected version.\n\n" },
+                    {
+                      label: "Summarize a file",
+                      hint: "PDF or doc to key points",
+                      prompt:
+                        "Summarize the attached file into the key points, decisions, and action items.",
+                    },
+                    {
+                      label: "Research a topic",
+                      hint: "Briefing with sources",
+                      prompt: "Research this topic and give me a concise briefing with sources: ",
+                    },
+                    {
+                      label: "Improve my writing",
+                      hint: "Clearer and tighter",
+                      prompt:
+                        "Improve the clarity and tone of this text without changing its meaning:\n\n",
+                    },
+                    {
+                      label: "Debug my code",
+                      hint: "Find and fix the bug",
+                      prompt:
+                        "Here's my code and the error I'm seeing. Explain what's wrong and give a corrected version.\n\n",
+                    },
                   ].map((p) => (
                     <button
                       key={p.label}
@@ -1033,14 +1158,15 @@ function KovaGPT() {
               </div>
             </div>
           </div>
-
-
         ) : (
           <>
-            <div ref={scrollRef} className="flex-1 overflow-y-auto overscroll-contain scroll-smooth pt-8 lg:pt-12 pb-14 lg:pb-20">
+            <div
+              ref={scrollRef}
+              onScroll={updateNearBottom}
+              className="flex-1 overflow-y-auto overscroll-contain scroll-smooth pt-8 lg:pt-12 pb-14 lg:pb-20"
+            >
               {active.messages.map((m, i) => {
-                const isLastAssistant =
-                  m.role === "assistant" && i === active.messages.length - 1;
+                const isLastAssistant = m.role === "assistant" && i === active.messages.length - 1;
                 // Find the user message that prompted this assistant reply (immediately before).
                 const priorUser =
                   m.role === "assistant" && i > 0 && active.messages[i - 1]?.role === "user"
@@ -1071,12 +1197,8 @@ function KovaGPT() {
                         }),
                       );
                     }}
-                    
-                    
                     onFollowUp={
-                      isLastAssistant && !isStreaming
-                        ? (prompt) => send(prompt, [])
-                        : undefined
+                      isLastAssistant && !isStreaming ? (prompt) => send(prompt, []) : undefined
                     }
                     onRetry={
                       isLastAssistant && !isStreaming && priorUser
@@ -1123,6 +1245,22 @@ function KovaGPT() {
                 );
               })}
             </div>
+            {showJumpToLatest && (
+              <button
+                type="button"
+                onClick={() => {
+                  const el = scrollRef.current;
+                  if (!el) return;
+                  nearBottomRef.current = true;
+                  el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+                  setShowJumpToLatest(false);
+                }}
+                className="fixed bottom-28 left-1/2 z-20 -translate-x-1/2 rounded-full border border-border bg-card px-3 py-2 text-sm font-medium shadow-lg hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label="Jump to latest message"
+              >
+                Jump to latest
+              </button>
+            )}
             <div className="lg:pb-2 lg:pt-2">
               <ChatInput
                 value={input}
@@ -1134,18 +1272,31 @@ function KovaGPT() {
                 onAttachmentsChange={setAttachments}
                 mode={mode}
                 onModeChange={setMode}
-                onUploadLimit={() =>
-                  setLimitDialog({ open: true, kind: "upload" })
-                }
+                onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
                 placeholder="Message KovaGPT"
                 onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
                 onToolSelect={setSelectedTool}
               />
               <div className="hidden lg:flex flex-col items-center gap-2 text-[11px] text-muted-foreground/70 mt-2 select-none">
                 <div className="flex justify-center gap-3">
-                  <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">Enter</kbd> to send</span>
-                  <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">Shift+Enter</kbd> newline</span>
-                  <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">⌘K</kbd> search</span>
+                  <span>
+                    <kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">
+                      Enter
+                    </kbd>{" "}
+                    to send
+                  </span>
+                  <span>
+                    <kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">
+                      Shift+Enter
+                    </kbd>{" "}
+                    newline
+                  </span>
+                  <span>
+                    <kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">
+                      ⌘K
+                    </kbd>{" "}
+                    search
+                  </span>
                 </div>
                 <p>KovaGPT can make mistakes. Check important info.</p>
               </div>
@@ -1153,7 +1304,6 @@ function KovaGPT() {
           </>
         )}
       </main>
-
 
       <Suspense fallback={null}>
         {settingsOpen && (
@@ -1212,12 +1362,15 @@ function KovaGPT() {
 
       <MobileFabs
         onNewChat={() => {
-          try { localStorage.removeItem("nova-gpt-pending-active"); } catch { /* ignore */ }
+          try {
+            localStorage.removeItem("nova-gpt-pending-active");
+          } catch {
+            /* ignore */
+          }
           window.location.assign("/");
         }}
         onOpenSettings={() => setSettingsOpen(true)}
       />
-
     </div>
   );
 }

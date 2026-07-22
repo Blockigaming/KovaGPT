@@ -77,7 +77,6 @@
 - Next non-PASS row: Lovable dependency/runtime removal, but it cannot be fully verified until the engineering environment dependency gate is unblocked.
 - Exact next command after external service unblock: `npm ci --ignore-scripts --no-audit --no-fund`.
 
-
 ## 2026-07-21 — Provider architecture static advancement
 
 - Starting commit: `8557062`.
@@ -98,7 +97,6 @@
 - Next non-PASS row: Lovable dependency/runtime removal remains blocked from full verification by the engineering environment dependency gate.
 - Exact next command after external service unblock: `npm ci --ignore-scripts --no-audit --no-fund`.
 
-
 ## 2026-07-21 — Search provider boundary advancement
 
 - Starting commit: `29fe6fd`.
@@ -118,7 +116,6 @@
 - Next non-PASS row: Lovable dependency/runtime removal remains blocked from full verification by the engineering environment dependency gate.
 - Exact next command after external service unblock: `npm ci --ignore-scripts --no-audit --no-fund`.
 
-
 ## 2026-07-21 — Deep Research workflow advancement
 
 - Starting commit: `06dab94`.
@@ -137,7 +134,6 @@
 - Remaining failures: clean install, dev server, build, typecheck, lint, Playwright discovery, browser tests, visual tests, accessibility tests.
 - Next non-PASS row: Lovable dependency/runtime removal remains blocked from full verification by the engineering environment dependency gate.
 - Exact next command after external service unblock: `npm ci --ignore-scripts --no-audit --no-fund`.
-
 
 ## 2026-07-21 — Deep Research persistence and RLS advancement
 
@@ -159,7 +155,6 @@
 - Remaining failures: clean install, dev server, build, typecheck, lint, Playwright discovery, browser tests, visual tests, accessibility tests.
 - Next non-PASS row: Lovable dependency/runtime removal remains blocked from full verification by the engineering environment dependency gate.
 - Exact next command after external service unblock: `npm ci --ignore-scripts --no-audit --no-fund`.
-
 
 ## 2026-07-21 — GitHub synchronization gate inspection
 
@@ -220,7 +215,6 @@
 - Next non-PASS row: GitHub synchronization and Lovable recovery.
 - Exact next command after external credential/config unblock: `git remote add origin <KOVAGPT_REPO_URL> && git fetch --all --tags`.
 
-
 ## 2026-07-21 — Source-of-truth reinspection and engineering script recovery
 
 - Starting commit: `c372ccf`.
@@ -268,7 +262,6 @@
 - Next non-PASS row: GitHub synchronization and Lovable recovery.
 - Exact next command after external credential/config unblock: `git remote add origin <KOVAGPT_REPO_URL> && git fetch --all --tags`.
 
-
 ## 2026-07-21 — Post-commit push attempt for health/CI checkpoint
 
 - Starting commit: `bf8ee3c`.
@@ -286,3 +279,44 @@
 - Remaining failures: no git remote/origin; cannot push, create a real PR, inspect CI, or verify Lovable deployment state.
 - Next non-PASS row: GitHub synchronization and Lovable recovery.
 - Exact next command after external credential/config unblock: `git remote add origin <KOVAGPT_REPO_URL> && git fetch --all --tags`.
+
+## 2026-07-21 — Core shell and chat experience checkpoint
+
+- Starting commit: `c072a7b`.
+- Ending implementation commit: `d2a7ec6` (final branch head may differ if this log entry is amended or followed by documentation-only metadata).
+- Matrix rows changed: Design system and responsive shell; Navigation, history, command palette; Chat, composer, messages, streaming; Accessibility, performance, resilience; Automated and visual testing.
+- Files changed: `src/components/Sidebar.tsx`, `src/components/MobileTopBar.tsx`, `src/components/ChatInput.tsx`, `src/routes/index.tsx`, `tests/integration/core-shell-chat-source.test.mjs`, `tests/e2e/core-chat-experience.spec.ts`, `docs/kova-final-completion-matrix.md`, `docs/kova-execution-log.md`.
+- Migrations added: none.
+- RLS changes: none.
+- External blocker retry:
+  - `git remote -v` → no output; there is still no configured Git remote/origin.
+  - `npm ci --ignore-scripts --no-audit --no-fund` → failed again with `E403 403 Forbidden - GET https://registry.npmjs.org/@playwright%2ftest`; this remains the same external registry/proxy blocker and was not retried further.
+- Implementation notes:
+  - Consolidated the shared sidebar shell around a 280px expanded desktop rail, 72px collapsed desktop rail, `min(88vw, 340px)` mobile drawer, persisted collapse preference, scroll fades, bottom controls, focus trap, Escape close, body-scroll locking, and focus restoration.
+  - Strengthened the mobile header and navigation touch targets to the 44px minimum source contract.
+  - Reworked the shared chat composer to support IME-safe submission, duplicate-submit prevention, paste/drop file intake, selected/uploading/complete/failed attachment states, retry/remove controls, file type/size validation, and live upload announcements.
+  - Repaired chat viewport behavior so streaming/autoscroll only follows when the user is near the bottom and exposes a Jump to latest affordance after intentional upward scrolling.
+  - Added source-level integration coverage for shell/navigation/composer/chat contracts and Playwright browser coverage scaffolding for empty chat, active chat, mobile drawer, multiline composer, error/retry, light mode, and dark mode once Playwright dependencies are installable.
+- Commands run:
+  - `git status --short` → showed a clean tree at checkpoint start.
+  - `git branch --show-current` → `work`.
+  - `git log --oneline -10` → latest commit was `c072a7b Record push blocker after health checkpoint`.
+  - `git remote -v` → no output; no remote configured.
+  - `sed -n '1,260p' docs/kova-final-completion-matrix.md` → durable matrix read.
+  - `tail -200 docs/kova-execution-log.md` → durable execution log read.
+  - `npm test` → passed 16 unit tests.
+  - `npm run test:api` → passed 2 API/static tests.
+  - `npm run test:integration` → passed 7 integration/static tests, including 5 new core shell/chat source-contract tests.
+  - `npm run test:a11y` → passed 1 static accessibility test.
+  - `npm run test:visual` → passed 1 static viewport coverage test.
+  - `npm run format:check` → failed with repository-wide Prettier issues in 151 files; this is pre-existing/repository-wide drift and was not mass-formatted in this focused checkpoint.
+  - `npm run lint` → failed because `@eslint/js` is unavailable while the dependency tree cannot be installed.
+  - `npm run typecheck` → failed because `vite/client` types are unavailable while the dependency tree cannot be installed.
+  - `npm run build` → failed because `vite` is unavailable while the dependency tree cannot be installed.
+  - `npm run test:e2e` → failed because `playwright` is unavailable while the dependency tree cannot be installed.
+  - `git diff --check` → passed.
+- Browser checks: Playwright spec was added but could not execute because `@playwright/test`/`playwright` are not installed and `npm ci` is blocked by HTTP 403.
+- Screenshot locations: none; runtime browser/screenshot verification remains blocked.
+- Remaining failures: no git remote/origin, no real GitHub PR, no Lovable active-commit/log access, blocked dependency install, repository-wide formatting drift, and missing installed dev tooling for lint/typecheck/build/e2e.
+- First next executable non-PASS row after this checkpoint: `Observable reference audit`.
+- Exact next code task: document the authorized observable UI reference measurements before making pixel-close claims, while continuing to keep external GitHub/Lovable/npm rows blocked until credentials/service access are restored.
