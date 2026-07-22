@@ -61,7 +61,18 @@ const CATEGORIES = [
   "Refunds",
   "Privacy",
   "Security",
-  "Voice",
+  "Getting started",
+  "Chat basics",
+  "Search",
+  "Deep Research",
+  "Files",
+  "Data analysis",
+  "Canvas",
+  "Temporary Chat",
+  "Memory",
+  "Sharing and collaboration",
+  "Account and security",
+  "Billing and usage",
   "Images",
   "Projects",
   "Library",
@@ -70,6 +81,70 @@ const CATEGORIES = [
 ] as const;
 
 const FAQS: Faq[] = [
+  {
+    id: "start-1",
+    category: "Getting started",
+    question: "What should I try first in KovaGPT?",
+    answer:
+      "Start with a normal chat, create a Project for ongoing work, save reusable files to Library, and use Search or Deep Research when you need current sources.",
+    keywords: ["getting started", "first run", "onboarding"],
+  },
+  {
+    id: "chat-1",
+    category: "Chat basics",
+    question: "How do I choose the right chat mode?",
+    answer:
+      "Use Normal for quick help, Search for current sources, Deep Research for cited reports, Images for generation, and Temporary Chat when you do not want history or memory used.",
+    keywords: ["chat", "mode", "temporary"],
+  },
+  {
+    id: "search-1",
+    category: "Search",
+    question: "When should I enable Search?",
+    answer:
+      "Enable Search when you need recent or source-backed information. KovaGPT shows retrieved sources instead of fabricating citations.",
+    keywords: ["web", "sources", "citations"],
+  },
+  {
+    id: "research-1",
+    category: "Deep Research",
+    question: "What does Deep Research do?",
+    answer:
+      "Deep Research plans, searches, reads sources, tracks evidence, and writes a cited report with progress updates.",
+    keywords: ["research", "report", "sources"],
+  },
+  {
+    id: "files-1",
+    category: "Files",
+    question: "What files can KovaGPT understand?",
+    answer:
+      "KovaGPT can process supported text, PDF, CSV, spreadsheet, code, JSON, and image files when extraction succeeds and you are authorized to use the file.",
+    keywords: ["upload", "pdf", "csv", "documents"],
+  },
+  {
+    id: "analysis-1",
+    category: "Data analysis",
+    question: "Can KovaGPT analyze spreadsheets?",
+    answer:
+      "Yes. It can profile CSV or supported spreadsheets, summarize columns, detect missing values, aggregate rows, and generate tables or charts without executing untrusted code.",
+    keywords: ["spreadsheet", "csv", "chart", "analysis"],
+  },
+  {
+    id: "canvas-1",
+    category: "Canvas",
+    question: "When should I use Canvas?",
+    answer:
+      "Use Canvas for long-form documents, reports, tables, and artifacts that benefit from editing, versions, suggestions, and downloads.",
+    keywords: ["document", "artifact", "version"],
+  },
+  {
+    id: "memory-1",
+    category: "Memory",
+    question: "How does Memory work?",
+    answer:
+      "Memory is controlled in Settings. It is not read or written when disabled, and Temporary Chat never uses memory.",
+    keywords: ["preferences", "remember", "forget"],
+  },
   {
     id: "acc-1",
     category: "Accounts",
