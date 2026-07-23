@@ -271,8 +271,8 @@ export function SettingsDialog({
       });
       if ("error" in res) throw new Error(res.error);
       window.open(res.url, "_blank", "noopener,noreferrer");
-    } catch (e: any) {
-      toast.error(e?.message || "Couldn't open the billing portal.");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Couldn't open the billing portal.");
     } finally {
       setPortalLoading(false);
     }

@@ -76,7 +76,9 @@ export function setLinkedAccounts(userId: string, providers: LinkedProvider[]): 
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(storageKey(userId), JSON.stringify(providers));
-  } catch {}
+  } catch {
+    // Ignore unavailable storage while syncing linked accounts.
+  }
 }
 
 export async function connectProvider(
@@ -125,5 +127,7 @@ export async function syncSessionProviderToLinked(): Promise<void> {
     const current = new Set(getLinkedAccounts(user.id));
     current.add(provider as LinkedProvider);
     setLinkedAccounts(user.id, Array.from(current));
-  } catch {}
+  } catch {
+    // Ignore unavailable storage while syncing linked accounts.
+  }
 }

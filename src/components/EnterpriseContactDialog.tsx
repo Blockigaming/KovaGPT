@@ -50,8 +50,8 @@ export function EnterpriseContactDialog({
         <DialogHeader>
           <DialogTitle>Talk to us about Enterprise</DialogTitle>
           <DialogDescription>
-            Tell us what you're looking for. Estimated pricing is $500 - $5,000 / month,
-            but the final price depends on your needs. Someone will get back to you.
+            Tell us what you're looking for. Estimated pricing is $500 - $5,000 / month, but the
+            final price depends on your needs. Someone will get back to you.
           </DialogDescription>
         </DialogHeader>
 

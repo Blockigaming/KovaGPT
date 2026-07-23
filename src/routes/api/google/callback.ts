@@ -1,11 +1,7 @@
 // Google OAuth callback. Verifies HMAC-signed state, exchanges code,
 // stores per-user tokens, then bounces back into the app.
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  exchangeCodeForTokens,
-  storeGoogleTokens,
-  logAudit,
-} from "@/lib/google-oauth.server";
+import { exchangeCodeForTokens, storeGoogleTokens, logAudit } from "@/lib/google-oauth.server";
 
 async function verifyState(state: string): Promise<string | null> {
   const parts = state.split(".");
@@ -19,16 +15,10 @@ async function verifyState(state: string): Promise<string | null> {
     false,
     ["verify"],
   );
-  const sigBytes = Uint8Array.from(
-    atob(sig.replace(/-/g, "+").replace(/_/g, "/")),
-    (c) => c.charCodeAt(0),
+  const sigBytes = Uint8Array.from(atob(sig.replace(/-/g, "+").replace(/_/g, "/")), (c) =>
+    c.charCodeAt(0),
   );
-  const ok = await crypto.subtle.verify(
-    "HMAC",
-    key,
-    sigBytes,
-    new TextEncoder().encode(payload),
-  );
+  const ok = await crypto.subtle.verify("HMAC", key, sigBytes, new TextEncoder().encode(payload));
   if (!ok) return null;
   // 10-minute state validity.
   if (Date.now() - parseInt(ts, 10) > 10 * 60 * 1000) return null;

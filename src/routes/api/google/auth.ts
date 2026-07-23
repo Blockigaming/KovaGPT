@@ -22,11 +22,7 @@ export const Route = createFileRoute("/api/google/auth")({
           false,
           ["sign"],
         );
-        const sig = await crypto.subtle.sign(
-          "HMAC",
-          key,
-          new TextEncoder().encode(payload),
-        );
+        const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
         const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig)))
           .replace(/\+/g, "-")
           .replace(/\//g, "_")

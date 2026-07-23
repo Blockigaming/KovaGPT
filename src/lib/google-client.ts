@@ -72,9 +72,13 @@ export const gmailDraft = (opts: {
     action: "draft",
     ...opts,
   });
-export const gmailSend = (
-  opts: { draftId?: string; to?: string; subject?: string; body?: string; cc?: string },
-) => post<{ messageId: string; link: string }>("/api/google/gmail", { action: "send", ...opts });
+export const gmailSend = (opts: {
+  draftId?: string;
+  to?: string;
+  subject?: string;
+  body?: string;
+  cc?: string;
+}) => post<{ messageId: string; link: string }>("/api/google/gmail", { action: "send", ...opts });
 export const gmailTrash = (id: string) =>
   post<{ ok: true }>("/api/google/gmail", { action: "trash", id });
 

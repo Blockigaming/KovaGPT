@@ -67,7 +67,9 @@ function computeInteractionMode(): InteractionMode {
  */
 export function useLayout() {
   const [mode, setMode] = React.useState<LayoutMode>(() => computeLayoutMode());
-  const [interaction, setInteraction] = React.useState<InteractionMode>(() => computeInteractionMode());
+  const [interaction, setInteraction] = React.useState<InteractionMode>(() =>
+    computeInteractionMode(),
+  );
 
   React.useEffect(() => {
     let raf = 0;
@@ -91,7 +93,13 @@ export function useLayout() {
     };
   }, []);
 
-  return { mode, interaction, isMobile: mode === "mobile", isTablet: mode === "tablet", isDesktop: mode === "desktop" };
+  return {
+    mode,
+    interaction,
+    isMobile: mode === "mobile",
+    isTablet: mode === "tablet",
+    isDesktop: mode === "desktop",
+  };
 }
 
 /** Back-compat: phones only. Tablets return false. */

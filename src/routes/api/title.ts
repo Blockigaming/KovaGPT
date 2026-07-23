@@ -33,7 +33,6 @@ export const Route = createFileRoute("/api/title")({
             });
           }
 
-
           const MAX_BODY = 1 * 1024 * 1024;
           const contentLength = Number(request.headers.get("content-length") ?? "0");
           if (contentLength > MAX_BODY) {
@@ -61,19 +60,17 @@ export const Route = createFileRoute("/api/title")({
             .join("\n")
             .slice(0, 4000);
 
-
           const upstream = await chatCompletions({
-              model: chatModel("fast"),
-              messages: [
-                {
-                  role: "system",
-                  content:
-                    "You write concise chat titles. Read the conversation and return a clear 3 to 5 word title summarizing the main topic. No quotes. No trailing punctuation. No emoji. No dashes. Return only the title.",
-
-                },
-                { role: "user", content: excerpt },
-              ],
-            });
+            model: chatModel("fast"),
+            messages: [
+              {
+                role: "system",
+                content:
+                  "You write concise chat titles. Read the conversation and return a clear 3 to 5 word title summarizing the main topic. No quotes. No trailing punctuation. No emoji. No dashes. Return only the title.",
+              },
+              { role: "user", content: excerpt },
+            ],
+          });
 
           if (!upstream.ok) {
             return new Response(JSON.stringify({ title: "New chat" }), {

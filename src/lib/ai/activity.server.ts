@@ -1,3 +1,4 @@
+import { replaceControlCharacters } from "@/lib/sanitize-text";
 export type ToolActivityType =
   | "search_web"
   | "read_source"
@@ -61,7 +62,7 @@ export function createToolActivityEvent(
   return {
     id: `act-${Date.now().toString(36)}-${activityCounter.toString(36)}`,
     type,
-    label: label.replace(/[\u0000-\u001F\u007F]+/g, " ").slice(0, 160),
+    label: replaceControlCharacters(label).slice(0, 160),
     status,
     timestamp: new Date().toISOString(),
     ...(options.parentId ? { parentId: options.parentId } : {}),

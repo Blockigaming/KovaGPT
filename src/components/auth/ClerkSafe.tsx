@@ -62,7 +62,7 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     const config = getSupabaseClientConfigStatus();
     if (!config.configured) {
-      console.error(`[KovaAuth] Supabase auth unavailable. Missing: ${config.missing.join(", ")}`);
+      console.warn(`[KovaAuth] Supabase auth unavailable. Missing: ${config.missing.join(", ")}`);
       setSession(null);
       setIsLoaded(true);
       return () => {
@@ -167,7 +167,9 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
         }
       }
       toRemove.forEach((k) => localStorage.removeItem(k));
-    } catch {}
+    } catch {
+      // Ignore local sign-out cleanup errors.
+    }
     // Hard reload drops any in-memory React-Query / router caches too.
     if (typeof window !== "undefined") window.location.assign("/");
   }, []);

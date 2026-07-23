@@ -20,10 +20,7 @@ import {
 export const Route = createFileRoute("/projects/$projectId/chat/$chatId")({
   component: ProjectChatPage,
   head: () => ({
-    meta: [
-      { title: "Project chat | KovaGPT" },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: [{ title: "Project chat | KovaGPT" }, { name: "robots", content: "noindex" }],
   }),
 });
 
@@ -53,7 +50,11 @@ function ProjectChatPage() {
           fnGetChat({ data: { id: chatId } }),
           fnGetProject({ data: { id: projectId } }),
         ]);
-        if (!c) { toast.error("Chat not found"); navigate({ to: "/projects/$projectId", params: { projectId } }); return; }
+        if (!c) {
+          toast.error("Chat not found");
+          navigate({ to: "/projects/$projectId", params: { projectId } });
+          return;
+        }
         setProject(p);
         setTitle(c.title);
         setMessages(c.snapshot.messages ?? []);
@@ -67,21 +68,37 @@ function ProjectChatPage() {
     // eslint-disable-next-line
   }, [isSignedIn, chatId, projectId]);
 
-  useEffect(() => { scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight }); }, [messages, sending]);
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+  }, [messages, sending]);
 
-  if (!isLoaded) return <AppShell><div className="p-8 text-muted-foreground">Loading…</div></AppShell>;
+  if (!isLoaded)
+    return (
+      <AppShell>
+        <div className="p-8 text-muted-foreground">Loading…</div>
+      </AppShell>
+    );
   if (!isSignedIn) {
     return (
       <AppShell>
         <div className="max-w-2xl mx-auto p-8 text-center">
           <h1 className="text-2xl font-semibold mb-2">Sign in required</h1>
-          <SignInButton mode="modal"><Button>Sign in</Button></SignInButton>
+          <SignInButton mode="modal">
+            <Button>Sign in</Button>
+          </SignInButton>
         </div>
       </AppShell>
     );
   }
   if (loading) {
-    return <AppShell><div className="p-8 flex items-center gap-2 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />Loading chat…</div></AppShell>;
+    return (
+      <AppShell>
+        <div className="p-8 flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Loading chat…
+        </div>
+      </AppShell>
+    );
   }
 
   const canEdit = project?.role === "owner" || project?.role === "editor";
@@ -103,7 +120,10 @@ function ProjectChatPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...priorSystem, ...nextHistory].map((m) => ({ role: m.role, content: m.content })),
+          messages: [...priorSystem, ...nextHistory].map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
           mode: "default",
           user: {},
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -143,10 +163,15 @@ function ProjectChatPage() {
                 return copy;
               });
             }
-          } catch { /* ignore */ }
+          } catch {
+            /* ignore */
+          }
         }
       }
-      const finalMsgs: ProjectChatMessage[] = [...nextHistory, { role: "assistant", content: assistant }];
+      const finalMsgs: ProjectChatMessage[] = [
+        ...nextHistory,
+        { role: "assistant", content: assistant },
+      ];
       await fnSave({ data: { id: chatId, messages: finalMsgs } });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
@@ -172,25 +197,50 @@ function ProjectChatPage() {
     <AppShell>
       <div className="flex flex-col h-[100dvh] w-full">
         <div className="border-b px-4 py-3 flex items-center gap-3">
-          <Link to="/projects/$projectId" params={{ projectId }} className="text-muted-foreground hover:text-foreground">
+          <Link
+            to="/projects/$projectId"
+            params={{ projectId }}
+            className="text-muted-foreground hover:text-foreground"
+          >
             <ArrowLeft className="w-4 h-4" />
           </Link>
-          <button className="font-medium truncate flex-1 text-left hover:underline" onClick={handleRename}>{title}</button>
+          <button
+            className="font-medium truncate flex-1 text-left hover:underline"
+            onClick={handleRename}
+          >
+            {title}
+          </button>
           {canEdit && (
-            <Button variant="ghost" size="icon" onClick={handleDelete} aria-label="Delete"><Trash2 className="w-4 h-4" /></Button>
+            <Button variant="ghost" size="icon" onClick={handleDelete} aria-label="Delete">
+              <Trash2 className="w-4 h-4" />
+            </Button>
           )}
         </div>
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
           {messages.filter((m) => m.role !== "system").length === 0 && (
-            <div className="text-center text-muted-foreground text-sm">Start the conversation. Everyone in the project can see it.</div>
-          )}
-          {messages.filter((m) => m.role !== "system").map((m, i) => (
-            <div key={i} className={`max-w-3xl mx-auto flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`rounded-2xl px-4 py-2.5 whitespace-pre-wrap ${m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-                {m.content || (sending && i === messages.length - 1 ? <Loader2 className="w-4 h-4 animate-spin" /> : "")}
-              </div>
+            <div className="text-center text-muted-foreground text-sm">
+              Start the conversation. Everyone in the project can see it.
             </div>
-          ))}
+          )}
+          {messages
+            .filter((m) => m.role !== "system")
+            .map((m, i) => (
+              <div
+                key={i}
+                className={`max-w-3xl mx-auto flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`rounded-2xl px-4 py-2.5 whitespace-pre-wrap ${m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}
+                >
+                  {m.content ||
+                    (sending && i === messages.length - 1 ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      ""
+                    ))}
+                </div>
+              </div>
+            ))}
         </div>
         <div className="border-t p-3">
           <div className="max-w-3xl mx-auto flex gap-2 items-end">
@@ -198,7 +248,10 @@ function ProjectChatPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
               }}
               placeholder={canEdit ? "Message the project…" : "You have view-only access"}
               disabled={!canEdit || sending}
@@ -206,7 +259,11 @@ function ProjectChatPage() {
               className="resize-none"
             />
             <Button onClick={handleSend} disabled={!canEdit || sending || !input.trim()}>
-              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              {sending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
             </Button>
           </div>
         </div>

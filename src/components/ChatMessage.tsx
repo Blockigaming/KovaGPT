@@ -341,18 +341,20 @@ function ChatMessageInner({
           <div className="max-w-[85%] lg:max-w-[70%] flex flex-col items-end min-w-0">
             {message.attachments && message.attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2 justify-end">
-                {message.attachments.map((a, i) => (
-                  <img
-                    key={i}
-                    src={a.dataUrl}
-                    alt={
-                      message.content?.trim()
-                        ? `User-uploaded image: ${message.content.slice(0, 120)}`
-                        : "User-uploaded image attached to message"
-                    }
-                    className="max-h-64 rounded-2xl border border-border"
-                  />
-                ))}
+                {message.attachments
+                  .filter((a): a is Extract<typeof a, { kind: "image" }> => a.kind === "image")
+                  .map((a, i) => (
+                    <img
+                      key={i}
+                      src={a.dataUrl}
+                      alt={
+                        message.content?.trim()
+                          ? `User-uploaded image: ${message.content.slice(0, 120)}`
+                          : "User-uploaded image attached to message"
+                      }
+                      className="max-h-64 rounded-2xl border border-border"
+                    />
+                  ))}
               </div>
             )}
             {message.content && (

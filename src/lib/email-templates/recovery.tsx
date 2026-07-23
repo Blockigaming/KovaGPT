@@ -1,4 +1,4 @@
-import * as React from 'react'
+import * as React from "react";
 import {
   Body,
   Button,
@@ -10,18 +10,15 @@ import {
   Preview,
   Section,
   Text,
-} from '@react-email/components'
-import { BrandFooter, BrandHeader, styles } from './_brand'
+} from "@react-email/components";
+import { BrandFooter, BrandHeader, styles } from "./_brand";
 
 interface RecoveryEmailProps {
-  siteName: string
-  confirmationUrl: string
+  siteName: string;
+  confirmationUrl: string;
 }
 
-export const RecoveryEmail = ({
-  siteName,
-  confirmationUrl,
-}: RecoveryEmailProps) => (
+export const RecoveryEmail = ({ siteName, confirmationUrl }: RecoveryEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>Reset your {siteName} password</Preview>
@@ -30,9 +27,8 @@ export const RecoveryEmail = ({
         <BrandHeader />
         <Heading style={styles.h1}>Reset your password</Heading>
         <Text style={styles.text}>
-          We received a request to reset the password for your {siteName}{' '}
-          account. Click the button below to choose a new password. This link
-          expires in 60 minutes.
+          We received a request to reset the password for your {siteName} account. Click the button
+          below to choose a new password. This link expires in 60 minutes.
         </Text>
         <Section style={styles.buttonWrap}>
           <Button style={styles.button} href={confirmationUrl}>
@@ -43,14 +39,14 @@ export const RecoveryEmail = ({
         <Link href={confirmationUrl} style={styles.fallbackLink}>
           {confirmationUrl}
         </Link>
-        <Text style={{ ...styles.text, fontSize: '13px', color: '#6b7280', margin: '18px 0 0' }}>
-          If you didn't request a password reset, you can safely ignore this
-          email and your password will remain unchanged.
+        <Text style={{ ...styles.text, fontSize: "13px", color: "#6b7280", margin: "18px 0 0" }}>
+          If you didn't request a password reset, you can safely ignore this email and your password
+          will remain unchanged.
         </Text>
         <BrandFooter />
       </Container>
     </Body>
   </Html>
-)
+);
 
-export default RecoveryEmail
+export default RecoveryEmail;

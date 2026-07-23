@@ -46,31 +46,40 @@ export const getMyFamily = createServerFn({ method: "POST" })
       .from("family_members")
       .select("id, user_id, role, created_at")
       .eq("group_id", group.id);
-    const { data: invites } = role === "owner"
-      ? await supabase
-          .from("family_invites")
-          .select("id, token, invited_email, accepted_at, expires_at, created_at")
-          .eq("group_id", group.id)
-          .order("created_at", { ascending: false })
-      : { data: [] };
+    const { data: invites } =
+      role === "owner"
+        ? await supabase
+            .from("family_invites")
+            .select("id, token, invited_email, accepted_at, expires_at, created_at")
+            .eq("group_id", group.id)
+            .order("created_at", { ascending: false })
+        : { data: [] };
     return { group, role, members: members ?? [], invites: invites ?? [] };
   });
 
 export const createFamilyGroup = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ name: z.string().trim().min(1).max(60).default("My Family") }).parse(i))
+  .inputValidator((i: unknown) =>
+    z.object({ name: z.string().trim().min(1).max(60).default("My Family") }).parse(i),
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: existing } = await supabase
-      .from("family_groups").select("id").eq("owner_id", userId).maybeSingle();
+      .from("family_groups")
+      .select("id")
+      .eq("owner_id", userId)
+      .maybeSingle();
     if (existing) return { id: existing.id };
     const { data: group, error } = await supabase
       .from("family_groups")
       .insert({ owner_id: userId, name: data.name })
-      .select("id").single();
+      .select("id")
+      .single();
     if (error) throw new Error(error.message);
     // Add owner as a member row so RLS treats them uniformly.
-    await supabase.from("family_members").insert({ group_id: group.id, user_id: userId, role: "owner" });
+    await supabase
+      .from("family_members")
+      .insert({ group_id: group.id, user_id: userId, role: "owner" });
     return { id: group.id };
   });
 
@@ -80,7 +89,10 @@ export const createFamilyInvite = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: group, error: gErr } = await supabase
-      .from("family_groups").select("id").eq("owner_id", userId).maybeSingle();
+      .from("family_groups")
+      .select("id")
+      .eq("owner_id", userId)
+      .maybeSingle();
     if (gErr) throw new Error(gErr.message);
     if (!group) throw new Error("Create your family group first.");
     const token = newToken();
@@ -150,12 +162,18 @@ export const removeFamilyMember = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: group } = await supabase
-      .from("family_groups").select("id").eq("owner_id", userId).maybeSingle();
+      .from("family_groups")
+      .select("id")
+      .eq("owner_id", userId)
+      .maybeSingle();
     if (!group) throw new Error("You are not a group owner.");
-    if (data.memberUserId === userId) throw new Error("Owners cannot remove themselves; delete the group instead.");
+    if (data.memberUserId === userId)
+      throw new Error("Owners cannot remove themselves; delete the group instead.");
     const { error } = await supabase
-      .from("family_members").delete()
-      .eq("group_id", group.id).eq("user_id", data.memberUserId);
+      .from("family_members")
+      .delete()
+      .eq("group_id", group.id)
+      .eq("user_id", data.memberUserId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -164,7 +182,11 @@ export const leaveFamily = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const { error } = await supabase.from("family_members").delete().eq("user_id", userId).eq("role", "member");
+    const { error } = await supabase
+      .from("family_members")
+      .delete()
+      .eq("user_id", userId)
+      .eq("role", "member");
     if (error) throw new Error(error.message);
     return { ok: true };
   });

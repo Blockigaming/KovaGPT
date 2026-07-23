@@ -5,13 +5,16 @@ This turn tackles a large polish + fixes pass. To ship real quality (not a shall
 ## Wave 1 — Ship this turn
 
 ### Sidebar & background
+
 - Add a 1px vertical divider on the sidebar's right edge so it separates cleanly from the main surface (both now share the same `--background`).
 - Add a subtle, animated mesh-gradient background layer behind the app shell (fixed, `pointer-events-none`, low-opacity `--kova-blue` and violet radial blobs with a slow 20s float). Works in light + dark.
 
 ### Global type scale
+
 - Reduce the app's base font-size from `16px` to `15.2px` (~5% smaller) on `html`. All Tailwind rem-based sizes scale with it, so headings/inputs/buttons shrink proportionally without touching every component.
 
 ### Brand system ("Kova" visual language)
+
 - Add signature tokens in `src/styles.css`:
   - `--kova-blue: oklch(0.62 0.19 255)` — primary brand accent
   - `--kova-blue-glow` — soft radial glow variant
@@ -20,21 +23,25 @@ This turn tackles a large polish + fixes pass. To ship real quality (not a shall
 - Standardize border radius via existing `--radius` (already `0.875rem`); nudge cards/inputs to use `rounded-2xl` consistently.
 
 ### Kova logo
+
 - Gentle floating animation (`@keyframes kova-float`: `translateY(0 → -3px → 0)` over 4s, ease-in-out infinite) applied on `NovaLogo` in the sidebar brand row + empty-state hero.
 
 ### Chat composer (ChatInput)
+
 - Larger, more rounded pill container (`rounded-3xl`, more padding, deeper `--shadow-elevate` on focus).
 - Attachment / voice / image icon buttons become floating circular chips inside the composer with hover elevation.
 - Textarea already auto-expands via `rows` + `useLayoutEffect` — verify and tighten min/max height.
 - Send button uses the signature `--gradient-kova` with a scale + glow "send" animation on submit.
 
 ### Messages & action bar
+
 - Copy / Save / Share / Edit action row on assistant messages becomes sticky at the message's bottom-left with a subtle backdrop-blur pill so it stays visible while scrolling long responses.
 - Animated checkmark on copy (already partially there — upgrade `Check` swap with a spring scale-in via `animate-in zoom-in`).
 - AI icon (`NovaLogo` on streaming assistant row) gets a soft pulsing halo while `streaming` is true.
 - Skeleton loaders (thin bars using `animate-pulse` + brand-tinted bg) replace the spinner in message idle states.
 
 ### Motion system
+
 - Add reusable utility classes in `src/styles.css`:
   - `.animate-kova-float` (logo)
   - `.animate-kova-pulse` (assistant-thinking halo)
@@ -43,11 +50,13 @@ This turn tackles a large polish + fixes pass. To ship real quality (not a shall
 - Wire these into: message bubbles on mount, sidebar nav items on route change, settings dialog sections, hero on `/`.
 
 ### Shared cards / spacing / headings
+
 - Introduce a shared `.kova-card` utility (rounded-2xl, border, `bg-card`, `hover:shadow-elevate`, `transition`) — retrofit Apps, Library, Projects, Scheduled-tasks, Pricing tier cards.
 - Bump `<h1>` empty-state greeting +10% + tighter tracking; conversation titles in the sidebar go from `text-[14px]` → `text-[15px]` semibold when active.
 - More whitespace: bump `space-y` between message groups by one step; more section padding in Settings.
 
 ### Icon sizing
+
 - Standardize on `w-4 h-4` (inline) / `w-[18px] h-[18px]` (nav) / `w-5 h-5` (composer). Sweep AppShell, Sidebar, ChatMessage, ChatInput, SettingsDialog.
 
 ## Wave 2 — Confirm with user before spending on

@@ -33,7 +33,11 @@ export function ToolConfirmCard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action_id: confirm.actionId, decision }),
       });
-      const json = (await res.json().catch(() => ({}))) as { ok?: boolean; result_text?: string; error?: string };
+      const json = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        result_text?: string;
+        error?: string;
+      };
       if (!res.ok || !json.ok) {
         const err = json.error || `Failed (${res.status})`;
         onUpdate({ ...confirm, status: "failed", resultText: err });
@@ -62,30 +66,77 @@ export function ToolConfirmCard({
         <span>{meta.label}</span>
       </div>
       <div className="mt-1 text-foreground">{confirm.summary}</div>
-      {Boolean(preview.to || preview.subject || preview.body_preview || preview.start || preview.location) && (
+      {Boolean(
+        preview.to || preview.subject || preview.body_preview || preview.start || preview.location,
+      ) && (
         <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-          {typeof preview.to === "string" && <div><span className="font-medium text-foreground">To:</span> {preview.to}</div>}
-          {typeof preview.cc === "string" && preview.cc && <div><span className="font-medium text-foreground">Cc:</span> {preview.cc}</div>}
-          {typeof preview.subject === "string" && <div><span className="font-medium text-foreground">Subject:</span> {preview.subject}</div>}
-          {typeof preview.body_preview === "string" && (
-            <div className="whitespace-pre-wrap rounded-md bg-background/60 p-2 max-h-32 overflow-y-auto"><span className="font-medium text-foreground">Body: </span>{preview.body_preview}</div>
+          {typeof preview.to === "string" && (
+            <div>
+              <span className="font-medium text-foreground">To:</span> {preview.to}
+            </div>
           )}
-          {typeof preview.start === "string" && <div><span className="font-medium text-foreground">Start:</span> {preview.start}</div>}
-          {typeof preview.end === "string" && preview.end.length > 0 && <div><span className="font-medium text-foreground">End:</span> {preview.end}</div>}
-          {typeof preview.location === "string" && preview.location.length > 0 && <div><span className="font-medium text-foreground">Where:</span> {preview.location}</div>}
+          {typeof preview.cc === "string" && preview.cc && (
+            <div>
+              <span className="font-medium text-foreground">Cc:</span> {preview.cc}
+            </div>
+          )}
+          {typeof preview.subject === "string" && (
+            <div>
+              <span className="font-medium text-foreground">Subject:</span> {preview.subject}
+            </div>
+          )}
+          {typeof preview.body_preview === "string" && (
+            <div className="whitespace-pre-wrap rounded-md bg-background/60 p-2 max-h-32 overflow-y-auto">
+              <span className="font-medium text-foreground">Body: </span>
+              {preview.body_preview}
+            </div>
+          )}
+          {typeof preview.start === "string" && (
+            <div>
+              <span className="font-medium text-foreground">Start:</span> {preview.start}
+            </div>
+          )}
+          {typeof preview.end === "string" && preview.end.length > 0 && (
+            <div>
+              <span className="font-medium text-foreground">End:</span> {preview.end}
+            </div>
+          )}
+          {typeof preview.location === "string" && preview.location.length > 0 && (
+            <div>
+              <span className="font-medium text-foreground">Where:</span> {preview.location}
+            </div>
+          )}
           {Array.isArray(preview.attendees) && (preview.attendees as string[]).length > 0 && (
-            <div><span className="font-medium text-foreground">Attendees:</span> {(preview.attendees as string[]).join(", ")}</div>
+            <div>
+              <span className="font-medium text-foreground">Attendees:</span>{" "}
+              {(preview.attendees as string[]).join(", ")}
+            </div>
           )}
         </div>
       )}
       {isTerminal ? (
-        <div className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs ${
-          confirm.status === "confirmed" ? "bg-primary/10 text-primary" :
-          confirm.status === "cancelled" ? "bg-muted text-muted-foreground" :
-          "bg-destructive/10 text-destructive"
-        }`}>
-          {confirm.status === "confirmed" ? <Check className="h-3 w-3" /> : confirm.status === "cancelled" ? <X className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
-          {confirm.resultText ?? (confirm.status === "confirmed" ? "Done" : confirm.status === "cancelled" ? "Cancelled" : "Failed")}
+        <div
+          className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs ${
+            confirm.status === "confirmed"
+              ? "bg-primary/10 text-primary"
+              : confirm.status === "cancelled"
+                ? "bg-muted text-muted-foreground"
+                : "bg-destructive/10 text-destructive"
+          }`}
+        >
+          {confirm.status === "confirmed" ? (
+            <Check className="h-3 w-3" />
+          ) : confirm.status === "cancelled" ? (
+            <X className="h-3 w-3" />
+          ) : (
+            <AlertCircle className="h-3 w-3" />
+          )}
+          {confirm.resultText ??
+            (confirm.status === "confirmed"
+              ? "Done"
+              : confirm.status === "cancelled"
+                ? "Cancelled"
+                : "Failed")}
         </div>
       ) : (
         <div className="mt-3 flex gap-2">
@@ -94,15 +145,27 @@ export function ToolConfirmCard({
             disabled={!!busy}
             className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1.5 text-xs font-medium text-background hover:opacity-90 disabled:opacity-50"
           >
-            {busy === "confirm" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-            {confirm.tool === "calendar_delete_event" ? "Delete" : confirm.tool === "gmail_send" ? "Send" : "Confirm"}
+            {busy === "confirm" ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Check className="h-3 w-3" />
+            )}
+            {confirm.tool === "calendar_delete_event"
+              ? "Delete"
+              : confirm.tool === "gmail_send"
+                ? "Send"
+                : "Confirm"}
           </button>
           <button
             onClick={() => decide("cancel")}
             disabled={!!busy}
             className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
           >
-            {busy === "cancel" ? <Loader2 className="h-3 w-3 animate-spin" /> : <X className="h-3 w-3" />}
+            {busy === "cancel" ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <X className="h-3 w-3" />
+            )}
             Cancel
           </button>
         </div>

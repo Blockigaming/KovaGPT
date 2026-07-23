@@ -1,3 +1,4 @@
+import { replaceControlCharacters } from "@/lib/sanitize-text";
 import {
   createCitationMap,
   dedupeKovaSources,
@@ -49,11 +50,7 @@ const DEFAULT_SEARCH_TIMEOUT_MS = 15_000;
 
 function cleanText(v: string | undefined, max: number): string {
   if (typeof v !== "string") return "";
-  const cleaned = v
-    .replace(/[\u0000-\u0008\u000B-\u001F\u007F]+/g, " ")
-    .replace(/-{3,}/g, "--")
-    .replace(/\s+/g, " ")
-    .trim();
+  const cleaned = replaceControlCharacters(v).replace(/-{3,}/g, "--").replace(/\s+/g, " ").trim();
   return cleaned.length > max ? cleaned.slice(0, max) : cleaned;
 }
 

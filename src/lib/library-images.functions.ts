@@ -40,7 +40,9 @@ function isHostAllowed(hostname: string): boolean {
   return ALLOWED_IMAGE_HOST_SUFFIXES.some((s) => h === s.slice(1) || h.endsWith(s));
 }
 
-async function fetchRemoteImage(url: string): Promise<{ bytes: Uint8Array; contentType: string } | null> {
+async function fetchRemoteImage(
+  url: string,
+): Promise<{ bytes: Uint8Array; contentType: string } | null> {
   try {
     let current = new URL(url);
     if (current.protocol !== "https:") return null;
@@ -138,7 +140,10 @@ export const saveImageToLibrary = createServerFn({ method: "POST" })
     if (error || !row) {
       // best-effort cleanup of orphan upload
       await context.supabase.storage.from(BUCKET).remove([path]);
-      { console.error("[serverfn]", error?.message); throw new Error("Failed to save"); }
+      {
+        console.error("[serverfn]", error?.message);
+        throw new Error("Failed to save");
+      }
     }
     return { id: row.id };
   });
@@ -181,6 +186,9 @@ export const deleteLibraryImage = createServerFn({ method: "POST" })
       .delete()
       .eq("id", data.id)
       .eq("user_id", context.userId);
-    if (error) { console.error("[serverfn]", error.message); throw new Error("Request failed. Please try again."); }
+    if (error) {
+      console.error("[serverfn]", error.message);
+      throw new Error("Request failed. Please try again.");
+    }
     return { ok: true };
   });

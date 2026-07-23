@@ -96,7 +96,7 @@ export const Route = createFileRoute("/lovable/email/transactional/send")({
         let recipientEmail: string;
         let idempotencyKey: string;
         let messageId: string;
-        let templateData: Record<string, any> = {};
+        let templateData: Record<string, unknown> = {};
         try {
           const body = await request.json();
           templateName = body.templateName || body.template_name;

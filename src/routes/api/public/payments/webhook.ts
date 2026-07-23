@@ -14,15 +14,32 @@ function getSupabase() {
   return _supabase;
 }
 
-function priceIdFrom(item: any): string {
-  return (
-    item?.price?.lookup_key ||
-    item?.price?.metadata?.lovable_external_id ||
-    item?.price?.id
-  );
+type StripeLineItemLike = {
+  price?: {
+    lookup_key?: string;
+    metadata?: { lovable_external_id?: string };
+    id?: string;
+    product?: string;
+  };
+  current_period_start?: number;
+  current_period_end?: number;
+};
+type StripeSubscriptionLike = {
+  id: string;
+  customer?: string;
+  status?: string;
+  cancel_at_period_end?: boolean;
+  current_period_start?: number;
+  current_period_end?: number;
+  metadata?: { userId?: string };
+  items?: { data?: StripeLineItemLike[] };
+};
+
+function priceIdFrom(item: StripeLineItemLike | undefined): string | undefined {
+  return item?.price?.lookup_key || item?.price?.metadata?.lovable_external_id || item?.price?.id;
 }
 
-async function handleSubscriptionCreated(subscription: any, env: StripeEnv) {
+async function handleSubscriptionCreated(subscription: StripeSubscriptionLike, env: StripeEnv) {
   const userId = subscription.metadata?.userId;
   if (!userId) {
     console.error("No userId in subscription metadata");
@@ -32,24 +49,26 @@ async function handleSubscriptionCreated(subscription: any, env: StripeEnv) {
   const periodStart = item?.current_period_start ?? subscription.current_period_start;
   const periodEnd = item?.current_period_end ?? subscription.current_period_end;
 
-  await getSupabase().from("subscriptions").upsert(
-    {
-      user_id: userId,
-      stripe_subscription_id: subscription.id,
-      stripe_customer_id: subscription.customer,
-      product_id: item?.price?.product,
-      price_id: priceIdFrom(item),
-      status: subscription.status,
-      current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
-      current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
-      environment: env,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "stripe_subscription_id" },
-  );
+  await getSupabase()
+    .from("subscriptions")
+    .upsert(
+      {
+        user_id: userId,
+        stripe_subscription_id: subscription.id,
+        stripe_customer_id: subscription.customer ?? "",
+        product_id: item?.price?.product ?? "",
+        price_id: priceIdFrom(item) ?? "",
+        status: subscription.status ?? "unknown",
+        current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
+        current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
+        environment: env,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "stripe_subscription_id" },
+    );
 }
 
-async function handleSubscriptionUpdated(subscription: any, env: StripeEnv) {
+async function handleSubscriptionUpdated(subscription: StripeSubscriptionLike, env: StripeEnv) {
   const item = subscription.items?.data?.[0];
   const periodStart = item?.current_period_start ?? subscription.current_period_start;
   const periodEnd = item?.current_period_end ?? subscription.current_period_end;
@@ -57,9 +76,9 @@ async function handleSubscriptionUpdated(subscription: any, env: StripeEnv) {
   await getSupabase()
     .from("subscriptions")
     .update({
-      status: subscription.status,
-      product_id: item?.price?.product,
-      price_id: priceIdFrom(item),
+      status: subscription.status ?? "unknown",
+      product_id: item?.price?.product ?? "",
+      price_id: priceIdFrom(item) ?? "",
       current_period_start: periodStart ? new Date(periodStart * 1000).toISOString() : null,
       current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
       cancel_at_period_end: subscription.cancel_at_period_end || false,
@@ -69,7 +88,7 @@ async function handleSubscriptionUpdated(subscription: any, env: StripeEnv) {
     .eq("environment", env);
 }
 
-async function handleSubscriptionDeleted(subscription: any, env: StripeEnv) {
+async function handleSubscriptionDeleted(subscription: StripeSubscriptionLike, env: StripeEnv) {
   await getSupabase()
     .from("subscriptions")
     .update({
@@ -84,14 +103,14 @@ async function handleWebhook(req: Request, env: StripeEnv) {
   const event = await verifyWebhook(req, env);
 
   // Idempotency: skip if this Stripe event id has already been processed.
-  const eventId = (event as any).id as string | undefined;
+  const eventId = event.id;
   if (eventId) {
     const { error: insertErr } = await getSupabase()
-      .from("processed_stripe_events" as any)
-      .insert({ event_id: eventId, type: event.type, environment: env });
+      .from("processed_stripe_events")
+      .insert({ event_id: eventId, type: event.type, environment: env } as never);
     if (insertErr) {
       // Unique-violation => already processed; any other error => log and bail safely.
-      if ((insertErr as any).code === "23505") {
+      if ((insertErr as { code?: string }).code === "23505") {
         console.log("Duplicate Stripe event ignored:", eventId);
         return;
       }
@@ -102,13 +121,13 @@ async function handleWebhook(req: Request, env: StripeEnv) {
 
   switch (event.type) {
     case "customer.subscription.created":
-      await handleSubscriptionCreated(event.data.object, env);
+      await handleSubscriptionCreated(event.data.object as StripeSubscriptionLike, env);
       break;
     case "customer.subscription.updated":
-      await handleSubscriptionUpdated(event.data.object, env);
+      await handleSubscriptionUpdated(event.data.object as StripeSubscriptionLike, env);
       break;
     case "customer.subscription.deleted":
-      await handleSubscriptionDeleted(event.data.object, env);
+      await handleSubscriptionDeleted(event.data.object as StripeSubscriptionLike, env);
       break;
     default:
       console.log("Unhandled event:", event.type);

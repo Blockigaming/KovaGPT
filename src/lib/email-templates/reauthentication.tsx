@@ -1,17 +1,9 @@
-import * as React from 'react'
-import {
-  Body,
-  Container,
-  Head,
-  Heading,
-  Html,
-  Preview,
-  Text,
-} from '@react-email/components'
-import { BrandFooter, BrandHeader, styles } from './_brand'
+import * as React from "react";
+import { Body, Container, Head, Heading, Html, Preview, Text } from "@react-email/components";
+import { BrandFooter, BrandHeader, styles } from "./_brand";
 
 interface ReauthenticationEmailProps {
-  token: string
+  token: string;
 }
 
 export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => (
@@ -26,14 +18,13 @@ export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => 
           Use the verification code below to confirm your identity in KovaGPT.
         </Text>
         <Text style={styles.code}>{token}</Text>
-        <Text style={{ ...styles.text, fontSize: '13px', color: '#6b7280', margin: '0' }}>
-          This code expires shortly. If you didn't request it, you can safely
-          ignore this email.
+        <Text style={{ ...styles.text, fontSize: "13px", color: "#6b7280", margin: "0" }}>
+          This code expires shortly. If you didn't request it, you can safely ignore this email.
         </Text>
         <BrandFooter />
       </Container>
     </Body>
   </Html>
-)
+);
 
-export default ReauthenticationEmail
+export default ReauthenticationEmail;

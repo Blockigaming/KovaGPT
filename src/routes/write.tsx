@@ -1,16 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  Bookmark,
-  Check,
-  Copy,
-  Download,
-  Eraser,
-  Loader2,
-  Sparkles,
-  Wand2,
-} from "lucide-react";
+import { Bookmark, Check, Copy, Download, Eraser, Loader2, Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { authFetch } from "@/lib/auth-fetch";
@@ -36,14 +27,7 @@ const STORAGE_KEY = "kova.write.draft.v1";
 const TITLE_KEY = "kova.write.title.v1";
 
 type Action =
-  | "improve"
-  | "expand"
-  | "shorten"
-  | "grammar"
-  | "continue"
-  | "tone"
-  | "outline"
-  | "custom";
+  "improve" | "expand" | "shorten" | "grammar" | "continue" | "tone" | "outline" | "custom";
 
 function countWords(t: string) {
   const m = t.trim().match(/\S+/g);
@@ -73,7 +57,9 @@ function WritePage() {
       const ti = localStorage.getItem(TITLE_KEY);
       if (t) setText(t);
       if (ti) setTitle(ti);
-    } catch {}
+    } catch {
+      // Ignore unavailable storage during draft restoration.
+    }
   }, []);
 
   // Autosave to localStorage
@@ -82,7 +68,9 @@ function WritePage() {
       try {
         localStorage.setItem(STORAGE_KEY, text);
         localStorage.setItem(TITLE_KEY, title);
-      } catch {}
+      } catch {
+        // Ignore unavailable storage during draft persistence.
+      }
     }, 400);
     return () => clearTimeout(id);
   }, [text, title]);
@@ -213,11 +201,7 @@ function WritePage() {
     }
   };
 
-  const actionButton = (
-    action: Action,
-    label: string,
-    Icon: typeof Sparkles = Sparkles,
-  ) => (
+  const actionButton = (action: Action, label: string, Icon: typeof Sparkles = Sparkles) => (
     <button
       onClick={() => run(action)}
       disabled={!!busy}
@@ -306,7 +290,11 @@ function WritePage() {
             disabled={!!busy || !custom.trim()}
             className="inline-flex items-center gap-1.5 rounded-lg bg-foreground px-3 py-2 text-xs font-medium text-background hover:opacity-90 disabled:opacity-50"
           >
-            {busy === "custom" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+            {busy === "custom" ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Sparkles className="h-3 w-3" />
+            )}
             Apply
           </button>
         </div>

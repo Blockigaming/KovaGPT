@@ -5,7 +5,10 @@ export const Route = createFileRoute("/status")({
   head: () => ({
     meta: [
       { title: "KovaGPT Status" },
-      { name: "description", content: "Check this page for known service issues or outages affecting KovaGPT." },
+      {
+        name: "description",
+        content: "Check this page for known service issues or outages affecting KovaGPT.",
+      },
       { property: "og:title", content: "KovaGPT Status" },
       { property: "og:url", content: "https://kovagpt.com/status" },
     ],

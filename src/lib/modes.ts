@@ -120,4 +120,3 @@ export const DAILY_UPLOAD_LIMIT_BY_TIER: Record<Tier, number> = {
   plus: 50,
   pro: 200,
 };
-

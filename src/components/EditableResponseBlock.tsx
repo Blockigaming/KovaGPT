@@ -101,7 +101,8 @@ export function EditableResponseBlock({
         >
           {collapsed ? (
             <>
-              <ChevronDown className="w-3.5 h-3.5" /> Show full ({text.length.toLocaleString()} chars)
+              <ChevronDown className="w-3.5 h-3.5" /> Show full ({text.length.toLocaleString()}{" "}
+              chars)
             </>
           ) : (
             <>

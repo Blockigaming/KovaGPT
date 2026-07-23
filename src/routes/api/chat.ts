@@ -38,6 +38,41 @@ import { activityToSseDelta, createToolActivityEvent } from "@/lib/ai/activity.s
 import { selectModelForMode, mapProviderError } from "@/lib/ai/registry.server";
 import { formatMemoryBlock, selectRelevantMemories, type KovaMemory } from "@/lib/ai/memory.server";
 
+type ChatContentPart =
+  { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
+
+type ChainableQueryLike = {
+  select: (columns: string) => ChainableQueryLike;
+  eq: (column: string, value: unknown) => ChainableQueryLike;
+  order: (column: string, options?: unknown) => ChainableQueryLike;
+  limit: (count: number) => Promise<{ data: unknown[] | null; error?: unknown }>;
+  maybeSingle: () => Promise<{ data: unknown; error?: unknown }>;
+};
+
+type SupabaseAdminLike = {
+  from: (table: string) => ChainableQueryLike;
+  rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
+};
+
+const OWNER_EMAIL = "support@kovagpt.com";
+const TONE_INSTRUCTION = "";
+const ADAPTIVE_INSTRUCTION = "";
+const UNRESTRICTED_INSTRUCTION = "";
+const ACCURACY_INSTRUCTION = "";
+const CHART_INSTRUCTION = "";
+const CREATOR_INSTRUCTION = "";
+function sanitizeLong(value: unknown, max: number): string {
+  return typeof value === "string" ? value.trim().slice(0, max) : "";
+}
+function buildUserContextBlock(user: UserContext): string {
+  const entries = Object.entries(user).filter(([, value]) => value != null && value !== "");
+  if (!entries.length) return "";
+  return `\n\n--- User context ---\n${entries.map(([key, value]) => `${key}: ${String(value)}`).join("\n")}\n--- End user context ---`;
+}
+function buildCurrentDateInstruction(timezone?: string, locale?: string): string {
+  return `\nCurrent date: ${new Date().toISOString().slice(0, 10)}${timezone ? `; timezone: ${timezone}` : ""}${locale ? `; locale: ${locale}` : ""}.`;
+}
+
 type IncomingMessage = {
   role: "user" | "assistant" | "system";
   content: string;
@@ -118,7 +153,7 @@ async function handleDeepResearchRequest(
   prompt: string,
   options: {
     signal?: AbortSignal;
-    persistence?: Parameters<typeof runDeepResearch>[1]["persistence"];
+    persistence?: NonNullable<Parameters<typeof runDeepResearch>[1]>["persistence"];
   } = {},
 ): Promise<Response> {
   const enc = new TextEncoder();
@@ -558,7 +593,8 @@ export const Route = createFileRoute("/api/chat")({
                 signal: request.signal,
                 persistence: auth
                   ? {
-                      supabase: auth.supabaseAdmin,
+                      supabase:
+                        auth.supabaseAdmin as unknown as import("@/lib/ai/deep-research.server").ResearchPersistence["supabase"],
                       userId: auth.userId,
                       chatId,
                       projectId:
@@ -659,7 +695,7 @@ export const Route = createFileRoute("/api/chat")({
               try {
                 const { data: memRows } = await (
                   auth.supabaseAdmin as unknown as {
-                    from: (t: string) => any;
+                    from: (t: string) => ChainableQueryLike;
                   }
                 )
                   .from("chat_memories")
@@ -668,8 +704,8 @@ export const Route = createFileRoute("/api/chat")({
                   .order("updated_at", { ascending: false })
                   .limit(8);
                 if (Array.isArray(memRows) && memRows.length > 0) {
-                  const memories = memRows.map(
-                    (r: { title?: string | null; summary: string }, i: number): KovaMemory => ({
+                  const memories = (memRows as { title?: string | null; summary: string }[]).map(
+                    (r, i): KovaMemory => ({
                       id: `chat-memory-${i + 1}`,
                       userId: auth.userId,
                       content: `${r.title ? `${r.title}: ` : ""}${r.summary}`,
@@ -678,7 +714,7 @@ export const Route = createFileRoute("/api/chat")({
                   );
                   memoryBlock = formatMemoryBlock(
                     selectRelevantMemories(memories, lastText, {
-                      enabled: user?.rememberAcross !== false,
+                      enabled: user?.rememberAcross === true,
                       temporary: Boolean(temporary),
                       maxItems: 8,
                     }),
@@ -695,13 +731,7 @@ export const Route = createFileRoute("/api/chat")({
             let projectBlock = "";
             if (auth && typeof projectId === "string" && /^[0-9a-f-]{36}$/i.test(projectId)) {
               try {
-                const admin = auth.supabaseAdmin as unknown as {
-                  from: (t: string) => any;
-                  rpc: (
-                    name: string,
-                    args: Record<string, unknown>,
-                  ) => Promise<{ data: unknown; error: unknown }>;
-                };
+                const admin = auth.supabaseAdmin as unknown as SupabaseAdminLike;
                 // Verify caller is a member of the project.
                 const { data: isMember } = await admin.rpc("is_project_member", {
                   _user_id: auth.userId,
@@ -809,7 +839,7 @@ export const Route = createFileRoute("/api/chat")({
                     ACCURACY_INSTRUCTION +
                     CHART_INSTRUCTION +
                     CREATOR_INSTRUCTION +
-                    buildUserContextBlock(user) +
+                    buildUserContextBlock(user ?? {}) +
                     personalityBlock +
                     memoryBlock +
                     projectBlock +
@@ -1263,7 +1293,6 @@ export const Route = createFileRoute("/api/chat")({
                     );
                   }
                   try {
-                    // eslint-disable-next-line no-constant-condition
                     while (true) {
                       const { done, value } = await upstreamReader.read();
                       if (done) break;

@@ -74,7 +74,7 @@ const tools = [
         .from("projects")
         .select("id, name, description, created_at, updated_at")
         .order("updated_at", { ascending: false })
-        .limit(limit ?? 50);
+        .limit(typeof limit === "number" ? limit : 50);
       if (error) return { content: [{ type: "text", text: error.message }], isError: true };
       return {
         content: [{ type: "text", text: JSON.stringify(data, null, 2) }],

@@ -6,6 +6,16 @@ import { getValidGoogleAccessToken, logAudit } from "@/lib/google-oauth.server";
 
 const GMAIL = "https://gmail.googleapis.com/gmail/v1/users/me";
 
+type JsonRecord = Record<string, unknown>;
+type GmailHeader = { name?: string; value?: string };
+type GmailPayload = {
+  mimeType?: string;
+  body?: { data?: string };
+  parts?: GmailPayload[];
+  headers?: GmailHeader[];
+};
+type GmailMessage = { id?: string; threadId?: string; snippet?: string; payload?: GmailPayload };
+
 function base64UrlEncode(s: string): string {
   return btoa(unescape(encodeURIComponent(s)))
     .replace(/\+/g, "-")
@@ -16,21 +26,17 @@ function base64UrlEncode(s: string): string {
 function decodeBody(data: string | undefined): string {
   if (!data) return "";
   try {
-    return decodeURIComponent(
-      escape(
-        atob(data.replace(/-/g, "+").replace(/_/g, "/")),
-      ),
-    );
+    return decodeURIComponent(escape(atob(data.replace(/-/g, "+").replace(/_/g, "/"))));
   } catch {
     return "";
   }
 }
 
-function extractText(payload: any): string {
+function extractText(payload: GmailPayload | undefined): string {
   if (!payload) return "";
   if (payload.body?.data) return decodeBody(payload.body.data);
   if (Array.isArray(payload.parts)) {
-    const textPart = payload.parts.find((p: any) => p.mimeType === "text/plain");
+    const textPart = payload.parts.find((p) => p.mimeType === "text/plain");
     if (textPart?.body?.data) return decodeBody(textPart.body.data);
     for (const p of payload.parts) {
       const t = extractText(p);
@@ -60,7 +66,7 @@ export const Route = createFileRoute("/api/google/gmail")({
       POST: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
-        let body: any;
+        let body: JsonRecord;
         try {
           body = await request.json();
         } catch {
@@ -84,8 +90,8 @@ export const Route = createFileRoute("/api/google/gmail")({
               { headers: H },
             );
             if (!listRes.ok) throw new Error(`gmail list ${listRes.status}`);
-            const list = await listRes.json();
-            const ids: string[] = (list.messages ?? []).map((m: any) => m.id);
+            const list = (await listRes.json()) as { messages?: { id?: string }[] };
+            const ids: string[] = (list.messages ?? []).map((m) => String(m.id ?? ""));
             const messages = await Promise.all(
               ids.map(async (id) => {
                 const r = await fetch(
@@ -93,9 +99,9 @@ export const Route = createFileRoute("/api/google/gmail")({
                   { headers: H },
                 );
                 if (!r.ok) return null;
-                const m = await r.json();
+                const m = (await r.json()) as GmailMessage;
                 const h = (name: string) =>
-                  m.payload?.headers?.find((x: any) => x.name === name)?.value ?? "";
+                  m.payload?.headers?.find((x) => x.name === name)?.value ?? "";
                 return {
                   id: m.id,
                   threadId: m.threadId,
@@ -121,9 +127,9 @@ export const Route = createFileRoute("/api/google/gmail")({
             if (!id) return Response.json({ error: "missing_id" }, { status: 400 });
             const r = await fetch(`${GMAIL}/messages/${id}?format=full`, { headers: H });
             if (!r.ok) throw new Error(`gmail get ${r.status}`);
-            const m = await r.json();
+            const m = (await r.json()) as GmailMessage;
             const h = (name: string) =>
-              m.payload?.headers?.find((x: any) => x.name === name)?.value ?? "";
+              m.payload?.headers?.find((x) => x.name === name)?.value ?? "";
             const text = extractText(m.payload).slice(0, 30000);
             await logAudit({
               userId: auth.userId,
@@ -155,11 +161,11 @@ export const Route = createFileRoute("/api/google/gmail")({
               to,
               subject,
               body: messageBody,
-              cc: body.cc,
-              threadId: body.threadId,
+              cc: typeof body.cc === "string" ? body.cc : undefined,
+              threadId: typeof body.threadId === "string" ? body.threadId : undefined,
             });
-            const draftBody: any = { message: { raw } };
-            if (body.threadId) draftBody.message.threadId = body.threadId;
+            const draftBody: { message: { raw: string; threadId?: string } } = { message: { raw } };
+            if (typeof body.threadId === "string") draftBody.message.threadId = body.threadId;
             const r = await fetch(`${GMAIL}/drafts`, {
               method: "POST",
               headers: { ...H, "Content-Type": "application/json" },
@@ -210,7 +216,12 @@ export const Route = createFileRoute("/api/google/gmail")({
             if (!to || !subject) {
               return Response.json({ error: "missing_fields" }, { status: 400 });
             }
-            const raw = buildRawEmail({ to, subject, body: messageBody, cc: body.cc });
+            const raw = buildRawEmail({
+              to,
+              subject,
+              body: messageBody,
+              cc: typeof body.cc === "string" ? body.cc : undefined,
+            });
             const r = await fetch(`${GMAIL}/messages/send`, {
               method: "POST",
               headers: { ...H, "Content-Type": "application/json" },

@@ -1,3 +1,4 @@
+import { removeNulCharacters } from "@/lib/sanitize-text";
 // Server-only helpers for project knowledge indexing + retrieval (RAG).
 // Uses the configured direct embedding provider through the server-side AI adapter.
 
@@ -23,11 +24,53 @@ const TEXT_MIME_EXACT = new Set([
   "application/sql",
 ]);
 const TEXT_EXTENSIONS = new Set([
-  "txt", "md", "markdown", "csv", "tsv", "json", "yaml", "yml", "xml",
-  "log", "ini", "env", "conf", "cfg", "toml", "sql", "html", "htm", "css",
-  "js", "jsx", "ts", "tsx", "py", "rb", "go", "rs", "java", "kt", "swift",
-  "php", "sh", "bash", "zsh", "c", "cc", "cpp", "h", "hpp", "cs", "vue",
-  "svelte", "r", "lua", "pl", "ex", "exs",
+  "txt",
+  "md",
+  "markdown",
+  "csv",
+  "tsv",
+  "json",
+  "yaml",
+  "yml",
+  "xml",
+  "log",
+  "ini",
+  "env",
+  "conf",
+  "cfg",
+  "toml",
+  "sql",
+  "html",
+  "htm",
+  "css",
+  "js",
+  "jsx",
+  "ts",
+  "tsx",
+  "py",
+  "rb",
+  "go",
+  "rs",
+  "java",
+  "kt",
+  "swift",
+  "php",
+  "sh",
+  "bash",
+  "zsh",
+  "c",
+  "cc",
+  "cpp",
+  "h",
+  "hpp",
+  "cs",
+  "vue",
+  "svelte",
+  "r",
+  "lua",
+  "pl",
+  "ex",
+  "exs",
 ]);
 
 export function isTextIndexable(mime: string | null | undefined, name: string): boolean {
@@ -38,7 +81,7 @@ export function isTextIndexable(mime: string | null | undefined, name: string): 
 }
 
 function chunkText(text: string): string[] {
-  const clean = text.replace(/\r\n/g, "\n").replace(/\u0000/g, "").trim();
+  const clean = removeNulCharacters(text).replace(/\r\n/g, "\n").trim();
   if (!clean) return [];
   const chunks: string[] = [];
   let i = 0;
@@ -82,7 +125,11 @@ async function embedOne(text: string): Promise<number[] | null> {
 }
 
 type Supa = {
-  storage: { from: (b: string) => { download: (p: string) => Promise<{ data: Blob | null; error: unknown }> } };
+  storage: {
+    from: (b: string) => {
+      download: (p: string) => Promise<{ data: Blob | null; error: unknown }>;
+    };
+  };
   from: (t: string) => {
     delete: () => { eq: (c: string, v: unknown) => Promise<{ error: unknown }> };
     insert: (rows: Record<string, unknown>[]) => Promise<{ error: unknown }>;
@@ -146,7 +193,10 @@ export async function indexProjectFile(params: {
  */
 export async function retrieveProjectContext(params: {
   supabase: {
-    rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
+    rpc: (
+      name: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: unknown; error: unknown }>;
   };
   project_id: string;
   query: string;
@@ -162,7 +212,10 @@ export async function retrieveProjectContext(params: {
       query_embedding: vec as unknown as string,
       match_count: Math.max(1, Math.min(params.k ?? 6, 12)),
     });
-    if (error) { console.warn("[retrieveProjectContext] rpc", error); return []; }
+    if (error) {
+      console.warn("[retrieveProjectContext] rpc", error);
+      return [];
+    }
     return (data as Array<{ file_id: string; content: string; similarity: number }>) ?? [];
   } catch (e) {
     console.warn("[retrieveProjectContext]", (e as Error)?.message ?? e);

@@ -131,9 +131,7 @@ export async function completeOAuthSessionFromUrl(source: string): Promise<Sessi
 
   const oauthError = getOAuthParam(url, "error");
   if (oauthError) {
-    const description =
-      getOAuthParam(url, "error_description") ||
-      "Google sign in failed.";
+    const description = getOAuthParam(url, "error_description") || "Google sign in failed.";
     const error = new Error(description);
     console.error(`[KovaAuth] OAuth callback error from ${source}.`, error);
     throw error;

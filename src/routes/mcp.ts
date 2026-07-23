@@ -9,7 +9,8 @@ export const Route = createFileRoute("/mcp")({
           name: "kovagpt-mcp",
           title: "KovaGPT",
           version: "0.1.0",
-          instructions: "KovaGPT project tools. Authenticate with a Supabase user bearer token before invoking tools.",
+          instructions:
+            "KovaGPT project tools. Authenticate with a Supabase user bearer token before invoking tools.",
           tools: listTools(),
         }),
     },

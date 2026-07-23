@@ -35,38 +35,55 @@ export const Route = createFileRoute("/api/project-suggest")({
               headers: { "Content-Type": "application/json" },
             });
           }
-          const body = await request.json().catch(() => ({})) as { hint?: string };
+          const body = (await request.json().catch(() => ({}))) as { hint?: string };
           const hint = (body.hint ?? "").toString().slice(0, 400);
           const missingProvider = missingAiProviderResponse(fallback());
           if (missingProvider) return missingProvider;
           const upstream = await chatCompletions({
-              model: chatModel("fast"),
-              messages: [
-                {
-                  role: "system",
-                  content:
-                    'You suggest a name and short description for a collaborative work project. Reply with ONLY compact JSON in the shape {"name": string (2-5 words, Title Case, no quotes), "description": string (one sentence, <=140 chars)}. No markdown, no code fences.',
-                },
-                { role: "user", content: hint || "Suggest a creative, useful project idea." },
-              ],
-            });
+            model: chatModel("fast"),
+            messages: [
+              {
+                role: "system",
+                content:
+                  'You suggest a name and short description for a collaborative work project. Reply with ONLY compact JSON in the shape {"name": string (2-5 words, Title Case, no quotes), "description": string (one sentence, <=140 chars)}. No markdown, no code fences.',
+              },
+              { role: "user", content: hint || "Suggest a creative, useful project idea." },
+            ],
+          });
           if (!upstream.ok) {
-            return new Response(JSON.stringify(fallback()), { headers: { "Content-Type": "application/json" } });
+            return new Response(JSON.stringify(fallback()), {
+              headers: { "Content-Type": "application/json" },
+            });
           }
           const data = await upstream.json();
-          const raw = (data.choices?.[0]?.message?.content ?? "").trim().replace(/^```json|^```|```$/g, "").trim();
+          const raw = (data.choices?.[0]?.message?.content ?? "")
+            .trim()
+            .replace(/^```json|^```|```$/g, "")
+            .trim();
           let parsed: { name?: string; description?: string } = {};
-          try { parsed = JSON.parse(raw); } catch { /* ignore */ }
-          const name = String(parsed.name ?? "").trim().slice(0, 100);
-          const description = String(parsed.description ?? "").trim().slice(0, 300);
+          try {
+            parsed = JSON.parse(raw);
+          } catch {
+            /* ignore */
+          }
+          const name = String(parsed.name ?? "")
+            .trim()
+            .slice(0, 100);
+          const description = String(parsed.description ?? "")
+            .trim()
+            .slice(0, 300);
           if (!name) {
-            return new Response(JSON.stringify(fallback()), { headers: { "Content-Type": "application/json" } });
+            return new Response(JSON.stringify(fallback()), {
+              headers: { "Content-Type": "application/json" },
+            });
           }
           return new Response(JSON.stringify({ name, description }), {
             headers: { "Content-Type": "application/json" },
           });
         } catch {
-          return new Response(JSON.stringify(fallback()), { headers: { "Content-Type": "application/json" } });
+          return new Response(JSON.stringify(fallback()), {
+            headers: { "Content-Type": "application/json" },
+          });
         }
       },
     },
@@ -75,9 +92,18 @@ export const Route = createFileRoute("/api/project-suggest")({
 
 function fallback() {
   const options = [
-    { name: "Marketing Campaign", description: "Plan, draft, and coordinate launch content across channels." },
-    { name: "Product Research", description: "Gather user interviews, competitive notes, and opportunity briefs." },
-    { name: "Content Calendar", description: "Track posts, deadlines, and drafts for the upcoming quarter." },
+    {
+      name: "Marketing Campaign",
+      description: "Plan, draft, and coordinate launch content across channels.",
+    },
+    {
+      name: "Product Research",
+      description: "Gather user interviews, competitive notes, and opportunity briefs.",
+    },
+    {
+      name: "Content Calendar",
+      description: "Track posts, deadlines, and drafts for the upcoming quarter.",
+    },
     { name: "Team Onboarding", description: "Docs, checklists, and resources for new hires." },
   ];
   return options[Math.floor(Math.random() * options.length)];

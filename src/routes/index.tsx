@@ -338,9 +338,13 @@ function KovaGPT() {
   const firstName = useMemo(() => {
     const candidate =
       settings.displayName?.trim() ||
-      (user as any)?.firstName ||
-      (user as any)?.username ||
-      (user as any)?.fullName?.split(" ")[0] ||
+      (user as { firstName?: string; username?: string; fullName?: string } | null | undefined)
+        ?.firstName ||
+      (user as { firstName?: string; username?: string; fullName?: string } | null | undefined)
+        ?.username ||
+      (
+        user as { firstName?: string; username?: string; fullName?: string } | null | undefined
+      )?.fullName?.split(" ")[0] ||
       "";
     return typeof candidate === "string" ? candidate.split(" ")[0] : "";
   }, [settings.displayName, user]);
@@ -365,7 +369,6 @@ function KovaGPT() {
           "Ask anything.",
         ];
     return prompts[Math.floor(Math.random() * prompts.length)];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [firstName, isLoaded, isSignedIn]);
 
   const updateNearBottom = useCallback(() => {

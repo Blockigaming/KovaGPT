@@ -8,7 +8,9 @@ export function getKovaVersion(): KovaVersion {
   try {
     const v = localStorage.getItem(KEY);
     if (v && (KOVA_VERSIONS as readonly string[]).includes(v)) return v as KovaVersion;
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return DEFAULT_KOVA_VERSION;
 }
 
@@ -16,7 +18,9 @@ export function setKovaVersion(v: KovaVersion) {
   try {
     localStorage.setItem(KEY, v);
     window.dispatchEvent(new CustomEvent("kova-version", { detail: v }));
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 export function useKovaVersionListener(cb: (v: KovaVersion) => void) {

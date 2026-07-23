@@ -11,7 +11,9 @@ export function MapWidget({ height = 180 }: { height?: number }) {
     try {
       const raw = localStorage.getItem("kova-location");
       if (raw) setLoc(JSON.parse(raw));
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   if (!loc?.enabled || loc.lat == null || loc.lon == null) {

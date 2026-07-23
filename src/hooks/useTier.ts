@@ -1,7 +1,7 @@
 // Client-side tier helper. Reads the user's most recent active subscription
 // row from Supabase (RLS scoped to auth.uid()) and resolves to free/plus/pro.
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { getSupabaseClientConfigStatus, supabase } from "@/integrations/supabase/client";
 
 export type Tier = "free" | "plus" | "pro";
 
@@ -18,6 +18,12 @@ export function useTier(): { tier: Tier; loading: boolean } {
 
   useEffect(() => {
     let alive = true;
+    const config = getSupabaseClientConfigStatus();
+    if (!config.configured) {
+      setTier("free");
+      setLoading(false);
+      return;
+    }
     const load = async () => {
       const { data: userRes } = await supabase.auth.getUser();
       const uid = userRes.user?.id;

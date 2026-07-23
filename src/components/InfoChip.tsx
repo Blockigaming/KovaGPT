@@ -17,23 +17,37 @@ export function detectInfoChip(text: string): ChipKind | null {
   const lower = trimmed.toLowerCase();
 
   // Reject news / topical content outright.
-  if (/\b(news|headline|breaking|report|announced|according to|reuters|associated press|study|research shows)\b/i.test(lower)) {
+  if (
+    /\b(news|headline|breaking|report|announced|according to|reuters|associated press|study|research shows)\b/i.test(
+      lower,
+    )
+  ) {
     return null;
   }
 
   // Time: must contain a clock-like time AND a strong time cue.
   const clockTime = /\b\d{1,2}:\d{2}\s*(?:am|pm)?\b/i;
-  const timeCue = /(current time|the time is|it(?:'s| is)\s+(?:currently\s+|now\s+)?\d{1,2}:\d{2}|right now it(?:'s| is)|local time)/i;
+  const timeCue =
+    /(current time|the time is|it(?:'s| is)\s+(?:currently\s+|now\s+)?\d{1,2}:\d{2}|right now it(?:'s| is)|local time)/i;
   if (clockTime.test(trimmed) && timeCue.test(lower)) return "time";
 
   // Location: strong first-person location cue.
-  const locationCue = /(you (?:are|'re) (?:currently )?(?:in|located in|near)\b|your (?:approximate )?location is|based on your (?:saved |shared )?location|you appear to be in)/i;
+  const locationCue =
+    /(you (?:are|'re) (?:currently )?(?:in|located in|near)\b|your (?:approximate )?location is|based on your (?:saved |shared )?location|you appear to be in)/i;
   if (locationCue.test(lower)) return "location";
 
   return null;
 }
 
-export function InfoChip({ kind, children, rawText }: { kind: ChipKind; children: ReactNode; rawText?: string }) {
+export function InfoChip({
+  kind,
+  children,
+  rawText,
+}: {
+  kind: ChipKind;
+  children: ReactNode;
+  rawText?: string;
+}) {
   const Icon = kind === "time" ? Clock : MapPin;
   const label = kind === "time" ? "Time" : "Location";
   const [copied, setCopied] = useState(false);
@@ -44,7 +58,9 @@ export function InfoChip({ kind, children, rawText }: { kind: ChipKind; children
       await navigator.clipboard.writeText(text || "");
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
 
   return (
@@ -64,14 +80,17 @@ export function InfoChip({ kind, children, rawText }: { kind: ChipKind; children
         </button>
       </div>
       <div className="px-4 pb-4 pt-2 flex items-center gap-4">
-        {kind === "time" ? (
-          <ClockWidget size={72} />
-        ) : null}
+        {kind === "time" ? <ClockWidget size={72} /> : null}
         <div className="prose-chat prose-invert max-w-none text-neutral-100 text-[15px] leading-relaxed flex-1 min-w-0">
           {children}
           {kind === "time" && (
             <div className="mt-1 text-[12px] text-neutral-500">
-              {Intl.DateTimeFormat().resolvedOptions().timeZone.replace(/_/g, " ")} · {new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
+              {Intl.DateTimeFormat().resolvedOptions().timeZone.replace(/_/g, " ")} ·{" "}
+              {new Date().toLocaleDateString(undefined, {
+                weekday: "long",
+                month: "short",
+                day: "numeric",
+              })}
             </div>
           )}
         </div>

@@ -28,21 +28,8 @@ export function NovaLogo({
       xmlns="http://www.w3.org/2000/svg"
     >
       <circle cx="24" cy="24" r="21" fill="white" />
-      <circle
-        cx="24"
-        cy="24"
-        r="22"
-        stroke="black"
-        strokeWidth="1.5"
-      />
-      <circle
-        cx="24"
-        cy="24"
-        r="21"
-        stroke="white"
-        strokeWidth="1.5"
-        strokeOpacity="0.85"
-      />
+      <circle cx="24" cy="24" r="22" stroke="black" strokeWidth="1.5" />
+      <circle cx="24" cy="24" r="21" stroke="white" strokeWidth="1.5" strokeOpacity="0.85" />
       <path
         d="M24 13L26.5 21.5L35 24L26.5 26.5L24 35L21.5 26.5L13 24L21.5 21.5L24 13Z"
         fill="black"
@@ -50,22 +37,14 @@ export function NovaLogo({
         strokeWidth="1"
         strokeLinejoin="round"
       />
-      <path
-        d="M24 18V30M18 24H30"
-        stroke="white"
-        strokeWidth="1"
-        strokeLinecap="round"
-      />
+      <path d="M24 18V30M18 24H30" stroke="white" strokeWidth="1" strokeLinecap="round" />
     </svg>
   );
 
   if (pulse) {
     return (
       <span className="relative inline-flex">
-        <span
-          aria-hidden="true"
-          className="absolute inset-0 rounded-full animate-kova-pulse"
-        />
+        <span aria-hidden="true" className="absolute inset-0 rounded-full animate-kova-pulse" />
         {svg}
       </span>
     );

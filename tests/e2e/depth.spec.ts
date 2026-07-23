@@ -25,18 +25,14 @@ test.describe("Theme handling", () => {
   test("root element reflects stored theme mode", async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem("kova-theme-mode", "dark"));
     await page.goto("/");
-    const hasDark = await page.evaluate(() =>
-      document.documentElement.classList.contains("dark"),
-    );
+    const hasDark = await page.evaluate(() => document.documentElement.classList.contains("dark"));
     expect(hasDark).toBe(true);
   });
 
   test("light mode does not force .dark class", async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem("kova-theme-mode", "light"));
     await page.goto("/");
-    const hasDark = await page.evaluate(() =>
-      document.documentElement.classList.contains("dark"),
-    );
+    const hasDark = await page.evaluate(() => document.documentElement.classList.contains("dark"));
     expect(hasDark).toBe(false);
   });
 });

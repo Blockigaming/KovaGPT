@@ -2,6 +2,34 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
+type SubscriptionQueryLike = {
+  from: (table: string) => {
+    select: (columns: string) => {
+      eq: (
+        column: string,
+        value: unknown,
+      ) => {
+        in: (
+          column: string,
+          values: unknown[],
+        ) => Promise<{ data: unknown[] | null; error: { message: string } | null }>;
+      };
+    };
+  };
+};
+
+type SupabaseQueryLike = {
+  from: (table: string) => SupabaseQueryLike;
+  select: (columns?: string) => SupabaseQueryLike;
+  insert: (values: unknown) => SupabaseQueryLike;
+  update: (values: unknown) => SupabaseQueryLike;
+  eq: (column: string, value: unknown) => SupabaseQueryLike;
+  in: (column: string, values: unknown[]) => SupabaseQueryLike;
+  order: (column: string, options?: unknown) => SupabaseQueryLike;
+  single: () => Promise<{ data: unknown; error: { message: string } | null }>;
+  maybeSingle: () => Promise<{ data: unknown; error: { message: string } | null }>;
+};
+
 export type ScheduledTask = {
   id: string;
   title: string;
@@ -25,19 +53,25 @@ function classifyTier(priceId: string | null | undefined): "free" | "plus" | "pr
   return "free";
 }
 
-async function ensurePlusOrAbove(
-  supabase: any,
-  userId: string,
-): Promise<"plus" | "pro"> {
-  const { data, error } = await supabase
+async function ensurePlusOrAbove(supabase: unknown, userId: string): Promise<"plus" | "pro"> {
+  const { data, error } = await (supabase as SubscriptionQueryLike)
     .from("subscriptions")
     .select("status, current_period_end, price_id")
     .eq("user_id", userId)
     .in("status", ["active", "trialing"]);
-  if (error) { console.error("[serverfn]", error.message); throw new Error("Request failed. Please try again."); }
-  const active = (data ?? []).filter(
-    (r: any) =>
-      ["active", "trialing"].includes(r.status) &&
+  if (error) {
+    console.error("[serverfn]", error.message);
+    throw new Error("Request failed. Please try again.");
+  }
+  const active = (
+    (data ?? []) as {
+      status?: string;
+      current_period_end?: string | null;
+      price_id?: string | null;
+    }[]
+  ).filter(
+    (r: { status?: string; current_period_end?: string | null; price_id?: string | null }) =>
+      ["active", "trialing"].includes(r.status ?? "") &&
       (!r.current_period_end || new Date(r.current_period_end) > new Date()),
   );
   if (active.length === 0) {
@@ -45,8 +79,11 @@ async function ensurePlusOrAbove(
   }
   let tier: "plus" | "pro" = "plus";
   for (const row of active) {
-    const t = classifyTier(row.price_id);
-    if (t === "pro") { tier = "pro"; break; }
+    const t = classifyTier(row.price_id ?? null);
+    if (t === "pro") {
+      tier = "pro";
+      break;
+    }
   }
   return tier;
 }
@@ -63,8 +100,8 @@ export const isScheduledTasksEligible = createServerFn({ method: "POST" })
       .in("status", ["active", "trialing"]);
     if (error) return { eligible: false };
     const ok = (data ?? []).some(
-      (r: any) =>
-        ["active", "trialing"].includes(r.status) &&
+      (r: { status?: string; current_period_end?: string | null; price_id?: string | null }) =>
+        ["active", "trialing"].includes(r.status ?? "") &&
         (!r.current_period_end || new Date(r.current_period_end) > new Date()),
     );
     return { eligible: ok };
@@ -78,7 +115,10 @@ export const listScheduledTasks = createServerFn({ method: "POST" })
       .select("*")
       .eq("user_id", context.userId)
       .order("run_at", { ascending: true });
-    if (error) { console.error("[serverfn]", error.message); throw new Error("Request failed. Please try again."); }
+    if (error) {
+      console.error("[serverfn]", error.message);
+      throw new Error("Request failed. Please try again.");
+    }
     return (data ?? []) as ScheduledTask[];
   });
 
@@ -124,7 +164,10 @@ export const createScheduledTask = createServerFn({ method: "POST" })
       })
       .select("*")
       .single();
-    if (error || !row) { console.error("[serverfn]", error?.message); throw new Error("Failed to create task"); }
+    if (error || !row) {
+      console.error("[serverfn]", error?.message);
+      throw new Error("Failed to create task");
+    }
     return row as ScheduledTask;
   });
 
@@ -151,14 +194,17 @@ export const updateScheduledTask = createServerFn({ method: "POST" })
     }
     if (data.repeat !== undefined) patch.repeat = data.repeat;
     if (data.status !== undefined) patch.status = data.status;
-    const { data: row, error } = await (context.supabase as any)
+    const { data: row, error } = await (context.supabase as unknown as SupabaseQueryLike)
       .from("scheduled_tasks")
       .update(patch)
       .eq("id", data.id)
       .eq("user_id", context.userId)
       .select("*")
       .single();
-    if (error || !row) { console.error("[serverfn]", error?.message); throw new Error("Failed to update task"); }
+    if (error || !row) {
+      console.error("[serverfn]", error?.message);
+      throw new Error("Failed to update task");
+    }
     return row as ScheduledTask;
   });
 
@@ -173,6 +219,9 @@ export const deleteScheduledTask = createServerFn({ method: "POST" })
       .delete()
       .eq("id", data.id)
       .eq("user_id", context.userId);
-    if (error) { console.error("[serverfn]", error.message); throw new Error("Request failed. Please try again."); }
+    if (error) {
+      console.error("[serverfn]", error.message);
+      throw new Error("Request failed. Please try again.");
+    }
     return { ok: true };
   });

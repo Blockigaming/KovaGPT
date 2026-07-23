@@ -1,3 +1,4 @@
+import { replaceControlCharacters } from "@/lib/sanitize-text";
 export type KovaSource = {
   id: string;
   url: string;
@@ -36,10 +37,7 @@ export function sourceDomain(url: string): string {
 
 function clean(value: string | undefined, max: number): string | undefined {
   if (!value) return undefined;
-  const cleaned = value
-    .replace(/[\u0000-\u001F\u007F]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  const cleaned = replaceControlCharacters(value).replace(/\s+/g, " ").trim();
   return cleaned ? cleaned.slice(0, max) : undefined;
 }
 

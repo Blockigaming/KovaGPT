@@ -152,7 +152,11 @@ export function OnboardingDialog() {
     try {
       await persistOnboarding();
       if (starter) {
-        try { localStorage.setItem("kova-draft:__new__", starter); } catch { /* ignore */ }
+        try {
+          localStorage.setItem("kova-draft:__new__", starter);
+        } catch {
+          /* ignore */
+        }
       }
       setOpen(false);
     } finally {

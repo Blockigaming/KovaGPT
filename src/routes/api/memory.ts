@@ -1,10 +1,6 @@
 // Cross-chat memory store + summarizer for Plus+ users.
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  getCallerTier,
-  requireUser,
-  type AuthedCaller,
-} from "@/lib/api-auth.server";
+import { getCallerTier, requireUser, type AuthedCaller } from "@/lib/api-auth.server";
 import { chatCompletions, chatModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
 
 const MAX_SUMMARIES_RETURNED = 8;
@@ -13,15 +9,23 @@ const MAX_MEMORIES_PER_USER = 100;
 // `chat_memories` was added in a recent migration; the generated Database
 // types haven't been refreshed yet, so we go through a permissive client
 // to keep the build green. RLS still enforces row ownership.
-function tbl(auth: AuthedCaller) {
-  return (auth.supabaseAdmin as unknown as {
-    from: (t: string) => {
-      select: (cols: string) => any;
-      upsert: (row: any, opts?: any) => any;
-      delete: () => any;
-      // chained methods chain through `any`
-    };
-  }).from("chat_memories");
+type MemoryTableQuery = {
+  select: (cols: string) => MemoryTableQuery;
+  upsert: (row: unknown, opts?: unknown) => MemoryTableQuery;
+  delete: () => MemoryTableQuery;
+  eq: (column: string, value: unknown) => MemoryTableQuery;
+  order: (column: string, options?: unknown) => MemoryTableQuery;
+  limit: (count: number) => Promise<{ data: unknown[] | null; error?: unknown }>;
+  range: (from: number, to: number) => Promise<{ data: unknown[] | null; error?: unknown }>;
+  in: (column: string, values: unknown[]) => MemoryTableQuery;
+};
+
+function tbl(auth: AuthedCaller): MemoryTableQuery {
+  return (
+    auth.supabaseAdmin as unknown as {
+      from: (t: string) => MemoryTableQuery;
+    }
+  ).from("chat_memories");
 }
 
 async function summarize(messages: { role: string; content: string }[]) {
@@ -30,16 +34,16 @@ async function summarize(messages: { role: string; content: string }[]) {
     .map((m) => `${m.role === "user" ? "User" : "KovaGPT"}: ${String(m.content).slice(0, 2000)}`)
     .join("\n");
   const resp = await chatCompletions({
-      model: chatModel("fast"),
-      messages: [
-        {
-          role: "system",
-          content:
-            "Summarize this conversation in 2-4 sentences as factual notes about the user and what they discussed. Focus on lasting facts, preferences, projects, decisions, names, and goals - not small talk. Write in third person ('The user...'). No markdown. No en or em dashes; use a regular hyphen. Plain text only.",
-        },
-        { role: "user", content: transcript },
-      ],
-    });
+    model: chatModel("fast"),
+    messages: [
+      {
+        role: "system",
+        content:
+          "Summarize this conversation in 2-4 sentences as factual notes about the user and what they discussed. Focus on lasting facts, preferences, projects, decisions, names, and goals - not small talk. Write in third person ('The user...'). No markdown. No en or em dashes; use a regular hyphen. Plain text only.",
+      },
+      { role: "user", content: transcript },
+    ],
+  });
   if (!resp.ok) return null;
   const data = await resp.json();
   const text = data?.choices?.[0]?.message?.content;
@@ -128,10 +132,12 @@ export const Route = createFileRoute("/api/memory")({
           .order("updated_at", { ascending: false })
           .range(MAX_MEMORIES_PER_USER, MAX_MEMORIES_PER_USER + 50);
         if (Array.isArray(extra) && extra.length > 0) {
-          await tbl(auth).delete().in(
-            "id",
-            extra.map((r: { id: string }) => r.id),
-          );
+          await tbl(auth)
+            .delete()
+            .in(
+              "id",
+              (extra as { id: string }[]).map((r) => r.id),
+            );
         }
         return new Response(JSON.stringify({ ok: true }), {
           headers: { "Content-Type": "application/json" },

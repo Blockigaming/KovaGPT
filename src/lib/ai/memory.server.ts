@@ -1,3 +1,4 @@
+import { replaceControlCharacters } from "@/lib/sanitize-text";
 export type MemoryCategory =
   | "preference"
   | "personal_context"
@@ -23,11 +24,7 @@ export type MemoryPolicy = {
 };
 
 export function normalizeMemoryText(text: string): string {
-  return text
-    .replace(/[\u0000-\u001F\u007F]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 500);
+  return replaceControlCharacters(text).replace(/\s+/g, " ").trim().slice(0, 500);
 }
 
 export function shouldReadMemory(policy: MemoryPolicy): boolean {

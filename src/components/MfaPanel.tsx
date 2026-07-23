@@ -73,10 +73,12 @@ export function MfaPanel() {
         code: code.trim(),
       });
       if (error) throw error;
-      const codes = Array.from({ length: 10 }, () =>
-        Math.random().toString(36).slice(2, 6).toUpperCase() +
-        "-" +
-        Math.random().toString(36).slice(2, 6).toUpperCase(),
+      const codes = Array.from(
+        { length: 10 },
+        () =>
+          Math.random().toString(36).slice(2, 6).toUpperCase() +
+          "-" +
+          Math.random().toString(36).slice(2, 6).toUpperCase(),
       );
       setBackup(codes);
       setEnrolling(null);
@@ -129,7 +131,8 @@ export function MfaPanel() {
           <h3 className="text-sm font-semibold">Two-factor authentication</h3>
         </div>
         <p className="text-xs text-muted-foreground mb-4">
-          Add an authenticator app (Google Authenticator, 1Password, Authy) for a second layer of security.
+          Add an authenticator app (Google Authenticator, 1Password, Authy) for a second layer of
+          security.
         </p>
 
         {loading ? (
@@ -149,7 +152,12 @@ export function MfaPanel() {
                       {f.friendly_name || "TOTP"} • Active
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => unenroll(f.id)} disabled={busy}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => unenroll(f.id)}
+                    disabled={busy}
+                  >
                     Remove
                   </Button>
                 </div>

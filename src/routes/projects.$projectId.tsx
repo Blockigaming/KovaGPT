@@ -332,7 +332,7 @@ function ProjectDetailPage() {
               isOwner={isOwner}
               onInvite={async (email, role) => {
                 const fn = (await import("@/lib/projects.functions")).inviteMember;
-                const res = await useServerFnDirect(fn, {
+                const res = await callServerFnDirect(fn, {
                   data: { project_id: projectId, email, role },
                 });
                 toast.success(
@@ -343,19 +343,19 @@ function ProjectDetailPage() {
                 await refresh();
               }}
               onRevoke={async (id) => {
-                await useServerFnDirect((await import("@/lib/projects.functions")).revokeInvite, {
+                await callServerFnDirect((await import("@/lib/projects.functions")).revokeInvite, {
                   data: { id },
                 });
                 await refresh();
               }}
               onRemove={async (userId) => {
-                await useServerFnDirect((await import("@/lib/projects.functions")).removeMember, {
+                await callServerFnDirect((await import("@/lib/projects.functions")).removeMember, {
                   data: { project_id: projectId, user_id: userId },
                 });
                 await refresh();
               }}
               onChangeRole={async (userId, role) => {
-                await useServerFnDirect(
+                await callServerFnDirect(
                   (await import("@/lib/projects.functions")).updateMemberRole,
                   { data: { project_id: projectId, user_id: userId, role } },
                 );
@@ -397,7 +397,7 @@ function ProjectDetailPage() {
 }
 
 // Helper for one-off server fn calls inside callbacks
-function useServerFnDirect<T>(fn: unknown, arg: unknown): Promise<T> {
+function callServerFnDirect<T>(fn: unknown, arg: unknown): Promise<T> {
   return (fn as (a: unknown) => Promise<T>)(arg);
 }
 

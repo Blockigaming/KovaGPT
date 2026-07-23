@@ -1,5 +1,6 @@
 import { imageModel } from "@/lib/ai/provider.server";
 import { selectModelForMode, KovaProviderError } from "@/lib/ai/registry.server";
+import { replaceControlCharacters } from "@/lib/sanitize-text";
 
 export type ImageOperation = "generate" | "variation" | "edit";
 export type ImageAspectRatio = "1:1" | "2:3" | "3:2" | "16:9" | "9:16";
@@ -46,11 +47,7 @@ const ASPECT_TO_SIZE: Record<ImageAspectRatio, ImageGenerationSettings["size"]> 
 };
 
 export function sanitizeImagePrompt(prompt: string): string {
-  return prompt
-    .replace(/[\u0000-\u001F\u007F]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 2000);
+  return replaceControlCharacters(prompt).replace(/\s+/g, " ").trim().slice(0, 2000);
 }
 
 export function normalizeImageSettings(

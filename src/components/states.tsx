@@ -91,13 +91,7 @@ export function SkeletonCard() {
   );
 }
 
-export function SkeletonGrid({
-  count = 6,
-  minWidth = 240,
-}: {
-  count?: number;
-  minWidth?: number;
-}) {
+export function SkeletonGrid({ count = 6, minWidth = 240 }: { count?: number; minWidth?: number }) {
   return (
     <div
       className="grid gap-4"
@@ -156,11 +150,7 @@ export function EmptyState({
         <p className="text-sm text-muted-foreground max-w-sm mx-auto">{description}</p>
       )}
       {action && <div className="mt-5 flex justify-center">{action}</div>}
-      {tip && (
-        <p className="mt-4 text-[11px] text-muted-foreground/80">
-          Tip: {tip}
-        </p>
-      )}
+      {tip && <p className="mt-4 text-[11px] text-muted-foreground/80">Tip: {tip}</p>}
     </div>
   );
 }
@@ -209,7 +199,6 @@ export class AppErrorBoundary extends Component<
     return { error };
   }
   componentDidCatch(error: Error) {
-    // eslint-disable-next-line no-console
     console.error("[AppErrorBoundary]", error);
   }
   reset = () => this.setState({ error: null });

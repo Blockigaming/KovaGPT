@@ -1,11 +1,6 @@
+import { replaceControlCharacters } from "@/lib/sanitize-text";
 export type ArtifactType =
-  | "document"
-  | "report"
-  | "table"
-  | "chart"
-  | "analysis_summary"
-  | "code"
-  | "image_collection";
+  "document" | "report" | "table" | "chart" | "analysis_summary" | "code" | "image_collection";
 export type ArtifactStatus = "draft" | "saving" | "saved" | "failed" | "archived";
 export type ArtifactVersion = {
   version: number;
@@ -55,8 +50,7 @@ export function createArtifact(input: {
 }
 export function sanitizeArtifactTitle(title: string): string {
   return (
-    title
-      .replace(/[\u0000-\u001F\u007F]+/g, " ")
+    replaceControlCharacters(title)
       .replace(/[/\\?%*:|"<>]/g, "")
       .trim()
       .slice(0, 160) || "Untitled artifact"

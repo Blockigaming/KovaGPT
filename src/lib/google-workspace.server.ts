@@ -45,7 +45,7 @@ export type DriveFileRef = {
   authorizedContentRef: string;
 };
 
-export function normalizeGmailSearchResult(raw: any): GmailMessageSummary {
+export function normalizeGmailSearchResult(raw: Record<string, unknown>): GmailMessageSummary {
   return {
     id: String(raw.id ?? ""),
     threadId: String(raw.threadId ?? ""),
@@ -83,7 +83,7 @@ export function normalizeCalendarEvent(input: CalendarEventInput): CalendarEvent
   };
 }
 
-export function normalizeDriveFile(raw: any): DriveFileRef {
+export function normalizeDriveFile(raw: Record<string, unknown>): DriveFileRef {
   const mimeType = String(raw.mimeType ?? "application/octet-stream");
   const id = String(raw.id ?? "");
   if (!id) throw new Error("Drive file id is required.");

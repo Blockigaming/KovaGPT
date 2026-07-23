@@ -66,9 +66,7 @@ export function ChatChart({ spec }: { spec: ChartSpec }) {
   return (
     <figure className="my-4 overflow-hidden rounded-2xl border border-border bg-card p-3 sm:p-4">
       {spec.title && (
-        <figcaption className="mb-2 text-sm font-semibold text-foreground">
-          {spec.title}
-        </figcaption>
+        <figcaption className="mb-2 text-sm font-semibold text-foreground">{spec.title}</figcaption>
       )}
       <div className="h-56 w-full sm:h-72">
         <ResponsiveContainer width="100%" height="100%">

@@ -33,7 +33,9 @@ function write(items: TimerItem[]) {
   try {
     localStorage.setItem(KEY, JSON.stringify(items));
     window.dispatchEvent(new CustomEvent(EVT));
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 export function listTimers(): TimerItem[] {

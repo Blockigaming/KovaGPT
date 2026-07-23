@@ -17,7 +17,7 @@ const TRAITS = [
   { key: "conciseness", label: "Conciseness", hint: "Verbose vs terse" },
 ] as const;
 
-type TraitKey = typeof TRAITS[number]["key"];
+type TraitKey = (typeof TRAITS)[number]["key"];
 export type Personality = Record<TraitKey, number>;
 
 const STORAGE_KEY = "kova.personality.v1";
@@ -96,7 +96,9 @@ export function PersonalitySliders() {
         Fine-tune how KovaGPT responds. Default (5) matches normal tone.
       </p>
 
-      <div className={`grid gap-4 sm:grid-cols-2 ${unlocked ? "" : "pointer-events-none blur-[2px] opacity-70 select-none"}`}>
+      <div
+        className={`grid gap-4 sm:grid-cols-2 ${unlocked ? "" : "pointer-events-none blur-[2px] opacity-70 select-none"}`}
+      >
         {TRAITS.map((t) => (
           <div key={t.key} className="space-y-1.5">
             <div className="flex items-center justify-between text-xs">

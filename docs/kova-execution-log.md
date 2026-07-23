@@ -505,3 +505,15 @@
 - Dependency-install attempt: `rm -rf node_modules && npm ci --ignore-scripts --no-audit --no-fund` failed with `403 Forbidden - GET https://registry.npmjs.org/@playwright%2ftest`; lint/typecheck/build/e2e were not rerun after the failed clean install because required dev dependencies were unavailable.
 - Production HTTP attempt from this environment: `curl -I --max-time 20 https://kovagpt.com/` and `curl -i --max-time 20 https://kovagpt.com/api/health` both failed at the environment proxy with `CONNECT tunnel failed, response 403`, so this workspace still cannot verify production status.
 - Deployment recovery remains `BLOCKED — EXTERNAL ACCESS`: no real remote connection, no push, no real PR, no GitHub checks, no Lovable deployment ID, no Lovable Preview status, no production status, and no deployed SHA are available from this workspace.
+
+## 2026-07-22 — Formatting, lint, build, and local browser verification checkpoint
+
+- Starting branch and commit: `work` at `ccaf3a158dde5ab1beb9102d65f9bf713f90c932`; working tree had no source changes before formatter execution in this checkpoint.
+- Ran the repository formatter with `npm run format`, which normalized supported source, test, configuration, and documentation files using the checked-in Prettier configuration.
+- Fixed blocking lint/type errors without disabling rules: removed explicit `any` surfaces in Google, Stripe, memory, email, scheduled-task, and project-workspace code; added typed query shims where generated Supabase types lag migrations; converted empty catches to documented ignored-failure branches; renamed non-hook callback helpers; and moved route error handling into a proper React component.
+- Added `src/lib/sanitize-text.ts` and replaced control-character regular expressions with helper-based sanitization so ESLint no-control-regex passes while preserving runtime behavior.
+- Hardened signed-out/local boot when Supabase browser variables are absent: `useTier` now resolves to the free plan instead of touching the Supabase proxy, and auth emits a non-fatal warning rather than a route-crashing error.
+- Verification passed: `npm install --no-audit --no-fund`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, `npm run test:e2e -- --list`, and `git diff --check`.
+- Playwright Chromium host dependencies were installed with `npx playwright install chromium` and `npx playwright install-deps chromium` after the first browser launch reported missing system libraries.
+- Local browser verification passed for `http://127.0.0.1:5173/`: HTTP 200, page title `KovaGPT`, KovaGPT shell text present, and no route-crashing page errors. Remaining console errors were external resource/network failures (`ERR_CERT_AUTHORITY_INVALID` and `ERR_TUNNEL_CONNECTION_FAILED`) in the local proxy environment; missing Supabase env is now a warning and no longer crashes the page. Screenshot saved at `/tmp/kovagpt-home-verification.png`.
+- Remaining non-PASS row: `GitHub synchronization and Lovable recovery`; no push, PR update, CI observation, Lovable deployment, production verification, or deployed SHA was performed in this checkpoint.

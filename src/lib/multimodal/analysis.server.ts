@@ -1,12 +1,6 @@
 import { createToolActivityEvent, type ToolActivityEvent } from "@/lib/ai/activity.server";
 export type AnalysisJobStatus =
-  | "queued"
-  | "preparing"
-  | "running"
-  | "rendering"
-  | "complete"
-  | "failed"
-  | "canceled";
+  "queued" | "preparing" | "running" | "rendering" | "complete" | "failed" | "canceled";
 export type ColumnKind = "number" | "date" | "boolean" | "text" | "empty";
 export type AnalysisTable = {
   title: string;
@@ -18,7 +12,7 @@ export type ChartType = "bar" | "line" | "area" | "scatter" | "pie" | "histogram
 export type ChartSpec = {
   type: ChartType;
   title: string;
-  data: Array<Record<string, string | number | null>>;
+  data: Array<Record<string, string | number | boolean | null>>;
   xField?: string;
   yFields?: string[];
   seriesField?: string;

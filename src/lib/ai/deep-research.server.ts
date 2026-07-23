@@ -1,3 +1,4 @@
+import { replaceControlCharacters } from "@/lib/sanitize-text";
 import {
   chatCompletions,
   chatModel,
@@ -8,12 +9,7 @@ import { createToolActivityEvent, type ToolActivityEvent } from "@/lib/ai/activi
 import { searchWeb, type WebSource } from "@/lib/ai/search.server";
 
 export type ResearchStageStatus =
-  | "created"
-  | "pending"
-  | "running"
-  | "complete"
-  | "failed"
-  | "canceled";
+  "created" | "pending" | "running" | "complete" | "failed" | "canceled";
 
 export type ResearchStage = {
   id:
@@ -76,7 +72,7 @@ type ResearchPersistenceClient = {
   };
 };
 
-type ResearchPersistence = {
+export type ResearchPersistence = {
   supabase: ResearchPersistenceClient;
   userId: string;
   chatId?: string;
@@ -150,11 +146,7 @@ const MAX_PLAN_QUERIES = 5;
 const MAX_EVIDENCE = 12;
 
 function sanitizeResearchText(text: string, max = 1200): string {
-  return text
-    .replace(/[\u0000-\u0008\u000B-\u001F\u007F]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, max);
+  return replaceControlCharacters(text).replace(/\s+/g, " ").trim().slice(0, max);
 }
 
 function fallbackPlan(query: string): string[] {

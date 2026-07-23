@@ -40,12 +40,7 @@ async function resolveOrCreateCustomer(
 export const createCheckoutSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
-    (data: {
-      priceId: string;
-      quantity?: number;
-      returnUrl: string;
-      environment: StripeEnv;
-    }) => {
+    (data: { priceId: string; quantity?: number; returnUrl: string; environment: StripeEnv }) => {
       if (!/^[a-zA-Z0-9_-]+$/.test(data.priceId)) throw new Error("Invalid priceId");
       return data;
     },
@@ -106,7 +101,6 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         });
         if (prior.data.length > 0) isPlusTrialEligible = false;
       }
-
 
       const sessionParams: Record<string, unknown> = {
         line_items: [{ price: stripePrice.id, quantity: data.quantity || 1 }],
@@ -216,4 +210,3 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
       hasBillingAccount: !!row?.stripe_customer_id,
     };
   });
-
