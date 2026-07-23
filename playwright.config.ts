@@ -12,6 +12,12 @@ export default defineConfig({
   fullyParallel: true,
   retries: 0,
   reporter: [["list"]],
+  webServer: {
+    command: "npm run preview -- --host 127.0.0.1 --port 8080",
+    url: "http://127.0.0.1:8080",
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
+  },
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://localhost:8080",
     trace: "retain-on-failure",

@@ -86,13 +86,20 @@ alter table public.chat_share_links enable row level security;
 alter table public.user_preferences enable row level security;
 alter table public.account_audit_entries enable row level security;
 
-create policy if not exists "connected accounts owner read" on public.connected_accounts for select using (auth.uid() = user_id);
-create policy if not exists "connected accounts owner delete" on public.connected_accounts for delete using (auth.uid() = user_id);
-create policy if not exists "task runs owner read" on public.scheduled_task_runs for select using (auth.uid() = user_id);
-create policy if not exists "notifications owner read" on public.notification_deliveries for select using (auth.uid() = user_id);
-create policy if not exists "share links owner crud" on public.chat_share_links for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy if not exists "preferences owner crud" on public.user_preferences for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy if not exists "audit owner read" on public.account_audit_entries for select using (auth.uid() = user_id);
+drop policy if exists "connected accounts owner read" on public.connected_accounts;
+create policy "connected accounts owner read" on public.connected_accounts for select using (auth.uid() = user_id);
+drop policy if exists "connected accounts owner delete" on public.connected_accounts;
+create policy "connected accounts owner delete" on public.connected_accounts for delete using (auth.uid() = user_id);
+drop policy if exists "task runs owner read" on public.scheduled_task_runs;
+create policy "task runs owner read" on public.scheduled_task_runs for select using (auth.uid() = user_id);
+drop policy if exists "notifications owner read" on public.notification_deliveries;
+create policy "notifications owner read" on public.notification_deliveries for select using (auth.uid() = user_id);
+drop policy if exists "share links owner crud" on public.chat_share_links;
+create policy "share links owner crud" on public.chat_share_links for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "preferences owner crud" on public.user_preferences;
+create policy "preferences owner crud" on public.user_preferences for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+drop policy if exists "audit owner read" on public.account_audit_entries;
+create policy "audit owner read" on public.account_audit_entries for select using (auth.uid() = user_id);
 
 create index if not exists idx_connected_accounts_user_provider on public.connected_accounts(user_id, provider);
 create index if not exists idx_scheduled_task_runs_user_task on public.scheduled_task_runs(user_id, task_id, scheduled_for desc);

@@ -14,7 +14,7 @@ export type ImageGenerationSettings = {
   quality: ImageQuality;
   outputFormat: ImageOutputFormat;
   transparentBackground: boolean;
-  n: 1 | 2 | 4;
+  n: 1;
   parentImageId?: string;
   editInstruction?: string;
   maskAssetId?: string;
@@ -70,6 +70,15 @@ export function normalizeImageSettings(
       { status: 400 },
     );
   }
+  if (input.n !== undefined && input.n !== 1) {
+    throw new KovaProviderError(
+      "CAPABILITY_UNSUPPORTED",
+      "KovaGPT currently supports one image per request.",
+      {
+        status: 400,
+      },
+    );
+  }
   return {
     prompt,
     operation,
@@ -78,7 +87,7 @@ export function normalizeImageSettings(
     quality: input.quality ?? "low",
     outputFormat: input.outputFormat ?? "png",
     transparentBackground: Boolean(input.transparentBackground),
-    n: input.n ?? 1,
+    n: 1,
     parentImageId: input.parentImageId,
     editInstruction: sanitizeImagePrompt(input.editInstruction ?? "") || undefined,
     maskAssetId: input.maskAssetId,
