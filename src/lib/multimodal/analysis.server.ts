@@ -1,6 +1,12 @@
 import { createToolActivityEvent, type ToolActivityEvent } from "@/lib/ai/activity.server";
 export type AnalysisJobStatus =
-  "queued" | "preparing" | "running" | "rendering" | "complete" | "failed" | "canceled";
+  | "queued"
+  | "preparing"
+  | "running"
+  | "rendering"
+  | "complete"
+  | "failed"
+  | "canceled";
 export type ColumnKind = "number" | "date" | "boolean" | "text" | "empty";
 export type AnalysisTable = {
   title: string;

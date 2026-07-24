@@ -11,6 +11,10 @@ import {
 import appCss from "../styles.css?url";
 import { ClerkProvider } from "@/components/auth/ClerkSafe";
 import { Toaster } from "@/components/ui/sonner";
+import { useUser } from "@/components/auth/ClerkSafe";
+import { applyThemeMode } from "@/lib/theme";
+import { loadSettings } from "@/lib/use-nova-settings";
+import { useEffect, useLayoutEffect } from "react";
 
 function NotFoundComponent() {
   return (
@@ -173,12 +177,6 @@ function RootShell({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {/* Apply theme before hydration to avoid flash + match system on every route. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var m=localStorage.getItem('kova-theme-mode')||'system';function isDark(mode){return mode==='dark'||(mode==='system'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);}function apply(mode){var d=isDark(mode);document.documentElement.classList.toggle('dark',d);var color=d?'#2a2a2e':'#f4f4f6';var metas=document.querySelectorAll('meta[name="theme-color"]');if(metas.length===0){var el=document.createElement('meta');el.setAttribute('name','theme-color');document.head.appendChild(el);metas=[el];}metas.forEach(function(el){el.removeAttribute('media');el.setAttribute('content',color);});}apply(m);if(m==='system'&&window.matchMedia){var mq=window.matchMedia('(prefers-color-scheme: dark)');mq.addEventListener&&mq.addEventListener('change',function(){if((localStorage.getItem('kova-theme-mode')||'system')==='system')apply('system');});}var mo=new MutationObserver(function(){apply(localStorage.getItem('kova-theme-mode')||'system');});mo.observe(document.documentElement,{attributes:true,attributeFilter:['class']});}catch(e){}})();`,
-          }}
-        />
         {children}
         <Scripts />
       </body>
@@ -186,11 +184,29 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function RootThemeManager() {
+  const { isLoaded, user } = useUser();
+  const userKey = user?.id ?? null;
+
+  useLayoutEffect(() => {
+    applyThemeMode(loadSettings(null).mode ?? "system");
+  }, []);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    const loaded = loadSettings(userKey);
+    applyThemeMode(loaded.mode ?? "system");
+  }, [isLoaded, userKey]);
+
+  return null;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <ClerkProvider>
       <QueryClientProvider client={queryClient}>
+        <RootThemeManager />
         <Outlet />
         <Toaster />
       </QueryClientProvider>

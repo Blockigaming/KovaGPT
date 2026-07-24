@@ -1,6 +1,5 @@
 import { Menu, SquarePen } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
-import { useLayout } from "@/hooks/use-mobile";
 import { useUser, SignInButton, SignUpButton, clerkEnabled } from "@/components/auth/ClerkSafe";
 
 /**
@@ -20,9 +19,7 @@ export function MobileTopBar({
   onNewChat: () => void;
   title?: string;
 }) {
-  const { isDesktop } = useLayout();
   const { isLoaded, isSignedIn } = useUser();
-  if (isDesktop) return null;
   const showAuth = isLoaded && clerkEnabled && !isSignedIn;
   return (
     <header

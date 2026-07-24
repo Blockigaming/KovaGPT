@@ -16,7 +16,7 @@ for (const viewport of viewports) {
   test(`multimodal surfaces fit at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await page.goto("/images");
-    await expect(page.getByRole("main").or(page.locator("body"))).toBeVisible();
+    await expect(page.getByRole("main")).toBeVisible();
     await expect(page.locator("body")).not.toHaveCSS("overflow-x", "scroll");
   });
 }

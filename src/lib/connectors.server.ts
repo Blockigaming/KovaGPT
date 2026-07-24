@@ -13,7 +13,11 @@ export type ConnectorState =
   | "temporarily_unavailable";
 
 export type GoogleCapability =
-  "gmail.read" | "gmail.write" | "calendar.read" | "calendar.write" | "drive.read";
+  | "gmail.read"
+  | "gmail.write"
+  | "calendar.read"
+  | "calendar.write"
+  | "drive.read";
 
 export const GOOGLE_SCOPE_GROUPS: Record<GoogleCapability, readonly string[]> = {
   "gmail.read": [

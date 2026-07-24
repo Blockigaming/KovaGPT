@@ -21,19 +21,41 @@ test.describe("Signed-out gating", () => {
   });
 });
 
+const seedGuestTheme = async (page: import("@playwright/test").Page, mode: "dark" | "light") => {
+  await page.goto("/");
+  await page.evaluate((selectedMode) => {
+    localStorage.clear();
+    localStorage.setItem("kova-theme-mode", selectedMode);
+    localStorage.setItem("nova-gpt-settings-v1:guest", JSON.stringify({ mode: selectedMode }));
+    document.documentElement.classList.toggle("dark", selectedMode === "dark");
+  }, mode);
+};
+
 test.describe("Theme handling", () => {
-  test("root element reflects stored theme mode", async ({ page }) => {
-    await page.addInitScript(() => localStorage.setItem("kova-theme-mode", "dark"));
-    await page.goto("/");
-    const hasDark = await page.evaluate(() => document.documentElement.classList.contains("dark"));
-    expect(hasDark).toBe(true);
+  const directRoutes = ["/", "/images", "/projects", "/settings"] as const;
+
+  test("dark guest theme hydrates on direct app-route navigation", async ({ page }) => {
+    await seedGuestTheme(page, "dark");
+
+    for (const path of directRoutes) {
+      if (path === "/") await page.reload();
+      else await page.goto(path);
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.classList.contains("dark")))
+        .toBe(true);
+    }
   });
 
-  test("light mode does not force .dark class", async ({ page }) => {
-    await page.addInitScript(() => localStorage.setItem("kova-theme-mode", "light"));
-    await page.goto("/");
-    const hasDark = await page.evaluate(() => document.documentElement.classList.contains("dark"));
-    expect(hasDark).toBe(false);
+  test("light guest theme hydrates on direct app-route navigation", async ({ page }) => {
+    await seedGuestTheme(page, "light");
+
+    for (const path of directRoutes) {
+      if (path === "/") await page.reload();
+      else await page.goto(path);
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.classList.contains("dark")))
+        .toBe(false);
+    }
   });
 });
 

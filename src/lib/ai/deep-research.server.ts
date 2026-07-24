@@ -9,7 +9,12 @@ import { createToolActivityEvent, type ToolActivityEvent } from "@/lib/ai/activi
 import { searchWeb, type WebSource } from "@/lib/ai/search.server";
 
 export type ResearchStageStatus =
-  "created" | "pending" | "running" | "complete" | "failed" | "canceled";
+  | "created"
+  | "pending"
+  | "running"
+  | "complete"
+  | "failed"
+  | "canceled";
 
 export type ResearchStage = {
   id:
