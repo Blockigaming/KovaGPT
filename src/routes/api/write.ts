@@ -12,7 +12,14 @@ import {
 import { DAILY_CHAT_LIMIT_BY_TIER } from "@/lib/modes";
 
 type Action =
-  "improve" | "expand" | "shorten" | "grammar" | "continue" | "tone" | "outline" | "custom";
+  | "improve"
+  | "expand"
+  | "shorten"
+  | "grammar"
+  | "continue"
+  | "tone"
+  | "outline"
+  | "custom";
 
 type Body = {
   text?: string;

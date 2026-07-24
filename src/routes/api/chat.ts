@@ -39,7 +39,8 @@ import { selectModelForMode, mapProviderError } from "@/lib/ai/registry.server";
 import { formatMemoryBlock, selectRelevantMemories, type KovaMemory } from "@/lib/ai/memory.server";
 
 type ChatContentPart =
-  { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
 
 type ChainableQueryLike = {
   select: (columns: string) => ChainableQueryLike;
