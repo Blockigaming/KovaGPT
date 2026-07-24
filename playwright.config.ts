@@ -2,8 +2,7 @@ import { defineConfig } from "@playwright/test";
 
 /**
  * Playwright config for KovaGPT responsive smoke and visual checks.
- * The Lovable sandbox can provide PLAYWRIGHT_BASE_URL; otherwise tests use
- * the conventional local dev-server URL.
+ * PLAYWRIGHT_BASE_URL can override the conventional local preview-server URL.
  */
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -13,7 +12,7 @@ export default defineConfig({
   retries: 0,
   reporter: [["list"]],
   webServer: {
-    command: "npm run preview -- --host 127.0.0.1 --port 8080",
+    command: "npm run build && npm run preview -- --host 127.0.0.1 --port 8080",
     url: "http://127.0.0.1:8080",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

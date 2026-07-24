@@ -368,7 +368,7 @@ function KovaGPT() {
           "What are we working on?",
           "Ask anything.",
         ];
-    return prompts[Math.floor(Math.random() * prompts.length)];
+    return prompts[0];
   }, [firstName, isLoaded, isSignedIn]);
 
   const updateNearBottom = useCallback(() => {

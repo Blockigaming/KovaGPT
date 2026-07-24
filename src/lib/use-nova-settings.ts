@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { DEFAULT_SETTINGS, type Settings } from "@/components/SettingsDialog";
+import { loadThemeMode } from "@/lib/theme";
 
 const SETTINGS_KEY_BASE = "nova-gpt-settings-v1";
 
@@ -14,7 +15,7 @@ export function loadSettings(userKey: string | null): Settings {
     if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
     const legacy = localStorage.getItem(SETTINGS_KEY_BASE);
     if (legacy) return { ...DEFAULT_SETTINGS, ...JSON.parse(legacy) };
-    return DEFAULT_SETTINGS;
+    return { ...DEFAULT_SETTINGS, mode: loadThemeMode() };
   } catch {
     return DEFAULT_SETTINGS;
   }

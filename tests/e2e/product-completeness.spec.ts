@@ -17,7 +17,8 @@ test.describe("product completeness responsive scaffolding", () => {
     test(`help and support surfaces fit ${width}x${height}`, async ({ page }) => {
       await page.setViewportSize({ width, height });
       await page.goto("/help");
-      await expect(page.getByRole("heading", { name: /help/i })).toBeVisible();
+      await expect(page.getByText(/KovaGPT Help Center/i).first()).toBeVisible();
+      await expect(page.getByRole("heading", { name: /How can we help/i })).toBeVisible();
       await expect(page.locator("body")).not.toContainText(
         /voice|microphone|dictation|read aloud/i,
       );
@@ -32,8 +33,8 @@ test.describe("product completeness responsive scaffolding", () => {
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.keyboard.press("Escape");
     await page.goto("/notifications");
-    await expect(page.getByText(/notifications/i)).toBeVisible();
+    await expect(page.getByRole("heading", { name: /notifications/i })).toBeVisible();
     await page.goto("/privacy");
-    await expect(page.getByRole("heading", { name: /privacy/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /^Privacy Policy$/i })).toBeVisible();
   });
 });

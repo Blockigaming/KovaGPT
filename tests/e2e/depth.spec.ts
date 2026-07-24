@@ -23,17 +23,25 @@ test.describe("Signed-out gating", () => {
 
 test.describe("Theme handling", () => {
   test("root element reflects stored theme mode", async ({ page }) => {
-    await page.addInitScript(() => localStorage.setItem("kova-theme-mode", "dark"));
+    await page.addInitScript(() => {
+      localStorage.setItem("kova-theme-mode", "dark");
+      localStorage.setItem("nova-gpt-settings-v1:guest", JSON.stringify({ mode: "dark" }));
+    });
     await page.goto("/");
-    const hasDark = await page.evaluate(() => document.documentElement.classList.contains("dark"));
-    expect(hasDark).toBe(true);
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.classList.contains("dark")))
+      .toBe(true);
   });
 
   test("light mode does not force .dark class", async ({ page }) => {
-    await page.addInitScript(() => localStorage.setItem("kova-theme-mode", "light"));
+    await page.addInitScript(() => {
+      localStorage.setItem("kova-theme-mode", "light");
+      localStorage.setItem("nova-gpt-settings-v1:guest", JSON.stringify({ mode: "light" }));
+    });
     await page.goto("/");
-    const hasDark = await page.evaluate(() => document.documentElement.classList.contains("dark"));
-    expect(hasDark).toBe(false);
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.classList.contains("dark")))
+      .toBe(false);
   });
 });
 

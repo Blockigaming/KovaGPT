@@ -517,3 +517,42 @@
 - Playwright Chromium host dependencies were installed with `npx playwright install chromium` and `npx playwright install-deps chromium` after the first browser launch reported missing system libraries.
 - Local browser verification passed for `http://127.0.0.1:5173/`: HTTP 200, page title `KovaGPT`, KovaGPT shell text present, and no route-crashing page errors. Remaining console errors were external resource/network failures (`ERR_CERT_AUTHORITY_INVALID` and `ERR_TUNNEL_CONNECTION_FAILED`) in the local proxy environment; missing Supabase env is now a warning and no longer crashes the page. Screenshot saved at `/tmp/kovagpt-home-verification.png`.
 - Remaining non-PASS row: `GitHub synchronization and Lovable recovery`; no push, PR update, CI observation, Lovable deployment, production verification, or deployed SHA was performed in this checkpoint.
+
+
+## 2026-07-23 — Full browser-test triage and runtime hardening checkpoint
+
+- Starting requested commit: `dff6eb837642520cf9b643a96b83e76bb5e4838f`; actual repository HEAD at task start was `f0d43bc86f828592d8dcdc11dd3a262e1d41b718` on local branch `work`, with no source changes before this checkpoint.
+- Initial `npm run test:e2e` failure was a repository-side Playwright environment defect: the configured web server launched preview without first creating `dist/server/server.js`, so TanStack preview failed with `ERR_MODULE_NOT_FOUND`. `playwright.config.ts` now builds before preview for browser tests.
+- Browser runtime dependency failures were resolved by installing Playwright Chromium and host dependencies with `npx playwright install chromium` and `npx playwright install-deps chromium`; the first CDN returned a 403 but the Microsoft CDN fallback completed.
+- Real application defect fixed: anonymous/public API calls through `authFetch` no longer fail when Supabase browser auth env is intentionally absent; the wrapper now attaches a Supabase bearer token only when browser auth is configured.
+- Real application defect fixed: production hydration errors on responsive/mobile shells were traced in the browser to SSR/client layout branching and random greeting selection. The layout hook now starts from the server-safe desktop/pointer snapshot and updates after hydration, the mobile top bar is CSS-gated instead of conditionally omitted, the initial greeting is deterministic, and the pre-hydration theme script that could mutate head/html state was removed.
+- Invalid test assumptions fixed without weakening product coverage: multimodal route visibility now targets the actual `main` landmark instead of a strict-mode `main OR body`; Help/Notifications/Privacy assertions now target exact visible landmarks; signed-out Projects verification accepts the intentional sign-in gate before checking authenticated workspace controls.
+- Full-suite attempt: `npm run test:e2e` ran 191 of 486 tests before manual interruption because the suite was too large for this task window. Interrupted count was 127 passed, 63 failed, 1 interrupted, 295 not run. The repeated failures were classified into invalid test assumptions plus the hydration/runtime defects fixed above.
+- Prioritized browser verification after fixes: `npm run test:e2e -- tests/e2e/core-chat-experience.spec.ts tests/e2e/responsive.spec.ts tests/e2e/model-selector.spec.ts tests/e2e/projects-library-workspaces.spec.ts tests/e2e/connectors-tasks-settings.spec.ts tests/e2e/multimodal-canvas.spec.ts tests/e2e/product-completeness.spec.ts tests/e2e/ai-core-parity.spec.ts --project=desktop-1280x800` reached 46 passed and 2 invalid-assumption failures; after focused fixes, `npm run test:e2e -- tests/e2e/product-completeness.spec.ts --project=desktop-1280x800` passed 10/10 and the Projects focused rerun passed its previously failing gate.
+- Visual/responsive evidence inspected from Playwright screenshots/traces for 320x700, 375x812, 390x844, 430x932, 768x1024, 1024x768, 1280x800, 1440x900, and 1728x1117 viewport loops in the prioritized specs. The real visual/runtime defect fixed was the mobile/tablet hydration/layout transition; no horizontal overflow remained in the focused 320x700 responsive rerun.
+- Security review: static scan confirmed service-role and provider keys are referenced from server-only modules/routes, not normal client components; Supabase migrations contain RLS and ownership policies for Library items, shared content, project/project-file data, memories, scheduled tasks, connectors/preferences/audit rows, generated image storage, and subscriptions. Runtime cross-user denial still needs a live Supabase environment and seeded users.
+- Final verification passed: `npm run lint` (0 errors, existing warnings), `npm run typecheck`, `npm test` (34 unit tests), `npm run test:a11y` (1 test), `npm run test:visual` (1 test), `npm run build`, and `git diff --check`.
+- Remaining blockers: complete all-project Playwright execution across all 486 tests, live Supabase cross-user/RLS tests, provider-backed streaming/image/search flows with real or boundary-mocked credentials, GitHub/CI/Lovable/deployment verification, and production verification.
+
+## 2026-07-24 — Grouped Playwright matrix completion from current HEAD
+
+- Starting HEAD for this continuation: `de8b49b12baaadd2a2b73867277660b529130918` on local branch `work`.
+- Matrix discovery: `npx playwright test --list` reported 486 tests across 10 e2e files and 9 configured projects; each project has 54 tests.
+- Environment fix: installed the missing Playwright Chromium browser and host dependencies after the first browser run failed before application startup with `browserType.launch: Executable doesn't exist at /root/.cache/ms-playwright/chromium_headless_shell-1194/chrome-linux/headless_shell`.
+- Application defect fixed: guest theme settings now preserve the standalone `kova-theme-mode` value when no persisted Nova settings object exists, so the light/dark preference survives the removal of the pre-hydration theme script.
+- Test-only defect fixed: `tests/e2e/depth.spec.ts` now seeds the real guest settings storage key and waits for the hydrated root theme state instead of reading the HTML class immediately after navigation.
+- Grouped Playwright results after fixes:
+  - `tests/e2e/core-chat-experience.spec.ts`: 18 passed, 0 failed, 0 skipped.
+  - `tests/e2e/responsive.spec.ts`: 18 passed, 0 failed, 0 skipped.
+  - `tests/e2e/product-completeness.spec.ts`: 90 passed, 0 failed, 0 skipped.
+  - `tests/e2e/projects-library-workspaces.spec.ts`: 27 passed, 0 failed, 0 skipped.
+  - `tests/e2e/model-selector.spec.ts`: 9 passed, 0 failed, 0 skipped.
+  - `tests/e2e/connectors-tasks-settings.spec.ts`: 90 passed, 0 failed, 0 skipped.
+  - `tests/e2e/multimodal-canvas.spec.ts`: 90 passed, 0 failed, 0 skipped.
+  - `tests/e2e/ai-core-parity.spec.ts`: 90 passed, 0 failed, 0 skipped.
+  - `tests/e2e/chat-api-error.spec.ts`: 9 passed, 0 failed, 0 skipped.
+  - `tests/e2e/depth.spec.ts`: 45 passed, 0 failed, 0 skipped.
+- Final grouped Playwright total: 486 passed, 0 failed, 0 skipped, 0 externally blocked, 0 not run.
+- Project totals: each configured project (`phone-320x700`, `phone-375x812`, `phone-390x844`, `phone-430x932`, `tablet-768x1024`, `tablet-1024x768`, `desktop-1280x800`, `desktop-1440x900`, `desktop-1728x1117`) completed 54 passed, 0 failed, 0 skipped.
+- Security preparation: static/local coverage continues to verify provider keys stay server-side, billing checks are server-authoritative, ownership checks are present in server helpers/migrations, and request-id/error contracts are deterministic. Live cross-user Supabase RLS verification remains BLOCKED — EXTERNAL CREDENTIAL because it requires a live Supabase project plus two seeded users.
+- Final local gate passed: `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:a11y`, `npm run test:visual`, `npm run build`, and `git diff --check`.

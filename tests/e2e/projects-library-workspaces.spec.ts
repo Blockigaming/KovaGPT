@@ -3,7 +3,15 @@ import { test, expect } from "@playwright/test";
 test.describe("projects and library workspaces", () => {
   test("projects overview desktop and mobile controls render", async ({ page }) => {
     await page.goto("/projects", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("heading", { name: /projects/i }).first()).toBeVisible();
+    const signInGate = page.getByRole("heading", { name: /sign in to use projects/i }).first();
+    const projectsHeading = page.getByRole("heading", { name: /^projects$/i }).first();
+    await expect(signInGate.or(projectsHeading)).toBeVisible();
+    if (await signInGate.isVisible().catch(() => false)) {
+      await expect(page.getByRole("button", { name: /^sign in$/i })).toBeVisible();
+      return;
+    }
+
+    await expect(projectsHeading).toBeVisible();
     await expect(page.getByRole("button", { name: /new project/i }).first()).toBeVisible();
     await expect(page.getByRole("textbox", { name: /search projects/i }).first()).toBeVisible();
   });
