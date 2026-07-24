@@ -1,5 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+<<<<<<< HEAD
 import {
   Copy,
   Check,
@@ -19,6 +20,9 @@ import {
   Globe,
   Mail,
 } from "lucide-react";
+=======
+import { Copy, Check, ImageIcon, Loader2, Bookmark, FileEdit, Code2, Eye, MoreHorizontal, Share2, Pencil, RefreshCw, ThumbsUp, ThumbsDown, GitBranch, Globe, Mail, Volume2 } from "lucide-react";
+>>>>>>> origin/main
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileBottomSheet } from "./MobileBottomSheet";
 import { useLayout } from "@/hooks/use-mobile";
@@ -271,6 +275,18 @@ function ChatMessageInner({
     setTimeout(() => setCopied(false), 1500);
   };
 
+  const readAloud = () => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      toast.error("Read aloud is not supported in this browser.");
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(cleanAssistantText(message.content));
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    window.speechSynthesis.speak(utterance);
+  };
+
   const saveItem = async () => {
     // Guests can save to a local-only library (kept in localStorage). The
     // ClerkSafe sign-in prompt is no longer shown here.
@@ -487,6 +503,14 @@ function ChatMessageInner({
                 ) : (
                   <Copy className="w-4 h-4" />
                 )}
+              </button>
+              <button
+                onClick={readAloud}
+                className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
+                title="Read aloud"
+                aria-label="Read aloud"
+              >
+                <Volume2 className="w-4 h-4" />
               </button>
               <button
                 onClick={() => {
@@ -715,6 +739,7 @@ function ChatMessageInner({
         >
           <div className="flex flex-col py-1">
             {[
+<<<<<<< HEAD
               {
                 label: copied ? "Copied" : "Copy",
                 icon: Copy,
@@ -743,6 +768,13 @@ function ChatMessageInner({
                 label: "Share",
                 icon: Share2,
                 onClick: async () => {
+=======
+              { label: copied ? "Copied" : "Copy", icon: Copy, onClick: () => { copy(); setMobileSheetOpen(false); } },
+              { label: "Read aloud", icon: Volume2, onClick: () => { readAloud(); setMobileSheetOpen(false); } },
+              { label: feedback === "up" ? "Remove good rating" : "Good response", icon: ThumbsUp, onClick: () => { persistFeedback(feedback === "up" ? null : "up"); setMobileSheetOpen(false); } },
+              { label: feedback === "down" ? "Remove bad rating" : "Bad response", icon: ThumbsDown, onClick: () => { persistFeedback(feedback === "down" ? null : "down"); setMobileSheetOpen(false); } },
+              { label: "Share", icon: Share2, onClick: async () => {
+>>>>>>> origin/main
                   setMobileSheetOpen(false);
                   const text = message.content;
                   if (typeof navigator !== "undefined" && navigator.share) {

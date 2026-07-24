@@ -24,10 +24,14 @@ function normalizeError(error: unknown): Error {
 
 export const providerAuth = {
   auth: {
+<<<<<<< HEAD
     signInWithOAuth: async (
       provider: OAuthProvider,
       opts?: SignInOptions,
     ): Promise<OAuthResult> => {
+=======
+    signInWithOAuth: async (provider: OAuthProvider, opts?: SignInOptions): Promise<OAuthResult> => {
+>>>>>>> origin/main
       const mappedProvider = providerMap[provider];
       try {
         const { data, error } = await supabase.auth.signInWithOAuth({

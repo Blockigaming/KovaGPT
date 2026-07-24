@@ -46,7 +46,11 @@
   --background: oklch(0.982 0 0);
   --foreground: oklch(0.19 0 0);
   --card: oklch(1 0 0);
+<<<<<<< HEAD
   --card-foreground: oklch(0.2 0 0);
+=======
+  --card-foreground: oklch(0.20 0 0);
+>>>>>>> origin/main
   --popover: oklch(0.995 0.001 250);
   --popover-foreground: oklch(0.2 0 0);
   --primary: oklch(0.2 0 0);
@@ -169,6 +173,7 @@
   --sidebar-hover: oklch(1 0 0 / 6%);
   --sidebar-active: oklch(1 0 0 / 10%);
   --user-bubble: oklch(0.275 0.003 250);
+<<<<<<< HEAD
 
   --surface-app: var(--background);
   --surface-workspace: oklch(0.18 0.003 250);
@@ -194,6 +199,8 @@
   --status-error: var(--destructive);
   --skeleton-base: oklch(0.28 0.003 250);
   --skeleton-highlight: oklch(0.34 0.003 250);
+=======
+>>>>>>> origin/main
 
   --scrollbar-thumb: oklch(1 0 0 / 12%);
   --scrollbar-thumb-hover: oklch(1 0 0 / 22%);
@@ -1052,3 +1059,8 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* ChatGPT-like utility: hide horizontal starter-card scrollbars on mobile. */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

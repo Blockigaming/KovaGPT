@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import {
   ArrowUp,
   Square,
@@ -17,6 +18,9 @@ import {
   RotateCcw,
   type LucideIcon,
 } from "lucide-react";
+=======
+import { ArrowUp, Square, Plus, X, Mic, Image as ImageIcon, FileText, Camera, Puzzle, Search, Lightbulb, Sparkles, GraduationCap, SlidersHorizontal, Brain, type LucideIcon } from "lucide-react";
+>>>>>>> origin/main
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { useLayout } from "@/hooks/use-mobile";
 
@@ -26,6 +30,7 @@ import { toast } from "sonner";
 import { ResponsiveModelSelector as ModelSelector } from "@/components/ResponsiveModelSelector";
 import type { ModeId, Tier } from "@/lib/modes";
 
+<<<<<<< HEAD
 export type PendingAttachment = {
   kind: "image" | "library_file";
   dataUrl: string;
@@ -38,6 +43,10 @@ export type PendingAttachment = {
   sourceProject?: string | null;
   createdAt?: string | null;
 };
+=======
+export type PendingAttachment = { kind: "image"; dataUrl: string; name: string };
+export type ComposerToolId = "web_search" | "deep_research" | "image" | "study" | "data_analysis" | "file_analysis";
+>>>>>>> origin/main
 
 export type RecentLibraryFile = {
   id: string;
@@ -76,10 +85,13 @@ export function ChatInput({
   placeholder,
   onPromptShortcut,
   onToolSelect,
+<<<<<<< HEAD
   recentLibraryFiles = [],
   recentLibraryLoading = false,
   recentLibraryError = null,
   onRecentLibraryRetry,
+=======
+>>>>>>> origin/main
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -96,10 +108,13 @@ export function ChatInput({
   placeholder?: string;
   onPromptShortcut?: (prompt: string) => void;
   onToolSelect?: (tool: ComposerToolId) => void;
+<<<<<<< HEAD
   recentLibraryFiles?: RecentLibraryFile[];
   recentLibraryLoading?: boolean;
   recentLibraryError?: string | null;
   onRecentLibraryRetry?: () => void;
+=======
+>>>>>>> origin/main
 }) {
   const { isDesktop } = useLayout();
   const isMobileLayout = !isDesktop;
@@ -141,6 +156,11 @@ export function ChatInput({
       document.removeEventListener("keydown", onEsc);
     };
   }, [plusOpen, toolsOpen]);
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> origin/main
 
   useEffect(() => {
     try {
@@ -229,6 +249,7 @@ export function ChatInput({
     },
   ];
 
+<<<<<<< HEAD
   const toolActions: Array<{
     id: ComposerToolId;
     label: string;
@@ -266,6 +287,15 @@ export function ChatInput({
       icon: FileText,
       prompt: "Analyze the attached file and summarize the important details.",
     },
+=======
+  const toolActions: Array<{ id: ComposerToolId; label: string; icon: LucideIcon; prompt: string }> = [
+    { id: "web_search", label: "Search the web", icon: Search, prompt: "Search the web and cite sources for: " },
+    { id: "deep_research", label: "Deep research", icon: GraduationCap, prompt: "Research this deeply with sources and a structured report: " },
+    { id: "image", label: "Create an image", icon: ImageIcon, prompt: "Create an image of: " },
+    { id: "data_analysis", label: "Analyze data", icon: Brain, prompt: "Analyze this data and show the key findings: " },
+    { id: "study", label: "Study mode", icon: Lightbulb, prompt: "Tutor me on this step by step, then quiz me: " },
+    { id: "file_analysis", label: "Analyze files", icon: FileText, prompt: "Analyze the attached file and summarize the important details." },
+>>>>>>> origin/main
   ];
 
   const applyShortcut = (prompt: string) => {
@@ -774,12 +804,15 @@ export function ChatInput({
               value={value}
               onChange={(e) => onChange(e.target.value)}
               onKeyDown={handleKey}
+<<<<<<< HEAD
               onCompositionStart={() => {
                 composingRef.current = true;
               }}
               onCompositionEnd={() => {
                 composingRef.current = false;
               }}
+=======
+>>>>>>> origin/main
               placeholder={placeholder ?? "Message KovaGPT"}
               rows={1}
               spellCheck={false}
@@ -883,12 +916,16 @@ export function ChatInput({
             )}
           </div>
           {isMobileLayout && (
+<<<<<<< HEAD
             <MobileBottomSheet
               open={toolsOpen}
               onOpenChange={setToolsOpen}
               title="Tools"
               ariaLabel="Choose a tool"
             >
+=======
+            <MobileBottomSheet open={toolsOpen} onOpenChange={setToolsOpen} title="Tools" ariaLabel="Choose a tool">
+>>>>>>> origin/main
               <div className="flex flex-col gap-1 p-1">
                 {toolActions.map((tool) => {
                   const Icon = tool.icon;

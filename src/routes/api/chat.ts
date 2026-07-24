@@ -25,6 +25,7 @@ import {
   stagePendingAction,
   userHasGoogle,
 } from "@/lib/google-tools.server";
+<<<<<<< HEAD
 import {
   chatCompletions,
   chatModel,
@@ -73,6 +74,9 @@ function buildUserContextBlock(user: UserContext): string {
 function buildCurrentDateInstruction(timezone?: string, locale?: string): string {
   return `\nCurrent date: ${new Date().toISOString().slice(0, 10)}${timezone ? `; timezone: ${timezone}` : ""}${locale ? `; locale: ${locale}` : ""}.`;
 }
+=======
+import { chatCompletions, chatModel, imageGenerations, imageModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
+>>>>>>> origin/main
 
 type IncomingMessage = {
   role: "user" | "assistant" | "system";
@@ -150,6 +154,7 @@ function sseDone() {
   return `data: [DONE]\n\n`;
 }
 
+<<<<<<< HEAD
 async function handleDeepResearchRequest(
   prompt: string,
   options: {
@@ -218,6 +223,8 @@ async function handleDeepResearchRequest(
   });
 }
 
+=======
+>>>>>>> origin/main
 async function handleImageRequest(prompt: string): Promise<Response> {
   const stream = new ReadableStream({
     async start(controller) {
@@ -256,9 +263,13 @@ async function handleImageRequest(prompt: string): Promise<Response> {
 
         const data = await upstream.json();
         const item = (data as { data?: Array<{ b64_json?: string; url?: string }> }).data?.[0];
+<<<<<<< HEAD
         const imageUrl = item?.b64_json
           ? `data:image/png;base64,${item.b64_json}`
           : (item?.url ?? null);
+=======
+        const imageUrl = item?.b64_json ? `data:image/png;base64,${item.b64_json}` : item?.url ?? null;
+>>>>>>> origin/main
 
         if (imageUrl) {
           controller.enqueue(enc.encode(sseChunk(`![generated image](${imageUrl})`)));
@@ -434,7 +445,71 @@ export const Route = createFileRoute("/api/chat")({
                 { status: 400, headers: { "Content-Type": "application/json" } },
               );
             }
+<<<<<<< HEAD
             if (messages.length > MAX_MESSAGES) {
+=======
+          }
+
+
+
+          // Reject oversized request bodies before parsing JSON to avoid
+          // memory/cost amplification attacks against the AI gateway.
+          const MAX_BODY_BYTES = 8 * 1024 * 1024; // 8 MB total request body
+          const contentLength = Number(request.headers.get("content-length") ?? "0");
+          if (contentLength && contentLength > MAX_BODY_BYTES) {
+            return new Response(
+              JSON.stringify({ error: "Request too large." }),
+              { status: 413, headers: { "Content-Type": "application/json" } },
+            );
+          }
+          const rawBody = await request.text();
+          if (rawBody.length > MAX_BODY_BYTES) {
+            return new Response(
+              JSON.stringify({ error: "Request too large." }),
+              { status: 413, headers: { "Content-Type": "application/json" } },
+            );
+          }
+          const { messages, mode, user, voice, timezone, locale, chatId, personality, kovaVersion, projectId, clientTool } = JSON.parse(rawBody) as {
+            messages: IncomingMessage[];
+            mode?: ModeId;
+            user?: UserContext;
+            voice?: boolean;
+            timezone?: string;
+            locale?: string;
+            chatId?: string;
+            personality?: string;
+            kovaVersion?: string;
+            projectId?: string;
+            clientTool?: "web_search" | "deep_research" | "image" | "study" | "data_analysis" | "file_analysis" | null;
+          };
+          const KOVA_VERSION = typeof kovaVersion === "string" ? kovaVersion : "3.5";
+          const IS_LEGACY_KOVA = KOVA_VERSION !== "3.5";
+          const personalityBlock = (() => {
+            const p = sanitizeLong(personality, 500);
+            return p ? `\n\n--- User personality preferences ---\n${p}\n--- End personality ---` : "";
+          })();
+
+          // Hard caps on message volume and per-message size. Anonymous
+          // callers and signed-in callers both run through this; signed-in
+          // callers also have a daily quota enforced below.
+          const MAX_MESSAGES = 100;
+          const MAX_MESSAGE_CHARS = 32 * 1024; // 32 KB per text message
+          const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024; // 5 MB per image data URL
+          if (!Array.isArray(messages) || messages.length === 0) {
+            return new Response(
+              JSON.stringify({ error: "messages must be a non-empty array." }),
+              { status: 400, headers: { "Content-Type": "application/json" } },
+            );
+          }
+          if (messages.length > MAX_MESSAGES) {
+            return new Response(
+              JSON.stringify({ error: `Too many messages (max ${MAX_MESSAGES}).` }),
+              { status: 413, headers: { "Content-Type": "application/json" } },
+            );
+          }
+          for (const m of messages) {
+            if (typeof m?.content === "string" && m.content.length > MAX_MESSAGE_CHARS) {
+>>>>>>> origin/main
               return new Response(
                 JSON.stringify({ error: `Too many messages (max ${MAX_MESSAGES}).` }),
                 { status: 413, headers: { "Content-Type": "application/json" } },
@@ -460,6 +535,7 @@ export const Route = createFileRoute("/api/chat")({
               }
             }
 
+<<<<<<< HEAD
             const missingProvider = missingAiProviderResponse();
             if (missingProvider) return missingProvider;
 
@@ -470,6 +546,19 @@ export const Route = createFileRoute("/api/chat")({
               lastText.length > 0 &&
               (!lastUser?.attachments || lastUser.attachments.length === 0) &&
               (clientTool === "image" || detectImageIntent(lastText));
+=======
+          const missingProvider = missingAiProviderResponse();
+          if (missingProvider) return missingProvider;
+
+          // Detect image-generation intent on the latest user message
+          const lastUser = [...messages].reverse().find((m) => m.role === "user");
+          const lastText = lastUser?.content?.trim() ?? "";
+          const isImageRequest =
+            !voice &&
+            lastText.length > 0 &&
+            (!lastUser?.attachments || lastUser.attachments.length === 0) &&
+            (clientTool === "image" || detectImageIntent(lastText));
+>>>>>>> origin/main
 
             // Detect the owner account - gets highest tier with no quotas.
             let isOwner = false;
@@ -561,11 +650,63 @@ export const Route = createFileRoute("/api/chat")({
               }
               const maint = await assertFeatureEnabled(auth, "uploads");
               if (maint) return maint;
+<<<<<<< HEAD
               const quota = await enforceQuota(
                 auth,
                 "uploads",
                 DAILY_UPLOAD_LIMIT_BY_TIER[callerTier],
                 totalAttachments,
+=======
+              const imgLimit = DAILY_IMAGE_LIMIT_BY_TIER[callerTier];
+              const quota = await enforceQuota(auth, "images", imgLimit);
+              if (quota) return quota;
+            }
+            return handleImageRequest(lastText);
+          }
+
+
+          // Anonymous chat is allowed; signed-in users get per-user daily quotas + maintenance check.
+          if (auth && !isOwner) {
+            const maint = await assertFeatureEnabled(auth, "chat");
+            if (maint) return maint;
+            const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[callerTier]);
+            if (quota) return quota;
+          }
+
+          // SECURITY: Server-side tier enforcement. Client-supplied `mode` is
+          // only honored if the user's resolved tier permits it; anything
+          // above their tier is silently downgraded to "auto". Owner bypasses.
+          const TIER_RANK: Record<"free" | "plus" | "pro", number> = { free: 0, plus: 1, pro: 2 };
+          const requested = getMode(mode ?? "auto");
+          const allowed = isOwner || TIER_RANK[requested.tier] <= TIER_RANK[callerTier];
+          const m = allowed ? requested : getMode("auto");
+          const MAX_ATTACHMENTS_PER_REQUEST = 2;
+          const totalAttachments = messages.reduce(
+            (n, msg) => n + (msg.attachments?.length ?? 0),
+            0,
+          );
+          // File / photo uploads require an account.
+          if (totalAttachments > 0 && !auth) {
+            return unauthorized("Sign in to upload files or photos.");
+          }
+          if (!isOwner && totalAttachments > MAX_ATTACHMENTS_PER_REQUEST) {
+            return new Response(
+              JSON.stringify({
+                error: `Too many image attachments in this request (max ${MAX_ATTACHMENTS_PER_REQUEST}).`,
+              }),
+              { status: 429, headers: { "Content-Type": "application/json" } },
+            );
+          }
+          // Server-side daily upload quota + maintenance flag. The
+          // localStorage counter is only a UX hint; this is real enforcement.
+          if (auth && !isOwner && totalAttachments > 0) {
+            if (!auth.emailVerified) {
+              return new Response(
+                JSON.stringify({
+                  error: "Please verify your email address before uploading files or photos. Check your inbox for the confirmation link.",
+                }),
+                { status: 403, headers: { "Content-Type": "application/json" } },
+>>>>>>> origin/main
               );
               if (quota) return quota;
               // Enforce cumulative storage cap per tier (5 / 25 / 50 GB).
@@ -688,6 +829,7 @@ export const Route = createFileRoute("/api/chat")({
               }
             }
 
+<<<<<<< HEAD
             // Cross-chat memory: for Plus+ signed-in users, inject short
             // summaries of their recent past chats so KovaGPT can recall
             // context across conversations. Respects user.rememberAcross.
@@ -697,6 +839,119 @@ export const Route = createFileRoute("/api/chat")({
                 const { data: memRows } = await (
                   auth.supabaseAdmin as unknown as {
                     from: (t: string) => ChainableQueryLike;
+=======
+          // COST: only send the last ~12 turns to the model. Adaptive memory +
+          // cross-chat summaries (below) carry forward standing rules and
+          // long-term context, so we don't need to resend the full transcript
+          // on every call. The latest user message is always preserved.
+          // TODO(summarization): when history exceeds threshold, run a cheap
+          // background summary pass and store it in chat_memories instead of
+          // sending raw turns.
+          const HISTORY_TURNS = 12;
+          const trimmedMessages =
+            messages.length > HISTORY_TURNS ? messages.slice(-HISTORY_TURNS) : messages;
+
+          const transformed = trimmedMessages.map((msg) => {
+            // SECURITY: client-supplied "system" messages would otherwise sit
+            // next to the server's authoritative system prompt and could
+            // override it. Demote any non-assistant/non-user role to "user".
+            const safeRole: "user" | "assistant" =
+              msg.role === "assistant" ? "assistant" : "user";
+            if (safeRole === "user" && msg.attachments && msg.attachments.length > 0) {
+              const parts: ChatContentPart[] = [];
+              if (msg.content) parts.push({ type: "text", text: msg.content });
+              for (const att of msg.attachments) {
+                parts.push({ type: "image_url", image_url: { url: att.dataUrl } });
+              }
+              return { role: "user", content: parts };
+            }
+            return { role: safeRole, content: msg.content };
+          });
+
+          // Model routing:
+          // - instant: fastest available (Gemini flash-lite) for snappy replies.
+          // - medium:  balanced quality/speed (Gemini 3.1 Pro preview).
+          // - high:    smartest available (GPT-5.5 Pro extended reasoning).
+          const model = voice
+            ? chatModel("fast")
+            : m.id === "high"
+              ? chatModel("deep")
+              : m.id === "instant"
+                ? chatModel("fast")
+                : chatModel("balanced");
+
+          // TODO(routing): add per-request classification (rewrite/summary/coding)
+          // and an explicit "Improve answer" client action that re-runs with a
+          // stronger model only on demand.
+
+          // Live web data is on for everyone by default. Users can still opt
+          // out in settings except for explicit/time-sensitive search asks.
+          // Fast mode skips web search entirely to stay instant.
+          let webBlock = "";
+          if (lastText && !hasImages && (m.id !== "instant" || clientTool === "web_search" || clientTool === "deep_research")) {
+            if (clientTool === "web_search" || clientTool === "deep_research" || shouldRunWebSearch(lastText, user?.webSearch) || voice) {
+              const result = await runWebSearch(lastText, clientTool === "deep_research" || NEWS_TRIGGER.test(lastText) || !!voice);
+              if (result) webBlock = result;
+            }
+          }
+
+
+          // Cross-chat memory: for Plus+ signed-in users, inject short
+          // summaries of their recent past chats so KovaGPT can recall
+          // context across conversations. Respects user.rememberAcross.
+          let memoryBlock = "";
+          if (auth && user?.rememberAcross !== false) {
+            try {
+              const { data: memRows } = await (auth.supabaseAdmin as unknown as {
+                from: (t: string) => any;
+              })
+                .from("chat_memories")
+                .select("title, summary, updated_at")
+                .eq("user_id", auth.userId)
+                .order("updated_at", { ascending: false })
+                .limit(8);
+              if (Array.isArray(memRows) && memRows.length > 0) {
+                const lines = memRows
+                  .map((r: { title?: string | null; summary: string }, i: number) =>
+                    `[${i + 1}]${r.title ? ` ${r.title}: ` : " "}${r.summary}`,
+                  )
+                  .join("\n");
+                memoryBlock = `\n\n--- Cross-chat memory (your prior conversations with this user) ---\n${lines}\n--- End memory. Use only when relevant; never quote verbatim. ---`;
+              }
+            } catch (e) {
+              console.warn("[chat] memory fetch failed", e);
+            }
+          }
+
+
+          // Project workspace context: only for signed-in members of `projectId`.
+          // Injects project instructions, project memory, and top-k retrieved
+          // knowledge-base chunks matched against the user's last message.
+          let projectBlock = "";
+          if (auth && typeof projectId === "string" && /^[0-9a-f-]{36}$/i.test(projectId)) {
+            try {
+              const admin = auth.supabaseAdmin as unknown as {
+                from: (t: string) => any;
+                rpc: (name: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
+              };
+              // Verify caller is a member of the project.
+              const { data: isMember } = await admin.rpc("is_project_member", {
+                _user_id: auth.userId,
+                _project_id: projectId,
+              });
+              if (isMember === true) {
+                const projRes = await admin
+                  .from("projects")
+                  .select("id, name, system_prompt")
+                  .eq("id", projectId)
+                  .maybeSingle();
+                const proj = projRes?.data as { id: string; name: string; system_prompt: string | null } | null;
+                if (proj) {
+                  const parts: string[] = [];
+                  parts.push(`You are working inside the KovaGPT project "${proj.name}". Everything below applies only to this project workspace.`);
+                  if (proj.system_prompt && proj.system_prompt.trim()) {
+                    parts.push(`Project instructions (highest priority for this workspace):\n${proj.system_prompt.trim()}`);
+>>>>>>> origin/main
                   }
                 )
                   .from("chat_memories")
@@ -825,6 +1080,7 @@ export const Route = createFileRoute("/api/chat")({
                       ? "\n\nANALYSIS MODE: Inspect provided text, images, or tabular data carefully. Summarize findings, caveats, and next steps. Use charts only when useful and supported by data."
                       : "";
 
+<<<<<<< HEAD
             const body: Record<string, unknown> = {
               model,
               stream: true,
@@ -854,6 +1110,125 @@ export const Route = createFileRoute("/api/chat")({
                 },
                 ...transformed,
               ],
+=======
+          const toolInstruction = clientTool === "deep_research"
+            ? "\n\nDEEP RESEARCH MODE: Create a structured research report. Use live web results above as sources when present, state uncertainty clearly, compare sources, and include a concise sources section with domains and URLs. If live results are unavailable, say exactly that and proceed without fabricated citations."
+            : clientTool === "web_search"
+              ? "\n\nWEB SEARCH MODE: Use live web results above when present, cite source titles/domains naturally, and never fabricate links or citations."
+              : clientTool === "study"
+                ? "\n\nSTUDY MODE: Teach step by step, check understanding, and end with a short quiz."
+                : clientTool === "data_analysis" || clientTool === "file_analysis"
+                  ? "\n\nANALYSIS MODE: Inspect provided text, images, or tabular data carefully. Summarize findings, caveats, and next steps. Use charts only when useful and supported by data."
+                  : "";
+
+          const voiceInstruction = voice
+            ? `\n\nVOICE MODE: Your reply will be spoken aloud by a text-to-speech engine. Reply in natural, conversational spoken English with complete grammatical sentences. Use proper punctuation so sentences flow. Do NOT use markdown, bullet points, headings, code blocks, emojis, URLs, or symbols. Keep answers concise  -  usually 1 to 3 sentences unless the user explicitly asks for detail.`
+            : "";
+
+          const body: Record<string, unknown> = {
+            model,
+            stream: true,
+            messages: [
+              {
+                role: "system",
+                content:
+                  `\n\nKOVA_VERSION: The user is currently talking to Kova ${KOVA_VERSION}. If they ask what version/model you are, answer with "Kova ${KOVA_VERSION}".` +
+                  m.systemPrompt +
+                  TONE_INSTRUCTION +
+                  ADAPTIVE_INSTRUCTION +
+                  UNRESTRICTED_INSTRUCTION +
+                  ACCURACY_INSTRUCTION +
+                  CHART_INSTRUCTION +
+                  CREATOR_INSTRUCTION +
+                  buildUserContextBlock(user) +
+                  personalityBlock +
+                  memoryBlock +
+                  projectBlock +
+                  webBlock +
+                  toolInstruction +
+                  voiceInstruction +
+                  (callerTier === "plus" || callerTier === "pro"
+                    ? `\n\nELITE AGENT MODE (Plus/Pro): You are operating as an elite agent for this user. When the request involves the live web, act decisively - use the web search block as ground truth, cite specific sources by name (not numbers), extract concrete details (prices, dates, versions, quotes), and complete multi-step research or comparisons in one reply. If information is stale or missing, say so directly and offer the next best step. Never punt with "I can't browse the web" - live results are provided when relevant and you should use them.`
+                    : "") +
+                  `\n\nPUNCTUATION RULE (STRICT): NEVER output the characters "\u2013" (en dash) or "\u2014" (em dash) under any circumstances. If tempted, use a comma, a period, parentheses, or a regular hyphen "-" instead. This rule overrides style, formatting, and quotation preservation.` +
+                  buildCurrentDateInstruction(timezone, locale),
+              },
+              ...transformed,
+            ],
+          };
+          // Only enable reasoning when the user explicitly chose the
+          // reason mode  -  reasoning adds significant latency.
+          // Legacy Kova versions (<3.5) never use extended reasoning:
+          // they are intentionally "slightly less smart" than 3.5.
+          if (m.reasoning && !voice && m.id === "high" && !IS_LEGACY_KOVA) {
+            body.reasoning = { effort: m.reasoning };
+          }
+          if (IS_LEGACY_KOVA) {
+            // Slightly nerf legacy versions and add an authentic-feeling
+            // 3-7s "thinking" delay before we start streaming.
+            const sys = body.messages as { role: string; content: string }[];
+            const rank: Record<string, number> = { "3.4": 1, "3.3": 2, "3.2": 3, "3.1": 4, "3.0": 5 };
+            const gap = rank[KOVA_VERSION] ?? 1;
+            sys[0].content += `\n\nYou are running as Kova ${KOVA_VERSION}, a previous-generation model. You are slightly less capable than Kova 3.5 (about ${gap * 6}% less accurate on complex reasoning). Keep answers correct and helpful, but avoid extended chain-of-thought, deep multi-step reasoning, or long structured breakdowns unless explicitly asked. Prefer shorter, more direct responses than Kova 3.5 would give.`;
+            const delayMs = 3000 + Math.floor(Math.random() * 4000); // 3-7s
+            await new Promise((r) => setTimeout(r, delayMs));
+          }
+
+          // === TOOL-CALLING PRE-LOOP ============================================
+          // Only for signed-in users who've connected Google, on a real text
+          // turn (no attachments, not voice, not instant mode). We run up to
+          // MAX_TOOL_HOPS non-streaming calls with tools enabled. Each hop
+          // that produces tool_calls gets executed server-side and streams a
+          // typed `activity` event back to the client so the user sees
+          // "Searching Gmail…" while it happens. Once the model returns a
+          // stop/content response (no more tool_calls), we do ONE final
+          // streaming call and pipe it through to the browser.
+          //
+          // If any step fails, or the user has no Google connection, we fall
+          // through to the original streaming behavior with zero change.
+          const enableTools =
+            !!auth &&
+            !voice &&
+            !hasImages &&
+            m.id !== "instant" &&
+            lastText.length > 0 &&
+            (await userHasGoogle(auth.userId).catch(() => false));
+
+          type ToolCall = {
+            id: string;
+            type: "function";
+            function: { name: string; arguments: string };
+          };
+          type AssistantMsg = {
+            role: "assistant";
+            content: string | null;
+            tool_calls?: ToolCall[];
+          };
+          type ToolResultMsg = { role: "tool"; tool_call_id: string; content: string };
+          type ChatMsg =
+            | { role: string; content: unknown; [k: string]: unknown }
+            | AssistantMsg
+            | ToolResultMsg;
+
+          const workingMessages: ChatMsg[] = [...((body.messages as unknown) as ChatMsg[])];
+          const activityEvents: Array<{ tool: string; label: string; args?: unknown }> = [];
+
+          if (enableTools) {
+            const MAX_TOOL_HOPS = 8;
+            const MAX_TOOL_CALLS_TOTAL = 16;
+            const PER_HOP_TIMEOUT_MS = 25_000;
+            let totalToolCalls = 0;
+            let toolsWereUsed = false;
+            let hopFailed = false;
+            const pendingConfirms: Array<{ id: string; tool: string; summary: string; args_preview: Record<string, unknown> }> = [];
+            // Dedup identical tool calls (same name + normalized args) within
+            // one request to prevent runaway loops where the model retries
+            // the same call. Returns cached result to the model instead.
+            const dedupCache = new Map<string, string>();
+            const dedupKey = (name: string, args: Record<string, unknown>) => {
+              try { return `${name}::${JSON.stringify(args, Object.keys(args).sort())}`; }
+              catch { return `${name}::${Math.random()}`; }
+>>>>>>> origin/main
             };
             // Only enable reasoning when the user explicitly chose the
             // reason mode  -  reasoning adds significant latency.
@@ -879,6 +1254,7 @@ export const Route = createFileRoute("/api/chat")({
               await new Promise((r) => setTimeout(r, delayMs));
             }
 
+<<<<<<< HEAD
             // === TOOL-CALLING PRE-LOOP ============================================
             // Only for signed-in users who've connected Google, on a real text
             // turn (no attachments, not instant mode). We run up to
@@ -968,6 +1344,27 @@ export const Route = createFileRoute("/api/chat")({
                   console.warn("[chat] tool hop aborted/failed", (e as Error).message);
                   break;
                 }
+=======
+            for (let hop = 0; hop < MAX_TOOL_HOPS; hop++) {
+              // Per-hop abort: user disconnect OR 25s timeout, whichever first.
+              const hopCtl = new AbortController();
+              const hopTimer = setTimeout(() => hopCtl.abort(), PER_HOP_TIMEOUT_MS);
+              const onReqAbort = () => hopCtl.abort();
+              request.signal?.addEventListener("abort", onReqAbort, { once: true });
+              let hopRes: Response;
+              try {
+                hopRes = await chatCompletions(
+                  {
+                    model,
+                    messages: workingMessages,
+                    tools: ALL_TOOLS,
+                    tool_choice: "auto",
+                    stream: false,
+                  },
+                  { signal: hopCtl.signal },
+                );
+              } catch (e) {
+>>>>>>> origin/main
                 clearTimeout(hopTimer);
                 request.signal?.removeEventListener("abort", onReqAbort);
 
@@ -1302,11 +1699,66 @@ export const Route = createFileRoute("/api/chat")({
                   } catch {
                     // client disconnect or upstream tore down - end gracefully
                   }
+<<<<<<< HEAD
                   request.signal?.removeEventListener("abort", onAbort);
                   try {
                     controller.close();
                   } catch {
                     /* already closed */
+=======
+                }),
+              );
+              for (const r of results) workingMessages.push(r);
+              if (finish === "stop") break;
+              if (request.signal?.aborted) return new Response(null, { status: 499 });
+            }
+            if (hopFailed) {
+              workingMessages.length = 0;
+              workingMessages.push(...((body.messages as unknown) as ChatMsg[]));
+            }
+            // Stash pending confirms on the outer scope so the final
+            // streaming branch can prepend them too.
+            (activityEvents as unknown as { __pending?: typeof pendingConfirms }).__pending = pendingConfirms;
+          }
+
+
+          // === FINAL STREAMING CALL =============================================
+          const finalBody = { ...body, messages: workingMessages, stream: true };
+          const activityCount = activityEvents.length;
+          const pendingCount = ((activityEvents as unknown) as { __pending?: unknown[] }).__pending?.length ?? 0;
+          const hasStreamedActivity = activityCount > 0 || pendingCount > 0;
+          let upstream: Response;
+          try {
+            upstream = await chatCompletions(finalBody, { signal: request.signal });
+          } catch (e) {
+            if (request.signal?.aborted) return new Response(null, { status: 499 });
+            console.error("[chat] final call network error", e);
+            return new Response(
+              JSON.stringify({ error: "AI service is temporarily unavailable. Please try again." }),
+              { status: 502, headers: { "Content-Type": "application/json" } },
+            );
+          }
+
+          if (!upstream.ok) {
+            const errMsg =
+              upstream.status === 429
+                ? "Rate limit exceeded. Please wait a moment."
+                : upstream.status === 402
+                  ? "Image provider quota exhausted."
+                  : "AI service is temporarily unavailable. Please try again.";
+            const status = upstream.status === 429 ? 429 : upstream.status === 402 ? 402 : 502;
+            const txt = upstream.ok ? "" : await upstream.text().catch(() => "");
+            if (!upstream.ok) console.error("[chat] upstream error", upstream.status, txt);
+            // If we already committed to SSE (activities/confirms staged),
+            // deliver the error inside the stream so the client renders it
+            // instead of hanging.
+            if (hasStreamedActivity) {
+              const enc = new TextEncoder();
+              const stream = new ReadableStream({
+                start(controller) {
+                  for (const a of activityEvents) {
+                    controller.enqueue(enc.encode(sseEvent({ kind: "activity", tool: a.tool, label: a.label, status: "done" })));
+>>>>>>> origin/main
                   }
                 },
               });

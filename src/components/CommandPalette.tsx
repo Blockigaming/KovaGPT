@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+<<<<<<< HEAD
 import {
   Search,
   SquarePen,
@@ -14,10 +15,14 @@ import {
   SunMoon,
   FileSearch,
 } from "lucide-react";
+=======
+import { Search, SquarePen, Settings, Image as ImageIcon, FolderOpen, Plug, Calendar, X } from "lucide-react";
+>>>>>>> origin/main
 import type { Conversation } from "@/lib/chat-store";
 
 const quickActions = [
   { label: "New chat", href: "/", icon: SquarePen },
+<<<<<<< HEAD
   { label: "Search workspace", action: "search", icon: Search },
   { label: "New project", href: "/projects", icon: FolderOpen },
   { label: "Open Library", href: "/library", icon: FolderOpen },
@@ -38,6 +43,12 @@ const quickActions = [
   { label: "Open Apps", href: "/apps", icon: Plug },
   { label: "Open Help", href: "/help", icon: FlaskConical },
   { label: "Toggle appearance", action: "theme", icon: SunMoon },
+=======
+  { label: "Apps", href: "/apps", icon: Plug },
+  { label: "Library", href: "/library", icon: FolderOpen },
+  { label: "Images", href: "/images", icon: ImageIcon },
+  { label: "Scheduled tasks", href: "/scheduled-tasks", icon: Calendar },
+>>>>>>> origin/main
 ];
 
 export function CommandPalette({
@@ -64,6 +75,7 @@ export function CommandPalette({
     ? conversations.filter((chat) => chat.title.toLowerCase().includes(normalized)).slice(0, 8)
     : conversations.slice(0, 6);
   const [activeIndex, setActiveIndex] = useState(0);
+<<<<<<< HEAD
   const actionItems = useMemo(
     () => [
       "new-chat",
@@ -72,6 +84,9 @@ export function CommandPalette({
     ],
     [],
   );
+=======
+  const actionItems = useMemo(() => ["new-chat", "settings", ...quickActions.slice(1).map((action) => action.href)], []);
+>>>>>>> origin/main
   const totalItems = actionItems.length + matches.length;
 
   useEffect(() => {
@@ -80,6 +95,7 @@ export function CommandPalette({
 
   const chooseActive = () => {
     const action = actionItems[activeIndex];
+<<<<<<< HEAD
     if (action === "new-chat") {
       onNewChat();
       onClose();
@@ -101,6 +117,14 @@ export function CommandPalette({
         onSelectChat(chat.id);
         onClose();
       }
+=======
+    if (action === "new-chat") { onNewChat(); onClose(); return; }
+    if (action === "settings") { onOpenSettings(); onClose(); return; }
+    if (typeof action === "string" && action.startsWith("/")) { window.location.assign(action); onClose(); return; }
+    if (!action) {
+      const chat = matches[activeIndex - actionItems.length];
+      if (chat) { onSelectChat(chat.id); onClose(); }
+>>>>>>> origin/main
     }
   };
 
@@ -113,6 +137,7 @@ export function CommandPalette({
       aria-modal="true"
       aria-label="Search chats and actions"
       onKeyDown={(event) => {
+<<<<<<< HEAD
         if (event.key === "Escape") {
           event.preventDefault();
           onClose();
@@ -129,6 +154,12 @@ export function CommandPalette({
           event.preventDefault();
           chooseActive();
         }
+=======
+        if (event.key === "Escape") { event.preventDefault(); onClose(); }
+        if (event.key === "ArrowDown") { event.preventDefault(); setActiveIndex((i) => Math.min(totalItems - 1, i + 1)); }
+        if (event.key === "ArrowUp") { event.preventDefault(); setActiveIndex((i) => Math.max(0, i - 1)); }
+        if (event.key === "Enter") { event.preventDefault(); chooseActive(); }
+>>>>>>> origin/main
       }}
     >
       <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-border bg-popover text-popover-foreground shadow-2xl animate-in fade-in zoom-in-95 duration-150">
@@ -139,6 +170,7 @@ export function CommandPalette({
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Search chats, apps, files, and actions"
+<<<<<<< HEAD
             role="combobox"
             aria-expanded="true"
             aria-controls="command-palette-results"
@@ -152,10 +184,16 @@ export function CommandPalette({
             className="rounded-full p-2 text-muted-foreground hover:bg-accent hover:text-foreground"
             aria-label="Close command palette"
           >
+=======
+            className="h-10 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
+          />
+          <button type="button" onClick={onClose} className="rounded-full p-2 text-muted-foreground hover:bg-accent hover:text-foreground" aria-label="Close command palette">
+>>>>>>> origin/main
             <X className="h-4 w-4" />
           </button>
         </div>
 
+<<<<<<< HEAD
         <div
           id="command-palette-results"
           role="listbox"
@@ -172,10 +210,18 @@ export function CommandPalette({
             id="command-option-0"
             role="option"
             aria-selected={activeIndex === 0}
+=======
+        <div className="max-h-[60vh] overflow-y-auto p-2">
+          <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">Actions</div>
+          <button
+            type="button"
+            onClick={() => { onNewChat(); onClose(); }}
+>>>>>>> origin/main
             className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 0 ? "bg-accent" : ""}`}
           >
             <SquarePen className="h-4 w-4 text-muted-foreground" />
             <span>Start a new chat</span>
+<<<<<<< HEAD
             <span className="ml-auto rounded-md border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground">
               ⌘ ⇧ O
             </span>
@@ -189,6 +235,13 @@ export function CommandPalette({
             id="command-option-1"
             role="option"
             aria-selected={activeIndex === 1}
+=======
+            <span className="ml-auto rounded-md border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground">⌘ ⇧ O</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { onOpenSettings(); onClose(); }}
+>>>>>>> origin/main
             className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 1 ? "bg-accent" : ""}`}
           >
             <Settings className="h-4 w-4 text-muted-foreground" />
@@ -196,6 +249,7 @@ export function CommandPalette({
           </button>
           {quickActions.slice(1).map((action, actionIndex) => {
             const Icon = action.icon;
+<<<<<<< HEAD
             const index = actionIndex + 2;
             const className = `flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === index ? "bg-accent" : ""} ${action.disabledReason ? "text-muted-foreground" : ""}`;
             const content = (
@@ -234,19 +288,36 @@ export function CommandPalette({
               >
                 {content}
               </button>
+=======
+            return (
+              <Link
+                key={action.href}
+                to={action.href as never}
+                onClick={onClose}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === actionIndex + 2 ? "bg-accent" : ""}`}
+              >
+                <Icon className="h-4 w-4 text-muted-foreground" />
+                <span>{action.label}</span>
+              </Link>
+>>>>>>> origin/main
             );
           })}
 
           <div className="px-3 pb-1 pt-4 text-xs font-medium text-muted-foreground">Chats</div>
           {matches.length === 0 ? (
+<<<<<<< HEAD
             <div className="px-3 py-6 text-center text-sm text-muted-foreground">
               No chats found
             </div>
+=======
+            <div className="px-3 py-6 text-center text-sm text-muted-foreground">No chats found</div>
+>>>>>>> origin/main
           ) : (
             matches.map((chat, chatIndex) => (
               <button
                 key={chat.id}
                 type="button"
+<<<<<<< HEAD
                 onClick={() => {
                   onSelectChat(chat.id);
                   onClose();
@@ -254,6 +325,9 @@ export function CommandPalette({
                 id={`command-option-${actionItems.length + chatIndex}`}
                 role="option"
                 aria-selected={activeIndex === actionItems.length + chatIndex}
+=======
+                onClick={() => { onSelectChat(chat.id); onClose(); }}
+>>>>>>> origin/main
                 className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === actionItems.length + chatIndex ? "bg-accent" : ""}`}
               >
                 <span className="h-2 w-2 rounded-full bg-muted-foreground/50" />

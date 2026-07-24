@@ -60,6 +60,7 @@ export const Route = createFileRoute("/api/title")({
             .join("\n")
             .slice(0, 4000);
 
+<<<<<<< HEAD
           const upstream = await chatCompletions({
             model: chatModel("fast"),
             messages: [
@@ -71,6 +72,21 @@ export const Route = createFileRoute("/api/title")({
               { role: "user", content: excerpt },
             ],
           });
+=======
+
+          const upstream = await chatCompletions({
+              model: chatModel("fast"),
+              messages: [
+                {
+                  role: "system",
+                  content:
+                    "You write concise chat titles. Read the conversation and return a clear 3 to 5 word title summarizing the main topic. No quotes. No trailing punctuation. No emoji. No dashes. Return only the title.",
+
+                },
+                { role: "user", content: excerpt },
+              ],
+            });
+>>>>>>> origin/main
 
           if (!upstream.ok) {
             return new Response(JSON.stringify({ title: "New chat" }), {

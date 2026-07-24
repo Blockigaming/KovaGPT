@@ -91,6 +91,7 @@ export const Route = createFileRoute("/api/write")({
         if (missingProvider) return missingProvider;
 
         const upstream = await chatCompletions({
+<<<<<<< HEAD
           model: chatModel("balanced"),
           messages: [
             {
@@ -104,6 +105,21 @@ export const Route = createFileRoute("/api/write")({
             },
           ],
         });
+=======
+            model: chatModel("balanced"),
+            messages: [
+              {
+                role: "system",
+                content:
+                  "You are a precise writing assistant. Return only the requested text with no commentary, no headings like 'Here is', and no code fences unless the source used them.",
+              },
+              {
+                role: "user",
+                content: `${instruction}\n\n---\n${text}`,
+              },
+            ],
+          });
+>>>>>>> origin/main
 
         if (!upstream.ok) {
           const errBody = await upstream.text();

@@ -3,8 +3,13 @@ import { Img, Section, Text } from "@react-email/components";
 
 // Logo is served from the deployed KovaGPT domain so email clients can fetch it
 // over a stable, branded URL (not a preview host).
+<<<<<<< HEAD
 export const KOVA_LOGO_URL = "https://kovagpt.com/email-logo.png";
 export const KOVA_SITE_URL = "https://kovagpt.com";
+=======
+export const KOVA_LOGO_URL = 'https://kovagpt.com/email-logo.png'
+export const KOVA_SITE_URL = 'https://kovagpt.com'
+>>>>>>> origin/main
 
 export const brandColors = {
   bg: "#ffffff",

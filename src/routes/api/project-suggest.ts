@@ -40,6 +40,7 @@ export const Route = createFileRoute("/api/project-suggest")({
           const missingProvider = missingAiProviderResponse(fallback());
           if (missingProvider) return missingProvider;
           const upstream = await chatCompletions({
+<<<<<<< HEAD
             model: chatModel("fast"),
             messages: [
               {
@@ -50,6 +51,18 @@ export const Route = createFileRoute("/api/project-suggest")({
               { role: "user", content: hint || "Suggest a creative, useful project idea." },
             ],
           });
+=======
+              model: chatModel("fast"),
+              messages: [
+                {
+                  role: "system",
+                  content:
+                    'You suggest a name and short description for a collaborative work project. Reply with ONLY compact JSON in the shape {"name": string (2-5 words, Title Case, no quotes), "description": string (one sentence, <=140 chars)}. No markdown, no code fences.',
+                },
+                { role: "user", content: hint || "Suggest a creative, useful project idea." },
+              ],
+            });
+>>>>>>> origin/main
           if (!upstream.ok) {
             return new Response(JSON.stringify(fallback()), {
               headers: { "Content-Type": "application/json" },

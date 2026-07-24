@@ -26,8 +26,13 @@ const ROOT_DOMAIN = "kovagpt.com";
 // The sample email uses a fixed placeholder (RFC 6761 .test TLD) so the Go backend
 // can always find-and-replace it with the actual recipient when sending test emails,
 // even if the project's domain has changed since the template was scaffolded.
+<<<<<<< HEAD
 const SAMPLE_PROJECT_URL = "https://kovagpt.kovagpt.com";
 const SAMPLE_EMAIL = "user@example.test";
+=======
+const SAMPLE_PROJECT_URL = "https://kovagpt.kovagpt.com"
+const SAMPLE_EMAIL = "user@example.test"
+>>>>>>> origin/main
 const SAMPLE_DATA: Record<string, object> = {
   signup: {
     siteName: SITE_NAME,
@@ -64,14 +69,22 @@ export const Route = createFileRoute("/lovable/email/auth/preview")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+<<<<<<< HEAD
         const apiKey = process.env.EMAIL_PREVIEW_TOKEN;
+=======
+        const apiKey = process.env.EMAIL_PREVIEW_TOKEN
+>>>>>>> origin/main
 
         if (!apiKey) {
           return Response.json({ error: "Server configuration error" }, { status: 500 });
         }
 
         // Verify the caller is authorized with EMAIL_PREVIEW_TOKEN
+<<<<<<< HEAD
         const authHeader = request.headers.get("Authorization");
+=======
+        const authHeader = request.headers.get('Authorization')
+>>>>>>> origin/main
         if (!authHeader || authHeader !== `Bearer ${apiKey}`) {
           return Response.json({ error: "Unauthorized" }, { status: 401 });
         }
