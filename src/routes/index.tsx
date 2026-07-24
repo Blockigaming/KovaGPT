@@ -48,6 +48,7 @@ const AddMembersDialog = lazy(() =>
   import("@/components/AddMembersDialog").then((m) => ({ default: m.AddMembersDialog })),
 );
 import { applyThemeMode } from "@/lib/theme";
+import { loadSettings, settingsKey } from "@/lib/use-nova-settings";
 
 import { getUsage } from "@/lib/limits";
 
@@ -103,25 +104,6 @@ export const Route = createFileRoute("/")({
     links: [{ rel: "canonical", href: "https://kovagpt.com/" }],
   }),
 });
-
-const SETTINGS_KEY_BASE = "nova-gpt-settings-v1";
-function settingsKey(userKey: string | null) {
-  return userKey ? `${SETTINGS_KEY_BASE}:${userKey}` : `${SETTINGS_KEY_BASE}:guest`;
-}
-
-function loadSettings(userKey: string | null): Settings {
-  if (typeof window === "undefined") return DEFAULT_SETTINGS;
-  try {
-    const raw = localStorage.getItem(settingsKey(userKey));
-    if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
-    // Migration: pick up legacy single-key settings the first time.
-    const legacy = localStorage.getItem(SETTINGS_KEY_BASE);
-    if (legacy) return { ...DEFAULT_SETTINGS, ...JSON.parse(legacy) };
-    return DEFAULT_SETTINGS;
-  } catch {
-    return DEFAULT_SETTINGS;
-  }
-}
 
 function KovaGPT() {
   const { isSignedIn, isLoaded, user } = useUser();
@@ -271,7 +253,7 @@ function KovaGPT() {
   const [shareChatId, setShareChatId] = useState<string | null>(null);
   const [membersChatId, setMembersChatId] = useState<string | null>(null);
 
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<Settings>(() => loadSettings(null));
   const [signupPromptOpen, setSignupPromptOpen] = useState(false);
   const [signupPromptShown, setSignupPromptShown] = useState(false);
   const [limitDialog, setLimitDialog] = useState<{
@@ -315,12 +297,12 @@ function KovaGPT() {
   // Debounced persistence - avoid JSON.stringify on every keystroke / stream token,
   // which was the main source of typing/streaming lag.
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (!isLoaded || typeof window === "undefined") return;
     const t = setTimeout(() => {
       localStorage.setItem(settingsKey(userKey), JSON.stringify(settings));
     }, 400);
     return () => clearTimeout(t);
-  }, [settings, userKey]);
+  }, [isLoaded, settings, userKey]);
 
   useEffect(() => {
     const t = setTimeout(() => saveConversations(conversations.filter((c) => !c.temporary)), 400);

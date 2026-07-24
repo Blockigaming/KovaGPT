@@ -11,6 +11,10 @@ import {
 import appCss from "../styles.css?url";
 import { ClerkProvider } from "@/components/auth/ClerkSafe";
 import { Toaster } from "@/components/ui/sonner";
+import { useUser } from "@/components/auth/ClerkSafe";
+import { applyThemeMode } from "@/lib/theme";
+import { loadSettings } from "@/lib/use-nova-settings";
+import { useEffect, useLayoutEffect } from "react";
 
 function NotFoundComponent() {
   return (
@@ -180,11 +184,29 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function RootThemeManager() {
+  const { isLoaded, user } = useUser();
+  const userKey = user?.id ?? null;
+
+  useLayoutEffect(() => {
+    applyThemeMode(loadSettings(null).mode ?? "system");
+  }, []);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    const loaded = loadSettings(userKey);
+    applyThemeMode(loaded.mode ?? "system");
+  }, [isLoaded, userKey]);
+
+  return null;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <ClerkProvider>
       <QueryClientProvider client={queryClient}>
+        <RootThemeManager />
         <Outlet />
         <Toaster />
       </QueryClientProvider>

@@ -518,7 +518,6 @@
 - Local browser verification passed for `http://127.0.0.1:5173/`: HTTP 200, page title `KovaGPT`, KovaGPT shell text present, and no route-crashing page errors. Remaining console errors were external resource/network failures (`ERR_CERT_AUTHORITY_INVALID` and `ERR_TUNNEL_CONNECTION_FAILED`) in the local proxy environment; missing Supabase env is now a warning and no longer crashes the page. Screenshot saved at `/tmp/kovagpt-home-verification.png`.
 - Remaining non-PASS row: `GitHub synchronization and Lovable recovery`; no push, PR update, CI observation, Lovable deployment, production verification, or deployed SHA was performed in this checkpoint.
 
-
 ## 2026-07-23 — Full browser-test triage and runtime hardening checkpoint
 
 - Starting requested commit: `dff6eb837642520cf9b643a96b83e76bb5e4838f`; actual repository HEAD at task start was `f0d43bc86f828592d8dcdc11dd3a262e1d41b718` on local branch `work`, with no source changes before this checkpoint.
@@ -556,3 +555,11 @@
 - Project totals: each configured project (`phone-320x700`, `phone-375x812`, `phone-390x844`, `phone-430x932`, `tablet-768x1024`, `tablet-1024x768`, `desktop-1280x800`, `desktop-1440x900`, `desktop-1728x1117`) completed 54 passed, 0 failed, 0 skipped.
 - Security preparation: static/local coverage continues to verify provider keys stay server-side, billing checks are server-authoritative, ownership checks are present in server helpers/migrations, and request-id/error contracts are deterministic. Live cross-user Supabase RLS verification remains BLOCKED — EXTERNAL CREDENTIAL because it requires a live Supabase project plus two seeded users.
 - Final local gate passed: `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:a11y`, `npm run test:visual`, `npm run build`, and `git diff --check`.
+
+## 2026-07-24 — PR #4 final theme verification continuation
+
+- Starting requested commit for this continuation: `bae373e950d183ec3c87ec77821ff2d5b84a9e5f`; actual local starting HEAD was `e11b44f6c08fd7fc6e7bdf3868c8aabbaf8abf7e` on branch `work`, preserving the newer local commit.
+- Fixed the remaining direct-route light-theme regression: shared Nova settings now load before persistence and reapply the loaded mode, preventing secondary routes such as `/images` from rewriting `kova-theme-mode` back to the default dark value before the stored guest light preference is applied.
+- Stabilized direct-route theme coverage so guest dark and guest light preferences verify `html.dark` state across `/`, `/images`, `/projects`, and `/settings`.
+- Grouped Playwright matrix completed file-by-file: 486 passed, 0 failed, 0 skipped, 0 not run.
+- GitHub push/CI observation remains blocked in this container because no git remote is configured and `gh` is unavailable.

@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DEFAULT_SETTINGS, type Settings } from "@/components/SettingsDialog";
-import { loadThemeMode } from "@/lib/theme";
+import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 
 const SETTINGS_KEY_BASE = "nova-gpt-settings-v1";
 
-function settingsKey(userKey: string | null) {
+export function settingsKey(userKey: string | null) {
   return userKey ? `${SETTINGS_KEY_BASE}:${userKey}` : `${SETTINGS_KEY_BASE}:guest`;
 }
 
@@ -27,14 +27,19 @@ export function loadSettings(userKey: string | null): Settings {
  * regardless of which route opened it.
  */
 export function useNovaSettings(userKey: string | null) {
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<Settings>(() => loadSettings(userKey));
+  const hasLoadedSettings = useRef(false);
 
   useEffect(() => {
-    setSettings(loadSettings(userKey));
+    const loaded = loadSettings(userKey);
+    hasLoadedSettings.current = true;
+    setSettings(loaded);
+    applyThemeMode(loaded.mode ?? "system");
   }, [userKey]);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !hasLoadedSettings.current) return;
+    applyThemeMode(settings.mode ?? "system");
     try {
       localStorage.setItem(settingsKey(userKey), JSON.stringify(settings));
     } catch {
