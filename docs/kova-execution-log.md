@@ -563,3 +563,12 @@
 - Stabilized direct-route theme coverage so guest dark and guest light preferences verify `html.dark` state across `/`, `/images`, `/projects`, and `/settings`.
 - Grouped Playwright matrix completed file-by-file: 486 passed, 0 failed, 0 skipped, 0 not run.
 - GitHub push/CI observation remains blocked in this container because no git remote is configured and `gh` is unavailable.
+
+## 2026-07-24 — PR #3 merge-conflict repair attempt from local workspace
+
+- Starting commit for this task: `b64e844253c3fabcdd77e7b5b5fd179e3585c6b1` on local branch `work`.
+- Required inspection commands run: `git status --short --branch`, `git branch --show-current`, `git rev-parse HEAD`, `git log --oneline --decorate -12`, and `git remote -v`.
+- Remote access result: no remote was configured initially; adding the declared GitHub URL as `origin` and fetching `main` plus `codex/clone-chatgpt-features-and-design-u7jhdg` failed with `could not read Username for 'https://github.com': No such device or address`, so this environment cannot fetch current `main`, inspect PR #3, push, or observe GitHub conflict/CI status.
+- Local semantic review found no conflict markers in tracked source outside generated/legacy route names and docs/tests. The current local HEAD already preserves the newer direct-provider architecture, server-only provider/Supabase secret usage, MCP real-user task attribution, image count validation before quota enforcement, email queue disabled-by-default behavior when no active worker is configured, and Playwright webServer build/preview startup coverage.
+- Documentation consolidation completed by removing stale `docs/final-completion-matrix.md`; `docs/kova-final-completion-matrix.md` and this execution log remain the canonical durable status files.
+- Non-obvious semantic decision: because authenticated fetch of `main`/PR #3 is unavailable, no blind ours/theirs merge was attempted against guessed or unreachable refs. The local branch state after PR #4/#5 remains the preserved implementation source of truth until GitHub credentials are available.
