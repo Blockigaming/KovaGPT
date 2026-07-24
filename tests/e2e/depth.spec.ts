@@ -22,13 +22,13 @@ test.describe("Signed-out gating", () => {
 });
 
 const seedGuestTheme = async (page: import("@playwright/test").Page, mode: "dark" | "light") => {
-  await page.goto("/");
-  await page.evaluate((selectedMode) => {
+  await page.addInitScript((selectedMode) => {
     localStorage.clear();
     localStorage.setItem("kova-theme-mode", selectedMode);
     localStorage.setItem("nova-gpt-settings-v1:guest", JSON.stringify({ mode: selectedMode }));
     document.documentElement.classList.toggle("dark", selectedMode === "dark");
   }, mode);
+  await page.goto("/");
 };
 
 test.describe("Theme handling", () => {
