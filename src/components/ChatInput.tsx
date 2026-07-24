@@ -49,7 +49,12 @@ export type RecentLibraryFile = {
   projectName?: string | null;
 };
 export type ComposerToolId =
-  "web_search" | "deep_research" | "image" | "study" | "data_analysis" | "file_analysis";
+  | "web_search"
+  | "deep_research"
+  | "image"
+  | "study"
+  | "data_analysis"
+  | "file_analysis";
 
 const TEXT_LIKE_EXT =
   /\.(txt|md|markdown|csv|tsv|json|jsonl|ya?ml|toml|xml|html?|css|scss|less|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|h|cc|cpp|hpp|cs|php|sql|sh|bash|zsh|fish|env|ini|conf|log|srt|vtt)$/i;

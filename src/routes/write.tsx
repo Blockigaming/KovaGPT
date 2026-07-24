@@ -27,7 +27,14 @@ const STORAGE_KEY = "kova.write.draft.v1";
 const TITLE_KEY = "kova.write.title.v1";
 
 type Action =
-  "improve" | "expand" | "shorten" | "grammar" | "continue" | "tone" | "outline" | "custom";
+  | "improve"
+  | "expand"
+  | "shorten"
+  | "grammar"
+  | "continue"
+  | "tone"
+  | "outline"
+  | "custom";
 
 function countWords(t: string) {
   const m = t.trim().match(/\S+/g);

@@ -1,6 +1,12 @@
 import { replaceControlCharacters } from "@/lib/sanitize-text";
 export type ArtifactType =
-  "document" | "report" | "table" | "chart" | "analysis_summary" | "code" | "image_collection";
+  | "document"
+  | "report"
+  | "table"
+  | "chart"
+  | "analysis_summary"
+  | "code"
+  | "image_collection";
 export type ArtifactStatus = "draft" | "saving" | "saved" | "failed" | "archived";
 export type ArtifactVersion = {
   version: number;
