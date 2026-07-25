@@ -18,13 +18,9 @@
     "test:integration": "node --test tests/integration/*.test.mjs",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install --with-deps chromium",
-<<<<<<< HEAD
     "test:a11y": "node --test tests/a11y/*.test.mjs",
     "test:visual": "node --test tests/visual/*.test.mjs",
     "format:check:changed": "node scripts/check-format-changed.mjs"
-=======
-    "typecheck": "tsc --noEmit"
->>>>>>> origin/main
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.3",

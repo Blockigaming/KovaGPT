@@ -1,14 +1,6 @@
 // Cross-chat memory store + summarizer for Plus+ users.
 import { createFileRoute } from "@tanstack/react-router";
-<<<<<<< HEAD
 import { getCallerTier, requireUser, type AuthedCaller } from "@/lib/api-auth.server";
-=======
-import {
-  getCallerTier,
-  requireUser,
-  type AuthedCaller,
-} from "@/lib/api-auth.server";
->>>>>>> origin/main
 import { chatCompletions, chatModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
 
 const MAX_SUMMARIES_RETURNED = 8;
@@ -42,7 +34,6 @@ async function summarize(messages: { role: string; content: string }[]) {
     .map((m) => `${m.role === "user" ? "User" : "KovaGPT"}: ${String(m.content).slice(0, 2000)}`)
     .join("\n");
   const resp = await chatCompletions({
-<<<<<<< HEAD
     model: chatModel("fast"),
     messages: [
       {
@@ -53,18 +44,6 @@ async function summarize(messages: { role: string; content: string }[]) {
       { role: "user", content: transcript },
     ],
   });
-=======
-      model: chatModel("fast"),
-      messages: [
-        {
-          role: "system",
-          content:
-            "Summarize this conversation in 2-4 sentences as factual notes about the user and what they discussed. Focus on lasting facts, preferences, projects, decisions, names, and goals - not small talk. Write in third person ('The user...'). No markdown. No en or em dashes; use a regular hyphen. Plain text only.",
-        },
-        { role: "user", content: transcript },
-      ],
-    });
->>>>>>> origin/main
   if (!resp.ok) return null;
   const data = await resp.json();
   const text = data?.choices?.[0]?.message?.content;

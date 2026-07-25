@@ -10,23 +10,14 @@ export const Route = createFileRoute("/lovable/email/transactional/preview")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-<<<<<<< HEAD
         const apiKey = process.env.EMAIL_PREVIEW_TOKEN;
-=======
-        const apiKey = process.env.EMAIL_PREVIEW_TOKEN
->>>>>>> origin/main
         if (!apiKey) {
           return Response.json({ error: "Server configuration error" }, { status: 500 });
         }
 
         // Verify the caller is authorized with EMAIL_PREVIEW_TOKEN
-<<<<<<< HEAD
         const authHeader = request.headers.get("Authorization");
         const token = authHeader?.replace(/^Bearer\s+/i, "");
-=======
-        const authHeader = request.headers.get('Authorization')
-        const token = authHeader?.replace(/^Bearer\s+/i, '')
->>>>>>> origin/main
         if (token !== apiKey) {
           return Response.json({ error: "Unauthorized" }, { status: 401 });
         }

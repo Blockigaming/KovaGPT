@@ -2,7 +2,6 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
-<<<<<<< HEAD
 import {
   PanelLeft,
   Search,
@@ -26,13 +25,6 @@ import {
   type PendingAttachment,
   type RecentLibraryFile,
 } from "@/components/ChatInput";
-=======
-import { PanelLeft, Search, MessageSquareDashed, Check, Sparkles, Globe2, Code2, GraduationCap, Image as ImageIcon, FileText, Mic, Share2, Download } from "lucide-react";
-import { Sidebar } from "@/components/Sidebar";
-
-import { ChatMessage } from "@/components/ChatMessage";
-import { ChatInput, type ComposerToolId, type PendingAttachment } from "@/components/ChatInput";
->>>>>>> origin/main
 import { AIStatus } from "@/components/AIStatus";
 import { MobileFabs } from "@/components/MobileFabs";
 import { MobileTopBar } from "@/components/MobileTopBar";
@@ -128,12 +120,9 @@ function KovaGPT() {
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
   const [selectedTool, setSelectedTool] = useState<ComposerToolId | null>(null);
-<<<<<<< HEAD
   const [recentLibraryFiles, setRecentLibraryFiles] = useState<RecentLibraryFile[]>([]);
   const [recentLibraryLoading, setRecentLibraryLoading] = useState(false);
   const [recentLibraryError, setRecentLibraryError] = useState<string | null>(null);
-=======
->>>>>>> origin/main
 
   // Start closed to avoid a flash-of-open sidebar on narrow viewports during
   // SSR/hydration. On desktop we honor the persisted user preference so the
@@ -596,11 +585,8 @@ function KovaGPT() {
             messages: payloadMessages,
             mode: activeTool === "deep_research" ? "high" : mode,
             clientTool: activeTool,
-<<<<<<< HEAD
             chatId: nextConvId,
             temporary: tempChat,
-=======
->>>>>>> origin/main
             user: {
               name: settings.displayName,
               pronouns: settings.preferredPronouns,
@@ -835,7 +821,6 @@ function KovaGPT() {
 
   const assistantCapabilities = [
     { label: "Create image", icon: ImageIcon, prompt: "Create a detailed image prompt for: " },
-<<<<<<< HEAD
     {
       label: "Summarize text",
       icon: FileText,
@@ -849,14 +834,6 @@ function KovaGPT() {
     { label: "Write code", icon: Code2, prompt: "Help me write code for: " },
     { label: "Learn", icon: GraduationCap, prompt: "Teach me this topic like a patient tutor: " },
     { label: "Web research", icon: Globe2, prompt: "Research this online and cite sources: " },
-=======
-    { label: "Summarize text", icon: FileText, prompt: "Summarize this into clear bullet points: " },
-    { label: "Analyze data", icon: Sparkles, prompt: "Analyze this data and explain the key insights: " },
-    { label: "Write code", icon: Code2, prompt: "Help me write code for: " },
-    { label: "Learn", icon: GraduationCap, prompt: "Teach me this topic like a patient tutor: " },
-    { label: "Web research", icon: Globe2, prompt: "Research this online and cite sources: " },
-    { label: "Voice", icon: Mic, prompt: "Draft a spoken-friendly response about: " },
->>>>>>> origin/main
   ];
 
   // Image generation removed; can be reintroduced when user explicitly asks.
@@ -969,14 +946,10 @@ function KovaGPT() {
         }}
       />
 
-<<<<<<< HEAD
       <main
         className="flex-1 flex flex-col min-w-0 bg-background"
         data-sidebar={sidebarOpen ? "open" : "closed"}
       >
-=======
-      <main className="flex-1 flex flex-col min-w-0 bg-background" data-sidebar={sidebarOpen ? "open" : "closed"}>
->>>>>>> origin/main
         <MobileTopBar
           onOpenSidebar={() => setSidebarOpen(true)}
           onNewChat={newChat}
@@ -1029,13 +1002,9 @@ function KovaGPT() {
                 <button
                   type="button"
                   onClick={() => {
-<<<<<<< HEAD
                     const transcript = active.messages
                       .map((m) => `${m.role === "user" ? "You" : "KovaGPT"}: ${m.content}`)
                       .join("\n\n");
-=======
-                    const transcript = active.messages.map((m) => `${m.role === "user" ? "You" : "KovaGPT"}: ${m.content}`).join("\n\n");
->>>>>>> origin/main
                     const blob = new Blob([transcript], { type: "text/markdown;charset=utf-8" });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement("a");
@@ -1139,17 +1108,6 @@ function KovaGPT() {
           </div>
         )}
 
-
-        {tempChat && (
-          <div className="mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-3xl items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm shadow-sm">
-            <div className="flex min-w-0 items-center gap-2">
-              <MessageSquareDashed className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="truncate">Temporary chat is on. This chat will not use or update memory.</span>
-            </div>
-            <button type="button" onClick={() => setTempChat(false)} className="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium hover:bg-accent">Turn off</button>
-          </div>
-        )}
-
         {!active || active.messages.length === 0 ? (
           <div className="flex-1 flex flex-col overflow-y-auto px-4 lg:px-6">
             <div className="flex-1 flex flex-col items-center justify-center w-full py-8 lg:py-12">
@@ -1158,11 +1116,7 @@ function KovaGPT() {
                   {greeting}
                 </h1>
                 <p className="max-w-xl text-center text-sm text-muted-foreground">
-<<<<<<< HEAD
                   Ask, search, analyze, create, or keep working from a previous chat.
-=======
-                  Chat, search, reason, create images, analyze files, write code, make plans, and keep working across your chats.
->>>>>>> origin/main
                 </p>
               </div>
 
@@ -1177,7 +1131,6 @@ function KovaGPT() {
                   onAttachmentsChange={setAttachments}
                   mode={mode}
                   onModeChange={setMode}
-<<<<<<< HEAD
                   onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
                   placeholder="Message KovaGPT"
                   onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
@@ -1189,17 +1142,6 @@ function KovaGPT() {
                 />
 
                 <div className="mx-auto mt-5 hidden max-w-3xl grid-cols-2 gap-2 lg:grid">
-=======
-                  onUploadLimit={() =>
-                    setLimitDialog({ open: true, kind: "upload" })
-                  }
-                  placeholder="Message KovaGPT"
-                  onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
-                  onToolSelect={setSelectedTool}
-                />
-
-                <div className="mt-5 hidden lg:flex flex-wrap items-center justify-center gap-2 max-w-3xl mx-auto">
->>>>>>> origin/main
                   {assistantCapabilities.map((p) => {
                     const Icon = p.icon;
                     return (
@@ -1207,11 +1149,7 @@ function KovaGPT() {
                         key={p.label}
                         type="button"
                         onClick={() => setInput((v) => (v.trim() ? v : p.prompt))}
-<<<<<<< HEAD
                         className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-border/70 bg-card/55 px-3.5 text-left text-[14px] font-medium text-foreground shadow-sm hover:border-foreground/20 hover:bg-accent"
-=======
-                        className="inline-flex h-10 items-center gap-2 rounded-full border border-border/70 bg-card/55 px-3.5 text-[14px] font-medium text-foreground shadow-sm hover:bg-accent hover:border-foreground/20"
->>>>>>> origin/main
                       >
                         <Icon className="h-4 w-4 text-muted-foreground" />
                         <span>{p.label}</span>
@@ -1373,7 +1311,6 @@ function KovaGPT() {
                 onAttachmentsChange={setAttachments}
                 mode={mode}
                 onModeChange={setMode}
-<<<<<<< HEAD
                 onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
                 placeholder="Message KovaGPT"
                 onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
@@ -1403,20 +1340,6 @@ function KovaGPT() {
                     </kbd>{" "}
                     search
                   </span>
-=======
-                onUploadLimit={() =>
-                  setLimitDialog({ open: true, kind: "upload" })
-                }
-                placeholder="Message KovaGPT"
-                onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
-                onToolSelect={setSelectedTool}
-              />
-              <div className="hidden lg:flex flex-col items-center gap-2 text-[11px] text-muted-foreground/70 mt-2 select-none">
-                <div className="flex justify-center gap-3">
-                  <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">Enter</kbd> to send</span>
-                  <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">Shift+Enter</kbd> newline</span>
-                  <span><kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">⌘K</kbd> search</span>
->>>>>>> origin/main
                 </div>
                 <p>KovaGPT can make mistakes. Check important info.</p>
               </div>

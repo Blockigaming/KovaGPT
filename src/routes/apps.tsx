@@ -33,16 +33,7 @@ const GOOGLE_IDS = new Set(["google", "gmail", "google-drive", "google-calendar"
 
 // Apps that are actually wired up end-to-end today. Non-working connectors are
 // intentionally hidden so navigation never exposes fake or decorative controls.
-<<<<<<< HEAD
 const WORKING_IDS = new Set<string>(["google", "gmail", "google-drive", "google-calendar"]);
-=======
-const WORKING_IDS = new Set<string>([
-  "google",
-  "gmail",
-  "google-drive",
-  "google-calendar",
-]);
->>>>>>> origin/main
 
 // Every catalog app is linkable from KovaGPT. Providers with native OAuth
 // (Google family, Apple) go through the real sign-in flow; the rest use a
@@ -139,10 +130,6 @@ function AppLogo({ domain, label }: { domain: string; label: string }) {
   );
 }
 
-<<<<<<< HEAD
-=======
-
->>>>>>> origin/main
 function StatusBadge({ state, configured }: { state: ConnState; configured: boolean }) {
   if (!configured) {
     return (

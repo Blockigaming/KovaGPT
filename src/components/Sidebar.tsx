@@ -39,14 +39,9 @@ const EXPANDED_WIDTH = 280;
 const COLLAPSED_WIDTH = 72;
 const MOBILE_DRAWER_WIDTH = "min(88vw, 340px)";
 
-<<<<<<< HEAD
 function isMobileViewport() {
   return typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches;
 }
-=======
-const SIDEBAR_WIDTH = 260;
-
->>>>>>> origin/main
 
 export function Sidebar({
   conversations,
@@ -289,7 +284,6 @@ export function Sidebar({
       ) : null}
 
       <aside
-<<<<<<< HEAD
         ref={drawerRef}
         style={
           {
@@ -312,20 +306,9 @@ export function Sidebar({
             <div
               className={`flex min-w-0 flex-1 items-center gap-2 ${collapsed ? "lg:flex-none" : ""}`}
             >
-=======
-        style={{ width: open ? SIDEBAR_WIDTH : 0 }}
-        className="relative shrink-0 overflow-hidden transition-[width] duration-150 bg-sidebar text-sidebar-foreground flex flex-col max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:z-40 max-lg:h-[100dvh] max-lg:shadow-2xl max-lg:rounded-r-2xl lg:border-r lg:border-border/60"
-      >
-        <div style={{ width: SIDEBAR_WIDTH }} className="flex flex-col h-full">
-
-          {/* Brand row */}
-          <div className="relative z-20 flex items-center gap-2 px-3 sm:px-3 pt-3 pb-2 bg-sidebar">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
->>>>>>> origin/main
               <span className="inline-flex shrink-0 rounded-full dark:bg-black dark:p-[2px] dark:ring-1 dark:ring-black">
                 <NovaLogo className="h-7 w-7" animated />
               </span>
-<<<<<<< HEAD
               <span
                 className={
                   collapsed
@@ -333,9 +316,6 @@ export function Sidebar({
                     : "truncate font-display text-[17px] font-semibold tracking-tight"
                 }
               >
-=======
-              <span className="font-display font-semibold tracking-tight text-[17px] truncate">
->>>>>>> origin/main
                 KovaGPT
               </span>
             </div>
@@ -382,11 +362,7 @@ export function Sidebar({
             </div>
           ) : null}
 
-<<<<<<< HEAD
           <div className="flex flex-col gap-1 px-3 pt-2">
-=======
-          <div className="px-3 pt-2 flex flex-col gap-1">
->>>>>>> origin/main
             <button
               onClick={() => {
                 onNew();
@@ -399,7 +375,6 @@ export function Sidebar({
               <SquarePen className="h-[18px] w-[18px] shrink-0" />
               <span className={labelClass}>New chat</span>
             </button>
-<<<<<<< HEAD
             <button
               type="button"
               onClick={() => setSearchOpen((v) => !v)}
@@ -425,44 +400,6 @@ export function Sidebar({
             {tier !== "plus" && tier !== "pro"
               ? renderNavLink("/pricing", "Subscriptions", CreditCard, isOn("/pricing"))
               : null}
-=======
-            <Link to="/library" className={navItemClass(isOn("/library"))} title="Library">
-              <ActiveBar on={isOn("/library")} />
-              <FolderOpen className="w-[18px] h-[18px] shrink-0" />
-              <span className="truncate">Library</span>
-            </Link>
-            <Link to="/apps" className={navItemClass(isOn("/apps"))} title="Apps">
-              <ActiveBar on={isOn("/apps")} />
-              <Plug className="w-[18px] h-[18px] shrink-0" />
-              <span className="truncate">Apps</span>
-            </Link>
-            <Link to="/images" className={navItemClass(isOn("/images"))} title="Images">
-              <ActiveBar on={isOn("/images")} />
-              <ImageIcon className="w-[18px] h-[18px] shrink-0" />
-              <span className="truncate">Images</span>
-            </Link>
-            {showSignedIn && (
-              <Link to="/projects" className={navItemClass(isOn("/projects"))} title="Projects">
-                <ActiveBar on={isOn("/projects")} />
-                <FolderKanban className="w-[18px] h-[18px] shrink-0" />
-                <span className="truncate">Projects</span>
-              </Link>
-            )}
-            {showSignedIn && (tier === "plus" || tier === "pro") && (
-              <Link to="/scheduled-tasks" className={navItemClass(isOn("/scheduled-tasks"))} title="Scheduled Tasks">
-                <ActiveBar on={isOn("/scheduled-tasks")} />
-                <Calendar className="w-[18px] h-[18px] shrink-0" />
-                <span className="truncate">Scheduled Tasks</span>
-              </Link>
-            )}
-            {tier !== "plus" && tier !== "pro" && (
-              <Link to="/pricing" className={navItemClass(isOn("/pricing"))} title="Subscriptions">
-                <ActiveBar on={isOn("/pricing")} />
-                <CreditCard className="w-[18px] h-[18px] shrink-0" />
-                <span className="truncate">Subscriptions</span>
-              </Link>
-            )}
->>>>>>> origin/main
           </div>
 
           <nav className="relative mt-2 min-h-0 flex-1 overflow-y-auto pb-4" aria-label="Chats">
@@ -486,7 +423,6 @@ export function Sidebar({
                   <div className="px-5 py-3 text-sm text-muted-foreground">
                     {q ? "No matches" : "No chats yet"}
                   </div>
-<<<<<<< HEAD
                 ) : (
                   <>
                     {pinned.length > 0 ? (
@@ -555,62 +491,6 @@ export function Sidebar({
                     {user?.firstName || "Account"}
                   </span>
                 ) : null}
-=======
-                );
-              }
-
-              return (
-                <>
-                  {pinned.length > 0 && (
-                    <>
-                      <div className="px-5 pt-4 pb-1.5 text-[13px] font-medium text-muted-foreground flex items-center gap-1.5">
-                        <Pin className="w-3 h-3" /> Pinned
-                      </div>
-                      {pinned.map(renderRow)}
-                    </>
-                  )}
-                  <div className="px-5 pt-4 pb-1.5 text-[13px] font-medium text-muted-foreground">
-                    Chats
-                  </div>
-                  {recents.length === 0 ? (
-                    <div className="px-5 py-2 text-sm text-muted-foreground">No recent chats</div>
-                  ) : (
-                    recents.map(renderRow)
-                  )}
-                </>
-              );
-            })()}
-          </nav>
-
-          {/* Bottom row: Chat pill + Settings gear (ChatGPT style) */}
-          {!isLoaded ? (
-            <div className="border-t border-border/60 p-3" />
-          ) : showSignedIn ? (
-            <div className="border-t border-border/60 p-3 flex items-center gap-2">
-              <button
-                onClick={onNew}
-                className="flex-1 flex items-center justify-center gap-2 rounded-full bg-primary text-primary-foreground hover:opacity-90 px-4 py-2.5 text-sm font-medium transition active:scale-[0.98]"
-              >
-                <MessageCircle className="w-4 h-4" />
-                <span>New chat</span>
-              </button>
-              <button
-                onClick={() => onOpenSettings("general")}
-                className="p-2.5 rounded-full bg-sidebar-hover hover:bg-sidebar-hover/80 transition active:scale-95"
-                aria-label="Settings"
-              >
-                <SettingsIcon className="w-[18px] h-[18px]" />
-              </button>
-              <button
-                onClick={onOpenHelp}
-                className="p-2.5 rounded-full bg-sidebar-hover hover:bg-sidebar-hover/80 transition active:scale-95"
-                aria-label="Help"
-              >
-                <HelpCircle className="w-[18px] h-[18px]" />
-              </button>
-              <div onClick={(e) => e.stopPropagation()} className="shrink-0">
-                <UserButton />
->>>>>>> origin/main
               </div>
             ) : showSignedOut ? (
               <div className="space-y-2">

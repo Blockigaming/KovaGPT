@@ -22,10 +22,7 @@ grouped by area so a future pass can pick them off cleanly.
 - [ ] Profile menu in `UserButton` already opens Settings; double-check both sidebar Settings click and profile menu open the same view.
 
 ### Auth / OAuth
-<<<<<<< HEAD
 
-=======
->>>>>>> origin/main
 - [ ] Google OAuth `redirect_uri_mismatch`: this is a Google Cloud Console config issue, not a code bug. Add the project's Supabase callback URL (visible in Cloud → Auth → Google) to the OAuth client's Authorized redirect URIs, and add the kovagpt.com origins. Keep OAuth configured directly in Google Cloud/Supabase so the KovaGPT brand remains visible.
 - [ ] Password reset email: link IS sent and works as a clickable button in the default Supabase template. If it appears as plain text in some clients, scaffold custom auth email templates with `email_domain--scaffold_auth_email_templates` so we control the HTML and can guarantee a styled button + correct kovagpt.com domain. Requires verified email domain.
 

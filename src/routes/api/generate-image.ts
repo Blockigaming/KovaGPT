@@ -7,16 +7,12 @@ import {
   requireVerifiedUser,
 } from "@/lib/api-auth.server";
 import { DAILY_IMAGE_LIMIT_BY_TIER } from "@/lib/modes";
-<<<<<<< HEAD
 import { imageGenerations, missingAiProviderResponse } from "@/lib/ai/provider.server";
 import {
   imageProviderPayload,
   imageResultMetadata,
   normalizeImageSettings,
 } from "@/lib/multimodal/image-workflows.server";
-=======
-import { imageGenerations, imageModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
->>>>>>> origin/main
 
 const MODEL_TIMEOUT_MS = 22_000;
 
@@ -28,26 +24,13 @@ function jsonError(message: string, status: number) {
 }
 
 async function tryModel(
-<<<<<<< HEAD
   payload: ReturnType<typeof imageProviderPayload>,
-=======
-  model: string,
-  prompt: string,
-  size: string,
->>>>>>> origin/main
 ): Promise<{ imageUrl?: string; status: number; error?: string }> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), MODEL_TIMEOUT_MS);
   let upstream: Response;
   try {
-<<<<<<< HEAD
     upstream = await imageGenerations(payload, { signal: controller.signal });
-=======
-    upstream = await imageGenerations(
-      { model, prompt, size, quality: "low", n: 1 },
-      { signal: controller.signal },
-    );
->>>>>>> origin/main
   } catch (e) {
     clearTimeout(timer);
     const aborted = (e as { name?: string } | null)?.name === "AbortError";
@@ -90,11 +73,6 @@ export const Route = createFileRoute("/api/generate-image")({
               400,
             );
           }
-<<<<<<< HEAD
-=======
-          const ALLOWED_SIZES = new Set(["1024x1024", "1024x1536", "1536x1024", "1792x1024"]);
-          const chosenSize = ALLOWED_SIZES.has(size ?? "") ? (size as string) : "1024x1024";
->>>>>>> origin/main
           const missingProvider = missingAiProviderResponse();
           if (missingProvider) return missingProvider;
 
@@ -107,7 +85,6 @@ export const Route = createFileRoute("/api/generate-image")({
           const quota = await enforceQuota(auth, "images", DAILY_IMAGE_LIMIT_BY_TIER[tier]);
           if (quota) return quota;
 
-<<<<<<< HEAD
           const payload = imageProviderPayload(settings);
           const result = await tryModel(payload);
           if (result.imageUrl) {
@@ -134,19 +111,6 @@ export const Route = createFileRoute("/api/generate-image")({
             "Image service is temporarily unavailable. Please try again.",
             result.status,
           );
-=======
-
-          const model = imageModel();
-          const result = await tryModel(model, prompt.trim(), chosenSize);
-          if (result.imageUrl) {
-            return new Response(JSON.stringify({ imageUrl: result.imageUrl, model }), {
-              headers: { "Content-Type": "application/json" },
-            });
-          }
-          if (result.status === 429) return jsonError("Rate limit - try again in a moment.", 429);
-          if (result.error) console.error("[generate-image] provider error", model, result.status, result.error);
-          return jsonError("Image service is temporarily unavailable. Please try again.", result.status);
->>>>>>> origin/main
         } catch (e) {
           console.error("[generate-image] handler error", e);
           return jsonError("An unexpected error occurred. Please try again.", 500);
