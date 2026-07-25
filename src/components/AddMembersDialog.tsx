@@ -1,5 +1,11 @@
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Users, X, UserPlus } from "lucide-react";
@@ -83,7 +89,8 @@ export function AddMembersDialog({
             <Users className="w-5 h-5" /> Add members
           </DialogTitle>
           <DialogDescription>
-            Invite people by email to collaborate on this chat. They will see new messages when they open the chat.
+            Invite people by email to collaborate on this chat. They will see new messages when they
+            open the chat.
           </DialogDescription>
         </DialogHeader>
 

@@ -24,15 +24,29 @@ type ToolDefinition<Input extends z.ZodRawShape> = {
   handler: (input: z.infer<z.ZodObject<Input>>, ctx: ToolContext) => Promise<ToolResult>;
 };
 
-function contextFromRequest(request: Request): ToolContext {
+async function userIdFromToken(token: string | null): Promise<string | null> {
+  if (!token) return null;
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const authKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_PUBLISHABLE_KEY;
+  if (!supabaseUrl || !authKey) return null;
+  const supabase = createClient(supabaseUrl, authKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user?.id) return null;
+  return data.user.id;
+}
+
+async function contextFromRequest(request: Request): Promise<ToolContext> {
   const header = request.headers.get("authorization") ?? "";
   const token = header.toLowerCase().startsWith("bearer ") ? header.slice(7).trim() : null;
+  const userId = await userIdFromToken(token);
   return {
     token,
-    userId: null,
-    isAuthenticated: () => Boolean(token),
+    userId,
+    isAuthenticated: () => Boolean(token && userId),
     getToken: () => token ?? "",
-    getUserId: () => "",
+    getUserId: () => userId ?? "",
   };
 }
 
@@ -60,16 +74,22 @@ const tools = [
         .from("projects")
         .select("id, name, description, created_at, updated_at")
         .order("updated_at", { ascending: false })
-        .limit(limit ?? 50);
+        .limit(typeof limit === "number" ? limit : 50);
       if (error) return { content: [{ type: "text", text: error.message }], isError: true };
-      return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }], structuredContent: { projects: data ?? [] } };
+      return {
+        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        structuredContent: { projects: data ?? [] },
+      };
     },
   },
   {
     name: "list_project_tasks",
     title: "List project tasks",
     description: "List tasks in one of the signed-in user's KovaGPT projects.",
-    inputSchema: z.object({ project_id: z.string().uuid(), status: z.enum(["todo", "doing", "done"]).optional() }),
+    inputSchema: z.object({
+      project_id: z.string().uuid(),
+      status: z.enum(["todo", "doing", "done"]).optional(),
+    }),
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
     handler: async ({ project_id, status }, ctx) => {
       if (!ctx.isAuthenticated()) return authError();
@@ -81,24 +101,46 @@ const tools = [
       if (status) q = q.eq("status", status);
       const { data, error } = await q;
       if (error) return { content: [{ type: "text", text: error.message }], isError: true };
-      return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }], structuredContent: { tasks: data ?? [] } };
+      return {
+        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        structuredContent: { tasks: data ?? [] },
+      };
     },
   },
   {
     name: "create_project_task",
     title: "Create project task",
     description: "Create a new task in one of the signed-in user's KovaGPT projects.",
-    inputSchema: z.object({ project_id: z.string().uuid(), title: z.string().trim().min(1), status: z.enum(["todo", "doing", "done"]).optional(), due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }),
+    inputSchema: z.object({
+      project_id: z.string().uuid(),
+      title: z.string().trim().min(1),
+      status: z.enum(["todo", "doing", "done"]).optional(),
+      due_date: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .optional(),
+    }),
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     handler: async ({ project_id, title, status, due_date }, ctx) => {
       if (!ctx.isAuthenticated()) return authError();
+      const userId = ctx.getUserId();
+      if (!userId) return authError();
       const { data, error } = await supabaseForUser(ctx)
         .from("project_tasks")
-        .insert({ project_id, title, status: status ?? "todo", due_date: due_date ?? null, created_by: ctx.getUserId() || null })
+        .insert({
+          project_id,
+          title,
+          status: status ?? "todo",
+          due_date: due_date ?? null,
+          created_by: userId,
+        })
         .select("id, project_id, title, status, due_date, created_at")
         .single();
       if (error) return { content: [{ type: "text", text: error.message }], isError: true };
-      return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }], structuredContent: { task: data } };
+      return {
+        content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+        structuredContent: { task: data },
+      };
     },
   },
   {
@@ -109,9 +151,16 @@ const tools = [
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
     handler: async ({ project_id }, ctx) => {
       if (!ctx.isAuthenticated()) return authError();
-      const { data, error } = await supabaseForUser(ctx).from("project_notes").select("project_id, content, updated_at").eq("project_id", project_id).maybeSingle();
+      const { data, error } = await supabaseForUser(ctx)
+        .from("project_notes")
+        .select("project_id, content, updated_at")
+        .eq("project_id", project_id)
+        .maybeSingle();
       if (error) return { content: [{ type: "text", text: error.message }], isError: true };
-      return { content: [{ type: "text", text: data?.content ?? "" }], structuredContent: { notes: data } };
+      return {
+        content: [{ type: "text", text: data?.content ?? "" }],
+        structuredContent: { notes: data },
+      };
     },
   },
 ] satisfies ToolDefinition<z.ZodRawShape>[];
@@ -131,6 +180,7 @@ export async function invokeTool(request: Request, name: string): Promise<ToolRe
   if (!tool) return { content: [{ type: "text", text: `Unknown tool: ${name}` }], isError: true };
   const body = await request.json().catch(() => ({}));
   const input = tool.inputSchema.safeParse((body as { input?: unknown }).input ?? body);
-  if (!input.success) return { content: [{ type: "text", text: input.error.message }], isError: true };
-  return tool.handler(input.data, contextFromRequest(request));
+  if (!input.success)
+    return { content: [{ type: "text", text: input.error.message }], isError: true };
+  return tool.handler(input.data, await contextFromRequest(request));
 }

@@ -78,23 +78,21 @@ export function LimitReachedDialog({
               <span className="text-sm font-semibold">1 month of Plus, free</span>
             </div>
             <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              Start Plus today and get your first month on us. After that it's just $16/month. Cancel anytime.
+              Start Plus today and get your first month on us. After that it's just $16/month.
+              Cancel anytime.
             </p>
           </div>
 
           {resetsAt && (
             <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground rounded-lg border border-border bg-muted/30 px-3 py-2">
               <Clock className="w-3.5 h-3.5" />
-              Resets in <span className="font-medium text-foreground">{formatCountdown(remaining)}</span>
+              Resets in{" "}
+              <span className="font-medium text-foreground">{formatCountdown(remaining)}</span>
             </div>
           )}
 
           <div className="mt-6 flex gap-2">
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => onOpenChange(false)}
-            >
+            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
               Not now
             </Button>
             <Button asChild className="flex-1">

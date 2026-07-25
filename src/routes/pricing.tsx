@@ -16,13 +16,13 @@ export const Route = createFileRoute("/pricing")({
       {
         name: "description",
         content:
-          "Compare KovaGPT Free, Plus, and Pro plans. Get more messages, image generations, voice, and advanced reasoning modes.",
+          "Compare KovaGPT Free, Plus, and Pro plans. Get more messages, image generations and advanced reasoning modes.",
       },
       { property: "og:title", content: "Pricing - KovaGPT Plus & Pro plans" },
       {
         property: "og:description",
         content:
-          "Compare KovaGPT Free, Plus, and Pro plans. More messages, image generation, voice, and advanced reasoning.",
+          "Compare KovaGPT Free, Plus, and Pro plans. More messages, image generation and advanced reasoning.",
       },
       { property: "og:url", content: "https://kovagpt.com/pricing" },
       { property: "og:type", content: "website" },
@@ -57,7 +57,8 @@ export const Route = createFileRoute("/pricing")({
             {
               "@type": "Product",
               name: "KovaGPT Plus",
-              description: "Plus plan with Creative, Precise, Code, and Study modes plus higher usage.",
+              description:
+                "Plus plan with Creative, Precise, Code, and Study modes plus higher usage.",
               brand: { "@type": "Brand", name: "KovaGPT" },
               offers: {
                 "@type": "Offer",
@@ -70,7 +71,8 @@ export const Route = createFileRoute("/pricing")({
             {
               "@type": "Product",
               name: "KovaGPT Pro",
-              description: "Pro plan with Reasoning, Research, Writer Pro, and Tutor Pro modes and top usage limits.",
+              description:
+                "Pro plan with Reasoning, Research, Writer Pro, and Tutor Pro modes and top usage limits.",
               brand: { "@type": "Brand", name: "KovaGPT" },
               offers: {
                 "@type": "Offer",
@@ -136,7 +138,11 @@ function PricingPage() {
 
   const startCheckout = (priceId: string) => {
     if (isLoaded && !isSignedIn) {
-      try { openSignIn(); } catch { /* clerk not ready */ }
+      try {
+        openSignIn();
+      } catch {
+        /* clerk not ready */
+      }
       return;
     }
     openCheckout({
@@ -224,7 +230,6 @@ function PricingPage() {
               "Highest KovaGPT usage limits",
               "Reasoning, Research, Writer Pro & Tutor Pro modes",
               "Generate emails, websites & components",
-              "Highest quality voice synthesis",
               "Longer context for big documents",
               "Early access to new features",
             ]}
@@ -271,7 +276,8 @@ function PricingPage() {
         </div>
       )}
       <p className="mx-auto max-w-5xl px-6 mt-10 text-xs text-muted-foreground">
-        Exact usage limits may vary by plan and feature. You can view your current limits from your account when signed in.
+        Exact usage limits may vary by plan and feature. You can view your current limits from your
+        account when signed in.
       </p>
 
       <section className="mx-auto max-w-5xl px-6 mt-16">
@@ -279,19 +285,27 @@ function PricingPage() {
         <div className="grid gap-5 text-sm sm:grid-cols-2">
           <div className="rounded-2xl border border-border bg-card/50 p-5">
             <h3 className="font-medium mb-1">Can I cancel anytime?</h3>
-            <p className="text-muted-foreground">Yes. You can cancel from your account settings. Canceling stops future renewals.</p>
+            <p className="text-muted-foreground">
+              Yes. You can cancel from your account settings. Canceling stops future renewals.
+            </p>
           </div>
           <div className="rounded-2xl border border-border bg-card/50 p-5">
             <h3 className="font-medium mb-1">What happens if I hit my limit?</h3>
-            <p className="text-muted-foreground">You can wait until your limit resets or upgrade to a higher plan for more usage.</p>
+            <p className="text-muted-foreground">
+              You can wait until your limit resets or upgrade to a higher plan for more usage.
+            </p>
           </div>
           <div className="rounded-2xl border border-border bg-card/50 p-5">
             <h3 className="font-medium mb-1">Can I switch plans?</h3>
-            <p className="text-muted-foreground">Yes. Manage your subscription from your account settings at any time.</p>
+            <p className="text-muted-foreground">
+              Yes. Manage your subscription from your account settings at any time.
+            </p>
           </div>
           <div className="rounded-2xl border border-border bg-card/50 p-5">
             <h3 className="font-medium mb-1">Do unused credits roll over?</h3>
-            <p className="text-muted-foreground">Unused usage does not roll over unless stated otherwise.</p>
+            <p className="text-muted-foreground">
+              Unused usage does not roll over unless stated otherwise.
+            </p>
           </div>
         </div>
       </section>

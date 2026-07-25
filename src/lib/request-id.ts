@@ -36,7 +36,8 @@ export function newRequestId(): string {
 export function categorizeError(err: unknown, statusHint?: number): ChatErrorCategory {
   const msg = err instanceof Error ? err.message.toLowerCase() : String(err ?? "").toLowerCase();
   if (statusHint === 429 || /rate.?limit|too many/i.test(msg)) return "rate_limit";
-  if (statusHint === 401 || statusHint === 403 || /unauthori[sz]ed|forbidden/i.test(msg)) return "auth_failure";
+  if (statusHint === 401 || statusHint === 403 || /unauthori[sz]ed|forbidden/i.test(msg))
+    return "auth_failure";
   if (statusHint === 402 || /quota|credit|exhaust/i.test(msg)) return "quota_exceeded";
   if (/timeout|timed out|deadline/i.test(msg)) return "model_timeout";
   if (/abort|stream|connection|econnreset|network/i.test(msg)) return "streaming_interruption";

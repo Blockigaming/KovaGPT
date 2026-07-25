@@ -66,8 +66,8 @@ function computeInteractionMode(): InteractionMode {
  * Split View / Stage Manager changes, and pointer capability changes.
  */
 export function useLayout() {
-  const [mode, setMode] = React.useState<LayoutMode>(() => computeLayoutMode());
-  const [interaction, setInteraction] = React.useState<InteractionMode>(() => computeInteractionMode());
+  const [mode, setMode] = React.useState<LayoutMode>("desktop");
+  const [interaction, setInteraction] = React.useState<InteractionMode>("pointer");
 
   React.useEffect(() => {
     let raf = 0;
@@ -91,7 +91,13 @@ export function useLayout() {
     };
   }, []);
 
-  return { mode, interaction, isMobile: mode === "mobile", isTablet: mode === "tablet", isDesktop: mode === "desktop" };
+  return {
+    mode,
+    interaction,
+    isMobile: mode === "mobile",
+    isTablet: mode === "tablet",
+    isDesktop: mode === "desktop",
+  };
 }
 
 /** Back-compat: phones only. Tablets return false. */

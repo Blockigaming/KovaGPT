@@ -39,7 +39,9 @@ export function FamilySharingPanel() {
     }
   }, []);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   const isPaid = tier === "plus" || tier === "pro";
 
@@ -57,11 +59,12 @@ export function FamilySharingPanel() {
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
           {loadError}
         </div>
-        <Button size="sm" variant="outline" onClick={refresh}>Try again</Button>
+        <Button size="sm" variant="outline" onClick={refresh}>
+          Try again
+        </Button>
       </div>
     );
   }
-
 
   const group = state?.group;
   const role = state?.role;
@@ -78,8 +81,8 @@ export function FamilySharingPanel() {
           <div>
             <h3 className="text-sm font-semibold">Family Sharing</h3>
             <p className="text-xs text-muted-foreground">
-              Share KovaGPT Plus or Pro with up to 5 family members. Each member keeps
-              their own private chats - only the plan is shared.
+              Share KovaGPT Plus or Pro with up to 5 family members. Each member keeps their own
+              private chats - only the plan is shared.
             </p>
           </div>
         </div>
@@ -139,8 +142,11 @@ export function FamilySharingPanel() {
                           try {
                             await removeFamilyMember({ data: { memberUserId: m.user_id } });
                             await refresh();
-                          } catch (e) { toast.error((e as Error).message); }
-                          finally { setBusy(false); }
+                          } catch (e) {
+                            toast.error((e as Error).message);
+                          } finally {
+                            setBusy(false);
+                          }
                         }}
                       >
                         Remove
@@ -178,8 +184,11 @@ export function FamilySharingPanel() {
                         toast.success("Invite link copied to clipboard.");
                         setInviteEmail("");
                         await refresh();
-                      } catch (e) { toast.error((e as Error).message); }
-                      finally { setBusy(false); }
+                      } catch (e) {
+                        toast.error((e as Error).message);
+                      } finally {
+                        setBusy(false);
+                      }
                     }}
                   >
                     Generate link
@@ -192,45 +201,56 @@ export function FamilySharingPanel() {
                       Pending invites
                     </div>
                     <div className="divide-y divide-border rounded-lg border border-border">
-                      {invites.filter((i) => !i.accepted_at).map((inv) => {
-                        const link = `${window.location.origin}/?family_invite=${inv.token}`;
-                        const expired = new Date(inv.expires_at).getTime() < Date.now();
-                        return (
-                          <div key={inv.id} className="flex items-center justify-between px-3 py-2 gap-2 text-sm">
-                            <div className="min-w-0 flex-1">
-                              <div className="truncate text-xs text-muted-foreground">
-                                {inv.invited_email || "Anyone with the link"} · {expired ? "expired" : `expires ${new Date(inv.expires_at).toLocaleDateString()}`}
+                      {invites
+                        .filter((i) => !i.accepted_at)
+                        .map((inv) => {
+                          const link = `${window.location.origin}/?family_invite=${inv.token}`;
+                          const expired = new Date(inv.expires_at).getTime() < Date.now();
+                          return (
+                            <div
+                              key={inv.id}
+                              className="flex items-center justify-between px-3 py-2 gap-2 text-sm"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate text-xs text-muted-foreground">
+                                  {inv.invited_email || "Anyone with the link"} ·{" "}
+                                  {expired
+                                    ? "expired"
+                                    : `expires ${new Date(inv.expires_at).toLocaleDateString()}`}
+                                </div>
                               </div>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(link).catch(() => {});
+                                  toast.success("Copied");
+                                }}
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={async () => {
+                                  setBusy(true);
+                                  try {
+                                    await revokeFamilyInvite({ data: { inviteId: inv.id } });
+                                    await refresh();
+                                  } catch (e) {
+                                    toast.error((e as Error).message);
+                                  } finally {
+                                    setBusy(false);
+                                  }
+                                }}
+                              >
+                                <XIcon className="w-3.5 h-3.5" />
+                              </Button>
                             </div>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 px-2"
-                              onClick={() => {
-                                navigator.clipboard.writeText(link).catch(() => {});
-                                toast.success("Copied");
-                              }}
-                            >
-                              <Copy className="w-3.5 h-3.5" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={async () => {
-                                setBusy(true);
-                                try {
-                                  await revokeFamilyInvite({ data: { inviteId: inv.id } });
-                                  await refresh();
-                                } catch (e) { toast.error((e as Error).message); }
-                                finally { setBusy(false); }
-                              }}
-                            >
-                              <XIcon className="w-3.5 h-3.5" />
-                            </Button>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
                     </div>
                   </div>
                 )}
@@ -248,8 +268,11 @@ export function FamilySharingPanel() {
                     await leaveFamily();
                     toast.success("Left family group.");
                     await refresh();
-                  } catch (e) { toast.error((e as Error).message); }
-                  finally { setBusy(false); }
+                  } catch (e) {
+                    toast.error((e as Error).message);
+                  } finally {
+                    setBusy(false);
+                  }
                 }}
               >
                 Leave family
@@ -260,8 +283,8 @@ export function FamilySharingPanel() {
       </div>
 
       <p className="text-[11px] text-muted-foreground px-1">
-        Members inherit the owner's Plus or Pro features. Each member has their own daily
-        quotas, chats, and settings - nothing shared besides the plan.
+        Members inherit the owner's Plus or Pro features. Each member has their own daily quotas,
+        chats, and settings - nothing shared besides the plan.
       </p>
     </div>
   );

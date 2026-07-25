@@ -5,13 +5,15 @@ import { getValidGoogleAccessToken, logAudit } from "@/lib/google-oauth.server";
 
 const DRIVE = "https://www.googleapis.com/drive/v3";
 
+type JsonRecord = Record<string, unknown>;
+
 export const Route = createFileRoute("/api/google/drive")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
-        let body: any;
+        let body: JsonRecord;
         try {
           body = await request.json();
         } catch {

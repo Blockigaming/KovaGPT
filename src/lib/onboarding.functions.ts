@@ -42,8 +42,6 @@ export const skipOnboarding = createServerFn({ method: "POST" })
       completed: true,
       completed_at: new Date().toISOString(),
     };
-    await context.supabase
-      .from("user_onboarding")
-      .upsert(row, { onConflict: "user_id" });
+    await context.supabase.from("user_onboarding").upsert(row, { onConflict: "user_id" });
     return { ok: true };
   });

@@ -1,7 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
 import { useEffect, useRef, useState } from "react";
-import { PanelLeft, ArrowUp, Loader2, Download, Trash2, Paperclip, Sparkles, X as XIcon } from "lucide-react";
+import {
+  PanelLeft,
+  ArrowUp,
+  Loader2,
+  Download,
+  Trash2,
+  Paperclip,
+  Sparkles,
+  X as XIcon,
+} from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
 
@@ -17,14 +26,24 @@ export const Route = createFileRoute("/images")({
   head: () => ({
     meta: [
       { title: "AI Image Generation | KovaGPT" },
-      { name: "description", content: "Create AI-generated images from text prompts with KovaGPT. Pick a style, describe what you want, and save the results." },
+      {
+        name: "description",
+        content:
+          "Create AI-generated images from text prompts with KovaGPT. Pick a style, describe what you want, and save the results.",
+      },
       { property: "og:title", content: "AI Image Generation | KovaGPT" },
-      { property: "og:description", content: "Create AI-generated images from text prompts with KovaGPT." },
+      {
+        property: "og:description",
+        content: "Create AI-generated images from text prompts with KovaGPT.",
+      },
       { property: "og:url", content: "https://kovagpt.com/images" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "AI Image Generation | KovaGPT" },
-      { name: "twitter:description", content: "Create AI-generated images from text prompts with KovaGPT." },
+      {
+        name: "twitter:description",
+        content: "Create AI-generated images from text prompts with KovaGPT.",
+      },
     ],
     links: [{ rel: "canonical", href: "https://kovagpt.com/images" }],
   }),
@@ -59,31 +78,173 @@ import blueprintImg from "@/assets/image-presets/blueprint.jpg";
 type Preset = { label: string; prompt: string; seed: string; image: string };
 
 const PRESETS: Preset[] = [
-  { label: "Portrait mode", prompt: "A cinematic close-up portrait, soft natural light, shallow depth of field", seed: "portrait-mode", image: portraitModeImg },
-  { label: "Sticker pack", prompt: "A cute die-cut sticker illustration of my subject, thick white border, flat colors", seed: "sticker-pack", image: stickerPackImg },
-  { label: "Bobblehead", prompt: "A miniature bobblehead figurine on a stadium field, oversized head, detailed uniform, studio lighting", seed: "bobblehead", image: bobbleheadImg },
-  { label: "Action shot", prompt: "A dynamic action shot mid-motion, dramatic lighting, sports photography, sharp focus", seed: "action-shot", image: actionShotImg },
-  { label: "Handwritten", prompt: "A candid family moment illustrated in a warm handwritten storybook style, pastel palette", seed: "handwritten", image: handwrittenImg },
-  { label: "Interior design", prompt: "A modern interior of my described room, warm wood, natural light, magazine photography", seed: "interior-design", image: interiorDesignImg },
-  { label: "Action figure", prompt: "A collectible action figure of my subject in a blister-pack toy box with accessories, product photo", seed: "action-figure", image: actionFigureImg },
-  { label: "Disco mode", prompt: "A shiny mirrorball sculpture of my subject on a reflective black stage, studio lights, sparkle", seed: "disco-mode", image: discoModeImg },
-  { label: "App icon", prompt: "A polished app icon for my described product, gradient background, rounded corners, minimal", seed: "app-icon", image: appIconImg },
-  { label: "Logo mark", prompt: "A minimal vector logo mark for my described brand, symmetrical, black on white", seed: "logo-mark", image: logoMarkImg },
-  { label: "Watercolor", prompt: "A soft watercolor painting of my subject, pastel washes, paper texture, artistic brush strokes", seed: "watercolor", image: watercolorImg },
-  { label: "Oil painting", prompt: "A classical oil painting portrait of my subject, rich textured brush strokes, chiaroscuro lighting", seed: "oil-painting", image: oilPaintingImg },
-  { label: "Pixel art", prompt: "A retro 16-bit pixel art scene of my subject, crisp pixels, limited palette", seed: "pixel-art", image: pixelArtImg },
-  { label: "Anime", prompt: "An anime illustration of my subject, cel shaded, vivid colors, expressive eyes", seed: "anime", image: animeImg },
-  { label: "3D render", prompt: "A glossy 3D render of my subject in Pixar style, soft studio lighting, subsurface scattering", seed: "3d-render", image: threeDRenderImg },
-  { label: "Cyberpunk", prompt: "My subject in a neon cyberpunk city street at night, rain reflections, purple and cyan lights, cinematic", seed: "cyberpunk", image: cyberpunkImg },
-  { label: "Vintage poster", prompt: "A vintage travel poster of my subject, bold flat colors, mid-century deco composition", seed: "vintage-poster", image: vintagePosterImg },
-  { label: "Line drawing", prompt: "A minimal continuous line drawing of my subject on cream paper, elegant black ink", seed: "line-drawing", image: lineDrawingImg },
-  { label: "Origami", prompt: "An origami paper sculpture of my subject, folded pastel paper, soft studio lighting, minimal background", seed: "origami", image: origamiImg },
-  { label: "Comic book", prompt: "A comic book panel of my subject, bold ink outlines, halftone dots, dynamic action, saturated colors", seed: "comic-book", image: comicBookImg },
-  { label: "Isometric", prompt: "An isometric illustration of my subject in a tiny cutaway scene, soft colors, detailed miniature", seed: "isometric", image: isometricImg },
-  { label: "Low poly", prompt: "A low poly geometric render of my subject, flat shaded triangles, minimal gradient background", seed: "low-poly", image: lowPolyImg },
-  { label: "Ghibli", prompt: "A Studio Ghibli inspired scene of my subject, hand painted, lush environment, nostalgic warm light", seed: "ghibli", image: ghibliImg },
-  { label: "Pop art", prompt: "A pop art Warhol style portrait of my subject, bold flat blocks of complementary colors, screen print texture", seed: "pop-art", image: popArtImg },
-  { label: "Blueprint", prompt: "A technical blueprint drawing of my subject, cyan lines on dark blue paper, dimensional annotations", seed: "blueprint", image: blueprintImg },
+  {
+    label: "Portrait mode",
+    prompt: "A cinematic close-up portrait, soft natural light, shallow depth of field",
+    seed: "portrait-mode",
+    image: portraitModeImg,
+  },
+  {
+    label: "Sticker pack",
+    prompt: "A cute die-cut sticker illustration of my subject, thick white border, flat colors",
+    seed: "sticker-pack",
+    image: stickerPackImg,
+  },
+  {
+    label: "Bobblehead",
+    prompt:
+      "A miniature bobblehead figurine on a stadium field, oversized head, detailed uniform, studio lighting",
+    seed: "bobblehead",
+    image: bobbleheadImg,
+  },
+  {
+    label: "Action shot",
+    prompt: "A dynamic action shot mid-motion, dramatic lighting, sports photography, sharp focus",
+    seed: "action-shot",
+    image: actionShotImg,
+  },
+  {
+    label: "Handwritten",
+    prompt:
+      "A candid family moment illustrated in a warm handwritten storybook style, pastel palette",
+    seed: "handwritten",
+    image: handwrittenImg,
+  },
+  {
+    label: "Interior design",
+    prompt:
+      "A modern interior of my described room, warm wood, natural light, magazine photography",
+    seed: "interior-design",
+    image: interiorDesignImg,
+  },
+  {
+    label: "Action figure",
+    prompt:
+      "A collectible action figure of my subject in a blister-pack toy box with accessories, product photo",
+    seed: "action-figure",
+    image: actionFigureImg,
+  },
+  {
+    label: "Disco mode",
+    prompt:
+      "A shiny mirrorball sculpture of my subject on a reflective black stage, studio lights, sparkle",
+    seed: "disco-mode",
+    image: discoModeImg,
+  },
+  {
+    label: "App icon",
+    prompt:
+      "A polished app icon for my described product, gradient background, rounded corners, minimal",
+    seed: "app-icon",
+    image: appIconImg,
+  },
+  {
+    label: "Logo mark",
+    prompt: "A minimal vector logo mark for my described brand, symmetrical, black on white",
+    seed: "logo-mark",
+    image: logoMarkImg,
+  },
+  {
+    label: "Watercolor",
+    prompt:
+      "A soft watercolor painting of my subject, pastel washes, paper texture, artistic brush strokes",
+    seed: "watercolor",
+    image: watercolorImg,
+  },
+  {
+    label: "Oil painting",
+    prompt:
+      "A classical oil painting portrait of my subject, rich textured brush strokes, chiaroscuro lighting",
+    seed: "oil-painting",
+    image: oilPaintingImg,
+  },
+  {
+    label: "Pixel art",
+    prompt: "A retro 16-bit pixel art scene of my subject, crisp pixels, limited palette",
+    seed: "pixel-art",
+    image: pixelArtImg,
+  },
+  {
+    label: "Anime",
+    prompt: "An anime illustration of my subject, cel shaded, vivid colors, expressive eyes",
+    seed: "anime",
+    image: animeImg,
+  },
+  {
+    label: "3D render",
+    prompt:
+      "A glossy 3D render of my subject in Pixar style, soft studio lighting, subsurface scattering",
+    seed: "3d-render",
+    image: threeDRenderImg,
+  },
+  {
+    label: "Cyberpunk",
+    prompt:
+      "My subject in a neon cyberpunk city street at night, rain reflections, purple and cyan lights, cinematic",
+    seed: "cyberpunk",
+    image: cyberpunkImg,
+  },
+  {
+    label: "Vintage poster",
+    prompt: "A vintage travel poster of my subject, bold flat colors, mid-century deco composition",
+    seed: "vintage-poster",
+    image: vintagePosterImg,
+  },
+  {
+    label: "Line drawing",
+    prompt: "A minimal continuous line drawing of my subject on cream paper, elegant black ink",
+    seed: "line-drawing",
+    image: lineDrawingImg,
+  },
+  {
+    label: "Origami",
+    prompt:
+      "An origami paper sculpture of my subject, folded pastel paper, soft studio lighting, minimal background",
+    seed: "origami",
+    image: origamiImg,
+  },
+  {
+    label: "Comic book",
+    prompt:
+      "A comic book panel of my subject, bold ink outlines, halftone dots, dynamic action, saturated colors",
+    seed: "comic-book",
+    image: comicBookImg,
+  },
+  {
+    label: "Isometric",
+    prompt:
+      "An isometric illustration of my subject in a tiny cutaway scene, soft colors, detailed miniature",
+    seed: "isometric",
+    image: isometricImg,
+  },
+  {
+    label: "Low poly",
+    prompt:
+      "A low poly geometric render of my subject, flat shaded triangles, minimal gradient background",
+    seed: "low-poly",
+    image: lowPolyImg,
+  },
+  {
+    label: "Ghibli",
+    prompt:
+      "A Studio Ghibli inspired scene of my subject, hand painted, lush environment, nostalgic warm light",
+    seed: "ghibli",
+    image: ghibliImg,
+  },
+  {
+    label: "Pop art",
+    prompt:
+      "A pop art Warhol style portrait of my subject, bold flat blocks of complementary colors, screen print texture",
+    seed: "pop-art",
+    image: popArtImg,
+  },
+  {
+    label: "Blueprint",
+    prompt:
+      "A technical blueprint drawing of my subject, cyan lines on dark blue paper, dimensional annotations",
+    seed: "blueprint",
+    image: blueprintImg,
+  },
 ];
 
 type HistoryItem = { id: string; prompt: string; imageUrl: string; createdAt: number };
@@ -97,11 +258,20 @@ function loadHistory(userKey: string | null): HistoryItem[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
-  } catch { return []; }
+  } catch {
+    return [];
+  }
 }
 function saveHistory(userKey: string | null, items: HistoryItem[]) {
   if (!userKey || typeof window === "undefined") return;
-  try { localStorage.setItem(HISTORY_KEY_PREFIX + userKey, JSON.stringify(items.slice(0, HISTORY_LIMIT))); } catch {/*ignore*/}
+  try {
+    localStorage.setItem(
+      HISTORY_KEY_PREFIX + userKey,
+      JSON.stringify(items.slice(0, HISTORY_LIMIT)),
+    );
+  } catch {
+    /*ignore*/
+  }
 }
 
 function ImagesPage() {
@@ -112,7 +282,10 @@ function ImagesPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
-  const openSettings = (tab?: string) => { setSettingsTab(tab); setSettingsOpen(true); };
+  const openSettings = (tab?: string) => {
+    setSettingsTab(tab);
+    setSettingsOpen(true);
+  };
   useEffect(() => {
     const h = (e: Event) => openSettings((e as CustomEvent<{ tab?: string }>).detail?.tab);
     window.addEventListener("kova-open-settings", h);
@@ -135,7 +308,9 @@ function ImagesPage() {
 
   useEffect(() => {
     if (!lightbox) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setLightbox(null); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLightbox(null);
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [lightbox]);
@@ -147,7 +322,12 @@ function ImagesPage() {
 
   function addToHistory(p: string, imageUrl: string) {
     if (!isSignedIn || !userKey) return;
-    const item: HistoryItem = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, prompt: p, imageUrl, createdAt: Date.now() };
+    const item: HistoryItem = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      prompt: p,
+      imageUrl,
+      createdAt: Date.now(),
+    };
     setHistory((prev) => {
       const next = [item, ...prev].slice(0, HISTORY_LIMIT);
       saveHistory(userKey, next);
@@ -165,7 +345,10 @@ function ImagesPage() {
   async function generate(p: string) {
     const trimmed = p.trim();
     if (!trimmed || submittingRef.current) return;
-    if (!isSignedIn) { setLoginOpen(true); return; }
+    if (!isSignedIn) {
+      setLoginOpen(true);
+      return;
+    }
     submittingRef.current = true;
     setError(null);
     setResult(null);
@@ -179,7 +362,10 @@ function ImagesPage() {
       const data = await res.json();
       if (!res.ok) {
         const msg = data?.error || "Failed to generate image";
-        if (res.status === 429 && /limit/i.test(msg)) { setLimitMessage(msg); setLimitOpen(true); }
+        if (res.status === 429 && /limit/i.test(msg)) {
+          setLimitMessage(msg);
+          setLimitOpen(true);
+        }
         throw new Error(msg);
       }
       setResult(data.imageUrl);
@@ -194,7 +380,7 @@ function ImagesPage() {
     }
   }
 
-  const usePreset = (p: Preset) => {
+  const applyPreset = (p: Preset) => {
     setPrompt(p.prompt);
     inputRef.current?.focus();
   };
@@ -231,10 +417,14 @@ function ImagesPage() {
             ) : (
               <>
                 <SignInButton mode="modal">
-                  <button className="text-sm font-medium px-4 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition">Log in</button>
+                  <button className="text-sm font-medium px-4 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition">
+                    Log in
+                  </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full bg-neutral-200 text-neutral-900 hover:bg-neutral-300 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700 transition whitespace-nowrap">Sign up for free</button>
+                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full bg-neutral-200 text-neutral-900 hover:bg-neutral-300 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700 transition whitespace-nowrap">
+                    Sign up for free
+                  </button>
                 </SignUpButton>
               </>
             )}
@@ -252,7 +442,7 @@ function ImagesPage() {
                     <button
                       key={p.label}
                       type="button"
-                      onClick={() => usePreset(p)}
+                      onClick={() => applyPreset(p)}
                       className="group flex flex-col items-start w-[128px] shrink-0 focus:outline-none"
                     >
                       <div className="relative w-[128px] h-[176px] rounded-2xl overflow-hidden ring-1 ring-border/60 bg-muted transition-transform duration-200 group-hover:scale-[1.03] group-hover:ring-foreground/30">
@@ -265,7 +455,9 @@ function ImagesPage() {
                           className="absolute inset-0 w-full h-full object-cover"
                         />
                       </div>
-                      <span className="mt-2 text-sm text-foreground/90 group-hover:text-foreground text-center w-full">{p.label}</span>
+                      <span className="mt-2 text-sm text-foreground/90 group-hover:text-foreground text-center w-full">
+                        {p.label}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -278,7 +470,10 @@ function ImagesPage() {
                 {loading && !result && (
                   <div className="max-w-md mx-auto aspect-square rounded-3xl overflow-hidden relative ring-1 ring-border bg-gradient-to-br from-fuchsia-500/20 via-violet-500/20 to-cyan-500/20">
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(280_90%_60%/0.35),transparent_55%),radial-gradient(circle_at_70%_80%,hsl(190_90%_55%/0.35),transparent_55%),radial-gradient(circle_at_50%_50%,hsl(320_90%_60%/0.25),transparent_60%)] animate-[imgAura_6s_ease-in-out_infinite]" />
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent animate-[shimmer_1.8s_infinite]" style={{ backgroundSize: "200% 100%" }} />
+                    <div
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent animate-[shimmer_1.8s_infinite]"
+                      style={{ backgroundSize: "200% 100%" }}
+                    />
                     <div className="absolute inset-0 backdrop-blur-2xl" />
                     <div className="pointer-events-none absolute inset-0">
                       {Array.from({ length: 14 }).map((_, i) => (
@@ -301,16 +496,28 @@ function ImagesPage() {
                         <div className="absolute inset-0 rounded-full border-2 border-white/40 border-t-white animate-spin" />
                         <Sparkles className="absolute inset-0 m-auto w-6 h-6 text-white animate-pulse" />
                       </div>
-                      <div className="text-sm font-medium tracking-wide">Painting your image...</div>
-                      <div className="text-[11px] uppercase tracking-[0.2em] opacity-70">Mixing colors · Adding light · Sharpening details</div>
+                      <div className="text-sm font-medium tracking-wide">
+                        Painting your image...
+                      </div>
+                      <div className="text-[11px] uppercase tracking-[0.2em] opacity-70">
+                        Mixing colors · Adding light · Sharpening details
+                      </div>
                     </div>
                   </div>
                 )}
                 {result && (
                   <div className="max-w-md mx-auto">
-                    <img src={result} alt={resultPrompt || "Generated image"} className="w-full rounded-3xl ring-1 ring-border" />
+                    <img
+                      src={result}
+                      alt={resultPrompt || "Generated image"}
+                      className="w-full rounded-3xl ring-1 ring-border"
+                    />
                     <div className="flex justify-center mt-3 gap-2 flex-wrap">
-                      <a href={result} download="kovagpt-image.png" className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full border border-border hover:bg-accent transition">
+                      <a
+                        href={result}
+                        download="kovagpt-image.png"
+                        className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full border border-border hover:bg-accent transition"
+                      >
                         <Download className="w-4 h-4" /> Download
                       </a>
                     </div>
@@ -342,21 +549,49 @@ function ImagesPage() {
                       className="group relative aspect-square rounded-2xl overflow-hidden bg-muted ring-1 ring-border focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/60 text-left"
                       aria-label={`Open image: ${h.prompt}`}
                     >
-                      <img src={h.imageUrl} alt={h.prompt} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
+                      <img
+                        src={h.imageUrl}
+                        alt={h.prompt}
+                        loading="lazy"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                      />
                       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-gradient-to-t from-black/85 via-black/25 to-transparent flex flex-col justify-end p-2 gap-1.5">
-                        <p className="text-[11px] text-white line-clamp-2" title={h.prompt}>{h.prompt}</p>
-                        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        <p className="text-[11px] text-white line-clamp-2" title={h.prompt}>
+                          {h.prompt}
+                        </p>
+                        <div
+                          className="flex items-center gap-1"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <button
                             type="button"
-                            onClick={(e) => { e.stopPropagation(); setPrompt(h.prompt); inputRef.current?.focus(); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPrompt(h.prompt);
+                              inputRef.current?.focus();
+                            }}
                             className="flex-1 text-[11px] px-2 py-1 rounded-full bg-white text-black font-medium hover:opacity-90"
                           >
                             Reuse
                           </button>
-                          <a onClick={(e) => e.stopPropagation()} href={h.imageUrl} download={`kovagpt-${h.id}.png`} className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white" aria-label="Download">
+                          <a
+                            onClick={(e) => e.stopPropagation()}
+                            href={h.imageUrl}
+                            download={`kovagpt-${h.id}.png`}
+                            className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white"
+                            aria-label="Download"
+                          >
                             <Download className="w-3.5 h-3.5" />
                           </a>
-                          <button type="button" onClick={(e) => { e.stopPropagation(); removeFromHistory(h.id); }} className="w-7 h-7 rounded-full bg-white/15 hover:bg-destructive flex items-center justify-center text-white" aria-label="Remove">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeFromHistory(h.id);
+                            }}
+                            className="w-7 h-7 rounded-full bg-white/15 hover:bg-destructive flex items-center justify-center text-white"
+                            aria-label="Remove"
+                          >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
@@ -372,11 +607,18 @@ function ImagesPage() {
         {/* Bottom composer */}
         <div className="sticky bottom-0 border-t border-border/60 bg-gradient-to-t from-background via-background to-background/80 backdrop-blur">
           <form
-            onSubmit={(e) => { e.preventDefault(); generate(prompt); }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              generate(prompt);
+            }}
             className="max-w-3xl mx-auto px-4 sm:px-6 py-3"
           >
             <div className="flex items-end gap-2 rounded-3xl border border-border bg-card shadow-sm px-3 py-2.5">
-              <button type="button" aria-label="Attach" className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent transition shrink-0">
+              <button
+                type="button"
+                aria-label="Attach"
+                className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent transition shrink-0"
+              >
                 <Paperclip className="w-5 h-5" />
               </button>
               <textarea
@@ -384,7 +626,10 @@ function ImagesPage() {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); generate(prompt); }
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    generate(prompt);
+                  }
                 }}
                 rows={1}
                 placeholder="Describe an image"
@@ -400,7 +645,11 @@ function ImagesPage() {
                 className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center disabled:opacity-30 hover:opacity-90 transition shrink-0"
                 aria-label="Generate"
               >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-4 h-4" />}
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <ArrowUp className="w-4 h-4" />
+                )}
               </button>
             </div>
           </form>
@@ -416,13 +665,16 @@ function ImagesPage() {
         onClearAll={() => {
           try {
             for (const k of Object.keys(localStorage)) {
-              if (k.startsWith("novagpt-image-history-") || k.startsWith("nova-gpt-conversations")) localStorage.removeItem(k);
+              if (k.startsWith("novagpt-image-history-") || k.startsWith("nova-gpt-conversations"))
+                localStorage.removeItem(k);
             }
-          } catch { /* ignore */ }
+          } catch {
+            /* ignore */
+          }
           setHistory([]);
         }}
       />
-      
+
       <LoginPromptDialog
         open={loginOpen}
         onOpenChange={setLoginOpen}
@@ -461,10 +713,16 @@ function ImagesPage() {
               alt={lightbox.prompt}
               className="max-h-[75dvh] w-auto max-w-full rounded-2xl shadow-2xl object-contain"
             />
-            <p className="text-sm text-white/85 text-center max-w-2xl px-4 line-clamp-3">{lightbox.prompt}</p>
+            <p className="text-sm text-white/85 text-center max-w-2xl px-4 line-clamp-3">
+              {lightbox.prompt}
+            </p>
             <div className="flex flex-wrap items-center justify-center gap-2">
               <button
-                onClick={() => { setPrompt(lightbox.prompt); setLightbox(null); inputRef.current?.focus(); }}
+                onClick={() => {
+                  setPrompt(lightbox.prompt);
+                  setLightbox(null);
+                  inputRef.current?.focus();
+                }}
                 className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white text-black font-medium hover:opacity-90 transition"
               >
                 <Sparkles className="w-4 h-4" /> Reuse prompt
@@ -477,7 +735,10 @@ function ImagesPage() {
                 <Download className="w-4 h-4" /> Download
               </a>
               <button
-                onClick={() => { removeFromHistory(lightbox.id); setLightbox(null); }}
+                onClick={() => {
+                  removeFromHistory(lightbox.id);
+                  setLightbox(null);
+                }}
                 className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-destructive text-white transition"
               >
                 <Trash2 className="w-4 h-4" /> Remove

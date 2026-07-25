@@ -15,11 +15,9 @@ export const GOOGLE_SCOPES = [
 ].join(" ");
 
 function admin(): SupabaseClient<Database> {
-  return createClient<Database>(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
-  );
+  return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+  });
 }
 
 export function googleRedirectUri(request: Request): string {
@@ -113,9 +111,7 @@ export async function storeGoogleTokens(userId: string, tokens: TokenResponse) {
     expires_at: expiresAt,
     scopes: tokens.scope ?? "",
   };
-  const { error } = await db
-    .from("google_oauth_tokens")
-    .upsert(row, { onConflict: "user_id" });
+  const { error } = await db.from("google_oauth_tokens").upsert(row, { onConflict: "user_id" });
   if (error) throw new Error(`store google tokens failed: ${error.message}`);
 }
 
@@ -201,15 +197,17 @@ export async function logAudit(opts: {
   metadata?: Record<string, unknown>;
 }) {
   try {
-    await admin().from("connected_account_audit_log").insert({
-      user_id: opts.userId,
-      provider: opts.provider,
-      action: opts.action,
-      status: opts.status ?? "success",
-      resource_id: opts.resourceId ?? null,
-      summary: opts.summary ?? null,
-      metadata: (opts.metadata ?? null) as never,
-    });
+    await admin()
+      .from("connected_account_audit_log")
+      .insert({
+        user_id: opts.userId,
+        provider: opts.provider,
+        action: opts.action,
+        status: opts.status ?? "success",
+        resource_id: opts.resourceId ?? null,
+        summary: opts.summary ?? null,
+        metadata: (opts.metadata ?? null) as never,
+      });
   } catch (e) {
     console.warn("[audit] insert failed", e);
   }

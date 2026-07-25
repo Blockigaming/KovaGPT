@@ -33,7 +33,9 @@ test.describe("KovaGPT responsive shell", () => {
     });
 
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    await page.waitForLoadState("networkidle").catch(() => { /* ok */ });
+    await page.waitForLoadState("networkidle").catch(() => {
+      /* ok */
+    });
 
     // Basic content assertion — the app root always renders a textarea or
     // the empty-state landing with the KovaGPT brand.
@@ -70,10 +72,12 @@ test.describe("KovaGPT responsive shell", () => {
     const collapsedTrigger = page.getByRole("button", { name: /open sidebar/i });
     if (width >= 1200) {
       // Persistent sidebar starts open on desktop; the fixed trigger should NOT be visible.
-      await expect(collapsedTrigger).toHaveCount(0).catch(async () => {
-        // If it exists (variant), ensure not visible.
-        await expect(collapsedTrigger.first()).toBeHidden();
-      });
+      await expect(collapsedTrigger)
+        .toHaveCount(0)
+        .catch(async () => {
+          // If it exists (variant), ensure not visible.
+          await expect(collapsedTrigger.first()).toBeHidden();
+        });
     }
     await testInfo.attach(`chrome-${isPhone ? "phone" : "large"}`, {
       body: await page.screenshot(),

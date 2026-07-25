@@ -1,6 +1,5 @@
 import { Menu, SquarePen } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
-import { useLayout } from "@/hooks/use-mobile";
 import { useUser, SignInButton, SignUpButton, clerkEnabled } from "@/components/auth/ClerkSafe";
 
 /**
@@ -20,9 +19,7 @@ export function MobileTopBar({
   onNewChat: () => void;
   title?: string;
 }) {
-  const { isDesktop } = useLayout();
   const { isLoaded, isSignedIn } = useUser();
-  if (isDesktop) return null;
   const showAuth = isLoaded && clerkEnabled && !isSignedIn;
   return (
     <header
@@ -30,12 +27,12 @@ export function MobileTopBar({
       style={{ paddingTop: "env(safe-area-inset-top)" }}
       role="banner"
     >
-      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 h-12 px-2">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 min-h-14 px-2">
         <button
           type="button"
           onClick={onOpenSidebar}
           aria-label="Open menu"
-          className="w-10 h-10 rounded-full flex items-center justify-center text-foreground hover:bg-accent/60 active:scale-95 transition"
+          className="w-11 h-11 rounded-full flex items-center justify-center text-foreground hover:bg-accent/60 active:scale-95 transition"
         >
           <Menu className="w-5 h-5" />
         </button>
@@ -48,12 +45,12 @@ export function MobileTopBar({
         {showAuth ? (
           <div className="flex items-center gap-1.5 pr-1">
             <SignInButton mode="modal">
-              <button className="text-[13px] font-medium px-3 h-8 rounded-full text-foreground hover:bg-accent/60 active:scale-95 transition">
+              <button className="text-[13px] font-medium px-3 min-h-11 rounded-full text-foreground hover:bg-accent/60 active:scale-95 transition">
                 Log in
               </button>
             </SignInButton>
             <SignUpButton mode="modal">
-              <button className="text-[13px] font-semibold px-3 h-8 rounded-full bg-foreground text-background hover:opacity-90 active:scale-95 transition whitespace-nowrap">
+              <button className="text-[13px] font-semibold px-3 min-h-11 rounded-full bg-foreground text-background hover:opacity-90 active:scale-95 transition whitespace-nowrap">
                 Sign up
               </button>
             </SignUpButton>
@@ -63,7 +60,7 @@ export function MobileTopBar({
             type="button"
             onClick={onNewChat}
             aria-label="New chat"
-            className="w-10 h-10 rounded-full flex items-center justify-center text-foreground hover:bg-accent/60 active:scale-95 transition"
+            className="w-11 h-11 rounded-full flex items-center justify-center text-foreground hover:bg-accent/60 active:scale-95 transition"
           >
             <SquarePen className="w-5 h-5" />
           </button>

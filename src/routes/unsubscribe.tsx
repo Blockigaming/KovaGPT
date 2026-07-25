@@ -12,10 +12,7 @@ export const Route = createFileRoute("/unsubscribe")({
   validateSearch: SearchSchema,
   component: UnsubscribePage,
   head: () => ({
-    meta: [
-      { title: "Unsubscribe - KovaGPT" },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: [{ title: "Unsubscribe - KovaGPT" }, { name: "robots", content: "noindex" }],
   }),
 });
 
@@ -108,7 +105,9 @@ function UnsubscribePage() {
               You'll stop receiving non-essential emails from KovaGPT. Account and security messages
               will still be delivered.
             </p>
-            <Button onClick={confirm} className="w-full">Confirm unsubscribe</Button>
+            <Button onClick={confirm} className="w-full">
+              Confirm unsubscribe
+            </Button>
           </>
         )}
         {status.kind === "submitting" && (
@@ -138,7 +137,8 @@ function UnsubscribePage() {
             <XCircle className="mx-auto w-8 h-8 text-muted-foreground mb-2" />
             <h1 className="text-xl font-semibold mb-2">Link not valid</h1>
             <p className="text-sm text-muted-foreground">
-              This unsubscribe link is invalid or has expired. Please use the link from the latest email.
+              This unsubscribe link is invalid or has expired. Please use the link from the latest
+              email.
             </p>
           </>
         )}

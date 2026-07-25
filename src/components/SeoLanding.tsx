@@ -25,8 +25,12 @@ export function SeoLanding({ h1, intro, benefits, prompts, ctas, details, faq }:
             <span className="font-semibold">KovaGPT</span>
           </Link>
           <nav className="flex items-center gap-4 text-sm">
-            <Link to="/pricing" className="hover:underline">Pricing</Link>
-            <Link to="/modes" className="hover:underline">Modes</Link>
+            <Link to="/pricing" className="hover:underline">
+              Pricing
+            </Link>
+            <Link to="/modes" className="hover:underline">
+              Modes
+            </Link>
           </nav>
         </div>
       </header>
@@ -55,7 +59,10 @@ export function SeoLanding({ h1, intro, benefits, prompts, ctas, details, faq }:
           <h2 className="text-xl font-semibold mb-3">What you can do</h2>
           <ul className="space-y-2 text-sm sm:text-base text-muted-foreground">
             {benefits.map((b) => (
-              <li key={b} className="flex gap-2"><span aria-hidden>•</span><span>{b}</span></li>
+              <li key={b} className="flex gap-2">
+                <span aria-hidden>•</span>
+                <span>{b}</span>
+              </li>
             ))}
           </ul>
         </section>
@@ -73,7 +80,9 @@ export function SeoLanding({ h1, intro, benefits, prompts, ctas, details, faq }:
           <h2 className="text-xl font-semibold mb-3">Example prompts</h2>
           <ul className="space-y-2 text-sm sm:text-base text-muted-foreground">
             {prompts.map((p) => (
-              <li key={p} className="rounded-lg border border-border bg-card px-3 py-2">{p}</li>
+              <li key={p} className="rounded-lg border border-border bg-card px-3 py-2">
+                {p}
+              </li>
             ))}
           </ul>
         </section>
@@ -86,7 +95,9 @@ export function SeoLanding({ h1, intro, benefits, prompts, ctas, details, faq }:
                 <details key={f.q} className="group px-4 py-3">
                   <summary className="cursor-pointer list-none font-medium text-foreground flex items-center justify-between">
                     <span>{f.q}</span>
-                    <span className="ml-3 text-muted-foreground transition group-open:rotate-45">+</span>
+                    <span className="ml-3 text-muted-foreground transition group-open:rotate-45">
+                      +
+                    </span>
                   </summary>
                   <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{f.a}</p>
                 </details>
@@ -96,11 +107,21 @@ export function SeoLanding({ h1, intro, benefits, prompts, ctas, details, faq }:
         )}
 
         <nav className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-          <Link to="/" className="underline hover:text-foreground">KovaGPT</Link>
-          <Link to="/modes" className="underline hover:text-foreground">Modes</Link>
-          <Link to="/images" className="underline hover:text-foreground">Images</Link>
-          <Link to="/pricing" className="underline hover:text-foreground">Pricing</Link>
-          <Link to="/getting-started" className="underline hover:text-foreground">Getting Started</Link>
+          <Link to="/" className="underline hover:text-foreground">
+            KovaGPT
+          </Link>
+          <Link to="/modes" className="underline hover:text-foreground">
+            Modes
+          </Link>
+          <Link to="/images" className="underline hover:text-foreground">
+            Images
+          </Link>
+          <Link to="/pricing" className="underline hover:text-foreground">
+            Pricing
+          </Link>
+          <Link to="/getting-started" className="underline hover:text-foreground">
+            Getting Started
+          </Link>
         </nav>
       </main>
 
@@ -118,7 +139,9 @@ export function seoLandingHead(opts: {
 }) {
   const url = `https://kovagpt.com${opts.path}`;
   const ogImage = opts.ogImage
-    ? (opts.ogImage.startsWith("http") ? opts.ogImage : `https://kovagpt.com${opts.ogImage}`)
+    ? opts.ogImage.startsWith("http")
+      ? opts.ogImage
+      : `https://kovagpt.com${opts.ogImage}`
     : "https://kovagpt.com/og/home.jpg";
   const scripts: { type: string; children: string }[] = [
     {

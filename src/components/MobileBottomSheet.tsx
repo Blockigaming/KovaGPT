@@ -100,7 +100,11 @@ export function MobileBottomSheet({
   };
   const onTouchEnd = () => {
     if (dragY > 90) {
-      try { navigator.vibrate?.(10); } catch { /* ignore */ }
+      try {
+        navigator.vibrate?.(10);
+      } catch {
+        /* ignore */
+      }
       onOpenChange(false);
     }
     setDragY(0);
@@ -108,7 +112,8 @@ export function MobileBottomSheet({
   };
 
   const transform = dragY > 0 ? `translateY(${dragY}px)` : undefined;
-  const transition = reduceMotion || dragY > 0 ? "none" : "transform 220ms cubic-bezier(0.32, 0.72, 0, 1)";
+  const transition =
+    reduceMotion || dragY > 0 ? "none" : "transform 220ms cubic-bezier(0.32, 0.72, 0, 1)";
 
   return (
     <div
@@ -136,7 +141,9 @@ export function MobileBottomSheet({
           <div className="w-10 h-1.5 rounded-full bg-muted-foreground/40" aria-hidden="true" />
         </div>
         {title && (
-          <div className="px-4 pb-2 text-sm font-semibold text-muted-foreground shrink-0">{title}</div>
+          <div className="px-4 pb-2 text-sm font-semibold text-muted-foreground shrink-0">
+            {title}
+          </div>
         )}
         <div className="overflow-y-auto overscroll-contain px-2 pb-4">{children}</div>
       </div>

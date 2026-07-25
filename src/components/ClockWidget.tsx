@@ -28,16 +28,51 @@ export function ClockWidget({ size = 72 }: { size?: number }) {
         const y1 = cy - Math.cos(angle) * (r - 4);
         const x2 = cx + Math.sin(angle) * (r - 1);
         const y2 = cy - Math.cos(angle) * (r - 1);
-        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(255,255,255,0.35)" strokeWidth={i % 3 === 0 ? 1.5 : 0.75} strokeLinecap="round" />;
+        return (
+          <line
+            key={i}
+            x1={x1}
+            y1={y1}
+            x2={x2}
+            y2={y2}
+            stroke="rgba(255,255,255,0.35)"
+            strokeWidth={i % 3 === 0 ? 1.5 : 0.75}
+            strokeLinecap="round"
+          />
+        );
       })}
       <g transform={`rotate(${hourDeg} ${cx} ${cy})`}>
-        <line x1={cx} y1={cy} x2={cx} y2={cy - r * 0.5} stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
+        <line
+          x1={cx}
+          y1={cy}
+          x2={cx}
+          y2={cy - r * 0.5}
+          stroke="#fff"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
       </g>
       <g transform={`rotate(${minDeg} ${cx} ${cy})`}>
-        <line x1={cx} y1={cy} x2={cx} y2={cy - r * 0.75} stroke="#fff" strokeWidth="1.75" strokeLinecap="round" />
+        <line
+          x1={cx}
+          y1={cy}
+          x2={cx}
+          y2={cy - r * 0.75}
+          stroke="#fff"
+          strokeWidth="1.75"
+          strokeLinecap="round"
+        />
       </g>
       <g transform={`rotate(${secDeg} ${cx} ${cy})`}>
-        <line x1={cx} y1={cy + 6} x2={cx} y2={cy - r * 0.85} stroke="#3b82f6" strokeWidth="1" strokeLinecap="round" />
+        <line
+          x1={cx}
+          y1={cy + 6}
+          x2={cx}
+          y2={cy - r * 0.85}
+          stroke="#3b82f6"
+          strokeWidth="1"
+          strokeLinecap="round"
+        />
       </g>
       <circle cx={cx} cy={cy} r={2} fill="#3b82f6" />
     </svg>

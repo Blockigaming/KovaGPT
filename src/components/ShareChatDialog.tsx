@@ -1,4 +1,10 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -7,7 +13,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { shareChat } from "@/lib/shared-chats.functions";
 import type { Conversation } from "@/lib/chat-store";
 import { useUser } from "@/components/auth/ClerkSafe";
-
 
 export function ShareChatDialog({
   open,
@@ -23,7 +28,6 @@ export function ShareChatDialog({
   const share = useServerFn(shareChat);
   const { user } = useUser();
   const myEmail = (user?.primaryEmailAddress?.emailAddress ?? "").trim().toLowerCase();
-
 
   const submit = async () => {
     if (!conversation) return;
@@ -92,8 +96,8 @@ export function ShareChatDialog({
             />
           </div>
           <p className="text-[11px] text-muted-foreground">
-            The recipient needs a KovaGPT account using this email to view the chat. Sharing creates a
-            view-only snapshot. Future replies in your chat won't update theirs.
+            The recipient needs a KovaGPT account using this email to view the chat. Sharing creates
+            a view-only snapshot. Future replies in your chat won't update theirs.
           </p>
         </div>
         <div className="flex justify-end gap-2 pt-2">

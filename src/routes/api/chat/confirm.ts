@@ -22,7 +22,10 @@ export const Route = createFileRoute("/api/chat/confirm")({
         const id = String(body.action_id ?? "");
         const decision = body.decision;
         if (!id || (decision !== "confirm" && decision !== "cancel")) {
-          return Response.json({ ok: false, error: "Missing action_id or decision" }, { status: 400 });
+          return Response.json(
+            { ok: false, error: "Missing action_id or decision" },
+            { status: 400 },
+          );
         }
         if (decision === "cancel") {
           const ok = await cancelPendingAction(auth.userId, id);

@@ -1,12 +1,36 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Copy, Check, ImageIcon, Loader2, Bookmark, FileEdit, Code2, Eye, MoreHorizontal, Share2, Pencil, RefreshCw, ThumbsUp, ThumbsDown, GitBranch, Globe, Mail, Volume2 } from "lucide-react";
+import {
+  Copy,
+  Check,
+  ImageIcon,
+  Loader2,
+  Bookmark,
+  FileEdit,
+  Code2,
+  Eye,
+  MoreHorizontal,
+  Share2,
+  Pencil,
+  RefreshCw,
+  ThumbsUp,
+  ThumbsDown,
+  GitBranch,
+  Globe,
+  Mail,
+} from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileBottomSheet } from "./MobileBottomSheet";
 import { useLayout } from "@/hooks/use-mobile";
 import type { Message } from "@/lib/chat-store";
 import { ChatChart, extractCharts } from "./ChatChart";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { saveToLibrary } from "@/lib/library.functions";
@@ -31,9 +55,7 @@ function cleanAssistantText(text: string): string {
 // "Send email" button can prefill Gmail / Outlook compose windows. Handles
 // three shapes: an explicit "Subject: ..." line, a fenced block labelled
 // email, or a message that opens with a greeting like Hi/Hello/Dear.
-export function extractEmailFromMessage(
-  raw: string,
-): { subject: string; body: string } | null {
+export function extractEmailFromMessage(raw: string): { subject: string; body: string } | null {
   if (!raw) return null;
   const text = raw.replace(/\r\n/g, "\n").trim();
 
@@ -63,8 +85,13 @@ export function extractEmailFromMessage(
 
   // 3) Greeting heuristic - starts with Hi/Hello/Dear/Hey <Name>, and has
   // enough body + a signoff to feel like a real email draft.
-  const greeting = text.match(/^(hi|hello|dear|hey|good\s+(morning|afternoon|evening))\b[^\n]{0,60},?\s*\n/i);
-  const signoff = /\n\s*(best|thanks|thank you|regards|sincerely|cheers|kind regards|warmly|talk soon)[,\s]/i.test(text);
+  const greeting = text.match(
+    /^(hi|hello|dear|hey|good\s+(morning|afternoon|evening))\b[^\n]{0,60},?\s*\n/i,
+  );
+  const signoff =
+    /\n\s*(best|thanks|thank you|regards|sincerely|cheers|kind regards|warmly|talk soon)[,\s]/i.test(
+      text,
+    );
   if (greeting && signoff && text.length > 80) {
     return { subject: "", body: text };
   }
@@ -123,9 +150,11 @@ function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store
     if (tool.includes("image")) label = "Creating Image";
     else if (tool.includes("gmail") || tool.includes("mail")) label = "Checking Gmail";
     else if (tool.includes("calendar")) label = "Checking Calendar";
-    else if (tool.includes("drive") || tool.includes("file") || tool.includes("read")) label = "Reading documents";
+    else if (tool.includes("drive") || tool.includes("file") || tool.includes("read"))
+      label = "Reading documents";
     else if (tool.includes("memory") || tool.includes("recall")) label = "Searching memory";
-    else if (tool.includes("search") || tool.includes("web") || tool.includes("browse")) label = "Searching the web";
+    else if (tool.includes("search") || tool.includes("web") || tool.includes("browse"))
+      label = "Searching the web";
     else if (tool.includes("write")) label = "Writing draft";
     else label = last?.label ?? "Working";
   }
@@ -146,8 +175,6 @@ function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store
     </div>
   );
 }
-
-
 
 function ChatMessageInner({
   message,
@@ -172,14 +199,18 @@ function ChatMessageInner({
     try {
       const v = localStorage.getItem(feedbackKey);
       if (v === "up" || v === "down") setFeedback(v);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }, [feedbackKey]);
   const persistFeedback = (next: "up" | "down" | null) => {
     setFeedback(next);
     try {
       if (next) localStorage.setItem(feedbackKey, next);
       else localStorage.removeItem(feedbackKey);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
@@ -193,7 +224,11 @@ function ChatMessageInner({
     if (pressTimer.current) window.clearTimeout(pressTimer.current);
     pressTimer.current = window.setTimeout(() => {
       pressFired.current = true;
-      try { navigator.vibrate?.(12); } catch { /* ignore */ }
+      try {
+        navigator.vibrate?.(12);
+      } catch {
+        /* ignore */
+      }
       setMobileSheetOpen(true);
     }, 480);
   }, [isMobile]);
@@ -204,7 +239,6 @@ function ChatMessageInner({
     }
   }, []);
 
-
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -212,8 +246,6 @@ function ChatMessageInner({
   const { isSignedIn } = useUser();
 
   const saveFn = useServerFn(saveToLibrary);
-
-
 
   const artifactKind = useMemo(
     () => (isUser ? null : detectArtifactKind(message.content || "")),
@@ -239,18 +271,6 @@ function ChatMessageInner({
     setTimeout(() => setCopied(false), 1500);
   };
 
-  const readAloud = () => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      toast.error("Read aloud is not supported in this browser.");
-      return;
-    }
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(cleanAssistantText(message.content));
-    utterance.rate = 1;
-    utterance.pitch = 1;
-    window.speechSynthesis.speak(utterance);
-  };
-
   const saveItem = async () => {
     // Guests can save to a local-only library (kept in localStorage). The
     // ClerkSafe sign-in prompt is no longer shown here.
@@ -260,7 +280,9 @@ function ChatMessageInner({
     let savedIds: string[] = [];
     try {
       savedIds = JSON.parse(localStorage.getItem(dedupKey) || "[]");
-    } catch { savedIds = []; }
+    } catch {
+      savedIds = [];
+    }
     if (message.id && savedIds.includes(message.id)) {
       setSaved(true);
       toast.info("Already in your Library.");
@@ -298,7 +320,9 @@ function ChatMessageInner({
         try {
           savedIds.push(message.id);
           localStorage.setItem(dedupKey, JSON.stringify(savedIds.slice(-500)));
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
       setSaved(true);
       toast.success("Saved to Library");
@@ -310,7 +334,6 @@ function ChatMessageInner({
     }
   };
 
-
   return (
     <div className="w-full px-4 lg:px-20 py-2.5 lg:py-3 group animate-fade-in text-[15px] leading-[1.6] lg:text-[16px] lg:leading-[1.65] [[data-sidebar=closed]_&]:lg:text-[17px] [[data-sidebar=closed]_&]:lg:py-4">
       {isUser ? (
@@ -318,14 +341,20 @@ function ChatMessageInner({
           <div className="max-w-[85%] lg:max-w-[70%] flex flex-col items-end min-w-0">
             {message.attachments && message.attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2 justify-end">
-                {message.attachments.map((a, i) => (
-                  <img
-                    key={i}
-                    src={a.dataUrl}
-                    alt={message.content?.trim() ? `User-uploaded image: ${message.content.slice(0, 120)}` : "User-uploaded image attached to message"}
-                    className="max-h-64 rounded-2xl border border-border"
-                  />
-                ))}
+                {message.attachments
+                  .filter((a): a is Extract<typeof a, { kind: "image" }> => a.kind === "image")
+                  .map((a, i) => (
+                    <img
+                      key={i}
+                      src={a.dataUrl}
+                      alt={
+                        message.content?.trim()
+                          ? `User-uploaded image: ${message.content.slice(0, 120)}`
+                          : "User-uploaded image attached to message"
+                      }
+                      className="max-h-64 rounded-2xl border border-border"
+                    />
+                  ))}
               </div>
             )}
             {message.content && (
@@ -403,7 +432,6 @@ function ChatMessageInner({
                 </div>
               ) : streaming && !message.content ? (
                 <StreamingStatus activities={message.activities} />
-              
               ) : (
                 (() => {
                   const cleaned = cleanAssistantText(message.content);
@@ -415,7 +443,9 @@ function ChatMessageInner({
                         p.kind === "chart" ? (
                           <ChatChart key={i} spec={p.spec} />
                         ) : p.value.trim() ? (
-                          <ReactMarkdown key={i} remarkPlugins={[remarkGfm]}>{p.value}</ReactMarkdown>
+                          <ReactMarkdown key={i} remarkPlugins={[remarkGfm]}>
+                            {p.value}
+                          </ReactMarkdown>
                         ) : null,
                       )}
                     </div>
@@ -427,7 +457,12 @@ function ChatMessageInner({
                     return <LongResponseCard content={cleaned}>{md}</LongResponseCard>;
                   }
                   const chip = detectInfoChip(cleaned);
-                  if (chip) return <InfoChip kind={chip} rawText={cleaned}>{md}</InfoChip>;
+                  if (chip)
+                    return (
+                      <InfoChip kind={chip} rawText={cleaned}>
+                        {md}
+                      </InfoChip>
+                    );
                   return md;
                 })()
               )}
@@ -454,21 +489,15 @@ function ChatMessageInner({
                 )}
               </button>
               <button
-                onClick={readAloud}
-                className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
-                title="Read aloud"
-                aria-label="Read aloud"
-              >
-                <Volume2 className="w-4 h-4" />
-              </button>
-              <button
                 onClick={() => {
                   const next = feedback === "up" ? null : "up";
                   persistFeedback(next);
                   if (next) toast.success("Thanks for the feedback");
                 }}
                 className={`inline-flex items-center justify-center p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95 ${
-                  feedback === "up" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                  feedback === "up"
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
                 title="Good response"
                 aria-label="Good response"
@@ -483,7 +512,9 @@ function ChatMessageInner({
                   if (next) toast.success("Thanks, we'll improve");
                 }}
                 className={`inline-flex items-center justify-center p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95 ${
-                  feedback === "down" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                  feedback === "down"
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
                 title="Bad response"
                 aria-label="Bad response"
@@ -498,7 +529,9 @@ function ChatMessageInner({
                     try {
                       await navigator.share({ text, title: "KovaGPT response" });
                       return;
-                    } catch { /* user cancelled */ }
+                    } catch {
+                      /* user cancelled */
+                    }
                   }
                   try {
                     await navigator.clipboard.writeText(text);
@@ -551,9 +584,6 @@ function ChatMessageInner({
                 </DropdownMenu>
               )}
 
-
-
-
               {/* Everything else lives behind the 3-dot menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -583,7 +613,6 @@ function ChatMessageInner({
                     <RefreshCw className="w-4 h-4 mr-2" /> Retry
                   </DropdownMenuItem>
                   <DropdownMenuItem
-
                     onClick={() => {
                       if (onBranch) onBranch();
                       else toast.message("Branching coming to this chat");
@@ -594,7 +623,11 @@ function ChatMessageInner({
                   <DropdownMenuItem
                     onClick={() => {
                       const q = encodeURIComponent(message.content.slice(0, 300));
-                      window.open(`https://www.google.com/search?q=${q}`, "_blank", "noopener,noreferrer");
+                      window.open(
+                        `https://www.google.com/search?q=${q}`,
+                        "_blank",
+                        "noopener,noreferrer",
+                      );
                     }}
                   >
                     <Globe className="w-4 h-4 mr-2" /> Search the web
@@ -638,9 +671,19 @@ function ChatMessageInner({
                       <DropdownMenuSeparator />
                       {[
                         { label: "Continue", prompt: "Continue from where you left off." },
-                        { label: "Shorter", prompt: "Rewrite your last response to be shorter, keeping the key points." },
-                        { label: "Longer", prompt: "Expand your last response with more detail and examples." },
-                        { label: "Improve", prompt: "Improve the wording and clarity of your last response." },
+                        {
+                          label: "Shorter",
+                          prompt:
+                            "Rewrite your last response to be shorter, keeping the key points.",
+                        },
+                        {
+                          label: "Longer",
+                          prompt: "Expand your last response with more detail and examples.",
+                        },
+                        {
+                          label: "Improve",
+                          prompt: "Improve the wording and clarity of your last response.",
+                        },
                       ].map((a) => (
                         <DropdownMenuItem key={a.label} onClick={() => onFollowUp(a.prompt)}>
                           {a.label}
@@ -672,27 +715,109 @@ function ChatMessageInner({
         >
           <div className="flex flex-col py-1">
             {[
-              { label: copied ? "Copied" : "Copy", icon: Copy, onClick: () => { copy(); setMobileSheetOpen(false); } },
-              { label: "Read aloud", icon: Volume2, onClick: () => { readAloud(); setMobileSheetOpen(false); } },
-              { label: feedback === "up" ? "Remove good rating" : "Good response", icon: ThumbsUp, onClick: () => { persistFeedback(feedback === "up" ? null : "up"); setMobileSheetOpen(false); } },
-              { label: feedback === "down" ? "Remove bad rating" : "Bad response", icon: ThumbsDown, onClick: () => { persistFeedback(feedback === "down" ? null : "down"); setMobileSheetOpen(false); } },
-              { label: "Share", icon: Share2, onClick: async () => {
+              {
+                label: copied ? "Copied" : "Copy",
+                icon: Copy,
+                onClick: () => {
+                  copy();
+                  setMobileSheetOpen(false);
+                },
+              },
+              {
+                label: feedback === "up" ? "Remove good rating" : "Good response",
+                icon: ThumbsUp,
+                onClick: () => {
+                  persistFeedback(feedback === "up" ? null : "up");
+                  setMobileSheetOpen(false);
+                },
+              },
+              {
+                label: feedback === "down" ? "Remove bad rating" : "Bad response",
+                icon: ThumbsDown,
+                onClick: () => {
+                  persistFeedback(feedback === "down" ? null : "down");
+                  setMobileSheetOpen(false);
+                },
+              },
+              {
+                label: "Share",
+                icon: Share2,
+                onClick: async () => {
                   setMobileSheetOpen(false);
                   const text = message.content;
                   if (typeof navigator !== "undefined" && navigator.share) {
-                    try { await navigator.share({ text, title: "KovaGPT response" }); return; } catch { /* cancel */ }
+                    try {
+                      await navigator.share({ text, title: "KovaGPT response" });
+                      return;
+                    } catch {
+                      /* cancel */
+                    }
                   }
-                  try { await navigator.clipboard.writeText(text); toast.success("Response copied"); } catch { toast.error("Couldn't share"); }
-                } },
-              ...(onEdit ? [{ label: "Edit", icon: Pencil, onClick: () => { onEdit(); setMobileSheetOpen(false); } }] : []),
-              ...(onRetry ? [{ label: "Retry", icon: RefreshCw, onClick: () => { onRetry(); setMobileSheetOpen(false); } }] : []),
-              ...(onBranch ? [{ label: "Branch in new chat", icon: GitBranch, onClick: () => { onBranch(); setMobileSheetOpen(false); } }] : []),
-              { label: "Search the web", icon: Globe, onClick: () => {
+                  try {
+                    await navigator.clipboard.writeText(text);
+                    toast.success("Response copied");
+                  } catch {
+                    toast.error("Couldn't share");
+                  }
+                },
+              },
+              ...(onEdit
+                ? [
+                    {
+                      label: "Edit",
+                      icon: Pencil,
+                      onClick: () => {
+                        onEdit();
+                        setMobileSheetOpen(false);
+                      },
+                    },
+                  ]
+                : []),
+              ...(onRetry
+                ? [
+                    {
+                      label: "Retry",
+                      icon: RefreshCw,
+                      onClick: () => {
+                        onRetry();
+                        setMobileSheetOpen(false);
+                      },
+                    },
+                  ]
+                : []),
+              ...(onBranch
+                ? [
+                    {
+                      label: "Branch in new chat",
+                      icon: GitBranch,
+                      onClick: () => {
+                        onBranch();
+                        setMobileSheetOpen(false);
+                      },
+                    },
+                  ]
+                : []),
+              {
+                label: "Search the web",
+                icon: Globe,
+                onClick: () => {
                   const q = encodeURIComponent(message.content.slice(0, 300));
-                  window.open(`https://www.google.com/search?q=${q}`, "_blank", "noopener,noreferrer");
+                  window.open(
+                    `https://www.google.com/search?q=${q}`,
+                    "_blank",
+                    "noopener,noreferrer",
+                  );
                   setMobileSheetOpen(false);
-                } },
-              { label: saved ? "Saved" : "Save to Library", icon: Bookmark, onClick: () => { saveItem(); setMobileSheetOpen(false); } },
+                },
+              },
+              {
+                label: saved ? "Saved" : "Save to Library",
+                icon: Bookmark,
+                onClick: () => {
+                  saveItem();
+                  setMobileSheetOpen(false);
+                },
+              },
             ].map((a) => (
               <button
                 key={a.label}
@@ -711,4 +836,3 @@ function ChatMessageInner({
 }
 
 export const ChatMessage = memo(ChatMessageInner);
-

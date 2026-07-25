@@ -2,6 +2,18 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
+type SupabaseQueryLike = {
+  from: (table: string) => SupabaseQueryLike;
+  select: (columns?: string) => SupabaseQueryLike;
+  insert: (values: unknown) => SupabaseQueryLike;
+  update: (values: unknown) => SupabaseQueryLike;
+  eq: (column: string, value: unknown) => SupabaseQueryLike;
+  in: (column: string, values: unknown[]) => SupabaseQueryLike;
+  order: (column: string, options?: unknown) => SupabaseQueryLike;
+  single: () => Promise<{ data: unknown; error: { message: string } | null }>;
+  maybeSingle: () => Promise<{ data: unknown; error: { message: string } | null }>;
+};
+
 // ============= Types =============
 export type TaskStatus = "todo" | "doing" | "done";
 export type ProjectTask = {
@@ -46,17 +58,20 @@ export type ProjectActivity = {
 };
 
 async function logActivity(
-  supabase: any,
+  supabase: unknown,
   project_id: string,
   actor_id: string,
   kind: string,
   summary: string,
 ) {
   try {
-    await supabase.from("project_activity").insert({ project_id, actor_id, kind, summary });
-  } catch { /* ignore */ }
+    await (supabase as SupabaseQueryLike)
+      .from("project_activity")
+      .insert({ project_id, actor_id, kind, summary });
+  } catch {
+    /* ignore */
+  }
 }
-
 
 // ============= NOTES =============
 export const getProjectNote = createServerFn({ method: "GET" })
@@ -69,15 +84,24 @@ export const getProjectNote = createServerFn({ method: "GET" })
       .eq("project_id", data.project_id)
       .maybeSingle();
     if (row) return row as ProjectNote;
-    return { id: "", project_id: data.project_id, content: "", updated_at: new Date().toISOString() };
+    return {
+      id: "",
+      project_id: data.project_id,
+      content: "",
+      updated_at: new Date().toISOString(),
+    };
   });
 
 export const saveProjectNote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({
-    project_id: z.string().uuid(),
-    content: z.string().max(200_000),
-  }).parse(i))
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        project_id: z.string().uuid(),
+        content: z.string().max(200_000),
+      })
+      .parse(i),
+  )
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     const { error } = await context.supabase
       .from("project_notes")
@@ -106,11 +130,15 @@ export const listTasks = createServerFn({ method: "GET" })
 
 export const createTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({
-    project_id: z.string().uuid(),
-    title: z.string().trim().min(1).max(500),
-    due_date: z.string().nullable().optional(),
-  }).parse(i))
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        project_id: z.string().uuid(),
+        title: z.string().trim().min(1).max(500),
+        due_date: z.string().nullable().optional(),
+      })
+      .parse(i),
+  )
   .handler(async ({ data, context }): Promise<ProjectTask> => {
     const { data: max } = await context.supabase
       .from("project_tasks")
@@ -132,25 +160,35 @@ export const createTask = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error) throw new Error(error.message);
-    await logActivity(context.supabase, data.project_id, context.userId, "task_created", `Added task “${data.title}”`);
+    await logActivity(
+      context.supabase,
+      data.project_id,
+      context.userId,
+      "task_created",
+      `Added task “${data.title}”`,
+    );
     return row as ProjectTask;
   });
 
 export const updateTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({
-    id: z.string().uuid(),
-    title: z.string().trim().min(1).max(500).optional(),
-    status: z.enum(["todo", "doing", "done"]).optional(),
-    due_date: z.string().nullable().optional(),
-    position: z.number().int().optional(),
-  }).parse(i))
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        title: z.string().trim().min(1).max(500).optional(),
+        status: z.enum(["todo", "doing", "done"]).optional(),
+        due_date: z.string().nullable().optional(),
+        position: z.number().int().optional(),
+      })
+      .parse(i),
+  )
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     const { id, ...rest } = data;
     const patch: Record<string, unknown> = { ...rest };
     if (rest.status === "done") patch.completed_at = new Date().toISOString();
     if (rest.status && rest.status !== "done") patch.completed_at = null;
-    const { data: row, error } = await (context.supabase as any)
+    const { data: row, error } = await (context.supabase as unknown as SupabaseQueryLike)
       .from("project_tasks")
       .update(patch)
 
@@ -158,18 +196,29 @@ export const updateTask = createServerFn({ method: "POST" })
       .select("project_id, title")
       .single();
     if (error) throw new Error(error.message);
+    const updatedTask = row as { project_id: string; title: string };
     if (rest.status === "done") {
-      await logActivity(context.supabase, row.project_id, context.userId, "task_done", `Completed task “${row.title}”`);
+      await logActivity(
+        context.supabase,
+        updatedTask.project_id,
+        context.userId,
+        "task_done",
+        `Completed task “${updatedTask.title}”`,
+      );
     }
     return { ok: true };
   });
 
 export const reorderTasks = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({
-    project_id: z.string().uuid(),
-    order: z.array(z.string().uuid()).max(500),
-  }).parse(i))
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        project_id: z.string().uuid(),
+        order: z.array(z.string().uuid()).max(500),
+      })
+      .parse(i),
+  )
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     // update positions sequentially
     for (let idx = 0; idx < data.order.length; idx++) {
@@ -187,20 +236,34 @@ export const deleteTask = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     const { data: row } = await context.supabase
-      .from("project_tasks").select("project_id, title").eq("id", data.id).maybeSingle();
+      .from("project_tasks")
+      .select("project_id, title")
+      .eq("id", data.id)
+      .maybeSingle();
     const { error } = await context.supabase.from("project_tasks").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
-    if (row) await logActivity(context.supabase, row.project_id, context.userId, "task_deleted", `Removed task “${row.title}”`);
+    if (row)
+      await logActivity(
+        context.supabase,
+        row.project_id,
+        context.userId,
+        "task_deleted",
+        `Removed task “${row.title}”`,
+      );
     return { ok: true };
   });
 
 // ============= FILES =============
 export const listFiles = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({
-    project_id: z.string().uuid(),
-    kind: z.enum(["file", "image", "all"]).default("all"),
-  }).parse(i))
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        project_id: z.string().uuid(),
+        kind: z.enum(["file", "image", "all"]).default("all"),
+      })
+      .parse(i),
+  )
   .handler(async ({ data, context }): Promise<ProjectFile[]> => {
     let q = context.supabase
       .from("project_files")
@@ -223,31 +286,41 @@ export const listFiles = createServerFn({ method: "GET" })
 
 export const registerUploadedFile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({
-    project_id: z.string().uuid(),
-    name: z.string().min(1).max(500),
-    storage_path: z.string().min(1).max(1000),
-    mime_type: z.string().max(200).nullable().optional(),
-    size_bytes: z.number().int().nonnegative(),
-    kind: z.enum(["file", "image"]).default("file"),
-  }).parse(i))
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        project_id: z.string().uuid(),
+        name: z.string().min(1).max(500),
+        storage_path: z.string().min(1).max(1000),
+        mime_type: z.string().max(200).nullable().optional(),
+        size_bytes: z.number().int().nonnegative(),
+        kind: z.enum(["file", "image"]).default("file"),
+      })
+      .parse(i),
+  )
   .handler(async ({ data, context }): Promise<{ id: string }> => {
     // Enforce per-plan file cap per project
     const { PROJECT_LIMITS } = await import("./projects.functions");
-    const s = context.supabase as unknown as { rpc: (n: string, a: Record<string, unknown>) => Promise<{ data: unknown }> };
+    const s = context.supabase as unknown as {
+      rpc: (n: string, a: Record<string, unknown>) => Promise<{ data: unknown }>;
+    };
     let tier: "free" | "plus" | "pro" = "free";
     try {
       const { data: t } = await s.rpc("user_plan_tier", { _user_id: context.userId });
       const v = String(t ?? "free");
       if (v === "pro" || v === "plus") tier = v;
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     const cap = PROJECT_LIMITS[tier].filesPerProject;
     const { count } = await context.supabase
       .from("project_files")
       .select("id", { count: "exact", head: true })
       .eq("project_id", data.project_id);
     if ((count ?? 0) >= cap) {
-      throw new Error(`Your plan allows up to ${cap} files per project. Remove one or upgrade to add more.`);
+      throw new Error(
+        `Your plan allows up to ${cap} files per project. Remove one or upgrade to add more.`,
+      );
     }
     const { data: row, error } = await context.supabase
       .from("project_files")
@@ -264,7 +337,9 @@ export const registerUploadedFile = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
     await logActivity(
-      context.supabase, data.project_id, context.userId,
+      context.supabase,
+      data.project_id,
+      context.userId,
       data.kind === "image" ? "image_added" : "file_added",
       `Uploaded ${data.kind === "image" ? "image" : "file"} “${data.name}”`,
     );
@@ -274,7 +349,9 @@ export const registerUploadedFile = createServerFn({ method: "POST" })
       if (data.kind === "file" && isTextIndexable(data.mime_type ?? null, data.name)) {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         await indexProjectFile({
-          supabaseAdmin: supabaseAdmin as unknown as Parameters<typeof indexProjectFile>[0]["supabaseAdmin"],
+          supabaseAdmin: supabaseAdmin as unknown as Parameters<
+            typeof indexProjectFile
+          >[0]["supabaseAdmin"],
           project_id: data.project_id,
           file_id: row.id,
           storage_path: data.storage_path,
@@ -282,32 +359,38 @@ export const registerUploadedFile = createServerFn({ method: "POST" })
           mime_type: data.mime_type ?? null,
         });
       }
-    } catch (e) { console.warn("[registerUploadedFile] index", (e as Error)?.message); }
+    } catch (e) {
+      console.warn("[registerUploadedFile] index", (e as Error)?.message);
+    }
     return { id: row.id };
   });
 
 export const reindexProjectFile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
-  .handler(async ({ data, context }): Promise<{ indexed: boolean; chunks: number; reason?: string }> => {
-    const { data: row, error } = await context.supabase
-      .from("project_files")
-      .select("id, project_id, name, storage_path, mime_type, kind")
-      .eq("id", data.id)
-      .maybeSingle();
-    if (error || !row) throw new Error("File not found");
-    if (row.kind !== "file") return { indexed: false, chunks: 0, reason: "not_a_document" };
-    const { indexProjectFile } = await import("./project-rag.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    return indexProjectFile({
-      supabaseAdmin: supabaseAdmin as unknown as Parameters<typeof indexProjectFile>[0]["supabaseAdmin"],
-      project_id: row.project_id,
-      file_id: row.id,
-      storage_path: row.storage_path,
-      name: row.name,
-      mime_type: row.mime_type ?? null,
-    });
-  });
+  .handler(
+    async ({ data, context }): Promise<{ indexed: boolean; chunks: number; reason?: string }> => {
+      const { data: row, error } = await context.supabase
+        .from("project_files")
+        .select("id, project_id, name, storage_path, mime_type, kind")
+        .eq("id", data.id)
+        .maybeSingle();
+      if (error || !row) throw new Error("File not found");
+      if (row.kind !== "file") return { indexed: false, chunks: 0, reason: "not_a_document" };
+      const { indexProjectFile } = await import("./project-rag.server");
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      return indexProjectFile({
+        supabaseAdmin: supabaseAdmin as unknown as Parameters<
+          typeof indexProjectFile
+        >[0]["supabaseAdmin"],
+        project_id: row.project_id,
+        file_id: row.id,
+        storage_path: row.storage_path,
+        name: row.name,
+        mime_type: row.mime_type ?? null,
+      });
+    },
+  );
 
 export const deleteProjectFile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -322,7 +405,13 @@ export const deleteProjectFile = createServerFn({ method: "POST" })
     await context.supabase.storage.from("project-files").remove([row.storage_path]);
     const { error } = await context.supabase.from("project_files").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
-    await logActivity(context.supabase, row.project_id, context.userId, "file_deleted", `Removed “${row.name}”`);
+    await logActivity(
+      context.supabase,
+      row.project_id,
+      context.userId,
+      "file_deleted",
+      `Removed “${row.name}”`,
+    );
     return { ok: true };
   });
 
@@ -342,10 +431,14 @@ export const listMemory = createServerFn({ method: "GET" })
 
 export const addMemory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({
-    project_id: z.string().uuid(),
-    content: z.string().trim().min(1).max(2000),
-  }).parse(i))
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        project_id: z.string().uuid(),
+        content: z.string().trim().min(1).max(2000),
+      })
+      .parse(i),
+  )
   .handler(async ({ data, context }): Promise<ProjectMemoryItem> => {
     const { data: row, error } = await context.supabase
       .from("project_memory")
@@ -353,7 +446,13 @@ export const addMemory = createServerFn({ method: "POST" })
       .select("*")
       .single();
     if (error) throw new Error(error.message);
-    await logActivity(context.supabase, data.project_id, context.userId, "memory_added", "Added a memory");
+    await logActivity(
+      context.supabase,
+      data.project_id,
+      context.userId,
+      "memory_added",
+      "Added a memory",
+    );
     return row as ProjectMemoryItem;
   });
 
@@ -362,10 +461,20 @@ export const deleteMemory = createServerFn({ method: "POST" })
   .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     const { data: row } = await context.supabase
-      .from("project_memory").select("project_id").eq("id", data.id).maybeSingle();
+      .from("project_memory")
+      .select("project_id")
+      .eq("id", data.id)
+      .maybeSingle();
     const { error } = await context.supabase.from("project_memory").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
-    if (row) await logActivity(context.supabase, row.project_id, context.userId, "memory_removed", "Removed a memory");
+    if (row)
+      await logActivity(
+        context.supabase,
+        row.project_id,
+        context.userId,
+        "memory_removed",
+        "Removed a memory",
+      );
     return { ok: true };
   });
 
@@ -387,19 +496,27 @@ export const listActivity = createServerFn({ method: "GET" })
 // ============= ARCHIVE =============
 export const setProjectArchived = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({
-    id: z.string().uuid(),
-    archived: z.boolean(),
-  }).parse(i))
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        archived: z.boolean(),
+      })
+      .parse(i),
+  )
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     const { error } = await context.supabase
       .from("projects")
       .update({ archived_at: data.archived ? new Date().toISOString() : null })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
-    await logActivity(context.supabase, data.id, context.userId,
+    await logActivity(
+      context.supabase,
+      data.id,
+      context.userId,
       data.archived ? "archived" : "unarchived",
-      data.archived ? "Archived project" : "Restored project from archive");
+      data.archived ? "Archived project" : "Restored project from archive",
+    );
     return { ok: true };
   });
 
@@ -413,50 +530,88 @@ export type SearchResult = {
 
 export const searchProject = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({
-    project_id: z.string().uuid(),
-    q: z.string().trim().min(1).max(200),
-  }).parse(i))
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        project_id: z.string().uuid(),
+        q: z.string().trim().min(1).max(200),
+      })
+      .parse(i),
+  )
   .handler(async ({ data, context }): Promise<SearchResult[]> => {
     const like = `%${data.q.replace(/[%_]/g, "\\$&")}%`;
     const [chats, note, tasks, files, memory] = await Promise.all([
-      context.supabase.from("project_chats")
+      context.supabase
+        .from("project_chats")
         .select("id, title, snapshot")
         .eq("project_id", data.project_id)
-        .ilike("title", like).limit(20),
-      context.supabase.from("project_notes")
-        .select("id, content").eq("project_id", data.project_id).maybeSingle(),
-      context.supabase.from("project_tasks")
-        .select("id, title").eq("project_id", data.project_id).ilike("title", like).limit(20),
-      context.supabase.from("project_files")
-        .select("id, name").eq("project_id", data.project_id).ilike("name", like).limit(20),
-      context.supabase.from("project_memory")
-        .select("id, content").eq("project_id", data.project_id).ilike("content", like).limit(20),
+        .ilike("title", like)
+        .limit(20),
+      context.supabase
+        .from("project_notes")
+        .select("id, content")
+        .eq("project_id", data.project_id)
+        .maybeSingle(),
+      context.supabase
+        .from("project_tasks")
+        .select("id, title")
+        .eq("project_id", data.project_id)
+        .ilike("title", like)
+        .limit(20),
+      context.supabase
+        .from("project_files")
+        .select("id, name")
+        .eq("project_id", data.project_id)
+        .ilike("name", like)
+        .limit(20),
+      context.supabase
+        .from("project_memory")
+        .select("id, content")
+        .eq("project_id", data.project_id)
+        .ilike("content", like)
+        .limit(20),
     ]);
     const results: SearchResult[] = [];
-    for (const c of chats.data ?? []) results.push({ kind: "chat", id: c.id, title: c.title, snippet: "Chat" });
-    if (note.data && String(note.data.content ?? "").toLowerCase().includes(data.q.toLowerCase())) {
+    for (const c of chats.data ?? [])
+      results.push({ kind: "chat", id: c.id, title: c.title, snippet: "Chat" });
+    if (
+      note.data &&
+      String(note.data.content ?? "")
+        .toLowerCase()
+        .includes(data.q.toLowerCase())
+    ) {
       const idx = String(note.data.content).toLowerCase().indexOf(data.q.toLowerCase());
       const snippet = String(note.data.content).slice(Math.max(0, idx - 30), idx + 80);
       results.push({ kind: "note", id: note.data.id, title: "Notes", snippet });
     }
-    for (const t of tasks.data ?? []) results.push({ kind: "task", id: t.id, title: t.title, snippet: "Task" });
-    for (const f of files.data ?? []) results.push({ kind: "file", id: f.id, title: f.name, snippet: "File" });
-    for (const m of memory.data ?? []) results.push({ kind: "memory", id: m.id, title: "Memory", snippet: m.content.slice(0, 120) });
+    for (const t of tasks.data ?? [])
+      results.push({ kind: "task", id: t.id, title: t.title, snippet: "Task" });
+    for (const f of files.data ?? [])
+      results.push({ kind: "file", id: f.id, title: f.name, snippet: "File" });
+    for (const m of memory.data ?? [])
+      results.push({ kind: "memory", id: m.id, title: "Memory", snippet: m.content.slice(0, 120) });
     return results;
   });
 
 // ============= MOVE CHAT INTO / OUT OF PROJECT =============
 export const importChatToProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({
-    project_id: z.string().uuid(),
-    title: z.string().trim().min(1).max(200),
-    messages: z.array(z.object({
-      role: z.enum(["user", "assistant", "system"]),
-      content: z.string().max(100_000),
-    })).max(500),
-  }).parse(i))
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        project_id: z.string().uuid(),
+        title: z.string().trim().min(1).max(200),
+        messages: z
+          .array(
+            z.object({
+              role: z.enum(["user", "assistant", "system"]),
+              content: z.string().max(100_000),
+            }),
+          )
+          .max(500),
+      })
+      .parse(i),
+  )
   .handler(async ({ data, context }): Promise<{ id: string }> => {
     const { data: row, error } = await context.supabase
       .from("project_chats")
@@ -469,16 +624,26 @@ export const importChatToProject = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
-    await logActivity(context.supabase, data.project_id, context.userId, "chat_added", `Added chat “${data.title}”`);
+    await logActivity(
+      context.supabase,
+      data.project_id,
+      context.userId,
+      "chat_added",
+      `Added chat “${data.title}”`,
+    );
     return { id: row.id };
   });
 
 export const moveChatToProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({
-    chat_id: z.string().uuid(),
-    project_id: z.string().uuid(),
-  }).parse(i))
+  .inputValidator((i: unknown) =>
+    z
+      .object({
+        chat_id: z.string().uuid(),
+        project_id: z.string().uuid(),
+      })
+      .parse(i),
+  )
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     const { data: row, error } = await context.supabase
       .from("project_chats")
@@ -487,6 +652,12 @@ export const moveChatToProject = createServerFn({ method: "POST" })
       .select("title")
       .single();
     if (error) throw new Error(error.message);
-    await logActivity(context.supabase, data.project_id, context.userId, "chat_moved", `Moved chat “${row.title}” here`);
+    await logActivity(
+      context.supabase,
+      data.project_id,
+      context.userId,
+      "chat_moved",
+      `Moved chat “${row.title}” here`,
+    );
     return { ok: true };
   });

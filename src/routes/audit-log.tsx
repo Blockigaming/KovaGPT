@@ -92,6 +92,24 @@ function AuditLogPage() {
   );
 }
 
+function AuditLogErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
+  const router = useRouter();
+  return (
+    <div className="mx-auto max-w-md p-8 text-center">
+      <p className="mb-4 text-sm text-destructive">{(error as Error).message}</p>
+      <button
+        className="rounded-md border px-3 py-1.5 text-sm"
+        onClick={() => {
+          router.invalidate();
+          reset();
+        }}
+      >
+        Try again
+      </button>
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/audit-log")({
   head: () => ({
     meta: [
@@ -101,22 +119,5 @@ export const Route = createFileRoute("/audit-log")({
     ],
   }),
   component: AuditLogPage,
-  errorComponent: ({ error, reset }) => {
-    const router = useRouter();
-    return (
-      <div className="mx-auto max-w-md p-8 text-center">
-        <p className="mb-4 text-sm text-destructive">{(error as Error).message}</p>
-        <button
-          className="rounded-md border px-3 py-1.5 text-sm"
-          onClick={() => {
-            router.invalidate();
-            reset();
-          }}
-        >
-          Retry
-        </button>
-      </div>
-    );
-  },
-  notFoundComponent: () => <div className="p-8">Not found</div>,
+  errorComponent: AuditLogErrorComponent,
 });

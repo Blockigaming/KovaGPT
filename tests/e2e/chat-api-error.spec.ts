@@ -4,7 +4,9 @@ import { test, expect } from "@playwright/test";
  * Server-side contract test for /api/chat error envelope.
  * A malformed body should produce a JSON error with requestId + category.
  */
-test("/api/chat returns structured error envelope with requestId + category", async ({ request }) => {
+test("/api/chat returns structured error envelope with requestId + category", async ({
+  request,
+}) => {
   const resp = await request.post("/api/chat", {
     headers: { "Content-Type": "application/json" },
     data: "not-json-at-all",
@@ -17,7 +19,10 @@ test("/api/chat returns structured error envelope with requestId + category", as
     json = await resp.json();
   } catch {
     // Non-JSON body: at least header should exist
-    expect(headerId, "response should include X-Request-Id header when body is not JSON").toBeTruthy();
+    expect(
+      headerId,
+      "response should include X-Request-Id header when body is not JSON",
+    ).toBeTruthy();
     return;
   }
   expect(json).toHaveProperty("requestId");

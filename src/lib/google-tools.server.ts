@@ -10,7 +10,11 @@
 
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { getValidGoogleAccessToken, getGoogleConnection, logAudit } from "@/lib/google-oauth.server";
+import {
+  getValidGoogleAccessToken,
+  getGoogleConnection,
+  logAudit,
+} from "@/lib/google-oauth.server";
 
 // OpenAI-compatible function tool schema.
 export type ToolDef = {
@@ -60,8 +64,14 @@ export const READ_ONLY_TOOLS: ToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          query: { type: "string", description: "Gmail search query. Example: 'from:boss@company.com newer_than:14d'." },
-          max_results: { type: "integer", description: "Max messages to return (1-15). Default 8." },
+          query: {
+            type: "string",
+            description: "Gmail search query. Example: 'from:boss@company.com newer_than:14d'.",
+          },
+          max_results: {
+            type: "integer",
+            description: "Max messages to return (1-15). Default 8.",
+          },
         },
         required: ["query"],
       },
@@ -71,10 +81,13 @@ export const READ_ONLY_TOOLS: ToolDef[] = [
     type: "function",
     function: {
       name: "gmail_read_message",
-      description: "Read the full body of a Gmail message by its id. Call after gmail_search returns an id the user wants to see.",
+      description:
+        "Read the full body of a Gmail message by its id. Call after gmail_search returns an id the user wants to see.",
       parameters: {
         type: "object",
-        properties: { id: { type: "string", description: "Gmail message id returned from gmail_search." } },
+        properties: {
+          id: { type: "string", description: "Gmail message id returned from gmail_search." },
+        },
         required: ["id"],
       },
     },
@@ -83,12 +96,16 @@ export const READ_ONLY_TOOLS: ToolDef[] = [
     type: "function",
     function: {
       name: "calendar_list_events",
-      description: "List the user's upcoming (or recent) Google Calendar events. Use for 'what's on my schedule today', 'am I free tomorrow at 3', 'what's my next meeting'.",
+      description:
+        "List the user's upcoming (or recent) Google Calendar events. Use for 'what's on my schedule today', 'am I free tomorrow at 3', 'what's my next meeting'.",
       parameters: {
         type: "object",
         properties: {
           time_min: { type: "string", description: "ISO 8601 lower bound. Default = now." },
-          time_max: { type: "string", description: "ISO 8601 upper bound. Default = 7 days from now." },
+          time_max: {
+            type: "string",
+            description: "ISO 8601 upper bound. Default = 7 days from now.",
+          },
           max_results: { type: "integer", description: "Max events to return (1-25). Default 10." },
         },
       },
@@ -98,7 +115,8 @@ export const READ_ONLY_TOOLS: ToolDef[] = [
     type: "function",
     function: {
       name: "drive_search",
-      description: "Search the user's Google Drive files by name. Use for 'find my resume', 'where's the Q3 report'. Returns file metadata + share links.",
+      description:
+        "Search the user's Google Drive files by name. Use for 'find my resume', 'where's the Q3 report'. Returns file metadata + share links.",
       parameters: {
         type: "object",
         properties: {
@@ -113,7 +131,8 @@ export const READ_ONLY_TOOLS: ToolDef[] = [
     type: "function",
     function: {
       name: "drive_read_file",
-      description: "Read the text contents of a Drive file by id. Works for text/plain, JSON, and Google Docs/Sheets/Slides (exported). Returns up to ~40k chars of content.",
+      description:
+        "Read the text contents of a Drive file by id. Works for text/plain, JSON, and Google Docs/Sheets/Slides (exported). Returns up to ~40k chars of content.",
       parameters: {
         type: "object",
         properties: { id: { type: "string", description: "Drive file id from drive_search." } },
@@ -174,10 +193,23 @@ export const WRITE_TOOLS: ToolDef[] = [
           summary: { type: "string", description: "Event title." },
           description: { type: "string", description: "Optional event description." },
           location: { type: "string", description: "Optional location or meeting link." },
-          start: { type: "string", description: "ISO 8601 start time, e.g. 2026-07-08T14:00:00-07:00." },
-          end: { type: "string", description: "ISO 8601 end time. If omitted, defaults to start + 30 minutes." },
-          attendees: { type: "array", items: { type: "string" }, description: "Optional attendee email addresses." },
-          timezone: { type: "string", description: "IANA timezone, e.g. America/Los_Angeles. Optional." },
+          start: {
+            type: "string",
+            description: "ISO 8601 start time, e.g. 2026-07-08T14:00:00-07:00.",
+          },
+          end: {
+            type: "string",
+            description: "ISO 8601 end time. If omitted, defaults to start + 30 minutes.",
+          },
+          attendees: {
+            type: "array",
+            items: { type: "string" },
+            description: "Optional attendee email addresses.",
+          },
+          timezone: {
+            type: "string",
+            description: "IANA timezone, e.g. America/Los_Angeles. Optional.",
+          },
         },
         required: ["summary", "start"],
       },
@@ -208,9 +240,15 @@ export const WRITE_TOOLS: ToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          name: { type: "string", description: "File name including extension, e.g. 'meeting-notes.txt' or 'summary.md'." },
+          name: {
+            type: "string",
+            description: "File name including extension, e.g. 'meeting-notes.txt' or 'summary.md'.",
+          },
           content: { type: "string", description: "Full text contents of the file." },
-          mime_type: { type: "string", description: "Optional MIME type. Defaults to text/plain. Use text/markdown for .md." },
+          mime_type: {
+            type: "string",
+            description: "Optional MIME type. Defaults to text/plain. Use text/markdown for .md.",
+          },
         },
         required: ["name", "content"],
       },
@@ -226,7 +264,10 @@ export const WRITE_TOOLS: ToolDef[] = [
         type: "object",
         properties: {
           title: { type: "string", description: "Document title." },
-          content: { type: "string", description: "Plain-text body content. Line breaks are preserved." },
+          content: {
+            type: "string",
+            description: "Plain-text body content. Line breaks are preserved.",
+          },
         },
         required: ["title", "content"],
       },
@@ -256,13 +297,22 @@ function decodeBase64Url(data: string): string {
 }
 
 function encodeBase64Url(s: string): string {
-  return Buffer.from(s, "utf8").toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return Buffer.from(s, "utf8")
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
 }
 
-type GmailPart = { mimeType?: string; body?: { data?: string; size?: number }; parts?: GmailPart[] };
+type GmailPart = {
+  mimeType?: string;
+  body?: { data?: string; size?: number };
+  parts?: GmailPart[];
+};
 function extractPlainText(payload: GmailPart | undefined): string {
   if (!payload) return "";
-  if (payload.mimeType === "text/plain" && payload.body?.data) return decodeBase64Url(payload.body.data);
+  if (payload.mimeType === "text/plain" && payload.body?.data)
+    return decodeBase64Url(payload.body.data);
   if (payload.parts) {
     for (const p of payload.parts) {
       const t = extractPlainText(p);
@@ -270,7 +320,10 @@ function extractPlainText(payload: GmailPart | undefined): string {
     }
   }
   if (payload.mimeType === "text/html" && payload.body?.data) {
-    return decodeBase64Url(payload.body.data).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    return decodeBase64Url(payload.body.data)
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
   }
   return "";
 }
@@ -297,13 +350,21 @@ export async function runGoogleTool(
   args: Record<string, unknown>,
 ): Promise<unknown> {
   if (WRITE_TOOL_NAMES.has(name)) {
-    return { error: "requires_confirmation", message: "Write tools require the confirmation card flow; runGoogleTool should not have been called." };
+    return {
+      error: "requires_confirmation",
+      message:
+        "Write tools require the confirmation card flow; runGoogleTool should not have been called.",
+    };
   }
   let token: string;
   try {
     token = await getValidGoogleAccessToken(userId);
   } catch {
-    return { error: "google_not_connected", message: "The user has not connected their Google account. Ask them to connect it on the Apps page." };
+    return {
+      error: "google_not_connected",
+      message:
+        "The user has not connected their Google account. Ask them to connect it on the Apps page.",
+    };
   }
   const H: HeadersInit = { Authorization: `Bearer ${token}` };
 
@@ -311,11 +372,19 @@ export async function runGoogleTool(
     if (name === "gmail_search") {
       const q = String(args.query ?? "").slice(0, 300);
       const max = Math.min(15, Math.max(1, Number(args.max_results ?? 8)));
-      const listRes = await fetch(`${GMAIL}/users/me/messages?maxResults=${max}&q=${encodeURIComponent(q)}`, { headers: H });
+      const listRes = await fetch(
+        `${GMAIL}/users/me/messages?maxResults=${max}&q=${encodeURIComponent(q)}`,
+        { headers: H },
+      );
       if (!listRes.ok) throw new Error(`gmail list ${listRes.status}`);
       const list = (await listRes.json()) as { messages?: Array<{ id: string }> };
       if (!list.messages || list.messages.length === 0) {
-        void logAudit({ userId, provider: "gmail", action: "search", summary: `No results for "${q}"` });
+        void logAudit({
+          userId,
+          provider: "gmail",
+          action: "search",
+          summary: `No results for "${q}"`,
+        });
         return { messages: [], note: "No matching messages." };
       }
       const details = await Promise.all(
@@ -335,14 +404,22 @@ export async function runGoogleTool(
             id: j.id,
             threadId: j.threadId,
             from: headerValue(j.payload?.headers, "From"),
-            subject: fenceUntrusted("subject", headerValue(j.payload?.headers, "Subject") || "(no subject)"),
+            subject: fenceUntrusted(
+              "subject",
+              headerValue(j.payload?.headers, "Subject") || "(no subject)",
+            ),
             date: headerValue(j.payload?.headers, "Date"),
             snippet: fenceUntrusted("snippet", (j.snippet ?? "").slice(0, 240)),
           };
         }),
       );
       const messages = details.filter(Boolean);
-      void logAudit({ userId, provider: "gmail", action: "search", summary: `Searched Gmail: "${q}" (${messages.length} results)` });
+      void logAudit({
+        userId,
+        provider: "gmail",
+        action: "search",
+        summary: `Searched Gmail: "${q}" (${messages.length} results)`,
+      });
       return { _warning: UNTRUSTED_WARNING, messages };
     }
 
@@ -357,13 +434,22 @@ export async function runGoogleTool(
         payload?: { headers?: Array<{ name: string; value: string }> } & GmailPart;
       };
       const body = extractPlainText(j.payload as GmailPart | undefined).slice(0, 20000);
-      void logAudit({ userId, provider: "gmail", action: "read", resourceId: id, summary: `Read email: ${headerValue(j.payload?.headers, "Subject")}` });
+      void logAudit({
+        userId,
+        provider: "gmail",
+        action: "read",
+        resourceId: id,
+        summary: `Read email: ${headerValue(j.payload?.headers, "Subject")}`,
+      });
       return {
         _warning: UNTRUSTED_WARNING,
         id: j.id,
         from: headerValue(j.payload?.headers, "From"),
         to: headerValue(j.payload?.headers, "To"),
-        subject: fenceUntrusted("subject", headerValue(j.payload?.headers, "Subject") || "(no subject)"),
+        subject: fenceUntrusted(
+          "subject",
+          headerValue(j.payload?.headers, "Subject") || "(no subject)",
+        ),
         date: headerValue(j.payload?.headers, "Date"),
         snippet: fenceUntrusted("snippet", j.snippet ?? ""),
         body: fenceUntrusted("email_body", body),
@@ -374,7 +460,9 @@ export async function runGoogleTool(
     if (name === "calendar_list_events") {
       const now = new Date();
       const timeMin = String(args.time_min ?? now.toISOString());
-      const timeMax = String(args.time_max ?? new Date(now.getTime() + 7 * 24 * 3600 * 1000).toISOString());
+      const timeMax = String(
+        args.time_max ?? new Date(now.getTime() + 7 * 24 * 3600 * 1000).toISOString(),
+      );
       const max = Math.min(25, Math.max(1, Number(args.max_results ?? 10)));
       const url = `${CAL}/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=${max}&timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`;
       const r = await fetch(url, { headers: H });
@@ -401,19 +489,34 @@ export async function runGoogleTool(
         link: e.htmlLink,
         attendees: (e.attendees ?? []).slice(0, 10).map((a) => a.email),
       }));
-      void logAudit({ userId, provider: "calendar", action: "list", summary: `Listed ${events.length} calendar event(s)` });
+      void logAudit({
+        userId,
+        provider: "calendar",
+        action: "list",
+        summary: `Listed ${events.length} calendar event(s)`,
+      });
       return { _warning: UNTRUSTED_WARNING, events };
     }
 
     if (name === "drive_search") {
       const q = String(args.query ?? "").slice(0, 200);
       const max = Math.min(25, Math.max(1, Number(args.max_results ?? 10)));
-      const driveQ = q ? `name contains '${q.replace(/'/g, "\\'")}' and trashed=false` : "trashed=false";
+      const driveQ = q
+        ? `name contains '${q.replace(/'/g, "\\'")}' and trashed=false`
+        : "trashed=false";
       const url = `${DRIVE}/files?pageSize=${max}&fields=files(id,name,mimeType,modifiedTime,webViewLink,size,owners(displayName))&q=${encodeURIComponent(driveQ)}&orderBy=modifiedTime desc`;
       const r = await fetch(url, { headers: H });
       if (!r.ok) throw new Error(`drive list ${r.status}`);
       const j = (await r.json()) as {
-        files?: Array<{ id: string; name: string; mimeType: string; modifiedTime: string; webViewLink: string; size?: string; owners?: Array<{ displayName?: string }> }>;
+        files?: Array<{
+          id: string;
+          name: string;
+          mimeType: string;
+          modifiedTime: string;
+          webViewLink: string;
+          size?: string;
+          owners?: Array<{ displayName?: string }>;
+        }>;
       };
       const files = (j.files ?? []).map((f) => ({
         id: f.id,
@@ -424,21 +527,40 @@ export async function runGoogleTool(
         size: f.size,
         owner: f.owners?.[0]?.displayName,
       }));
-      void logAudit({ userId, provider: "drive", action: "search", summary: `Searched Drive: "${q}" (${files.length} files)` });
+      void logAudit({
+        userId,
+        provider: "drive",
+        action: "search",
+        summary: `Searched Drive: "${q}" (${files.length} files)`,
+      });
       return { _warning: UNTRUSTED_WARNING, files };
     }
 
     if (name === "drive_read_file") {
       const id = String(args.id ?? "");
       if (!id) return { error: "missing_id" };
-      const metaRes = await fetch(`${DRIVE}/files/${id}?fields=id,name,mimeType,webViewLink`, { headers: H });
+      const metaRes = await fetch(`${DRIVE}/files/${id}?fields=id,name,mimeType,webViewLink`, {
+        headers: H,
+      });
       if (!metaRes.ok) throw new Error(`drive meta ${metaRes.status}`);
-      const meta = (await metaRes.json()) as { id: string; name: string; mimeType: string; webViewLink: string };
+      const meta = (await metaRes.json()) as {
+        id: string;
+        name: string;
+        mimeType: string;
+        webViewLink: string;
+      };
       let content = "";
       const mt = meta.mimeType ?? "";
       if (mt.startsWith("application/vnd.google-apps.")) {
-        const exportMime = mt.includes("spreadsheet") ? "text/csv" : mt.includes("presentation") ? "text/plain" : "text/plain";
-        const r = await fetch(`${DRIVE}/files/${id}/export?mimeType=${encodeURIComponent(exportMime)}`, { headers: H });
+        const exportMime = mt.includes("spreadsheet")
+          ? "text/csv"
+          : mt.includes("presentation")
+            ? "text/plain"
+            : "text/plain";
+        const r = await fetch(
+          `${DRIVE}/files/${id}/export?mimeType=${encodeURIComponent(exportMime)}`,
+          { headers: H },
+        );
         if (r.ok) content = (await r.text()).slice(0, 40000);
       } else if (mt.startsWith("text/") || mt === "application/json") {
         const r = await fetch(`${DRIVE}/files/${id}?alt=media`, { headers: H });
@@ -446,7 +568,13 @@ export async function runGoogleTool(
       } else {
         content = `(Binary file: ${mt}. Cannot preview inline; open ${meta.webViewLink} to view.)`;
       }
-      void logAudit({ userId, provider: "drive", action: "read", resourceId: id, summary: `Read Drive file: ${meta.name}` });
+      void logAudit({
+        userId,
+        provider: "drive",
+        action: "read",
+        resourceId: id,
+        summary: `Read Drive file: ${meta.name}`,
+      });
       return {
         _warning: UNTRUSTED_WARNING,
         id: meta.id,
@@ -482,7 +610,16 @@ function admin() {
 
 type WriteArgs = Record<string, unknown>;
 
-export type PendingAction = {
+export type SupabaseQueryLike = {
+  from: (table: string) => SupabaseQueryLike;
+  select: (columns?: string) => SupabaseQueryLike;
+  insert: (values: unknown) => SupabaseQueryLike;
+  update: (values: unknown) => SupabaseQueryLike;
+  eq: (column: string, value: unknown) => SupabaseQueryLike;
+  maybeSingle: () => Promise<{ data: unknown; error: { message?: string } | null }>;
+};
+
+type PendingAction = {
   id: string;
   tool: string;
   summary: string;
@@ -500,7 +637,10 @@ function truncate(s: unknown, n: number): string {
  * echo full recipient lists or full email bodies into the SSE stream - the
  * body preview is capped and long addresses are truncated.
  */
-export function summarizeWriteTool(tool: string, args: WriteArgs): { summary: string; preview: Record<string, unknown> } {
+export function summarizeWriteTool(
+  tool: string,
+  args: WriteArgs,
+): { summary: string; preview: Record<string, unknown> } {
   if (tool === "gmail_send" || tool === "gmail_create_draft") {
     const to = truncate(args.to, 120);
     const subject = truncate(args.subject, 120);
@@ -527,7 +667,9 @@ export function summarizeWriteTool(tool: string, args: WriteArgs): { summary: st
         start: args.start,
         end: args.end,
         location: args.location ? truncate(args.location, 120) : undefined,
-        attendees: Array.isArray(args.attendees) ? (args.attendees as string[]).slice(0, 10) : undefined,
+        attendees: Array.isArray(args.attendees)
+          ? (args.attendees as string[]).slice(0, 10)
+          : undefined,
         description: args.description ? truncate(args.description, 300) : undefined,
       },
     };
@@ -564,7 +706,11 @@ export function summarizeWriteTool(tool: string, args: WriteArgs): { summary: st
 }
 
 /** Persist a pending action row and return the id. */
-export async function stagePendingAction(userId: string, tool: string, args: WriteArgs): Promise<PendingAction> {
+export async function stagePendingAction(
+  userId: string,
+  tool: string,
+  args: WriteArgs,
+): Promise<PendingAction> {
   const { summary, preview } = summarizeWriteTool(tool, args);
   const { data, error } = await admin()
     .from("pending_tool_actions" as never)
@@ -587,19 +733,29 @@ export async function executePendingAction(
   actionId: string,
 ): Promise<{ ok: true; result_text: string } | { ok: false; error: string }> {
   const db = admin();
-  const { data: row, error } = await (db as unknown as { from: (t: string) => any })
+  const { data: row, error } = await (db as unknown as SupabaseQueryLike)
     .from("pending_tool_actions")
     .select("id, user_id, tool, args, status, expires_at")
     .eq("id", actionId)
     .maybeSingle();
   if (error || !row) return { ok: false, error: "Pending action not found." };
-  if (row.user_id !== userId) return { ok: false, error: "Not your action." };
-  if (row.status === "confirmed") return { ok: true, result_text: "Already sent." };
-  if (row.status === "processing") return { ok: false, error: "Action is already being processed." };
-  if (row.status === "cancelled") return { ok: false, error: "Action was cancelled." };
-  if (new Date(row.expires_at).getTime() < Date.now()) {
-    await (db as unknown as { from: (t: string) => any })
-      .from("pending_tool_actions").update({ status: "expired" }).eq("id", actionId);
+  const pendingRow = row as {
+    user_id: string;
+    status: string;
+    expires_at: string;
+    args?: unknown;
+    tool: string;
+  };
+  if (pendingRow.user_id !== userId) return { ok: false, error: "Not your action." };
+  if (pendingRow.status === "confirmed") return { ok: true, result_text: "Already sent." };
+  if (pendingRow.status === "processing")
+    return { ok: false, error: "Action is already being processed." };
+  if (pendingRow.status === "cancelled") return { ok: false, error: "Action was cancelled." };
+  if (new Date(pendingRow.expires_at).getTime() < Date.now()) {
+    await (db as unknown as SupabaseQueryLike)
+      .from("pending_tool_actions")
+      .update({ status: "expired" })
+      .eq("id", actionId);
     return { ok: false, error: "Action expired. Ask me to prepare it again." };
   }
 
@@ -607,7 +763,7 @@ export async function executePendingAction(
   // Without this, a duplicate confirmation request that races the first one
   // would see status still 'pending' and send the same email / create the
   // same event twice. Only the request whose UPDATE affects a row proceeds.
-  const { data: claimed } = await (db as unknown as { from: (t: string) => any })
+  const { data: claimed } = await (db as unknown as SupabaseQueryLike)
     .from("pending_tool_actions")
     .update({ status: "processing" })
     .eq("id", actionId)
@@ -623,11 +779,11 @@ export async function executePendingAction(
     return { ok: false, error: "Google account is not connected." };
   }
   const H: HeadersInit = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
-  const a = (row.args ?? {}) as WriteArgs;
+  const a = (pendingRow.args ?? {}) as WriteArgs;
 
   try {
     let resultText = "";
-    if (row.tool === "gmail_send" || row.tool === "gmail_create_draft") {
+    if (pendingRow.tool === "gmail_send" || pendingRow.tool === "gmail_create_draft") {
       const to = String(a.to ?? "");
       const subject = String(a.subject ?? "");
       const body = String(a.body ?? "");
@@ -640,26 +796,44 @@ export async function executePendingAction(
         `Subject: ${subject}`,
         "Content-Type: text/plain; charset=UTF-8",
         "MIME-Version: 1.0",
-      ].filter(Boolean).join("\r\n");
+      ]
+        .filter(Boolean)
+        .join("\r\n");
       const raw = encodeBase64Url(`${headers}\r\n\r\n${body}`);
-      if (row.tool === "gmail_send") {
+      if (pendingRow.tool === "gmail_send") {
         const r = await fetch(`${GMAIL}/users/me/messages/send`, {
-          method: "POST", headers: H, body: JSON.stringify({ raw }),
+          method: "POST",
+          headers: H,
+          body: JSON.stringify({ raw }),
         });
         if (!r.ok) throw new Error(`gmail send ${r.status} ${await r.text().catch(() => "")}`);
         resultText = `Sent to ${to}.`;
-        await logAudit({ userId, provider: "gmail", action: "send", summary: `Sent email to ${to}: ${subject}` });
+        await logAudit({
+          userId,
+          provider: "gmail",
+          action: "send",
+          summary: `Sent email to ${to}: ${subject}`,
+        });
       } else {
         const r = await fetch(`${GMAIL}/users/me/drafts`, {
-          method: "POST", headers: H, body: JSON.stringify({ message: { raw } }),
+          method: "POST",
+          headers: H,
+          body: JSON.stringify({ message: { raw } }),
         });
         if (!r.ok) throw new Error(`gmail draft ${r.status} ${await r.text().catch(() => "")}`);
         resultText = `Draft saved to Gmail for ${to}.`;
-        await logAudit({ userId, provider: "gmail", action: "draft", summary: `Drafted email to ${to}: ${subject}` });
+        await logAudit({
+          userId,
+          provider: "gmail",
+          action: "draft",
+          summary: `Drafted email to ${to}: ${subject}`,
+        });
       }
-    } else if (row.tool === "calendar_create_event") {
+    } else if (pendingRow.tool === "calendar_create_event") {
       const startISO = String(a.start ?? "");
-      const endISO = a.end ? String(a.end) : new Date(new Date(startISO).getTime() + 30 * 60 * 1000).toISOString();
+      const endISO = a.end
+        ? String(a.end)
+        : new Date(new Date(startISO).getTime() + 30 * 60 * 1000).toISOString();
       const tz = a.timezone ? String(a.timezone) : undefined;
       const eventBody: Record<string, unknown> = {
         summary: String(a.summary ?? "(untitled)"),
@@ -667,25 +841,42 @@ export async function executePendingAction(
         location: a.location ? String(a.location) : undefined,
         start: { dateTime: startISO, timeZone: tz },
         end: { dateTime: endISO, timeZone: tz },
-        attendees: Array.isArray(a.attendees) ? (a.attendees as string[]).map((email) => ({ email })) : undefined,
+        attendees: Array.isArray(a.attendees)
+          ? (a.attendees as string[]).map((email) => ({ email }))
+          : undefined,
       };
       const r = await fetch(`${CAL}/calendars/primary/events`, {
-        method: "POST", headers: H, body: JSON.stringify(eventBody),
+        method: "POST",
+        headers: H,
+        body: JSON.stringify(eventBody),
       });
       if (!r.ok) throw new Error(`calendar create ${r.status} ${await r.text().catch(() => "")}`);
       const created = (await r.json()) as { id: string; htmlLink?: string };
       resultText = `Event created${created.htmlLink ? ` - [open in Google Calendar](${created.htmlLink})` : "."}`;
-      await logAudit({ userId, provider: "calendar", action: "create", resourceId: created.id, summary: `Created event: ${a.summary ?? ""}` });
-    } else if (row.tool === "calendar_delete_event") {
+      await logAudit({
+        userId,
+        provider: "calendar",
+        action: "create",
+        resourceId: created.id,
+        summary: `Created event: ${a.summary ?? ""}`,
+      });
+    } else if (pendingRow.tool === "calendar_delete_event") {
       const id = String(a.id ?? "");
       if (!id) throw new Error("missing event id");
       const r = await fetch(`${CAL}/calendars/primary/events/${encodeURIComponent(id)}`, {
-        method: "DELETE", headers: { Authorization: `Bearer ${token}` },
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
       });
       if (!r.ok && r.status !== 410) throw new Error(`calendar delete ${r.status}`);
       resultText = "Event deleted.";
-      await logAudit({ userId, provider: "calendar", action: "delete", resourceId: id, summary: `Deleted event: ${a.summary ?? id}` });
-    } else if (row.tool === "drive_upload_text_file") {
+      await logAudit({
+        userId,
+        provider: "calendar",
+        action: "delete",
+        resourceId: id,
+        summary: `Deleted event: ${a.summary ?? id}`,
+      });
+    } else if (pendingRow.tool === "drive_upload_text_file") {
       const name = String(a.name ?? "untitled.txt");
       const content = String(a.content ?? "");
       const mimeType = a.mime_type ? String(a.mime_type) : "text/plain";
@@ -699,19 +890,28 @@ export async function executePendingAction(
         `Content-Type: ${mimeType}; charset=UTF-8\r\n\r\n` +
         `${content}\r\n` +
         `--${boundary}--`;
-      const r = await fetch(`https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": `multipart/related; boundary=${boundary}`,
+      const r = await fetch(
+        `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": `multipart/related; boundary=${boundary}`,
+          },
+          body: multipartBody,
         },
-        body: multipartBody,
-      });
+      );
       if (!r.ok) throw new Error(`drive upload ${r.status} ${await r.text().catch(() => "")}`);
       const created = (await r.json()) as { id: string; name: string; webViewLink?: string };
       resultText = `Uploaded "${created.name}"${created.webViewLink ? ` - [open in Drive](${created.webViewLink})` : "."}`;
-      await logAudit({ userId, provider: "drive", action: "upload", resourceId: created.id, summary: `Uploaded to Drive: ${created.name}` });
-    } else if (row.tool === "drive_create_doc") {
+      await logAudit({
+        userId,
+        provider: "drive",
+        action: "upload",
+        resourceId: created.id,
+        summary: `Uploaded to Drive: ${created.name}`,
+      });
+    } else if (pendingRow.tool === "drive_create_doc") {
       const title = String(a.title ?? "Untitled");
       const content = String(a.content ?? "");
       // 1. Create empty Google Doc via Drive
@@ -720,7 +920,10 @@ export async function executePendingAction(
         headers: H,
         body: JSON.stringify({ name: title, mimeType: "application/vnd.google-apps.document" }),
       });
-      if (!createRes.ok) throw new Error(`docs create ${createRes.status} ${await createRes.text().catch(() => "")}`);
+      if (!createRes.ok)
+        throw new Error(
+          `docs create ${createRes.status} ${await createRes.text().catch(() => "")}`,
+        );
       const doc = (await createRes.json()) as { id: string; name: string; webViewLink?: string };
       // 2. Insert body text via Docs API batchUpdate
       if (content) {
@@ -731,14 +934,21 @@ export async function executePendingAction(
             requests: [{ insertText: { location: { index: 1 }, text: content } }],
           }),
         });
-        if (!upd.ok) throw new Error(`docs write ${upd.status} ${await upd.text().catch(() => "")}`);
+        if (!upd.ok)
+          throw new Error(`docs write ${upd.status} ${await upd.text().catch(() => "")}`);
       }
       resultText = `Created "${doc.name}"${doc.webViewLink ? ` - [open in Google Docs](${doc.webViewLink})` : "."}`;
-      await logAudit({ userId, provider: "drive", action: "create_doc", resourceId: doc.id, summary: `Created Google Doc: ${doc.name}` });
+      await logAudit({
+        userId,
+        provider: "drive",
+        action: "create_doc",
+        resourceId: doc.id,
+        summary: `Created Google Doc: ${doc.name}`,
+      });
     } else {
-      return { ok: false, error: `Unknown tool: ${row.tool}` };
+      return { ok: false, error: `Unknown tool: ${pendingRow.tool}` };
     }
-    await (db as unknown as { from: (t: string) => any })
+    await (db as unknown as SupabaseQueryLike)
       .from("pending_tool_actions")
       .update({ status: "confirmed", result: { text: resultText } })
       .eq("id", actionId);
@@ -746,14 +956,20 @@ export async function executePendingAction(
   } catch (e) {
     const msg = (e as Error).message || "Action failed";
     console.error("[executePendingAction] failed", msg);
-    await (db as unknown as { from: (t: string) => any })
+    await (db as unknown as SupabaseQueryLike)
       .from("pending_tool_actions")
       .update({ status: "failed", result: { error: msg } })
       .eq("id", actionId);
     await logAudit({
       userId,
-      provider: row.tool.startsWith("gmail") ? "gmail" : row.tool.startsWith("drive") ? "drive" : "calendar",
-      action: row.tool, status: "failure", summary: msg.slice(0, 400),
+      provider: pendingRow.tool.startsWith("gmail")
+        ? "gmail"
+        : pendingRow.tool.startsWith("drive")
+          ? "drive"
+          : "calendar",
+      action: pendingRow.tool,
+      status: "failure",
+      summary: msg.slice(0, 400),
     });
     return { ok: false, error: msg };
   }
@@ -762,7 +978,7 @@ export async function executePendingAction(
 /** Mark a pending action cancelled. Idempotent; only touches your own row. */
 export async function cancelPendingAction(userId: string, actionId: string): Promise<boolean> {
   const db = admin();
-  const { data } = await (db as unknown as { from: (t: string) => any })
+  const { data } = await (db as unknown as SupabaseQueryLike)
     .from("pending_tool_actions")
     .update({ status: "cancelled" })
     .eq("id", actionId)

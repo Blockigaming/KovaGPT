@@ -4,20 +4,44 @@ import { useEffect, useMemo, useState } from "react";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
 import {
-  Plus, ImageIcon, FolderKanban, Calendar, Mail, ListChecks, CloudSun, X, RotateCcw,
-  FolderOpen, Link2, MessageCircle, Sparkles, Clock, CheckCircle2, Pin, ArrowRight,
+  Plus,
+  ImageIcon,
+  FolderKanban,
+  Calendar,
+  Mail,
+  ListChecks,
+  CloudSun,
+  X,
+  RotateCcw,
+  FolderOpen,
+  Link2,
+  MessageCircle,
+  Sparkles,
+  Clock,
+  CheckCircle2,
+  Pin,
+  ArrowRight,
 } from "lucide-react";
 import { loadConversations, type Conversation } from "@/lib/chat-store";
 import {
-  getSummaryProjects, getSummaryImages, getSummaryFiles, getSummaryTasks,
-  getGoogleStatus, getGmailSummary, getCalendarSummary,
+  getSummaryProjects,
+  getSummaryImages,
+  getSummaryFiles,
+  getSummaryTasks,
+  getGoogleStatus,
+  getGmailSummary,
+  getCalendarSummary,
 } from "@/lib/summary.functions";
 
 export const Route = createFileRoute("/summary")({
   head: () => ({
     meta: [
       { title: "Summary - KovaGPT" },
-      { name: "description", content: "Your personalized KovaGPT dashboard: chats, projects, files, tasks, and connected apps at a glance." },
+      {
+        name: "description",
+        content:
+          "Your personalized KovaGPT dashboard: chats, projects, files, tasks, and connected apps at a glance.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -27,23 +51,42 @@ export const Route = createFileRoute("/summary")({
 // -------- Dismissible sections --------
 const DISMISS_KEY = "kova-summary-dismissed-v1";
 type SectionId =
-  | "continue" | "pinned" | "projects" | "images" | "files"
-  | "calendar" | "gmail" | "tasks" | "suggested" | "quick"
-  | "apps" | "library" | "weather";
+  | "continue"
+  | "pinned"
+  | "projects"
+  | "images"
+  | "files"
+  | "calendar"
+  | "gmail"
+  | "tasks"
+  | "suggested"
+  | "quick"
+  | "apps"
+  | "library"
+  | "weather";
 
 function loadDismissed(): SectionId[] {
   if (typeof window === "undefined") return [];
-  try { return JSON.parse(localStorage.getItem(DISMISS_KEY) ?? "[]"); } catch { return []; }
+  try {
+    return JSON.parse(localStorage.getItem(DISMISS_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
 }
 function saveDismissed(v: SectionId[]) {
-  try { localStorage.setItem(DISMISS_KEY, JSON.stringify(v)); } catch { /* ignore */ }
+  try {
+    localStorage.setItem(DISMISS_KEY, JSON.stringify(v));
+  } catch {
+    /* ignore */
+  }
 }
 
 // -------- Greeting --------
 function useGreeting(name: string | null) {
   return useMemo(() => {
     const h = new Date().getHours();
-    const part = h < 5 ? "Still up" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+    const part =
+      h < 5 ? "Still up" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
     return name ? `${part}, ${name}` : part;
   }, [name]);
 }
@@ -51,13 +94,31 @@ function useGreeting(name: string | null) {
 // -------- Weather via geolocation + open-meteo (no key) --------
 type Weather = { temp: number; code: number; label: string; city: string | null };
 const WMO: Record<number, string> = {
-  0: "Clear", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
-  45: "Fog", 48: "Fog", 51: "Drizzle", 53: "Drizzle", 55: "Drizzle",
-  61: "Rain", 63: "Rain", 65: "Heavy rain", 71: "Snow", 73: "Snow", 75: "Heavy snow",
-  80: "Showers", 81: "Showers", 82: "Heavy showers", 95: "Thunderstorm",
+  0: "Clear",
+  1: "Mainly clear",
+  2: "Partly cloudy",
+  3: "Overcast",
+  45: "Fog",
+  48: "Fog",
+  51: "Drizzle",
+  53: "Drizzle",
+  55: "Drizzle",
+  61: "Rain",
+  63: "Rain",
+  65: "Heavy rain",
+  71: "Snow",
+  73: "Snow",
+  75: "Heavy snow",
+  80: "Showers",
+  81: "Showers",
+  82: "Heavy showers",
+  95: "Thunderstorm",
 };
 function useWeather(enabled: boolean) {
-  const [state, setState] = useState<{ status: "idle" | "loading" | "ok" | "denied" | "error"; data: Weather | null }>({ status: "idle", data: null });
+  const [state, setState] = useState<{
+    status: "idle" | "loading" | "ok" | "denied" | "error";
+    data: Weather | null;
+  }>({ status: "idle", data: null });
   useEffect(() => {
     if (!enabled || typeof window === "undefined" || !("geolocation" in navigator)) return;
     setState({ status: "loading", data: null });
@@ -65,12 +126,24 @@ function useWeather(enabled: boolean) {
       async (pos) => {
         try {
           const { latitude: lat, longitude: lon } = pos.coords;
-          const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&temperature_unit=fahrenheit`);
+          const r = await fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&temperature_unit=fahrenheit`,
+          );
           if (!r.ok) throw new Error("weather");
           const j = await r.json();
           const code = j.current?.weather_code ?? 0;
-          setState({ status: "ok", data: { temp: Math.round(j.current?.temperature_2m ?? 0), code, label: WMO[code] ?? "-", city: null } });
-        } catch { setState({ status: "error", data: null }); }
+          setState({
+            status: "ok",
+            data: {
+              temp: Math.round(j.current?.temperature_2m ?? 0),
+              code,
+              label: WMO[code] ?? "-",
+              city: null,
+            },
+          });
+        } catch {
+          setState({ status: "error", data: null });
+        }
       },
       () => setState({ status: "denied", data: null }),
       { timeout: 6000, maximumAge: 15 * 60_000 },
@@ -81,7 +154,12 @@ function useWeather(enabled: boolean) {
 
 // -------- Section wrapper --------
 function Section({
-  id, title, icon: Icon, action, onDismiss, children,
+  id,
+  title,
+  icon: Icon,
+  action,
+  onDismiss,
+  children,
 }: {
   id: SectionId;
   title: string;
@@ -140,16 +218,22 @@ function SummaryPage() {
   const isHidden = (id: SectionId) => dismissed.includes(id);
   const hide = (id: SectionId) => {
     const next = Array.from(new Set([...dismissed, id]));
-    setDismissed(next); saveDismissed(next);
+    setDismissed(next);
+    saveDismissed(next);
   };
-  const restore = () => { setDismissed([]); saveDismissed([]); };
+  const restore = () => {
+    setDismissed([]);
+    saveDismissed([]);
+  };
 
   const firstName = (user?.firstName ?? user?.fullName?.split(" ")[0] ?? null) as string | null;
   const greeting = useGreeting(firstName);
 
   // Local chats
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  useEffect(() => { setConversations(loadConversations()); }, []);
+  useEffect(() => {
+    setConversations(loadConversations());
+  }, []);
   const pinned = conversations.filter((c) => c.pinned).slice(0, 4);
   const continueChats = conversations
     .filter((c) => !c.pinned)
@@ -158,17 +242,54 @@ function SummaryPage() {
 
   // Server data (independent queries)
   const enabled = !!isSignedIn;
-  const qProjects = useQuery({ queryKey: ["summary", "projects"], queryFn: () => getSummaryProjects(), enabled, staleTime: 30_000 });
-  const qImages = useQuery({ queryKey: ["summary", "images"], queryFn: () => getSummaryImages(), enabled, staleTime: 30_000 });
-  const qFiles = useQuery({ queryKey: ["summary", "files"], queryFn: () => getSummaryFiles(), enabled, staleTime: 30_000 });
-  const qTasks = useQuery({ queryKey: ["summary", "tasks"], queryFn: () => getSummaryTasks(), enabled, staleTime: 30_000 });
-  const qGoogle = useQuery({ queryKey: ["summary", "google"], queryFn: () => getGoogleStatus(), enabled, staleTime: 60_000 });
+  const qProjects = useQuery({
+    queryKey: ["summary", "projects"],
+    queryFn: () => getSummaryProjects(),
+    enabled,
+    staleTime: 30_000,
+  });
+  const qImages = useQuery({
+    queryKey: ["summary", "images"],
+    queryFn: () => getSummaryImages(),
+    enabled,
+    staleTime: 30_000,
+  });
+  const qFiles = useQuery({
+    queryKey: ["summary", "files"],
+    queryFn: () => getSummaryFiles(),
+    enabled,
+    staleTime: 30_000,
+  });
+  const qTasks = useQuery({
+    queryKey: ["summary", "tasks"],
+    queryFn: () => getSummaryTasks(),
+    enabled,
+    staleTime: 30_000,
+  });
+  const qGoogle = useQuery({
+    queryKey: ["summary", "google"],
+    queryFn: () => getGoogleStatus(),
+    enabled,
+    staleTime: 60_000,
+  });
 
-  const hasGmail = !!qGoogle.data?.connected && qGoogle.data.scopes.some((s) => s.includes("gmail"));
-  const hasCal = !!qGoogle.data?.connected && qGoogle.data.scopes.some((s) => s.includes("calendar"));
+  const hasGmail =
+    !!qGoogle.data?.connected && qGoogle.data.scopes.some((s) => s.includes("gmail"));
+  const hasCal =
+    !!qGoogle.data?.connected && qGoogle.data.scopes.some((s) => s.includes("calendar"));
 
-  const qGmail = useQuery({ queryKey: ["summary", "gmail"], queryFn: () => getGmailSummary(), enabled: enabled && hasGmail, staleTime: 60_000 });
-  const qCal = useQuery({ queryKey: ["summary", "cal"], queryFn: () => getCalendarSummary(), enabled: enabled && hasCal, staleTime: 60_000 });
+  const qGmail = useQuery({
+    queryKey: ["summary", "gmail"],
+    queryFn: () => getGmailSummary(),
+    enabled: enabled && hasGmail,
+    staleTime: 60_000,
+  });
+  const qCal = useQuery({
+    queryKey: ["summary", "cal"],
+    queryFn: () => getCalendarSummary(),
+    enabled: enabled && hasCal,
+    staleTime: 60_000,
+  });
 
   // Weather (opt-in via localStorage flag; user grants location permission on button click)
   const [weatherEnabled, setWeatherEnabled] = useState<boolean>(() => {
@@ -176,19 +297,45 @@ function SummaryPage() {
     return localStorage.getItem("kova-weather-opt-in") === "1";
   });
   const weather = useWeather(weatherEnabled);
-  const enableWeather = () => { setWeatherEnabled(true); localStorage.setItem("kova-weather-opt-in", "1"); };
+  const enableWeather = () => {
+    setWeatherEnabled(true);
+    localStorage.setItem("kova-weather-opt-in", "1");
+  };
 
   // Suggested actions - derived from real state
   const suggestions: Array<{ label: string; to: string; hint: string }> = [];
-  if (!qGoogle.data?.connected) suggestions.push({ label: "Connect Google", to: "/apps", hint: "Get Gmail, Calendar, and Drive summaries." });
-  if ((qProjects.data ?? []).length === 0) suggestions.push({ label: "Create your first project", to: "/projects", hint: "Group chats, files, and tasks." });
-  if (pinned.length === 0 && conversations.length > 0) suggestions.push({ label: "Pin your most-used chat", to: "/", hint: "Keep it at the top of the sidebar." });
-  if ((qImages.data ?? []).length === 0) suggestions.push({ label: "Generate your first image", to: "/images", hint: "Describe it and pick a style." });
+  if (!qGoogle.data?.connected)
+    suggestions.push({
+      label: "Connect Google",
+      to: "/apps",
+      hint: "Get Gmail, Calendar, and Drive summaries.",
+    });
+  if ((qProjects.data ?? []).length === 0)
+    suggestions.push({
+      label: "Create your first project",
+      to: "/projects",
+      hint: "Group chats, files, and tasks.",
+    });
+  if (pinned.length === 0 && conversations.length > 0)
+    suggestions.push({
+      label: "Pin your most-used chat",
+      to: "/",
+      hint: "Keep it at the top of the sidebar.",
+    });
+  if ((qImages.data ?? []).length === 0)
+    suggestions.push({
+      label: "Generate your first image",
+      to: "/images",
+      hint: "Describe it and pick a style.",
+    });
 
   if (!isLoaded || !isSignedIn) {
     return (
       <AppShell>
-        <div className="p-6"><Skeleton className="h-8 w-64 mb-4" /><Skeleton className="h-24 w-full" /></div>
+        <div className="p-6">
+          <Skeleton className="h-8 w-64 mb-4" />
+          <Skeleton className="h-24 w-full" />
+        </div>
       </AppShell>
     );
   }
@@ -199,7 +346,9 @@ function SummaryPage() {
         {/* Greeting + composer */}
         <div className="mb-6 sm:mb-8">
           <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">{greeting}</h1>
-          <p className="text-muted-foreground text-sm mt-1">Here's what's happening in your workspace.</p>
+          <p className="text-muted-foreground text-sm mt-1">
+            Here's what's happening in your workspace.
+          </p>
           <button
             onClick={() => navigate({ to: "/" })}
             className="mt-5 w-full flex items-center gap-3 rounded-2xl border border-border bg-card px-5 py-4 text-left text-muted-foreground hover:bg-accent/40 hover:border-foreground/20 transition shadow-sm"
@@ -222,7 +371,11 @@ function SummaryPage() {
                   { label: "Apps", icon: Link2, to: "/apps" },
                   { label: "Scheduled", icon: Clock, to: "/scheduled-tasks" },
                 ].map((a) => (
-                  <Link key={a.label} to={a.to} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-accent/40 transition">
+                  <Link
+                    key={a.label}
+                    to={a.to}
+                    className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-accent/40 transition"
+                  >
                     <a.icon className="w-4 h-4 text-muted-foreground" />
                     <span className="truncate">{a.label}</span>
                   </Link>
@@ -232,7 +385,12 @@ function SummaryPage() {
           )}
 
           {!isHidden("continue") && (
-            <Section id="continue" title="Continue where you left off" icon={MessageCircle} onDismiss={hide}>
+            <Section
+              id="continue"
+              title="Continue where you left off"
+              icon={MessageCircle}
+              onDismiss={hide}
+            >
               {continueChats.length === 0 ? (
                 <Empty text="No recent chats yet - start one from the composer above." />
               ) : (
@@ -240,12 +398,21 @@ function SummaryPage() {
                   {continueChats.map((c) => (
                     <li key={c.id}>
                       <button
-                        onClick={() => { try { localStorage.setItem("nova-gpt-pending-active", c.id); } catch { /* ignore */ } navigate({ to: "/" }); }}
+                        onClick={() => {
+                          try {
+                            localStorage.setItem("nova-gpt-pending-active", c.id);
+                          } catch {
+                            /* ignore */
+                          }
+                          navigate({ to: "/" });
+                        }}
                         className="w-full flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-left hover:bg-accent/40"
                       >
                         <MessageCircle className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                         <span className="truncate flex-1">{c.title || "Untitled"}</span>
-                        <span className="text-[11px] text-muted-foreground">{fmtDate(new Date(c.updatedAt).toISOString())}</span>
+                        <span className="text-[11px] text-muted-foreground">
+                          {fmtDate(new Date(c.updatedAt).toISOString())}
+                        </span>
                       </button>
                     </li>
                   ))}
@@ -260,7 +427,14 @@ function SummaryPage() {
                 {pinned.map((c) => (
                   <li key={c.id}>
                     <button
-                      onClick={() => { try { localStorage.setItem("nova-gpt-pending-active", c.id); } catch { /* ignore */ } navigate({ to: "/" }); }}
+                      onClick={() => {
+                        try {
+                          localStorage.setItem("nova-gpt-pending-active", c.id);
+                        } catch {
+                          /* ignore */
+                        }
+                        navigate({ to: "/" });
+                      }}
                       className="w-full flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-left hover:bg-accent/40"
                     >
                       <Pin className="w-3.5 h-3.5 text-muted-foreground shrink-0 fill-current" />
@@ -273,20 +447,44 @@ function SummaryPage() {
           )}
 
           {!isHidden("projects") && (
-            <Section id="projects" title="Recent projects" icon={FolderKanban} onDismiss={hide}
-              action={<Link to="/projects" className="text-xs text-muted-foreground hover:text-foreground">All</Link>}>
+            <Section
+              id="projects"
+              title="Recent projects"
+              icon={FolderKanban}
+              onDismiss={hide}
+              action={
+                <Link
+                  to="/projects"
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
+                  All
+                </Link>
+              }
+            >
               {qProjects.isLoading ? (
-                <div className="space-y-2"><Skeleton className="h-8" /><Skeleton className="h-8" /></div>
+                <div className="space-y-2">
+                  <Skeleton className="h-8" />
+                  <Skeleton className="h-8" />
+                </div>
               ) : (qProjects.data ?? []).length === 0 ? (
                 <Empty text="No projects yet." />
               ) : (
                 <ul className="space-y-1">
                   {(qProjects.data ?? []).slice(0, 5).map((p) => (
                     <li key={p.id}>
-                      <Link to="/projects/$projectId" params={{ projectId: p.id }} className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent/40">
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ background: p.color ?? "hsl(var(--muted-foreground))" }} />
+                      <Link
+                        to="/projects/$projectId"
+                        params={{ projectId: p.id }}
+                        className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent/40"
+                      >
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ background: p.color ?? "hsl(var(--muted-foreground))" }}
+                        />
                         <span className="truncate flex-1">{p.name}</span>
-                        <span className="text-[11px] text-muted-foreground">{fmtDate(p.updated_at)}</span>
+                        <span className="text-[11px] text-muted-foreground">
+                          {fmtDate(p.updated_at)}
+                        </span>
                       </Link>
                     </li>
                   ))}
@@ -296,20 +494,44 @@ function SummaryPage() {
           )}
 
           {!isHidden("images") && (
-            <Section id="images" title="Recent images" icon={ImageIcon} onDismiss={hide}
-              action={<Link to="/images" className="text-xs text-muted-foreground hover:text-foreground">All</Link>}>
+            <Section
+              id="images"
+              title="Recent images"
+              icon={ImageIcon}
+              onDismiss={hide}
+              action={
+                <Link to="/images" className="text-xs text-muted-foreground hover:text-foreground">
+                  All
+                </Link>
+              }
+            >
               {qImages.isLoading ? (
-                <div className="grid grid-cols-3 gap-2">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="aspect-square" />)}</div>
+                <div className="grid grid-cols-3 gap-2">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <Skeleton key={i} className="aspect-square" />
+                  ))}
+                </div>
               ) : (qImages.data ?? []).length === 0 ? (
                 <Empty text="No images yet." />
               ) : (
                 <div className="grid grid-cols-3 gap-2">
                   {(qImages.data ?? []).slice(0, 6).map((img) => (
-                    <Link key={img.id} to="/library" className="block aspect-square rounded-lg overflow-hidden border border-border bg-muted/40">
+                    <Link
+                      key={img.id}
+                      to="/library"
+                      className="block aspect-square rounded-lg overflow-hidden border border-border bg-muted/40"
+                    >
                       {img.file_url ? (
-                        <img src={img.file_url} alt={img.title} loading="lazy" className="w-full h-full object-cover" />
+                        <img
+                          src={img.file_url}
+                          alt={img.title}
+                          loading="lazy"
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-muted-foreground"><ImageIcon className="w-4 h-4" /></div>
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                          <ImageIcon className="w-4 h-4" />
+                        </div>
                       )}
                     </Link>
                   ))}
@@ -319,10 +541,22 @@ function SummaryPage() {
           )}
 
           {!isHidden("files") && (
-            <Section id="files" title="Recent files" icon={FolderOpen} onDismiss={hide}
-              action={<Link to="/library" className="text-xs text-muted-foreground hover:text-foreground">All</Link>}>
+            <Section
+              id="files"
+              title="Recent files"
+              icon={FolderOpen}
+              onDismiss={hide}
+              action={
+                <Link to="/library" className="text-xs text-muted-foreground hover:text-foreground">
+                  All
+                </Link>
+              }
+            >
               {qFiles.isLoading ? (
-                <div className="space-y-2"><Skeleton className="h-8" /><Skeleton className="h-8" /></div>
+                <div className="space-y-2">
+                  <Skeleton className="h-8" />
+                  <Skeleton className="h-8" />
+                </div>
               ) : (qFiles.data ?? []).length === 0 ? (
                 <Empty text="No files yet." />
               ) : (
@@ -330,16 +564,28 @@ function SummaryPage() {
                   {(qFiles.data ?? []).slice(0, 5).map((f) => (
                     <li key={f.id}>
                       {f.file_url ? (
-                        <a href={f.file_url} target="_blank" rel="noopener" className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent/40">
+                        <a
+                          href={f.file_url}
+                          target="_blank"
+                          rel="noopener"
+                          className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent/40"
+                        >
                           <FolderOpen className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                           <span className="truncate flex-1">{f.title}</span>
-                          <span className="text-[11px] text-muted-foreground">{fmtDate(f.created_at)}</span>
+                          <span className="text-[11px] text-muted-foreground">
+                            {fmtDate(f.created_at)}
+                          </span>
                         </a>
                       ) : (
-                        <Link to="/library" className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent/40">
+                        <Link
+                          to="/library"
+                          className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent/40"
+                        >
                           <FolderOpen className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                           <span className="truncate flex-1">{f.title}</span>
-                          <span className="text-[11px] text-muted-foreground">{fmtDate(f.created_at)}</span>
+                          <span className="text-[11px] text-muted-foreground">
+                            {fmtDate(f.created_at)}
+                          </span>
                         </Link>
                       )}
                     </li>
@@ -352,16 +598,26 @@ function SummaryPage() {
           {!isHidden("tasks") && (
             <Section id="tasks" title="Tasks" icon={ListChecks} onDismiss={hide}>
               {qTasks.isLoading ? (
-                <div className="space-y-2"><Skeleton className="h-8" /><Skeleton className="h-8" /></div>
+                <div className="space-y-2">
+                  <Skeleton className="h-8" />
+                  <Skeleton className="h-8" />
+                </div>
               ) : (qTasks.data ?? []).length === 0 ? (
                 <Empty text="Nothing on your list." />
               ) : (
                 <ul className="space-y-1">
                   {(qTasks.data ?? []).map((t) => (
-                    <li key={`${t.source}-${t.id}`} className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm">
+                    <li
+                      key={`${t.source}-${t.id}`}
+                      className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm"
+                    >
                       <CheckCircle2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                       <span className="truncate flex-1">{t.title}</span>
-                      {t.due_at && <span className="text-[11px] text-muted-foreground">{fmtDate(t.due_at)}</span>}
+                      {t.due_at && (
+                        <span className="text-[11px] text-muted-foreground">
+                          {fmtDate(t.due_at)}
+                        </span>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -374,10 +630,15 @@ function SummaryPage() {
               {!qGoogle.isLoading && !hasCal ? (
                 <div className="text-sm text-muted-foreground">
                   <p className="mb-2">Connect Google Calendar to see upcoming events.</p>
-                  <Link to="/apps" className="text-xs underline">Connect →</Link>
+                  <Link to="/apps" className="text-xs underline">
+                    Connect →
+                  </Link>
                 </div>
               ) : qCal.isLoading || qGoogle.isLoading ? (
-                <div className="space-y-2"><Skeleton className="h-8" /><Skeleton className="h-8" /></div>
+                <div className="space-y-2">
+                  <Skeleton className="h-8" />
+                  <Skeleton className="h-8" />
+                </div>
               ) : !qCal.data?.available ? (
                 <Empty text="Calendar unavailable right now." />
               ) : qCal.data.events.length === 0 ? (
@@ -387,16 +648,25 @@ function SummaryPage() {
                   {qCal.data.events.map((e) => (
                     <li key={e.id}>
                       {e.link ? (
-                        <a href={e.link} target="_blank" rel="noopener" className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent/40">
+                        <a
+                          href={e.link}
+                          target="_blank"
+                          rel="noopener"
+                          className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent/40"
+                        >
                           <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                           <span className="truncate flex-1">{e.title}</span>
-                          <span className="text-[11px] text-muted-foreground">{fmtDate(e.start)}</span>
+                          <span className="text-[11px] text-muted-foreground">
+                            {fmtDate(e.start)}
+                          </span>
                         </a>
                       ) : (
                         <div className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm">
                           <Calendar className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                           <span className="truncate flex-1">{e.title}</span>
-                          <span className="text-[11px] text-muted-foreground">{fmtDate(e.start)}</span>
+                          <span className="text-[11px] text-muted-foreground">
+                            {fmtDate(e.start)}
+                          </span>
                         </div>
                       )}
                     </li>
@@ -411,10 +681,15 @@ function SummaryPage() {
               {!qGoogle.isLoading && !hasGmail ? (
                 <div className="text-sm text-muted-foreground">
                   <p className="mb-2">Connect Gmail to see unread messages.</p>
-                  <Link to="/apps" className="text-xs underline">Connect →</Link>
+                  <Link to="/apps" className="text-xs underline">
+                    Connect →
+                  </Link>
                 </div>
               ) : qGmail.isLoading || qGoogle.isLoading ? (
-                <div className="space-y-2"><Skeleton className="h-10" /><Skeleton className="h-10" /></div>
+                <div className="space-y-2">
+                  <Skeleton className="h-10" />
+                  <Skeleton className="h-10" />
+                </div>
               ) : !qGmail.data?.available ? (
                 <Empty text="Gmail unavailable right now." />
               ) : qGmail.data.messages.length === 0 ? (
@@ -423,10 +698,17 @@ function SummaryPage() {
                 <ul className="space-y-2">
                   {qGmail.data.messages.map((m) => (
                     <li key={m.id}>
-                      <a href={`https://mail.google.com/mail/u/0/#inbox/${m.id}`} target="_blank" rel="noopener" className="block rounded-lg px-2 py-2 text-sm hover:bg-accent/40">
+                      <a
+                        href={`https://mail.google.com/mail/u/0/#inbox/${m.id}`}
+                        target="_blank"
+                        rel="noopener"
+                        className="block rounded-lg px-2 py-2 text-sm hover:bg-accent/40"
+                      >
                         <div className="flex items-center gap-2">
                           <span className="truncate flex-1 font-medium">{m.subject}</span>
-                          <span className="text-[11px] text-muted-foreground shrink-0">{fmtDate(m.date)}</span>
+                          <span className="text-[11px] text-muted-foreground shrink-0">
+                            {fmtDate(m.date)}
+                          </span>
                         </div>
                         <div className="text-[11px] text-muted-foreground truncate">{m.from}</div>
                       </a>
@@ -442,7 +724,10 @@ function SummaryPage() {
               <ul className="space-y-2">
                 {suggestions.slice(0, 4).map((s) => (
                   <li key={s.label}>
-                    <Link to={s.to} className="flex items-start gap-3 rounded-lg border border-border px-3 py-2.5 hover:bg-accent/40 transition">
+                    <Link
+                      to={s.to}
+                      className="flex items-start gap-3 rounded-lg border border-border px-3 py-2.5 hover:bg-accent/40 transition"
+                    >
                       <ArrowRight className="w-4 h-4 mt-0.5 text-muted-foreground" />
                       <div className="min-w-0">
                         <div className="text-sm font-medium truncate">{s.label}</div>
@@ -456,10 +741,21 @@ function SummaryPage() {
           )}
 
           {!isHidden("apps") && (
-            <Section id="apps" title="Apps" icon={Link2} onDismiss={hide}
-              action={<Link to="/apps" className="text-xs text-muted-foreground hover:text-foreground">Manage</Link>}>
+            <Section
+              id="apps"
+              title="Apps"
+              icon={Link2}
+              onDismiss={hide}
+              action={
+                <Link to="/apps" className="text-xs text-muted-foreground hover:text-foreground">
+                  Manage
+                </Link>
+              }
+            >
               <p className="text-sm text-muted-foreground mb-3">
-                {qGoogle.data?.connected ? `Google connected${qGoogle.data.email ? ` as ${qGoogle.data.email}` : ""}.` : "Connect Google, Notion, Slack, and more."}
+                {qGoogle.data?.connected
+                  ? `Google connected${qGoogle.data.email ? ` as ${qGoogle.data.email}` : ""}.`
+                  : "Connect Google, Notion, Slack, and more."}
               </p>
               <Link to="/apps" className="inline-flex items-center gap-1.5 text-sm underline">
                 Open Apps <ArrowRight className="w-3.5 h-3.5" />
@@ -468,9 +764,20 @@ function SummaryPage() {
           )}
 
           {!isHidden("library") && (
-            <Section id="library" title="Library" icon={FolderOpen} onDismiss={hide}
-              action={<Link to="/library" className="text-xs text-muted-foreground hover:text-foreground">Open</Link>}>
-              <p className="text-sm text-muted-foreground">Saved chats, files, and generated images live here.</p>
+            <Section
+              id="library"
+              title="Library"
+              icon={FolderOpen}
+              onDismiss={hide}
+              action={
+                <Link to="/library" className="text-xs text-muted-foreground hover:text-foreground">
+                  Open
+                </Link>
+              }
+            >
+              <p className="text-sm text-muted-foreground">
+                Saved chats, files, and generated images live here.
+              </p>
             </Section>
           )}
 
@@ -478,8 +785,12 @@ function SummaryPage() {
             <Section id="weather" title="Weather" icon={CloudSun} onDismiss={hide}>
               {!weatherEnabled ? (
                 <div className="text-sm text-muted-foreground">
-                  <p className="mb-2">Show local weather using your device location. Nothing is stored.</p>
-                  <button onClick={enableWeather} className="text-xs underline">Enable</button>
+                  <p className="mb-2">
+                    Show local weather using your device location. Nothing is stored.
+                  </p>
+                  <button onClick={enableWeather} className="text-xs underline">
+                    Enable
+                  </button>
                 </div>
               ) : weather.status === "loading" || weather.status === "idle" ? (
                 <Skeleton className="h-8 w-32" />
@@ -499,7 +810,10 @@ function SummaryPage() {
 
         {dismissed.length > 0 && (
           <div className="mt-8 flex justify-center">
-            <button onClick={restore} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+            <button
+              onClick={restore}
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+            >
               <RotateCcw className="w-3.5 h-3.5" />
               Restore {dismissed.length} hidden section{dismissed.length === 1 ? "" : "s"}
             </button>

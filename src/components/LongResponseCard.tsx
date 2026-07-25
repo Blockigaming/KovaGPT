@@ -47,7 +47,9 @@ function download(filename: string, text: string) {
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 export function LongResponseCard({
@@ -86,7 +88,12 @@ export function LongResponseCard({
   };
 
   const dl = () => {
-    const safe = title.replace(/[^a-z0-9\- ]/gi, "").trim().replace(/\s+/g, "-").slice(0, 60) || "document";
+    const safe =
+      title
+        .replace(/[^a-z0-9\- ]/gi, "")
+        .trim()
+        .replace(/\s+/g, "-")
+        .slice(0, 60) || "document";
     download(`${safe}.md`, content);
   };
 
@@ -94,7 +101,9 @@ export function LongResponseCard({
     if (onOpenInWriting) return onOpenInWriting();
     try {
       sessionStorage.setItem("kova-writing-draft", content);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     window.open("/write", "_blank", "noopener,noreferrer");
   };
 
@@ -141,7 +150,10 @@ export function LongResponseCard({
       <div className="px-2 -mt-8 mb-2 text-[10px] uppercase tracking-wider text-neutral-500 pl-5">
         {title}
       </div>
-      <div ref={bodyRef} className="px-5 pb-5 pt-1 prose-chat prose-invert max-w-none text-neutral-100 leading-relaxed [&>p]:my-3 [&>h1]:mt-4 [&>h2]:mt-4 [&>h3]:mt-3">
+      <div
+        ref={bodyRef}
+        className="px-5 pb-5 pt-1 prose-chat prose-invert max-w-none text-neutral-100 leading-relaxed [&>p]:my-3 [&>h1]:mt-4 [&>h2]:mt-4 [&>h3]:mt-3"
+      >
         {children}
       </div>
     </div>

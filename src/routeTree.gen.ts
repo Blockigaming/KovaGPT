@@ -23,6 +23,7 @@ import { Route as RefundRouteImport } from './routes/refund'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as ModesRouteImport } from './routes/modes'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LibraryRouteImport } from './routes/library'
@@ -52,6 +53,7 @@ import { Route as ApiWriteRouteImport } from './routes/api/write'
 import { Route as ApiTitleRouteImport } from './routes/api/title'
 import { Route as ApiProjectSuggestRouteImport } from './routes/api/project-suggest'
 import { Route as ApiMemoryRouteImport } from './routes/api/memory'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -144,6 +146,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ModesRoute = ModesRouteImport.update({
@@ -293,6 +300,11 @@ const ApiMemoryRoute = ApiMemoryRouteImport.update({
   path: '/api/memory',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiGenerateImageRoute = ApiGenerateImageRouteImport.update({
   id: '/api/generate-image',
   path: '/api/generate-image',
@@ -436,6 +448,7 @@ export interface FileRoutesByFullPath {
   '/library': typeof LibraryRoute
   '/mcp': typeof McpRoute
   '/modes': typeof ModesRoute
+  '/notifications': typeof NotificationsRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/projects': typeof ProjectsRouteWithChildren
@@ -454,6 +467,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
+  '/api/health': typeof ApiHealthRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/title': typeof ApiTitleRoute
@@ -504,6 +518,7 @@ export interface FileRoutesByTo {
   '/library': typeof LibraryRoute
   '/mcp': typeof McpRoute
   '/modes': typeof ModesRoute
+  '/notifications': typeof NotificationsRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/projects': typeof ProjectsRouteWithChildren
@@ -522,6 +537,7 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
+  '/api/health': typeof ApiHealthRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/title': typeof ApiTitleRoute
@@ -573,6 +589,7 @@ export interface FileRoutesById {
   '/library': typeof LibraryRoute
   '/mcp': typeof McpRoute
   '/modes': typeof ModesRoute
+  '/notifications': typeof NotificationsRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/projects': typeof ProjectsRouteWithChildren
@@ -591,6 +608,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
+  '/api/health': typeof ApiHealthRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
   '/api/title': typeof ApiTitleRoute
@@ -643,6 +661,7 @@ export interface FileRouteTypes {
     | '/library'
     | '/mcp'
     | '/modes'
+    | '/notifications'
     | '/pricing'
     | '/privacy'
     | '/projects'
@@ -661,6 +680,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/api/chat'
     | '/api/generate-image'
+    | '/api/health'
     | '/api/memory'
     | '/api/project-suggest'
     | '/api/title'
@@ -711,6 +731,7 @@ export interface FileRouteTypes {
     | '/library'
     | '/mcp'
     | '/modes'
+    | '/notifications'
     | '/pricing'
     | '/privacy'
     | '/projects'
@@ -729,6 +750,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/api/chat'
     | '/api/generate-image'
+    | '/api/health'
     | '/api/memory'
     | '/api/project-suggest'
     | '/api/title'
@@ -779,6 +801,7 @@ export interface FileRouteTypes {
     | '/library'
     | '/mcp'
     | '/modes'
+    | '/notifications'
     | '/pricing'
     | '/privacy'
     | '/projects'
@@ -797,6 +820,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/api/chat'
     | '/api/generate-image'
+    | '/api/health'
     | '/api/memory'
     | '/api/project-suggest'
     | '/api/title'
@@ -848,6 +872,7 @@ export interface RootRouteChildren {
   LibraryRoute: typeof LibraryRoute
   McpRoute: typeof McpRoute
   ModesRoute: typeof ModesRoute
+  NotificationsRoute: typeof NotificationsRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProjectsRoute: typeof ProjectsRouteWithChildren
@@ -866,6 +891,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   ApiChatRoute: typeof ApiChatRouteWithChildren
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
+  ApiHealthRoute: typeof ApiHealthRoute
   ApiMemoryRoute: typeof ApiMemoryRoute
   ApiProjectSuggestRoute: typeof ApiProjectSuggestRoute
   ApiTitleRoute: typeof ApiTitleRoute
@@ -993,6 +1019,13 @@ declare module '@tanstack/react-router' {
       path: '/pricing'
       fullPath: '/pricing'
       preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/modes': {
@@ -1196,6 +1229,13 @@ declare module '@tanstack/react-router' {
       path: '/api/memory'
       fullPath: '/api/memory'
       preLoaderRoute: typeof ApiMemoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/generate-image': {
@@ -1415,6 +1455,7 @@ const rootRouteChildren: RootRouteChildren = {
   LibraryRoute: LibraryRoute,
   McpRoute: McpRoute,
   ModesRoute: ModesRoute,
+  NotificationsRoute: NotificationsRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ProjectsRoute: ProjectsRouteWithChildren,
@@ -1434,6 +1475,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   ApiChatRoute: ApiChatRouteWithChildren,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
+  ApiHealthRoute: ApiHealthRoute,
   ApiMemoryRoute: ApiMemoryRoute,
   ApiProjectSuggestRoute: ApiProjectSuggestRoute,
   ApiTitleRoute: ApiTitleRoute,

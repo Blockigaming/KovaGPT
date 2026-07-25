@@ -5,9 +5,7 @@
   "auth": {
     "type": "oauth",
     "issuer": "https://zrzwkqrwurgutrmvalri.supabase.co/auth/v1",
-    "accepted_audiences": [
-      "authenticated"
-    ]
+    "accepted_audiences": ["authenticated"]
   },
   "mcp": {
     "server": {
@@ -61,16 +59,10 @@
             "status": {
               "description": "Optional status filter.",
               "type": "string",
-              "enum": [
-                "todo",
-                "doing",
-                "done"
-              ]
+              "enum": ["todo", "doing", "done"]
             }
           },
-          "required": [
-            "project_id"
-          ]
+          "required": ["project_id"]
         },
         "outputSchema": null
       },
@@ -101,11 +93,7 @@
             "status": {
               "description": "Initial status (defaults to todo).",
               "type": "string",
-              "enum": [
-                "todo",
-                "doing",
-                "done"
-              ]
+              "enum": ["todo", "doing", "done"]
             },
             "due_date": {
               "description": "Optional due date in YYYY-MM-DD.",
@@ -113,10 +101,7 @@
               "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
             }
           },
-          "required": [
-            "project_id",
-            "title"
-          ]
+          "required": ["project_id", "title"]
         },
         "outputSchema": null
       },
@@ -140,9 +125,7 @@
               "description": "The project ID."
             }
           },
-          "required": [
-            "project_id"
-          ]
+          "required": ["project_id"]
         },
         "outputSchema": null
       }

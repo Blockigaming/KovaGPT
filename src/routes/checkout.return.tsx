@@ -17,7 +17,11 @@ export const Route = createFileRoute("/checkout/return")({
       },
       { name: "robots", content: "noindex, nofollow" },
       { property: "og:title", content: "Payment Successful - KovaGPT" },
-      { property: "og:description", content: "Your KovaGPT subscription is now active. Access all advanced AI modes and priority features." },
+      {
+        property: "og:description",
+        content:
+          "Your KovaGPT subscription is now active. Access all advanced AI modes and priority features.",
+      },
       { property: "og:url", content: "https://kovagpt.com/checkout/return" },
     ],
     links: [{ rel: "canonical", href: "https://kovagpt.com/checkout/return" }],
@@ -44,8 +48,8 @@ function CheckoutReturn() {
           <>
             <h1 className="text-2xl font-semibold mb-2">No session found</h1>
             <p className="text-sm text-muted-foreground mb-6">
-              We couldn't find your checkout session. If you completed a payment, it
-              should still go through.
+              We couldn't find your checkout session. If you completed a payment, it should still go
+              through.
             </p>
           </>
         )}

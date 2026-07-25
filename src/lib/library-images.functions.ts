@@ -22,12 +22,10 @@ function decodeDataUrl(dataUrl: string): { bytes: Uint8Array; contentType: strin
 }
 
 // Allowlisted hosts the library can save images from. These are the only
-// domains we expect (AI gateway CDN, Supabase storage, OpenAI image CDN).
+// domains we expect (Supabase storage and direct provider image CDNs).
 // User-supplied URLs to anything else are rejected to prevent SSRF against
 // internal/cloud-metadata endpoints.
 const ALLOWED_IMAGE_HOST_SUFFIXES = [
-  ".lovable.dev",
-  ".lovable.app",
   ".supabase.co",
   ".supabase.in",
   ".oaiusercontent.com",
@@ -42,7 +40,9 @@ function isHostAllowed(hostname: string): boolean {
   return ALLOWED_IMAGE_HOST_SUFFIXES.some((s) => h === s.slice(1) || h.endsWith(s));
 }
 
-async function fetchRemoteImage(url: string): Promise<{ bytes: Uint8Array; contentType: string } | null> {
+async function fetchRemoteImage(
+  url: string,
+): Promise<{ bytes: Uint8Array; contentType: string } | null> {
   try {
     let current = new URL(url);
     if (current.protocol !== "https:") return null;
@@ -140,7 +140,10 @@ export const saveImageToLibrary = createServerFn({ method: "POST" })
     if (error || !row) {
       // best-effort cleanup of orphan upload
       await context.supabase.storage.from(BUCKET).remove([path]);
-      { console.error("[serverfn]", error?.message); throw new Error("Failed to save"); }
+      {
+        console.error("[serverfn]", error?.message);
+        throw new Error("Failed to save");
+      }
     }
     return { id: row.id };
   });
@@ -183,6 +186,9 @@ export const deleteLibraryImage = createServerFn({ method: "POST" })
       .delete()
       .eq("id", data.id)
       .eq("user_id", context.userId);
-    if (error) { console.error("[serverfn]", error.message); throw new Error("Request failed. Please try again."); }
+    if (error) {
+      console.error("[serverfn]", error.message);
+      throw new Error("Request failed. Please try again.");
+    }
     return { ok: true };
   });

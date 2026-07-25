@@ -30,9 +30,10 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
     // `next()` returns a context object; the framework writes the final Response
     // separately. We attach headers here best-effort via the returned response
     // when present.
-    const maybeResponse = (result as any)?.response as Response | undefined;
+    const contextResult = result as { response?: Response };
+    const maybeResponse = contextResult.response;
     if (maybeResponse instanceof Response) {
-      (result as any).response = applySecurityHeaders(maybeResponse);
+      contextResult.response = applySecurityHeaders(maybeResponse);
     }
     return result;
   } catch (error) {

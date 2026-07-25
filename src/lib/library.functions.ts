@@ -82,7 +82,10 @@ export const saveToLibrary = createServerFn({ method: "POST" })
       })
       .select("id")
       .single();
-    if (error || !row) { console.error("[serverfn]", error?.message); throw new Error("Failed to save"); }
+    if (error || !row) {
+      console.error("[serverfn]", error?.message);
+      throw new Error("Failed to save");
+    }
     return { id: row.id };
   });
 
@@ -105,6 +108,9 @@ export const deleteLibraryItem = createServerFn({ method: "POST" })
       .delete()
       .eq("id", data.id)
       .eq("user_id", context.userId);
-    if (error) { console.error("[serverfn]", error.message); throw new Error("Request failed. Please try again."); }
+    if (error) {
+      console.error("[serverfn]", error.message);
+      throw new Error("Request failed. Please try again.");
+    }
     return { ok: true };
   });

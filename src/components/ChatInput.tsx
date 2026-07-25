@@ -1,17 +1,24 @@
-import { ArrowUp, Square, Plus, X, Mic, Image as ImageIcon, FileText, Camera, Puzzle, Search, Lightbulb, Sparkles, GraduationCap, SlidersHorizontal, Brain, type LucideIcon } from "lucide-react";
+import {
+  ArrowUp,
+  Square,
+  Plus,
+  X,
+  Image as ImageIcon,
+  FileText,
+  Camera,
+  Puzzle,
+  Search,
+  Lightbulb,
+  Sparkles,
+  GraduationCap,
+  SlidersHorizontal,
+  Brain,
+  AlertCircle,
+  RotateCcw,
+  type LucideIcon,
+} from "lucide-react";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { useLayout } from "@/hooks/use-mobile";
-
-type SpeechRecognitionLike = {
-  lang: string;
-  interimResults: boolean;
-  continuous: boolean;
-  onresult: ((e: { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal?: boolean }> }) => void) | null;
-  onerror: ((e: { error?: string }) => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-};
 
 import { useEffect, useRef, useState } from "react";
 import { tryUseUpload, DAILY_UPLOAD_LIMIT, getUsage } from "@/lib/limits";
@@ -19,11 +26,40 @@ import { toast } from "sonner";
 import { ResponsiveModelSelector as ModelSelector } from "@/components/ResponsiveModelSelector";
 import type { ModeId, Tier } from "@/lib/modes";
 
-export type PendingAttachment = { kind: "image"; dataUrl: string; name: string };
-export type ComposerToolId = "web_search" | "deep_research" | "image" | "study" | "data_analysis" | "file_analysis";
+export type PendingAttachment = {
+  kind: "image" | "library_file";
+  dataUrl: string;
+  name: string;
+  size?: number;
+  status?: "selected" | "uploading" | "complete" | "failed";
+  error?: string;
+  libraryItemId?: string;
+  fileType?: string | null;
+  sourceProject?: string | null;
+  createdAt?: string | null;
+};
 
-const TEXT_LIKE_EXT = /\.(txt|md|markdown|csv|tsv|json|jsonl|ya?ml|toml|xml|html?|css|scss|less|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|h|cc|cpp|hpp|cs|php|sql|sh|bash|zsh|fish|env|ini|conf|log|srt|vtt)$/i;
+export type RecentLibraryFile = {
+  id: string;
+  title: string;
+  fileName?: string | null;
+  fileType?: string | null;
+  fileSize?: number | null;
+  createdAt?: string | null;
+  projectName?: string | null;
+};
+export type ComposerToolId =
+  | "web_search"
+  | "deep_research"
+  | "image"
+  | "study"
+  | "data_analysis"
+  | "file_analysis";
+
+const TEXT_LIKE_EXT =
+  /\.(txt|md|markdown|csv|tsv|json|jsonl|ya?ml|toml|xml|html?|css|scss|less|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|h|cc|cpp|hpp|cs|php|sql|sh|bash|zsh|fish|env|ini|conf|log|srt|vtt)$/i;
 const MAX_TEXT_FILE_BYTES = 256 * 1024; // 256 KB inline cap to keep prompts reasonable
+const MAX_IMAGE_FILE_BYTES = 10 * 1024 * 1024; // 10 MB image preview cap
 
 export function ChatInput({
   value,
@@ -40,6 +76,10 @@ export function ChatInput({
   placeholder,
   onPromptShortcut,
   onToolSelect,
+  recentLibraryFiles = [],
+  recentLibraryLoading = false,
+  recentLibraryError = null,
+  onRecentLibraryRetry,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -56,8 +96,11 @@ export function ChatInput({
   placeholder?: string;
   onPromptShortcut?: (prompt: string) => void;
   onToolSelect?: (tool: ComposerToolId) => void;
+  recentLibraryFiles?: RecentLibraryFile[];
+  recentLibraryLoading?: boolean;
+  recentLibraryError?: string | null;
+  onRecentLibraryRetry?: () => void;
 }) {
-
   const { isDesktop } = useLayout();
   const isMobileLayout = !isDesktop;
 
@@ -73,9 +116,10 @@ export function ChatInput({
   const [plusOpen, setPlusOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [kbOffset, setKbOffset] = useState(0);
-  const [listening, setListening] = useState(false);
-  const recRef = useRef<SpeechRecognitionLike | null>(null);
-  const dictationBaseRef = useRef<string>("");
+  const submittingRef = useRef(false);
+  const composingRef = useRef(false);
+  const [uploadAnnouncement, setUploadAnnouncement] = useState("");
+  const [recentQuery, setRecentQuery] = useState("");
 
   useEffect(() => {
     if (!plusOpen && !toolsOpen) return;
@@ -98,13 +142,13 @@ export function ChatInput({
     };
   }, [plusOpen, toolsOpen]);
 
-
-
   useEffect(() => {
     try {
       const c = localStorage.getItem("kova-action-color");
       if (c && /^#[0-9a-f]{6}$/i.test(c)) setActionColor(c);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     const onStorage = (e: StorageEvent) => {
       if (e.key === "kova-action-color" && e.newValue && /^#[0-9a-f]{6}$/i.test(e.newValue)) {
         setActionColor(e.newValue);
@@ -113,7 +157,8 @@ export function ChatInput({
     window.addEventListener("storage", onStorage);
     const onLocal = (e: Event) => {
       const ce = e as CustomEvent<string>;
-      if (typeof ce.detail === "string" && /^#[0-9a-f]{6}$/i.test(ce.detail)) setActionColor(ce.detail);
+      if (typeof ce.detail === "string" && /^#[0-9a-f]{6}$/i.test(ce.detail))
+        setActionColor(ce.detail);
     };
     window.addEventListener("kova-action-color", onLocal as EventListener);
     return () => {
@@ -147,8 +192,16 @@ export function ChatInput({
     };
   }, [isMobileLayout]);
 
+  useEffect(() => {
+    if (!isStreaming) submittingRef.current = false;
+  }, [isStreaming, value, attachments.length]);
+
   const triggerSubmit = () => {
+    if (submittingRef.current || isStreaming) return;
+    if (!value.trim() && attachments.length === 0) return;
+    submittingRef.current = true;
     setSendFlash(true);
+    setUploadAnnouncement("Message submitted");
     window.setTimeout(() => setSendFlash(false), 380);
     onSubmit();
   };
@@ -176,13 +229,43 @@ export function ChatInput({
     },
   ];
 
-  const toolActions: Array<{ id: ComposerToolId; label: string; icon: LucideIcon; prompt: string }> = [
-    { id: "web_search", label: "Search the web", icon: Search, prompt: "Search the web and cite sources for: " },
-    { id: "deep_research", label: "Deep research", icon: GraduationCap, prompt: "Research this deeply with sources and a structured report: " },
+  const toolActions: Array<{
+    id: ComposerToolId;
+    label: string;
+    icon: LucideIcon;
+    prompt: string;
+  }> = [
+    {
+      id: "web_search",
+      label: "Search the web",
+      icon: Search,
+      prompt: "Search the web and cite sources for: ",
+    },
+    {
+      id: "deep_research",
+      label: "Deep research",
+      icon: GraduationCap,
+      prompt: "Research this deeply with sources and a structured report: ",
+    },
     { id: "image", label: "Create an image", icon: ImageIcon, prompt: "Create an image of: " },
-    { id: "data_analysis", label: "Analyze data", icon: Brain, prompt: "Analyze this data and show the key findings: " },
-    { id: "study", label: "Study mode", icon: Lightbulb, prompt: "Tutor me on this step by step, then quiz me: " },
-    { id: "file_analysis", label: "Analyze files", icon: FileText, prompt: "Analyze the attached file and summarize the important details." },
+    {
+      id: "data_analysis",
+      label: "Analyze data",
+      icon: Brain,
+      prompt: "Analyze this data and show the key findings: ",
+    },
+    {
+      id: "study",
+      label: "Study mode",
+      icon: Lightbulb,
+      prompt: "Tutor me on this step by step, then quiz me: ",
+    },
+    {
+      id: "file_analysis",
+      label: "Analyze files",
+      icon: FileText,
+      prompt: "Analyze the attached file and summarize the important details.",
+    },
   ];
 
   const applyShortcut = (prompt: string) => {
@@ -198,73 +281,264 @@ export function ChatInput({
   };
 
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    const native = e.nativeEvent as KeyboardEvent & { isComposing?: boolean };
+    if (e.key === "Enter" && !e.shiftKey && !native.isComposing && !composingRef.current) {
       e.preventDefault();
-      if (!isStreaming && (value.trim() || attachments.length > 0)) triggerSubmit();
+      triggerSubmit();
     }
   };
 
-
-  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-
-    e.target.value = "";
+  async function addFiles(files: File[]) {
+    if (files.length === 0) return;
     let nextValue = value;
+    let nextAttachments = [...attachments];
+    const seen = new Set(nextAttachments.map((a) => `${a.name}:${a.size ?? 0}`));
+
     for (const f of files) {
       const isImage = f.type.startsWith("image/");
       const isTextLike =
-        f.type.startsWith("text/") ||
-        f.type === "application/json" ||
-        TEXT_LIKE_EXT.test(f.name);
+        f.type.startsWith("text/") || f.type === "application/json" || TEXT_LIKE_EXT.test(f.name);
 
       if (!isImage && !isTextLike) {
-        toast.error(`${f.name}: unsupported file type. Attach an image or a text file.`);
+        const failed: PendingAttachment = {
+          kind: "image",
+          dataUrl: "",
+          name: f.name,
+          size: f.size,
+          status: "failed",
+          error: "Unsupported file type",
+        };
+        nextAttachments = [...nextAttachments, failed];
+        setUploadAnnouncement(`${f.name}: unsupported file type`);
+        continue;
+      }
+
+      const duplicateKey = `${f.name}:${f.size}`;
+      if (isImage && seen.has(duplicateKey)) {
+        setUploadAnnouncement(`${f.name} is already attached`);
+        toast.message(`${f.name} is already attached.`);
         continue;
       }
 
       const u = getUsage();
-      if (u.uploads >= DAILY_UPLOAD_LIMIT) {
-        onUploadLimit?.();
-        return;
-      }
-      if (!tryUseUpload()) {
+      if (u.uploads >= DAILY_UPLOAD_LIMIT || !tryUseUpload()) {
         onUploadLimit?.();
         return;
       }
 
       if (isImage) {
-        const dataUrl = await new Promise<string>((res, rej) => {
-          const r = new FileReader();
-          r.onload = () => res(r.result as string);
-          r.onerror = rej;
-          r.readAsDataURL(f);
-        });
-        onAttachmentsChange([...attachments, { kind: "image", dataUrl, name: f.name }]);
+        if (f.size > MAX_IMAGE_FILE_BYTES) {
+          nextAttachments = [
+            ...nextAttachments,
+            {
+              kind: "image",
+              dataUrl: "",
+              name: f.name,
+              size: f.size,
+              status: "failed",
+              error: "Image is larger than 10 MB",
+            },
+          ];
+          setUploadAnnouncement(`${f.name}: image is larger than 10 MB`);
+          continue;
+        }
+        const uploading: PendingAttachment = {
+          kind: "image",
+          dataUrl: "",
+          name: f.name,
+          size: f.size,
+          status: "uploading",
+        };
+        nextAttachments = [...nextAttachments, uploading];
+        onAttachmentsChange(nextAttachments);
+        setUploadAnnouncement(`Uploading ${f.name}`);
+        try {
+          const dataUrl = await new Promise<string>((res, rej) => {
+            const r = new FileReader();
+            r.onload = () => res(r.result as string);
+            r.onerror = () => rej(new Error("Could not read image"));
+            r.readAsDataURL(f);
+          });
+          nextAttachments = nextAttachments.map((a) =>
+            a === uploading ? { ...uploading, dataUrl, status: "complete" as const } : a,
+          );
+          seen.add(duplicateKey);
+          setUploadAnnouncement(`${f.name} attached`);
+        } catch (error) {
+          nextAttachments = nextAttachments.map((a) =>
+            a === uploading
+              ? {
+                  ...uploading,
+                  status: "failed" as const,
+                  error: error instanceof Error ? error.message : "Could not read image",
+                }
+              : a,
+          );
+          setUploadAnnouncement(`${f.name}: upload failed`);
+        }
+        onAttachmentsChange(nextAttachments);
       } else {
         if (f.size > MAX_TEXT_FILE_BYTES) {
           toast.error(`${f.name} is too large (max 256 KB for text files).`);
+          setUploadAnnouncement(`${f.name}: text file is larger than 256 KB`);
           continue;
         }
         const text = await f.text();
         const lang = (f.name.split(".").pop() || "").toLowerCase();
         const block = `\n\nAttached file: ${f.name}\n\`\`\`${lang}\n${text}\n\`\`\`\n`;
         nextValue = (nextValue ? nextValue : "") + block;
+        setUploadAnnouncement(`${f.name} inserted into the message`);
       }
     }
+    if (nextAttachments !== attachments) onAttachmentsChange(nextAttachments);
     if (nextValue !== value) onChange(nextValue);
+  }
+
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    await addFiles(files);
   };
 
+  const handlePaste = async (e: React.ClipboardEvent<HTMLDivElement>) => {
+    const files = Array.from(e.clipboardData.files || []);
+    if (files.length === 0) return;
+    e.preventDefault();
+    await addFiles(files);
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length === 0) return;
+    e.preventDefault();
+    await addFiles(files);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (e.dataTransfer.types.includes("Files")) e.preventDefault();
+  };
+
+  const attachLibraryFile = (item: RecentLibraryFile) => {
+    const name = item.fileName || item.title;
+    const duplicate = attachments.some((a) => a.libraryItemId === item.id);
+    if (duplicate) {
+      setUploadAnnouncement(`${name} is already attached`);
+      toast.message(`${name} is already attached.`);
+      return;
+    }
+    onAttachmentsChange([
+      ...attachments,
+      {
+        kind: "library_file",
+        dataUrl: "",
+        name,
+        size: item.fileSize ?? undefined,
+        status: "complete",
+        libraryItemId: item.id,
+        fileType: item.fileType ?? null,
+        sourceProject: item.projectName ?? null,
+        createdAt: item.createdAt ?? null,
+      },
+    ]);
+    setPlusOpen(false);
+    setUploadAnnouncement(`${name} attached from Library`);
+    ref.current?.focus();
+  };
+
+  const visibleRecentLibraryFiles = recentLibraryFiles
+    .filter((item) => {
+      const q = recentQuery.trim().toLowerCase();
+      if (!q) return true;
+      return (
+        (item.fileName || item.title).toLowerCase().includes(q) ||
+        (item.fileType ?? "").toLowerCase().includes(q) ||
+        (item.projectName ?? "").toLowerCase().includes(q)
+      );
+    })
+    .slice(0, 8);
+
+  const renderRecentLibraryFiles = () => (
+    <div className="mt-1 border-t border-border/70 pt-1" aria-label="Recent Library files">
+      <div className="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        Recent Library files
+      </div>
+      {recentLibraryFiles.length > 4 ? (
+        <label className="mx-2 mb-1 block">
+          <span className="sr-only">Search recent Library files</span>
+          <input
+            value={recentQuery}
+            onChange={(event) => setRecentQuery(event.target.value)}
+            placeholder="Search files"
+            className="h-10 w-full rounded-[var(--kova-radius-input)] border border-border bg-[var(--surface-input)] px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </label>
+      ) : null}
+      {recentLibraryLoading ? (
+        <div className="px-3 py-3 text-sm text-muted-foreground">Loading recent files…</div>
+      ) : recentLibraryError ? (
+        <div className="px-3 py-2 text-sm text-muted-foreground">
+          <div>{recentLibraryError}</div>
+          {onRecentLibraryRetry ? (
+            <button
+              type="button"
+              className="mt-1 text-xs font-medium text-foreground underline"
+              onClick={onRecentLibraryRetry}
+            >
+              Retry
+            </button>
+          ) : null}
+        </div>
+      ) : visibleRecentLibraryFiles.length === 0 ? (
+        <div className="px-3 py-3 text-sm text-muted-foreground">No reusable files yet.</div>
+      ) : (
+        <div className="max-h-64 overflow-y-auto p-1">
+          {visibleRecentLibraryFiles.map((item) => {
+            const name = item.fileName || item.title;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="menuitem"
+                onClick={() => attachLibraryFile(item)}
+                className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">{name}</span>
+                  <span className="block truncate text-[11px] text-muted-foreground">
+                    {[
+                      item.fileType || "Library file",
+                      item.projectName,
+                      item.createdAt ? new Date(item.createdAt).toLocaleDateString() : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div
       className="w-full px-3 sm:px-6 lg:px-8 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 transition-[padding] duration-150"
       style={isMobileLayout && kbOffset > 0 ? { paddingBottom: `${kbOffset + 8}px` } : undefined}
+      onPaste={handlePaste}
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
     >
       <div className="mx-auto max-w-3xl [[data-sidebar=closed]_&]:max-w-4xl">
         <div
           style={
             sendFlash
-              ? ({ boxShadow: `0 0 0 2px ${actionColor}33`, borderColor: `${actionColor}99` } as React.CSSProperties)
+              ? ({
+                  boxShadow: `0 0 0 2px ${actionColor}33`,
+                  borderColor: `${actionColor}99`,
+                } as React.CSSProperties)
               : undefined
           }
           className={`rounded-[28px] border bg-card shadow-[0_12px_32px_-20px_rgba(0,0,0,0.45),0_1px_2px_rgba(0,0,0,0.08)] transition-all duration-200 focus-within:border-muted-foreground/50 ${
@@ -276,22 +550,75 @@ export function ChatInput({
           }`}
         >
           {attachments.length > 0 && (
-            <div className="flex flex-wrap gap-2 p-3 pb-0">
+            <div className="flex flex-wrap gap-2 p-3 pb-0" aria-label="Attachments">
               {attachments.map((a, i) => (
-                <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border">
-                  <img src={a.dataUrl} alt="Uploaded image preview" className="w-full h-full object-cover" />
+                <div
+                  key={`${a.name}:${a.size ?? i}:${i}`}
+                  className="relative min-h-16 w-20 overflow-hidden rounded-xl border border-border bg-muted/30"
+                >
+                  {a.kind === "library_file" ? (
+                    <div className="flex h-16 w-full flex-col items-center justify-center gap-1 text-muted-foreground">
+                      <FileText className="h-5 w-5" />
+                      <span className="text-[9px] uppercase">Library</span>
+                    </div>
+                  ) : a.dataUrl ? (
+                    <img
+                      src={a.dataUrl}
+                      alt={`Attachment preview: ${a.name}`}
+                      className="h-16 w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-16 w-full items-center justify-center text-muted-foreground">
+                      {a.status === "failed" ? (
+                        <AlertCircle className="h-5 w-5" />
+                      ) : (
+                        <FileText className="h-5 w-5" />
+                      )}
+                    </div>
+                  )}
+                  <div className="truncate px-1.5 pb-1 text-[10px] text-muted-foreground">
+                    {a.name}
+                  </div>
+                  {a.kind === "library_file" && a.sourceProject ? (
+                    <div className="truncate px-1.5 pb-1 text-[9px] text-muted-foreground">
+                      {a.sourceProject}
+                    </div>
+                  ) : null}
+                  {a.status === "uploading" ? (
+                    <span className="absolute inset-x-1 bottom-5 h-1 overflow-hidden rounded-full bg-background/70">
+                      <span className="block h-full w-1/2 animate-pulse rounded-full bg-primary" />
+                    </span>
+                  ) : null}
+                  {a.status === "failed" ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onAttachmentsChange(attachments.filter((_, j) => j !== i));
+                        fileRef.current?.click();
+                      }}
+                      className="absolute bottom-5 left-1 flex h-7 w-7 items-center justify-center rounded-full bg-background/90 hover:bg-background"
+                      aria-label={`Retry ${a.name}`}
+                      title={a.error ?? "Retry attachment"}
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => onAttachmentsChange(attachments.filter((_, j) => j !== i))}
-                    className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-background/80 flex items-center justify-center hover:bg-background"
+                    className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-background/85 hover:bg-background"
+                    aria-label={`Remove ${a.name}`}
                   >
-                    <X className="w-3 h-3" />
+                    <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
               ))}
             </div>
           )}
-          <div className="flex items-center min-h-[52px]">
+          <div aria-live="polite" className="sr-only">
+            {uploadAnnouncement}
+          </div>
+          <div className="flex min-h-[56px] items-center">
             <div className="flex items-center pl-1.5 relative" ref={plusWrapRef}>
               <input
                 ref={fileRef}
@@ -336,7 +663,10 @@ export function ChatInput({
                   <button
                     role="menuitem"
                     type="button"
-                    onClick={() => { setPlusOpen(false); cameraRef.current?.click(); }}
+                    onClick={() => {
+                      setPlusOpen(false);
+                      cameraRef.current?.click();
+                    }}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
                   >
                     <Camera className="w-4 h-4 text-muted-foreground" />
@@ -345,7 +675,10 @@ export function ChatInput({
                   <button
                     role="menuitem"
                     type="button"
-                    onClick={() => { setPlusOpen(false); photoRef.current?.click(); }}
+                    onClick={() => {
+                      setPlusOpen(false);
+                      photoRef.current?.click();
+                    }}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
                   >
                     <ImageIcon className="w-4 h-4 text-muted-foreground" />
@@ -354,7 +687,10 @@ export function ChatInput({
                   <button
                     role="menuitem"
                     type="button"
-                    onClick={() => { setPlusOpen(false); window.location.href = "/apps"; }}
+                    onClick={() => {
+                      setPlusOpen(false);
+                      window.location.href = "/apps";
+                    }}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
                   >
                     <Puzzle className="w-4 h-4 text-muted-foreground" />
@@ -363,12 +699,16 @@ export function ChatInput({
                   <button
                     role="menuitem"
                     type="button"
-                    onClick={() => { setPlusOpen(false); fileRef.current?.click(); }}
+                    onClick={() => {
+                      setPlusOpen(false);
+                      fileRef.current?.click();
+                    }}
                     className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
                   >
                     <FileText className="w-4 h-4 text-muted-foreground" />
                     <span>Files</span>
                   </button>
+                  {renderRecentLibraryFiles()}
                 </div>
               )}
             </div>
@@ -382,7 +722,10 @@ export function ChatInput({
                 <div className="flex flex-col gap-1 p-1">
                   <button
                     type="button"
-                    onClick={() => { setPlusOpen(false); cameraRef.current?.click(); }}
+                    onClick={() => {
+                      setPlusOpen(false);
+                      cameraRef.current?.click();
+                    }}
                     className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
                   >
                     <Camera className="w-5 h-5 text-muted-foreground" />
@@ -390,7 +733,10 @@ export function ChatInput({
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setPlusOpen(false); photoRef.current?.click(); }}
+                    onClick={() => {
+                      setPlusOpen(false);
+                      photoRef.current?.click();
+                    }}
                     className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
                   >
                     <ImageIcon className="w-5 h-5 text-muted-foreground" />
@@ -398,7 +744,10 @@ export function ChatInput({
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setPlusOpen(false); fileRef.current?.click(); }}
+                    onClick={() => {
+                      setPlusOpen(false);
+                      fileRef.current?.click();
+                    }}
                     className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
                   >
                     <FileText className="w-5 h-5 text-muted-foreground" />
@@ -406,12 +755,16 @@ export function ChatInput({
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setPlusOpen(false); window.location.href = "/apps"; }}
+                    onClick={() => {
+                      setPlusOpen(false);
+                      window.location.href = "/apps";
+                    }}
                     className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
                   >
                     <Puzzle className="w-5 h-5 text-muted-foreground" />
                     <span>Plugins</span>
                   </button>
+                  {renderRecentLibraryFiles()}
                 </div>
               </MobileBottomSheet>
             )}
@@ -421,6 +774,12 @@ export function ChatInput({
               value={value}
               onChange={(e) => onChange(e.target.value)}
               onKeyDown={handleKey}
+              onCompositionStart={() => {
+                composingRef.current = true;
+              }}
+              onCompositionEnd={() => {
+                composingRef.current = false;
+              }}
               placeholder={placeholder ?? "Message KovaGPT"}
               rows={1}
               spellCheck={false}
@@ -430,99 +789,10 @@ export function ChatInput({
               className="flex-1 resize-none bg-transparent px-2 py-[0.65rem] outline-none border-0 focus:ring-0 focus:outline-none text-foreground placeholder:text-muted-foreground max-h-[200px] leading-relaxed text-base lg:text-sm"
             />
             <div className="flex items-center gap-1.5 pr-1.5">
-
               {mode && onModeChange && (
                 <div className="hidden lg:flex items-center">
                   <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
                 </div>
-              )}
-              {!isStreaming && !(value.trim() || attachments.length > 0) && (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    // Toggle off if already listening.
-                    if (listening && recRef.current) {
-                      try { recRef.current.stop(); } catch { /* ignore */ }
-                      setListening(false);
-                      return;
-                    }
-                    const w = window as unknown as {
-                      SpeechRecognition?: new () => SpeechRecognitionLike;
-                      webkitSpeechRecognition?: new () => SpeechRecognitionLike;
-                    };
-                    const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
-                    if (!Ctor) {
-                      toast.error("Voice input isn't supported in this browser. Try Chrome, Edge, or Safari.");
-                      return;
-                    }
-                    // Proactively check permission (skip on Safari which lacks Permissions API for microphone).
-                    try {
-                      const permsApi = (navigator as Navigator & { permissions?: { query: (d: { name: PermissionName }) => Promise<{ state: string }> } }).permissions;
-                      if (permsApi?.query) {
-                        const status = await permsApi.query({ name: "microphone" as PermissionName });
-                        if (status.state === "denied") {
-                          toast.error("Microphone is blocked. Enable it in your browser settings.");
-                          return;
-                        }
-                      }
-                    } catch { /* Safari: proceed anyway */ }
-
-                    const rec = new Ctor();
-                    rec.lang = navigator.language || "en-US";
-                    rec.interimResults = true;
-                    rec.continuous = true;
-                    dictationBaseRef.current = value ? value.replace(/\s*$/, "") + " " : "";
-                    rec.onresult = (e) => {
-                      let finalText = "";
-                      let interimText = "";
-                      for (let i = e.resultIndex; i < e.results.length; i++) {
-                        const res = e.results[i] as ArrayLike<{ transcript: string }> & { isFinal?: boolean };
-                        const chunk = res[0]?.transcript ?? "";
-                        if (res.isFinal) finalText += chunk;
-                        else interimText += chunk;
-                      }
-                      if (finalText) {
-                        dictationBaseRef.current = (dictationBaseRef.current + finalText).replace(/\s+/g, " ");
-                        if (!/\s$/.test(dictationBaseRef.current)) dictationBaseRef.current += " ";
-                      }
-                      onChange((dictationBaseRef.current + interimText).trimStart());
-                    };
-                    rec.onerror = (e) => {
-                      const err = e?.error ?? "";
-                      if (err === "not-allowed" || err === "service-not-allowed") {
-                        toast.error("Microphone permission denied.");
-                      } else if (err === "no-speech") {
-                        // Silent fail — just stop.
-                      } else if (err === "audio-capture") {
-                        toast.error("No microphone found.");
-                      } else if (err && err !== "aborted") {
-                        toast.error("Voice input failed. Try again.");
-                      }
-                      setListening(false);
-                    };
-                    rec.onend = () => {
-                      setListening(false);
-                      recRef.current = null;
-                    };
-                    try {
-                      rec.start();
-                      recRef.current = rec;
-                      setListening(true);
-                    } catch {
-                      toast.error("Couldn't start voice input. Try again.");
-                    }
-                  }}
-                  className={`w-11 h-11 lg:w-9 lg:h-9 rounded-full flex items-center justify-center transition ${
-                    listening
-                      ? "bg-red-500/90 text-white animate-pulse"
-                      : "bg-accent/60 text-muted-foreground hover:text-foreground hover:bg-accent"
-                  }`}
-                  aria-label={listening ? "Stop voice input" : "Voice input"}
-                  aria-pressed={listening}
-                  title={listening ? "Stop dictation" : "Voice input"}
-                >
-                  <Mic className="w-5 h-5" />
-                </button>
               )}
               {isStreaming ? (
                 <button
@@ -542,7 +812,9 @@ export function ChatInput({
                   className={`w-11 h-11 lg:w-9 lg:h-9 rounded-full text-white flex items-center justify-center shadow-sm hover:opacity-90 transition duration-150 active:scale-90 active:opacity-70 ${sendFlash ? "scale-90 opacity-80" : ""}`}
                   aria-label="Send"
                 >
-                  <ArrowUp className={`w-5 h-5 transition-transform duration-300 ${sendFlash ? "-translate-y-1.5 opacity-0" : ""}`} />
+                  <ArrowUp
+                    className={`w-5 h-5 transition-transform duration-300 ${sendFlash ? "-translate-y-1.5 opacity-0" : ""}`}
+                  />
                 </button>
               ) : null}
             </div>
@@ -611,7 +883,12 @@ export function ChatInput({
             )}
           </div>
           {isMobileLayout && (
-            <MobileBottomSheet open={toolsOpen} onOpenChange={setToolsOpen} title="Tools" ariaLabel="Choose a tool">
+            <MobileBottomSheet
+              open={toolsOpen}
+              onOpenChange={setToolsOpen}
+              title="Tools"
+              ariaLabel="Choose a tool"
+            >
               <div className="flex flex-col gap-1 p-1">
                 {toolActions.map((tool) => {
                   const Icon = tool.icon;
@@ -633,6 +910,5 @@ export function ChatInput({
         </div>
       </div>
     </div>
-
   );
 }

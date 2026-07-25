@@ -5,7 +5,12 @@ import { MODES, type ModeId, type Tier } from "@/lib/modes";
 import { useLayout } from "@/hooks/use-mobile";
 import { ModelSelector } from "@/components/ModelSelector";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
-import { KOVA_VERSIONS, getKovaVersion, setKovaVersion, type KovaVersion } from "@/lib/kova-version";
+import {
+  KOVA_VERSIONS,
+  getKovaVersion,
+  setKovaVersion,
+  type KovaVersion,
+} from "@/lib/kova-version";
 
 const TIER_RANK: Record<Tier, number> = { free: 0, plus: 1, pro: 2 };
 
@@ -29,7 +34,9 @@ export function ResponsiveModelSelector({
   const useSheet = !isDesktop || interaction === "touch";
   const [open, setOpen] = useState(false);
   const [version, setVersion] = useState<KovaVersion>("3.5");
-  useEffect(() => { setVersion(getKovaVersion()); }, []);
+  useEffect(() => {
+    setVersion(getKovaVersion());
+  }, []);
   const current = MODES.find((m) => m.id === mode) ?? MODES[0];
 
   if (!useSheet) {
@@ -58,69 +65,85 @@ export function ResponsiveModelSelector({
         </span>
         <ChevronDown className="w-4 h-4 text-muted-foreground" />
       </button>
-      <MobileBottomSheet open={open} onOpenChange={setOpen} title="Intelligence" ariaLabel="Choose model">
-        {version === "3.5" ? (<div className="flex flex-col gap-1">
-          {MODES.map((m) => {
-            const locked = TIER_RANK[m.tier] > TIER_RANK[userTier];
-            const badge = tierBadge(m.tier);
-            const selected = m.id === mode;
-            const inner = (
-              <div
-                className={`w-full text-left px-4 py-3.5 rounded-xl min-h-11 flex items-center gap-3 ${
-                  selected ? "bg-accent" : "hover:bg-accent/60 active:bg-accent"
-                }`}
-              >
-                <span className="font-medium text-base flex-1">{m.label}</span>
-                {badge && (
-                  <span
-                    className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${
-                      m.tier === "pro" ? "bg-foreground text-background" : "bg-accent text-foreground"
-                    }`}
+      <MobileBottomSheet
+        open={open}
+        onOpenChange={setOpen}
+        title="Intelligence"
+        ariaLabel="Choose model"
+      >
+        {version === "3.5" ? (
+          <div className="flex flex-col gap-1">
+            {MODES.map((m) => {
+              const locked = TIER_RANK[m.tier] > TIER_RANK[userTier];
+              const badge = tierBadge(m.tier);
+              const selected = m.id === mode;
+              const inner = (
+                <div
+                  className={`w-full text-left px-4 py-3.5 rounded-xl min-h-11 flex items-center gap-3 ${
+                    selected ? "bg-accent" : "hover:bg-accent/60 active:bg-accent"
+                  }`}
+                >
+                  <span className="font-medium text-base flex-1">{m.label}</span>
+                  {badge && (
+                    <span
+                      className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${
+                        m.tier === "pro"
+                          ? "bg-foreground text-background"
+                          : "bg-accent text-foreground"
+                      }`}
+                    >
+                      {badge}
+                    </span>
+                  )}
+                  {locked && <Lock className="w-4 h-4 text-muted-foreground" aria-label="Locked" />}
+                  {selected && !locked && (
+                    <Check className="w-5 h-5 text-foreground" aria-label="Selected" />
+                  )}
+                </div>
+              );
+              if (locked) {
+                return (
+                  <Link
+                    key={m.id}
+                    to="/pricing"
+                    onClick={() => setOpen(false)}
+                    className="block opacity-70 active:opacity-100"
+                    aria-disabled="true"
                   >
-                    {badge}
-                  </span>
-                )}
-                {locked && <Lock className="w-4 h-4 text-muted-foreground" aria-label="Locked" />}
-                {selected && !locked && <Check className="w-5 h-5 text-foreground" aria-label="Selected" />}
-              </div>
-            );
-            if (locked) {
+                    {inner}
+                  </Link>
+                );
+              }
               return (
-                <Link
+                <button
                   key={m.id}
-                  to="/pricing"
-                  onClick={() => setOpen(false)}
-                  className="block opacity-70 active:opacity-100"
-                  aria-disabled="true"
+                  type="button"
+                  onClick={() => {
+                    onChange(m.id);
+                    setOpen(false);
+                  }}
+                  className="w-full"
+                  data-testid={`model-option-${m.id}`}
                 >
                   {inner}
-                </Link>
+                </button>
               );
-            }
-            return (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => {
-                  onChange(m.id);
-                  setOpen(false);
-                }}
-                className="w-full"
-                data-testid={`model-option-${m.id}`}
-              >
-                {inner}
-              </button>
-            );
-          })}
-        </div>) : null}
+            })}
+          </div>
+        ) : null}
         <div className="mt-3 pt-3 border-t border-border">
-          <div className="px-1 pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Kova version</div>
+          <div className="px-1 pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Kova version
+          </div>
           <div className="flex flex-wrap gap-1.5">
             {KOVA_VERSIONS.map((v) => (
               <button
                 key={v}
                 type="button"
-                onClick={() => { setKovaVersion(v); setVersion(v); }}
+                onClick={() => {
+                  setKovaVersion(v);
+                  setVersion(v);
+                }}
                 className={`text-sm px-3 py-1.5 rounded-full border transition ${
                   v === version
                     ? "bg-foreground text-background border-foreground"

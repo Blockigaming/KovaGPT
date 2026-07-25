@@ -20,14 +20,49 @@ export type Shortcut = {
 };
 
 export const DEFAULT_SHORTCUTS: Shortcut[] = [
-  { id: "new-chat", label: "New chat", description: "Start a fresh conversation", combo: "Mod+Shift+O" },
+  {
+    id: "new-chat",
+    label: "New chat",
+    description: "Start a fresh conversation",
+    combo: "Mod+Shift+O",
+  },
   { id: "search", label: "Search chats", description: "Open chat search", combo: "Mod+K" },
-  { id: "open-projects", label: "Open Projects", description: "Jump to Projects", combo: "Mod+Shift+P" },
-  { id: "open-library", label: "Open Library", description: "Jump to Library", combo: "Mod+Shift+L" },
-  { id: "open-settings", label: "Open Settings", description: "Open the Settings dialog", combo: "Mod+," },
-  { id: "generate-image", label: "Generate image", description: "Open image generator", combo: "Mod+Shift+I" },
-  { id: "toggle-sidebar", label: "Toggle sidebar", description: "Show or hide the sidebar", combo: "Mod+\\" },
-  { id: "focus-input", label: "Focus chat input", description: "Move cursor to the composer", combo: "Mod+/" },
+  {
+    id: "open-projects",
+    label: "Open Projects",
+    description: "Jump to Projects",
+    combo: "Mod+Shift+P",
+  },
+  {
+    id: "open-library",
+    label: "Open Library",
+    description: "Jump to Library",
+    combo: "Mod+Shift+L",
+  },
+  {
+    id: "open-settings",
+    label: "Open Settings",
+    description: "Open the Settings dialog",
+    combo: "Mod+,",
+  },
+  {
+    id: "generate-image",
+    label: "Generate image",
+    description: "Open image generator",
+    combo: "Mod+Shift+I",
+  },
+  {
+    id: "toggle-sidebar",
+    label: "Toggle sidebar",
+    description: "Show or hide the sidebar",
+    combo: "Mod+\\",
+  },
+  {
+    id: "focus-input",
+    label: "Focus chat input",
+    description: "Move cursor to the composer",
+    combo: "Mod+/",
+  },
 ];
 
 const KEY = "kova-shortcuts-v1";
@@ -51,14 +86,18 @@ export function saveShortcuts(list: Shortcut[]) {
   try {
     localStorage.setItem(KEY, JSON.stringify(list.map((s) => ({ id: s.id, combo: s.combo }))));
     window.dispatchEvent(new CustomEvent("kova-shortcuts-change"));
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 export function resetShortcuts() {
   try {
     localStorage.removeItem(KEY);
     window.dispatchEvent(new CustomEvent("kova-shortcuts-change"));
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 function isMac() {
@@ -103,12 +142,11 @@ export function installShortcutListener(handlers: ShortcutHandlers): () => void 
     const target = e.target as HTMLElement | null;
     const inEditable =
       target &&
-      (target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.isContentEditable);
+      (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
     const shortcuts = loadShortcuts();
     for (const s of shortcuts) {
-      const usesMod = s.combo.includes("Mod") || s.combo.includes("Ctrl") || s.combo.includes("Alt");
+      const usesMod =
+        s.combo.includes("Mod") || s.combo.includes("Ctrl") || s.combo.includes("Alt");
       if (inEditable && !usesMod) continue;
       if (matches(e, s.combo)) {
         const h = handlers[s.id];

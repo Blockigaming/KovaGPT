@@ -53,7 +53,10 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {/* Mobile/tablet drag handle affordance */}
-      <div aria-hidden className="mx-auto mb-1 h-1.5 w-10 rounded-full bg-muted-foreground/30 sm:hidden" />
+      <div
+        aria-hidden
+        className="mx-auto mb-1 h-1.5 w-10 rounded-full bg-muted-foreground/30 sm:hidden"
+      />
       {children}
       <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background cursor-pointer transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
         <X className="h-4 w-4" />

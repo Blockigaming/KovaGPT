@@ -1,4 +1,4 @@
-import * as React from 'react'
+import * as React from "react";
 import {
   Body,
   Button,
@@ -10,20 +10,16 @@ import {
   Preview,
   Section,
   Text,
-} from '@react-email/components'
-import { BrandFooter, BrandHeader, styles } from './_brand'
+} from "@react-email/components";
+import { BrandFooter, BrandHeader, styles } from "./_brand";
 
 interface InviteEmailProps {
-  siteName: string
-  siteUrl: string
-  confirmationUrl: string
+  siteName: string;
+  siteUrl: string;
+  confirmationUrl: string;
 }
 
-export const InviteEmail = ({
-  siteName,
-  siteUrl,
-  confirmationUrl,
-}: InviteEmailProps) => (
+export const InviteEmail = ({ siteName, siteUrl, confirmationUrl }: InviteEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>You've been invited to {siteName}</Preview>
@@ -32,7 +28,7 @@ export const InviteEmail = ({
         <BrandHeader />
         <Heading style={styles.h1}>You're invited to KovaGPT</Heading>
         <Text style={styles.text}>
-          You've been invited to join{' '}
+          You've been invited to join{" "}
           <Link href={siteUrl} style={styles.link}>
             <strong>{siteName}</strong>
           </Link>
@@ -51,6 +47,6 @@ export const InviteEmail = ({
       </Container>
     </Body>
   </Html>
-)
+);
 
-export default InviteEmail
+export default InviteEmail;

@@ -7,10 +7,16 @@
 // underlying implementation now uses Supabase auth (email/password + Google)
 // and renders a local <AuthDialog> for sign in/up.
 
-import { cloneElement, isValidElement, type MouseEvent, type ReactElement, type ReactNode } from "react";
+import {
+  cloneElement,
+  isValidElement,
+  type MouseEvent,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { getSupabaseClientConfigStatus, supabase } from "@/integrations/supabase/client";
 import { AuthDialog } from "@/components/auth/AuthDialog";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import {
@@ -50,8 +56,20 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Register listener first so we capture the SIGNED_IN that fires when
-    // setSession() persists the OAuth tokens below.
+    // setSession() persists the OAuth tokens below. Missing Supabase browser
+    // config must not take down the public homepage; auth becomes unavailable
+    // until deployment config is repaired.
     let cancelled = false;
+    const config = getSupabaseClientConfigStatus();
+    if (!config.configured) {
+      console.warn(`[KovaAuth] Supabase auth unavailable. Missing: ${config.missing.join(", ")}`);
+      setSession(null);
+      setIsLoaded(true);
+      return () => {
+        cancelled = true;
+      };
+    }
+
     const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
       if (cancelled) return;
       if (!newSession && hasOAuthResponseInUrl()) return;
@@ -81,7 +99,10 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
         if (data.session) {
           const { data: userData, error: userError } = await supabase.auth.getUser();
           if (userError || !userData.user) {
-            console.error("[KovaAuth] Current user check failed during session restore.", userError);
+            console.error(
+              "[KovaAuth] Current user check failed during session restore.",
+              userError,
+            );
             if (!cancelled) {
               setSession(null);
               setIsLoaded(true);
@@ -137,12 +158,18 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
       const toRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (k && !keep.has(k) && (k.startsWith("nova-") || k.startsWith("kova") || k.startsWith("sb-"))) {
+        if (
+          k &&
+          !keep.has(k) &&
+          (k.startsWith("nova-") || k.startsWith("kova") || k.startsWith("sb-"))
+        ) {
           toRemove.push(k);
         }
       }
       toRemove.forEach((k) => localStorage.removeItem(k));
-    } catch {}
+    } catch {
+      // Ignore local sign-out cleanup errors.
+    }
     // Hard reload drops any in-memory React-Query / router caches too.
     if (typeof window !== "undefined") window.location.assign("/");
   }, []);
@@ -210,7 +237,10 @@ function adaptUser(u: SupabaseUser | null): UserShape {
     email,
     firstName,
     fullName,
-    username: (meta.user_name as string | undefined) ?? (meta.preferred_username as string | undefined) ?? null,
+    username:
+      (meta.user_name as string | undefined) ??
+      (meta.preferred_username as string | undefined) ??
+      null,
     imageUrl,
     primaryEmailAddress: email ? { emailAddress: email } : undefined,
     emailAddresses: email ? [{ emailAddress: email }] : [],
@@ -299,8 +329,7 @@ export function UserButton(_props?: {
   const { user, signOut } = useAuthCtx();
   const adapted = adaptUser(user);
   const avatar = adapted?.imageUrl;
-  const label =
-    adapted?.fullName || adapted?.email || "Account";
+  const label = adapted?.fullName || adapted?.email || "Account";
   const initial = (adapted?.fullName || adapted?.email || "?").trim().charAt(0).toUpperCase();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -330,18 +359,29 @@ export function UserButton(_props?: {
           <DropdownMenuItem
             onClick={() => {
               if (typeof window !== "undefined") {
-                window.dispatchEvent(new CustomEvent("kova-open-settings", { detail: { tab: "general" } }));
+                window.dispatchEvent(
+                  new CustomEvent("kova-open-settings", { detail: { tab: "general" } }),
+                );
               }
             }}
           >
             <UserIcon className="mr-2 h-4 w-4" /> Profile &amp; settings
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setConfirmOpen(true); }}>
+          <DropdownMenuItem
+            onSelect={(e) => {
+              e.preventDefault();
+              setConfirmOpen(true);
+            }}
+          >
             <LogOut className="mr-2 h-4 w-4" /> Sign out
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <LogoutConfirmDialog open={confirmOpen} onOpenChange={setConfirmOpen} onConfirm={() => signOut()} />
+      <LogoutConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        onConfirm={() => signOut()}
+      />
     </>
   );
 }

@@ -7,7 +7,12 @@ import {
   requireVerifiedUser,
 } from "@/lib/api-auth.server";
 import { DAILY_IMAGE_LIMIT_BY_TIER } from "@/lib/modes";
-import { imageGenerations, imageModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
+import { imageGenerations, missingAiProviderResponse } from "@/lib/ai/provider.server";
+import {
+  imageProviderPayload,
+  imageResultMetadata,
+  normalizeImageSettings,
+} from "@/lib/multimodal/image-workflows.server";
 
 const MODEL_TIMEOUT_MS = 22_000;
 
@@ -19,18 +24,13 @@ function jsonError(message: string, status: number) {
 }
 
 async function tryModel(
-  model: string,
-  prompt: string,
-  size: string,
+  payload: ReturnType<typeof imageProviderPayload>,
 ): Promise<{ imageUrl?: string; status: number; error?: string }> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), MODEL_TIMEOUT_MS);
   let upstream: Response;
   try {
-    upstream = await imageGenerations(
-      { model, prompt, size, quality: "low", n: 1 },
-      { signal: controller.signal },
-    );
+    upstream = await imageGenerations(payload, { signal: controller.signal });
   } catch (e) {
     clearTimeout(timer);
     const aborted = (e as { name?: string } | null)?.name === "AbortError";
@@ -63,12 +63,16 @@ export const Route = createFileRoute("/api/generate-image")({
           if (contentLength > MAX_BODY) return jsonError("Request too large.", 413);
           const raw = await request.text();
           if (raw.length > MAX_BODY) return jsonError("Request too large.", 413);
-          const { prompt, size } = JSON.parse(raw) as { prompt?: string; size?: string };
-          if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
-            return jsonError("Prompt required", 400);
+          const parsed = JSON.parse(raw) as Parameters<typeof normalizeImageSettings>[0];
+          let settings;
+          try {
+            settings = normalizeImageSettings(parsed);
+          } catch (error) {
+            return jsonError(
+              error instanceof Error ? error.message : "Invalid image settings.",
+              400,
+            );
           }
-          const ALLOWED_SIZES = new Set(["1024x1024", "1024x1536", "1536x1024", "1792x1024"]);
-          const chosenSize = ALLOWED_SIZES.has(size ?? "") ? (size as string) : "1024x1024";
           const missingProvider = missingAiProviderResponse();
           if (missingProvider) return missingProvider;
 
@@ -81,17 +85,32 @@ export const Route = createFileRoute("/api/generate-image")({
           const quota = await enforceQuota(auth, "images", DAILY_IMAGE_LIMIT_BY_TIER[tier]);
           if (quota) return quota;
 
-
-          const model = imageModel();
-          const result = await tryModel(model, prompt.trim(), chosenSize);
+          const payload = imageProviderPayload(settings);
+          const result = await tryModel(payload);
           if (result.imageUrl) {
-            return new Response(JSON.stringify({ imageUrl: result.imageUrl, model }), {
-              headers: { "Content-Type": "application/json" },
-            });
+            return new Response(
+              JSON.stringify({
+                imageUrl: result.imageUrl,
+                model: payload.model,
+                metadata: imageResultMetadata(settings),
+              }),
+              {
+                headers: { "Content-Type": "application/json" },
+              },
+            );
           }
           if (result.status === 429) return jsonError("Rate limit - try again in a moment.", 429);
-          if (result.error) console.error("[generate-image] provider error", model, result.status, result.error);
-          return jsonError("Image service is temporarily unavailable. Please try again.", result.status);
+          if (result.error)
+            console.error(
+              "[generate-image] provider error",
+              payload.model,
+              result.status,
+              result.error,
+            );
+          return jsonError(
+            "Image service is temporarily unavailable. Please try again.",
+            result.status,
+          );
         } catch (e) {
           console.error("[generate-image] handler error", e);
           return jsonError("An unexpected error occurred. Please try again.", 500);

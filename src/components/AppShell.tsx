@@ -2,20 +2,19 @@ import { lazy, Suspense, useEffect, useState, useCallback, type ReactNode } from
 import { useNavigate } from "@tanstack/react-router";
 import { Sidebar } from "@/components/Sidebar";
 import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
-const SettingsDialog = lazy(() => import("@/components/SettingsDialog").then(m => ({ default: m.SettingsDialog })));
-const OnboardingDialog = lazy(() => import("@/components/OnboardingDialog").then(m => ({ default: m.OnboardingDialog })));
+const SettingsDialog = lazy(() =>
+  import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog })),
+);
+const OnboardingDialog = lazy(() =>
+  import("@/components/OnboardingDialog").then((m) => ({ default: m.OnboardingDialog })),
+);
 import { TimersWidget } from "@/components/TimersWidget";
 import { AppErrorBoundary, OfflineBanner } from "@/components/states";
 import { MobileFabs } from "@/components/MobileFabs";
 import { MobileTopBar } from "@/components/MobileTopBar";
 import { installShortcutListener } from "@/lib/shortcuts";
 import { PanelLeft } from "lucide-react";
-import {
-  type Conversation,
-  loadConversations,
-  saveConversations,
-} from "@/lib/chat-store";
-
+import { type Conversation, loadConversations, saveConversations } from "@/lib/chat-store";
 
 /**
  * Shared shell that renders the chat Sidebar alongside any page (e.g. /apps,
@@ -30,16 +29,26 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined" || window.innerWidth < 1024) return;
     let saved: string | null = null;
-    try { saved = localStorage.getItem("kova-sidebar-open"); } catch { /* ignore */ }
+    try {
+      saved = localStorage.getItem("kova-sidebar-open");
+    } catch {
+      /* ignore */
+    }
     setSidebarOpen(saved === null ? true : saved === "1");
   }, []);
   useEffect(() => {
     if (typeof window === "undefined" || window.innerWidth < 1024) return;
-    try { localStorage.setItem("kova-sidebar-open", sidebarOpen ? "1" : "0"); } catch { /* ignore */ }
+    try {
+      localStorage.setItem("kova-sidebar-open", sidebarOpen ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
   }, [sidebarOpen]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
-  const openHelp = useCallback(() => { navigate({ to: "/help" as never }); }, [navigate]);
+  const openHelp = useCallback(() => {
+    navigate({ to: "/help" as never });
+  }, [navigate]);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
@@ -48,15 +57,37 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     return installShortcutListener({
-      "new-chat": () => { try { localStorage.removeItem("nova-gpt-pending-active"); } catch { /* ignore */ } navigate({ to: "/" }); },
-      "search": () => { window.dispatchEvent(new CustomEvent("kova-open-search")); },
-      "open-projects": () => { navigate({ to: "/projects" as never }); },
-      "open-library": () => { navigate({ to: "/library" }); },
-      "open-settings": () => { setSettingsTab(undefined); setSettingsOpen(true); },
-      "generate-image": () => { navigate({ to: "/images" }); },
-      "toggle-sidebar": () => { setSidebarOpen((v) => !v); },
+      "new-chat": () => {
+        try {
+          localStorage.removeItem("nova-gpt-pending-active");
+        } catch {
+          /* ignore */
+        }
+        navigate({ to: "/" });
+      },
+      search: () => {
+        window.dispatchEvent(new CustomEvent("kova-open-search"));
+      },
+      "open-projects": () => {
+        navigate({ to: "/projects" as never });
+      },
+      "open-library": () => {
+        navigate({ to: "/library" });
+      },
+      "open-settings": () => {
+        setSettingsTab(undefined);
+        setSettingsOpen(true);
+      },
+      "generate-image": () => {
+        navigate({ to: "/images" });
+      },
+      "toggle-sidebar": () => {
+        setSidebarOpen((v) => !v);
+      },
       "focus-input": () => {
-        const el = document.querySelector<HTMLTextAreaElement>('textarea, [contenteditable="true"]');
+        const el = document.querySelector<HTMLTextAreaElement>(
+          'textarea, [contenteditable="true"]',
+        );
         el?.focus();
       },
     });
@@ -70,12 +101,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   const goToConversation = (id: string) => {
     try {
       localStorage.setItem("nova-gpt-pending-active", id);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     navigate({ to: "/" });
   };
 
   const handleNew = () => {
-    try { localStorage.removeItem("nova-gpt-pending-active"); } catch { /* ignore */ }
+    try {
+      localStorage.removeItem("nova-gpt-pending-active");
+    } catch {
+      /* ignore */
+    }
     navigate({ to: "/" });
   };
 
@@ -108,7 +145,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           }
         }
       }}
-      onTouchEnd={(e) => { delete (e.currentTarget as HTMLDivElement).dataset.swipeStart; }}
+      onTouchEnd={(e) => {
+        delete (e.currentTarget as HTMLDivElement).dataset.swipeStart;
+      }}
     >
       {/* Animated brand mesh background - sits behind everything, no pointer events. */}
       <div aria-hidden="true" className="kova-bg" />
@@ -126,10 +165,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">
         <OfflineBanner />
-        <MobileTopBar
-          onOpenSidebar={() => setSidebarOpen(true)}
-          onNewChat={handleNew}
-        />
+        <MobileTopBar onOpenSidebar={() => setSidebarOpen(true)} onNewChat={handleNew} />
         {!sidebarOpen && (
           <button
             onClick={() => setSidebarOpen(true)}
@@ -145,12 +181,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Mobile/tablet floating actions: bottom-left New Chat + Settings.
           Replaces the previous bottom tab bar so the phone/tablet UX feels
           native — thumb-reachable, unobtrusive, no fixed chrome strip. */}
-      <MobileFabs
-        onNewChat={handleNew}
-        onOpenSettings={() => openSettings()}
-      />
-
-
+      <MobileFabs onNewChat={handleNew} onOpenSettings={() => openSettings()} />
 
       <Suspense fallback={null}>
         {settingsOpen && (
@@ -162,7 +193,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             onClearAll={() => {
               try {
                 localStorage.removeItem("nova-gpt-conversations-v2");
-              } catch { /* ignore */ }
+              } catch {
+                /* ignore */
+              }
               setConversations([]);
             }}
             onOpenHelp={openHelp}

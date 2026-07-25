@@ -54,7 +54,10 @@ export const shareChat = createServerFn({ method: "POST" })
       })
       .select("id")
       .single();
-    if (error || !row) { console.error("[serverfn]", error?.message); throw new Error("Failed to share chat"); }
+    if (error || !row) {
+      console.error("[serverfn]", error?.message);
+      throw new Error("Failed to share chat");
+    }
     return { id: row.id };
   });
 
@@ -109,6 +112,9 @@ export const revokeSharedChat = createServerFn({ method: "POST" })
       .update({ status: "revoked" })
       .eq("id", data.id)
       .eq("owner_user_id", context.userId);
-    if (error) { console.error("[serverfn]", error.message); throw new Error("Request failed. Please try again."); }
+    if (error) {
+      console.error("[serverfn]", error.message);
+      throw new Error("Request failed. Please try again.");
+    }
     return { ok: true };
   });

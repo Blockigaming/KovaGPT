@@ -10,7 +10,12 @@ import { Loader2 } from "lucide-react";
 // URL `/.lovable/oauth/consent` — the path Supabase redirects to for consent.
 
 type AuthorizationDetails = {
-  client?: { name?: string; client_name?: string; redirect_uri?: string; redirect_uris?: string[] } | null;
+  client?: {
+    name?: string;
+    client_name?: string;
+    redirect_uri?: string;
+    redirect_uris?: string[];
+  } | null;
   redirect_url?: string | null;
   redirect_to?: string | null;
   scope?: string | null;
@@ -18,9 +23,17 @@ type AuthorizationDetails = {
 };
 
 type OAuthApi = {
-  getAuthorizationDetails: (id: string) => Promise<{ data: AuthorizationDetails | null; error: { message: string } | null }>;
-  approveAuthorization: (id: string) => Promise<{ data: { redirect_url?: string; redirect_to?: string } | null; error: { message: string } | null }>;
-  denyAuthorization: (id: string) => Promise<{ data: { redirect_url?: string; redirect_to?: string } | null; error: { message: string } | null }>;
+  getAuthorizationDetails: (
+    id: string,
+  ) => Promise<{ data: AuthorizationDetails | null; error: { message: string } | null }>;
+  approveAuthorization: (id: string) => Promise<{
+    data: { redirect_url?: string; redirect_to?: string } | null;
+    error: { message: string } | null;
+  }>;
+  denyAuthorization: (id: string) => Promise<{
+    data: { redirect_url?: string; redirect_to?: string } | null;
+    error: { message: string } | null;
+  }>;
 };
 
 function oauthApi(): OAuthApi | null {
@@ -144,7 +157,8 @@ function ConsentRoute() {
           </div>
           <h1 className="text-[22px] font-semibold tracking-tight">Sign in to continue</h1>
           <p className="mt-2 text-sm text-muted-foreground max-w-[320px]">
-            An app is requesting access to your KovaGPT account. Sign in to review and approve the request.
+            An app is requesting access to your KovaGPT account. Sign in to review and approve the
+            request.
           </p>
           <div className="mt-6 w-full flex flex-col gap-2">
             <button
@@ -186,7 +200,9 @@ function ConsentRoute() {
 
   const clientName = details.client?.name ?? details.client?.client_name ?? "An app";
   const redirectUri =
-    details.client?.redirect_uri ?? (details.client?.redirect_uris && details.client.redirect_uris[0]) ?? null;
+    details.client?.redirect_uri ??
+    (details.client?.redirect_uris && details.client.redirect_uris[0]) ??
+    null;
   const rawScopes =
     details.scopes ??
     (typeof details.scope === "string" && details.scope.length ? details.scope.split(/\s+/) : []);
@@ -197,25 +213,32 @@ function ConsentRoute() {
         <div className="mb-4 w-14 h-14 rounded-2xl bg-foreground/[0.04] ring-1 ring-border flex items-center justify-center">
           <NovaLogo className="w-9 h-9" />
         </div>
-        <h1 className="text-[22px] font-semibold tracking-tight">Connect {clientName} to KovaGPT</h1>
+        <h1 className="text-[22px] font-semibold tracking-tight">
+          Connect {clientName} to KovaGPT
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground max-w-[340px]">
-          This lets {clientName} use KovaGPT as you. Your KovaGPT permissions and backend policies still decide what
-          it can read or change.
+          This lets {clientName} use KovaGPT as you. Your KovaGPT permissions and backend policies
+          still decide what it can read or change.
         </p>
         <p className="mt-3 text-xs text-muted-foreground">
-          Signed in as <span className="text-foreground">{session.user.email ?? session.user.id}</span>
+          Signed in as{" "}
+          <span className="text-foreground">{session.user.email ?? session.user.id}</span>
         </p>
 
         {redirectUri && (
           <div className="mt-4 w-full text-left rounded-2xl border border-border bg-card p-3">
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Redirects to</div>
+            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              Redirects to
+            </div>
             <div className="mt-1 text-[13px] break-all">{redirectUri}</div>
           </div>
         )}
 
         {rawScopes.length > 0 && (
           <div className="mt-3 w-full text-left rounded-2xl border border-border bg-card p-3">
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Requested access</div>
+            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              Requested access
+            </div>
             <ul className="mt-1 space-y-1 text-[13px]">
               {rawScopes.map((s) => (
                 <li key={s}>{scopeLabel(s)}</li>
@@ -267,7 +290,9 @@ function scopeLabel(scope: string) {
 function Shell({ children }: { children: React.ReactNode }) {
   return (
     <main className="min-h-screen w-full flex items-center justify-center px-4 py-10 bg-background text-foreground">
-      <div className="w-full max-w-[440px] rounded-3xl border border-border bg-card shadow-2xl p-8">{children}</div>
+      <div className="w-full max-w-[440px] rounded-3xl border border-border bg-card shadow-2xl p-8">
+        {children}
+      </div>
     </main>
   );
 }

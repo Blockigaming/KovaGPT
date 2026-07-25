@@ -16,7 +16,9 @@ import { toast } from "sonner";
 
 function beep() {
   try {
-    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const Ctx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     const ctx = new Ctx();
     const o = ctx.createOscillator();
     const g = ctx.createGain();
@@ -29,7 +31,9 @@ function beep() {
     g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.9);
     o.start();
     o.stop(ctx.currentTime + 1);
-  } catch { /* silent */ }
+  } catch {
+    /* silent */
+  }
 }
 
 function notify(label: string) {
@@ -37,7 +41,9 @@ function notify(label: string) {
     if ("Notification" in window && Notification.permission === "granted") {
       new Notification("KovaGPT", { body: `${label} finished`, silent: false });
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 export function TimersWidget() {
@@ -91,7 +97,11 @@ export function TimersWidget() {
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
               <TimerIcon className="w-3.5 h-3.5" /> Timers
             </div>
-            <button onClick={() => setOpen(false)} className="p-1 rounded hover:bg-accent" aria-label="Close timers">
+            <button
+              onClick={() => setOpen(false)}
+              className="p-1 rounded hover:bg-accent"
+              aria-label="Close timers"
+            >
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -103,10 +113,15 @@ export function TimersWidget() {
               const remaining = t.fireAt - now;
               const done = t.fired || remaining <= 0;
               return (
-                <li key={t.id} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg bg-accent/40">
+                <li
+                  key={t.id}
+                  className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg bg-accent/40"
+                >
                   <div className="min-w-0">
                     <div className="text-sm truncate">{t.label}</div>
-                    <div className={`text-xs tabular-nums ${done ? "text-emerald-500" : "text-muted-foreground"}`}>
+                    <div
+                      className={`text-xs tabular-nums ${done ? "text-emerald-500" : "text-muted-foreground"}`}
+                    >
                       {done ? "Done" : formatRemaining(remaining)}
                     </div>
                   </div>

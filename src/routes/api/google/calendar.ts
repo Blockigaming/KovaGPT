@@ -5,13 +5,25 @@ import { getValidGoogleAccessToken, logAudit } from "@/lib/google-oauth.server";
 
 const CAL = "https://www.googleapis.com/calendar/v3/calendars/primary";
 
+type JsonRecord = Record<string, unknown>;
+type CalendarEvent = JsonRecord & {
+  id?: string;
+  summary?: string;
+  start?: unknown;
+  end?: unknown;
+  location?: string;
+  description?: string;
+  attendees?: unknown;
+  htmlLink?: string;
+};
+
 export const Route = createFileRoute("/api/google/calendar")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
-        let body: any;
+        let body: JsonRecord;
         try {
           body = await request.json();
         } catch {
@@ -30,8 +42,7 @@ export const Route = createFileRoute("/api/google/calendar")({
           if (action === "list") {
             const timeMin = String(body.timeMin ?? new Date().toISOString());
             const timeMax = String(
-              body.timeMax ??
-                new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+              body.timeMax ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
             );
             const max = Math.min(50, Number(body.maxResults ?? 25));
             const url = `${CAL}/events?singleEvents=true&orderBy=startTime&timeMin=${encodeURIComponent(
@@ -39,8 +50,8 @@ export const Route = createFileRoute("/api/google/calendar")({
             )}&timeMax=${encodeURIComponent(timeMax)}&maxResults=${max}`;
             const r = await fetch(url, { headers: H });
             if (!r.ok) throw new Error(`calendar list ${r.status}`);
-            const j = await r.json();
-            const events = (j.items ?? []).map((e: any) => ({
+            const j = (await r.json()) as { items?: CalendarEvent[] };
+            const events = (j.items ?? []).map((e) => ({
               id: e.id,
               summary: e.summary,
               start: e.start,
@@ -63,7 +74,7 @@ export const Route = createFileRoute("/api/google/calendar")({
             if (!body.summary || !body.start || !body.end) {
               return Response.json({ error: "missing_fields" }, { status: 400 });
             }
-            const event: any = {
+            const event: JsonRecord = {
               summary: String(body.summary).slice(0, 300),
               description: body.description ? String(body.description).slice(0, 8000) : undefined,
               location: body.location ? String(body.location).slice(0, 500) : undefined,
@@ -79,7 +90,7 @@ export const Route = createFileRoute("/api/google/calendar")({
               body: JSON.stringify(event),
             });
             if (!r.ok) throw new Error(`calendar create ${r.status} ${await r.text()}`);
-            const j = await r.json();
+            const j = (await r.json()) as { id?: string; htmlLink?: string };
             await logAudit({
               userId: auth.userId,
               provider: "calendar",
@@ -93,7 +104,7 @@ export const Route = createFileRoute("/api/google/calendar")({
           if (action === "update") {
             const id = String(body.id ?? "");
             if (!id) return Response.json({ error: "missing_id" }, { status: 400 });
-            const patch: any = {};
+            const patch: JsonRecord = {};
             for (const k of ["summary", "description", "location", "start", "end"]) {
               if (body[k] !== undefined) patch[k] = body[k];
             }
@@ -103,7 +114,7 @@ export const Route = createFileRoute("/api/google/calendar")({
               body: JSON.stringify(patch),
             });
             if (!r.ok) throw new Error(`calendar update ${r.status}`);
-            const j = await r.json();
+            const j = (await r.json()) as { id?: string; htmlLink?: string };
             await logAudit({
               userId: auth.userId,
               provider: "calendar",

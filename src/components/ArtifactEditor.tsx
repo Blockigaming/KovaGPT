@@ -10,7 +10,10 @@ export type ArtifactKind = "writing" | "code" | "website";
 // Split an editor value back into pieces using the "// --- Block N ---"
 // markers that ChatMessage injects when joining multiple code blocks.
 function splitEditorBlocks(value: string): string[] {
-  const parts = value.split(/\n?\/\/ --- Block \d+ ---\n?/g).map((p) => p.trim()).filter(Boolean);
+  const parts = value
+    .split(/\n?\/\/ --- Block \d+ ---\n?/g)
+    .map((p) => p.trim())
+    .filter(Boolean);
   return parts.length > 0 ? parts : [value];
 }
 
@@ -128,7 +131,6 @@ export function ArtifactEditor({
     }
   }, [open, initialContent, initialMode, canTruncate]);
 
-
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -141,8 +143,7 @@ export function ArtifactEditor({
   if (!open) return null;
 
   const isCode = kind === "code" || kind === "website";
-  const label =
-    kind === "website" ? "Website draft" : kind === "code" ? "Code" : "Writing";
+  const label = kind === "website" ? "Website draft" : kind === "code" ? "Code" : "Writing";
 
   const copy = async (text: string) => {
     await navigator.clipboard.writeText(text);
@@ -211,9 +212,7 @@ export function ArtifactEditor({
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-xs uppercase tracking-wide text-muted-foreground">
-              {label}
-            </span>
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
             {kind === "website" && (
               <div className="ml-2 inline-flex rounded border border-border overflow-hidden">
                 <button
@@ -260,17 +259,20 @@ export function ArtifactEditor({
               loading="lazy"
               className="flex-1 w-full bg-white"
             />
-
           </div>
         ) : (
           <div className="flex-1 flex flex-col min-h-0">
             {truncated && (
               <div className="flex items-center justify-between gap-2 px-3 py-2 text-xs bg-yellow-50 text-yellow-900 border-b border-yellow-200">
                 <span>
-                  Showing the first {LONG_THRESHOLD.toLocaleString()} characters for performance. Full content is preserved.
+                  Showing the first {LONG_THRESHOLD.toLocaleString()} characters for performance.
+                  Full content is preserved.
                 </span>
                 <button
-                  onClick={() => { setValue(initialContent); setTruncated(false); }}
+                  onClick={() => {
+                    setValue(initialContent);
+                    setTruncated(false);
+                  }}
                   className="px-2 py-1 rounded border border-yellow-300 hover:bg-yellow-100 whitespace-nowrap"
                 >
                   Load full content
@@ -288,7 +290,6 @@ export function ArtifactEditor({
             />
           </div>
         )}
-
 
         <div className="flex flex-wrap items-center gap-2 px-3 py-3 border-t border-border">
           <button
@@ -314,9 +315,7 @@ export function ArtifactEditor({
             disabled={saving}
             className="text-xs px-3 py-1.5 rounded border border-border hover:bg-accent disabled:opacity-50"
           >
-            <Bookmark
-              className={`w-3.5 h-3.5 inline mr-1 ${saved ? "fill-current" : ""}`}
-            />
+            <Bookmark className={`w-3.5 h-3.5 inline mr-1 ${saved ? "fill-current" : ""}`} />
             {saved ? "Saved" : saving ? "Saving…" : "Save to Library"}
           </button>
           {onImprove && (
@@ -329,10 +328,7 @@ export function ArtifactEditor({
             </button>
           )}
           <div className="ml-auto">
-            <button
-              onClick={onClose}
-              className="text-xs px-3 py-1.5 rounded hover:bg-accent"
-            >
+            <button onClick={onClose} className="text-xs px-3 py-1.5 rounded hover:bg-accent">
               Close
             </button>
           </div>

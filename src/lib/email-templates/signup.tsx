@@ -1,4 +1,4 @@
-import * as React from 'react'
+import * as React from "react";
 import {
   Body,
   Button,
@@ -10,21 +10,17 @@ import {
   Preview,
   Section,
   Text,
-} from '@react-email/components'
-import { BrandFooter, BrandHeader, styles } from './_brand'
+} from "@react-email/components";
+import { BrandFooter, BrandHeader, styles } from "./_brand";
 
 interface SignupEmailProps {
-  siteName: string
-  siteUrl: string
-  recipient: string
-  confirmationUrl: string
+  siteName: string;
+  siteUrl: string;
+  recipient: string;
+  confirmationUrl: string;
 }
 
-export const SignupEmail = ({
-  siteName,
-  recipient,
-  confirmationUrl,
-}: SignupEmailProps) => (
+export const SignupEmail = ({ siteName, recipient, confirmationUrl }: SignupEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>Confirm your email for {siteName}</Preview>
@@ -33,10 +29,10 @@ export const SignupEmail = ({
         <BrandHeader />
         <Heading style={styles.h1}>Confirm your email</Heading>
         <Text style={styles.text}>
-          Thanks for joining {siteName}. Please confirm{' '}
+          Thanks for joining {siteName}. Please confirm{" "}
           <Link href={`mailto:${recipient}`} style={styles.link}>
             {recipient}
-          </Link>{' '}
+          </Link>{" "}
           so we can finish setting up your account.
         </Text>
         <Section style={styles.buttonWrap}>
@@ -48,13 +44,13 @@ export const SignupEmail = ({
         <Link href={confirmationUrl} style={styles.fallbackLink}>
           {confirmationUrl}
         </Link>
-        <Text style={{ ...styles.text, fontSize: '13px', color: '#6b7280', margin: '18px 0 0' }}>
+        <Text style={{ ...styles.text, fontSize: "13px", color: "#6b7280", margin: "18px 0 0" }}>
           If you didn't create a KovaGPT account, you can safely ignore this email.
         </Text>
         <BrandFooter />
       </Container>
     </Body>
   </Html>
-)
+);
 
-export default SignupEmail
+export default SignupEmail;

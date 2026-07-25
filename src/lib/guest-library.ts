@@ -44,7 +44,7 @@ function writeGuestLibrary(items: LibraryItem[]) {
 
 export function saveGuestItem(input: GuestSaveInput): LibraryItem {
   const fileUrl =
-    input.file_url && input.file_url.length > MAX_DATA_URL_BYTES ? null : input.file_url ?? null;
+    input.file_url && input.file_url.length > MAX_DATA_URL_BYTES ? null : (input.file_url ?? null);
   const item: LibraryItem = {
     id: `guest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     title: input.title.slice(0, 200),

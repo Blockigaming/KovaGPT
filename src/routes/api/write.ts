@@ -81,7 +81,8 @@ export const Route = createFileRoute("/api/write")({
           instruction = `Rewrite the following text in a ${tone} tone. Keep meaning intact. Return only the rewritten version.`;
         } else if (action === "custom") {
           instruction = (body.instructions ?? "").slice(0, 2000).trim();
-          if (!instruction) return Response.json({ error: "missing_instructions" }, { status: 400 });
+          if (!instruction)
+            return Response.json({ error: "missing_instructions" }, { status: 400 });
         } else {
           instruction = PROMPTS[action];
         }
@@ -90,19 +91,19 @@ export const Route = createFileRoute("/api/write")({
         if (missingProvider) return missingProvider;
 
         const upstream = await chatCompletions({
-            model: chatModel("balanced"),
-            messages: [
-              {
-                role: "system",
-                content:
-                  "You are a precise writing assistant. Return only the requested text with no commentary, no headings like 'Here is', and no code fences unless the source used them.",
-              },
-              {
-                role: "user",
-                content: `${instruction}\n\n---\n${text}`,
-              },
-            ],
-          });
+          model: chatModel("balanced"),
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are a precise writing assistant. Return only the requested text with no commentary, no headings like 'Here is', and no code fences unless the source used them.",
+            },
+            {
+              role: "user",
+              content: `${instruction}\n\n---\n${text}`,
+            },
+          ],
+        });
 
         if (!upstream.ok) {
           const errBody = await upstream.text();
