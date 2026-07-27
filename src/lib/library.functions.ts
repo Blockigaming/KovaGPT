@@ -2,14 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
-// TODO (Library image save): Persisting generated images requires a private
-// Supabase Storage bucket (e.g. `library-images`), a signed-URL flow, and an
-// upload route. Image generation currently returns base64 data URLs which are
-// too large to store in `user_library_items.content_text`. The `image`
-// item_type and `file_url`/`file_name`/`file_size` columns are already in
-// place so once the bucket + signed URL helper exist, only a thin save route
-// needs to be added here.
-
 export type LibraryItem = {
   id: string;
   title: string;
@@ -47,7 +39,7 @@ export const listMyLibrary = createServerFn({ method: "GET" })
       .limit(200);
     if (error) {
       console.error("[listMyLibrary]", error.message);
-      return [];
+      throw new Error("Library could not be loaded. Check your connection and try again.");
     }
     return (data ?? []) as LibraryItem[];
   });

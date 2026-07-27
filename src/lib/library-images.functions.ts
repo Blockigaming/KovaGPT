@@ -4,6 +4,34 @@ import { z } from "zod";
 
 const BUCKET = "library-images";
 const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
+const SAFE_IMAGE_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/gif",
+]);
+
+function hasImageSignature(bytes: Uint8Array, contentType: string): boolean {
+  if (contentType === "image/png")
+    return (
+      bytes.length > 8 &&
+      bytes.slice(0, 8).every((byte, index) => byte === [137, 80, 78, 71, 13, 10, 26, 10][index])
+    );
+  if (contentType === "image/jpeg" || contentType === "image/jpg")
+    return bytes.length > 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (contentType === "image/gif")
+    return (
+      bytes.length > 6 && new TextDecoder().decode(bytes.slice(0, 6)).match(/^GIF8[79]a$/) !== null
+    );
+  if (contentType === "image/webp")
+    return (
+      bytes.length > 12 &&
+      new TextDecoder().decode(bytes.slice(0, 4)) === "RIFF" &&
+      new TextDecoder().decode(bytes.slice(8, 12)) === "WEBP"
+    );
+  return false;
+}
 
 function decodeDataUrl(dataUrl: string): { bytes: Uint8Array; contentType: string } | null {
   const m = /^data:([^;,]+);base64,(.+)$/.exec(dataUrl);
@@ -15,7 +43,9 @@ function decodeDataUrl(dataUrl: string): { bytes: Uint8Array; contentType: strin
     const bin = atob(b64);
     const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return { bytes, contentType };
+    return hasImageSignature(bytes, contentType.toLowerCase())
+      ? { bytes, contentType: contentType.toLowerCase() }
+      : null;
   } catch {
     return null;
   }
@@ -76,11 +106,14 @@ async function fetchRemoteImage(
       break;
     }
     if (!res || !res.ok) return null;
-    const contentType = res.headers.get("content-type") ?? "image/png";
-    if (!/^image\//i.test(contentType)) return null;
+    const contentType = (res.headers.get("content-type") ?? "")
+      .split(";", 1)[0]
+      .trim()
+      .toLowerCase();
+    if (!SAFE_IMAGE_TYPES.has(contentType)) return null;
     const buf = new Uint8Array(await res.arrayBuffer());
     if (buf.byteLength > MAX_BYTES) return null;
-    return { bytes: buf, contentType };
+    return hasImageSignature(buf, contentType) ? { bytes: buf, contentType } : null;
   } catch {
     return null;
   }

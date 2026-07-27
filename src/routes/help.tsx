@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 
 export const Route = createFileRoute("/help")({
   head: () => ({
@@ -656,20 +657,24 @@ function SupportForm() {
     }
     setSubmitting(true);
     try {
-      const res = await fetch("/api/public/help-submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          email,
-          topic,
-          message,
-          variant: "help",
-          website,
-          url: typeof window !== "undefined" ? window.location.href : "",
-          userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
-        }),
-      });
+      const res = await fetchWithTimeout(
+        "/api/public/help-submit",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name,
+            email,
+            topic,
+            message,
+            variant: "help",
+            website,
+            url: typeof window !== "undefined" ? window.location.href : "",
+            userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
+          }),
+        },
+        20_000,
+      );
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
         toast.error(data.error || "Something went wrong. Please try again.");
@@ -681,8 +686,12 @@ function SupportForm() {
       setTopic("");
       setMessage("");
       toast.success("Message sent - we'll reply by email.");
-    } catch {
-      toast.error("Network error. Please try again.");
+    } catch (reason) {
+      toast.error(
+        reason instanceof DOMException && reason.name === "TimeoutError"
+          ? "Support request timed out. Your message is still here—retry when connected."
+          : "Network error. Your message is still here; please try again.",
+      );
     } finally {
       setSubmitting(false);
     }

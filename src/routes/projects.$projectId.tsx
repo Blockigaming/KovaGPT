@@ -2,6 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
+import { ProjectCollaboration } from "@/components/ProjectCollaboration";
+import { RelatedWorkspaceItems } from "@/components/WorkspaceIntelligence";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -286,6 +288,9 @@ function ProjectDetailPage() {
               <Users className="w-4 h-4 mr-1.5" />
               Members
             </TabsTrigger>
+            <TabsTrigger value="collaboration">
+              <MessageCircle className="mr-1.5 h-4 w-4" /> Collaboration
+            </TabsTrigger>
             {isOwner && (
               <TabsTrigger value="settings">
                 <SettingsIcon className="w-4 h-4 mr-1.5" />
@@ -363,6 +368,9 @@ function ProjectDetailPage() {
               }}
             />
           </TabsContent>
+          <TabsContent value="collaboration" className="mt-4">
+            <ProjectCollaboration projectId={projectId} members={members} role={project.role} />
+          </TabsContent>
           {isOwner && (
             <TabsContent value="settings" className="mt-4">
               <SettingsTab
@@ -436,62 +444,65 @@ function OverviewTab({ projectId, onJump }: { projectId: string; onJump: (k: str
     );
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      <div className="border rounded-xl p-4">
-        <div className="flex items-center justify-between mb-2">
-          <div className="font-medium flex items-center gap-2">
-            <CheckSquare className="w-4 h-4" />
-            Open tasks
+    <>
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="border rounded-xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="font-medium flex items-center gap-2">
+              <CheckSquare className="w-4 h-4" />
+              Open tasks
+            </div>
+            <button
+              className="text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => onJump("tasks")}
+            >
+              View all
+            </button>
           </div>
-          <button
-            className="text-xs text-muted-foreground hover:text-foreground"
-            onClick={() => onJump("tasks")}
-          >
-            View all
-          </button>
+          {openTasks.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No open tasks. {doneCount > 0 && `${doneCount} completed.`}
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {openTasks.map((t) => (
+                <li key={t.id} className="text-sm flex items-center justify-between gap-2">
+                  <span className="truncate">{t.title}</span>
+                  {t.due_date && (
+                    <span className="text-xs text-muted-foreground shrink-0">{t.due_date}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-        {openTasks.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No open tasks. {doneCount > 0 && `${doneCount} completed.`}
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {openTasks.map((t) => (
-              <li key={t.id} className="text-sm flex items-center justify-between gap-2">
-                <span className="truncate">{t.title}</span>
-                {t.due_date && (
-                  <span className="text-xs text-muted-foreground shrink-0">{t.due_date}</span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-      <div className="border rounded-xl p-4">
-        <div className="flex items-center justify-between mb-2">
-          <div className="font-medium flex items-center gap-2">
-            <Activity className="w-4 h-4" />
-            Recent activity
+        <div className="border rounded-xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="font-medium flex items-center gap-2">
+              <Activity className="w-4 h-4" />
+              Recent activity
+            </div>
           </div>
+          {activity.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No activity yet. Get started by adding chats, files, or tasks.
+            </p>
+          ) : (
+            <ul className="space-y-2 max-h-80 overflow-auto">
+              {activity.slice(0, 20).map((a) => (
+                <li key={a.id} className="text-sm">
+                  <div>{a.summary}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {new Date(a.created_at).toLocaleString()}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-        {activity.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No activity yet. Get started by adding chats, files, or tasks.
-          </p>
-        ) : (
-          <ul className="space-y-2 max-h-80 overflow-auto">
-            {activity.slice(0, 20).map((a) => (
-              <li key={a.id} className="text-sm">
-                <div>{a.summary}</div>
-                <div className="text-xs text-muted-foreground">
-                  {new Date(a.created_at).toLocaleString()}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
       </div>
-    </div>
+      <RelatedWorkspaceItems projectId={projectId} title="Connected project work" />
+    </>
   );
 }
 
@@ -561,7 +572,14 @@ function ChatsTab({
           {chats.map((c) => (
             <div
               key={c.id}
+              draggable={canEdit}
+              onDragStart={(event) => {
+                event.dataTransfer.effectAllowed = "move";
+                event.dataTransfer.setData("application/x-kova-project-chat", c.id);
+                event.dataTransfer.setData("text/plain", c.title);
+              }}
               className="flex items-center justify-between p-3 hover:bg-accent/50 transition"
+              title={canEdit ? "Drag this chat onto another project to move it" : undefined}
             >
               <Link
                 to="/projects/$projectId/chat/$chatId"
