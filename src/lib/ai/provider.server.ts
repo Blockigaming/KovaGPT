@@ -54,7 +54,7 @@ const DEFAULT_CHAT_MODEL = "google/gemini-3.1-flash-lite";
 const DEFAULT_FAST_MODEL = "google/gemini-3.1-flash-lite";
 const DEFAULT_DEEP_MODEL = "google/gemini-3.6-flash";
 const DEFAULT_IMAGE_MODEL = "google/gemini-3.1-flash-lite-image";
-const DEFAULT_EMBEDDING_MODEL = "google/gemini-embedding-001";
+const DEFAULT_EMBEDDING_MODEL = "openai/text-embedding-3-small";
 
 const DEFAULT_TIMEOUT_MS = 45_000;
 
