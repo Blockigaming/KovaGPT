@@ -73,6 +73,7 @@
   --surface-app: var(--background);
   --surface-workspace: oklch(0.985 0.001 250);
   --surface-raised: var(--card);
+  --surface-floating: oklch(1 0 0 / 94%);
   --surface-secondary: oklch(0.955 0.002 250);
   --surface-hover: oklch(0 0 0 / 6%);
   --surface-selected: oklch(0 0 0 / 9%);
@@ -116,6 +117,19 @@
   --motion-standard: 180ms;
   --motion-menu: 220ms;
   --motion-reveal: 280ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --blur-glass: 18px;
+  --blur-drawer: 24px;
+  --shadow-floating: 0 12px 34px -18px oklch(0 0 0 / 32%), 0 1px 2px oklch(0 0 0 / 8%);
+  --z-header: 30;
+  --z-drawer: 40;
+  --z-popover: 50;
+  --z-modal: 60;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
 
   --scrollbar-thumb: oklch(0 0 0 / 14%);
   --scrollbar-thumb-hover: oklch(0 0 0 / 26%);
@@ -173,6 +187,7 @@
   --surface-app: var(--background);
   --surface-workspace: oklch(0.18 0.003 250);
   --surface-raised: var(--card);
+  --surface-floating: oklch(0.235 0.003 250 / 94%);
   --surface-secondary: oklch(0.245 0.003 250);
   --surface-hover: oklch(1 0 0 / 6%);
   --surface-selected: oklch(1 0 0 / 10%);
@@ -338,6 +353,62 @@ input {
   padding: 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
+.kova-code-block {
+  margin: 0.9em 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklab, white 8%, transparent);
+  border-radius: 0.7rem;
+  background: var(--code-block-bg);
+  box-shadow: 0 1px 2px oklch(0 0 0 / 15%);
+}
+.kova-code-block pre {
+  margin: 0;
+  border-radius: 0;
+  outline: none;
+}
+.kova-code-block pre:focus-visible {
+  box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--ring) 65%, transparent);
+}
+.kova-code-toolbar {
+  display: flex;
+  min-height: 2.25rem;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid color-mix(in oklab, white 9%, transparent);
+  padding-inline: 0.8rem 0.45rem;
+  color: oklch(0.78 0 0);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+}
+.kova-code-toolbar button {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 0.4rem;
+  padding-inline: 0.55rem;
+}
+.kova-code-toolbar button:hover {
+  background: oklch(1 0 0 / 8%);
+  color: white;
+}
+.kova-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 0.9em 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.65rem;
+  -webkit-overflow-scrolling: touch;
+}
+.kova-table-scroll table {
+  margin: 0;
+  min-width: 32rem;
+}
+.kova-table-scroll th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
 .prose-chat blockquote {
   border-left: 3px solid var(--color-border);
   padding-left: 1em;
@@ -500,6 +571,84 @@ input {
   .ai-status-label,
   .ai-status-dots > span {
     animation: none;
+  }
+}
+
+/* Product-wide interaction finishing: Radix primitives share one calm motion
+   language even when individual routes use different component wrappers. */
+::selection {
+  background: color-mix(in oklab, var(--kova-blue) 24%, transparent);
+  color: var(--foreground);
+}
+:where(button, [role="button"], input, textarea, select):disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+:where([role="dialog"], [role="menu"], [role="listbox"], [data-radix-popper-content-wrapper]) {
+  transform-origin: var(--radix-popover-content-transform-origin, center);
+}
+:where([role="dialog"], [role="menu"], [role="listbox"])[data-state="open"] {
+  animation: kova-surface-in var(--motion-menu) var(--ease-spring) both;
+}
+:where([role="dialog"], [role="menu"], [role="listbox"])[data-state="closed"] {
+  animation: kova-surface-out var(--motion-fast) var(--ease-standard) both;
+}
+@keyframes kova-surface-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes kova-surface-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(2px) scale(0.99);
+  }
+}
+:where([role="menuitem"], [role="option"], [role="tab"]):focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--ring) 50%, transparent);
+}
+[data-slot="skeleton"],
+.kova-skeleton {
+  background: linear-gradient(
+    100deg,
+    var(--skeleton-base) 25%,
+    var(--skeleton-highlight) 42%,
+    var(--skeleton-base) 60%
+  );
+  background-size: 220% 100%;
+  animation: shimmer 1.65s var(--ease-standard) infinite;
+}
+.kova-card,
+.kova-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 180px;
+}
+img {
+  font-style: italic;
+  color: var(--muted-foreground);
+}
+@media (hover: hover) and (pointer: fine) {
+  .kova-card:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-floating);
+  }
+}
+@media (max-width: 480px) {
+  .kova-table-scroll table {
+    min-width: 28rem;
+  }
+  :where([role="dialog"]) {
+    max-width: 100vw;
   }
 }
 
@@ -934,6 +1083,83 @@ body {
 }
 
 @layer components {
+  .kova-glass {
+    background: color-mix(
+      in oklab,
+      var(--surface-floating, var(--surface-raised)) 86%,
+      transparent
+    );
+    border: 1px solid color-mix(in oklab, var(--foreground) 9%, transparent);
+    box-shadow:
+      var(--shadow-floating),
+      inset 0 1px color-mix(in oklab, white 40%, transparent);
+    backdrop-filter: blur(var(--blur-glass)) saturate(125%);
+  }
+  .dark .kova-glass {
+    box-shadow:
+      var(--shadow-floating),
+      inset 0 1px color-mix(in oklab, white 8%, transparent);
+  }
+  .kova-nav-row {
+    display: flex;
+    min-height: 40px;
+    width: 100%;
+    align-items: center;
+    gap: 0.7rem;
+    border-radius: 0.55rem;
+    padding: 0.45rem 0.625rem;
+    color: var(--sidebar-foreground);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    transition:
+      background-color var(--motion-fast) var(--ease-standard),
+      transform var(--motion-fast) var(--ease-spring);
+  }
+  .kova-nav-row:hover {
+    background: var(--sidebar-hover);
+  }
+  .kova-nav-row[aria-current="page"],
+  .kova-nav-row[data-active="true"] {
+    background: var(--sidebar-active);
+  }
+  .kova-action {
+    display: inline-flex;
+    min-height: var(--kova-touch);
+    min-width: var(--kova-touch);
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.65rem;
+    color: var(--text-secondary);
+    transition:
+      background-color var(--motion-fast),
+      color var(--motion-fast),
+      transform var(--motion-fast) var(--ease-spring);
+  }
+  .kova-action:hover {
+    background: var(--surface-hover);
+    color: var(--foreground);
+  }
+  .kova-action:active {
+    transform: scale(0.96);
+  }
+  .kova-topbar {
+    min-height: calc(52px + var(--safe-top));
+    padding-top: var(--safe-top);
+    background: color-mix(in oklab, var(--background) 88%, transparent);
+    border-bottom: 1px solid color-mix(in oklab, var(--foreground) 7%, transparent);
+    backdrop-filter: blur(14px) saturate(120%);
+  }
+  .kova-divider {
+    height: 1px;
+    background: var(--border-subtle);
+  }
+  .kova-message-actions {
+    display: flex;
+    min-height: 36px;
+    align-items: center;
+    gap: 0.125rem;
+    color: var(--muted-foreground);
+  }
   .kova-page {
     width: 100%;
     max-width: var(--kova-page-max);
@@ -1039,6 +1265,28 @@ body {
     background: var(--surface-secondary);
     padding: clamp(2rem, 5vw, 4rem);
     text-align: center;
+  }
+}
+
+@media (max-width: 767px), (pointer: coarse) {
+  .kova-glass,
+  .glassy,
+  .kova-topbar {
+    backdrop-filter: blur(10px) saturate(110%);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .kova-glass,
+  .glassy,
+  .kova-topbar {
+    background: var(--surface-raised);
+    backdrop-filter: none;
+  }
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .kova-glass,
+  .kova-topbar {
+    background: var(--surface-raised);
   }
 }
 

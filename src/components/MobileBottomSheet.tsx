@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { X } from "lucide-react";
 
 /**
  * Native-feeling bottom sheet for phones and touch tablets.
@@ -30,6 +31,7 @@ export function MobileBottomSheet({
   const [dragY, setDragY] = useState(0);
   const dragStart = useRef<number | null>(null);
   const [reduceMotion, setReduceMotion] = useState(false);
+  const titleId = useId();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -51,7 +53,7 @@ export function MobileBottomSheet({
       const first = sheetRef.current?.querySelector<HTMLElement>(
         'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
       );
-      first?.focus();
+      (first ?? sheetRef.current)?.focus();
     });
     return () => {
       document.body.style.overflow = prevOverflow;
@@ -119,33 +121,54 @@ export function MobileBottomSheet({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={ariaLabel || title || "Options"}
+      aria-label={title ? undefined : ariaLabel || "Options"}
+      aria-labelledby={title ? titleId : undefined}
       className="fixed inset-0 z-[100]"
       data-testid="mobile-bottom-sheet"
     >
-      <button
-        type="button"
-        aria-label="Close"
+      <div
+        aria-hidden="true"
         onClick={() => onOpenChange(false)}
         className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in-0 duration-200"
       />
       <div
         ref={sheetRef}
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
+        tabIndex={-1}
         style={{ transform, transition, paddingBottom: "env(safe-area-inset-bottom)" }}
-        className="absolute inset-x-0 bottom-0 bg-popover text-popover-foreground rounded-t-2xl shadow-2xl border-t border-border max-h-[85vh] flex flex-col animate-in slide-in-from-bottom duration-200"
+        className="absolute inset-x-0 bottom-0 flex max-h-[88dvh] flex-col rounded-t-[var(--kova-radius-panel)] border-t border-border/80 bg-popover/96 text-popover-foreground shadow-[var(--shadow-floating)] backdrop-blur-xl animate-in slide-in-from-bottom duration-[var(--motion-menu)]"
       >
-        <div className="pt-2 pb-1 flex justify-center shrink-0">
-          <div className="w-10 h-1.5 rounded-full bg-muted-foreground/40" aria-hidden="true" />
+        <div
+          className="flex shrink-0 touch-none justify-center pb-2 pt-2.5 cursor-grab active:cursor-grabbing"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          aria-hidden="true"
+        >
+          <div className="h-1 w-9 rounded-full bg-muted-foreground/35" />
         </div>
-        {title && (
-          <div className="px-4 pb-2 text-sm font-semibold text-muted-foreground shrink-0">
-            {title}
-          </div>
-        )}
-        <div className="overflow-y-auto overscroll-contain px-2 pb-4">{children}</div>
+        <div className="flex shrink-0 items-center gap-3 px-4 pb-2">
+          {title ? (
+            <div
+              id={titleId}
+              className="min-w-0 flex-1 truncate text-[15px] font-semibold text-foreground"
+            >
+              {title}
+            </div>
+          ) : (
+            <div className="flex-1" />
+          )}
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--kova-radius-compact)] text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Close sheet"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="overflow-y-auto overscroll-contain px-2 pb-4 [scrollbar-gutter:stable]">
+          {children}
+        </div>
       </div>
     </div>
   );

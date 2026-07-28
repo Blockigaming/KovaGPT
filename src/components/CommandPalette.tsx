@@ -13,12 +13,36 @@ import {
   ShieldCheck,
   SunMoon,
   FileSearch,
+  Boxes,
+  Star,
+  Zap,
 } from "lucide-react";
 import type { Conversation } from "@/lib/chat-store";
+import type { LucideIcon } from "lucide-react";
+import { CAPABILITIES } from "@/platform/capabilities";
+import { extensionRegistry } from "@/platform/extensions";
+import { platformEvents } from "@/platform/events";
+import { applyThemeMode } from "@/lib/theme";
+import { searchConversations } from "@/lib/conversation-search";
 
-const quickActions = [
+type PaletteAction = {
+  label: string;
+  href?: string;
+  action?: string;
+  icon: LucideIcon;
+  disabledReason?: string;
+  keywords?: readonly string[];
+};
+
+const fixedActions: PaletteAction[] = [
   { label: "New chat", href: "/", icon: SquarePen },
   { label: "Search workspace", action: "search", icon: Search },
+  {
+    label: "Open Kova Lens",
+    action: "kova-lens",
+    icon: Zap,
+    keywords: ["capture", "send", "continue", "selection"],
+  },
   { label: "New project", href: "/projects", icon: FolderOpen },
   { label: "Open Library", href: "/library", icon: FolderOpen },
   { label: "Generate image", href: "/images", icon: ImageIcon },
@@ -40,6 +64,44 @@ const quickActions = [
   { label: "Toggle appearance", action: "theme", icon: SunMoon },
 ];
 
+const quickActions: PaletteAction[] = [
+  ...fixedActions,
+  ...CAPABILITIES.filter(
+    (capability) => !fixedActions.some((action) => action.href === capability.route),
+  ).map((capability) => ({
+    label: `Open ${capability.label}`,
+    href: capability.route,
+    icon: Boxes,
+    keywords: capability.keywords,
+  })),
+  ...extensionRegistry.contributions("command").flatMap((contribution) =>
+    contribution.command
+      ? [
+          {
+            label: contribution.command.label,
+            href: contribution.command.href,
+            action: contribution.id,
+            icon: Boxes,
+            keywords: contribution.command.keywords,
+          },
+        ]
+      : [],
+  ),
+];
+
+function fuzzyScore(candidate: string, query: string) {
+  if (!query) return 1;
+  const text = candidate.toLowerCase();
+  if (text.includes(query)) return 100 - text.indexOf(query);
+  let cursor = 0;
+  for (const character of query) {
+    cursor = text.indexOf(character, cursor);
+    if (cursor < 0) return 0;
+    cursor += 1;
+  }
+  return 10;
+}
+
 export function CommandPalette({
   open,
   query,
@@ -60,19 +122,45 @@ export function CommandPalette({
   onOpenSettings: () => void;
 }) {
   const normalized = query.trim().toLowerCase();
-  const matches = normalized
-    ? conversations.filter((chat) => chat.title.toLowerCase().includes(normalized)).slice(0, 8)
-    : conversations.slice(0, 6);
+  const conversationMatches = normalized
+    ? searchConversations(conversations, query).slice(0, 8)
+    : conversations.slice(0, 6).map((conversation) => ({
+        conversation,
+        snippet: `${conversation.messages.length} messages`,
+        score: 0,
+      }));
   const [activeIndex, setActiveIndex] = useState(0);
-  const actionItems = useMemo(
-    () => [
-      "new-chat",
-      "settings",
-      ...quickActions.slice(1).map((action) => action.href ?? action.action),
-    ],
-    [],
+  const [recentCommands, setRecentCommands] = useState<string[]>([]);
+  const [pinnedCommands, setPinnedCommands] = useState<string[]>([]);
+  useEffect(() => {
+    try {
+      setRecentCommands(JSON.parse(localStorage.getItem("kova-command-history-v1") ?? "[]"));
+      setPinnedCommands(JSON.parse(localStorage.getItem("kova-command-pins-v1") ?? "[]"));
+    } catch {
+      setRecentCommands([]);
+      setPinnedCommands([]);
+    }
+  }, [open]);
+  const visibleActions = useMemo(
+    () =>
+      quickActions
+        .slice(1)
+        .map((action) => ({
+          ...action,
+          score:
+            fuzzyScore(`${action.label} ${(action.keywords ?? []).join(" ")}`, normalized) +
+            (recentCommands.includes(action.href ?? action.action ?? "") ? 5 : 0) +
+            (pinnedCommands.includes(action.href ?? action.action ?? "") ? 20 : 0),
+        }))
+        .filter((action) => action.score > 0)
+        .sort((a, b) => b.score - a.score),
+    [normalized, recentCommands, pinnedCommands],
   );
-  const totalItems = actionItems.length + matches.length;
+  const actionItems = useMemo(
+    () => ["new-chat", "settings", ...visibleActions.map((action) => action.href ?? action.action)],
+    [visibleActions],
+  );
+  const totalItems = actionItems.length + conversationMatches.length;
 
   useEffect(() => {
     setActiveIndex(0);
@@ -91,14 +179,35 @@ export function CommandPalette({
       return;
     }
     if (typeof action === "string" && action.startsWith("/")) {
+      const next = [action, ...recentCommands.filter((item) => item !== action)].slice(0, 12);
+      localStorage.setItem("kova-command-history-v1", JSON.stringify(next));
+      platformEvents.publish("platform", "command.executed", { command: action });
       window.location.assign(action);
       onClose();
       return;
     }
+    if (action === "kova-lens") {
+      window.dispatchEvent(new CustomEvent("kova-open-lens"));
+      platformEvents.publish("platform", "command.executed", { command: action });
+      onClose();
+      return;
+    }
+    if (action === "theme") {
+      applyThemeMode(document.documentElement.classList.contains("dark") ? "light" : "dark");
+      platformEvents.publish("platform", "command.executed", { command: action });
+      onClose();
+      return;
+    }
+    if (action === "search") {
+      window.dispatchEvent(new CustomEvent("kova-open-search"));
+      platformEvents.publish("platform", "command.executed", { command: action });
+      onClose();
+      return;
+    }
     if (!action) {
-      const chat = matches[activeIndex - actionItems.length];
-      if (chat) {
-        onSelectChat(chat.id);
+      const match = conversationMatches[activeIndex - actionItems.length];
+      if (match) {
+        onSelectChat(match.conversation.id);
         onClose();
       }
     }
@@ -127,6 +236,17 @@ export function CommandPalette({
         }
         if (event.key === "Enter") {
           event.preventDefault();
+          if (event.altKey) {
+            const command = actionItems[activeIndex];
+            if (command && command !== "new-chat" && command !== "settings") {
+              const next = pinnedCommands.includes(command)
+                ? pinnedCommands.filter((item) => item !== command)
+                : [command, ...pinnedCommands];
+              setPinnedCommands(next);
+              localStorage.setItem("kova-command-pins-v1", JSON.stringify(next));
+              return;
+            }
+          }
           chooseActive();
         }
       }}
@@ -194,7 +314,7 @@ export function CommandPalette({
             <Settings className="h-4 w-4 text-muted-foreground" />
             <span>Open settings</span>
           </button>
-          {quickActions.slice(1).map((action, actionIndex) => {
+          {visibleActions.map((action, actionIndex) => {
             const Icon = action.icon;
             const index = actionIndex + 2;
             const className = `flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === index ? "bg-accent" : ""} ${action.disabledReason ? "text-muted-foreground" : ""}`;
@@ -202,8 +322,11 @@ export function CommandPalette({
               <>
                 <Icon className="h-4 w-4 text-muted-foreground" />
                 <span>{action.label}</span>
+                {pinnedCommands.includes(action.href ?? action.action ?? "") ? (
+                  <Star className="ml-auto h-3.5 w-3.5 fill-current" aria-label="Pinned command" />
+                ) : null}
                 {action.disabledReason ? (
-                  <span className="ml-auto text-[11px]">{action.disabledReason}</span>
+                  <span className="text-[11px]">{action.disabledReason}</span>
                 ) : null}
               </>
             );
@@ -215,7 +338,17 @@ export function CommandPalette({
                   role="option"
                   aria-selected={activeIndex === index}
                   to={action.href as never}
-                  onClick={onClose}
+                  onClick={() => {
+                    const next = [
+                      action.href!,
+                      ...recentCommands.filter((item) => item !== action.href),
+                    ].slice(0, 12);
+                    localStorage.setItem("kova-command-history-v1", JSON.stringify(next));
+                    platformEvents.publish("platform", "command.executed", {
+                      command: action.href,
+                    });
+                    onClose();
+                  }}
                   className={className}
                 >
                   {content}
@@ -230,6 +363,31 @@ export function CommandPalette({
                 aria-selected={activeIndex === index}
                 type="button"
                 disabled={!!action.disabledReason}
+                onClick={() => {
+                  const targetIndex = actionItems.indexOf(action.action);
+                  if (targetIndex >= 0) setActiveIndex(targetIndex);
+                  if (action.action === "kova-lens") {
+                    window.dispatchEvent(new CustomEvent("kova-open-lens"));
+                    platformEvents.publish("platform", "command.executed", {
+                      command: action.action,
+                    });
+                    onClose();
+                  } else if (action.action === "theme") {
+                    applyThemeMode(
+                      document.documentElement.classList.contains("dark") ? "light" : "dark",
+                    );
+                    platformEvents.publish("platform", "command.executed", {
+                      command: action.action,
+                    });
+                    onClose();
+                  } else if (action.action === "search") {
+                    window.dispatchEvent(new CustomEvent("kova-open-search"));
+                    platformEvents.publish("platform", "command.executed", {
+                      command: action.action,
+                    });
+                    onClose();
+                  }
+                }}
                 className={className}
               >
                 {content}
@@ -238,12 +396,17 @@ export function CommandPalette({
           })}
 
           <div className="px-3 pb-1 pt-4 text-xs font-medium text-muted-foreground">Chats</div>
-          {matches.length === 0 ? (
+          {normalized ? null : (
+            <p className="px-3 pb-2 text-[11px] text-muted-foreground">
+              Search message text or use is:pinned, has:attachment, in:title:, after:, and before:.
+            </p>
+          )}
+          {conversationMatches.length === 0 ? (
             <div className="px-3 py-6 text-center text-sm text-muted-foreground">
               No chats found
             </div>
           ) : (
-            matches.map((chat, chatIndex) => (
+            conversationMatches.map(({ conversation: chat, snippet }, chatIndex) => (
               <button
                 key={chat.id}
                 type="button"
@@ -258,9 +421,15 @@ export function CommandPalette({
               >
                 <span className="h-2 w-2 rounded-full bg-muted-foreground/50" />
                 <span className="min-w-0 flex-1 truncate">{chat.title}</span>
+                <span className="hidden max-w-52 truncate text-xs text-muted-foreground sm:block">
+                  {snippet}
+                </span>
               </button>
             ))
           )}
+          <p className="border-t px-3 py-2 text-[11px] text-muted-foreground">
+            Press Alt+Enter to pin or unpin the selected command.
+          </p>
         </div>
       </div>
     </div>

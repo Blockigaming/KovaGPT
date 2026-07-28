@@ -525,13 +525,13 @@ export function ChatInput({
 
   return (
     <div
-      className="w-full px-3 sm:px-6 lg:px-8 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 transition-[padding] duration-150"
+      className="w-full px-2.5 pb-[max(.75rem,var(--safe-bottom))] pt-2 transition-[padding] duration-150 sm:px-6 lg:px-8"
       style={isMobileLayout && kbOffset > 0 ? { paddingBottom: `${kbOffset + 8}px` } : undefined}
       onPaste={handlePaste}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
     >
-      <div className="mx-auto max-w-3xl [[data-sidebar=closed]_&]:max-w-4xl">
+      <div className="mx-auto max-w-[48rem] [[data-sidebar=closed]_&]:max-w-[52rem]">
         <div
           style={
             sendFlash
@@ -541,7 +541,7 @@ export function ChatInput({
                 } as React.CSSProperties)
               : undefined
           }
-          className={`rounded-[28px] border bg-card shadow-[0_12px_32px_-20px_rgba(0,0,0,0.45),0_1px_2px_rgba(0,0,0,0.08)] transition-all duration-200 focus-within:border-muted-foreground/50 ${
+          className={`kova-glass overflow-visible rounded-[1.35rem] transition-[border-color,box-shadow,transform] duration-200 focus-within:border-foreground/20 focus-within:shadow-[0_14px_36px_-20px_rgba(0,0,0,.42),0_0_0_3px_color-mix(in_oklab,var(--ring)_12%,transparent)] ${
             sendFlash
               ? "scale-[0.995]"
               : isStreaming
@@ -554,7 +554,7 @@ export function ChatInput({
               {attachments.map((a, i) => (
                 <div
                   key={`${a.name}:${a.size ?? i}:${i}`}
-                  className="relative min-h-16 w-20 overflow-hidden rounded-xl border border-border bg-muted/30"
+                  className="relative min-h-16 w-24 overflow-hidden rounded-xl border border-border/70 bg-muted/45 shadow-sm"
                 >
                   {a.kind === "library_file" ? (
                     <div className="flex h-16 w-full flex-col items-center justify-center gap-1 text-muted-foreground">
@@ -618,7 +618,7 @@ export function ChatInput({
           <div aria-live="polite" className="sr-only">
             {uploadAnnouncement}
           </div>
-          <div className="flex min-h-[56px] items-center">
+          <div className="flex min-h-[58px] items-end">
             <div className="flex items-center pl-1.5 relative" ref={plusWrapRef}>
               <input
                 ref={fileRef}
@@ -658,7 +658,7 @@ export function ChatInput({
               {plusOpen && !isMobileLayout && (
                 <div
                   role="menu"
-                  className="absolute bottom-11 left-0 z-50 min-w-[200px] rounded-2xl border border-border bg-popover shadow-xl p-1.5 animate-in fade-in slide-in-from-bottom-1"
+                  className="kova-glass absolute bottom-11 left-0 z-50 min-w-[220px] rounded-xl p-1.5 animate-in fade-in slide-in-from-bottom-1"
                 >
                   <button
                     role="menuitem"
@@ -786,7 +786,8 @@ export function ChatInput({
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="off"
-              className="flex-1 resize-none bg-transparent px-2 py-[0.65rem] outline-none border-0 focus:ring-0 focus:outline-none text-foreground placeholder:text-muted-foreground max-h-[200px] leading-relaxed text-base lg:text-sm"
+              className="min-h-[44px] max-h-[200px] flex-1 resize-none border-0 bg-transparent px-2 py-[.72rem] text-[16px] leading-[1.45] text-foreground outline-none placeholder:text-muted-foreground focus:outline-none focus:ring-0 lg:text-[15px]"
+              aria-label="Message KovaGPT"
             />
             <div className="flex items-center gap-1.5 pr-1.5">
               {mode && onModeChange && (
@@ -799,7 +800,7 @@ export function ChatInput({
                   type="button"
                   onClick={onStop}
                   style={{ backgroundColor: actionColor }}
-                  className="w-11 h-11 lg:w-9 lg:h-9 rounded-full text-white flex items-center justify-center hover:opacity-80 transition"
+                  className="mb-1 flex h-10 w-10 items-center justify-center rounded-full text-white transition hover:opacity-80 lg:h-9 lg:w-9"
                   aria-label="Stop"
                 >
                   <Square className="w-4 h-4 fill-current" />
@@ -809,7 +810,7 @@ export function ChatInput({
                   type="button"
                   onClick={triggerSubmit}
                   style={{ backgroundColor: actionColor }}
-                  className={`w-11 h-11 lg:w-9 lg:h-9 rounded-full text-white flex items-center justify-center shadow-sm hover:opacity-90 transition duration-150 active:scale-90 active:opacity-70 ${sendFlash ? "scale-90 opacity-80" : ""}`}
+                  className={`mb-1 flex h-10 w-10 items-center justify-center rounded-full text-white shadow-sm transition duration-150 hover:opacity-90 active:scale-90 active:opacity-70 lg:h-9 lg:w-9 ${sendFlash ? "scale-90 opacity-80" : ""}`}
                   aria-label="Send"
                 >
                   <ArrowUp
@@ -819,7 +820,7 @@ export function ChatInput({
               ) : null}
             </div>
           </div>
-          <div className="flex items-center justify-between gap-2 px-2 pb-2">
+          <div className="flex min-h-9 items-center justify-between gap-2 px-2 pb-2">
             <div className="relative flex items-center gap-1.5" ref={toolsWrapRef}>
               <button
                 type="button"
@@ -839,7 +840,7 @@ export function ChatInput({
               {toolsOpen && !isMobileLayout && (
                 <div
                   role="menu"
-                  className="absolute bottom-10 left-0 z-50 w-64 rounded-2xl border border-border bg-popover p-1.5 shadow-2xl animate-in fade-in slide-in-from-bottom-1"
+                  className="kova-glass absolute bottom-10 left-0 z-50 w-64 rounded-xl p-1.5 animate-in fade-in slide-in-from-bottom-1"
                 >
                   {toolActions.map((tool) => {
                     const Icon = tool.icon;
