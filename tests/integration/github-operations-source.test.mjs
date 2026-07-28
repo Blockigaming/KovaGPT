@@ -47,6 +47,10 @@ test("webhook route verifies signatures rejects replay and handles required even
     "github_webhook_deliveries",
   ])
     assert.ok(webhook.includes(value), value);
+  assert.ok(
+    webhook.includes('.eq("installation_id", installationId)'),
+    "repository webhook mutations must be scoped to the originating installation",
+  );
 });
 test("GitHub sync and coding selection persistence remain owner and grant scoped", () => {
   for (const value of [

@@ -17,7 +17,6 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes("/src/components/SettingsDialog")) return "settings";
           if (id.includes("/src/components/ChatInput")) return "chat-input";
           if (id.includes("/src/components/ChatMessage")) return "chat-message";
           if (id.includes("/src/lib/connectors-catalog")) return "connectors";
@@ -26,8 +25,6 @@ export default defineConfig({
           if (id.includes("react-markdown") || id.includes("remark-") || id.includes("micromark"))
             return "markdown";
           if (id.includes("@supabase")) return "supabase";
-          if (id.includes("@radix-ui") || id.includes("lucide-react")) return "ui";
-          if (id.includes("react") || id.includes("@tanstack")) return "react";
         },
       },
     },

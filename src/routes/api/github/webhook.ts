@@ -62,16 +62,22 @@ export const Route = createFileRoute("/api/github/webhook")({
           if (
             event === "repository" &&
             ["deleted", "archived", "transferred"].includes(payload.action)
-          )
-            await (supabaseAdmin as any)
+          ) {
+            let revoke = (supabaseAdmin as any)
               .from("github_repositories")
               .update({ explicitly_granted: false, revoked_at: new Date().toISOString() })
               .eq("id", repositoryId);
-          if (repositoryId)
-            await (supabaseAdmin as any)
+            if (installationId) revoke = revoke.eq("installation_id", installationId);
+            await revoke;
+          }
+          if (repositoryId) {
+            let touched = (supabaseAdmin as any)
               .from("github_repositories")
               .update({ last_webhook_at: new Date().toISOString() })
               .eq("id", repositoryId);
+            if (installationId) touched = touched.eq("installation_id", installationId);
+            await touched;
+          }
           await (supabaseAdmin as any)
             .from("github_webhook_deliveries")
             .update({

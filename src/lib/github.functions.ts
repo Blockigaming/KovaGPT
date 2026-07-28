@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { createInstallationToken, listGitHubAppInstallations } from "@/lib/github-oauth.server";
+import { createInstallationToken, decryptSecret } from "@/lib/github-oauth.server";
 /* eslint-disable @typescript-eslint/no-explicit-any -- Mercury tables are available after generated types refresh. */
 export type GitHubManagement = {
   configured: boolean;
@@ -67,19 +67,41 @@ export const getGitHubManagement = createServerFn({ method: "GET" })
 export const refreshGitHubInstallations = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const available = (await listGitHubAppInstallations()) as any[];
+    // GitHub's App-JWT installation endpoint is global to the deployment and
+    // must never be used to discover installations for an arbitrary user.
+    // Discover through each owner's OAuth identity instead; GitHub then returns
+    // only installations that identity is allowed to access.
     const accounts = await (supabaseAdmin as any)
       .from("github_accounts")
-      .select("id")
+      .select("id,token_ciphertext")
       .eq("owner_id", context.userId)
-      .limit(1)
-      .single();
-    if (accounts.error) throw new Error("Connect GitHub before selecting an installation");
+      .eq("status", "connected")
+      .not("token_ciphertext", "is", null)
+      .limit(20);
+    if (accounts.error) throw new Error("Unable to load connected GitHub accounts");
+    const ownedById = new Map<number, string>(),
+      availableById = new Map<number, any>();
+    for (const account of accounts.data ?? []) {
+      const response = await fetch("https://api.github.com/user/installations?per_page=100", {
+        headers: {
+          accept: "application/vnd.github+json",
+          authorization: `Bearer ${await decryptSecret(account.token_ciphertext)}`,
+          "x-github-api-version": "2022-11-28",
+        },
+      });
+      if (!response.ok) throw new Error("Unable to verify GitHub installation access");
+      const payload = (await response.json()) as { installations?: any[] };
+      for (const installation of payload.installations ?? []) {
+        ownedById.set(Number(installation.id), account.id);
+        availableById.set(Number(installation.id), installation);
+      }
+    }
+    const available = [...availableById.values()];
     for (const installation of available) {
       const token = await createInstallationToken(installation.id);
       await (supabaseAdmin as any).from("github_installations").upsert({
         id: installation.id,
-        account_id: accounts.data.id,
+        account_id: ownedById.get(Number(installation.id)),
         owner_id: context.userId,
         organization_id: installation.account?.id,
         organization_login: installation.account?.login,
@@ -106,7 +128,7 @@ export const refreshGitHubInstallations = createServerFn({ method: "POST" })
           {
             id: repo.id,
             owner_id: context.userId,
-            account_id: accounts.data.id,
+            account_id: ownedById.get(Number(installation.id)),
             installation_id: installation.id,
             full_name: String(repo.full_name).toLowerCase(),
             organization_login: repo.owner?.login,
@@ -116,7 +138,7 @@ export const refreshGitHubInstallations = createServerFn({ method: "POST" })
             archived: repo.archived,
             updated_at: new Date().toISOString(),
           },
-          { onConflict: "id" },
+          { onConflict: "owner_id,id" },
         );
     }
     return { count: available.length };
