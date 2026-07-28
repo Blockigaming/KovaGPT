@@ -28,11 +28,7 @@ export default defineConfig({
           if (id.includes("/src/lib/connectors-catalog")) return "connectors";
           if (!id.includes("node_modules")) return;
           if (id.includes("recharts") || id.includes("d3-")) return "charts";
-          if (
-            id.includes("react-markdown") ||
-            id.includes("remark-") ||
-            id.includes("micromark")
-          ) {
+          if (id.includes("react-markdown") || id.includes("remark-") || id.includes("micromark")) {
             return "markdown";
           }
           if (id.includes("@supabase")) return "supabase";
@@ -41,12 +37,12 @@ export default defineConfig({
     },
   },
 
-  // TanStack Start imports its H3 v2 release through the npm alias `h3-v2`.
-  // Lovable's runtime only installs declared production package names, so an
-  // external alias import survives the build but cannot be resolved at boot.
-  // Bundle the alias into the SSR output instead of leaving that runtime edge.
+  // TanStack Start imports its H3 v2 release through the npm alias `h3-v2`,
+  // which in turn imports `rou3`. Lovable's runtime only installs declared
+  // production package names, so external imports can survive the build but
+  // cannot be resolved at boot. Bundle the complete routing edge into the SSR
+  // output instead of relying on packages being present in the runtime image.
   ssr: {
-    noExternal: ["h3-v2"],
-  },
+    noExternal: ["h3-v2", "rou3"],
   },
 });
