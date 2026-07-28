@@ -27,13 +27,80 @@ export const DEFAULT_PERSONALITY: Personality = TRAITS.reduce(
   {} as Personality,
 );
 
-export const PERSONALITY_PRESETS: { id: string; label: string; hint: string; values: Personality }[] = [
-  { id: "balanced", label: "Balanced", hint: "Default KovaGPT", values: { ...DEFAULT_PERSONALITY } },
-  { id: "friendly", label: "Friendly", hint: "Warm and casual", values: { ...DEFAULT_PERSONALITY, kindness: 9, friendliness: 9, humor: 7, formalness: 3, energy: 7, seriousness: 3 } },
-  { id: "professional", label: "Professional", hint: "Formal and precise", values: { ...DEFAULT_PERSONALITY, formalness: 9, seriousness: 8, humor: 2, directness: 8, conciseness: 7, detail: 7 } },
-  { id: "playful", label: "Playful", hint: "Witty and light", values: { ...DEFAULT_PERSONALITY, humor: 10, energy: 9, friendliness: 9, seriousness: 2, creativity: 9, formalness: 2 } },
-  { id: "concise", label: "Concise", hint: "Short and direct", values: { ...DEFAULT_PERSONALITY, conciseness: 10, directness: 10, detail: 2, humor: 3 } },
-  { id: "mentor", label: "Mentor", hint: "Thorough and patient", values: { ...DEFAULT_PERSONALITY, detail: 10, kindness: 8, creativity: 7, directness: 6, seriousness: 6, friendliness: 8 } },
+export const PERSONALITY_PRESETS: {
+  id: string;
+  label: string;
+  hint: string;
+  values: Personality;
+}[] = [
+  {
+    id: "balanced",
+    label: "Balanced",
+    hint: "Default KovaGPT",
+    values: { ...DEFAULT_PERSONALITY },
+  },
+  {
+    id: "friendly",
+    label: "Friendly",
+    hint: "Warm and casual",
+    values: {
+      ...DEFAULT_PERSONALITY,
+      kindness: 9,
+      friendliness: 9,
+      humor: 7,
+      formalness: 3,
+      energy: 7,
+      seriousness: 3,
+    },
+  },
+  {
+    id: "professional",
+    label: "Professional",
+    hint: "Formal and precise",
+    values: {
+      ...DEFAULT_PERSONALITY,
+      formalness: 9,
+      seriousness: 8,
+      humor: 2,
+      directness: 8,
+      conciseness: 7,
+      detail: 7,
+    },
+  },
+  {
+    id: "playful",
+    label: "Playful",
+    hint: "Witty and light",
+    values: {
+      ...DEFAULT_PERSONALITY,
+      humor: 10,
+      energy: 9,
+      friendliness: 9,
+      seriousness: 2,
+      creativity: 9,
+      formalness: 2,
+    },
+  },
+  {
+    id: "concise",
+    label: "Concise",
+    hint: "Short and direct",
+    values: { ...DEFAULT_PERSONALITY, conciseness: 10, directness: 10, detail: 2, humor: 3 },
+  },
+  {
+    id: "mentor",
+    label: "Mentor",
+    hint: "Thorough and patient",
+    values: {
+      ...DEFAULT_PERSONALITY,
+      detail: 10,
+      kindness: 8,
+      creativity: 7,
+      directness: 6,
+      seriousness: 6,
+      friendliness: 8,
+    },
+  },
 ];
 
 export function loadPersonality(): Personality {
@@ -140,7 +207,8 @@ export function PersonalitySliders() {
         )}
       </div>
       <p className="text-xs text-muted-foreground mb-4">
-        Pick a preset or fine-tune 10 traits. Kova also adapts to how you write when Auto-adapt is on.
+        Pick a preset or fine-tune 10 traits. Kova also adapts to how you write when Auto-adapt is
+        on.
       </p>
 
       <div className={`mb-4 ${unlocked ? "" : "pointer-events-none opacity-70"}`}>
@@ -164,13 +232,12 @@ export function PersonalitySliders() {
             className="h-3.5 w-3.5 rounded border-border accent-primary"
           />
           <span>
-            <span className="font-medium text-foreground">Auto-adapt to me.</span> Kova learns your style
-            (length, formality, humor) and mirrors it. Say "shorter", "more casual", or "add detail" and it adjusts.
+            <span className="font-medium text-foreground">Auto-adapt to me.</span> Kova learns your
+            style (length, formality, humor) and mirrors it. Say "shorter", "more casual", or "add
+            detail" and it adjusts.
           </span>
         </label>
       </div>
-
-
 
       <div
         className={`grid gap-4 sm:grid-cols-2 ${unlocked ? "" : "pointer-events-none blur-[2px] opacity-70 select-none"}`}

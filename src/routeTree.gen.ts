@@ -77,6 +77,10 @@ import { Route as ApiGoogleDisconnectRouteImport } from './routes/api/google/dis
 import { Route as ApiGoogleCallbackRouteImport } from './routes/api/google/callback'
 import { Route as ApiGoogleCalendarRouteImport } from './routes/api/google/calendar'
 import { Route as ApiGoogleAuthRouteImport } from './routes/api/google/auth'
+import { Route as ApiGithubWebhookRouteImport } from './routes/api/github/webhook'
+import { Route as ApiGithubToolRouteImport } from './routes/api/github/tool'
+import { Route as ApiGithubCallbackRouteImport } from './routes/api/github/callback'
+import { Route as ApiGithubAuthRouteImport } from './routes/api/github/auth'
 import { Route as ApiFinancesWebhookRouteImport } from './routes/api/finances/webhook'
 import { Route as ApiFinancesLinkTokenRouteImport } from './routes/api/finances/link-token'
 import { Route as ApiFinancesExchangeRouteImport } from './routes/api/finances/exchange'
@@ -440,6 +444,26 @@ const ApiGoogleAuthRoute = ApiGoogleAuthRouteImport.update({
   path: '/api/google/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGithubWebhookRoute = ApiGithubWebhookRouteImport.update({
+  id: '/api/github/webhook',
+  path: '/api/github/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGithubToolRoute = ApiGithubToolRouteImport.update({
+  id: '/api/github/tool',
+  path: '/api/github/tool',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGithubCallbackRoute = ApiGithubCallbackRouteImport.update({
+  id: '/api/github/callback',
+  path: '/api/github/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGithubAuthRoute = ApiGithubAuthRouteImport.update({
+  id: '/api/github/auth',
+  path: '/api/github/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiFinancesWebhookRoute = ApiFinancesWebhookRouteImport.update({
   id: '/api/finances/webhook',
   path: '/api/finances/webhook',
@@ -607,6 +631,10 @@ export interface FileRoutesByFullPath {
   '/api/finances/exchange': typeof ApiFinancesExchangeRoute
   '/api/finances/link-token': typeof ApiFinancesLinkTokenRoute
   '/api/finances/webhook': typeof ApiFinancesWebhookRoute
+  '/api/github/auth': typeof ApiGithubAuthRoute
+  '/api/github/callback': typeof ApiGithubCallbackRoute
+  '/api/github/tool': typeof ApiGithubToolRoute
+  '/api/github/webhook': typeof ApiGithubWebhookRoute
   '/api/google/auth': typeof ApiGoogleAuthRoute
   '/api/google/calendar': typeof ApiGoogleCalendarRoute
   '/api/google/callback': typeof ApiGoogleCallbackRoute
@@ -695,6 +723,10 @@ export interface FileRoutesByTo {
   '/api/finances/exchange': typeof ApiFinancesExchangeRoute
   '/api/finances/link-token': typeof ApiFinancesLinkTokenRoute
   '/api/finances/webhook': typeof ApiFinancesWebhookRoute
+  '/api/github/auth': typeof ApiGithubAuthRoute
+  '/api/github/callback': typeof ApiGithubCallbackRoute
+  '/api/github/tool': typeof ApiGithubToolRoute
+  '/api/github/webhook': typeof ApiGithubWebhookRoute
   '/api/google/auth': typeof ApiGoogleAuthRoute
   '/api/google/calendar': typeof ApiGoogleCalendarRoute
   '/api/google/callback': typeof ApiGoogleCallbackRoute
@@ -784,6 +816,10 @@ export interface FileRoutesById {
   '/api/finances/exchange': typeof ApiFinancesExchangeRoute
   '/api/finances/link-token': typeof ApiFinancesLinkTokenRoute
   '/api/finances/webhook': typeof ApiFinancesWebhookRoute
+  '/api/github/auth': typeof ApiGithubAuthRoute
+  '/api/github/callback': typeof ApiGithubCallbackRoute
+  '/api/github/tool': typeof ApiGithubToolRoute
+  '/api/github/webhook': typeof ApiGithubWebhookRoute
   '/api/google/auth': typeof ApiGoogleAuthRoute
   '/api/google/calendar': typeof ApiGoogleCalendarRoute
   '/api/google/callback': typeof ApiGoogleCallbackRoute
@@ -874,6 +910,10 @@ export interface FileRouteTypes {
     | '/api/finances/exchange'
     | '/api/finances/link-token'
     | '/api/finances/webhook'
+    | '/api/github/auth'
+    | '/api/github/callback'
+    | '/api/github/tool'
+    | '/api/github/webhook'
     | '/api/google/auth'
     | '/api/google/calendar'
     | '/api/google/callback'
@@ -962,6 +1002,10 @@ export interface FileRouteTypes {
     | '/api/finances/exchange'
     | '/api/finances/link-token'
     | '/api/finances/webhook'
+    | '/api/github/auth'
+    | '/api/github/callback'
+    | '/api/github/tool'
+    | '/api/github/webhook'
     | '/api/google/auth'
     | '/api/google/calendar'
     | '/api/google/callback'
@@ -1050,6 +1094,10 @@ export interface FileRouteTypes {
     | '/api/finances/exchange'
     | '/api/finances/link-token'
     | '/api/finances/webhook'
+    | '/api/github/auth'
+    | '/api/github/callback'
+    | '/api/github/tool'
+    | '/api/github/webhook'
     | '/api/google/auth'
     | '/api/google/calendar'
     | '/api/google/callback'
@@ -1137,6 +1185,10 @@ export interface RootRouteChildren {
   ApiFinancesExchangeRoute: typeof ApiFinancesExchangeRoute
   ApiFinancesLinkTokenRoute: typeof ApiFinancesLinkTokenRoute
   ApiFinancesWebhookRoute: typeof ApiFinancesWebhookRoute
+  ApiGithubAuthRoute: typeof ApiGithubAuthRoute
+  ApiGithubCallbackRoute: typeof ApiGithubCallbackRoute
+  ApiGithubToolRoute: typeof ApiGithubToolRoute
+  ApiGithubWebhookRoute: typeof ApiGithubWebhookRoute
   ApiGoogleAuthRoute: typeof ApiGoogleAuthRoute
   ApiGoogleCalendarRoute: typeof ApiGoogleCalendarRoute
   ApiGoogleCallbackRoute: typeof ApiGoogleCallbackRoute
@@ -1636,6 +1688,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiGoogleAuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/github/webhook': {
+      id: '/api/github/webhook'
+      path: '/api/github/webhook'
+      fullPath: '/api/github/webhook'
+      preLoaderRoute: typeof ApiGithubWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/github/tool': {
+      id: '/api/github/tool'
+      path: '/api/github/tool'
+      fullPath: '/api/github/tool'
+      preLoaderRoute: typeof ApiGithubToolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/github/callback': {
+      id: '/api/github/callback'
+      path: '/api/github/callback'
+      fullPath: '/api/github/callback'
+      preLoaderRoute: typeof ApiGithubCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/github/auth': {
+      id: '/api/github/auth'
+      path: '/api/github/auth'
+      fullPath: '/api/github/auth'
+      preLoaderRoute: typeof ApiGithubAuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/finances/webhook': {
       id: '/api/finances/webhook'
       path: '/api/finances/webhook'
@@ -1865,6 +1945,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiFinancesExchangeRoute: ApiFinancesExchangeRoute,
   ApiFinancesLinkTokenRoute: ApiFinancesLinkTokenRoute,
   ApiFinancesWebhookRoute: ApiFinancesWebhookRoute,
+  ApiGithubAuthRoute: ApiGithubAuthRoute,
+  ApiGithubCallbackRoute: ApiGithubCallbackRoute,
+  ApiGithubToolRoute: ApiGithubToolRoute,
+  ApiGithubWebhookRoute: ApiGithubWebhookRoute,
   ApiGoogleAuthRoute: ApiGoogleAuthRoute,
   ApiGoogleCalendarRoute: ApiGoogleCalendarRoute,
   ApiGoogleCallbackRoute: ApiGoogleCallbackRoute,

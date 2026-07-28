@@ -29,6 +29,8 @@ test("AI provider adapter keeps secrets server side and normalizes retryable fai
   const source = read("src/lib/ai/provider.server.ts");
   assert.doesNotMatch(source, /VITE_.*API_KEY/);
   assert.match(source, /OPENAI_API_KEY/);
+  assert.match(source, /LOVABLE_API_KEY/);
+  assert.match(source, /provider: lovable \? "lovable" : "openai"/);
   assert.match(source, /provider_timeout/);
   assert.match(source, /provider_rate_limited/);
   assert.match(source, /provider_auth_failed/);

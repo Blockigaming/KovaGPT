@@ -34,13 +34,13 @@ test("Context Packs are owner scoped, persisted, and attach to chat", () => {
 });
 test("Work mode is durable, approval-gated, and never claims background work", () => {
   const route = read("src/routes/work.tsx"),
-    store = read("src/lib/work-store.ts");
-  assert.match(store, /localStorage\.setItem/);
-  assert.match(route, /Approval gate/);
-  assert.match(route, /Approve step/);
+    functions = read("src/lib/work.functions.ts");
+  assert.match(functions, /requireSupabaseAuth/);
+  assert.match(route, /Approval required/);
+  assert.match(route, /decideApproval/);
   assert.match(route, /Deliverables/);
-  assert.match(route, /does not\s+claim background execution/);
-  assert.match(route, /Continue in chat/);
+  assert.match(route, /Waiting for worker/);
+  assert.match(route, /controlWorkRun/);
 });
 test("Files and Apps expose truthful professional workflows", () => {
   const files = read("src/routes/files.tsx"),

@@ -1,5 +1,6 @@
 import {
   Archive,
+  Bell,
   Boxes,
   Brain,
   BriefcaseBusiness,
@@ -412,6 +413,7 @@ export function Sidebar({
             {showSignedIn ? renderNavLink("/projects", "Projects", FolderKanban) : null}
             {renderNavLink("/recents", "Recents", Clock3)}
             {showSignedIn ? renderNavLink("/work", "Work", BriefcaseBusiness) : null}
+            {showSignedIn ? renderNavLink("/notifications", "Notifications", Bell) : null}
             {showSignedIn ? renderNavLink("/research-planner", "Research", FlaskConical) : null}
             {showSignedIn ? renderNavLink("/prompt-studio", "Prompt Studio", ScrollText) : null}
             {showSignedIn ? renderNavLink("/knowledge-graph", "Knowledge Graph", Network) : null}

@@ -3,19 +3,18 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
-test("Work exposes template selection, task graph editing and live server timeline", async () => {
-  const [workspace, route] = await Promise.all([
-    read("src/components/AgentTeamWorkspace.tsx"),
+test("Work exposes the persisted specialist graph and live server timeline", async () => {
+  const [route, functions] = await Promise.all([
     read("src/routes/work.tsx"),
+    read("src/lib/work.functions.ts"),
   ]);
-  assert.match(route, /<AgentTeamWorkspace \/>/);
-  assert.match(workspace, /Direct an agent team/);
-  assert.match(workspace, /Launch \{tasks\.length\} specialists/);
-  assert.match(workspace, /Live specialist timeline/);
-  assert.match(workspace, /Evidence and deliverables/);
-  assert.match(workspace, /screenshotUrl/);
-  assert.match(workspace, /window\.setInterval/);
-  assert.match(workspace, /Approve checkpoint/);
+  assert.match(route, /DependencyGraph/);
+  assert.match(route, /Timeline/);
+  assert.match(route, /Evidence/);
+  assert.match(route, /Approvals/);
+  assert.match(route, /useServerFn\(getWorkRun\)/);
+  assert.match(functions, /agent_specialist_tasks/);
+  assert.match(functions, /agent_dependency_edges/);
 });
 
 test("Apollo migration persists parent tasks, dependencies, retries, outputs and checkpoints", async () => {

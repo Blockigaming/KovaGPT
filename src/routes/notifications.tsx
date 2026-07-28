@@ -1,143 +1,224 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Bell, CheckCheck, Mail, Settings, ShieldAlert } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { Bell, Check, CheckCheck, Loader2, Search, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
-import { EmptyState } from "@/components/states";
+import { EmptyState, ErrorState } from "@/components/states";
+import { useUser } from "@/components/auth/ClerkSafe";
+import {
+  deleteNotifications,
+  listNotifications,
+  markNotificationsRead,
+  type CenterNotification,
+} from "@/lib/notification-center.functions";
 
 export const Route = createFileRoute("/notifications")({ component: NotificationsRoute });
-
-const preferenceRows = [
-  { label: "Tasks", description: "Scheduled-task results and failures", enabled: true },
-  {
-    label: "Projects and sharing",
-    description: "Invitations, role changes, and shared-chat updates",
-    enabled: true,
-  },
-  {
-    label: "Connectors",
-    description: "Google reauthorization and permission issues",
-    enabled: true,
-  },
-  {
-    label: "Billing",
-    description: "Payment issues and subscription status changes",
-    enabled: true,
-  },
-  { label: "Security", description: "Sign-in and account-safety alerts", enabled: true },
-];
+type Filter = "all" | "unread" | "agent" | "connector" | "scheduled";
 
 function NotificationsRoute() {
+  const { isLoaded, isSignedIn } = useUser();
+  const list = useServerFn(listNotifications);
+  const markRead = useServerFn(markNotificationsRead);
+  const remove = useServerFn(deleteNotifications);
+  const [items, setItems] = useState<CenterNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<Filter>("all");
+  const [search, setSearch] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
+  const reload = useCallback(async () => {
+    if (!isSignedIn) return;
+    setLoading(true);
+    setError(null);
+    try {
+      setItems(await list());
+    } catch {
+      setError("Notifications could not be loaded.");
+    } finally {
+      setLoading(false);
+    }
+  }, [isSignedIn, list]);
+  useEffect(() => {
+    if (isLoaded && isSignedIn) void reload();
+    else if (isLoaded) setLoading(false);
+  }, [isLoaded, isSignedIn, reload]);
+  const unread = items.filter((item) => !item.readAt).length;
+  const visible = useMemo(
+    () =>
+      items.filter((item) => {
+        const text = `${item.title} ${item.preview} ${item.type}`.toLowerCase();
+        if (search && !text.includes(search.toLowerCase())) return false;
+        if (filter === "unread") return !item.readAt;
+        if (filter === "agent") return item.source === "agent";
+        if (filter === "connector")
+          return item.type.includes("connector") || item.type.includes("reauth");
+        if (filter === "scheduled")
+          return item.type.includes("scheduled") || item.type.includes("task");
+        return true;
+      }),
+    [items, filter, search],
+  );
+  async function read(item?: CenterNotification) {
+    setBusy(item?.id ?? "all");
+    try {
+      await markRead({ data: item ? { ids: [item.id], source: item.source } : { source: "all" } });
+      const now = new Date().toISOString();
+      setItems((current) =>
+        current.map((candidate) =>
+          !item || candidate.id === item.id
+            ? { ...candidate, readAt: candidate.readAt ?? now }
+            : candidate,
+        ),
+      );
+    } catch {
+      toast.error("Could not mark notifications as read.");
+    } finally {
+      setBusy(null);
+    }
+  }
+  async function discard(item: CenterNotification) {
+    setBusy(item.id);
+    try {
+      await remove({ data: { ids: [item.id], source: item.source } });
+      setItems((current) => current.filter((candidate) => candidate.id !== item.id));
+    } catch {
+      toast.error("Could not delete the notification.");
+    } finally {
+      setBusy(null);
+    }
+  }
   return (
     <AppShell>
       <main
-        className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8"
+        className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 py-6 sm:px-6"
         aria-labelledby="notifications-title"
       >
-        <header className="flex flex-col gap-3 rounded-3xl border border-border bg-card p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-medium text-primary">Notification center</p>
-            <h1
-              id="notifications-title"
-              className="text-2xl font-semibold tracking-tight text-foreground"
-            >
-              Notifications
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-              Review task results, project invitations, connector reauthorization, billing, and
-              security alerts. Private Gmail and Drive content is never shown in previews.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2" aria-label="Notification actions">
-            <button
-              type="button"
-              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm font-medium text-foreground hover:bg-accent"
-            >
-              <CheckCheck className="h-4 w-4" aria-hidden="true" /> Mark all read
-            </button>
-            <button
-              type="button"
-              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-4 text-sm font-medium text-foreground hover:bg-accent"
-            >
-              <Settings className="h-4 w-4" aria-hidden="true" /> Preferences
-            </button>
-          </div>
-        </header>
-
-        <section
-          aria-labelledby="notifications-empty"
-          className="rounded-3xl border border-border bg-card p-6"
-        >
-          <EmptyState
-            icon={Bell}
-            title="No notifications"
-            description="Task results, project invites, and security alerts appear here."
-            action={
-              <button
-                type="button"
-                className="min-h-11 rounded-full border border-border px-4 text-sm font-medium hover:bg-accent"
-              >
-                Notification settings
-              </button>
-            }
-          />
-          <p id="notifications-empty" className="sr-only">
-            There are currently no notifications.
-          </p>
-        </section>
-
-        <section
-          aria-labelledby="delivery-preferences"
-          className="rounded-3xl border border-border bg-card p-5 shadow-sm"
-        >
-          <div className="flex items-center gap-3">
-            <Bell className="h-5 w-5 text-primary" aria-hidden="true" />
+        <header className="rounded-3xl border border-border bg-card p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h2 id="delivery-preferences" className="text-lg font-semibold text-foreground">
-                Delivery preferences
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                In-app and verified account-email delivery are supported. Browser push is hidden
-                until a real push provider exists.
+              <p className="text-sm font-medium text-primary">Notification center</p>
+              <h1 id="notifications-title" className="text-2xl font-semibold">
+                Notifications
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground" aria-live="polite">
+                {unread} unread notification{unread === 1 ? "" : "s"}
               </p>
             </div>
+            <button
+              type="button"
+              disabled={!unread || busy !== null}
+              onClick={() => void read()}
+              className="inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm disabled:opacity-50"
+            >
+              <CheckCheck className="h-4 w-4" />
+              Mark all read
+            </button>
           </div>
-          <div
-            className="mt-4 divide-y divide-border rounded-2xl border border-border"
-            role="list"
-            aria-label="Notification preference categories"
-          >
-            {preferenceRows.map((row) => (
-              <div
-                key={row.label}
-                role="listitem"
-                className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <label className="relative flex-1">
+              <span className="sr-only">Search notifications</span>
+              <Search className="pointer-events-none absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search notifications"
+                className="min-h-11 w-full rounded-xl border bg-background pl-10 pr-3"
+              />
+            </label>
+            <select
+              aria-label="Filter notifications"
+              value={filter}
+              onChange={(event) => setFilter(event.target.value as Filter)}
+              className="min-h-11 rounded-xl border bg-background px-3"
+            >
+              <option value="all">All</option>
+              <option value="unread">Unread</option>
+              <option value="agent">Agents</option>
+              <option value="connector">Connectors</option>
+              <option value="scheduled">Scheduled tasks</option>
+            </select>
+          </div>
+        </header>
+        {!isSignedIn && isLoaded ? (
+          <EmptyState
+            icon={Bell}
+            title="Sign in to view notifications"
+            description="Notifications are private to your account."
+          />
+        ) : loading ? (
+          <div className="flex min-h-40 items-center justify-center" role="status">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span className="sr-only">Loading notifications</span>
+          </div>
+        ) : error ? (
+          <ErrorState
+            title="Notifications unavailable"
+            description={error}
+            onRetry={() => void reload()}
+          />
+        ) : visible.length === 0 ? (
+          <EmptyState
+            icon={Bell}
+            title={items.length ? "No matching notifications" : "No notifications"}
+            description={
+              items.length
+                ? "Try another search or filter."
+                : "Agent runs, connectors, and scheduled tasks will appear here."
+            }
+          />
+        ) : (
+          <ul className="divide-y rounded-3xl border bg-card">
+            {visible.map((item) => (
+              <li
+                key={`${item.source}-${item.id}`}
+                className={`p-4 sm:p-5 ${item.readAt ? "" : "bg-primary/[0.04]"}`}
               >
-                <div>
-                  <p className="font-medium text-foreground">{row.label}</p>
-                  <p className="text-sm text-muted-foreground">{row.description}</p>
-                </div>
-                <label className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-foreground">
-                  <input
-                    type="checkbox"
-                    defaultChecked={row.enabled}
-                    className="h-5 w-5 rounded border-border"
-                    aria-label={`${row.label} notifications`}
+                <div className="flex gap-3">
+                  <span
+                    className={`mt-2 h-2 w-2 shrink-0 rounded-full ${item.readAt ? "bg-muted" : "bg-primary"}`}
+                    aria-hidden="true"
                   />
-                  In-app + email
-                </label>
-              </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap justify-between gap-2">
+                      <p className="font-medium">{item.title}</p>
+                      <time className="text-xs text-muted-foreground" dateTime={item.createdAt}>
+                        {new Date(item.createdAt).toLocaleString()}
+                      </time>
+                    </div>
+                    <p className="mt-1 text-sm text-muted-foreground">{item.preview}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {item.actionUrl && (
+                        <Link to={item.actionUrl} className="rounded-full border px-3 py-2 text-sm">
+                          Open
+                        </Link>
+                      )}
+                      {!item.readAt && (
+                        <button
+                          onClick={() => void read(item)}
+                          disabled={busy === item.id}
+                          className="inline-flex items-center gap-1 rounded-full border px-3 py-2 text-sm"
+                        >
+                          <Check className="h-4 w-4" />
+                          Mark read
+                        </button>
+                      )}
+                      <button
+                        onClick={() => void discard(item)}
+                        disabled={busy === item.id}
+                        aria-label={`Delete ${item.title}`}
+                        className="inline-flex items-center gap-1 rounded-full border px-3 py-2 text-sm text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </li>
             ))}
-          </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl bg-muted/50 p-4 text-sm text-muted-foreground">
-              <Mail className="mb-2 h-4 w-4 text-primary" aria-hidden="true" /> Account email must
-              be verified before email delivery is enabled.
-            </div>
-            <div className="rounded-2xl bg-muted/50 p-4 text-sm text-muted-foreground">
-              <ShieldAlert className="mb-2 h-4 w-4 text-primary" aria-hidden="true" /> Security
-              alerts stay enabled for account protection.
-            </div>
-          </div>
-        </section>
+          </ul>
+        )}
       </main>
     </AppShell>
   );

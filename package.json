@@ -21,7 +21,12 @@
     "test:e2e:install": "playwright install --with-deps chromium",
     "test:a11y": "node --test tests/a11y/*.test.mjs",
     "test:visual": "node --test tests/visual/*.test.mjs",
-    "format:check:changed": "node scripts/check-format-changed.mjs"
+    "format:check:changed": "node scripts/check-format-changed.mjs",
+    "worker:dev": "node --watch worker/src/index.mjs",
+    "worker:start": "node worker/src/index.mjs",
+    "worker:health": "node worker/scripts/health-check.mjs",
+    "worker:smoke": "node worker/scripts/smoke-test.mjs",
+    "db:migrate": "supabase db push"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.3",

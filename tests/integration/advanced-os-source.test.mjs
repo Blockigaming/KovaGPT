@@ -56,7 +56,7 @@ test("Artifact and Work expansions remain truthful and interactive", () => {
   assert.match(artifact, /Search outline/);
   assert.match(artifact, /Version comparison/);
   assert.match(artifact, /Artifact comments/);
-  assert.match(work, /Save as template/);
-  assert.match(work, /Schedule follow-up/);
-  assert.match(work, /does not\s+claim background execution/);
+  assert.match(work, /listWorkRuns/);
+  assert.match(work, /controlWorkRun/);
+  assert.match(work, /Approval required/);
 });

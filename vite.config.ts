@@ -4,9 +4,9 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
-// Keep the Lovable-compatible TanStack Start stack explicit and built only
-// from public packages. This preserves the same Vite runtime behavior without
-// making installs or production startup depend on a private platform package.
+// Lovable Cloud runs the public TanStack Start Vite stack directly. Keep the
+// Start plugin ahead of React and avoid the legacy private Lovable adapter;
+// this is also the supported Nitro/h3-v2 production configuration.
 export default defineConfig({
   plugins: [
     tsconfigPaths(),
@@ -18,11 +18,35 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 5173,
   },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("/src/components/ChatInput")) return "chat-input";
+          if (id.includes("/src/components/ChatMessage")) return "chat-message";
+          if (id.includes("/src/lib/connectors-catalog")) return "connectors";
+          if (!id.includes("node_modules")) return;
+          if (id.includes("recharts") || id.includes("d3-")) return "charts";
+          if (
+            id.includes("react-markdown") ||
+            id.includes("remark-") ||
+            id.includes("micromark")
+          ) {
+            return "markdown";
+          }
+          if (id.includes("@supabase")) return "supabase";
+        },
+      },
+    },
+  },
+
   // TanStack Start imports its H3 v2 release through the npm alias `h3-v2`.
   // Lovable's runtime only installs declared production package names, so an
   // external alias import survives the build but cannot be resolved at boot.
   // Bundle the alias into the SSR output instead of leaving that runtime edge.
   ssr: {
     noExternal: ["h3-v2"],
+  },
   },
 });

@@ -47,6 +47,9 @@ export function ModelSelector({
   return (
     <div className="relative" ref={ref}>
       <button
+        type="button"
+        aria-label={`Choose model: Kova ${version} ${current.label}`}
+        data-testid="model-selector-trigger"
         onClick={() => setOpen((v) => !v)}
         className={`inline-flex items-center gap-1.5 rounded-full bg-accent/70 hover:bg-accent transition ${
           compact ? "h-8 px-3.5 text-[13px]" : "h-9 px-4 text-sm"

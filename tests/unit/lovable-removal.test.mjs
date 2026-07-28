@@ -17,11 +17,10 @@ test("package metadata does not depend on private Lovable packages", () => {
   }
 });
 
-test("runtime source has no Lovable AI gateway or API key dependency", () => {
+test("Lovable integration uses no private package and exposes no client-side gateway secret", () => {
   const files = [
     "package.json",
     "vite.config.ts",
-    "src/lib/ai/provider.server.ts",
     "src/routes/api/chat.ts",
     "src/routes/api/generate-image.ts",
     "src/routes/api/memory.ts",
@@ -32,7 +31,6 @@ test("runtime source has no Lovable AI gateway or API key dependency", () => {
   ];
   const forbidden = [
     /@lovable\.dev/i,
-    /LOVABLE_API_KEY/,
     /ai\.gateway\.lovable\.dev/,
     /connector-gateway\.lovable\.dev/,
   ];
@@ -42,6 +40,10 @@ test("runtime source has no Lovable AI gateway or API key dependency", () => {
       assert.equal(pattern.test(text), false, `${file} contains ${pattern}`);
     }
   }
+  const provider = read("src/lib/ai/provider.server.ts");
+  assert.match(provider, /LOVABLE_API_KEY/);
+  assert.match(provider, /OPENAI_API_KEY/);
+  assert.doesNotMatch(provider, /VITE_.*(?:LOVABLE|OPENAI).*API_KEY/);
 });
 
 test("direct provider env example contains no secret values", () => {

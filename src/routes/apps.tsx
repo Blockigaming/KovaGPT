@@ -17,7 +17,17 @@ import {
   AlertCircle,
   X,
   LogIn,
+  Github,
 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  getGitHubManagement,
+  refreshGitHubInstallations,
+  updateGitHubRepositoryGrants,
+  disconnectGitHub,
+  type GitHubManagement,
+} from "@/lib/github.functions";
+import { authFetch } from "@/lib/auth-fetch";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -39,7 +49,13 @@ const GOOGLE_IDS = new Set(["google", "gmail", "google-drive", "google-calendar"
 
 // Apps that are actually wired up end-to-end today. Non-working connectors are
 // intentionally hidden so navigation never exposes fake or decorative controls.
-const WORKING_IDS = new Set<string>(["google", "gmail", "google-drive", "google-calendar"]);
+const WORKING_IDS = new Set<string>([
+  "google",
+  "gmail",
+  "google-drive",
+  "google-calendar",
+  "github",
+]);
 
 const CONFIGURED_CONNECTORS = WORKING_IDS;
 
@@ -293,6 +309,209 @@ function AppCard({
   );
 }
 
+function GitHubManager() {
+  const load = useServerFn(getGitHubManagement),
+    refresh = useServerFn(refreshGitHubInstallations),
+    grants = useServerFn(updateGitHubRepositoryGrants),
+    disconnect = useServerFn(disconnectGitHub);
+  const [data, setData] = useState<GitHubManagement | null>(null),
+    [busy, setBusy] = useState(false),
+    [search, setSearch] = useState(""),
+    [selected, setSelected] = useState<number[]>([]);
+  const reload = useCallback(
+    () =>
+      load()
+        .then(setData)
+        .catch(() => toast.error("GitHub status unavailable")),
+    [load],
+  );
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+  if (!data)
+    return (
+      <div
+        className="h-28 animate-pulse rounded-2xl bg-muted"
+        role="status"
+        aria-label="Loading GitHub"
+      />
+    );
+  const repos = data.repositories.filter((repo) => repo.full_name.includes(search.toLowerCase()));
+  async function connect() {
+    const response = await authFetch("/api/github/auth");
+    const result = await response.json();
+    if (result.url) location.assign(result.url);
+    else toast.error(result.error ?? "GitHub is unavailable");
+  }
+  async function update(granted: boolean) {
+    setBusy(true);
+    try {
+      await grants({
+        data: {
+          repositoryIds: selected,
+          granted,
+          confirmed:
+            granted ||
+            confirm("Remove selected GitHub repositories? Coding Agents will lose access."),
+        },
+      });
+      setSelected([]);
+      await reload();
+    } catch {
+      toast.error("Repository access could not be updated");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <section className="rounded-2xl border bg-card p-5" aria-labelledby="github-manager">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex gap-3">
+          <Github className="h-9 w-9" />
+          <div>
+            <h2 id="github-manager" className="font-semibold">
+              GitHub
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {data.configured ? data.health.replaceAll("_", " ") : "Credentials not configured"}
+            </p>
+          </div>
+        </div>
+        {!data.configured ? (
+          <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs">
+            Operator setup required
+          </span>
+        ) : !data.accounts.length ? (
+          <button
+            className="rounded-full bg-foreground px-4 py-2 text-sm text-background"
+            onClick={() => void connect()}
+          >
+            Connect GitHub
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            <button
+              className="rounded-full border px-3 py-2 text-sm"
+              onClick={() => void refresh().then(reload)}
+            >
+              Refresh installations
+            </button>
+            <button
+              className="rounded-full border px-3 py-2 text-sm text-destructive"
+              onClick={() =>
+                void disconnect({
+                  data: {
+                    accountId: data.accounts[0].id,
+                    removeData: confirm("Also remove synchronized GitHub metadata?"),
+                  },
+                }).then(reload)
+              }
+            >
+              Disconnect
+            </button>
+          </div>
+        )}
+      </div>
+      {data.accounts.map((account) => (
+        <div
+          key={account.id}
+          className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-muted/40 p-3"
+        >
+          {account.avatar_url && (
+            <img src={account.avatar_url} alt="" className="h-10 w-10 rounded-full" />
+          )}
+          <div>
+            <p className="font-medium">@{account.login}</p>
+            <p className="text-xs text-muted-foreground">
+              {account.auth_type} · {account.status} · ID {account.github_user_id}
+            </p>
+          </div>
+          <div className="ml-auto text-right text-xs text-muted-foreground">
+            <p>
+              Rate limit {account.rate_remaining ?? "—"} / {account.rate_limit ?? "—"}
+            </p>
+            <p>
+              Health{" "}
+              {account.last_health_at
+                ? new Date(account.last_health_at).toLocaleString()
+                : "not checked"}
+            </p>
+          </div>
+        </div>
+      ))}
+      {data.installations.length > 0 && (
+        <div className="mt-4">
+          <h3 className="text-sm font-medium">Installations</h3>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {data.installations.map((item) => (
+              <span key={item.id} className="rounded-full border px-3 py-1 text-xs">
+                {item.organization_login ?? "Personal"} · {item.repository_selection}
+                {item.suspended_at ? " · suspended" : ""}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      {data.repositories.length > 0 && (
+        <div className="mt-4">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              className="min-h-10 flex-1 rounded-xl border px-3"
+              placeholder="Search GitHub repositories"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+            <button
+              disabled={!selected.length || busy}
+              onClick={() => void update(true)}
+              className="rounded-full border px-3 text-sm"
+            >
+              Grant selected
+            </button>
+            <button
+              disabled={!selected.length || busy}
+              onClick={() => void update(false)}
+              className="rounded-full border px-3 text-sm text-destructive"
+            >
+              Remove selected
+            </button>
+          </div>
+          <ul className="mt-3 max-h-80 divide-y overflow-y-auto rounded-xl border">
+            {repos.map((repo) => (
+              <li key={repo.id} className="flex min-h-12 items-center gap-3 p-3">
+                <input
+                  type="checkbox"
+                  aria-label={`Select ${repo.full_name}`}
+                  checked={selected.includes(repo.id)}
+                  onChange={() =>
+                    setSelected((current) =>
+                      current.includes(repo.id)
+                        ? current.filter((id) => id !== repo.id)
+                        : [...current, repo.id],
+                    )
+                  }
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{repo.full_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {repo.visibility} · {repo.default_branch} ·{" "}
+                    {repo.archived ? "archived" : "active"}
+                  </p>
+                </div>
+                <span
+                  className={`rounded-full px-2 py-1 text-xs ${repo.explicitly_granted ? "bg-emerald-500/10 text-emerald-600" : "bg-muted"}`}
+                >
+                  {repo.explicitly_granted ? "Granted" : "Available"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function AppsPage() {
   const { isSignedIn } = useUser();
   const [query, setQuery] = useState("");
@@ -416,15 +635,17 @@ function AppsPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return CONNECTOR_CATALOG.filter((c) => WORKING_IDS.has(c.id)).filter((c) => {
-      if (category !== "All" && c.category !== category) return false;
-      if (!q) return true;
-      return (
-        c.label.toLowerCase().includes(q) ||
-        c.description.toLowerCase().includes(q) ||
-        c.category.toLowerCase().includes(q)
-      );
-    });
+    return CONNECTOR_CATALOG.filter((c) => WORKING_IDS.has(c.id) && c.id !== "github").filter(
+      (c) => {
+        if (category !== "All" && c.category !== category) return false;
+        if (!q) return true;
+        return (
+          c.label.toLowerCase().includes(q) ||
+          c.description.toLowerCase().includes(q) ||
+          c.category.toLowerCase().includes(q)
+        );
+      },
+    );
   }, [query, category]);
 
   const isConnected = (id: string) => isGoogleId(id) && isGoogleConnected(id);
@@ -594,6 +815,8 @@ function AppsPage() {
             </div>
           </div>
         )}
+
+        {isSignedIn && <GitHubManager />}
 
         {filtered.length === 0 ? (
           <div className="rounded-xl border border-border p-10 text-center">

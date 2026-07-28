@@ -40,6 +40,22 @@
     "OpenAI Sans", "SoehneBuch", "Söhne", "Inter", "DM Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
+@layer components {
+  .work-action {
+    @apply inline-flex min-h-10 items-center gap-1.5 rounded-full border border-border px-3 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-50;
+  }
+  .work-action svg,
+  .work-small svg {
+    @apply h-4 w-4;
+  }
+  .work-small {
+    @apply inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-medium transition-colors hover:bg-muted disabled:opacity-50;
+  }
+  .work-icon {
+    @apply grid h-10 w-10 place-items-center rounded-full border border-border text-lg hover:bg-muted;
+  }
+}
+
 :root {
   --radius: 0.75rem;
   /* KovaGPT light theme - ChatGPT-like restrained neutrals */
