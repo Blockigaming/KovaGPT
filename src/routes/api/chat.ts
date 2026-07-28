@@ -288,8 +288,8 @@ async function handleImageRequest(prompt: string): Promise<Response> {
 // In-memory per-IP rate limiter for anonymous /api/chat callers to prevent
 // scripted denial-of-wallet abuse against the paid LLM/search gateways.
 // Signed-in callers are gated by daily quota (enforceQuota) further below.
-const ANON_RATE_MAX = 20;
-const ANON_RATE_WINDOW_MS = 60 * 60 * 1000; // 20 requests / hour / IP
+const ANON_RATE_MAX = 60;
+const ANON_RATE_WINDOW_MS = 60 * 60 * 1000; // 60 requests / hour / IP
 const anonRateBuckets = new Map<string, { count: number; resetAt: number }>();
 function anonRateLimited(ip: string): boolean {
   const now = Date.now();
