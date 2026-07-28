@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WriteRouteImport } from './routes/write'
+import { Route as WorkRouteImport } from './routes/work'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SummaryRouteImport } from './routes/summary'
@@ -81,6 +82,11 @@ import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/publi
 const WriteRoute = WriteRouteImport.update({
   id: '/write',
   path: '/write',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkRoute = WorkRouteImport.update({
+  id: '/work',
+  path: '/work',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UnsubscribeRoute = UnsubscribeRouteImport.update({
@@ -462,6 +468,7 @@ export interface FileRoutesByFullPath {
   '/summary': typeof SummaryRoute
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
+  '/work': typeof WorkRoute
   '/write': typeof WriteRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -532,6 +539,7 @@ export interface FileRoutesByTo {
   '/summary': typeof SummaryRoute
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
+  '/work': typeof WorkRoute
   '/write': typeof WriteRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -603,6 +611,7 @@ export interface FileRoutesById {
   '/summary': typeof SummaryRoute
   '/terms': typeof TermsRoute
   '/unsubscribe': typeof UnsubscribeRoute
+  '/work': typeof WorkRoute
   '/write': typeof WriteRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -675,6 +684,7 @@ export interface FileRouteTypes {
     | '/summary'
     | '/terms'
     | '/unsubscribe'
+    | '/work'
     | '/write'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -745,6 +755,7 @@ export interface FileRouteTypes {
     | '/summary'
     | '/terms'
     | '/unsubscribe'
+    | '/work'
     | '/write'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -815,6 +826,7 @@ export interface FileRouteTypes {
     | '/summary'
     | '/terms'
     | '/unsubscribe'
+    | '/work'
     | '/write'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -886,6 +898,7 @@ export interface RootRouteChildren {
   SummaryRoute: typeof SummaryRoute
   TermsRoute: typeof TermsRoute
   UnsubscribeRoute: typeof UnsubscribeRoute
+  WorkRoute: typeof WorkRoute
   WriteRoute: typeof WriteRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -928,6 +941,13 @@ declare module '@tanstack/react-router' {
       path: '/write'
       fullPath: '/write'
       preLoaderRoute: typeof WriteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/work': {
+      id: '/work'
+      path: '/work'
+      fullPath: '/work'
+      preLoaderRoute: typeof WorkRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/unsubscribe': {
@@ -1469,6 +1489,7 @@ const rootRouteChildren: RootRouteChildren = {
   SummaryRoute: SummaryRoute,
   TermsRoute: TermsRoute,
   UnsubscribeRoute: UnsubscribeRoute,
+  WorkRoute: WorkRoute,
   WriteRoute: WriteRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
@@ -1507,3 +1528,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

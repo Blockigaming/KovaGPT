@@ -18,6 +18,7 @@ import {
   SquarePen,
   Trash2,
   Users,
+  Workflow,
   type LucideIcon,
 } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
@@ -386,6 +387,7 @@ export function Sidebar({
               <span className={labelClass}>Search</span>
             </button>
             {showSignedIn ? renderNavLink("/projects", "Projects", FolderKanban) : null}
+            {showSignedIn ? renderNavLink("/work", "Work", Workflow) : null}
             {renderNavLink("/library", "Library", FolderOpen)}
             {renderNavLink("/images", "Images", ImageIcon)}
             {renderNavLink("/apps", "Apps", Plug)}

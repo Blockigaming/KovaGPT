@@ -20,7 +20,12 @@
     "test:e2e:install": "playwright install --with-deps chromium",
     "test:a11y": "node --test tests/a11y/*.test.mjs",
     "test:visual": "node --test tests/visual/*.test.mjs",
-    "format:check:changed": "node scripts/check-format-changed.mjs"
+    "format:check:changed": "node scripts/check-format-changed.mjs",
+    "worker:dev": "node --watch worker/src/index.mjs",
+    "worker:start": "node worker/src/index.mjs",
+    "worker:health": "node worker/scripts/health-check.mjs",
+    "worker:smoke": "node worker/scripts/smoke-test.mjs",
+    "db:migrate": "supabase db push"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.3",
@@ -89,7 +94,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
-    "@lovable.dev/vite-tanstack-config": "^2.7.7",
     "@playwright/test": "1.56.0",
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",
