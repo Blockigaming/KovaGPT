@@ -75,9 +75,11 @@ export function PersonalitySliders() {
   const { tier } = useTier();
   const unlocked = tierRank(tier) >= tierRank("plus");
   const [values, setValues] = useState<Personality>(DEFAULT_PERSONALITY);
+  const [autoAdapt, setAutoAdapt] = useState<boolean>(true);
 
   useEffect(() => {
     setValues(loadPersonality());
+    setAutoAdapt(loadAutoAdapt());
   }, []);
 
   function update(key: TraitKey, v: number) {
@@ -86,6 +88,26 @@ export function PersonalitySliders() {
     setValues(next);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function applyPreset(preset: Personality) {
+    if (!unlocked) return;
+    setValues(preset);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(preset));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function toggleAuto() {
+    const next = !autoAdapt;
+    setAutoAdapt(next);
+    try {
+      localStorage.setItem(AUTO_KEY, next ? "1" : "0");
     } catch {
       /* ignore */
     }
@@ -118,8 +140,37 @@ export function PersonalitySliders() {
         )}
       </div>
       <p className="text-xs text-muted-foreground mb-4">
-        Fine-tune how KovaGPT responds. Default (5) matches normal tone.
+        Pick a preset or fine-tune 10 traits. Kova also adapts to how you write when Auto-adapt is on.
       </p>
+
+      <div className={`mb-4 ${unlocked ? "" : "pointer-events-none opacity-70"}`}>
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {PERSONALITY_PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              onClick={() => applyPreset(preset.values)}
+              className="text-xs px-2.5 py-1 rounded-full border border-border bg-background/60 hover:bg-accent transition"
+              title={preset.hint}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={autoAdapt}
+            onChange={toggleAuto}
+            className="h-3.5 w-3.5 rounded border-border accent-primary"
+          />
+          <span>
+            <span className="font-medium text-foreground">Auto-adapt to me.</span> Kova learns your style
+            (length, formality, humor) and mirrors it. Say "shorter", "more casual", or "add detail" and it adjusts.
+          </span>
+        </label>
+      </div>
+
+
 
       <div
         className={`grid gap-4 sm:grid-cols-2 ${unlocked ? "" : "pointer-events-none blur-[2px] opacity-70 select-none"}`}
