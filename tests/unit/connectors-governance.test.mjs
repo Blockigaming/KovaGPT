@@ -26,6 +26,27 @@ test("Google connector lifecycle has PKCE, state validation, scopes, and safe er
   assert.doesNotMatch(source, /localStorage|access_token\s*:/);
 });
 
+test("Google OAuth routes use the documented configuration, exact redirect, and one-browser PKCE state", () => {
+  const oauth = read("src/lib/google-oauth.server.ts");
+  const authRoute = read("src/routes/api/google/auth.ts");
+  const callbackRoute = read("src/routes/api/google/callback.ts");
+  const diagnostics = read("src/lib/config/diagnostics.server.ts");
+  const envExample = read(".env.example");
+
+  for (const source of [oauth, diagnostics, envExample]) {
+    assert.match(source, /GOOGLE_OAUTH_CLIENT_ID/);
+    assert.match(source, /GOOGLE_OAUTH_CLIENT_SECRET/);
+    assert.match(source, /GOOGLE_REDIRECT_URI/);
+    assert.doesNotMatch(source, /GOOGLE_CLIENT_ID|GOOGLE_CLIENT_SECRET/);
+  }
+  assert.match(oauth, /code_challenge_method: "S256"/);
+  assert.match(oauth, /code_verifier: codeVerifier/);
+  assert.match(authRoute, /HttpOnly; Secure; SameSite=Lax; Max-Age=600/);
+  assert.match(callbackRoute, /oauthCookie\.state !== state/);
+  assert.match(callbackRoute, /age < -30_000/);
+  assert.match(callbackRoute, /Max-Age=0/);
+});
+
 test("voice remains deferred and no voice feature surfaces are reintroduced", () => {
   const matrix = read("docs/kova-final-completion-matrix.md");
   const settings = read("src/components/SettingsDialog.tsx");

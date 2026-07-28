@@ -14,7 +14,7 @@ test("/api/chat returns structured error envelope with requestId + category", as
   expect(resp.status()).toBeGreaterThanOrEqual(400);
   const headerId = resp.headers()["x-request-id"];
   // header presence is nice-to-have; the body must carry it either way.
-  let json: Record<string, unknown> = {};
+  let json: Record<string, unknown>;
   try {
     json = await resp.json();
   } catch {
