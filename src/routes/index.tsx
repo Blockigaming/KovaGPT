@@ -29,6 +29,7 @@ import { AIStatus } from "@/components/AIStatus";
 import { MobileFabs } from "@/components/MobileFabs";
 import { MobileTopBar } from "@/components/MobileTopBar";
 import { CommandPalette } from "@/components/CommandPalette";
+import { ConversationOutline } from "@/components/ConversationOutline";
 
 import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 
@@ -46,6 +47,14 @@ const ShareChatDialog = lazy(() =>
 );
 const AddMembersDialog = lazy(() =>
   import("@/components/AddMembersDialog").then((m) => ({ default: m.AddMembersDialog })),
+);
+const ArchivedChatsDialog = lazy(() =>
+  import("@/components/ArchivedChatsDialog").then((m) => ({ default: m.ArchivedChatsDialog })),
+);
+const WorkspaceIntelligence = lazy(() =>
+  import("@/components/WorkspaceIntelligence").then((module) => ({
+    default: module.WorkspaceIntelligence,
+  })),
 );
 import { applyThemeMode } from "@/lib/theme";
 import { loadSettings, settingsKey } from "@/lib/use-nova-settings";
@@ -65,9 +74,11 @@ import {
   type Conversation,
   type Message,
   deriveTitle,
+  branchConversation,
   loadConversations,
   newId,
   saveConversations,
+  archiveConversation,
 } from "@/lib/chat-store";
 import { toast } from "sonner";
 import { loadPersonality, personalityToInstruction } from "@/components/PersonalitySliders";
@@ -119,6 +130,7 @@ function KovaGPT() {
   const [tempChatConfirmed, setTempChatConfirmed] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
+  const [archivedOpen, setArchivedOpen] = useState(false);
   const [selectedTool, setSelectedTool] = useState<ComposerToolId | null>(null);
   const [recentLibraryFiles, setRecentLibraryFiles] = useState<RecentLibraryFile[]>([]);
   const [recentLibraryLoading, setRecentLibraryLoading] = useState(false);
@@ -309,6 +321,72 @@ function KovaGPT() {
     return () => clearTimeout(t);
   }, [conversations]);
 
+  useEffect(() => {
+    try {
+      const rawPack =
+        sessionStorage.getItem("kova-active-context-pack") ??
+        localStorage.getItem("kova-active-context-pack");
+      const rawWork = localStorage.getItem("kova-work-context");
+      const rawApp =
+        sessionStorage.getItem("kova-app-chat-context") ??
+        localStorage.getItem("kova-app-chat-context");
+      const rawPrompt =
+        sessionStorage.getItem("kova-prompt-launch") ?? localStorage.getItem("kova-prompt-launch");
+      const rawResearch = localStorage.getItem("kova-research-launch");
+      if (rawPack) {
+        const pack = JSON.parse(rawPack) as {
+          name: string;
+          items: { title: string; content: string }[];
+        };
+        const context = pack.items.map((item) => `## ${item.title}\n${item.content}`).join("\n\n");
+        setInput(
+          `Use this saved context pack, “${pack.name}”, to help with my request:\n\n${context}\n\nMy request: `,
+        );
+        sessionStorage.removeItem("kova-active-context-pack");
+        localStorage.removeItem("kova-active-context-pack");
+      } else if (rawWork) {
+        const task = JSON.parse(rawWork) as {
+          objective: string;
+          context: string;
+          steps: { text: string; done: boolean }[];
+        };
+        setInput(
+          `Continue this work task without claiming background execution.\n\nObjective: ${task.objective}\nContext: ${task.context || "None provided"}\nPlan:\n${task.steps.map((step) => `- [${step.done ? "x" : " "}] ${step.text}`).join("\n")}\n\nNext, help me with: `,
+        );
+        localStorage.removeItem("kova-work-context");
+      } else if (rawApp) {
+        setInput(rawApp);
+        sessionStorage.removeItem("kova-app-chat-context");
+        localStorage.removeItem("kova-app-chat-context");
+      } else if (rawPrompt) {
+        const launch = JSON.parse(rawPrompt) as {
+          prompt: string;
+          pack?: { name: string; items: { title: string; content: string }[] } | null;
+        };
+        const context = launch.pack
+          ? `\n\nContext pack “${launch.pack.name}”:\n${launch.pack.items.map((item) => `## ${item.title}\n${item.content}`).join("\n\n")}`
+          : "";
+        setInput(`${launch.prompt}${context}`);
+        sessionStorage.removeItem("kova-prompt-launch");
+        localStorage.removeItem("kova-prompt-launch");
+      } else if (rawResearch) {
+        setInput(rawResearch);
+        setSelectedTool("deep_research");
+        localStorage.removeItem("kova-research-launch");
+      }
+    } catch {
+      sessionStorage.removeItem("kova-active-context-pack");
+      localStorage.removeItem("kova-active-context-pack");
+      localStorage.removeItem("kova-work-context");
+      sessionStorage.removeItem("kova-app-chat-context");
+      localStorage.removeItem("kova-app-chat-context");
+      sessionStorage.removeItem("kova-prompt-launch");
+      localStorage.removeItem("kova-prompt-launch");
+      localStorage.removeItem("kova-research-launch");
+      toast.error("Saved workspace context could not be attached");
+    }
+  }, []);
+
   // Memory is retained across sign-in/sign-out transitions per user request.
 
   const active = useMemo(
@@ -362,6 +440,9 @@ function KovaGPT() {
     setShowJumpToLatest(!near && Boolean(active?.messages.length));
   }, [active?.messages.length]);
 
+  const activeMessageCount = active?.messages.length;
+  const latestMessageContent = active?.messages.at(-1)?.content;
+
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -371,7 +452,7 @@ function KovaGPT() {
     } else {
       setShowJumpToLatest(true);
     }
-  }, [active?.messages.length, active?.messages.at(-1)?.content, isStreaming]);
+  }, [activeMessageCount, latestMessageContent, isStreaming]);
 
   // Cross-chat memory: when an active conversation has been updated and
   // we're not mid-stream, debounce a summary save server-side. The
@@ -840,7 +921,7 @@ function KovaGPT() {
 
   return (
     <div
-      className="flex h-screen w-full bg-background text-foreground"
+      className="flex h-screen w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
       style={{ height: "100dvh" }}
     >
       {/* Mobile edge-swipe zone: swipe right from the left edge to open the sidebar. */}
@@ -909,19 +990,9 @@ function KovaGPT() {
           toast.success("Chat duplicated");
         }}
         onArchive={(id) => {
-          // Lightweight archive: remove from sidebar list, persist in localStorage.
           setConversations((prev) => {
             const target = prev.find((c) => c.id === id);
-            if (target) {
-              try {
-                const raw = localStorage.getItem("kovagpt:archived") || "[]";
-                const arr = JSON.parse(raw);
-                arr.unshift(target);
-                localStorage.setItem("kovagpt:archived", JSON.stringify(arr.slice(0, 200)));
-              } catch {
-                /* ignore */
-              }
-            }
+            if (target) archiveConversation(target);
             return prev.filter((c) => c.id !== id);
           });
           if (activeId === id) setActiveId(null);
@@ -944,10 +1015,11 @@ function KovaGPT() {
           }
           setMembersChatId(id);
         }}
+        onOpenArchived={() => setArchivedOpen(true)}
       />
 
       <main
-        className="flex-1 flex flex-col min-w-0 bg-background"
+        className="flex min-w-0 flex-1 flex-col bg-background"
         data-sidebar={sidebarOpen ? "open" : "closed"}
       >
         <MobileTopBar
@@ -955,7 +1027,10 @@ function KovaGPT() {
           onNewChat={newChat}
           title={active?.title}
         />
-        <header className="hidden lg:flex h-14 items-center px-4 relative gap-1 bg-background">
+        <header
+          className="kova-topbar relative hidden h-[52px] items-center gap-1 px-3 lg:flex"
+          role="banner"
+        >
           {!sidebarOpen && (
             <div className="flex items-center gap-1 mr-2 shrink-0">
               <button
@@ -979,7 +1054,7 @@ function KovaGPT() {
 
           {/* AI status: live indicator to the right of the KovaGPT mark while streaming */}
           <div className="flex items-center min-w-0 flex-1 relative">
-            <div className="mr-3 flex items-center gap-2 rounded-full px-2.5 py-1.5 text-sm font-semibold text-foreground hover:bg-accent transition">
+            <div className="mr-3 flex min-h-10 items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-foreground transition hover:bg-accent">
               <span>KovaGPT</span>
               <span className="text-muted-foreground">⌄</span>
             </div>
@@ -1109,18 +1184,24 @@ function KovaGPT() {
         )}
 
         {!active || active.messages.length === 0 ? (
-          <div className="flex-1 flex flex-col overflow-y-auto px-4 lg:px-6">
-            <div className="flex-1 flex flex-col items-center justify-center w-full py-8 lg:py-12">
-              <div className="flex flex-col items-center gap-4 mb-5 lg:mb-7 animate-fade-in">
-                <h1 className="font-display text-[28px] leading-[1.1] lg:text-[36px] lg:leading-[1.08] font-semibold tracking-tight text-center text-balance px-4 text-foreground">
+          <section
+            className="flex flex-1 flex-col overflow-y-auto px-3 lg:px-6"
+            aria-labelledby="chat-greeting"
+          >
+            <div className="flex w-full flex-1 flex-col items-center justify-center py-6 lg:py-10">
+              <div className="mb-5 flex animate-fade-in flex-col items-center gap-2.5 lg:mb-6">
+                <h1
+                  id="chat-greeting"
+                  className="text-balance px-4 text-center font-display text-[26px] font-semibold leading-[1.15] tracking-[-.025em] text-foreground lg:text-[32px]"
+                >
                   {greeting}
                 </h1>
-                <p className="max-w-xl text-center text-sm text-muted-foreground">
+                <p className="max-w-lg text-center text-sm leading-relaxed text-muted-foreground">
                   Ask, search, analyze, create, or keep working from a previous chat.
                 </p>
               </div>
 
-              <div className="w-full max-w-3xl mx-auto">
+              <div className="mx-auto w-full max-w-[48rem]">
                 <ChatInput
                   value={input}
                   onChange={setInput}
@@ -1141,7 +1222,7 @@ function KovaGPT() {
                   onRecentLibraryRetry={loadRecentLibraryFiles}
                 />
 
-                <div className="mx-auto mt-5 hidden max-w-3xl grid-cols-2 gap-2 lg:grid">
+                <div className="mx-auto mt-4 hidden max-w-[46rem] grid-cols-2 gap-2 lg:grid">
                   {assistantCapabilities.map((p) => {
                     const Icon = p.icon;
                     return (
@@ -1149,7 +1230,7 @@ function KovaGPT() {
                         key={p.label}
                         type="button"
                         onClick={() => setInput((v) => (v.trim() ? v : p.prompt))}
-                        className="inline-flex min-h-11 items-center gap-2 rounded-2xl border border-border/70 bg-card/55 px-3.5 text-left text-[14px] font-medium text-foreground shadow-sm hover:border-foreground/20 hover:bg-accent"
+                        className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border/70 bg-card/55 px-3.5 text-left text-[13.5px] font-medium text-foreground shadow-sm transition hover:border-foreground/20 hover:bg-accent"
                       >
                         <Icon className="h-4 w-4 text-muted-foreground" />
                         <span>{p.label}</span>
@@ -1196,14 +1277,48 @@ function KovaGPT() {
                 </div>
               </div>
             </div>
-          </div>
+            <Suspense
+              fallback={
+                <div className="mx-auto mb-6 h-32 w-full max-w-[56rem] animate-pulse rounded-2xl bg-muted" />
+              }
+            >
+              <WorkspaceIntelligence />
+            </Suspense>
+          </section>
         ) : (
           <>
+            <ConversationOutline messages={active.messages} />
             <div
               ref={scrollRef}
               onScroll={updateNearBottom}
-              className="flex-1 overflow-y-auto overscroll-contain scroll-smooth pt-8 lg:pt-12 pb-14 lg:pb-20"
+              className="flex-1 overflow-y-auto overscroll-contain scroll-smooth pb-14 pt-5 lg:pb-20 lg:pt-8"
+              aria-label="Conversation"
             >
+              {active.branchOrigin && (
+                <div className="mx-auto mb-5 flex w-[calc(100%-2rem)] max-w-[48rem] items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/45 px-3 py-2 text-sm">
+                  <div className="min-w-0">
+                    <span className="font-medium">Branched conversation</span>
+                    <span className="ml-1 text-muted-foreground">
+                      from {active.branchOrigin.title}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-lg px-2.5 py-1.5 font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onClick={() => {
+                      const origin = active.branchOrigin;
+                      if (!origin) return;
+                      const sourceExists = conversations.some(
+                        (conversation) => conversation.id === origin.conversationId,
+                      );
+                      if (sourceExists) setActiveId(origin.conversationId);
+                      else toast.error("The source conversation is no longer available");
+                    }}
+                  >
+                    View source
+                  </button>
+                </div>
+              )}
               {active.messages.map((m, i) => {
                 const isLastAssistant = m.role === "assistant" && i === active.messages.length - 1;
                 // Find the user message that prompted this assistant reply (immediately before).
@@ -1263,22 +1378,20 @@ function KovaGPT() {
                         : undefined
                     }
                     onBranch={() => {
-                      // Branch: create a new conversation with messages up to and including this one.
-                      const sliceEnd = i + 1;
-                      const branched: Conversation = {
-                        id: newId(),
-                        title: `${active.title} (branch)`,
-                        messages: active.messages.slice(0, sliceEnd).map((mm) => ({
-                          ...mm,
-                          id: newId(),
-                        })),
-                        mode: active.mode,
-                        createdAt: Date.now(),
-                        updatedAt: Date.now(),
-                      };
-                      setConversations((prev) => [branched, ...prev]);
-                      setActiveId(branched.id);
-                      toast.success("Branched into a new chat");
+                      if (isStreaming) {
+                        toast.message("Wait for this response to finish before branching");
+                        return;
+                      }
+                      try {
+                        const branched = branchConversation(active, m.id);
+                        setConversations((prev) => [branched, ...prev]);
+                        setActiveId(branched.id);
+                        toast.success("Branched into a new chat");
+                      } catch (error) {
+                        toast.error(
+                          error instanceof Error ? error.message : "Could not branch chat",
+                        );
+                      }
                     }}
                   />
                 );
@@ -1388,6 +1501,17 @@ function KovaGPT() {
             resetsAt={getUsage().resetsAt}
           />
         )}
+        <ArchivedChatsDialog
+          open={archivedOpen}
+          onClose={() => setArchivedOpen(false)}
+          onRestore={(conversation) => {
+            setConversations((all) => [
+              conversation,
+              ...all.filter((item) => item.id !== conversation.id),
+            ]);
+            toast.success("Chat restored");
+          }}
+        />
       </Suspense>
 
       <SignUpPrompt open={signupPromptOpen} onOpenChange={setSignupPromptOpen} />

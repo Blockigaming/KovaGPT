@@ -67,7 +67,7 @@ export function OfflineBanner() {
       className="sticky top-0 z-40 w-full bg-amber-500/95 text-amber-50 text-xs font-medium px-4 py-1.5 flex items-center justify-center gap-2 shadow-sm animate-fade-in"
     >
       <WifiOff className="w-3.5 h-3.5" />
-      You're offline. Changes will retry when you're back online.
+      You're offline. Reconnect before retrying unsaved actions.
     </div>
   );
 }

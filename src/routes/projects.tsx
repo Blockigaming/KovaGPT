@@ -42,6 +42,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
+import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
 import { SkeletonGrid, EmptyState, ErrorState } from "@/components/states";
 import {
   listProjects,
@@ -56,7 +57,7 @@ import {
   type ProjectSummary,
   type PendingInvite,
 } from "@/lib/projects.functions";
-import { setProjectArchived } from "@/lib/project-workspace.functions";
+import { moveChatToProject, setProjectArchived } from "@/lib/project-workspace.functions";
 
 export const Route = createFileRoute("/projects")({
   component: ProjectsPage,
@@ -116,6 +117,8 @@ function ProjectsPage() {
   const fnPin = useServerFn(pinProject);
   const fnDuplicate = useServerFn(duplicateProject);
   const fnArchive = useServerFn(setProjectArchived);
+  const fnMoveChat = useServerFn(moveChatToProject);
+  const [dropProjectId, setDropProjectId] = useState<string | null>(null);
 
   const [renameFor, setRenameFor] = useState<ProjectSummary | null>(null);
   const [renameName, setRenameName] = useState("");
@@ -282,17 +285,27 @@ function ProjectsPage() {
   async function generateWithKova() {
     setAiBusy(true);
     try {
-      const res = await fetch("/api/project-suggest", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ hint: name || description || "" }),
-      });
+      const res = await fetchWithTimeout(
+        "/api/project-suggest",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ hint: name || description || "" }),
+        },
+        15_000,
+      );
       if (!res.ok) throw new Error("Suggestion service unavailable");
       const data = (await res.json()) as { name?: string; description?: string };
       if (data.name) setName(data.name);
       if (data.description) setDescription(data.description);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Couldn't generate suggestion");
+      toast.error(
+        e instanceof DOMException && e.name === "TimeoutError"
+          ? "Suggestion timed out. Check your connection and try again."
+          : e instanceof Error
+            ? e.message
+            : "Couldn't generate suggestion",
+      );
     } finally {
       setAiBusy(false);
     }
@@ -438,11 +451,43 @@ function ProjectsPage() {
 
             const Card = ({ p }: { p: ProjectSummary }) => (
               <div
-                className={
+                onDragOver={(event) => {
+                  if (!event.dataTransfer.types.includes("application/x-kova-project-chat")) return;
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = "move";
+                  setDropProjectId(p.id);
+                }}
+                onDragLeave={() =>
+                  setDropProjectId((current) => (current === p.id ? null : current))
+                }
+                onDrop={async (event) => {
+                  event.preventDefault();
+                  setDropProjectId(null);
+                  const chatId = event.dataTransfer.getData("application/x-kova-project-chat");
+                  if (!chatId || p.role === "viewer") return;
+                  try {
+                    await fnMoveChat({ data: { chat_id: chatId, project_id: p.id } });
+                    setProjects((current) =>
+                      current.map((item) =>
+                        item.id === p.id
+                          ? {
+                              ...item,
+                              chat_count: (item.chat_count ?? 0) + 1,
+                              updated_at: new Date().toISOString(),
+                            }
+                          : item,
+                      ),
+                    );
+                    toast.success(`Chat moved to ${p.name}`);
+                  } catch (error) {
+                    toast.error(error instanceof Error ? error.message : "Could not move chat");
+                  }
+                }}
+                className={`${dropProjectId === p.id ? "ring-2 ring-primary bg-primary/5" : ""} ${
                   view === "list"
                     ? "relative kova-row items-center gap-3 group"
                     : "relative kova-card block p-4 group"
-                }
+                }`}
               >
                 <Link to="/projects/$projectId" params={{ projectId: p.id }} className="block">
                   <div className="flex items-start justify-between mb-2">

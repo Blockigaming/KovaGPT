@@ -249,7 +249,7 @@ async function handleImageRequest(prompt: string): Promise<Response> {
           controller.close();
           return;
         }
-        // TODO(storage-cleanup): If/when uploaded files are persisted to a storage
+        // INTENTIONAL-DEFERRED(storage-cleanup): If uploaded files move to storage,
         // bucket (currently attachments live inline in message records), the file
         // delete flow must also remove the stored object via supabaseAdmin.storage
         // .from(<bucket>).remove([path]) with a server-side ownership check.
@@ -612,7 +612,7 @@ export const Route = createFileRoute("/api/chat")({
             // cross-chat summaries (below) carry forward standing rules and
             // long-term context, so we don't need to resend the full transcript
             // on every call. The latest user message is always preserved.
-            // TODO(summarization): when history exceeds threshold, run a cheap
+            // INTENTIONAL-DEFERRED(summarization): a future durable summary worker can
             // background summary pass and store it in chat_memories instead of
             // sending raw turns.
             const HISTORY_TURNS = 12;
@@ -654,7 +654,7 @@ export const Route = createFileRoute("/api/chat")({
             });
             const model = selectedModel.model.modelId;
 
-            // TODO(routing): add per-request classification (rewrite/summary/coding)
+            // INTENTIONAL-DEFERRED(routing): per-request classification can be added
             // and an explicit "Improve answer" client action that re-runs with a
             // stronger model only on demand.
 

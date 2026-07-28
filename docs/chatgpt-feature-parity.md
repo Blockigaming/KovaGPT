@@ -1,0 +1,76 @@
+# KovaGPT feature-parity ledger
+
+This ledger records product truth, not marketing claims. “Complete” means the capability has a discoverable, working KovaGPT workflow; it does not imply identical proprietary model behavior.
+
+| Product area                        | Status                 | Existing surface / backend                                              | Remaining work and checkpoint feasibility                                                                                                                    |
+| ----------------------------------- | ---------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Chat                                | Complete               | `src/routes/index.tsx`, chat API and persisted conversation store       | Provider-specific model behavior remains provider-dependent.                                                                                                 |
+| Work / agentic tasks                | Partial                | `/work`, templates, Context Packs, research, artifacts, scheduled tasks | Durable plans, approvals, deliverables, templates, Project/context handoffs and automation drafts exist. Autonomous execution still needs a runner.          |
+| Unified Recents                     | Complete               | `/recents`, local chats and authorized workspace aggregation            | Cross-device pin preferences remain backend-dependent.                                                                                                       |
+| Projects                            | Complete               | project routes and authorized project functions                         | Real-time collaboration remains backend-dependent.                                                                                                           |
+| Search                              | Complete               | `SearchDialog` and authorized server searches                           | Ranking parity is provider/backend-dependent.                                                                                                                |
+| Knowledge Graph                     | Complete               | `/knowledge-graph`, authenticated graph aggregation                     | Graph relationships are explicit only; KovaGPT does not infer hidden relationships or expose unauthorized resources.                                         |
+| Prompt Studio                       | Complete               | `/prompt-studio`, owner-scoped prompt templates                         | Variables, favorites, Projects, Context Packs and one-click chat testing are supported.                                                                      |
+| Library and file storage            | Complete               | `library.tsx`, Library functions and storage                            | Folder hierarchy is not supported by the schema.                                                                                                             |
+| Files and multimodal input          | Partial                | `ChatInput.tsx`, `/files`, upload/storage and Library picker            | Search, history, known storage usage and duplicate discovery exist. Replacement/versioning and higher limits need server validation.                         |
+| Images                              | Complete               | `images.tsx`, image providers, Library save                             | Masked editing/inpainting is provider-dependent.                                                                                                             |
+| Writing and code blocks             | Complete               | `ChatMessage.tsx`, `ArtifactEditor.tsx`                                 | This checkpoint makes eligible outputs explicitly full-screen discoverable.                                                                                  |
+| Interactive charts                  | Complete               | `ChatChart.tsx`, fenced structured chart protocol                       | Bar, line, pie/donut and scatter views include inspection and CSV export; model-supplied data remains provider-dependent.                                    |
+| Interactive learning                | Partial                | chat modes and artifacts                                                | Dedicated exercise state/assessment backend is missing.                                                                                                      |
+| Deep Research                       | Partial                | `/research-planner`, research functions, templates and persistence      | Editable/reorderable plans, allow lists, source preferences, export and Work/Project handoffs exist. Live redirection/pause is provider-dependent.           |
+| Web browsing                        | Complete               | tool registry and citations                                             | Availability is provider-dependent.                                                                                                                          |
+| Apps and connectors                 | Complete               | `/apps`, Gmail, Calendar and Drive routes/functions                     | Details, permissions, lifecycle activity, and chat handoff cover configured apps only.                                                                       |
+| Memory                              | Complete               | `/memory`, memory settings and authorized memory functions              | Durable conversation/project sources can be searched, edited, deleted and merged. Per-response attribution needs model metadata.                             |
+| Temporary Chat                      | Complete               | temporary conversation mode and non-durable behavior                    | None for core workflow.                                                                                                                                      |
+| Lockdown Mode                       | Missing                | tool authorization exists                                               | Account setting plus enforcement across every outbound tool is backend-dependent.                                                                            |
+| Voice                               | Intentionally deferred | none                                                                    | No supported voice provider/runtime; a control would be misleading.                                                                                          |
+| Scheduled Tasks                     | Complete               | scheduled task route and server runner                                  | External triggers remain unsupported.                                                                                                                        |
+| Sharing                             | Complete               | share routes and message sharing                                        | Collaborative permissions remain backend-dependent.                                                                                                          |
+| Conversation branching              | Complete               | local persisted chat flow and message actions                           | Safe truncation, valid metadata copies, origin metadata and source navigation use the actual local-first persistence flow. Cross-device sync is unavailable. |
+| Data export                         | Complete               | Settings export and artifact download                                   | None for supported data.                                                                                                                                     |
+| Account and security                | Complete               | Settings, Clerk/Supabase-safe auth surfaces                             | Lockdown enforcement remains missing.                                                                                                                        |
+| Usage and subscription              | Complete               | usage, plan and Stripe-backed settings                                  | Provider metering latency remains backend-dependent.                                                                                                         |
+| Mobile parity                       | Partial                | responsive shell, sheets, composer and routes                           | Browser-driven device QA is environment-dependent.                                                                                                           |
+| Desktop parity                      | Complete               | persistent shell and responsive workspaces                              | Proprietary desktop app integrations are intentionally excluded.                                                                                             |
+| Collaboration                       | Partial                | Project roles, comments, mentions, notes and activity timeline          | Member-scoped asynchronous collaboration is complete; realtime presence and simultaneous editing require a realtime subscription.                            |
+| Finances                            | Provider-dependent     | supported finance tool results in chat                                  | No independent financial-data feed; no fabricated quotes.                                                                                                    |
+| Safety and trusted-contact features | Missing                | safety policies and account security                                    | Trusted-contact data model and verified workflows are missing; backend-dependent.                                                                            |
+
+## This checkpoint
+
+- **Project Titan Workspace Health:** deterministic stalled-work detection and an explainable health index using authorized timestamps and statuses only.
+- **Project Titan Workspace DNA:** comparative 30-day resource-mix evolution without inferred topics or fabricated insights.
+- **Project Titan Workspace Time Machine:** account-scoped metadata checkpoints that replay only resources still present in the live authorized workspace index.
+
+- **Prompt Studio 2.0:** owner-scoped folders, launch analytics, immutable prior revisions, restoration, and explicit 1–5 evaluations with notes.
+- **Workspace Relationship Explorer:** Knowledge Graph graph/timeline switching, timestamped resources, explicit Project clusters, and visible relationship strength derived only from stored membership or Context Pack inclusion.
+
+- **Workspace Intelligence:** the existing chat home now surfaces real unfinished Work, active research and automations, important Projects, Context Packs, files, images, artifacts, memories, and recent chats without generated recommendations.
+- **Cross-workspace handoffs:** Library items, files, memories, artifacts, and Context Packs can move directly into Chat, Work, Research, or reusable Context Packs while retaining their truthful source type.
+- **Connected Projects:** Project overviews surface only explicitly project-linked chats, files, memories, research, and activity through the authenticated workspace index.
+- **Unified activity:** Recents now consumes the same authorized workspace index as the home dashboard and adds device-local chats and Work sessions without duplicating account records.
+- **Context breadth:** Context Packs now accept Projects, chats, files, artifacts, images, memories, Library items, research plans, Prompt Studio prompts, and Work sessions.
+
+- **Conversation branching:** independent history truncation, copied valid attachments/tool metadata, origin banner and source navigation.
+- **Conversation outline:** derived only from actual prompts/headings, active-section tracking and mobile sheet.
+- **Full-screen writing/code:** existing safe Artifact workspace made directly discoverable for eligible answers.
+- **Interactive charts:** safe structured data, four chart families, table alternative and exports.
+- **KovaGPT Automation Builder:** guided creation through the real scheduled-task API; scheduled triggers only.
+- **Unified Recents:** grouped, searchable account activity with type filters, continuation, and pins.
+- **Memory Center:** durable conversation and project memory search, editing, deletion, merging, and source explanations.
+- **Work mode:** durable objectives, editable plans, approvals, deliverables, pause/resume/cancel, and explicit chat continuation.
+- **Professional files:** upload history, search, known storage usage, and duplicate discovery backed by Library records.
+- **Apps directory:** supported Google app details, permissions, lifecycle activity, reconnect/disconnect, and chat handoff.
+- **Universal Context Packs:** owner-scoped reusable selections from chats, projects, files, and Library items with one-click chat attachment.
+- **Project collaboration:** role-aware comments, inline locations, mentions, notifications-by-mention, and activity logging.
+- **Research Planner:** editable, reorderable, reusable plans with source preferences, website allow lists, export, and real Deep Research/Work/Project handoffs.
+- **Knowledge Graph:** KovaGPT-exclusive visualization of explicit authorized relationships across Projects, chats, files, artifacts, memories, and Context Packs.
+- **Prompt Studio:** owner-scoped reusable prompts with variables, categories, favorites, recent use, Project/Context Pack associations, and one-click testing.
+- **Advanced Artifacts:** document statistics, reading time, outline search, revision comparison, and session comments.
+- **Advanced Work:** reusable templates, Context Pack handoff, approval checkpoints, deliverables, and Scheduled Task follow-up drafts.
+
+## Guardrails
+
+- No unsupported model, connector, trigger, progress stage, source, or success state is displayed as functional.
+- All account data continues through existing authorization boundaries.
+- Temporary chat remains non-durable, and the public Vite/TanStack Start runtime is unchanged.
