@@ -115,10 +115,7 @@ function parseCapabilities(value: string | undefined): ProviderCapability[] {
 }
 
 function baseUrl() {
-  if (useLovableGateway()) {
-    return (env("OPENAI_BASE_URL") ?? "https://ai.gateway.lovable.dev/v1").replace(/\/$/, "");
-  }
-  return (env("OPENAI_BASE_URL") ?? "https://api.openai.com/v1").replace(/\/$/, "");
+  return (env("OPENAI_BASE_URL") ?? "https://ai.gateway.lovable.dev/v1").replace(/\/$/, "");
 }
 
 export function getAiProviderConfig(): ProviderConfig {
@@ -131,14 +128,14 @@ export function getAiProviderConfig(): ProviderConfig {
     embeddingModel: env("KOVA_EMBEDDING_MODEL") ?? DEFAULT_EMBEDDING_MODEL,
     timeoutMs: parseTimeout(env("KOVA_AI_TIMEOUT_MS")),
     capabilities: parseCapabilities(env("KOVA_AI_CAPABILITIES")),
-    configured: Boolean(env("LOVABLE_API_KEY") || env("OPENAI_API_KEY")),
+    configured: Boolean(env("LOVABLE_API_KEY")),
   };
 }
 
 export function validateAiProviderConfig(): ProviderErrorEnvelope | null {
-  if (env("LOVABLE_API_KEY") || env("OPENAI_API_KEY")) return null;
+  if (env("LOVABLE_API_KEY")) return null;
   return {
-    error: "AI provider is not configured. Set LOVABLE_API_KEY or OPENAI_API_KEY on the server.",
+    error: "AI provider is not configured. Set LOVABLE_API_KEY on the server.",
     code: "missing_openai_api_key",
     retryable: false,
     status: 500,
@@ -181,16 +178,13 @@ export function missingAiProviderResponse(fallback?: JsonObject): Response | nul
 
 function headers() {
   const lovableKey = env("LOVABLE_API_KEY");
-  if (lovableKey && !env("OPENAI_BASE_URL")) {
-    return {
-      "Lovable-API-Key": lovableKey,
-      "Content-Type": "application/json",
-    } as Record<string, string>;
-  }
-  const apiKey = env("OPENAI_API_KEY");
-  if (!apiKey) throw new AiProviderError(validateAiProviderConfig()!);
-  return { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
+  if (!lovableKey) throw new AiProviderError(validateAiProviderConfig()!);
+  return {
+    "Lovable-API-Key": lovableKey,
+    "Content-Type": "application/json",
+  } as Record<string, string>;
 }
+
 
 export function chatModel(kind: ProviderModelKind = "balanced") {
   const config = getAiProviderConfig();
