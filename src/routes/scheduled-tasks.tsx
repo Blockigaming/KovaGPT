@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
@@ -11,8 +11,23 @@ import {
   isScheduledTasksEligible,
   type ScheduledTask,
 } from "@/lib/scheduled-tasks.functions";
-import { Calendar, Clock, Plus, Trash2, Pause, Play, ArrowLeft, Lock } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  Plus,
+  Trash2,
+  Pause,
+  Play,
+  ArrowLeft,
+  Lock,
+  RefreshCw,
+  Search,
+  RotateCcw,
+  WandSparkles,
+} from "lucide-react";
 import { toast } from "sonner";
+import { AutomationBuilder, type AutomationDraft } from "@/components/AutomationBuilder";
+import { RelatedWorkspaceItems } from "@/components/WorkspaceIntelligence";
 
 export const Route = createFileRoute("/scheduled-tasks")({
   component: ScheduledTasksPage,
@@ -26,6 +41,7 @@ export const Route = createFileRoute("/scheduled-tasks")({
 });
 
 type PlanState = "loading" | "free" | "paid" | "signed-out";
+type TaskFilter = "all" | "active" | "paused" | "history" | "failed";
 
 function ScheduledTasksPage() {
   const { isLoaded, isSignedIn } = useUser();
@@ -33,6 +49,10 @@ function ScheduledTasksPage() {
   const [tasks, setTasks] = useState<ScheduledTask[]>([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<TaskFilter>("all");
+  const [builderOpen, setBuilderOpen] = useState(false);
 
   const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
@@ -65,14 +85,59 @@ function ScheduledTasksPage() {
     };
   }, [isLoaded, isSignedIn, checkEligible]);
 
-  useEffect(() => {
+  const loadTasks = useCallback(async () => {
     if (plan !== "paid") return;
     setLoading(true);
-    list({})
-      .then((rows) => setTasks(rows))
-      .catch((e) => toast.error(e instanceof Error ? e.message : "Failed to load tasks"))
-      .finally(() => setLoading(false));
+    setLoadError(null);
+    try {
+      setTasks(await list({}));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to load tasks";
+      setLoadError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
   }, [plan, list]);
+
+  useEffect(() => {
+    void loadTasks();
+  }, [loadTasks]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("kova-automation-draft");
+      if (!raw) return;
+      const draft = JSON.parse(raw) as {
+        title: string;
+        prompt: string;
+        repeat: ScheduledTask["repeat"];
+      };
+      setTitle(draft.title);
+      setPrompt(draft.prompt);
+      setRepeat(draft.repeat);
+      localStorage.removeItem("kova-automation-draft");
+      toast.message("Work follow-up loaded. Choose when it should run.");
+    } catch {
+      localStorage.removeItem("kova-automation-draft");
+    }
+  }, []);
+
+  const visibleTasks = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return tasks.filter((task) => {
+      const statusMatch =
+        filter === "all" ||
+        (filter === "active" && ["scheduled", "running"].includes(task.status)) ||
+        (filter === "paused" && task.status === "paused") ||
+        (filter === "history" && task.status === "completed") ||
+        (filter === "failed" && task.status === "failed");
+      return (
+        statusMatch &&
+        (!normalized || `${task.title} ${task.prompt}`.toLowerCase().includes(normalized))
+      );
+    });
+  }, [filter, query, tasks]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,6 +161,14 @@ function ScheduledTasksPage() {
     }
   };
 
+  const createAutomation = async (draft: AutomationDraft) => {
+    const row = await create({
+      data: { title: draft.title, prompt: draft.prompt, run_at: draft.runAt, repeat: draft.repeat },
+    });
+    setTasks((current) => [...current, row].sort((a, b) => a.run_at.localeCompare(b.run_at)));
+    toast.success("Automation scheduled");
+  };
+
   const togglePause = async (t: ScheduledTask) => {
     const next = t.status === "paused" ? "scheduled" : "paused";
     try {
@@ -112,6 +185,16 @@ function ScheduledTasksPage() {
       setTasks((arr) => arr.filter((x) => x.id !== t.id));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to delete");
+    }
+  };
+
+  const retry = async (task: ScheduledTask) => {
+    try {
+      const updated = await update({ data: { id: task.id, status: "scheduled" } });
+      setTasks((current) => current.map((item) => (item.id === task.id ? updated : item)));
+      toast.success("Task queued to retry");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not retry task");
     }
   };
 
@@ -170,6 +253,20 @@ function ScheduledTasksPage() {
 
           {plan === "paid" && (
             <>
+              <div className="mb-4 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setBuilderOpen(true)}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border bg-card px-3.5 text-sm font-medium shadow-sm hover:bg-accent"
+                >
+                  <WandSparkles className="h-4 w-4" /> Build an automation
+                </button>
+              </div>
+              <AutomationBuilder
+                open={builderOpen}
+                onOpenChange={setBuilderOpen}
+                onCreate={createAutomation}
+              />
               <form
                 onSubmit={submit}
                 className="rounded-2xl border border-border p-4 sm:p-5 mb-8 space-y-3"
@@ -235,7 +332,69 @@ function ScheduledTasksPage() {
                 </div>
               </form>
 
-              <h2 className="font-display text-lg font-semibold mb-3">Your scheduled tasks</h2>
+              <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h2 className="font-display text-lg font-semibold">Your scheduled tasks</h2>
+                  <p className="text-xs text-muted-foreground">
+                    Times are shown in {Intl.DateTimeFormat().resolvedOptions().timeZone}.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadTasks}
+                  disabled={loading}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm hover:bg-accent disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Refresh
+                </button>
+              </div>
+              <div className="mb-4 flex flex-col gap-2 sm:flex-row">
+                <label className="relative min-w-0 flex-1">
+                  <span className="sr-only">Search scheduled tasks</span>
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Search tasks"
+                    className="h-10 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm"
+                  />
+                </label>
+                <div
+                  className="flex gap-1 overflow-x-auto"
+                  role="tablist"
+                  aria-label="Task filters"
+                >
+                  {(["all", "active", "paused", "history", "failed"] as TaskFilter[]).map(
+                    (value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        role="tab"
+                        aria-selected={filter === value}
+                        onClick={() => setFilter(value)}
+                        className={`min-h-10 shrink-0 rounded-lg px-3 text-sm capitalize ${filter === value ? "bg-foreground text-background" : "bg-accent/50 hover:bg-accent"}`}
+                      >
+                        {value}
+                      </button>
+                    ),
+                  )}
+                </div>
+              </div>
+              {loadError ? (
+                <div
+                  className="mb-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm"
+                  role="alert"
+                >
+                  <div className="font-medium">Could not load scheduled tasks</div>
+                  <p className="mt-1 text-muted-foreground">{loadError}</p>
+                  <button
+                    className="mt-3 rounded-lg border border-border px-3 py-2 font-medium"
+                    onClick={loadTasks}
+                  >
+                    Try again
+                  </button>
+                </div>
+              ) : null}
               {loading ? (
                 <ul className="flex flex-col gap-2" aria-hidden>
                   {Array.from({ length: 3 }).map((_, i) => (
@@ -257,9 +416,16 @@ function ScheduledTasksPage() {
                     once, or on a repeating schedule.
                   </p>
                 </div>
+              ) : visibleTasks.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border p-8 text-center">
+                  <div className="font-medium">No matching tasks</div>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Try another search or filter.
+                  </p>
+                </div>
               ) : (
                 <ul className="flex flex-col gap-2">
-                  {tasks.map((t) => (
+                  {visibleTasks.map((t) => (
                     <li
                       key={t.id}
                       className="rounded-xl border border-border p-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4"
@@ -279,6 +445,16 @@ function ScheduledTasksPage() {
                         </p>
                       </div>
                       <div className="flex items-center gap-1">
+                        {t.status === "failed" ? (
+                          <button
+                            onClick={() => retry(t)}
+                            className="p-2 rounded-md hover:bg-accent transition"
+                            aria-label="Retry failed task"
+                            title="Retry"
+                          >
+                            <RotateCcw className="h-4 w-4" />
+                          </button>
+                        ) : null}
                         <button
                           onClick={() => togglePause(t)}
                           className="p-2 rounded-md hover:bg-accent transition"
@@ -311,6 +487,10 @@ function ScheduledTasksPage() {
             </>
           )}
         </div>
+        <RelatedWorkspaceItems
+          kinds={["project", "research", "context_pack", "file", "memory"]}
+          title="Context for automations"
+        />
       </div>
     </AppShell>
   );

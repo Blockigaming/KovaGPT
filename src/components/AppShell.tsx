@@ -124,7 +124,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div
-      className="relative flex h-[100dvh] w-full bg-background text-foreground overflow-hidden"
+      className="relative flex h-[100dvh] w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
       onTouchStart={(e) => {
         const t = e.touches[0];
         if (t && t.clientX < 24 && window.innerWidth < 1024) {

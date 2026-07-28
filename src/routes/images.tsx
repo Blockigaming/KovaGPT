@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
 import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { saveToLibrary } from "@/lib/library.functions";
 import {
   PanelLeft,
   ArrowUp,
@@ -10,6 +12,8 @@ import {
   Paperclip,
   Sparkles,
   X as XIcon,
+  Bookmark,
+  RefreshCw,
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
@@ -20,6 +24,7 @@ import { getUsage } from "@/lib/limits";
 import { useNovaSettings } from "@/lib/use-nova-settings";
 import { SignInButton, SignUpButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/images")({
   component: ImagesPage,
@@ -303,6 +308,8 @@ function ImagesPage() {
   const [limitMessage, setLimitMessage] = useState<string | undefined>(undefined);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [lightbox, setLightbox] = useState<HistoryItem | null>(null);
+  const [savingImage, setSavingImage] = useState(false);
+  const saveImage = useServerFn(saveToLibrary);
   const submittingRef = useRef(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -340,6 +347,30 @@ function ImagesPage() {
       saveHistory(userKey, next);
       return next;
     });
+  }
+
+  async function saveGeneratedImage(item: { prompt: string; imageUrl: string }) {
+    if (!isSignedIn) {
+      setLoginOpen(true);
+      return;
+    }
+    setSavingImage(true);
+    try {
+      await saveImage({
+        data: {
+          title: item.prompt.slice(0, 100) || "Generated image",
+          item_type: "image",
+          source: "images",
+          content_text: item.prompt,
+          file_url: item.imageUrl,
+        },
+      });
+      toast.success("Saved to Library");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save image");
+    } finally {
+      setSavingImage(false);
+    }
   }
 
   async function generate(p: string) {
@@ -510,9 +541,29 @@ function ImagesPage() {
                     <img
                       src={result}
                       alt={resultPrompt || "Generated image"}
+                      decoding="async"
                       className="w-full rounded-3xl ring-1 ring-border"
                     />
                     <div className="flex justify-center mt-3 gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          saveGeneratedImage({ prompt: resultPrompt, imageUrl: result })
+                        }
+                        disabled={savingImage}
+                        className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full border border-border hover:bg-accent transition disabled:opacity-50"
+                      >
+                        <Bookmark className="h-4 w-4" />{" "}
+                        {savingImage ? "Saving…" : "Save to Library"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => generate(resultPrompt)}
+                        disabled={loading}
+                        className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full border border-border hover:bg-accent transition disabled:opacity-50"
+                      >
+                        <RefreshCw className="h-4 w-4" /> Create variation
+                      </button>
                       <a
                         href={result}
                         download="kovagpt-image.png"
@@ -553,6 +604,7 @@ function ImagesPage() {
                         src={h.imageUrl}
                         alt={h.prompt}
                         loading="lazy"
+                        decoding="async"
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                       />
                       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-gradient-to-t from-black/85 via-black/25 to-transparent flex flex-col justify-end p-2 gap-1.5">
@@ -711,6 +763,7 @@ function ImagesPage() {
             <img
               src={lightbox.imageUrl}
               alt={lightbox.prompt}
+              decoding="async"
               className="max-h-[75dvh] w-auto max-w-full rounded-2xl shadow-2xl object-contain"
             />
             <p className="text-sm text-white/85 text-center max-w-2xl px-4 line-clamp-3">
@@ -726,6 +779,23 @@ function ImagesPage() {
                 className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white text-black font-medium hover:opacity-90 transition"
               >
                 <Sparkles className="w-4 h-4" /> Reuse prompt
+              </button>
+              <button
+                onClick={() => {
+                  const item = lightbox;
+                  setLightbox(null);
+                  void generate(item.prompt);
+                }}
+                className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
+              >
+                <RefreshCw className="h-4 w-4" /> Create variation
+              </button>
+              <button
+                onClick={() => saveGeneratedImage(lightbox)}
+                disabled={savingImage}
+                className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition disabled:opacity-50"
+              >
+                <Bookmark className="h-4 w-4" /> Save
               </button>
               <a
                 href={lightbox.imageUrl}

@@ -4,10 +4,9 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
-// Public, provider-direct TanStack Start configuration. The previous private
-// the former private TanStack config package bundled these same public plugins
-// plus private-platform development hooks; keeping the stack explicit restores
-// local install/build without private registry access or private runtime code.
+// Keep the Lovable-compatible TanStack Start stack explicit and built only
+// from public packages. This preserves the same Vite runtime behavior without
+// making installs or production startup depend on a private platform package.
 export default defineConfig({
   plugins: [
     tsconfigPaths(),

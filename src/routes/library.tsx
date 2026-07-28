@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Download,
+  Eye,
   FileText,
   FolderOpen,
   Grid2X2,
   Image as ImageIcon,
   List,
   MoreHorizontal,
+  MessageSquarePlus,
   RefreshCw,
   Search,
   Star,
@@ -44,6 +46,13 @@ type SortId = "newest" | "oldest" | "name" | "size";
 type ViewId = "grid" | "list";
 
 import { loadGuestLibrary, deleteGuestItem } from "@/lib/guest-library";
+import {
+  addManyToContextPack,
+  addToContextPack,
+  continueInResearch,
+  openInWork,
+  type WorkspaceHandoff,
+} from "@/lib/workspace-handoffs";
 
 const VIEW_KEY = "kova-library-view";
 const FAVORITES_KEY = "kova-library-favorites";
@@ -94,6 +103,8 @@ function LibraryPage() {
     return localStorage.getItem(VIEW_KEY) === "list" ? "list" : "grid";
   });
   const [favorites, setFavorites] = useState<Set<string>>(() => readFavorites());
+  const [previewItem, setPreviewItem] = useState<LibItem | null>(null);
+  const [selected, setSelected] = useState<string[]>([]);
 
   const load = async () => {
     setLoadError(null);
@@ -124,6 +135,15 @@ function LibraryPage() {
     if (typeof window !== "undefined") localStorage.setItem(VIEW_KEY, view);
   }, [view]);
 
+  useEffect(() => {
+    if (!previewItem) return;
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setPreviewItem(null);
+    };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [previewItem]);
+
   const remove = async (id: string) => {
     const existing = items;
     if (!confirm("Delete this Library item?")) return;
@@ -152,6 +172,43 @@ function LibraryPage() {
       writeFavorites(next);
       return next;
     });
+  };
+
+  const deleteSelected = async () => {
+    if (!selected.length || !confirm(`Delete ${selected.length} selected Library items?`)) return;
+    const existing = items;
+    setItems((current) => current.filter((item) => !selected.includes(item.id)));
+    try {
+      if (isSignedIn) {
+        const { deleteLibraryItem } = await import("@/lib/library.functions");
+        const results = await Promise.allSettled(
+          selected.map((id) => deleteLibraryItem({ data: { id } })),
+        );
+        if (results.some((result) => result.status === "rejected")) {
+          await load();
+          throw new Error("Some selected items could not be deleted. Library was refreshed.");
+        }
+      } else selected.forEach(deleteGuestItem);
+      setSelected([]);
+      toast.success("Selected items deleted.");
+    } catch (error) {
+      if (!isSignedIn) setItems(existing);
+      toast.error(error instanceof Error ? error.message : "Selected items could not be deleted.");
+    }
+  };
+
+  const reuseInChat = (item: LibItem) => {
+    const context = item.content_text?.trim()
+      ? `Use this saved Library item as context:\n\n${item.content_text.slice(0, 20_000)}`
+      : `Help me work with this saved Library item: ${item.title}`;
+    try {
+      localStorage.setItem("kova-draft:__new__", context);
+      localStorage.removeItem("nova-gpt-pending-active");
+    } catch {
+      toast.error("Could not prepare this item for chat.");
+      return;
+    }
+    window.location.href = "/";
   };
 
   const filtered = useMemo(() => {
@@ -212,6 +269,21 @@ function LibraryPage() {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem onClick={() => setPreviewItem(item)}>
+          <Eye className="mr-2 h-4 w-4" /> Preview
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => reuseInChat(item)}>
+          <MessageSquarePlus className="mr-2 h-4 w-4" /> Reuse in chat
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => openInWork(toHandoff(item))}>
+          Open in Work
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => continueInResearch(toHandoff(item))}>
+          Continue Research
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => addToContextPack(toHandoff(item))}>
+          Add to Context Pack
+        </DropdownMenuItem>
         {item.file_url ? (
           <DropdownMenuItem asChild>
             <a href={item.file_url} target="_blank" rel="noreferrer">
@@ -233,6 +305,13 @@ function LibraryPage() {
     </DropdownMenu>
   );
 
+  const toHandoff = (item: LibItem): WorkspaceHandoff => ({
+    type: isImageItem(item) ? "image" : isDocumentItem(item) ? "artifact" : "library",
+    id: item.id,
+    title: item.title,
+    content: item.content_text ?? item.file_url ?? "Saved Library item",
+  });
+
   const renderItem = (item: LibItem) => {
     const image = isImageItem(item);
     const size = humanBytes(item.file_size);
@@ -250,6 +329,19 @@ function LibraryPage() {
           className="kova-row min-h-14 items-center gap-3"
           data-library-item={item.item_type}
         >
+          <input
+            type="checkbox"
+            checked={selected.includes(item.id)}
+            onChange={() =>
+              setSelected((current) =>
+                current.includes(item.id)
+                  ? current.filter((id) => id !== item.id)
+                  : [...current, item.id],
+              )
+            }
+            aria-label={`Select ${item.title}`}
+            className="h-4 w-4 shrink-0"
+          />
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--kova-radius-input)] bg-[var(--surface-secondary)] text-muted-foreground">
             {image ? <ImageIcon className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
           </div>
@@ -268,9 +360,24 @@ function LibraryPage() {
     return (
       <li
         key={item.id}
-        className="group kova-card overflow-hidden"
+        className="group kova-card relative overflow-hidden"
         data-library-item={item.item_type}
       >
+        <label className="absolute z-10 m-3 grid h-9 w-9 place-items-center rounded-lg bg-background/85 shadow-sm">
+          <span className="sr-only">Select {item.title}</span>
+          <input
+            type="checkbox"
+            checked={selected.includes(item.id)}
+            onChange={() =>
+              setSelected((current) =>
+                current.includes(item.id)
+                  ? current.filter((id) => id !== item.id)
+                  : [...current, item.id],
+              )
+            }
+            className="h-4 w-4"
+          />
+        </label>
         {image ? (
           <div className="aspect-square overflow-hidden bg-[var(--surface-secondary)]">
             <img
@@ -409,6 +516,46 @@ function LibraryPage() {
           ))}
         </div>
 
+        {selected.length ? (
+          <section
+            className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-muted/40 p-3"
+            aria-label="Selected Library actions"
+          >
+            <span className="text-sm font-medium">{selected.length} selected</span>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="ghost" onClick={() => setSelected([])}>
+                Clear
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const next = new Set(favorites);
+                  selected.forEach((id) => next.add(id));
+                  setFavorites(next);
+                  writeFavorites(next);
+                }}
+              >
+                Favorite
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  addManyToContextPack(
+                    items.filter((item) => selected.includes(item.id)).map(toHandoff),
+                  )
+                }
+              >
+                Add to Context Pack
+              </Button>
+              <Button size="sm" variant="destructive" onClick={deleteSelected}>
+                Delete
+              </Button>
+            </div>
+          </section>
+        ) : null}
+
         {loadError ? (
           <section className="kova-empty-state" role="alert">
             <FolderOpen className="mx-auto h-8 w-8 text-muted-foreground" />
@@ -444,6 +591,58 @@ function LibraryPage() {
             {filtered.map(renderItem)}
           </ul>
         )}
+        {previewItem ? (
+          <div
+            className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="library-preview-title"
+            onClick={() => setPreviewItem(null)}
+          >
+            <section
+              className="kova-glass max-h-[90dvh] w-full overflow-hidden rounded-t-2xl sm:max-w-3xl sm:rounded-2xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <header className="flex items-center gap-3 border-b border-border p-4">
+                <div className="min-w-0 flex-1">
+                  <h2 id="library-preview-title" className="truncate font-semibold">
+                    {previewItem.title}
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    {previewItem.item_type.replace(/_/g, " ")} ·{" "}
+                    {new Date(previewItem.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => reuseInChat(previewItem)}>
+                  Reuse in chat
+                </Button>
+                <button
+                  className="kova-icon-button"
+                  aria-label="Close preview"
+                  onClick={() => setPreviewItem(null)}
+                  autoFocus
+                >
+                  ×
+                </button>
+              </header>
+              <div className="max-h-[70dvh] overflow-auto p-4 sm:p-6">
+                {isImageItem(previewItem) ? (
+                  <img
+                    src={previewItem.file_url!}
+                    alt={previewItem.title}
+                    className="mx-auto max-h-[65dvh] rounded-xl object-contain"
+                  />
+                ) : (
+                  <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
+                    {previewItem.content_text ||
+                      previewItem.file_name ||
+                      "No preview is available for this item."}
+                  </pre>
+                )}
+              </div>
+            </section>
+          </div>
+        ) : null}
       </main>
     </AppShell>
   );

@@ -15,6 +15,8 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import { applyThemeMode } from "@/lib/theme";
 import { loadSettings } from "@/lib/use-nova-settings";
 import { useEffect, useLayoutEffect } from "react";
+import { PlatformRuntime } from "@/components/PlatformRuntime";
+import { KovaLens } from "@/components/KovaLens";
 
 function NotFoundComponent() {
   return (
@@ -207,6 +209,8 @@ function RootComponent() {
     <ClerkProvider>
       <QueryClientProvider client={queryClient}>
         <RootThemeManager />
+        <PlatformRuntime />
+        <KovaLens />
         <Outlet />
         <Toaster />
       </QueryClientProvider>
