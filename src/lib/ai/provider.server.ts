@@ -44,12 +44,12 @@ export type ProviderConfig = {
   configured: boolean;
 };
 
-// When routed through the Lovable AI Gateway, model ids must include a vendor prefix
-// (see ai-models-chat catalog). Bare OpenAI ids like "gpt-4o-mini" are rejected by the gateway.
+// Prefer the user's OpenAI account when OPENAI_API_KEY is set; only fall back
+// to the Lovable AI Gateway when OpenAI credentials are unavailable.
 function useLovableGateway(): boolean {
-  const hasLovable = typeof process !== "undefined" && !!process.env?.LOVABLE_API_KEY;
-  const openaiBaseOverride = typeof process !== "undefined" && !!process.env?.OPENAI_BASE_URL;
-  return hasLovable && !openaiBaseOverride;
+  if (typeof process === "undefined") return false;
+  if (process.env?.OPENAI_API_KEY) return false;
+  return !!process.env?.LOVABLE_API_KEY;
 }
 const DEFAULT_CHAT_MODEL = useLovableGateway() ? "google/gemini-3.6-flash" : "gpt-4o-mini";
 const DEFAULT_FAST_MODEL = useLovableGateway() ? "google/gemini-3.1-flash-lite" : "gpt-4o-mini";
