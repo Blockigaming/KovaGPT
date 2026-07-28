@@ -320,7 +320,7 @@ export const Route = createFileRoute("/api/chat")({
                 new ReadableStream({
                   async start(controller) {
                     const text = await res.clone().text();
-                    let parsed: Record<string, unknown> = {};
+                    let parsed: Record<string, unknown>;
                     try {
                       parsed = JSON.parse(text);
                     } catch {

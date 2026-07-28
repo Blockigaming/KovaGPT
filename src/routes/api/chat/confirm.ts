@@ -13,7 +13,7 @@ export const Route = createFileRoute("/api/chat/confirm")({
       POST: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
-        let body: Body = {};
+        let body: Body;
         try {
           body = (await request.json()) as Body;
         } catch {

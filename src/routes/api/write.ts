@@ -62,7 +62,7 @@ export const Route = createFileRoute("/api/write")({
         const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[tier]);
         if (quota) return quota;
 
-        let body: Body = {};
+        let body: Body;
         try {
           body = (await request.json()) as Body;
         } catch {
@@ -75,7 +75,7 @@ export const Route = createFileRoute("/api/write")({
           return Response.json({ error: "empty_text" }, { status: 400 });
         }
 
-        let instruction = "";
+        let instruction: string;
         if (action === "tone") {
           const tone = (body.tone ?? "professional").slice(0, 60);
           instruction = `Rewrite the following text in a ${tone} tone. Keep meaning intact. Return only the rewritten version.`;

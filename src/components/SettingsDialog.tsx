@@ -1447,19 +1447,26 @@ function LibraryItemViewer({
   const [imgUrl, setImgUrl] = useState<string | null>(null);
   const [imgErr, setImgErr] = useState<string | null>(null);
   useEffect(() => {
+    let cancelled = false;
     setImgUrl(null);
     setImgErr(null);
     if (!item || item.item_type !== "image") return;
+    const itemId = item.id;
     (async () => {
       try {
         const { getLibraryImageUrl } = await import("@/lib/library-images.functions");
-        const { url } = await getLibraryImageUrl({ data: { id: item.id } });
-        setImgUrl(url);
+        const { url } = await getLibraryImageUrl({ data: { id: itemId } });
+        if (!cancelled) setImgUrl(url);
       } catch (e) {
-        setImgErr(e instanceof Error ? e.message : "Could not load image");
+        if (!cancelled) {
+          setImgErr(e instanceof Error ? e.message : "Could not load image");
+        }
       }
     })();
-  }, [item?.id]);
+    return () => {
+      cancelled = true;
+    };
+  }, [item]);
 
   const isImage = item?.item_type === "image";
   return (
