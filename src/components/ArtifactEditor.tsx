@@ -182,6 +182,7 @@ export function ArtifactEditor({
       setCopied(false);
       setSaved(false);
       let preferred = "";
+
       try {
         preferred =
           JSON.parse(localStorage.getItem("kova-workspace-defaults-v1") ?? "{}").artifact ?? "";
@@ -197,7 +198,7 @@ export function ArtifactEditor({
         { id: Date.now(), content: initialContent, savedAt: Date.now(), label: "Original" },
       ]);
     }
-  }, [open, initialContent, initialMode, canTruncate]);
+  }, [open, initialContent, initialMode, canTruncate, kind]);
 
   useEffect(() => {
     if (!open) return;

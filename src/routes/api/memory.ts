@@ -92,7 +92,7 @@ export const Route = createFileRoute("/api/memory")({
           chatId?: string;
           title?: string;
           messages?: { role: string; content: string }[];
-        } | null = null;
+        } | null;
         try {
           body = JSON.parse(raw);
         } catch {

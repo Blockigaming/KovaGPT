@@ -20,14 +20,26 @@ function admin(): SupabaseClient<Database> {
   });
 }
 
-export function googleRedirectUri(request: Request): string {
-  const url = new URL(request.url);
-  return `${url.origin}/api/google/callback`;
+export function googleRedirectUri(_request: Request): string {
+  const configured = process.env.GOOGLE_REDIRECT_URI?.trim();
+  if (!configured) throw new Error("GOOGLE_REDIRECT_URI is not configured");
+  const redirect = new URL(configured);
+  if (redirect.protocol !== "https:" && redirect.hostname !== "localhost") {
+    throw new Error("GOOGLE_REDIRECT_URI must use HTTPS outside localhost");
+  }
+  if (redirect.username || redirect.password || redirect.search || redirect.hash) {
+    throw new Error("GOOGLE_REDIRECT_URI must not contain credentials, a query, or a fragment");
+  }
+  if (redirect.pathname !== "/api/google/callback") {
+    throw new Error("GOOGLE_REDIRECT_URI must end with /api/google/callback");
+  }
+  return redirect.toString();
 }
 
 export function buildGoogleAuthUrl(opts: {
   request: Request;
   state: string;
+  codeChallenge: string;
   scope?: string;
   loginHint?: string;
 }): string {
@@ -42,6 +54,8 @@ export function buildGoogleAuthUrl(opts: {
     include_granted_scopes: "true",
     prompt: "consent",
     state: opts.state,
+    code_challenge: opts.codeChallenge,
+    code_challenge_method: "S256",
   });
   if (opts.loginHint) params.set("login_hint", opts.loginHint);
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
@@ -58,6 +72,7 @@ type TokenResponse = {
 export async function exchangeCodeForTokens(
   code: string,
   request: Request,
+  codeVerifier: string,
 ): Promise<TokenResponse> {
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -68,6 +83,7 @@ export async function exchangeCodeForTokens(
       client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET!,
       redirect_uri: googleRedirectUri(request),
       grant_type: "authorization_code",
+      code_verifier: codeVerifier,
     }),
   });
   if (!res.ok) {
