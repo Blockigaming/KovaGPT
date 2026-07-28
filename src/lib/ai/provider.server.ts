@@ -44,11 +44,18 @@ export type ProviderConfig = {
   configured: boolean;
 };
 
-const DEFAULT_CHAT_MODEL = "gpt-4o-mini";
-const DEFAULT_FAST_MODEL = "gpt-4o-mini";
-const DEFAULT_DEEP_MODEL = "gpt-4o";
-const DEFAULT_IMAGE_MODEL = "gpt-image-1";
-const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small";
+// Force all AI traffic through the Lovable AI Gateway. We pick the cheapest
+// Gemini variants that still support full chat/vision/tools so users never
+// hit a "not possible" surface — memory and context stay on our side.
+function useLovableGateway(): boolean {
+  return true;
+}
+const DEFAULT_CHAT_MODEL = "google/gemini-3.1-flash-lite";
+const DEFAULT_FAST_MODEL = "google/gemini-3.1-flash-lite";
+const DEFAULT_DEEP_MODEL = "google/gemini-3.6-flash";
+const DEFAULT_IMAGE_MODEL = "google/gemini-3.1-flash-lite-image";
+const DEFAULT_EMBEDDING_MODEL = "openai/text-embedding-3-small";
+
 const DEFAULT_TIMEOUT_MS = 45_000;
 
 const DEFAULT_CAPABILITIES: ProviderCapability[] = [
@@ -108,7 +115,7 @@ function parseCapabilities(value: string | undefined): ProviderCapability[] {
 }
 
 function baseUrl() {
-  return (env("OPENAI_BASE_URL") ?? "https://api.openai.com/v1").replace(/\/$/, "");
+  return (env("OPENAI_BASE_URL") ?? "https://ai.gateway.lovable.dev/v1").replace(/\/$/, "");
 }
 
 export function getAiProviderConfig(): ProviderConfig {
@@ -121,14 +128,14 @@ export function getAiProviderConfig(): ProviderConfig {
     embeddingModel: env("KOVA_EMBEDDING_MODEL") ?? DEFAULT_EMBEDDING_MODEL,
     timeoutMs: parseTimeout(env("KOVA_AI_TIMEOUT_MS")),
     capabilities: parseCapabilities(env("KOVA_AI_CAPABILITIES")),
-    configured: Boolean(env("OPENAI_API_KEY")),
+    configured: Boolean(env("LOVABLE_API_KEY")),
   };
 }
 
 export function validateAiProviderConfig(): ProviderErrorEnvelope | null {
-  if (env("OPENAI_API_KEY")) return null;
+  if (env("LOVABLE_API_KEY")) return null;
   return {
-    error: "AI provider is not configured. Set OPENAI_API_KEY on the server.",
+    error: "AI provider is not configured. Set LOVABLE_API_KEY on the server.",
     code: "missing_openai_api_key",
     retryable: false,
     status: 500,
@@ -170,10 +177,14 @@ export function missingAiProviderResponse(fallback?: JsonObject): Response | nul
 }
 
 function headers() {
-  const apiKey = env("OPENAI_API_KEY");
-  if (!apiKey) throw new AiProviderError(validateAiProviderConfig()!);
-  return { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
+  const lovableKey = env("LOVABLE_API_KEY");
+  if (!lovableKey) throw new AiProviderError(validateAiProviderConfig()!);
+  return {
+    "Lovable-API-Key": lovableKey,
+    "Content-Type": "application/json",
+  } as Record<string, string>;
 }
+
 
 export function chatModel(kind: ProviderModelKind = "balanced") {
   const config = getAiProviderConfig();

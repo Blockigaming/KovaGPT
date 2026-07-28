@@ -1525,9 +1525,7 @@ function LibraryItemViewer({
     let cancelled = false;
     setImgUrl(null);
     setImgErr(null);
-
     if (!itemId || itemType !== "image") return;
-
     (async () => {
       try {
         const { getLibraryImageUrl } = await import("@/lib/library-images.functions");

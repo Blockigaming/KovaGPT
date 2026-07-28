@@ -18,4 +18,11 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 5173,
   },
+  // TanStack Start imports its H3 v2 release through the npm alias `h3-v2`.
+  // Lovable's runtime only installs declared production package names, so an
+  // external alias import survives the build but cannot be resolved at boot.
+  // Bundle the alias into the SSR output instead of leaving that runtime edge.
+  ssr: {
+    noExternal: ["h3-v2"],
+  },
 });
