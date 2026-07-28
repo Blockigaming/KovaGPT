@@ -55,3 +55,4 @@ create or replace function public.ready_agent_specialist_tasks(p_run_id uuid) re
   ) order by task.created_at;
 $$;
 revoke all on function public.ready_agent_specialist_tasks(uuid) from public,anon,authenticated;
+grant execute on function public.ready_agent_specialist_tasks(uuid) to service_role;

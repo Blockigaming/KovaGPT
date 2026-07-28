@@ -384,7 +384,16 @@ export const duplicateDeliverable = createServerFn({ method: "POST" })
       .eq("owner_id", context.userId)
       .single();
     if (source.error) throw new Error("Deliverable not found");
-    const { id, created_at, ...copy } = source.data;
+    const {
+      id,
+      created_at,
+      deliverable_key,
+      restored_from_id,
+      deleted_at,
+      purge_after,
+      cleanup_status,
+      ...copy
+    } = source.data;
     const result = await client
       .from("agent_deliverables")
       .insert({ ...copy, title: `${copy.title} copy`, revision: 1, status: "ready" })
@@ -509,7 +518,7 @@ export const listDeliverableVersions = createServerFn({ method: "GET" })
     const client = db(context.supabase);
     const source = await client
       .from("agent_deliverables")
-      .select("storage_reference")
+      .select("deliverable_key")
       .eq("id", data.id)
       .eq("owner_id", context.userId)
       .single();
@@ -518,7 +527,7 @@ export const listDeliverableVersions = createServerFn({ method: "GET" })
       .from("agent_deliverables")
       .select("*")
       .eq("owner_id", context.userId)
-      .eq("storage_reference", source.data.storage_reference)
+      .eq("deliverable_key", source.data.deliverable_key)
       .order("revision", { ascending: false });
     if (versions.error) throw new Error("Unable to load version history");
     return (versions.data ?? []).map(mapDeliverable);
@@ -540,7 +549,7 @@ export const restoreDeliverableRevision = createServerFn({ method: "POST" })
       .from("agent_deliverables")
       .select("revision")
       .eq("owner_id", context.userId)
-      .eq("storage_reference", source.data.storage_reference)
+      .eq("deliverable_key", source.data.deliverable_key)
       .order("revision", { ascending: false })
       .limit(1)
       .single();

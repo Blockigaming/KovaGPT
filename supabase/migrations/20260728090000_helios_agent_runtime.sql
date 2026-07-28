@@ -24,10 +24,10 @@ create table public.agent_deliverables (
   run_id uuid not null references public.agent_jobs(id) on delete cascade, specialist_task_id text,
   project_id uuid references public.projects(id) on delete set null,
   type text not null check (type in ('project_artifact','project_file','library_document','research_report','context_pack_candidate','markdown','json','csv')),
-  title text not null, mime_type text not null, storage_reference text not null, source_evidence jsonb not null default '[]',
+  deliverable_key uuid not null default gen_random_uuid(), title text not null, mime_type text not null, storage_reference text not null, source_evidence jsonb not null default '[]',
   revision integer not null default 1 check (revision > 0), status text not null default 'ready' check (status in ('draft','ready','superseded','deleted')),
   integrity_hash text not null check (integrity_hash ~ '^[a-f0-9]{64}$'), created_at timestamptz not null default now(),
-  unique (owner_id, storage_reference, revision)
+  unique (owner_id, deliverable_key, revision)
 );
 create table public.agent_notifications (
   id uuid primary key default gen_random_uuid(), owner_id uuid not null references auth.users(id) on delete cascade,
@@ -60,16 +60,19 @@ create policy "Owners update notifications" on public.agent_notifications for up
 create policy "Owners delete notifications" on public.agent_notifications for delete using (auth.uid() = owner_id);
 create policy "Owners read approvals" on public.agent_approvals for select using (auth.uid() = owner_id);
 create or replace function public.control_agent_job(p_job_id uuid,p_action text) returns jsonb language plpgsql security definer set search_path=public as $$
-declare next_status text; current_status text;
+declare next_status text; current_status text; current_worker text;
 begin
   if p_action not in ('pause','resume','cancel') then raise exception 'Invalid action'; end if;
-  select status into current_status from agent_jobs where id=p_job_id and owner_id=auth.uid() for update;
+  select status,worker_id into current_status,current_worker from agent_jobs where id=p_job_id and owner_id=auth.uid() for update;
   if current_status is null then raise exception 'Run not found'; end if;
   if p_action='pause' and current_status in ('queued','leased','running','retrying') then next_status='paused';
-  elsif p_action='resume' and current_status in ('paused','approval_required') then next_status='queued';
-  elsif p_action='cancel' and current_status in ('queued','leased','running','retrying','paused','approval_required') then next_status='cancelling';
+  elsif p_action='resume' and current_status='paused' and current_worker is null then next_status='queued';
+  elsif p_action='resume' and current_status='approval_required' then next_status='queued';
+  elsif p_action='cancel' and (current_status in ('leased','running') or (current_status='paused' and current_worker is not null)) then next_status='cancelling';
+  elsif p_action='cancel' and current_status in ('queued','retrying','paused','approval_required') then next_status='cancelled';
+  elsif p_action='cancel' and current_status='cancelling' then next_status='cancelling';
   else raise exception 'Invalid state transition'; end if;
-  update agent_jobs set status=next_status,updated_at=now() where id=p_job_id;
+  update agent_jobs set status=next_status,worker_id=case when next_status='cancelled' then null else worker_id end,lease_expires_at=case when next_status='cancelled' then null else lease_expires_at end,completed_at=case when next_status='cancelled' then now() else completed_at end,updated_at=now() where id=p_job_id;
   return jsonb_build_object('id',p_job_id,'status',next_status);
 end $$;
 create or replace function public.decide_agent_approval(p_approval_id uuid,p_decision text,p_edited_request jsonb default null) returns void language plpgsql security definer set search_path=public as $$
@@ -93,9 +96,9 @@ end $$;
 create or replace function public.recover_expired_agent_leases() returns integer language plpgsql security definer set search_path=public as $$
 declare affected integer;
 begin
-  update agent_jobs set status=case when attempts < max_attempts then 'retrying' else 'failed' end,
-    error='Worker lease expired', worker_id=null, lease_expires_at=null, available_at=now(), updated_at=now(), completed_at=case when attempts >= max_attempts then now() else completed_at end
-    where status in ('leased','running','cancelling') and lease_expires_at < now();
+  update agent_jobs set status=case when status='cancelling' then 'cancelled' when status='paused' then 'paused' when attempts < max_attempts then 'retrying' else 'failed' end,
+    error=case when status in ('cancelling','paused') then error else 'Worker lease expired' end, worker_id=null, lease_expires_at=null, available_at=now(), updated_at=now(), completed_at=case when status='cancelling' or (status<>'paused' and attempts >= max_attempts) then now() else completed_at end
+    where status in ('leased','running','cancelling','paused') and lease_expires_at < now();
   get diagnostics affected = row_count; return affected;
 end $$;
 create or replace function public.complete_agent_job(p_job_id uuid,p_worker_id text,p_result jsonb) returns void language plpgsql security definer set search_path=public as $$
@@ -109,15 +112,32 @@ begin
   if current_status is null then select status into current_status from agent_jobs where id=p_job_id; end if;
   return current_status;
 end $$;
+create or replace function public.settle_interrupted_agent_job(p_job_id uuid,p_worker_id text) returns text language plpgsql security definer set search_path=public as $$
+declare settled_status text;
+begin
+  update agent_jobs set status=case when status='cancelling' then 'cancelled' when status='paused' then 'paused' else 'retrying' end,
+    worker_id=null,lease_expires_at=null,available_at=now(),completed_at=case when status='cancelling' then now() else completed_at end,updated_at=now()
+    where id=p_job_id and worker_id=p_worker_id and status in ('leased','running','paused','cancelling') returning status into settled_status;
+  if settled_status is null then select status into settled_status from agent_jobs where id=p_job_id; end if;
+  return settled_status;
+end $$;
 create or replace function public.fail_agent_job(p_job_id uuid,p_worker_id text,p_error text) returns void language plpgsql security definer set search_path=public as $$
-begin update agent_jobs set status=case when attempts<max_attempts then 'retrying' else 'failed' end,error=left(p_error,1000),available_at=now()+make_interval(secs=>least(60,power(2,attempts)::int)),worker_id=null,lease_expires_at=null,completed_at=case when attempts>=max_attempts then now() else null end,updated_at=now() where id=p_job_id and worker_id=p_worker_id; end $$;
-create or replace function public.release_agent_lease(p_job_id uuid,p_worker_id text) returns void language sql security definer set search_path=public as $$ update agent_jobs set status='retrying',worker_id=null,lease_expires_at=null,available_at=now(),updated_at=now() where id=p_job_id and worker_id=p_worker_id and status in ('leased','running'); $$;
+begin update agent_jobs set status=case when attempts<max_attempts then 'retrying' else 'failed' end,error=left(p_error,1000),available_at=now()+make_interval(secs=>least(60,power(2,attempts)::int)),worker_id=null,lease_expires_at=null,completed_at=case when attempts>=max_attempts then now() else null end,updated_at=now() where id=p_job_id and worker_id=p_worker_id and status in ('leased','running'); end $$;
+create or replace function public.release_agent_lease(p_job_id uuid,p_worker_id text) returns void language plpgsql security definer set search_path=public as $$ begin perform settle_interrupted_agent_job(p_job_id,p_worker_id); end $$;
 revoke all on function public.lease_agent_job(text,integer) from public, anon, authenticated;
 revoke all on function public.recover_expired_agent_leases() from public, anon, authenticated;
 revoke all on function public.complete_agent_job(uuid,text,jsonb) from public, anon, authenticated;
 revoke all on function public.heartbeat_agent_job(uuid,text,integer) from public, anon, authenticated;
+revoke all on function public.settle_interrupted_agent_job(uuid,text) from public, anon, authenticated;
 revoke all on function public.fail_agent_job(uuid,text,text) from public, anon, authenticated;
 revoke all on function public.release_agent_lease(uuid,text) from public, anon, authenticated;
+grant execute on function public.lease_agent_job(text,integer) to service_role;
+grant execute on function public.recover_expired_agent_leases() to service_role;
+grant execute on function public.complete_agent_job(uuid,text,jsonb) to service_role;
+grant execute on function public.heartbeat_agent_job(uuid,text,integer) to service_role;
+grant execute on function public.settle_interrupted_agent_job(uuid,text) to service_role;
+grant execute on function public.fail_agent_job(uuid,text,text) to service_role;
+grant execute on function public.release_agent_lease(uuid,text) to service_role;
 
 insert into storage.buckets (id,name,public,file_size_limit,allowed_mime_types) values ('agent-evidence','agent-evidence',false,10485760,array['image/png','image/jpeg','text/plain','application/json']) on conflict (id) do nothing;
 create policy "Owners read agent evidence" on storage.objects for select using (bucket_id='agent-evidence' and (storage.foldername(name))[1]=auth.uid()::text);

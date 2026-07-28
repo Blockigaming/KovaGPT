@@ -3,6 +3,7 @@ import os from "node:os";
 import { rm, mkdir } from "node:fs/promises";
 import { createClient } from "@supabase/supabase-js";
 import { chromium } from "playwright";
+import { assertPublicUrl } from "./network-safety.mjs";
 
 const version = process.env.WORKER_VERSION || "1.0.0";
 const identity = process.env.WORKER_ID || `${os.hostname()}-${process.pid}`;
@@ -72,39 +73,20 @@ async function emit(jobId, type, payload) {
     .insert({ job_id: jobId, event_type: type, payload });
   if (error) throw error;
 }
-function assertPublicUrl(raw) {
-  const target = new URL(raw);
-  if (target.protocol !== "http:" && target.protocol !== "https:")
-    throw new Error("Only HTTP(S) navigation is allowed");
-  const host = target.hostname.toLowerCase();
-  if (
-    host === "localhost" ||
-    host.endsWith(".local") ||
-    host === "0.0.0.0" ||
-    host === "::1" ||
-    /^127\./.test(host) ||
-    /^10\./.test(host) ||
-    /^192\.168\./.test(host) ||
-    /^169\.254\./.test(host) ||
-    /^172\.(1[6-9]|2\d|3[01])\./.test(host)
-  )
-    throw new Error("Private network navigation is blocked");
-  return target.toString();
-}
 async function browserJob(job, signal) {
   browser ||= await chromium.launch({ headless: true });
-  const context = await browser.newContext({ acceptDownloads: false });
+  const context = await browser.newContext({ acceptDownloads: false, serviceWorkers: "block" });
   const page = await context.newPage();
   await page.route("**/*", async (route) => {
     try {
-      assertPublicUrl(route.request().url());
+      await assertPublicUrl(route.request().url());
       await route.continue();
     } catch {
       await route.abort("blockedbyclient");
     }
   });
   try {
-    const target = assertPublicUrl(job.input.url);
+    const target = await assertPublicUrl(job.input.url);
     await page.goto(target, { waitUntil: "domcontentloaded", timeout: 30000 });
     if (signal.aborted) throw new Error("Cancelled");
     const screenshot = await page.screenshot({ fullPage: false });
@@ -162,8 +144,8 @@ async function run(job) {
   );
   leaseHeartbeat.unref();
   const dir = `${tempRoot}/${job.id}`;
-  await mkdir(dir, { recursive: true });
   try {
+    await mkdir(dir, { recursive: true });
     await emit(job.id, "started", { worker_id: identity, attempt: job.attempts });
     const result =
       job.kind === "browser"
@@ -177,8 +159,37 @@ async function run(job) {
     if (error) throw error;
   } catch (error) {
     const message = String(error?.message || error).slice(0, 1000);
-    await db.rpc("fail_agent_job", { p_job_id: job.id, p_worker_id: identity, p_error: message });
-    log("error", "job_failed", { job_id: job.id, error: message });
+    let interrupted = controller.signal.aborted;
+    if (!interrupted) {
+      const { data: currentStatus } = await db.rpc("heartbeat_agent_job", {
+        p_job_id: job.id,
+        p_worker_id: identity,
+        p_lease_seconds: leaseSeconds,
+      });
+      if (["cancelling", "cancelled", "paused"].includes(currentStatus)) {
+        controller.abort(`Job ${currentStatus}`);
+        interrupted = true;
+      }
+    }
+    if (interrupted) {
+      const { data: status, error: settleError } = await db.rpc("settle_interrupted_agent_job", {
+        p_job_id: job.id,
+        p_worker_id: identity,
+      });
+      if (settleError)
+        log("error", "job_interrupt_settlement_failed", {
+          job_id: job.id,
+          error: settleError.message,
+        });
+      else log("info", "job_interrupted", { job_id: job.id, status });
+    } else {
+      await db.rpc("fail_agent_job", {
+        p_job_id: job.id,
+        p_worker_id: identity,
+        p_error: message,
+      });
+      log("error", "job_failed", { job_id: job.id, error: message });
+    }
   } finally {
     clearInterval(leaseHeartbeat);
     active.delete(job.id);
@@ -194,7 +205,12 @@ async function poll() {
     while (!stopping && active.size < concurrency) {
       const job = await lease();
       if (!job) break;
-      void run(job);
+      void run(job).catch((error) =>
+        log("error", "job_run_unhandled", {
+          job_id: job.id,
+          error: String(error?.message || error),
+        }),
+      );
     }
     lastPollError = null;
   } catch (error) {
