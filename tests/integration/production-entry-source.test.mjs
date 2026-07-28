@@ -13,13 +13,13 @@ test("production uses the repository server entry without a private Vite wrapper
   assert.match(wranglerConfig, /"main": "src\/server\.ts"/);
 });
 
-test("production bundles TanStack's h3-v2 alias instead of importing it at runtime", async () => {
-  assert.match(viteConfig, /noExternal: \["h3-v2"\]/);
+test("production bundles TanStack's H3 routing graph instead of importing it at runtime", async () => {
+  assert.match(viteConfig, /noExternal: \["h3-v2", "rou3"\]/);
 
   const serverFiles = await readdir("dist/server", { recursive: true });
   const javascriptFiles = serverFiles.filter((file) => file.endsWith(".js"));
   for (const file of javascriptFiles) {
     const output = await readFile(`dist/server/${file}`, "utf8");
-    assert.doesNotMatch(output, /(?:from\s*|import\s*)["']h3-v2["']/, file);
+    assert.doesNotMatch(output, /(?:from\s*|import\s*)["'](?:h3-v2|rou3)["']/, file);
   }
 });
