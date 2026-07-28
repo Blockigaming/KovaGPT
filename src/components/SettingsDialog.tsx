@@ -484,6 +484,7 @@ export function SettingsDialog({
                     </div>
                   </div>
                 </section>
+                <WorkspaceDefaults />
               </TabsContent>
 
               {/* PERSONALIZATION */}
@@ -1435,6 +1436,78 @@ function ToggleRow({
 
 type LibItem = import("@/lib/library.functions").LibraryItem;
 
+function WorkspaceDefaults() {
+  const [defaults, setDefaults] = useState(() => {
+    if (typeof window === "undefined")
+      return {
+        project: "Balanced",
+        work: "Review before completion",
+        prompt: "General",
+        research: "Balanced sources",
+        artifact: "Edit",
+      };
+    try {
+      return (
+        JSON.parse(localStorage.getItem("kova-workspace-defaults-v1") ?? "null") ?? {
+          project: "Balanced",
+          work: "Review before completion",
+          prompt: "General",
+          research: "Balanced sources",
+          artifact: "Edit",
+        }
+      );
+    } catch {
+      return {
+        project: "Balanced",
+        work: "Review before completion",
+        prompt: "General",
+        research: "Balanced sources",
+        artifact: "Edit",
+      };
+    }
+  });
+  const update = (key: string, value: string) => {
+    const next = { ...defaults, [key]: value };
+    setDefaults(next);
+    localStorage.setItem("kova-workspace-defaults-v1", JSON.stringify(next));
+  };
+  const fields = [
+    ["project", "Project defaults", ["Balanced", "Concise instructions", "Detailed instructions"]],
+    ["work", "Work defaults", ["Review before completion", "Approval gates", "Manual steps"]],
+    ["prompt", "Prompt defaults", ["General", "Writing", "Research", "Analysis", "Coding"]],
+    [
+      "research",
+      "Research defaults",
+      ["Balanced sources", "Primary sources", "Academic sources", "Recent sources"],
+    ],
+    ["artifact", "Artifact defaults", ["Edit", "Preview", "Split view"]],
+  ] as const;
+  return (
+    <section className="space-y-3">
+      <div>
+        <h3 className="text-sm font-semibold">Workspace preferences</h3>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Defaults are saved on this device and never imply an action ran.
+        </p>
+      </div>
+      {fields.map(([key, label, options]) => (
+        <label key={key} className="block text-xs text-muted-foreground">
+          {label}
+          <select
+            value={defaults[key]}
+            onChange={(event) => update(key, event.target.value)}
+            className="mt-1.5 h-10 w-full rounded-lg border bg-background px-3 text-sm text-foreground"
+          >
+            {options.map((option) => (
+              <option key={option}>{option}</option>
+            ))}
+          </select>
+        </label>
+      ))}
+    </section>
+  );
+}
+
 function LibraryItemViewer({
   item,
   onClose,
@@ -1446,20 +1519,26 @@ function LibraryItemViewer({
 }) {
   const [imgUrl, setImgUrl] = useState<string | null>(null);
   const [imgErr, setImgErr] = useState<string | null>(null);
+  const itemId = item?.id;
+  const itemType = item?.item_type;
   useEffect(() => {
+    let cancelled = false;
     setImgUrl(null);
     setImgErr(null);
-    if (!item || item.item_type !== "image") return;
+    if (!itemId || itemType !== "image") return;
     (async () => {
       try {
         const { getLibraryImageUrl } = await import("@/lib/library-images.functions");
-        const { url } = await getLibraryImageUrl({ data: { id: item.id } });
-        setImgUrl(url);
+        const { url } = await getLibraryImageUrl({ data: { id: itemId } });
+        if (!cancelled) setImgUrl(url);
       } catch (e) {
-        setImgErr(e instanceof Error ? e.message : "Could not load image");
+        if (!cancelled) setImgErr(e instanceof Error ? e.message : "Could not load image");
       }
     })();
-  }, [item?.id]);
+    return () => {
+      cancelled = true;
+    };
+  }, [itemId, itemType]);
 
   const isImage = item?.item_type === "image";
   return (
@@ -2073,7 +2152,42 @@ function FamilyPinPanel() {
 
   if (aud === "none") return null;
 
-  const savePin = () => {
+  const hashPin = async (value: string, salt?: string) => {
+    const actualSalt =
+      salt ??
+      Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) =>
+        byte.toString(16).padStart(2, "0"),
+      ).join("");
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(value),
+      "PBKDF2",
+      false,
+      ["deriveBits"],
+    );
+    const bits = await crypto.subtle.deriveBits(
+      {
+        name: "PBKDF2",
+        hash: "SHA-256",
+        salt: new TextEncoder().encode(actualSalt),
+        iterations: 120_000,
+      },
+      key,
+      256,
+    );
+    const hash = Array.from(new Uint8Array(bits), (byte) =>
+      byte.toString(16).padStart(2, "0"),
+    ).join("");
+    return `v2$${actualSalt}$${hash}`;
+  };
+
+  const verifyPin = async (value: string, stored: string) => {
+    if (!stored.startsWith("v2$")) return value === stored;
+    const [, salt] = stored.split("$");
+    return (await hashPin(value, salt)) === stored;
+  };
+
+  const savePin = async () => {
     if (!/^\d{4,8}$/.test(pin)) {
       toast.error("PIN must be 4-8 digits.");
       return;
@@ -2083,7 +2197,7 @@ function FamilyPinPanel() {
       return;
     }
     try {
-      localStorage.setItem("kova-family-pin", pin);
+      localStorage.setItem("kova-family-pin", await hashPin(pin));
       setHasPin(true);
       setPin("");
       setConfirm("");
@@ -2093,9 +2207,9 @@ function FamilyPinPanel() {
     }
   };
 
-  const changePin = () => {
+  const changePin = async () => {
     const saved = localStorage.getItem("kova-family-pin") || "";
-    if (current !== saved) {
+    if (!(await verifyPin(current, saved))) {
       toast.error("Current PIN is incorrect.");
       return;
     }
@@ -2108,7 +2222,7 @@ function FamilyPinPanel() {
       return;
     }
     try {
-      localStorage.setItem("kova-family-pin", pin);
+      localStorage.setItem("kova-family-pin", await hashPin(pin));
       setCurrent("");
       setPin("");
       setConfirm("");
@@ -2118,9 +2232,9 @@ function FamilyPinPanel() {
     }
   };
 
-  const removePin = () => {
+  const removePin = async () => {
     const saved = localStorage.getItem("kova-family-pin") || "";
-    if (current !== saved) {
+    if (!(await verifyPin(current, saved))) {
       toast.error("Current PIN is incorrect.");
       return;
     }
@@ -2130,7 +2244,7 @@ function FamilyPinPanel() {
       setCurrent("");
       toast.success("PIN removed.");
     } catch {
-      /* ignore */
+      toast.error("Couldn't remove PIN");
     }
   };
 

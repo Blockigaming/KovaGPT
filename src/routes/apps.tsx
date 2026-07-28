@@ -29,6 +29,13 @@ import {
 } from "@/lib/github.functions";
 import { authFetch } from "@/lib/auth-fetch";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { AppShell } from "@/components/AppShell";
 import { toast } from "sonner";
 import {
@@ -38,7 +45,6 @@ import {
   type GoogleStatus,
 } from "@/lib/google-client";
 
-const STORAGE_KEY = "kova-connected-apps-v1";
 const GOOGLE_IDS = new Set(["google", "gmail", "google-drive", "google-calendar"]);
 
 // Apps that are actually wired up end-to-end today. Non-working connectors are
@@ -51,11 +57,7 @@ const WORKING_IDS = new Set<string>([
   "github",
 ]);
 
-// Every catalog app is linkable from KovaGPT. Providers with native OAuth
-// (Google family, Apple) go through the real sign-in flow; the rest use a
-// KovaGPT-managed connection that's saved to your account and revocable
-// anytime from this page.
-const CONFIGURED_CONNECTORS = { has: (_id: string) => true } as { has: (id: string) => boolean };
+const CONFIGURED_CONNECTORS = WORKING_IDS;
 
 const RECOMMENDED_IDS = new Set([
   "google",
@@ -88,7 +90,7 @@ export const Route = createFileRoute("/apps")({
       { title: "Apps | KovaGPT" },
       {
         name: "description",
-        content: "Connect KovaGPT to Google, Drive, Gmail, Notion, Slack, and more.",
+        content: "Connect KovaGPT to supported Google, Drive, Gmail, and Calendar services.",
       },
       { name: "robots", content: "noindex" },
     ],
@@ -105,23 +107,6 @@ type ConnState =
   | "permission_incomplete"
   | "syncing"
   | "temporarily_unavailable";
-
-function loadConnected(): Record<string, true> {
-  if (typeof window === "undefined") return {};
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-  } catch {
-    return {};
-  }
-}
-
-function saveConnected(map: Record<string, true>) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
-  } catch {
-    /* ignore */
-  }
-}
 
 function AppLogo({ domain, label }: { domain: string; label: string }) {
   // Locally rendered brand mark using the domain's own favicon as a fallback.
@@ -227,6 +212,8 @@ function AppCard({
   onConnect,
   onDisconnect,
   onRetry,
+  onDetails,
+  onUseInChat,
 }: {
   item: ConnectorItem;
   state: ConnState;
@@ -235,6 +222,8 @@ function AppCard({
   onConnect: () => void;
   onDisconnect: () => void;
   onRetry: () => void;
+  onDetails: () => void;
+  onUseInChat: () => void;
 }) {
   const baseBtn =
     "text-xs px-3 py-1.5 rounded-full transition active:scale-[0.97] shrink-0 font-medium";
@@ -305,7 +294,17 @@ function AppCard({
         </div>
         <div className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{item.description}</div>
       </div>
-      {action}
+      <div className="flex shrink-0 flex-col items-end gap-2">
+        {action}
+        <button onClick={onDetails} className="text-xs text-muted-foreground hover:text-foreground">
+          Details
+        </button>
+        {state === "connected" && (
+          <button onClick={onUseInChat} className="text-xs font-medium hover:underline">
+            Use in chat
+          </button>
+        )}
+      </div>
     </li>
   );
 }
@@ -517,15 +516,28 @@ function AppsPage() {
   const { isSignedIn } = useUser();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<ConnectorCategory | "All">("All");
-  const [connected, setConnected] = useState<Record<string, true>>({});
   const [connecting, setConnecting] = useState<Record<string, true>>({});
   const [failed, setFailed] = useState<Record<string, true>>({});
   const [googleStatus, setGoogleStatus] = useState<GoogleStatus | null>(null);
   const [googleLoading, setGoogleLoading] = useState(true);
+  const [selectedApp, setSelectedApp] = useState<ConnectorItem | null>(null);
+  const [activity, setActivity] = useState<{ app: string; action: string; at: string }[]>([]);
 
   useEffect(() => {
-    setConnected(loadConnected());
+    try {
+      setActivity(JSON.parse(localStorage.getItem("kova-app-activity-v1") ?? "[]"));
+    } catch {
+      setActivity([]);
+    }
   }, []);
+
+  const recordActivity = (app: string, action: string) => {
+    setActivity((current) => {
+      const next = [{ app, action, at: new Date().toISOString() }, ...current].slice(0, 50);
+      localStorage.setItem("kova-app-activity-v1", JSON.stringify(next));
+      return next;
+    });
+  };
 
   const refreshGoogle = useCallback(async () => {
     try {
@@ -555,6 +567,7 @@ function AppsPage() {
     const err = params.get("google_error");
     if (ok) {
       toast.success("Google account connected");
+      recordActivity("Google", "Connected");
       refreshGoogle();
     } else if (err) {
       const msg =
@@ -593,28 +606,7 @@ function AppsPage() {
       }
       return;
     }
-    if (!CONFIGURED_CONNECTORS.has(item.id)) {
-      toast.error(`${item.label} needs provider setup before it can be linked.`);
-      return;
-    }
-    setFailed((f) => {
-      const n = { ...f };
-      delete n[item.id];
-      return n;
-    });
-    setConnecting((c) => ({ ...c, [item.id]: true }));
-    toast(`Opening secure connection to ${item.label}…`);
-    window.setTimeout(() => {
-      setConnecting((c) => {
-        const n = { ...c };
-        delete n[item.id];
-        return n;
-      });
-      const next = { ...connected, [item.id]: true as const };
-      setConnected(next);
-      saveConnected(next);
-      toast.success(`${item.label} connected and ready`);
-    }, 700);
+    toast.error(`${item.label} is not available in this deployment.`);
   };
 
   const handleDisconnect = async (item: ConnectorItem) => {
@@ -622,17 +614,14 @@ function AppsPage() {
       try {
         await disconnectGoogleAccount();
         setGoogleStatus({ connected: false });
+        recordActivity(item.label, "Disconnected");
         toast("Google account disconnected");
       } catch {
         toast.error("Could not disconnect Google. Try again.");
       }
       return;
     }
-    const next = { ...connected };
-    delete next[item.id];
-    setConnected(next);
-    saveConnected(next);
-    toast(`${item.label} disconnected`);
+    toast.error(`${item.label} is not available in this deployment.`);
   };
 
   const isGoogleConnected = (id: string): boolean => {
@@ -659,7 +648,7 @@ function AppsPage() {
     );
   }, [query, category]);
 
-  const isConnected = (id: string) => (isGoogleId(id) ? isGoogleConnected(id) : !!connected[id]);
+  const isConnected = (id: string) => isGoogleId(id) && isGoogleConnected(id);
   const connectedList = filtered.filter((c) => isConnected(c.id));
   const recommendedList = filtered.filter((c) => !isConnected(c.id) && RECOMMENDED_IDS.has(c.id));
   const otherList = filtered.filter((c) => !isConnected(c.id) && !RECOMMENDED_IDS.has(c.id));
@@ -672,13 +661,7 @@ function AppsPage() {
       if (failed[id]) return "failed";
       return isGoogleConnected(id) ? "connected" : "idle";
     }
-    return connecting[id]
-      ? "connecting"
-      : failed[id]
-        ? "failed"
-        : connected[id]
-          ? "connected"
-          : "idle";
+    return "temporarily_unavailable";
   };
 
   const renderGrid = (items: ConnectorItem[]) => (
@@ -693,6 +676,14 @@ function AppsPage() {
           onConnect={() => handleConnect(item)}
           onDisconnect={() => handleDisconnect(item)}
           onRetry={() => handleConnect(item)}
+          onDetails={() => setSelectedApp(item)}
+          onUseInChat={() => {
+            sessionStorage.setItem(
+              "kova-app-chat-context",
+              `Use my connected ${item.label} account for this request when relevant: `,
+            );
+            window.location.href = "/";
+          }}
         />
       ))}
     </ul>
@@ -731,6 +722,48 @@ function AppsPage() {
   return (
     <AppShell>
       <main className="max-w-5xl mx-auto w-full px-4 py-8 space-y-8">
+        <Dialog open={!!selectedApp} onOpenChange={(open) => !open && setSelectedApp(null)}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>{selectedApp?.label}</DialogTitle>
+              <DialogDescription>{selectedApp?.description}</DialogDescription>
+            </DialogHeader>
+            {selectedApp && (
+              <div className="space-y-4 text-sm">
+                <section className="rounded-xl border p-3">
+                  <h3 className="font-medium">Capabilities and permissions</h3>
+                  <p className="mt-1 text-muted-foreground">
+                    {selectedApp.id === "gmail"
+                      ? "Read message context. Sending email always requires explicit confirmation."
+                      : selectedApp.id === "google-calendar"
+                        ? "Read calendars and propose events. Creating an event requires explicit confirmation."
+                        : selectedApp.id === "google-drive"
+                          ? "Search and read files covered by the Drive scopes you granted."
+                          : "Manage the Google connection shared by supported Google apps."}
+                  </p>
+                </section>
+                <section>
+                  <h3 className="font-medium">Recent activity</h3>
+                  {activity.filter((entry) => [selectedApp.label, "Google"].includes(entry.app))
+                    .length ? (
+                    <ul className="mt-2 space-y-2">
+                      {activity
+                        .filter((entry) => [selectedApp.label, "Google"].includes(entry.app))
+                        .slice(0, 5)
+                        .map((entry, index) => (
+                          <li key={`${entry.at}:${index}`} className="rounded-lg bg-muted/60 p-2">
+                            {entry.action} · {new Date(entry.at).toLocaleString()}
+                          </li>
+                        ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-1 text-muted-foreground">No recorded connection activity.</p>
+                  )}
+                </section>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
         <header className="space-y-3">
           <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <Link2 className="w-3.5 h-3.5" /> Apps

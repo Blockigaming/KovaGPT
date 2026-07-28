@@ -15,9 +15,7 @@ test("model selector opens (bottom sheet on touch, popover on desktop)", async (
 
   // The selector lives inside the ChatInput. On the empty-state landing it may
   // not be present; if so, we skip.
-  const trigger = page
-    .getByRole("button", { name: /Balanced|Instant|Deep|Fast|Reasoning|GPT|Kova/i })
-    .first();
+  const trigger = page.locator('[data-testid="model-selector-trigger"]:visible').first();
   if ((await trigger.count()) === 0) {
     testInfo.skip(true, "Model selector not present on this route/state");
     return;

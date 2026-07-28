@@ -1,0 +1,103 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
+const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
+
+test("workspace intelligence aggregates only authenticated existing workspace tables", async () => {
+  const source = await read("src/lib/workspace.functions.ts");
+  assert.match(source, /listWorkspaceIntelligence/);
+  for (const table of [
+    "projects",
+    "project_chats",
+    "project_files",
+    "user_library_items",
+    "project_memory",
+    "context_packs",
+    "deep_research_runs",
+    "scheduled_tasks",
+  ]) {
+    assert.match(source, new RegExp(`\"${table}\"`));
+  }
+  assert.match(source, /requireSupabaseAuth/);
+  assert.doesNotMatch(source, /recommended for you/i);
+});
+
+test("home, projects, work, research, and automations share real workspace signals", async () => {
+  const [home, project, work, research, tasks] = await Promise.all([
+    read("src/routes/index.tsx"),
+    read("src/routes/projects.$projectId.tsx"),
+    read("src/routes/work.tsx"),
+    read("src/routes/research-planner.tsx"),
+    read("src/routes/scheduled-tasks.tsx"),
+  ]);
+  assert.match(home, /WorkspaceIntelligence/);
+  assert.match(project, /Connected project work/);
+  assert.match(work, /Recent context for Work/);
+  assert.match(research, /Research context/);
+  assert.match(tasks, /Context for automations/);
+});
+
+test("workspace resources have reduced-click truthful handoffs", async () => {
+  const [handoffs, library, files, memory, artifact, packs] = await Promise.all([
+    read("src/lib/workspace-handoffs.ts"),
+    read("src/routes/library.tsx"),
+    read("src/routes/files.tsx"),
+    read("src/routes/memory.tsx"),
+    read("src/components/ArtifactEditor.tsx"),
+    read("src/routes/context-packs.tsx"),
+  ]);
+  for (const source of [library, files, memory, artifact]) {
+    assert.match(source, /openInWork/);
+    assert.match(source, /continueInResearch/);
+    assert.match(source, /addToContextPack/);
+  }
+  assert.match(handoffs, /kova-work-draft/);
+  assert.match(handoffs, /kova-research-draft/);
+  assert.match(packs, /Use in Research/);
+  for (const type of ["artifact", "image", "research", "prompt", "work"]) {
+    assert.match(packs, new RegExp(`\"${type}\"`));
+  }
+});
+
+test("Recents combines account intelligence with local chats and Work sessions", async () => {
+  const source = await read("src/routes/recents.tsx");
+  assert.match(source, /listWorkspaceIntelligence/);
+  assert.match(source, /loadConversations/);
+  assert.match(source, /loadWorkTasks/);
+  assert.match(source, /context_pack/);
+  assert.match(source, /artifact/);
+});
+
+test("all currently implementable gaps are closed and deferred gaps are classified", async () => {
+  const ledger = await read("docs/remaining-chatgpt-gaps.md");
+  assert.match(ledger, /A — Fully implementable now[\s\S]*Empty after this checkpoint/);
+  for (const category of [
+    "B — Requires backend work",
+    "C — Requires provider support",
+    "D — Requires proprietary OpenAI infrastructure",
+  ]) {
+    assert.match(ledger, new RegExp(category));
+  }
+  assert.match(ledger, /Workspace Timeline/);
+});
+
+test("Workspace Timeline and batch context workflows use existing authorized records", async () => {
+  const [dashboard, handoffs, files, library, packs] = await Promise.all([
+    read("src/components/WorkspaceIntelligence.tsx"),
+    read("src/lib/workspace-handoffs.ts"),
+    read("src/routes/files.tsx"),
+    read("src/routes/library.tsx"),
+    read("src/routes/context-packs.tsx"),
+  ]);
+  assert.match(dashboard, /WorkspaceTimeline/);
+  assert.match(dashboard, /7, 30, 90/);
+  assert.match(dashboard, /A factual replay of activity/);
+  assert.match(dashboard, /Export CSV/);
+  assert.match(handoffs, /addManyToContextPack/);
+  assert.match(handoffs, /new Map/);
+  assert.match(files, /files selected/);
+  assert.match(library, /Selected Library actions/);
+  assert.match(library, /deleteSelected/);
+  assert.match(packs, /kova-context-candidates/);
+});

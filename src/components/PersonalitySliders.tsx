@@ -21,10 +21,87 @@ type TraitKey = (typeof TRAITS)[number]["key"];
 export type Personality = Record<TraitKey, number>;
 
 const STORAGE_KEY = "kova.personality.v1";
+const AUTO_KEY = "kova.personality.autoAdapt.v1";
 export const DEFAULT_PERSONALITY: Personality = TRAITS.reduce(
   (acc, t) => ({ ...acc, [t.key]: 5 }),
   {} as Personality,
 );
+
+export const PERSONALITY_PRESETS: {
+  id: string;
+  label: string;
+  hint: string;
+  values: Personality;
+}[] = [
+  {
+    id: "balanced",
+    label: "Balanced",
+    hint: "Default KovaGPT",
+    values: { ...DEFAULT_PERSONALITY },
+  },
+  {
+    id: "friendly",
+    label: "Friendly",
+    hint: "Warm and casual",
+    values: {
+      ...DEFAULT_PERSONALITY,
+      kindness: 9,
+      friendliness: 9,
+      humor: 7,
+      formalness: 3,
+      energy: 7,
+      seriousness: 3,
+    },
+  },
+  {
+    id: "professional",
+    label: "Professional",
+    hint: "Formal and precise",
+    values: {
+      ...DEFAULT_PERSONALITY,
+      formalness: 9,
+      seriousness: 8,
+      humor: 2,
+      directness: 8,
+      conciseness: 7,
+      detail: 7,
+    },
+  },
+  {
+    id: "playful",
+    label: "Playful",
+    hint: "Witty and light",
+    values: {
+      ...DEFAULT_PERSONALITY,
+      humor: 10,
+      energy: 9,
+      friendliness: 9,
+      seriousness: 2,
+      creativity: 9,
+      formalness: 2,
+    },
+  },
+  {
+    id: "concise",
+    label: "Concise",
+    hint: "Short and direct",
+    values: { ...DEFAULT_PERSONALITY, conciseness: 10, directness: 10, detail: 2, humor: 3 },
+  },
+  {
+    id: "mentor",
+    label: "Mentor",
+    hint: "Thorough and patient",
+    values: {
+      ...DEFAULT_PERSONALITY,
+      detail: 10,
+      kindness: 8,
+      creativity: 7,
+      directness: 6,
+      seriousness: 6,
+      friendliness: 8,
+    },
+  },
+];
 
 export function loadPersonality(): Personality {
   if (typeof window === "undefined") return DEFAULT_PERSONALITY;
@@ -37,22 +114,39 @@ export function loadPersonality(): Personality {
   }
 }
 
+export function loadAutoAdapt(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    const raw = localStorage.getItem(AUTO_KEY);
+    return raw === null ? true : raw === "1";
+  } catch {
+    return true;
+  }
+}
+
 export function personalityToInstruction(p: Personality): string {
   const notable = TRAITS.filter((t) => (p[t.key] ?? 5) !== 5).map((t) => {
     const v = p[t.key];
     return `${t.label.toLowerCase()}=${v}/10`;
   });
-  if (!notable.length) return "";
-  return `Response tone (1=low, 10=high): ${notable.join(", ")}. Blend naturally; do not mention these settings.`;
+  const auto = loadAutoAdapt()
+    ? "Auto-adapt: continuously observe how the user writes (length, formality, humor, detail preference) and mirror their style. When they give feedback like 'shorter', 'more casual', 'more detail', apply it for the rest of the conversation."
+    : "";
+  const traits = notable.length
+    ? `Response tone (1=low, 10=high): ${notable.join(", ")}. Blend naturally; do not mention these settings.`
+    : "";
+  return [traits, auto].filter(Boolean).join(" ");
 }
 
 export function PersonalitySliders() {
   const { tier } = useTier();
   const unlocked = tierRank(tier) >= tierRank("plus");
   const [values, setValues] = useState<Personality>(DEFAULT_PERSONALITY);
+  const [autoAdapt, setAutoAdapt] = useState<boolean>(true);
 
   useEffect(() => {
     setValues(loadPersonality());
+    setAutoAdapt(loadAutoAdapt());
   }, []);
 
   function update(key: TraitKey, v: number) {
@@ -61,6 +155,26 @@ export function PersonalitySliders() {
     setValues(next);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function applyPreset(preset: Personality) {
+    if (!unlocked) return;
+    setValues(preset);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(preset));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function toggleAuto() {
+    const next = !autoAdapt;
+    setAutoAdapt(next);
+    try {
+      localStorage.setItem(AUTO_KEY, next ? "1" : "0");
     } catch {
       /* ignore */
     }
@@ -93,8 +207,37 @@ export function PersonalitySliders() {
         )}
       </div>
       <p className="text-xs text-muted-foreground mb-4">
-        Fine-tune how KovaGPT responds. Default (5) matches normal tone.
+        Pick a preset or fine-tune 10 traits. Kova also adapts to how you write when Auto-adapt is
+        on.
       </p>
+
+      <div className={`mb-4 ${unlocked ? "" : "pointer-events-none opacity-70"}`}>
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {PERSONALITY_PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              onClick={() => applyPreset(preset.values)}
+              className="text-xs px-2.5 py-1 rounded-full border border-border bg-background/60 hover:bg-accent transition"
+              title={preset.hint}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={autoAdapt}
+            onChange={toggleAuto}
+            className="h-3.5 w-3.5 rounded border-border accent-primary"
+          />
+          <span>
+            <span className="font-medium text-foreground">Auto-adapt to me.</span> Kova learns your
+            style (length, formality, humor) and mirrors it. Say "shorter", "more casual", or "add
+            detail" and it adjusts.
+          </span>
+        </label>
+      </div>
 
       <div
         className={`grid gap-4 sm:grid-cols-2 ${unlocked ? "" : "pointer-events-none blur-[2px] opacity-70 select-none"}`}

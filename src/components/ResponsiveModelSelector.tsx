@@ -51,6 +51,7 @@ export function ResponsiveModelSelector({
         type="button"
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
+        aria-label={`Choose model: Kova ${version} ${current.label}`}
         aria-expanded={open}
         data-testid="model-selector-trigger"
         className={`inline-flex items-center gap-1.5 rounded-full bg-accent/70 active:bg-accent transition ${

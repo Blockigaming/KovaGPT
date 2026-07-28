@@ -4,6 +4,9 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
+// Lovable Cloud runs the public TanStack Start Vite stack directly. Keep the
+// Start plugin ahead of React and avoid the legacy private Lovable adapter;
+// this is also the supported Nitro/h3-v2 production configuration.
 export default defineConfig({
   plugins: [
     tsconfigPaths(),
@@ -11,7 +14,10 @@ export default defineConfig({
     tanstackStart({ server: { entry: "src/server.ts" } }),
     react(),
   ],
-  server: { host: "0.0.0.0", port: 5173 },
+  server: {
+    host: "0.0.0.0",
+    port: 5173,
+  },
   build: {
     chunkSizeWarningLimit: 600,
     rollupOptions: {

@@ -41,6 +41,51 @@ import type { PendingConfirm } from "@/lib/chat-store";
 import { LongResponseCard, shouldWrapAsDocument } from "./LongResponseCard";
 import { InfoChip, detectInfoChip } from "./InfoChip";
 
+function MarkdownCode({ className, children }: React.ComponentProps<"code">) {
+  const language = /language-([\w-]+)/.exec(className ?? "")?.[1];
+  const text = String(children).replace(/\n$/, "");
+  const [copied, setCopied] = useState(false);
+  if (!language && !text.includes("\n")) return <code className={className}>{children}</code>;
+  return (
+    <div className="kova-code-block group/code" data-language={language ?? "text"}>
+      <div className="kova-code-toolbar">
+        <span>{language ?? "text"}</span>
+        <button
+          type="button"
+          onClick={async () => {
+            await navigator.clipboard.writeText(text);
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 1600);
+          }}
+          aria-label={copied ? "Code copied" : "Copy code"}
+        >
+          {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      <pre tabIndex={0} aria-label={`${language ?? "Text"} code block`}>
+        <code className={className}>{text}</code>
+      </pre>
+    </div>
+  );
+}
+
+const markdownComponents = {
+  pre: ({ children }: React.ComponentProps<"pre">) => <>{children}</>,
+  code: MarkdownCode,
+  table: ({ children }: React.ComponentProps<"table">) => (
+    <div className="kova-table-scroll" role="region" aria-label="Scrollable table" tabIndex={0}>
+      <table>{children}</table>
+    </div>
+  ),
+  a: ({ children, ...props }: React.ComponentProps<"a">) => (
+    <a {...props} target="_blank" rel="noreferrer noopener">
+      {children}
+      <span className="sr-only"> (opens in a new tab)</span>
+    </a>
+  ),
+};
+
 // Strip numbered citation markers like [1], [2], [3] that web-search-augmented
 // answers sometimes still inject, and normalize en/em dashes to a hyphen
 // so the assistant never shows them in the UI.
@@ -335,10 +380,15 @@ function ChatMessageInner({
   };
 
   return (
-    <div className="w-full px-4 lg:px-20 py-2.5 lg:py-3 group animate-fade-in text-[15px] leading-[1.6] lg:text-[16px] lg:leading-[1.65] [[data-sidebar=closed]_&]:lg:text-[17px] [[data-sidebar=closed]_&]:lg:py-4">
+    <article
+      id={`message-${message.id}`}
+      data-message-id={message.id}
+      className="group w-full animate-fade-in px-3 py-3 text-[15px] leading-[1.65] sm:px-5 lg:px-10 lg:py-4 lg:text-[16px] lg:leading-[1.7]"
+      aria-label={isUser ? "Your message" : "KovaGPT response"}
+    >
       {isUser ? (
-        <div className="mx-auto max-w-3xl [[data-sidebar=closed]_&]:max-w-4xl flex justify-end">
-          <div className="max-w-[85%] lg:max-w-[70%] flex flex-col items-end min-w-0">
+        <div className="mx-auto flex max-w-[48rem] justify-end [[data-sidebar=closed]_&]:max-w-[52rem]">
+          <div className="flex min-w-0 max-w-[88%] flex-col items-end sm:max-w-[78%] lg:max-w-[72%]">
             {message.attachments && message.attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2 justify-end">
                 {message.attachments
@@ -358,14 +408,24 @@ function ChatMessageInner({
               </div>
             )}
             {message.content && (
-              <div className="rounded-[20px] bg-accent text-foreground px-4 py-3 whitespace-pre-wrap break-words prose-chat">
+              <div className="prose-chat whitespace-pre-wrap break-words rounded-[1.15rem] rounded-br-[.35rem] bg-[var(--user-bubble)] px-4 py-2.5 text-foreground shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--foreground)_3%,transparent)]">
                 {message.content}
               </div>
+            )}
+            {onBranch && (
+              <button
+                type="button"
+                onClick={onBranch}
+                className="mt-1.5 inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-muted-foreground opacity-100 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100"
+                aria-label="Branch from this message in a new chat"
+              >
+                <GitBranch className="h-3.5 w-3.5" /> Branch
+              </button>
             )}
           </div>
         </div>
       ) : (
-        <div className="mx-auto max-w-3xl [[data-sidebar=closed]_&]:max-w-4xl flex items-start justify-start animate-fade-up">
+        <div className="mx-auto flex max-w-[48rem] animate-fade-up items-start justify-start [[data-sidebar=closed]_&]:max-w-[52rem]">
           <div
             className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text"
             onTouchStart={startLongPress}
@@ -443,14 +503,20 @@ function ChatMessageInner({
                         p.kind === "chart" ? (
                           <ChatChart key={i} spec={p.spec} />
                         ) : p.value.trim() ? (
-                          <ReactMarkdown key={i} remarkPlugins={[remarkGfm]}>
+                          <ReactMarkdown
+                            key={i}
+                            remarkPlugins={[remarkGfm]}
+                            components={markdownComponents}
+                          >
                             {p.value}
                           </ReactMarkdown>
                         ) : null,
                       )}
                     </div>
                   ) : (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleaned}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                      {cleaned}
+                    </ReactMarkdown>
                   );
                   if (artifactKind || streaming) return md;
                   if (shouldWrapAsDocument(cleaned)) {
@@ -471,10 +537,10 @@ function ChatMessageInner({
           </div>
         </div>
       )}
-      <div className="mx-auto max-w-3xl [[data-sidebar=closed]_&]:max-w-4xl">
+      <div className="mx-auto max-w-[48rem] [[data-sidebar=closed]_&]:max-w-[52rem]">
         <div className={isUser ? "flex justify-end" : "flex justify-start"}>
           {!streaming && !isUser && message.content && (
-            <div className="mt-2 flex flex-wrap items-center gap-1 transition-opacity">
+            <div className="kova-message-actions mt-1 transition-opacity lg:opacity-60 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
               {/* Visible: Copy, Thumbs up, Thumbs down, Share */}
               <button
                 onClick={copy}
@@ -650,10 +716,10 @@ function ChatMessageInner({
                         <Code2 className="w-4 h-4 mr-2" />
                       )}
                       {artifactKind === "website"
-                        ? "Edit code"
+                        ? "Open website full screen"
                         : artifactKind === "code"
-                          ? "Open code"
-                          : "Open in editor"}
+                          ? "Open code full screen"
+                          : "Open writing full screen"}
                     </DropdownMenuItem>
                   )}
                   {artifactKind === "website" && (
@@ -831,7 +897,7 @@ function ChatMessageInner({
           </div>
         </MobileBottomSheet>
       )}
-    </div>
+    </article>
   );
 }
 

@@ -21,7 +21,9 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { RealtimeReadiness } from "@/components/RealtimeReadiness";
 import { EmptyState, ErrorState } from "@/components/states";
+import { RelatedWorkspaceItems } from "@/components/WorkspaceIntelligence";
 import {
   controlWorkRun,
   decideApproval,
@@ -39,7 +41,12 @@ import {
 } from "@/lib/work.functions";
 import { calculateCriticalPath, dagLayout } from "@/lib/work-graph.mjs";
 
-export const Route = createFileRoute("/work")({ component: WorkRoute });
+export const Route = createFileRoute("/work")({
+  component: WorkRoute,
+  head: () => ({
+    meta: [{ title: "Work | KovaGPT" }, { name: "robots", content: "noindex" }],
+  }),
+});
 const terminal = new Set(["completed", "failed", "cancelled"]);
 const statusTone: Record<string, string> = {
   completed: "bg-emerald-500",
@@ -130,6 +137,7 @@ function WorkRoute() {
         <aside className="hidden w-72 shrink-0 overflow-y-auto rounded-3xl border bg-card p-3 md:block">
           <div className="mb-3 flex items-center justify-between px-2">
             <h1 className="text-xl font-semibold">Work</h1>
+            <RealtimeReadiness resource="Work" />
             <button onClick={() => void loadRuns()} aria-label="Refresh runs">
               <RefreshCw className="h-4 w-4" />
             </button>
@@ -254,6 +262,12 @@ function WorkRoute() {
             </>
           )}
         </section>
+        <aside className="hidden w-72 shrink-0 overflow-y-auto rounded-3xl border bg-card p-3 xl:block">
+          <RelatedWorkspaceItems
+            kinds={["project", "context_pack", "file", "artifact", "research", "memory"]}
+            title="Recent context for Work"
+          />
+        </aside>
       </main>
     </AppShell>
   );

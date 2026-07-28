@@ -1,24 +1,33 @@
 import {
   Archive,
+  Bell,
+  Boxes,
+  Brain,
+  BriefcaseBusiness,
   Calendar,
+  Clock3,
   Copy as CopyIcon,
   CreditCard,
   FolderKanban,
   FolderOpen,
+  Files,
+  FlaskConical,
   HelpCircle,
   ImageIcon,
   MoreHorizontal,
+  Network,
   PanelLeft,
   Pin,
   PinOff,
   Plug,
+  ScrollText,
   Search,
   Settings as SettingsIcon,
   Share2,
   SquarePen,
   Trash2,
   Users,
-  Workflow,
+  Orbit,
   type LucideIcon,
 } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
@@ -35,6 +44,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTier } from "@/hooks/useTier";
 import type { Conversation } from "@/lib/chat-store";
+import { searchConversations } from "@/lib/conversation-search";
 
 const EXPANDED_WIDTH = 280;
 const COLLAPSED_WIDTH = 72;
@@ -59,6 +69,7 @@ export function Sidebar({
   onToggle,
   onOpenSettings,
   onOpenHelp,
+  onOpenArchived,
 }: {
   conversations: Conversation[];
   activeId: string | null;
@@ -74,6 +85,7 @@ export function Sidebar({
   onToggle: () => void;
   onOpenSettings: (tab?: string) => void;
   onOpenHelp: () => void;
+  onOpenArchived?: () => void;
 }) {
   const { user, isSignedIn, isLoaded } = useUser();
   const { tier } = useTier();
@@ -168,7 +180,7 @@ export function Sidebar({
 
   const q = searchQuery.trim().toLowerCase();
   const filtered = q
-    ? conversations.filter((c) => c.title.toLowerCase().includes(q))
+    ? searchConversations(conversations, searchQuery).map((result) => result.conversation)
     : conversations;
   const pinned = filtered
     .filter((c) => c.pinned)
@@ -279,7 +291,7 @@ export function Sidebar({
         <button
           type="button"
           onClick={onToggle}
-          className="fixed inset-0 z-30 bg-black/45 lg:hidden"
+          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-[2px] lg:hidden"
           aria-label="Close navigation menu"
         />
       ) : null}
@@ -293,16 +305,16 @@ export function Sidebar({
             "--mobile-sidebar-width": open ? MOBILE_DRAWER_WIDTH : "0px",
           } as React.CSSProperties
         }
-        className={`relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-border/60 bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 ease-out lg:w-[var(--sidebar-expanded)] ${
+        className={`relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-border/60 bg-sidebar/95 text-sidebar-foreground transition-[width,transform] duration-200 ease-[var(--ease-spring)] lg:w-[var(--sidebar-expanded)] ${
           collapsed ? "lg:!w-[var(--sidebar-collapsed)]" : ""
-        } max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[var(--mobile-sidebar-width)] max-lg:rounded-r-2xl max-lg:shadow-2xl`}
+        } max-lg:kova-glass max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[var(--mobile-sidebar-width)] max-lg:rounded-r-xl max-lg:shadow-2xl`}
         aria-label="Primary navigation"
         aria-modal={open && isMobileViewport() ? true : undefined}
         role={open && isMobileViewport() ? "dialog" : "navigation"}
       >
         <div className="flex h-full min-w-[var(--sidebar-collapsed)] flex-col overflow-hidden">
           <div
-            className={`relative z-20 flex min-h-14 items-center bg-sidebar px-3 pt-[max(0.75rem,env(safe-area-inset-top))] ${collapsed ? "lg:justify-center" : "gap-2"}`}
+            className={`relative z-20 flex min-h-[52px] items-center bg-sidebar/90 px-2.5 pt-[var(--safe-top)] ${collapsed ? "lg:justify-center" : "gap-2"}`}
           >
             <div
               className={`flex min-w-0 flex-1 items-center gap-2 ${collapsed ? "lg:flex-none" : ""}`}
@@ -357,19 +369,19 @@ export function Sidebar({
                 autoFocus
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search chats..."
+                placeholder="Search titles, messages, or operators…"
                 className="h-11 w-full rounded-xl bg-sidebar-hover/60 px-3 text-sm outline-none transition focus:bg-sidebar-hover focus-visible:ring-2 focus-visible:ring-ring"
               />
             </div>
           ) : null}
 
-          <div className="flex flex-col gap-1 px-3 pt-2">
+          <div className="flex flex-col gap-0.5 px-2 pt-2">
             <button
               onClick={() => {
                 onNew();
                 closeAfterMobileNavigation();
               }}
-              className={`flex min-h-11 w-full items-center rounded-xl py-2 text-[15px] transition hover:bg-sidebar-hover active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring ${iconOnly}`}
+              className={`kova-nav-row ${iconOnly}`}
               aria-label="New chat"
               title="New chat"
             >
@@ -379,16 +391,37 @@ export function Sidebar({
             <button
               type="button"
               onClick={() => setSearchOpen((v) => !v)}
-              className={`flex min-h-11 w-full items-center rounded-xl py-2 text-[15px] transition hover:bg-sidebar-hover active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-ring ${iconOnly}`}
+              className={`kova-nav-row ${iconOnly}`}
               aria-label="Search chats"
               title="Search chats"
             >
               <Search className="h-[18px] w-[18px] shrink-0" />
               <span className={labelClass}>Search</span>
             </button>
+            {onOpenArchived ? (
+              <button
+                type="button"
+                onClick={onOpenArchived}
+                className={`kova-nav-row ${iconOnly}`}
+                aria-label="Archived chats"
+                title="Archived chats"
+              >
+                <Archive className="h-[18px] w-[18px] shrink-0" />
+                <span className={labelClass}>Archived chats</span>
+              </button>
+            ) : null}
             {showSignedIn ? renderNavLink("/projects", "Projects", FolderKanban) : null}
-            {showSignedIn ? renderNavLink("/work", "Work", Workflow) : null}
+            {renderNavLink("/recents", "Recents", Clock3)}
+            {showSignedIn ? renderNavLink("/work", "Work", BriefcaseBusiness) : null}
+            {showSignedIn ? renderNavLink("/notifications", "Notifications", Bell) : null}
+            {showSignedIn ? renderNavLink("/research-planner", "Research", FlaskConical) : null}
+            {showSignedIn ? renderNavLink("/prompt-studio", "Prompt Studio", ScrollText) : null}
+            {showSignedIn ? renderNavLink("/knowledge-graph", "Knowledge Graph", Network) : null}
+            {showSignedIn ? renderNavLink("/omega", "Omega Control Center", Orbit) : null}
             {renderNavLink("/library", "Library", FolderOpen)}
+            {showSignedIn ? renderNavLink("/files", "Files", Files) : null}
+            {showSignedIn ? renderNavLink("/context-packs", "Context packs", Boxes) : null}
+            {showSignedIn ? renderNavLink("/memory", "Memory", Brain) : null}
             {renderNavLink("/images", "Images", ImageIcon)}
             {renderNavLink("/apps", "Apps", Plug)}
             {showSignedIn && (tier === "plus" || tier === "pro")
@@ -460,7 +493,9 @@ export function Sidebar({
             />
           </nav>
 
-          <div className={`mt-auto border-t border-border/60 p-3 ${collapsed ? "lg:px-2" : ""}`}>
+          <div
+            className={`mt-auto border-t border-border/60 bg-sidebar/95 p-2.5 pb-[max(.625rem,var(--safe-bottom))] ${collapsed ? "lg:px-2" : ""}`}
+          >
             {!isLoaded ? null : showSignedIn ? (
               <div className={`flex items-center gap-2 ${collapsed ? "lg:flex-col" : ""}`}>
                 <button
