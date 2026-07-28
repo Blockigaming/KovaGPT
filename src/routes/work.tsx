@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { RelatedWorkspaceItems } from "@/components/WorkspaceIntelligence";
 import { RealtimeReadiness } from "@/components/RealtimeReadiness";
 import { AgentWorkspace } from "@/components/AgentWorkspace";
+import { AgentTeamWorkspace } from "@/components/AgentTeamWorkspace";
 import {
   createWorkTask,
   loadWorkTasks,
@@ -85,6 +86,7 @@ function WorkPage() {
             claim background execution.
           </p>
         </header>
+        <AgentTeamWorkspace />
         <AgentWorkspace />
         <section className="my-6 rounded-2xl border p-4">
           <h2 className="font-semibold">Create a work task</h2>

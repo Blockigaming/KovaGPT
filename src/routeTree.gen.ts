@@ -81,6 +81,7 @@ import { Route as ApiFinancesWebhookRouteImport } from './routes/api/finances/we
 import { Route as ApiFinancesLinkTokenRouteImport } from './routes/api/finances/link-token'
 import { Route as ApiFinancesExchangeRouteImport } from './routes/api/finances/exchange'
 import { Route as ApiChatConfirmRouteImport } from './routes/api/chat/confirm'
+import { Route as ApiAgentsTeamsRouteImport } from './routes/api/agents/teams'
 import { Route as ApiAgentsRunsRouteImport } from './routes/api/agents/runs'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
@@ -459,6 +460,11 @@ const ApiChatConfirmRoute = ApiChatConfirmRouteImport.update({
   path: '/confirm',
   getParentRoute: () => ApiChatRoute,
 } as any)
+const ApiAgentsTeamsRoute = ApiAgentsTeamsRouteImport.update({
+  id: '/api/agents/teams',
+  path: '/api/agents/teams',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAgentsRunsRoute = ApiAgentsRunsRouteImport.update({
   id: '/api/agents/runs',
   path: '/api/agents/runs',
@@ -596,6 +602,7 @@ export interface FileRoutesByFullPath {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
+  '/api/agents/teams': typeof ApiAgentsTeamsRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/finances/exchange': typeof ApiFinancesExchangeRoute
   '/api/finances/link-token': typeof ApiFinancesLinkTokenRoute
@@ -683,6 +690,7 @@ export interface FileRoutesByTo {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
+  '/api/agents/teams': typeof ApiAgentsTeamsRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/finances/exchange': typeof ApiFinancesExchangeRoute
   '/api/finances/link-token': typeof ApiFinancesLinkTokenRoute
@@ -771,6 +779,7 @@ export interface FileRoutesById {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
+  '/api/agents/teams': typeof ApiAgentsTeamsRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
   '/api/finances/exchange': typeof ApiFinancesExchangeRoute
   '/api/finances/link-token': typeof ApiFinancesLinkTokenRoute
@@ -860,6 +869,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/agents/runs'
+    | '/api/agents/teams'
     | '/api/chat/confirm'
     | '/api/finances/exchange'
     | '/api/finances/link-token'
@@ -947,6 +957,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/agents/runs'
+    | '/api/agents/teams'
     | '/api/chat/confirm'
     | '/api/finances/exchange'
     | '/api/finances/link-token'
@@ -1034,6 +1045,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/agents/runs'
+    | '/api/agents/teams'
     | '/api/chat/confirm'
     | '/api/finances/exchange'
     | '/api/finances/link-token'
@@ -1121,6 +1133,7 @@ export interface RootRouteChildren {
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiAgentsRunsRoute: typeof ApiAgentsRunsRoute
+  ApiAgentsTeamsRoute: typeof ApiAgentsTeamsRoute
   ApiFinancesExchangeRoute: typeof ApiFinancesExchangeRoute
   ApiFinancesLinkTokenRoute: typeof ApiFinancesLinkTokenRoute
   ApiFinancesWebhookRoute: typeof ApiFinancesWebhookRoute
@@ -1651,6 +1664,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatConfirmRouteImport
       parentRoute: typeof ApiChatRoute
     }
+    '/api/agents/teams': {
+      id: '/api/agents/teams'
+      path: '/api/agents/teams'
+      fullPath: '/api/agents/teams'
+      preLoaderRoute: typeof ApiAgentsTeamsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/agents/runs': {
       id: '/api/agents/runs'
       path: '/api/agents/runs'
@@ -1841,6 +1861,7 @@ const rootRouteChildren: RootRouteChildren = {
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiAgentsRunsRoute: ApiAgentsRunsRoute,
+  ApiAgentsTeamsRoute: ApiAgentsTeamsRoute,
   ApiFinancesExchangeRoute: ApiFinancesExchangeRoute,
   ApiFinancesLinkTokenRoute: ApiFinancesLinkTokenRoute,
   ApiFinancesWebhookRoute: ApiFinancesWebhookRoute,
