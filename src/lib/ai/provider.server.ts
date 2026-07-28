@@ -182,16 +182,18 @@ export function missingAiProviderResponse(fallback?: JsonObject): Response | nul
 }
 
 function headers() {
+  const openaiKey = env("OPENAI_API_KEY");
+  if (openaiKey) {
+    return { Authorization: `Bearer ${openaiKey}`, "Content-Type": "application/json" };
+  }
   const lovableKey = env("LOVABLE_API_KEY");
-  if (lovableKey && !env("OPENAI_BASE_URL")) {
+  if (lovableKey) {
     return {
       "Lovable-API-Key": lovableKey,
       "Content-Type": "application/json",
     } as Record<string, string>;
   }
-  const apiKey = env("OPENAI_API_KEY");
-  if (!apiKey) throw new AiProviderError(validateAiProviderConfig()!);
-  return { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
+  throw new AiProviderError(validateAiProviderConfig()!);
 }
 
 export function chatModel(kind: ProviderModelKind = "balanced") {
