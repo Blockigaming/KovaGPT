@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Activity, Bot, Building2, Cable, GitBranch, Mic, Network, ServerCog } from "lucide-react";
+import { Activity, Bot, Building2, Cable, GitBranch, Network, ServerCog } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useUser } from "@/components/auth/ClerkSafe";
 import {
@@ -28,7 +28,6 @@ export const Route = createFileRoute("/omega")({
 });
 type Tab =
   | "collaboration"
-  | "voice"
   | "execution"
   | "enterprise"
   | "mcp"
@@ -37,7 +36,6 @@ type Tab =
   | "pipelines";
 const tabs: [Tab, string, typeof Activity][] = [
   ["collaboration", "Collaboration", Network],
-  ["voice", "Voice", Mic],
   ["execution", "Execution", Activity],
   ["enterprise", "Enterprise", Building2],
   ["mcp", "MCP", Cable],
@@ -104,8 +102,6 @@ function OmegaPage() {
         </div>
         {tab === "collaboration" ? (
           <CollaborationPanel />
-        ) : tab === "voice" ? (
-          <VoicePanel />
         ) : tab === "execution" ? (
           <ExecutionPanel />
         ) : tab === "enterprise" ? (
@@ -154,83 +150,6 @@ function CollaborationPanel() {
           ),
         )}
       </ol>
-    </section>
-  );
-}
-
-function VoicePanel() {
-  const [permission, setPermission] = useState<"unknown" | "granted" | "denied">("unknown");
-  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
-  const [deviceId, setDeviceId] = useState("");
-  const request = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((track) => track.stop());
-      setPermission("granted");
-      const next = await navigator.mediaDevices.enumerateDevices();
-      setDevices(next.filter((device) => device.kind === "audioinput"));
-    } catch {
-      setPermission("denied");
-    }
-  };
-  return (
-    <section aria-labelledby="voice-title">
-      <h2 id="voice-title" className="text-lg font-semibold">
-        Voice session architecture
-      </h2>
-      <div className="mt-3">{unavailable("Voice provider")}</div>
-      <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <div className="rounded-xl border p-4">
-          <h3 className="font-medium">Microphone and device</h3>
-          <p className="mt-1 text-xs text-muted-foreground">Permission: {permission}</p>
-          <button
-            onClick={request}
-            className="mt-3 min-h-10 rounded-lg border px-3 text-sm hover:bg-accent"
-          >
-            Check microphone permission
-          </button>
-          <label className="mt-3 block text-xs">
-            Input device
-            <select
-              value={deviceId}
-              onChange={(event) => setDeviceId(event.target.value)}
-              disabled={!devices.length}
-              className="mt-1 h-10 w-full rounded-lg border bg-background px-2"
-            >
-              <option value="">System default</option>
-              {devices.map((device) => (
-                <option key={device.deviceId} value={device.deviceId}>
-                  {device.label || "Microphone"}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="rounded-xl border p-4">
-          <h3 className="font-medium">Session timeline</h3>
-          <ol className="mt-2 space-y-2 text-sm">
-            {[
-              "Permission required",
-              "Ready",
-              "Connecting",
-              "Listening",
-              "Speaking",
-              "Interrupted",
-              "Reconnecting",
-              "Ended",
-            ].map((state) => (
-              <li key={state} className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-muted-foreground" />
-                {state}
-              </li>
-            ))}
-          </ol>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Transcripts, latency samples, interruption, and audio levels render only after a
-            provider emits events.
-          </p>
-        </div>
-      </div>
     </section>
   );
 }
@@ -463,8 +382,7 @@ function ProviderPanel() {
         Provider management
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        AI, image, search, research, and voice adapters register through one typed platform
-        contract.
+        AI, image, search, and research adapters register through one typed platform contract.
       </p>
       {providers.length ? (
         <ul className="mt-4 grid gap-3 sm:grid-cols-2">

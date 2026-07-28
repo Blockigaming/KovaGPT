@@ -8,7 +8,6 @@ test("Omega exposes all backend-ready control surfaces without fake execution", 
   const route = await read("src/routes/omega.tsx");
   for (const label of [
     "Collaboration",
-    "Voice",
     "Execution",
     "Enterprise",
     "MCP",
@@ -17,6 +16,7 @@ test("Omega exposes all backend-ready control surfaces without fake execution", 
     "Pipeline Builder",
   ])
     assert.match(route, new RegExp(label));
+  assert.doesNotMatch(route, /VoicePanel|Check microphone permission|getUserMedia/);
   assert.match(route, /will not claim the service is running/);
   assert.match(route, /does not start\s+background work/);
   assert.match(route, /never\s+fabricates outputs\s+or claims execution/s);
