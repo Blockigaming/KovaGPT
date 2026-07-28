@@ -370,9 +370,8 @@ export function AuthDialog({
                     type="button"
                     onClick={handleMagicLink}
                     disabled={loading}
-                    className="w-full h-12 rounded-2xl text-sm text-muted-foreground hover:text-foreground transition inline-flex items-center justify-center gap-2"
+                    className="w-full h-12 rounded-2xl text-sm text-muted-foreground hover:text-foreground transition inline-flex items-center justify-center"
                   >
-                    <Sparkles className="h-4 w-4" />
                     Email me a link instead
                   </button>
                 </form>
