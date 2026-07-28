@@ -129,12 +129,9 @@ export const saveImageToLibrary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => SaveImageSchema.parse(input))
   .handler(async ({ data, context }): Promise<{ id: string }> => {
-    let payload: { bytes: Uint8Array; contentType: string } | null = null;
-    if (data.imageUrl.startsWith("data:")) {
-      payload = decodeDataUrl(data.imageUrl);
-    } else {
-      payload = await fetchRemoteImage(data.imageUrl);
-    }
+    const payload = data.imageUrl.startsWith("data:")
+      ? decodeDataUrl(data.imageUrl)
+      : await fetchRemoteImage(data.imageUrl);
     if (!payload) throw new Error("Unsupported or invalid image");
     if (payload.bytes.byteLength > MAX_BYTES) throw new Error("Image too large");
 

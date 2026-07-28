@@ -89,7 +89,11 @@ export function safeDiagnostics(): SafeDiagnostics {
       ]),
       aiProvider: oneOf(["LOVABLE_API_KEY", "OPENAI_API_KEY"]),
       search: feature(["FIRECRAWL_API_KEY"]),
-      googleOAuth: feature(["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI"]),
+      googleOAuth: feature([
+        "GOOGLE_OAUTH_CLIENT_ID",
+        "GOOGLE_OAUTH_CLIENT_SECRET",
+        "GOOGLE_REDIRECT_URI",
+      ]),
       stripe: feature(["STRIPE_SANDBOX_API_KEY", "STRIPE_LIVE_API_KEY"]),
       emailPreview: feature(["EMAIL_PREVIEW_TOKEN"]),
     },

@@ -9,6 +9,13 @@ export const Route = createFileRoute("/api/google/auth")({
       GET: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
+        if (
+          !process.env.GOOGLE_OAUTH_CLIENT_ID ||
+          !process.env.GOOGLE_OAUTH_CLIENT_SECRET ||
+          !process.env.GOOGLE_REDIRECT_URI
+        ) {
+          return Response.json({ error: "Google OAuth is not configured" }, { status: 503 });
+        }
         // State encodes the user id so the callback (which is not
         // authenticated by the bearer flow) can identify who to store
         // tokens for. Signed with SUPABASE_SERVICE_ROLE_KEY as an HMAC
@@ -28,8 +35,32 @@ export const Route = createFileRoute("/api/google/auth")({
           .replace(/\//g, "_")
           .replace(/=+$/, "");
         const state = `${payload}.${sigB64}`;
-        const url = buildGoogleAuthUrl({ request, state });
-        return Response.json({ url });
+        try {
+          const verifierBytes = crypto.getRandomValues(new Uint8Array(32));
+          const codeVerifier = btoa(String.fromCharCode(...verifierBytes))
+            .replace(/\+/g, "-")
+            .replace(/\//g, "_")
+            .replace(/=+$/, "");
+          const challengeBytes = await crypto.subtle.digest(
+            "SHA-256",
+            new TextEncoder().encode(codeVerifier),
+          );
+          const codeChallenge = btoa(String.fromCharCode(...new Uint8Array(challengeBytes)))
+            .replace(/\+/g, "-")
+            .replace(/\//g, "_")
+            .replace(/=+$/, "");
+          const url = buildGoogleAuthUrl({ request, state, codeChallenge });
+          return Response.json(
+            { url },
+            {
+              headers: {
+                "Set-Cookie": `__Host-kova_google_oauth=${state}.${codeVerifier}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`,
+              },
+            },
+          );
+        } catch {
+          return Response.json({ error: "Google OAuth configuration is invalid" }, { status: 503 });
+        }
       },
     },
   },

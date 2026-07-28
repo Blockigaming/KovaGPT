@@ -41,13 +41,13 @@ async function claim() {
   return data;
 }
 async function event(run, kind, payload, evidence) {
-  await db.from("agent_run_events").insert({
-    run_id: run.id,
-    owner_id: run.owner_id,
-    kind,
-    safe_payload: payload,
-    evidence_sha256: evidence ?? null,
-  });
+await db.from("agent_run_events").insert({
+  run_id: run.id,
+  owner_id: run.owner_id,
+  kind,
+  safe_payload: payload,
+  evidence_sha256: evidence ?? null,
+});
 }
 
 async function execute(run) {

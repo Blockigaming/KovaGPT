@@ -322,7 +322,7 @@ function ChatMessageInner({
 
     // Duplicate-safe: stable per-message id stored in localStorage avoids re-saves.
     const dedupKey = "kovagpt:savedMessageIds";
-    let savedIds: string[] = [];
+    let savedIds: string[];
     try {
       savedIds = JSON.parse(localStorage.getItem(dedupKey) || "[]");
     } catch {
