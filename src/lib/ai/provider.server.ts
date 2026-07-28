@@ -44,11 +44,20 @@ export type ProviderConfig = {
   configured: boolean;
 };
 
-const DEFAULT_CHAT_MODEL = "gpt-4o-mini";
-const DEFAULT_FAST_MODEL = "gpt-4o-mini";
-const DEFAULT_DEEP_MODEL = "gpt-4o";
-const DEFAULT_IMAGE_MODEL = "gpt-image-1";
-const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small";
+// When routed through the Lovable AI Gateway, model ids must include a vendor prefix
+// (see ai-models-chat catalog). Bare OpenAI ids like "gpt-4o-mini" are rejected by the gateway.
+function useLovableGateway(): boolean {
+  const hasLovable = typeof process !== "undefined" && !!process.env?.LOVABLE_API_KEY;
+  const openaiBaseOverride = typeof process !== "undefined" && !!process.env?.OPENAI_BASE_URL;
+  return hasLovable && !openaiBaseOverride;
+}
+const DEFAULT_CHAT_MODEL = useLovableGateway() ? "google/gemini-3.6-flash" : "gpt-4o-mini";
+const DEFAULT_FAST_MODEL = useLovableGateway() ? "google/gemini-3.1-flash-lite" : "gpt-4o-mini";
+const DEFAULT_DEEP_MODEL = useLovableGateway() ? "google/gemini-3.1-pro-preview" : "gpt-4o";
+const DEFAULT_IMAGE_MODEL = useLovableGateway() ? "openai/gpt-image-1" : "gpt-image-1";
+const DEFAULT_EMBEDDING_MODEL = useLovableGateway()
+  ? "openai/text-embedding-3-small"
+  : "text-embedding-3-small";
 const DEFAULT_TIMEOUT_MS = 45_000;
 
 const DEFAULT_CAPABILITIES: ProviderCapability[] = [
