@@ -327,6 +327,7 @@ function ChatMessageInner({
         item_type: (codeRatio ? "code" : "chat_artifact") as "code" | "chat_artifact",
         source: "chat" as const,
         content_text: message.content.slice(0, 100_000),
+        dedupe_key: message.id || undefined,
       };
       if (isSignedIn) {
         await saveFn({ data: payload });

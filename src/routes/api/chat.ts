@@ -575,6 +575,26 @@ export const Route = createFileRoute("/api/chat")({
               if (!isOwner) callerTier = await getCallerTier(auth);
             }
 
+            let verifiedProjectId: string | undefined;
+            if (projectId !== undefined) {
+              if (typeof projectId !== "string" || !/^[0-9a-f-]{36}$/i.test(projectId)) {
+                return Response.json({ error: "Invalid project." }, { status: 400 });
+              }
+              if (!auth) return unauthorized("Sign in to use a project workspace.");
+              const admin = auth.supabaseAdmin as unknown as SupabaseAdminLike;
+              const { data: isMember } = await admin.rpc("is_project_member", {
+                _user_id: auth.userId,
+                _project_id: projectId,
+              });
+              if (isMember !== true) {
+                return Response.json(
+                  { error: "You do not have access to this project." },
+                  { status: 403 },
+                );
+              }
+              verifiedProjectId = projectId;
+            }
+
             // Image generation requires an account. For signed-out users,
             // silently fall through to normal chat so the model can respond
             // in text (esp. important when the user *explicitly declined* an
@@ -685,10 +705,7 @@ export const Route = createFileRoute("/api/chat")({
                         auth.supabaseAdmin as unknown as import("@/lib/ai/deep-research.server").ResearchPersistence["supabase"],
                       userId: auth.userId,
                       chatId,
-                      projectId:
-                        typeof projectId === "string" && /^[0-9a-f-]{36}$/i.test(projectId)
-                          ? projectId
-                          : undefined,
+                      projectId: verifiedProjectId,
                       temporary: Boolean(temporary),
                     }
                   : undefined,
@@ -839,84 +856,77 @@ export const Route = createFileRoute("/api/chat")({
             // Injects project instructions, project memory, and top-k retrieved
             // knowledge-base chunks matched against the user's last message.
             let projectBlock = "";
-            if (auth && typeof projectId === "string" && /^[0-9a-f-]{36}$/i.test(projectId)) {
+            if (auth && verifiedProjectId) {
               try {
                 const admin = auth.supabaseAdmin as unknown as SupabaseAdminLike;
-                // Verify caller is a member of the project.
-                const { data: isMember } = await admin.rpc("is_project_member", {
-                  _user_id: auth.userId,
-                  _project_id: projectId,
-                });
-                if (isMember === true) {
-                  const projRes = await admin
-                    .from("projects")
-                    .select("id, name, system_prompt")
-                    .eq("id", projectId)
-                    .maybeSingle();
-                  const proj = projRes?.data as {
-                    id: string;
-                    name: string;
-                    system_prompt: string | null;
-                  } | null;
-                  if (proj) {
-                    const parts: string[] = [];
+                const projRes = await admin
+                  .from("projects")
+                  .select("id, name, system_prompt")
+                  .eq("id", verifiedProjectId)
+                  .maybeSingle();
+                const proj = projRes?.data as {
+                  id: string;
+                  name: string;
+                  system_prompt: string | null;
+                } | null;
+                if (proj) {
+                  const parts: string[] = [];
+                  parts.push(
+                    `You are working inside the KovaGPT project "${proj.name}". Everything below applies only to this project workspace.`,
+                  );
+                  if (proj.system_prompt && proj.system_prompt.trim()) {
                     parts.push(
-                      `You are working inside the KovaGPT project "${proj.name}". Everything below applies only to this project workspace.`,
+                      `Project instructions (highest priority for this workspace):\n${proj.system_prompt.trim()}`,
                     );
-                    if (proj.system_prompt && proj.system_prompt.trim()) {
-                      parts.push(
-                        `Project instructions (highest priority for this workspace):\n${proj.system_prompt.trim()}`,
-                      );
-                    }
-                    const memRes = await admin
-                      .from("project_memory")
-                      .select("content")
-                      .eq("project_id", projectId)
-                      .order("created_at", { ascending: false })
-                      .limit(20);
-                    const memRows = (memRes?.data as Array<{ content: string }> | null) ?? [];
-                    if (memRows.length > 0) {
-                      parts.push(
-                        "Project memory (facts the user has saved about this project - honor them):\n" +
-                          memRows.map((r, i) => `${i + 1}. ${r.content}`).join("\n"),
-                      );
-                    }
-                    // RAG over uploaded documents. Build a plain-text query.
-                    const lastUser = [...messages].reverse().find((mm) => mm.role === "user");
-                    let q = "";
-                    if (lastUser) {
-                      const c: unknown = (lastUser as { content: unknown }).content;
-                      if (typeof c === "string") q = c;
-                      else if (Array.isArray(c)) {
-                        q = c
-                          .map((p) => {
-                            const part = p as { text?: unknown } | null;
-                            return typeof part?.text === "string" ? part.text : "";
-                          })
-                          .join(" ");
-                      }
-                    }
-                    if (q.trim()) {
-                      const { retrieveProjectContext } = await import("@/lib/project-rag.server");
-                      const chunks = await retrieveProjectContext({
-                        supabase: admin,
-                        project_id: projectId,
-                        query: q,
-                        k: 6,
-                      });
-                      const rel = chunks.filter((c) => c.similarity > 0.15).slice(0, 6);
-                      if (rel.length > 0) {
-                        parts.push(
-                          "Relevant excerpts from this project's uploaded files (use as ground truth when the user's question maps to them; never invent content not present):\n" +
-                            rel.map((c, i) => `[Excerpt ${i + 1}]\n${c.content}`).join("\n\n"),
-                        );
-                      }
-                    }
-                    projectBlock =
-                      "\n\n--- PROJECT CONTEXT ---\n" +
-                      parts.join("\n\n") +
-                      "\n--- END PROJECT CONTEXT ---";
                   }
+                  const memRes = await admin
+                    .from("project_memory")
+                    .select("content")
+                    .eq("project_id", verifiedProjectId)
+                    .order("created_at", { ascending: false })
+                    .limit(20);
+                  const memRows = (memRes?.data as Array<{ content: string }> | null) ?? [];
+                  if (memRows.length > 0) {
+                    parts.push(
+                      "Project memory (facts the user has saved about this project - honor them):\n" +
+                        memRows.map((r, i) => `${i + 1}. ${r.content}`).join("\n"),
+                    );
+                  }
+                  // RAG over uploaded documents. Build a plain-text query.
+                  const lastUser = [...messages].reverse().find((mm) => mm.role === "user");
+                  let q = "";
+                  if (lastUser) {
+                    const c: unknown = (lastUser as { content: unknown }).content;
+                    if (typeof c === "string") q = c;
+                    else if (Array.isArray(c)) {
+                      q = c
+                        .map((p) => {
+                          const part = p as { text?: unknown } | null;
+                          return typeof part?.text === "string" ? part.text : "";
+                        })
+                        .join(" ");
+                    }
+                  }
+                  if (q.trim()) {
+                    const { retrieveProjectContext } = await import("@/lib/project-rag.server");
+                    const chunks = await retrieveProjectContext({
+                      supabase: admin,
+                      project_id: verifiedProjectId,
+                      query: q,
+                      k: 6,
+                    });
+                    const rel = chunks.filter((c) => c.similarity > 0.15).slice(0, 6);
+                    if (rel.length > 0) {
+                      parts.push(
+                        "Relevant excerpts from this project's uploaded files (use as ground truth when the user's question maps to them; never invent content not present):\n" +
+                          rel.map((c, i) => `[Excerpt ${i + 1}]\n${c.content}`).join("\n\n"),
+                      );
+                    }
+                  }
+                  projectBlock =
+                    "\n\n--- PROJECT CONTEXT ---\n" +
+                    parts.join("\n\n") +
+                    "\n--- END PROJECT CONTEXT ---";
                 }
               } catch (e) {
                 console.warn("[chat] project context failed", (e as Error)?.message);

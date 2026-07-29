@@ -6,6 +6,8 @@ import {
   BriefcaseBusiness,
   Calendar,
   Clock3,
+  Cloud,
+  HardDrive,
   Copy as CopyIcon,
   CreditCard,
   FolderKanban,
@@ -63,6 +65,7 @@ export function Sidebar({
   onDelete,
   onShare,
   onDuplicate,
+  onRename,
   onArchive,
   onTogglePin,
   open,
@@ -78,6 +81,7 @@ export function Sidebar({
   onDelete: (id: string) => void;
   onShare?: (id: string) => void;
   onDuplicate?: (id: string) => void;
+  onRename?: (id: string, title: string) => void;
   onArchive?: (id: string) => void;
   onTogglePin?: (id: string) => void;
   open: boolean;
@@ -261,6 +265,16 @@ export function Sidebar({
             {onDuplicate ? (
               <DropdownMenuItem onClick={() => onDuplicate(c.id)}>
                 <CopyIcon className="mr-2 h-4 w-4" /> Duplicate
+              </DropdownMenuItem>
+            ) : null}
+            {onRename ? (
+              <DropdownMenuItem
+                onClick={() => {
+                  const title = window.prompt("Rename chat", c.title)?.trim();
+                  if (title && title !== c.title) onRename(c.id, title.slice(0, 200));
+                }}
+              >
+                <SquarePen className="mr-2 h-4 w-4" /> Rename
               </DropdownMenuItem>
             ) : null}
             {onArchive ? (
@@ -484,8 +498,16 @@ export function Sidebar({
                         {pinned.map(renderRow)}
                       </>
                     ) : null}
-                    <div className="px-5 pb-1.5 pt-4 text-[13px] font-medium text-muted-foreground">
-                      Recent chats
+                    <div className="flex items-center justify-between gap-2 px-5 pb-1.5 pt-4 text-[13px] font-medium text-muted-foreground">
+                      <span>Recent chats</span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-normal">
+                        {isSignedIn ? (
+                          <Cloud className="h-3 w-3" />
+                        ) : (
+                          <HardDrive className="h-3 w-3" />
+                        )}
+                        {isSignedIn ? "Cloud" : "This device"}
+                      </span>
                     </div>
                     {recents.length === 0 ? (
                       <div className="px-5 py-2 text-sm text-muted-foreground">No recent chats</div>

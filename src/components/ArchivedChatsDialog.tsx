@@ -12,10 +12,12 @@ export function ArchivedChatsDialog({
   open,
   onClose,
   onRestore,
+  onPermanentDelete,
 }: {
   open: boolean;
   onClose: () => void;
   onRestore: (conversation: Conversation) => void;
+  onPermanentDelete?: (conversations: Conversation[]) => void;
 }) {
   const [items, setItems] = useState<Conversation[]>([]);
   const [query, setQuery] = useState("");
@@ -50,7 +52,7 @@ export function ArchivedChatsDialog({
               Archived chats
             </h2>
             <p className="text-xs text-muted-foreground">
-              Restore a conversation or delete it permanently from this device.
+              Restore a conversation or delete it permanently from your history.
             </p>
           </div>
           <button onClick={onClose} className="ml-auto p-2" aria-label="Close archived chats">
@@ -65,6 +67,7 @@ export function ArchivedChatsDialog({
               onClick={() => {
                 if (!window.confirm(`Permanently delete all ${items.length} archived chats?`))
                   return;
+                onPermanentDelete?.(items);
                 saveArchivedConversations([]);
                 setItems([]);
               }}
@@ -95,6 +98,7 @@ export function ArchivedChatsDialog({
               </span>
               <button
                 onClick={() => {
+                  onPermanentDelete?.([chat]);
                   removeArchivedConversation(chat.id);
                   onRestore(chat);
                   setItems((all) => all.filter((item) => item.id !== chat.id));

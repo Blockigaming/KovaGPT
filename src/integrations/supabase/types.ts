@@ -1060,6 +1060,7 @@ export type Database = {
         Row: {
           content_text: string | null;
           created_at: string;
+          dedupe_key: string | null;
           file_name: string | null;
           file_size: number | null;
           file_type: string | null;
@@ -1075,6 +1076,7 @@ export type Database = {
         Insert: {
           content_text?: string | null;
           created_at?: string;
+          dedupe_key?: string | null;
           file_name?: string | null;
           file_size?: number | null;
           file_type?: string | null;
@@ -1090,6 +1092,7 @@ export type Database = {
         Update: {
           content_text?: string | null;
           created_at?: string;
+          dedupe_key?: string | null;
           file_name?: string | null;
           file_size?: number | null;
           file_type?: string | null;
@@ -1101,6 +1104,36 @@ export type Database = {
           title?: string;
           updated_at?: string;
           user_id?: string;
+        };
+        Relationships: [];
+      };
+      user_conversations: {
+        Row: {
+          archived: boolean;
+          client_updated_at: number;
+          conversation_id: string;
+          deleted: boolean;
+          owner_id: string;
+          payload: Json;
+          server_updated_at: string;
+        };
+        Insert: {
+          archived?: boolean;
+          client_updated_at: number;
+          conversation_id: string;
+          deleted?: boolean;
+          owner_id: string;
+          payload?: Json;
+          server_updated_at?: string;
+        };
+        Update: {
+          archived?: boolean;
+          client_updated_at?: number;
+          conversation_id?: string;
+          deleted?: boolean;
+          owner_id?: string;
+          payload?: Json;
+          server_updated_at?: string;
         };
         Relationships: [];
       };
@@ -1183,6 +1216,10 @@ export type Database = {
         Args: { _project_id: string; _user_id: string };
         Returns: boolean;
       };
+      sync_my_conversations: {
+        Args: { p_rows: Json };
+        Returns: { client_updated_at: number; conversation_id: string }[];
+      };
       match_project_chunks: {
         Args: {
           _project_id: string;
@@ -1250,12 +1287,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals;
 }
@@ -1275,13 +1312,12 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals;
 }
@@ -1300,13 +1336,12 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+    keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals;
 }
@@ -1325,13 +1360,12 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    keyof DefaultSchema["Enums"] | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals;
 }
@@ -1342,13 +1376,12 @@ export type Enums<
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    keyof DefaultSchema["CompositeTypes"] | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals;
 }

@@ -5,6 +5,7 @@ const projects = new Set(["phone-390x844", "desktop-1440x900"]);
 test.beforeEach(async ({ page }, testInfo) => {
   test.skip(!projects.has(testInfo.project.name));
   await page.addInitScript(() => {
+    if (localStorage.getItem("nova-gpt-conversations-v2")) return;
     const now = Date.now();
     localStorage.setItem(
       "nova-gpt-conversations-v2",
@@ -214,4 +215,26 @@ test("chat API rejects malformed text attachments at the server boundary", async
   await expect(response.json()).resolves.toEqual(
     expect.objectContaining({ error: "Invalid text file attachment." }),
   );
+});
+
+test("device chat rename survives reload and remains clearly device scoped", async ({ page }) => {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  if (page.viewportSize()!.width < 1024) {
+    await page.getByRole("button", { name: "Open menu" }).click();
+  }
+  await expect(page.getByText("This device", { exact: true })).toBeVisible();
+  const row = page.locator(".kova-chat-row", { hasText: "Editable conversation" });
+  await row.getByRole("button", { name: "Chat options" }).click();
+  page.once("dialog", (dialog) => dialog.accept("Quarterly planning"));
+  await page.getByRole("menuitem", { name: "Rename" }).click();
+  await expect(page.locator(".kova-chat-row", { hasText: "Quarterly planning" })).toBeVisible();
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("nova-gpt-conversations-v2") ?? ""))
+    .toContain("Quarterly planning");
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  if (page.viewportSize()!.width < 1024) {
+    await page.getByRole("button", { name: "Open menu" }).click();
+  }
+  await expect(page.locator(".kova-chat-row", { hasText: "Quarterly planning" })).toBeVisible();
 });
