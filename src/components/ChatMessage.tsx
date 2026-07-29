@@ -387,8 +387,8 @@ function ChatMessageInner({
       aria-label={isUser ? "Your message" : "KovaGPT response"}
     >
       {isUser ? (
-        <div className="mx-auto flex max-w-[48rem] justify-end [[data-sidebar=closed]_&]:max-w-[52rem]">
-          <div className="flex min-w-0 max-w-[88%] flex-col items-end sm:max-w-[78%] lg:max-w-[72%]">
+        <div className="mx-auto flex max-w-[48rem] justify-end">
+          <div className="flex min-w-0 max-w-[88%] flex-col items-end sm:max-w-[78%] lg:max-w-[76%]">
             {message.attachments && message.attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2 justify-end">
                 {message.attachments
@@ -402,13 +402,13 @@ function ChatMessageInner({
                           ? `User-uploaded image: ${message.content.slice(0, 120)}`
                           : "User-uploaded image attached to message"
                       }
-                      className="max-h-64 rounded-2xl border border-border"
+                      className="max-h-64 rounded-lg border border-border"
                     />
                   ))}
               </div>
             )}
             {message.content && (
-              <div className="prose-chat whitespace-pre-wrap break-words rounded-[1.15rem] rounded-br-[.35rem] bg-[var(--user-bubble)] px-4 py-2.5 text-foreground shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--foreground)_3%,transparent)]">
+              <div className="prose-chat whitespace-pre-wrap break-words rounded-lg border border-border/60 bg-[var(--user-bubble)] px-3.5 py-2.5 text-foreground">
                 {message.content}
               </div>
             )}
@@ -425,7 +425,7 @@ function ChatMessageInner({
           </div>
         </div>
       ) : (
-        <div className="mx-auto flex max-w-[48rem] animate-fade-up items-start justify-start [[data-sidebar=closed]_&]:max-w-[52rem]">
+        <div className="mx-auto flex max-w-[48rem] animate-fade-up items-start justify-start">
           <div
             className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text"
             onTouchStart={startLongPress}
@@ -537,10 +537,10 @@ function ChatMessageInner({
           </div>
         </div>
       )}
-      <div className="mx-auto max-w-[48rem] [[data-sidebar=closed]_&]:max-w-[52rem]">
+      <div className="mx-auto max-w-[48rem]">
         <div className={isUser ? "flex justify-end" : "flex justify-start"}>
           {!streaming && !isUser && message.content && (
-            <div className="kova-message-actions mt-1 transition-opacity lg:opacity-60 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
+            <div className="kova-message-actions mt-1 max-w-full overflow-x-auto transition-opacity lg:opacity-60 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
               {/* Visible: Copy, Thumbs up, Thumbs down, Share */}
               <button
                 onClick={copy}

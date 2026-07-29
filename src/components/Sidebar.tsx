@@ -22,11 +22,12 @@ import {
   Plug,
   ScrollText,
   Search,
+  ScanSearch,
   Settings as SettingsIcon,
   Share2,
   SquarePen,
   Trash2,
-  Users,
+  X,
   Orbit,
   type LucideIcon,
 } from "lucide-react";
@@ -46,8 +47,8 @@ import { useTier } from "@/hooks/useTier";
 import type { Conversation } from "@/lib/chat-store";
 import { searchConversations } from "@/lib/conversation-search";
 
-const EXPANDED_WIDTH = 280;
-const COLLAPSED_WIDTH = 72;
+const EXPANDED_WIDTH = 260;
+const COLLAPSED_WIDTH = 64;
 const MOBILE_DRAWER_WIDTH = "min(88vw, 340px)";
 
 function isMobileViewport() {
@@ -64,7 +65,6 @@ export function Sidebar({
   onDuplicate,
   onArchive,
   onTogglePin,
-  onAddMembers,
   open,
   onToggle,
   onOpenSettings,
@@ -80,7 +80,6 @@ export function Sidebar({
   onDuplicate?: (id: string) => void;
   onArchive?: (id: string) => void;
   onTogglePin?: (id: string) => void;
-  onAddMembers?: (id: string) => void;
   open: boolean;
   onToggle: () => void;
   onOpenSettings: (tab?: string) => void;
@@ -151,7 +150,7 @@ export function Sidebar({
   const labelClass = collapsed ? "sr-only lg:sr-only" : "truncate";
   const iconOnly = collapsed ? "justify-center px-0" : "gap-3 px-2.5";
   const navItemClass = (active: boolean) =>
-    `relative flex min-h-11 items-center rounded-xl py-2 text-[14px] transition-colors duration-150 active:scale-[0.99] ${iconOnly} ${
+    `relative flex min-h-10 items-center rounded-md py-1.5 text-[13.5px] transition-colors duration-150 active:scale-[0.99] ${iconOnly} ${
       active
         ? "bg-sidebar-active text-foreground font-medium"
         : "text-sidebar-foreground hover:bg-sidebar-hover"
@@ -160,7 +159,7 @@ export function Sidebar({
     on ? (
       <span
         aria-hidden="true"
-        className="absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-r-full bg-foreground/50"
+        className="absolute -left-2.5 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r bg-[var(--kova-blue)]"
       />
     ) : null;
 
@@ -190,8 +189,10 @@ export function Sidebar({
   const renderRow = (c: Conversation) => (
     <div
       key={c.id}
-      className={`group mx-2 my-0.5 flex min-h-10 cursor-pointer items-center gap-1 rounded-xl px-3 py-2 text-[14px] transition ${
-        activeId === c.id ? "bg-sidebar-hover" : "hover:bg-sidebar-hover/60"
+      className={`group relative mx-2 my-0.5 flex min-h-9 cursor-pointer items-center gap-1 rounded-md px-2.5 py-1.5 text-[13px] transition ${
+        activeId === c.id
+          ? "bg-sidebar-active before:absolute before:-left-2 before:h-5 before:w-0.5 before:bg-[var(--kova-blue)]"
+          : "hover:bg-sidebar-hover/60"
       } ${collapsed ? "lg:justify-center lg:px-0" : ""}`}
       onClick={() => {
         onSelect(c.id);
@@ -257,11 +258,6 @@ export function Sidebar({
                 <Share2 className="mr-2 h-4 w-4" /> Share
               </DropdownMenuItem>
             ) : null}
-            {showSignedIn && onAddMembers ? (
-              <DropdownMenuItem onClick={() => onAddMembers(c.id)}>
-                <Users className="mr-2 h-4 w-4" /> Add members
-              </DropdownMenuItem>
-            ) : null}
             {onDuplicate ? (
               <DropdownMenuItem onClick={() => onDuplicate(c.id)}>
                 <CopyIcon className="mr-2 h-4 w-4" /> Duplicate
@@ -313,50 +309,57 @@ export function Sidebar({
         role={open && isMobileViewport() ? "dialog" : "navigation"}
       >
         <div className="flex h-full min-w-[var(--sidebar-collapsed)] flex-col overflow-hidden">
-          <div
-            className={`relative z-20 flex min-h-[52px] items-center bg-sidebar/90 px-2.5 pt-[var(--safe-top)] ${collapsed ? "lg:justify-center" : "gap-2"}`}
-          >
-            <div
-              className={`flex min-w-0 flex-1 items-center gap-2 ${collapsed ? "lg:flex-none" : ""}`}
-            >
-              <span className="inline-flex shrink-0 rounded-full dark:bg-black dark:p-[2px] dark:ring-1 dark:ring-black">
-                <NovaLogo className="h-7 w-7" animated />
-              </span>
-              <span
-                className={
-                  collapsed
-                    ? "sr-only"
-                    : "truncate font-display text-[17px] font-semibold tracking-tight"
-                }
-              >
-                KovaGPT
-              </span>
-            </div>
-            <div
-              className={`ml-auto flex shrink-0 items-center gap-1 ${collapsed ? "lg:ml-0" : ""}`}
-            >
-              <button
-                onClick={() => setSearchOpen((v) => !v)}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label="Search chats"
-                title="Search chats"
-              >
-                <Search className="h-[18px] w-[18px]" />
-              </button>
+          <div className="relative z-20 flex min-h-[52px] items-center gap-1 bg-sidebar/90 px-2.5 pt-[var(--safe-top)]">
+            {collapsed ? (
               <button
                 onClick={onToggle}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
-                title={open ? "Collapse sidebar" : "Expand sidebar"}
+                className="mx-auto hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:flex"
+                aria-label="Expand sidebar"
+                title="Expand sidebar"
               >
-                <PanelLeft className="h-[18px] w-[18px]" />
+                <NovaLogo className="h-6 w-6" />
               </button>
-            </div>
+            ) : (
+              <>
+                <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
+                  <span className="inline-flex shrink-0">
+                    <NovaLogo className="h-6 w-6" />
+                  </span>
+                  <span className="truncate font-display text-[15px] font-semibold tracking-[-0.01em]">
+                    KovaGPT
+                  </span>
+                </div>
+                <button
+                  onClick={() => setSearchOpen((v) => !v)}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label="Search chats"
+                  title="Search chats"
+                >
+                  <Search className="h-[17px] w-[17px]" />
+                </button>
+                <button
+                  onClick={onToggle}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+                  aria-label="Close navigation"
+                  title="Close navigation"
+                >
+                  <X className="h-[18px] w-[18px]" />
+                </button>
+                <button
+                  onClick={onToggle}
+                  className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:flex"
+                  aria-label="Collapse sidebar"
+                  title="Collapse sidebar"
+                >
+                  <PanelLeft className="h-[17px] w-[17px]" />
+                </button>
+              </>
+            )}
           </div>
 
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-0 z-10 h-20 bg-gradient-to-b from-sidebar via-sidebar/90 to-transparent"
+            className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px bg-border"
           />
 
           {searchOpen && !collapsed ? (
@@ -397,6 +400,19 @@ export function Sidebar({
             >
               <Search className="h-[18px] w-[18px] shrink-0" />
               <span className={labelClass}>Search</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent("kova-open-lens"));
+                closeAfterMobileNavigation();
+              }}
+              className={`kova-nav-row ${iconOnly}`}
+              aria-label="Open Kova Lens"
+              title="Open Kova Lens"
+            >
+              <ScanSearch className="h-[18px] w-[18px] shrink-0" />
+              <span className={labelClass}>Kova Lens</span>
             </button>
             {onOpenArchived ? (
               <button
@@ -449,7 +465,7 @@ export function Sidebar({
                     {Array.from({ length: 5 }).map((_, i) => (
                       <div
                         key={i}
-                        className="mx-2 h-8 rounded-xl bg-sidebar-hover/50 animate-pulse"
+                        className="mx-2 h-8 rounded-md bg-sidebar-hover/50 animate-pulse"
                         style={{ opacity: 1 - i * 0.15 }}
                       />
                     ))}
@@ -503,7 +519,7 @@ export function Sidebar({
                     onOpenSettings("general");
                     closeAfterMobileNavigation();
                   }}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sidebar-hover transition hover:bg-sidebar-hover/80 active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label="Settings"
                   title="Settings"
                 >
@@ -514,7 +530,7 @@ export function Sidebar({
                     onOpenHelp();
                     closeAfterMobileNavigation();
                   }}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sidebar-hover transition hover:bg-sidebar-hover/80 active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label="Help"
                   title="Help"
                 >

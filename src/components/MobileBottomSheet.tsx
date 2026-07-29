@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 /**
@@ -102,11 +103,6 @@ export function MobileBottomSheet({
   };
   const onTouchEnd = () => {
     if (dragY > 90) {
-      try {
-        navigator.vibrate?.(10);
-      } catch {
-        /* ignore */
-      }
       onOpenChange(false);
     }
     setDragY(0);
@@ -115,9 +111,9 @@ export function MobileBottomSheet({
 
   const transform = dragY > 0 ? `translateY(${dragY}px)` : undefined;
   const transition =
-    reduceMotion || dragY > 0 ? "none" : "transform 220ms cubic-bezier(0.32, 0.72, 0, 1)";
+    reduceMotion || dragY > 0 ? "none" : "transform 180ms cubic-bezier(0.2, 0, 0, 1)";
 
-  return (
+  const sheet = (
     <div
       role="dialog"
       aria-modal="true"
@@ -135,7 +131,7 @@ export function MobileBottomSheet({
         ref={sheetRef}
         tabIndex={-1}
         style={{ transform, transition, paddingBottom: "env(safe-area-inset-bottom)" }}
-        className="absolute inset-x-0 bottom-0 flex max-h-[88dvh] flex-col rounded-t-[var(--kova-radius-panel)] border-t border-border/80 bg-popover/96 text-popover-foreground shadow-[var(--shadow-floating)] backdrop-blur-xl animate-in slide-in-from-bottom duration-[var(--motion-menu)]"
+        className="absolute inset-x-0 bottom-0 flex max-h-[min(88dvh,44rem)] flex-col overflow-hidden rounded-t-[var(--kova-radius-panel)] border-t border-border/80 bg-popover/96 text-popover-foreground shadow-[var(--shadow-floating)] backdrop-blur-xl animate-in slide-in-from-bottom duration-[var(--motion-menu)]"
       >
         <div
           className="flex shrink-0 touch-none justify-center pb-2 pt-2.5 cursor-grab active:cursor-grabbing"
@@ -166,10 +162,15 @@ export function MobileBottomSheet({
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="overflow-y-auto overscroll-contain px-2 pb-4 [scrollbar-gutter:stable]">
+        <div className="min-h-0 overflow-y-auto overscroll-contain px-[max(.5rem,var(--safe-left))] pb-4 pr-[max(.5rem,var(--safe-right))] [scrollbar-gutter:stable]">
           {children}
         </div>
       </div>
     </div>
   );
+
+  // The composer uses backdrop filtering, which creates a containing block for
+  // fixed descendants. Portaling keeps the sheet anchored to the visual viewport
+  // in landscape and while the on-screen keyboard changes the page geometry.
+  return typeof document === "undefined" ? null : createPortal(sheet, document.body);
 }

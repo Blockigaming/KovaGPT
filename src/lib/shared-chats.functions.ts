@@ -72,7 +72,7 @@ export const listMySharedChats = createServerFn({ method: "GET" })
       .limit(200);
     if (error) {
       console.error("[listMySharedChats]", error.message);
-      return [];
+      throw new Error("Shared chats could not be loaded. Please try again.");
     }
     return (data ?? []) as SharedChatSummary[];
   });
@@ -89,7 +89,7 @@ export const listSharedWithMe = createServerFn({ method: "GET" })
       .limit(200);
     if (error) {
       console.error("[listSharedWithMe]", error.message);
-      return [];
+      throw new Error("Chats shared with you could not be loaded. Please try again.");
     }
     // Exclude shares I created myself (owner sees them via My shares).
     return (data ?? [])
