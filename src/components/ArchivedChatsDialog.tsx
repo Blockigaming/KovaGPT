@@ -3,6 +3,7 @@ import { ArchiveRestore, Search, Trash2, X } from "lucide-react";
 import {
   loadArchivedConversations,
   removeArchivedConversation,
+  saveArchivedConversations,
   type Conversation,
 } from "@/lib/chat-store";
 import { searchConversations } from "@/lib/conversation-search";
@@ -19,8 +20,14 @@ export function ArchivedChatsDialog({
   const [items, setItems] = useState<Conversation[]>([]);
   const [query, setQuery] = useState("");
   useEffect(() => {
-    if (open) setItems(loadArchivedConversations());
-  }, [open]);
+    if (!open) return;
+    setItems(loadArchivedConversations());
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose]);
   if (!open) return null;
   const visible = query.trim()
     ? searchConversations(items, query).map((result) => result.conversation)
@@ -50,6 +57,22 @@ export function ArchivedChatsDialog({
             <X className="h-4 w-4" />
           </button>
         </header>
+        {items.length > 0 && (
+          <div className="flex justify-end border-b px-3 py-2">
+            <button
+              type="button"
+              className="rounded-md px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={() => {
+                if (!window.confirm(`Permanently delete all ${items.length} archived chats?`))
+                  return;
+                saveArchivedConversations([]);
+                setItems([]);
+              }}
+            >
+              Delete all archived
+            </button>
+          </div>
+        )}
         <label className="relative m-3 block">
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <span className="sr-only">Search archived chats</span>

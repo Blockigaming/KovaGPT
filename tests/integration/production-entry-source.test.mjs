@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import test from "node:test";
 
 const viteConfig = await readFile("vite.config.ts", "utf8");
@@ -22,4 +24,41 @@ test("production bundles TanStack's H3 routing graph instead of importing it at 
     const output = await readFile(`dist/server/${file}`, "utf8");
     assert.doesNotMatch(output, /(?:from\s*|import\s*)["'](?:h3-v2|rou3)["']/, file);
   }
+});
+
+test("every generated bare server import is a declared production dependency", async () => {
+  const manifest = JSON.parse(packageJson);
+  const serverFiles = await readdir("dist/server", { recursive: true });
+  const external = new Set();
+  for (const file of serverFiles.filter((entry) => entry.endsWith(".js"))) {
+    const output = await readFile(`dist/server/${file}`, "utf8");
+    for (const line of output.split("\n")) {
+      const match = line.match(/^import\s+(?:[^"']+\s+from\s+)?["']([^"']+)["'];?$/);
+      const specifier = match?.[1];
+      if (!specifier || specifier.startsWith(".") || specifier.startsWith("node:")) continue;
+      const packageName = specifier.startsWith("@")
+        ? specifier.split("/").slice(0, 2).join("/")
+        : specifier.split("/")[0];
+      external.add(packageName);
+    }
+  }
+  for (const dependency of external) {
+    assert.ok(manifest.dependencies[dependency], `${dependency} must be a production dependency`);
+  }
+  for (const required of [
+    "react",
+    "react-dom",
+    "@tanstack/history",
+    "@tanstack/router-core",
+    "seroval",
+    "srvx",
+  ]) {
+    assert.ok(external.has(required), `${required} should be covered by the server import audit`);
+  }
+});
+
+test("generated production server entry can be imported by Node", async () => {
+  const entry = `${pathToFileURL(resolve("dist/server/server.js")).href}?audit=${Date.now()}`;
+  const loaded = await import(entry);
+  assert.equal(typeof loaded.default?.fetch, "function");
 });

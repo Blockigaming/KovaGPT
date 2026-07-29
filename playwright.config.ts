@@ -37,10 +37,18 @@ export default defineConfig({
       use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
     },
     {
+      name: "phone-412x915",
+      use: { viewport: { width: 412, height: 915 }, isMobile: true, hasTouch: true },
+    },
+    {
       name: "phone-430x932",
       use: { viewport: { width: 430, height: 932 }, isMobile: true, hasTouch: true },
     },
     { name: "tablet-768x1024", use: { viewport: { width: 768, height: 1024 }, hasTouch: true } },
+    {
+      name: "phone-landscape-844x390",
+      use: { viewport: { width: 844, height: 390 }, hasTouch: true },
+    },
     { name: "tablet-1024x768", use: { viewport: { width: 1024, height: 768 }, hasTouch: true } },
     { name: "desktop-1280x800", use: { viewport: { width: 1280, height: 800 } } },
     { name: "desktop-1440x900", use: { viewport: { width: 1440, height: 900 } } },
