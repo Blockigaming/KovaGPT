@@ -18,6 +18,7 @@ import {
   GitBranch,
   Globe,
   Mail,
+  FileText,
 } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileBottomSheet } from "./MobileBottomSheet";
@@ -377,6 +378,25 @@ function ChatMessageInner({
                       }
                       className="max-h-64 rounded-lg border border-border"
                     />
+                  ))}
+                {message.attachments
+                  .filter((attachment) => attachment.kind !== "image")
+                  .map((attachment) => (
+                    <span
+                      key={
+                        attachment.kind === "library_file"
+                          ? attachment.libraryItemId
+                          : `${attachment.name}:${attachment.size ?? 0}`
+                      }
+                      className="inline-flex min-h-10 max-w-full items-center gap-2 rounded-lg border border-border/70 bg-muted/55 px-3 py-2 text-xs text-foreground"
+                      title={attachment.name}
+                    >
+                      <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="max-w-48 truncate">{attachment.name}</span>
+                      <span className="shrink-0 text-[10px] uppercase text-muted-foreground">
+                        {attachment.kind === "library_file" ? "Library" : "Attached"}
+                      </span>
+                    </span>
                   ))}
               </div>
             )}

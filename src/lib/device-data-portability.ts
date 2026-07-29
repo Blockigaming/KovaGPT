@@ -35,6 +35,10 @@ function validateMessage(value: unknown): value is Message {
           !/^data:image\/(png|jpeg|webp|gif);base64,/.test(attachment.dataUrl)
         )
           return false;
+      } else if (attachment.kind === "text_file") {
+        if (typeof attachment.name !== "string" || attachment.name.length > 500) return false;
+        if (typeof attachment.content !== "string" || attachment.content.length > 256 * 1024)
+          return false;
       } else if (attachment.kind === "library_file") {
         if (typeof attachment.libraryItemId !== "string" || attachment.libraryItemId.length > 200)
           return false;

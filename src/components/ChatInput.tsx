@@ -27,8 +27,9 @@ import { ResponsiveModelSelector as ModelSelector } from "@/components/Responsiv
 import type { ModeId, Tier } from "@/lib/modes";
 
 export type PendingAttachment = {
-  kind: "image" | "library_file";
+  kind: "image" | "text_file" | "library_file";
   dataUrl: string;
+  textContent?: string;
   name: string;
   size?: number;
   status?: "selected" | "uploading" | "complete" | "failed";
@@ -54,7 +55,7 @@ export type ComposerToolId =
 const TEXT_LIKE_EXT =
   /\.(txt|md|markdown|csv|tsv|json|jsonl|ya?ml|toml|xml|html?|css|scss|less|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|h|cc|cpp|hpp|cs|php|sql|sh|bash|zsh|fish|env|ini|conf|log|srt|vtt)$/i;
 const MAX_TEXT_FILE_BYTES = 256 * 1024; // 256 KB inline cap to keep prompts reasonable
-const MAX_IMAGE_FILE_BYTES = 10 * 1024 * 1024; // 10 MB image preview cap
+const MAX_IMAGE_FILE_BYTES = 3 * 1024 * 1024; // bounded for inline vision requests and device history
 
 export function ChatInput({
   value,
@@ -194,6 +195,18 @@ export function ChatInput({
   const triggerSubmit = () => {
     if (submittingRef.current || isStreaming) return;
     if (!value.trim() && attachments.length === 0) return;
+    const blocked = attachments.find(
+      (attachment) => attachment.status === "uploading" || attachment.status === "failed",
+    );
+    if (blocked) {
+      const message =
+        blocked.status === "uploading"
+          ? `Wait for ${blocked.name} to finish.`
+          : `Remove or retry ${blocked.name} before sending.`;
+      setUploadAnnouncement(message);
+      toast.error(message);
+      return;
+    }
     submittingRef.current = true;
     setSendFlash(true);
     setUploadAnnouncement("Message submitted");
@@ -285,11 +298,21 @@ export function ChatInput({
 
   async function addFiles(files: File[]) {
     if (files.length === 0) return;
-    let nextValue = value;
+    const availableSlots = Math.max(0, 2 - attachments.length);
+    if (availableSlots === 0) {
+      setUploadAnnouncement("Remove an attachment before adding another.");
+      toast.error("You can attach up to 2 files per message.");
+      return;
+    }
+    if (files.length > availableSlots) {
+      toast.message(
+        `Only the first ${availableSlots} file${availableSlots === 1 ? "" : "s"} was added.`,
+      );
+    }
     let nextAttachments = [...attachments];
     const seen = new Set(nextAttachments.map((a) => `${a.name}:${a.size ?? 0}`));
 
-    for (const f of files) {
+    for (const f of files.slice(0, availableSlots)) {
       const isImage = f.type.startsWith("image/");
       const isTextLike =
         f.type.startsWith("text/") || f.type === "application/json" || TEXT_LIKE_EXT.test(f.name);
@@ -309,7 +332,7 @@ export function ChatInput({
       }
 
       const duplicateKey = `${f.name}:${f.size}`;
-      if (isImage && seen.has(duplicateKey)) {
+      if (seen.has(duplicateKey)) {
         setUploadAnnouncement(`${f.name} is already attached`);
         toast.message(`${f.name} is already attached.`);
         continue;
@@ -331,10 +354,10 @@ export function ChatInput({
               name: f.name,
               size: f.size,
               status: "failed",
-              error: "Image is larger than 10 MB",
+              error: "Image is larger than 3 MB",
             },
           ];
-          setUploadAnnouncement(`${f.name}: image is larger than 10 MB`);
+          setUploadAnnouncement(`${f.name}: image is larger than 3 MB`);
           continue;
         }
         const uploading: PendingAttachment = {
@@ -374,19 +397,57 @@ export function ChatInput({
         onAttachmentsChange(nextAttachments);
       } else {
         if (f.size > MAX_TEXT_FILE_BYTES) {
-          toast.error(`${f.name} is too large (max 256 KB for text files).`);
+          nextAttachments = [
+            ...nextAttachments,
+            {
+              kind: "text_file",
+              dataUrl: "",
+              name: f.name,
+              size: f.size,
+              fileType: f.type || "text/plain",
+              status: "failed",
+              error: "Text file is larger than 256 KB",
+            },
+          ];
           setUploadAnnouncement(`${f.name}: text file is larger than 256 KB`);
           continue;
         }
-        const text = await f.text();
-        const lang = (f.name.split(".").pop() || "").toLowerCase();
-        const block = `\n\nAttached file: ${f.name}\n\`\`\`${lang}\n${text}\n\`\`\`\n`;
-        nextValue = (nextValue ? nextValue : "") + block;
-        setUploadAnnouncement(`${f.name} inserted into the message`);
+        const uploading: PendingAttachment = {
+          kind: "text_file",
+          dataUrl: "",
+          name: f.name,
+          size: f.size,
+          fileType: f.type || "text/plain",
+          status: "uploading",
+        };
+        nextAttachments = [...nextAttachments, uploading];
+        onAttachmentsChange(nextAttachments);
+        setUploadAnnouncement(`Reading ${f.name}`);
+        try {
+          const textContent = await f.text();
+          nextAttachments = nextAttachments.map((attachment) =>
+            attachment === uploading
+              ? { ...uploading, textContent, status: "complete" as const }
+              : attachment,
+          );
+          seen.add(duplicateKey);
+          setUploadAnnouncement(`${f.name} ready for analysis`);
+        } catch (error) {
+          nextAttachments = nextAttachments.map((attachment) =>
+            attachment === uploading
+              ? {
+                  ...uploading,
+                  status: "failed" as const,
+                  error: error instanceof Error ? error.message : "Could not read file",
+                }
+              : attachment,
+          );
+          setUploadAnnouncement(`${f.name}: file could not be read`);
+        }
+        onAttachmentsChange(nextAttachments);
       }
     }
     if (nextAttachments !== attachments) onAttachmentsChange(nextAttachments);
-    if (nextValue !== value) onChange(nextValue);
   }
 
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -419,6 +480,11 @@ export function ChatInput({
     if (duplicate) {
       setUploadAnnouncement(`${name} is already attached`);
       toast.message(`${name} is already attached.`);
+      return;
+    }
+    if (attachments.length >= 2) {
+      setUploadAnnouncement("Remove an attachment before adding another.");
+      toast.error("You can attach up to 2 files per message.");
       return;
     }
     onAttachmentsChange([
@@ -556,6 +622,13 @@ export function ChatInput({
                       <FileText className="h-5 w-5" />
                       <span className="text-[9px] uppercase">Library</span>
                     </div>
+                  ) : a.kind === "text_file" ? (
+                    <div className="flex h-16 w-full flex-col items-center justify-center gap-1 text-muted-foreground">
+                      <FileText className="h-5 w-5" />
+                      <span className="text-[9px] uppercase">
+                        {a.status === "complete" ? "Ready" : "File"}
+                      </span>
+                    </div>
                   ) : a.dataUrl ? (
                     <img
                       src={a.dataUrl}
@@ -623,6 +696,10 @@ export function ChatInput({
                 className="hidden"
                 onChange={onFileChange}
               />
+              <span className="sr-only" id="file-upload-guidance">
+                Text, code, CSV, JSON, and image files. Text files may be up to 256 KB and images up
+                to 3 MB.
+              </span>
               <input
                 ref={photoRef}
                 type="file"
@@ -800,7 +877,11 @@ export function ChatInput({
                 >
                   <Square className="w-4 h-4 fill-current" />
                 </button>
-              ) : value.trim() || attachments.length > 0 ? (
+              ) : (value.trim() || attachments.length > 0) &&
+                !attachments.some(
+                  (attachment) =>
+                    attachment.status === "uploading" || attachment.status === "failed",
+                ) ? (
                 <button
                   type="button"
                   onClick={triggerSubmit}

@@ -601,7 +601,15 @@ function KovaGPT() {
                 size: a.size ?? null,
                 sourceProject: a.sourceProject ?? null,
               }
-            : { kind: "image" as const, dataUrl: a.dataUrl },
+            : a.kind === "text_file"
+              ? {
+                  kind: "text_file" as const,
+                  name: a.name,
+                  content: a.textContent ?? "",
+                  fileType: a.fileType ?? null,
+                  size: a.size ?? null,
+                }
+              : { kind: "image" as const, dataUrl: a.dataUrl },
         ),
       };
       const assistantMsg: Message = { id: newId(), role: "assistant", content: "" };
@@ -1431,16 +1439,26 @@ function KovaGPT() {
                                       name: "Attached image",
                                       status: "complete" as const,
                                     }
-                                  : {
-                                      kind: "library_file" as const,
-                                      dataUrl: "",
-                                      name: attachment.name,
-                                      size: attachment.size ?? undefined,
-                                      libraryItemId: attachment.libraryItemId,
-                                      fileType: attachment.fileType,
-                                      sourceProject: attachment.sourceProject,
-                                      status: "complete" as const,
-                                    },
+                                  : attachment.kind === "text_file"
+                                    ? {
+                                        kind: "text_file" as const,
+                                        dataUrl: "",
+                                        name: attachment.name,
+                                        size: attachment.size ?? undefined,
+                                        fileType: attachment.fileType,
+                                        textContent: attachment.content,
+                                        status: "complete" as const,
+                                      }
+                                    : {
+                                        kind: "library_file" as const,
+                                        dataUrl: "",
+                                        name: attachment.name,
+                                        size: attachment.size ?? undefined,
+                                        libraryItemId: attachment.libraryItemId,
+                                        fileType: attachment.fileType,
+                                        sourceProject: attachment.sourceProject,
+                                        status: "complete" as const,
+                                      },
                               ),
                             );
                           }
@@ -1459,16 +1477,26 @@ function KovaGPT() {
                                       name: "Attached image",
                                       status: "complete" as const,
                                     }
-                                  : {
-                                      kind: "library_file" as const,
-                                      dataUrl: "",
-                                      name: attachment.name,
-                                      size: attachment.size ?? undefined,
-                                      libraryItemId: attachment.libraryItemId,
-                                      fileType: attachment.fileType,
-                                      sourceProject: attachment.sourceProject,
-                                      status: "complete" as const,
-                                    },
+                                  : attachment.kind === "text_file"
+                                    ? {
+                                        kind: "text_file" as const,
+                                        dataUrl: "",
+                                        name: attachment.name,
+                                        size: attachment.size ?? undefined,
+                                        fileType: attachment.fileType,
+                                        textContent: attachment.content,
+                                        status: "complete" as const,
+                                      }
+                                    : {
+                                        kind: "library_file" as const,
+                                        dataUrl: "",
+                                        name: attachment.name,
+                                        size: attachment.size ?? undefined,
+                                        libraryItemId: attachment.libraryItemId,
+                                        fileType: attachment.fileType,
+                                        sourceProject: attachment.sourceProject,
+                                        status: "complete" as const,
+                                      },
                               ),
                             );
                             setEditingMessage({

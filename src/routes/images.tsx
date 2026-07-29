@@ -14,6 +14,7 @@ import {
   X as XIcon,
   Bookmark,
   RefreshCw,
+  Copy,
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
@@ -376,6 +377,45 @@ function ImagesPage() {
     }
   }
 
+  async function copyGeneratedImage(imageUrl: string) {
+    try {
+      if (typeof ClipboardItem === "undefined" || !navigator.clipboard?.write) {
+        throw new Error("Image copying is not supported by this browser");
+      }
+      const response = await fetch(imageUrl);
+      if (!response.ok) throw new Error("Could not read the generated image");
+      const source = await response.blob();
+      const blob =
+        source.type === "image/png"
+          ? source
+          : await new Promise<Blob>((resolve, reject) => {
+              const image = new Image();
+              const objectUrl = URL.createObjectURL(source);
+              image.onload = () => {
+                const canvas = document.createElement("canvas");
+                canvas.width = image.naturalWidth;
+                canvas.height = image.naturalHeight;
+                canvas.getContext("2d")?.drawImage(image, 0, 0);
+                URL.revokeObjectURL(objectUrl);
+                canvas.toBlob(
+                  (converted) =>
+                    converted ? resolve(converted) : reject(new Error("Could not convert image")),
+                  "image/png",
+                );
+              };
+              image.onerror = () => {
+                URL.revokeObjectURL(objectUrl);
+                reject(new Error("Could not decode image"));
+              };
+              image.src = objectUrl;
+            });
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      toast.success("Image copied");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not copy image");
+    }
+  }
+
   async function generate(p: string) {
     const trimmed = p.trim();
     if (!trimmed || submittingRef.current) return;
@@ -530,12 +570,7 @@ function ImagesPage() {
                         <div className="absolute inset-0 rounded-full border-2 border-white/40 border-t-white animate-spin" />
                         <Sparkles className="absolute inset-0 m-auto w-6 h-6 text-white animate-pulse" />
                       </div>
-                      <div className="text-sm font-medium tracking-wide">
-                        Painting your image...
-                      </div>
-                      <div className="text-[11px] uppercase tracking-[0.2em] opacity-70">
-                        Mixing colors · Adding light · Sharpening details
-                      </div>
+                      <div className="text-sm font-medium tracking-wide">Generating image…</div>
                     </div>
                   </div>
                 )}
@@ -566,6 +601,13 @@ function ImagesPage() {
                         className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full border border-border hover:bg-accent transition disabled:opacity-50"
                       >
                         <RefreshCw className="h-4 w-4" /> Create variation
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => copyGeneratedImage(result)}
+                        className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full border border-border hover:bg-accent transition"
+                      >
+                        <Copy className="h-4 w-4" /> Copy image
                       </button>
                       <a
                         href={result}

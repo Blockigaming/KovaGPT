@@ -41,3 +41,24 @@ test("device exports reject malformed and unknown-version files", () => {
   assert.match(failures[0], /valid KovaGPT JSON export/);
   assert.match(failures[1], /version is not supported/);
 });
+
+test("device exports preserve bounded text-file attachments", () => {
+  const output = run(`
+    import { parseDeviceDataExport } from './src/lib/device-data-portability.ts';
+    const attachment = { kind: 'text_file', name: 'notes.txt', content: 'real file context', fileType: 'text/plain', size: 17 };
+    const conversation = { id: 'chat-file', title: 'File chat', mode: 'instant', createdAt: 1, updatedAt: 1,
+      messages: [{ id: 'message-file', role: 'user', content: 'Analyze it', attachments: [attachment] }] };
+    const parsed = parseDeviceDataExport(JSON.stringify({
+      format: 'kovagpt-device-export', version: 1, exportedAt: new Date().toISOString(),
+      scope: 'this-device', settings: {}, conversations: [conversation], archivedConversations: []
+    }));
+    console.log(JSON.stringify(parsed.conversations[0].messages[0].attachments[0]));
+  `);
+  assert.deepEqual(JSON.parse(output), {
+    kind: "text_file",
+    name: "notes.txt",
+    content: "real file context",
+    fileType: "text/plain",
+    size: 17,
+  });
+});
