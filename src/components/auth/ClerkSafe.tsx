@@ -14,7 +14,15 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
 import { getSupabaseClientConfigStatus, supabase } from "@/integrations/supabase/client";
 import { AuthDialog } from "@/components/auth/AuthDialog";
@@ -53,6 +61,7 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [dialog, setDialog] = useState<AuthDialogState>({ open: false, mode: "sign-in" });
+  const authReturnFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     // Register listener first so we capture the SIGNED_IN that fires when
@@ -147,6 +156,8 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const openAuth = useCallback((mode: "sign-in" | "sign-up") => {
+    authReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setDialog({ open: true, mode });
   }, []);
 
@@ -191,6 +202,7 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
       <AuthDialog
         open={dialog.open}
         mode={dialog.mode}
+        returnFocusTarget={authReturnFocusRef.current}
         onOpenChange={(open) => setDialog((d) => ({ ...d, open }))}
       />
     </Ctx.Provider>

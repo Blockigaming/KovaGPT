@@ -5,8 +5,8 @@ import { test, expect, type Page } from "@playwright/test";
  * playwright.config.ts. Verifies core invariants:
  *  - Home page renders without SSR/hydration errors
  *  - No horizontal overflow at the given viewport
- *  - Mobile-only chrome (bottom FABs) and desktop-only chrome
- *    (persistent sidebar rail) are correctly gated by viewport
+ *  - Purpose-built mobile navigation and desktop sidebar chrome are
+ *    correctly gated by viewport
  */
 
 async function noHorizontalOverflow(page: Page) {
@@ -61,7 +61,7 @@ test.describe("KovaGPT responsive shell", () => {
     const width = page.viewportSize()?.width ?? 0;
     const isPhone = width < 768;
 
-    // MobileFabs uses md:hidden -> only visible on phones.
+    // The compact top bar preserves a reachable New chat affordance on phones.
     const fabs = page.getByRole("button", { name: /new chat/i });
     if (isPhone) {
       // At least one visible "New chat" affordance

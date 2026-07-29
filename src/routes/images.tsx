@@ -287,7 +287,10 @@ function ImagesPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
+  const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
   const openSettings = (tab?: string) => {
+    settingsReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setSettingsTab(tab);
     setSettingsOpen(true);
   };
@@ -714,6 +717,7 @@ function ImagesPage() {
         settings={settings}
         onChange={setSettings}
         initialTab={settingsTab}
+        returnFocusTarget={settingsReturnFocusRef.current}
         onClearAll={() => {
           try {
             for (const k of Object.keys(localStorage)) {

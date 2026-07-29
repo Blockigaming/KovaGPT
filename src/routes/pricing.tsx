@@ -169,7 +169,7 @@ function PricingPage() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 py-16">
+      <main className="kova-secondary-page kova-pricing-page max-w-6xl mx-auto px-6 py-16">
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">Upgrade your plan</h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
@@ -341,8 +341,8 @@ function PlanCard({
 }: CardProps) {
   return (
     <div
-      className={`relative rounded-2xl border p-6 flex flex-col ${
-        highlight ? "border-foreground bg-card shadow-2xl scale-[1.02]" : "border-border bg-card/50"
+      className={`kova-plan-card relative rounded-2xl border p-6 flex flex-col ${
+        highlight ? "border-[var(--kova-blue)] bg-card" : "border-border bg-card/50"
       }`}
     >
       {highlight && (

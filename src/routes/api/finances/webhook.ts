@@ -4,12 +4,20 @@ export const Route = createFileRoute("/api/finances/webhook")({
     handlers: {
       POST: async ({ request }) => {
         // A deployed edge/WAF must verify Plaid-Verification JWT before forwarding. Fail closed otherwise.
-        if (
-          request.headers.get("x-kova-webhook-verified") !==
-          process.env.FINANCE_WEBHOOK_VERIFICATION_TOKEN
-        )
+        const verificationToken = process.env.FINANCE_WEBHOOK_VERIFICATION_TOKEN;
+        if (!verificationToken)
+          return Response.json({ error: "webhook_verification_unavailable" }, { status: 503 });
+        if (request.headers.get("x-kova-webhook-verified") !== verificationToken)
           return Response.json({ error: "invalid_webhook_signature" }, { status: 401 });
-        const body = (await request.json().catch(() => null)) as {
+        const contentLength = Number(request.headers.get("content-length") ?? "0");
+        if (contentLength > 256 * 1024)
+          return Response.json({ error: "webhook_too_large" }, { status: 413 });
+        const raw = await request.text();
+        if (raw.length > 256 * 1024)
+          return Response.json({ error: "webhook_too_large" }, { status: 413 });
+        const body = (await Promise.resolve()
+          .then(() => JSON.parse(raw))
+          .catch(() => null)) as {
           webhook_type?: string;
           webhook_code?: string;
           item_id?: string;

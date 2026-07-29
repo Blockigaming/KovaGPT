@@ -63,7 +63,12 @@ export const Route = createFileRoute("/api/generate-image")({
           if (contentLength > MAX_BODY) return jsonError("Request too large.", 413);
           const raw = await request.text();
           if (raw.length > MAX_BODY) return jsonError("Request too large.", 413);
-          const parsed = JSON.parse(raw) as Parameters<typeof normalizeImageSettings>[0];
+          let parsed: Parameters<typeof normalizeImageSettings>[0];
+          try {
+            parsed = JSON.parse(raw) as Parameters<typeof normalizeImageSettings>[0];
+          } catch {
+            return jsonError("Invalid JSON.", 400);
+          }
           let settings;
           try {
             settings = normalizeImageSettings(parsed);

@@ -7,7 +7,9 @@ const SECURITY_HEADERS: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "SAMEORIGIN",
   "Referrer-Policy": "strict-origin-when-cross-origin",
-  "Permissions-Policy": "camera=(), geolocation=(), microphone=(self), payment=(self)",
+  // Location is an explicit, user-triggered feature in Settings and Summary.
+  // Keep it same-origin while denying unrelated camera access and cross-origin use.
+  "Permissions-Policy": "camera=(), geolocation=(self), microphone=(self), payment=(self)",
   "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
 };
 

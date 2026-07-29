@@ -40,17 +40,21 @@ export async function requireUser(request: Request): Promise<AuthedCaller | Resp
  * the token is present but invalid/expired.
  */
 export async function optionalUser(request: Request): Promise<AuthedCaller | null | Response> {
+  // Anonymous requests do not need an auth client. Check the credential first
+  // so protected routes return a truthful 401 even when a deployment is
+  // missing auth configuration, rather than exposing configuration state as a
+  // 500 response to unauthenticated callers.
+  const header = request.headers.get("authorization") ?? "";
+  if (!header.toLowerCase().startsWith("bearer ")) return null;
+  const token = header.slice(7).trim();
+  if (!token) return null;
+
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
   const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
     return jsonError("Auth backend not configured", 500);
   }
-  const header = request.headers.get("authorization") ?? "";
-  if (!header.toLowerCase().startsWith("bearer ")) return null;
-  const token = header.slice(7).trim();
-  if (!token) return null;
-
   const verifier = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
   });
@@ -183,7 +187,9 @@ export async function assertNotBanned(caller: AuthedCaller): Promise<Response | 
     .maybeSingle();
   if (error) {
     console.error("[assertNotBanned] lookup error", error);
-    return null; // fail-open on transient errors; logged for ops
+    // A failed moderation lookup must never silently grant access to costly or
+    // consequential routes. The caller can retry once the backend recovers.
+    return jsonError("Account status could not be verified. Please try again shortly.", 503);
   }
   if (data) {
     return jsonError(

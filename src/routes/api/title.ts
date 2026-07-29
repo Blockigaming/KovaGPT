@@ -5,6 +5,30 @@ const RATE_LIMIT_MAX = 30;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
 
+type TitleMessage = { role: "user" | "assistant"; content: string };
+
+function parseMessages(raw: string): TitleMessage[] | null {
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!value || typeof value !== "object") return null;
+  const messages = (value as { messages?: unknown }).messages;
+  if (!Array.isArray(messages) || messages.length === 0 || messages.length > 100) return null;
+  const valid = messages.every(
+    (message) =>
+      message !== null &&
+      typeof message === "object" &&
+      ((message as { role?: unknown }).role === "user" ||
+        (message as { role?: unknown }).role === "assistant") &&
+      typeof (message as { content?: unknown }).content === "string" &&
+      (message as { content: string }).content.length <= 50_000,
+  );
+  return valid ? (messages as TitleMessage[]) : null;
+}
+
 function checkRateLimit(ip: string): boolean {
   const now = Date.now();
   const bucket = rateLimitBuckets.get(ip);
@@ -48,9 +72,13 @@ export const Route = createFileRoute("/api/title")({
               headers: { "Content-Type": "application/json" },
             });
           }
-          const { messages } = JSON.parse(raw) as {
-            messages: { role: string; content: string }[];
-          };
+          const messages = parseMessages(raw);
+          if (!messages) {
+            return new Response(JSON.stringify({ error: "Invalid messages." }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
           const missingProvider = missingAiProviderResponse({ title: "New chat" });
           if (missingProvider) return missingProvider;
 

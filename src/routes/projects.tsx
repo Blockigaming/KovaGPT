@@ -42,7 +42,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
-import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { SkeletonGrid, EmptyState, ErrorState } from "@/components/states";
 import {
   listProjects,
@@ -285,7 +285,7 @@ function ProjectsPage() {
   async function generateWithKova() {
     setAiBusy(true);
     try {
-      const res = await fetchWithTimeout(
+      const res = await fetchWithTimeoutAuthenticated(
         "/api/project-suggest",
         {
           method: "POST",
@@ -294,7 +294,10 @@ function ProjectsPage() {
         },
         15_000,
       );
-      if (!res.ok) throw new Error("Suggestion service unavailable");
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(data?.error || "Suggestion service unavailable");
+      }
       const data = (await res.json()) as { name?: string; description?: string };
       if (data.name) setName(data.name);
       if (data.description) setDescription(data.description);
@@ -342,7 +345,7 @@ function ProjectsPage() {
   if (!isSignedIn) {
     return (
       <AppShell>
-        <div className="max-w-2xl mx-auto p-8 text-center">
+        <div className="kova-empty-state mx-auto mt-12 max-w-2xl">
           <FolderKanban className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
           <h1 className="text-2xl font-semibold mb-2">Sign in to use Projects</h1>
           <p className="text-muted-foreground mb-6">
@@ -358,13 +361,11 @@ function ProjectsPage() {
 
   return (
     <AppShell>
-      <div className="kova-page pb-24 lg:pb-8">
-        <div className="flex items-center justify-between mb-4 sm:mb-6">
+      <div className="kova-page kova-secondary-page pb-24 lg:pb-8">
+        <div className="kova-page-header">
           <div className="min-w-0">
-            <h1 className="text-2xl font-semibold">Projects</h1>
-            <p className="text-sm text-muted-foreground">
-              Shared workspaces for you and your team.
-            </p>
+            <h1 className="kova-page-title">Projects</h1>
+            <p className="kova-page-description">Shared workspaces for you and your team.</p>
           </div>
           <Button onClick={() => setCreateOpen(true)} className="hidden lg:inline-flex">
             <Plus className="w-4 h-4 mr-1.5" />
