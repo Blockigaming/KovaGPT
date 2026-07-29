@@ -141,7 +141,7 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
         const rawEnv = new URL(request.url).searchParams.get("env");
         if (rawEnv !== "sandbox" && rawEnv !== "live") {
           console.error("Webhook invalid env:", rawEnv);
-          return Response.json({ received: true, ignored: "invalid env" });
+          return Response.json({ error: "invalid_environment" }, { status: 400 });
         }
         try {
           await handleWebhook(request, rawEnv);

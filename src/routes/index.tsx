@@ -26,7 +26,6 @@ import {
   type RecentLibraryFile,
 } from "@/components/ChatInput";
 import { AIStatus } from "@/components/AIStatus";
-import { MobileFabs } from "@/components/MobileFabs";
 import { MobileTopBar } from "@/components/MobileTopBar";
 import { CommandPalette } from "@/components/CommandPalette";
 import { ConversationOutline } from "@/components/ConversationOutline";
@@ -44,9 +43,6 @@ const LimitReachedDialog = lazy(() =>
 );
 const ShareChatDialog = lazy(() =>
   import("@/components/ShareChatDialog").then((m) => ({ default: m.ShareChatDialog })),
-);
-const AddMembersDialog = lazy(() =>
-  import("@/components/AddMembersDialog").then((m) => ({ default: m.AddMembersDialog })),
 );
 const ArchivedChatsDialog = lazy(() =>
   import("@/components/ArchivedChatsDialog").then((m) => ({ default: m.ArchivedChatsDialog })),
@@ -219,7 +215,10 @@ function KovaGPT() {
   }, [input, activeId]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
+  const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
   const openSettings = useCallback((tab?: string) => {
+    settingsReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setSettingsTab(tab);
     setSettingsOpen(true);
   }, []);
@@ -263,7 +262,6 @@ function KovaGPT() {
     navigate({ to: "/help" as never });
   }, [navigate]);
   const [shareChatId, setShareChatId] = useState<string | null>(null);
-  const [membersChatId, setMembersChatId] = useState<string | null>(null);
 
   const [settings, setSettings] = useState<Settings>(() => loadSettings(null));
   const [signupPromptOpen, setSignupPromptOpen] = useState(false);
@@ -876,7 +874,12 @@ function KovaGPT() {
                 setConversations((prev) =>
                   prev.map((c) =>
                     c.id === nextConvId
-                      ? { ...c, messages: c.messages.filter((m) => m.id !== assistantMsg.id) }
+                      ? {
+                          ...c,
+                          messages: c.messages.filter(
+                            (m) => m.id !== assistantMsg.id && m.id !== userMsg.id,
+                          ),
+                        }
                       : c,
                   ),
                 );
@@ -1007,14 +1010,6 @@ function KovaGPT() {
             ),
           );
         }}
-        onAddMembers={(id) => {
-          if (!isSignedIn) {
-            toast.message("Sign in to add members");
-            openSignUp();
-            return;
-          }
-          setMembersChatId(id);
-        }}
         onOpenArchived={() => setArchivedOpen(true)}
       />
 
@@ -1088,7 +1083,7 @@ function KovaGPT() {
                     a.click();
                     URL.revokeObjectURL(url);
                   }}
-                  className="hidden xl:inline-flex h-9 items-center gap-2 rounded-full px-3 text-sm font-medium text-foreground hover:bg-accent"
+                  className="hidden xl:inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-medium text-foreground hover:bg-accent"
                   aria-label="Export chat"
                   title="Export chat"
                 >
@@ -1105,7 +1100,7 @@ function KovaGPT() {
                     }
                     setShareChatId(active.id);
                   }}
-                  className="hidden lg:inline-flex h-9 items-center gap-2 rounded-full border border-border px-3 text-sm font-medium text-foreground hover:bg-accent"
+                  className="hidden lg:inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-sm font-medium text-foreground hover:bg-accent"
                   aria-label="Share chat"
                   title="Share chat"
                 >
@@ -1156,7 +1151,7 @@ function KovaGPT() {
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button className="text-sm font-semibold px-4 h-9 rounded-full bg-foreground text-background hover:opacity-90 active:scale-[0.98] transition whitespace-nowrap shadow-sm">
+                  <button className="text-sm font-semibold px-4 h-9 rounded-md bg-[var(--kova-blue)] text-background hover:opacity-90 active:scale-[0.98] transition whitespace-nowrap shadow-sm">
                     Sign up for free
                   </button>
                 </SignUpButton>
@@ -1176,7 +1171,7 @@ function KovaGPT() {
             <button
               type="button"
               onClick={() => setTempChat(false)}
-              className="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium hover:bg-accent"
+              className="shrink-0 rounded-md px-2.5 py-1 text-xs font-medium hover:bg-accent"
             >
               Turn off
             </button>
@@ -1197,7 +1192,7 @@ function KovaGPT() {
                   {greeting}
                 </h1>
                 <p className="max-w-lg text-center text-sm leading-relaxed text-muted-foreground">
-                  Ask, search, analyze, create, or keep working from a previous chat.
+                  What would you like to work on?
                 </p>
               </div>
 
@@ -1222,7 +1217,7 @@ function KovaGPT() {
                   onRecentLibraryRetry={loadRecentLibraryFiles}
                 />
 
-                <div className="mx-auto mt-4 hidden max-w-[46rem] grid-cols-2 gap-2 lg:grid">
+                <div className="mx-auto mt-3 hidden max-w-[48rem] grid-cols-3 gap-1.5 lg:grid">
                   {assistantCapabilities.map((p) => {
                     const Icon = p.icon;
                     return (
@@ -1230,7 +1225,7 @@ function KovaGPT() {
                         key={p.label}
                         type="button"
                         onClick={() => setInput((v) => (v.trim() ? v : p.prompt))}
-                        className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border/70 bg-card/55 px-3.5 text-left text-[13.5px] font-medium text-foreground shadow-sm transition hover:border-foreground/20 hover:bg-accent"
+                        className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border/70 bg-transparent px-3 text-left text-[13px] font-medium text-foreground transition hover:border-foreground/20 hover:bg-accent"
                       >
                         <Icon className="h-4 w-4 text-muted-foreground" />
                         <span>{p.label}</span>
@@ -1268,7 +1263,7 @@ function KovaGPT() {
                       key={p.label}
                       type="button"
                       onClick={() => setInput((v) => (v ? v : p.prompt))}
-                      className="shrink-0 snap-start w-[68%] text-left px-4 py-3 rounded-2xl border border-border bg-card/70 backdrop-blur-sm active:scale-[0.985] active:bg-accent/60 transition-all"
+                      className="shrink-0 snap-start w-[72%] max-w-[17rem] text-left px-3.5 py-3 rounded-lg border border-border bg-card/70 active:bg-accent/60 transition-colors"
                     >
                       <div className="text-[15px] font-medium text-foreground">{p.label}</div>
                       <div className="text-[12.5px] text-muted-foreground mt-0.5">{p.hint}</div>
@@ -1407,7 +1402,7 @@ function KovaGPT() {
                   el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
                   setShowJumpToLatest(false);
                 }}
-                className="fixed bottom-28 left-1/2 z-20 -translate-x-1/2 rounded-full border border-border bg-card px-3 py-2 text-sm font-medium shadow-lg hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+                className="fixed bottom-28 left-1/2 z-20 -translate-x-1/2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium shadow-lg hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label="Jump to latest message"
               >
                 Jump to latest
@@ -1471,6 +1466,7 @@ function KovaGPT() {
             onClearAll={() => setConversations([])}
             onOpenHelp={openHelp}
             initialTab={settingsTab}
+            returnFocusTarget={settingsReturnFocusRef.current}
           />
         )}
 
@@ -1481,14 +1477,6 @@ function KovaGPT() {
             open={shareChatId !== null}
             onOpenChange={(v) => !v && setShareChatId(null)}
             conversation={conversations.find((c) => c.id === shareChatId) ?? null}
-          />
-        )}
-
-        {membersChatId !== null && (
-          <AddMembersDialog
-            open={membersChatId !== null}
-            chatId={membersChatId}
-            onOpenChange={(v) => !v && setMembersChatId(null)}
           />
         )}
 
@@ -1525,18 +1513,6 @@ function KovaGPT() {
         onNewChat={newChat}
         onSelectChat={setActiveId}
         onOpenSettings={() => openSettings("general")}
-      />
-
-      <MobileFabs
-        onNewChat={() => {
-          try {
-            localStorage.removeItem("nova-gpt-pending-active");
-          } catch {
-            /* ignore */
-          }
-          window.location.assign("/");
-        }}
-        onOpenSettings={() => setSettingsOpen(true)}
       />
     </div>
   );

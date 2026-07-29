@@ -14,3 +14,25 @@ export async function authFetch(input: RequestInfo | URL, init: RequestInit = {}
 
   return fetch(input, { ...init, headers });
 }
+
+/** Authenticated fetch with a bounded wait that also composes a caller signal. */
+export async function fetchWithTimeoutAuthenticated(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  timeoutMs = 15_000,
+) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(
+    () => controller.abort(new DOMException("Request timed out", "TimeoutError")),
+    timeoutMs,
+  );
+  const abort = () => controller.abort(init.signal?.reason);
+  if (init.signal?.aborted) abort();
+  else init.signal?.addEventListener("abort", abort, { once: true });
+  try {
+    return await authFetch(input, { ...init, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timeout);
+    init.signal?.removeEventListener("abort", abort);
+  }
+}

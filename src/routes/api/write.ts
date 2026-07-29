@@ -12,14 +12,7 @@ import {
 import { DAILY_CHAT_LIMIT_BY_TIER } from "@/lib/modes";
 
 type Action =
-  | "improve"
-  | "expand"
-  | "shorten"
-  | "grammar"
-  | "continue"
-  | "tone"
-  | "outline"
-  | "custom";
+  "improve" | "expand" | "shorten" | "grammar" | "continue" | "tone" | "outline" | "custom";
 
 type Body = {
   text?: string;
@@ -50,6 +43,64 @@ export const Route = createFileRoute("/api/write")({
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
 
+        const MAX_BODY = 64 * 1024;
+        const contentLength = Number(request.headers.get("content-length") ?? "0");
+        if (contentLength > MAX_BODY) {
+          return Response.json({ error: "request_too_large" }, { status: 413 });
+        }
+        const raw = await request.text();
+        if (raw.length > MAX_BODY) {
+          return Response.json({ error: "request_too_large" }, { status: 413 });
+        }
+        let body: Body;
+        try {
+          body = JSON.parse(raw) as Body;
+        } catch {
+          return Response.json({ error: "invalid_json" }, { status: 400 });
+        }
+        if (body.text !== undefined && typeof body.text !== "string") {
+          return Response.json({ error: "invalid_text" }, { status: 400 });
+        }
+        const actions = new Set<Action>([
+          "improve",
+          "expand",
+          "shorten",
+          "grammar",
+          "continue",
+          "tone",
+          "outline",
+          "custom",
+        ]);
+        if (body.action !== undefined && !actions.has(body.action)) {
+          return Response.json({ error: "invalid_action" }, { status: 400 });
+        }
+        const text = (body.text ?? "").slice(0, 40_000);
+        const action = body.action ?? "improve";
+        if (!text.trim() && action !== "custom" && action !== "outline") {
+          return Response.json({ error: "empty_text" }, { status: 400 });
+        }
+
+        let instruction: string;
+        if (action === "tone") {
+          if (body.tone !== undefined && typeof body.tone !== "string") {
+            return Response.json({ error: "invalid_tone" }, { status: 400 });
+          }
+          const tone = (body.tone ?? "professional").slice(0, 60);
+          instruction = `Rewrite the following text in a ${tone} tone. Keep meaning intact. Return only the rewritten version.`;
+        } else if (action === "custom") {
+          if (body.instructions !== undefined && typeof body.instructions !== "string") {
+            return Response.json({ error: "invalid_instructions" }, { status: 400 });
+          }
+          instruction = (body.instructions ?? "").slice(0, 2000).trim();
+          if (!instruction)
+            return Response.json({ error: "missing_instructions" }, { status: 400 });
+        } else {
+          instruction = PROMPTS[action];
+        }
+
+        const missingProvider = missingAiProviderResponse();
+        if (missingProvider) return missingProvider;
+
         // Same protections as /api/chat and /api/generate-image: refuse banned
         // users, respect the chat maintenance flag, and enforce a per-user
         // daily cap so this endpoint can't be scripted into an unlimited
@@ -61,34 +112,6 @@ export const Route = createFileRoute("/api/write")({
         const tier = await getCallerTier(auth);
         const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[tier]);
         if (quota) return quota;
-
-        let body: Body;
-        try {
-          body = (await request.json()) as Body;
-        } catch {
-          return Response.json({ error: "invalid_json" }, { status: 400 });
-        }
-
-        const text = (body.text ?? "").slice(0, 40_000);
-        const action = body.action ?? "improve";
-        if (!text.trim() && action !== "custom" && action !== "outline") {
-          return Response.json({ error: "empty_text" }, { status: 400 });
-        }
-
-        let instruction: string;
-        if (action === "tone") {
-          const tone = (body.tone ?? "professional").slice(0, 60);
-          instruction = `Rewrite the following text in a ${tone} tone. Keep meaning intact. Return only the rewritten version.`;
-        } else if (action === "custom") {
-          instruction = (body.instructions ?? "").slice(0, 2000).trim();
-          if (!instruction)
-            return Response.json({ error: "missing_instructions" }, { status: 400 });
-        } else {
-          instruction = PROMPTS[action];
-        }
-
-        const missingProvider = missingAiProviderResponse();
-        if (missingProvider) return missingProvider;
 
         const upstream = await chatCompletions({
           model: chatModel("balanced"),

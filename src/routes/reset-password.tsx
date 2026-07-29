@@ -28,31 +28,45 @@ function ResetPassword() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Supabase puts the recovery session in the URL hash; the client picks it up automatically.
+    // Supabase may need a network round-trip to exchange a recovery code. Listen
+    // before checking the current session so a slow exchange is not mislabeled
+    // as an expired link.
     let cancelled = false;
-    const check = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (cancelled) return;
-      if (data.session) {
-        setReady(true);
-      } else {
-        setError(
-          "This reset link is invalid or has expired. Request a new one from the sign-in screen.",
-        );
-        setReady(true);
-      }
+    let settled = false;
+    const finish = (sessionReady: boolean) => {
+      if (cancelled || settled) return;
+      settled = true;
+      setReady(true);
+      setError(
+        sessionReady
+          ? null
+          : "This reset link is invalid or has expired. Request a new one from the sign-in screen.",
+      );
     };
-    // Give the client a tick to process the URL hash.
-    const t = setTimeout(check, 200);
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
-        setReady(true);
-        setError(null);
+    const params = new URLSearchParams(window.location.search);
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    if (params.get("error") || hash.get("error")) {
+      finish(false);
+    }
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session)) {
+        finish(true);
       }
     });
+    const check = async () => {
+      const { data, error: sessionError } = await supabase.auth.getSession();
+      if (cancelled) return;
+      if (data.session) {
+        finish(true);
+      } else if (sessionError) {
+        finish(false);
+      }
+    };
+    void check();
+    const t = window.setTimeout(() => finish(false), 8_000);
     return () => {
       cancelled = true;
-      clearTimeout(t);
+      window.clearTimeout(t);
       sub.subscription.unsubscribe();
     };
   }, []);

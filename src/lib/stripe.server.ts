@@ -36,7 +36,11 @@ export async function verifyWebhook(
   env: StripeEnv,
 ): Promise<{ id?: string; type: string; data: { object: unknown } }> {
   const signature = req.headers.get("stripe-signature");
+  const maxBodyBytes = 2 * 1024 * 1024;
+  const contentLength = Number(req.headers.get("content-length") ?? "0");
+  if (contentLength > maxBodyBytes) throw new Error("Webhook payload too large");
   const body = await req.text();
+  if (body.length > maxBodyBytes) throw new Error("Webhook payload too large");
   const secret =
     env === "sandbox"
       ? getEnv("PAYMENTS_SANDBOX_WEBHOOK_SECRET")

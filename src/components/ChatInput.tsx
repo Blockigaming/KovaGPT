@@ -49,12 +49,7 @@ export type RecentLibraryFile = {
   projectName?: string | null;
 };
 export type ComposerToolId =
-  | "web_search"
-  | "deep_research"
-  | "image"
-  | "study"
-  | "data_analysis"
-  | "file_analysis";
+  "web_search" | "deep_research" | "image" | "study" | "data_analysis" | "file_analysis";
 
 const TEXT_LIKE_EXT =
   /\.(txt|md|markdown|csv|tsv|json|jsonl|ya?ml|toml|xml|html?|css|scss|less|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|h|cc|cpp|hpp|cs|php|sql|sh|bash|zsh|fish|env|ini|conf|log|srt|vtt)$/i;
@@ -531,7 +526,7 @@ export function ChatInput({
       onDrop={handleDrop}
       onDragOver={handleDragOver}
     >
-      <div className="mx-auto max-w-[48rem] [[data-sidebar=closed]_&]:max-w-[52rem]">
+      <div className="mx-auto max-w-[48rem]">
         <div
           style={
             sendFlash
@@ -541,7 +536,7 @@ export function ChatInput({
                 } as React.CSSProperties)
               : undefined
           }
-          className={`kova-glass overflow-visible rounded-[1.35rem] transition-[border-color,box-shadow,transform] duration-200 focus-within:border-foreground/20 focus-within:shadow-[0_14px_36px_-20px_rgba(0,0,0,.42),0_0_0_3px_color-mix(in_oklab,var(--ring)_12%,transparent)] ${
+          className={`kova-composer kova-glass overflow-visible rounded-xl transition-[border-color,box-shadow,transform] duration-200 focus-within:border-foreground/20 focus-within:shadow-[0_0_0_3px_color-mix(in_oklab,var(--ring)_12%,transparent)] ${
             sendFlash
               ? "scale-[0.995]"
               : isStreaming
@@ -799,8 +794,8 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={onStop}
-                  style={{ backgroundColor: actionColor }}
-                  className="mb-1 flex h-10 w-10 items-center justify-center rounded-full text-white transition hover:opacity-80 lg:h-9 lg:w-9"
+                  style={{ backgroundColor: "var(--kova-blue)" }}
+                  className="mb-1 flex h-10 w-10 items-center justify-center rounded-lg text-white transition hover:opacity-80 lg:h-9 lg:w-9"
                   aria-label="Stop"
                 >
                   <Square className="w-4 h-4 fill-current" />
@@ -809,8 +804,8 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={triggerSubmit}
-                  style={{ backgroundColor: actionColor }}
-                  className={`mb-1 flex h-10 w-10 items-center justify-center rounded-full text-white shadow-sm transition duration-150 hover:opacity-90 active:scale-90 active:opacity-70 lg:h-9 lg:w-9 ${sendFlash ? "scale-90 opacity-80" : ""}`}
+                  style={{ backgroundColor: "var(--kova-blue)" }}
+                  className={`mb-1 flex h-10 w-10 items-center justify-center rounded-lg text-white shadow-sm transition duration-150 hover:opacity-90 active:scale-90 active:opacity-70 lg:h-9 lg:w-9 ${sendFlash ? "scale-90 opacity-80" : ""}`}
                   aria-label="Send"
                 >
                   <ArrowUp
@@ -825,7 +820,7 @@ export function ChatInput({
               <button
                 type="button"
                 onClick={() => setToolsOpen((value) => !value)}
-                className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[13px] font-medium transition ${
+                className={`inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-[13px] font-medium transition ${
                   toolsOpen
                     ? "border-foreground/20 bg-accent text-foreground"
                     : "border-border/70 bg-background/55 text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -860,7 +855,7 @@ export function ChatInput({
                 </div>
               )}
             </div>
-            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <div className="kova-composer-shortcuts flex min-w-0 flex-wrap items-center gap-1.5">
               {shortcutActions.map((action) => {
                 const Icon = action.icon;
                 return (
@@ -868,7 +863,7 @@ export function ChatInput({
                     key={action.label}
                     type="button"
                     onClick={() => applyShortcut(action.prompt)}
-                    className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border/70 bg-background/55 px-2.5 text-[12.5px] font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+                    className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border/70 bg-background/55 px-2.5 text-[12.5px] font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
                     aria-label={`${action.label} shortcut`}
                   >
                     <Icon className="h-3.5 w-3.5" />

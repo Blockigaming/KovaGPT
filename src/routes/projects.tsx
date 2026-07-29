@@ -42,7 +42,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
-import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import { fetchWithTimeoutAuthenticated } from "@/lib/auth-fetch";
 import { SkeletonGrid, EmptyState, ErrorState } from "@/components/states";
 import {
   listProjects,
@@ -285,7 +285,7 @@ function ProjectsPage() {
   async function generateWithKova() {
     setAiBusy(true);
     try {
-      const res = await fetchWithTimeout(
+      const res = await fetchWithTimeoutAuthenticated(
         "/api/project-suggest",
         {
           method: "POST",
@@ -294,7 +294,10 @@ function ProjectsPage() {
         },
         15_000,
       );
-      if (!res.ok) throw new Error("Suggestion service unavailable");
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(data?.error || "Suggestion service unavailable");
+      }
       const data = (await res.json()) as { name?: string; description?: string };
       if (data.name) setName(data.name);
       if (data.description) setDescription(data.description);

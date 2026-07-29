@@ -39,8 +39,7 @@ import { selectModelForMode, mapProviderError } from "@/lib/ai/registry.server";
 import { formatMemoryBlock, selectRelevantMemories, type KovaMemory } from "@/lib/ai/memory.server";
 
 type ChatContentPart =
-  | { type: "text"; text: string }
-  | { type: "image_url"; image_url: { url: string } };
+  { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
 
 type ChainableQueryLike = {
   select: (columns: string) => ChainableQueryLike;
@@ -441,16 +440,56 @@ export const Route = createFileRoute("/api/chat")({
               );
             }
             for (const m of messages) {
-              if (typeof m?.content === "string" && m.content.length > MAX_MESSAGE_CHARS) {
+              if (!m || typeof m !== "object" || !["user", "assistant"].includes(m.role)) {
+                return Response.json(
+                  { error: "Each message must have a valid user or assistant role." },
+                  { status: 400 },
+                );
+              }
+              if (typeof m.content !== "string") {
+                return Response.json(
+                  { error: "Each message must contain text content." },
+                  { status: 400 },
+                );
+              }
+              if (m.content.length > MAX_MESSAGE_CHARS) {
                 return new Response(
                   JSON.stringify({ error: "A message exceeds the maximum allowed length." }),
                   { status: 413, headers: { "Content-Type": "application/json" } },
                 );
               }
-              if (m?.attachments) {
+              if (m.attachments !== undefined && !Array.isArray(m.attachments)) {
+                return Response.json({ error: "attachments must be an array." }, { status: 400 });
+              }
+              if (m.attachments) {
                 for (const a of m.attachments) {
-                  if (a.kind !== "image") continue;
-                  if (typeof a?.dataUrl === "string" && a.dataUrl.length > MAX_ATTACHMENT_BYTES) {
+                  if (!a || typeof a !== "object" || !["image", "library_file"].includes(a.kind)) {
+                    return Response.json({ error: "Invalid attachment." }, { status: 400 });
+                  }
+                  if (a.kind === "library_file") {
+                    if (
+                      typeof a.libraryItemId !== "string" ||
+                      !/^[0-9a-f-]{36}$/i.test(a.libraryItemId) ||
+                      typeof a.name !== "string" ||
+                      a.name.length > 255
+                    ) {
+                      return Response.json(
+                        { error: "Invalid Library attachment metadata." },
+                        { status: 400 },
+                      );
+                    }
+                    continue;
+                  }
+                  if (
+                    typeof a.dataUrl !== "string" ||
+                    !/^data:image\/(?:png|jpe?g|webp|gif);base64,/i.test(a.dataUrl)
+                  ) {
+                    return Response.json(
+                      { error: "Image attachments must use a supported image data URL." },
+                      { status: 400 },
+                    );
+                  }
+                  if (a.dataUrl.length > MAX_ATTACHMENT_BYTES) {
                     return new Response(
                       JSON.stringify({ error: "An attachment exceeds the 5 MB limit." }),
                       { status: 413, headers: { "Content-Type": "application/json" } },

@@ -81,10 +81,11 @@ export function AuthDialog({
     if (!guard()) return;
     try {
       if (isSignUp) {
+        const normalizedEmail = email.trim().toLowerCase();
         const metadata: Record<string, string> = {};
         if (fullName.trim()) metadata.full_name = fullName.trim();
         const { data, error } = await supabase.auth.signUp({
-          email,
+          email: normalizedEmail,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
@@ -94,25 +95,31 @@ export function AuthDialog({
         if (error) throw error;
         const isRepeat = !!data.user && (data.user.identities?.length ?? 0) === 0;
         if (isRepeat) {
-          await supabase.auth.resend({
+          const { error: resendError } = await supabase.auth.resend({
             type: "signup",
-            email,
+            email: normalizedEmail,
             options: { emailRedirectTo: `${window.location.origin}/` },
           });
+          if (resendError) throw resendError;
           toast.success("Already registered - we resent the verification link.");
         } else {
           toast.success("Verification email sent. Check your inbox.");
         }
         onOpenChange(false);
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const normalizedEmail = email.trim().toLowerCase();
+        const { error } = await supabase.auth.signInWithPassword({
+          email: normalizedEmail,
+          password,
+        });
         if (error) {
           if (/confirm|not confirmed|email.*verif/i.test(error.message)) {
-            await supabase.auth.resend({
+            const { error: resendError } = await supabase.auth.resend({
               type: "signup",
-              email,
+              email: normalizedEmail,
               options: { emailRedirectTo: `${window.location.origin}/` },
             });
+            if (resendError) throw resendError;
             toast.error("Please verify your email - we just resent the link.");
             return;
           }
@@ -163,8 +170,9 @@ export function AuthDialog({
     }
     if (!guard()) return;
     try {
+      const normalizedEmail = email.trim().toLowerCase();
       const { error } = await supabase.auth.signInWithOtp({
-        email,
+        email: normalizedEmail,
         options: { emailRedirectTo: `${window.location.origin}/` },
       });
       if (error) throw error;
