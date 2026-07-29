@@ -1,12 +1,12 @@
 import { Menu, SquarePen } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
-import { useUser, SignInButton, SignUpButton, clerkEnabled } from "@/components/auth/ClerkSafe";
+import { useUser, SignInButton, clerkEnabled } from "@/components/auth/ClerkSafe";
 
 /**
  * Compact sticky top bar shown on phones and tablets (any viewport below the
  * desktop breakpoint). Provides a menu trigger to open the off-canvas sidebar,
  * brand identity, and a quick "new chat" action. Signed-out users see a
- * compact "Sign up" pill instead of the new-chat icon so they can always
+ * compact login action instead of the new-chat icon so they can always
  * reach auth from the top bar. Honors safe-area-inset-top and uses
  * translucent blur so content underneath eases through as it scrolls.
  */
@@ -23,7 +23,7 @@ export function MobileTopBar({
   const showAuth = isLoaded && clerkEnabled && !isSignedIn;
   return (
     <header className="kova-topbar sticky top-0 z-30 lg:hidden" role="banner">
-      <div className="grid min-h-14 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1 px-[max(.35rem,var(--safe-left))]">
+      <div className="kova-topbar-inner grid min-h-14 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1">
         <button
           type="button"
           onClick={onOpenSidebar}
@@ -39,18 +39,11 @@ export function MobileTopBar({
           </span>
         </div>
         {showAuth ? (
-          <div className="flex items-center gap-1.5 pr-1">
-            <SignInButton mode="modal">
-              <button className="text-[13px] font-medium px-3 min-h-11 rounded-full text-foreground hover:bg-accent/60 active:scale-95 transition">
-                Log in
-              </button>
-            </SignInButton>
-            <SignUpButton mode="modal">
-              <button className="text-[13px] font-semibold px-3 min-h-11 rounded-full bg-foreground text-background hover:opacity-90 active:scale-95 transition whitespace-nowrap">
-                Sign up
-              </button>
-            </SignUpButton>
-          </div>
+          <SignInButton mode="modal">
+            <button className="mr-1 min-h-11 whitespace-nowrap rounded-md px-3 text-[13px] font-medium text-foreground transition hover:bg-accent/60 active:bg-accent">
+              Log in
+            </button>
+          </SignInButton>
         ) : (
           <button
             type="button"

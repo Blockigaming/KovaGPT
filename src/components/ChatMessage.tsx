@@ -165,32 +165,13 @@ export async function openEmailCompose(
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
-// Rotating idle statuses cycled while the assistant is streaming with no
-// tool activity, so users see progression rather than a static "Thinking".
-const IDLE_STATUSES = [
-  "Thinking",
-  "Planning response",
-  "Reasoning",
-  "Analyzing",
-  "Writing draft",
-  "Formatting",
-  "Finishing response",
-];
-
 // Short status label shown while the assistant is streaming but has no text yet.
 // Derives from the latest running/last activity tool, so users see
 // "Searching", "Reading Files", "Interacting with Gmail", etc.
 function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store").Activity[] }) {
   const last = activities && activities.length > 0 ? activities[activities.length - 1] : null;
   const tool = (last?.tool ?? "").toLowerCase();
-  const [idleIdx, setIdleIdx] = useState(0);
-  useEffect(() => {
-    if (tool) return;
-    const t = setInterval(() => setIdleIdx((i) => (i + 1) % IDLE_STATUSES.length), 2200);
-    return () => clearInterval(t);
-  }, [tool]);
-
-  let label = IDLE_STATUSES[idleIdx];
+  let label = "Thinking";
   if (tool) {
     if (tool.includes("image")) label = "Creating Image";
     else if (tool.includes("gmail") || tool.includes("mail")) label = "Checking Gmail";
@@ -204,17 +185,9 @@ function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store
     else label = last?.label ?? "Working";
   }
   return (
-    <div className="flex items-center gap-2 py-1" aria-live="polite">
-      <span
-        key={label}
-        className="text-sm font-medium bg-clip-text text-transparent animate-in fade-in duration-300"
-        style={{
-          backgroundImage:
-            "linear-gradient(90deg, var(--color-muted-foreground) 0%, var(--color-foreground) 50%, var(--color-muted-foreground) 100%)",
-          backgroundSize: "200% 100%",
-          animation: "shimmer 1.8s linear infinite",
-        }}
-      >
+    <div className="kova-thinking-indicator flex items-center gap-2 py-1" aria-live="polite">
+      <span className="h-1.5 w-1.5 rounded-full bg-[var(--kova-blue)]" aria-hidden="true" />
+      <span key={label} className="text-sm font-medium text-muted-foreground">
         {label}…
       </span>
     </div>
@@ -383,12 +356,12 @@ function ChatMessageInner({
     <article
       id={`message-${message.id}`}
       data-message-id={message.id}
-      className="group w-full animate-fade-in px-3 py-3 text-[15px] leading-[1.65] sm:px-5 lg:px-10 lg:py-4 lg:text-[16px] lg:leading-[1.7]"
+      className="kova-message group w-full animate-fade-in px-3 py-3 text-[15px] leading-[1.65] sm:px-5 lg:px-10 lg:py-4 lg:text-[16px] lg:leading-[1.7]"
       aria-label={isUser ? "Your message" : "KovaGPT response"}
     >
       {isUser ? (
-        <div className="mx-auto flex max-w-[48rem] justify-end [[data-sidebar=closed]_&]:max-w-[52rem]">
-          <div className="flex min-w-0 max-w-[88%] flex-col items-end sm:max-w-[78%] lg:max-w-[72%]">
+        <div className="mx-auto flex max-w-[48rem] justify-end">
+          <div className="flex min-w-0 max-w-[88%] flex-col items-end sm:max-w-[78%] lg:max-w-[76%]">
             {message.attachments && message.attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2 justify-end">
                 {message.attachments
@@ -402,13 +375,13 @@ function ChatMessageInner({
                           ? `User-uploaded image: ${message.content.slice(0, 120)}`
                           : "User-uploaded image attached to message"
                       }
-                      className="max-h-64 rounded-2xl border border-border"
+                      className="max-h-64 rounded-lg border border-border"
                     />
                   ))}
               </div>
             )}
             {message.content && (
-              <div className="prose-chat whitespace-pre-wrap break-words rounded-[1.15rem] rounded-br-[.35rem] bg-[var(--user-bubble)] px-4 py-2.5 text-foreground shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--foreground)_3%,transparent)]">
+              <div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-lg border border-border/60 bg-[var(--user-bubble)] px-3.5 py-2.5 text-foreground">
                 {message.content}
               </div>
             )}
@@ -425,7 +398,7 @@ function ChatMessageInner({
           </div>
         </div>
       ) : (
-        <div className="mx-auto flex max-w-[48rem] animate-fade-up items-start justify-start [[data-sidebar=closed]_&]:max-w-[52rem]">
+        <div className="kova-assistant-message mx-auto flex max-w-[48rem] animate-fade-up items-start justify-start">
           <div
             className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text"
             onTouchStart={startLongPress}
@@ -537,10 +510,10 @@ function ChatMessageInner({
           </div>
         </div>
       )}
-      <div className="mx-auto max-w-[48rem] [[data-sidebar=closed]_&]:max-w-[52rem]">
+      <div className="mx-auto max-w-[48rem]">
         <div className={isUser ? "flex justify-end" : "flex justify-start"}>
           {!streaming && !isUser && message.content && (
-            <div className="kova-message-actions mt-1 transition-opacity lg:opacity-60 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
+            <div className="kova-message-actions mt-1 max-w-full overflow-x-auto transition-opacity lg:opacity-60 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
               {/* Visible: Copy, Thumbs up, Thumbs down, Share */}
               <button
                 onClick={copy}

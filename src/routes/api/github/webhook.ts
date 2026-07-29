@@ -18,10 +18,17 @@ export const Route = createFileRoute("/api/github/webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const contentLength = Number(request.headers.get("content-length") ?? "0");
+        if (contentLength > 2 * 1024 * 1024) {
+          return Response.json({ error: "Webhook payload too large" }, { status: 413 });
+        }
         const body = await request.text(),
           signature = request.headers.get("x-hub-signature-256") ?? "",
           delivery = request.headers.get("x-github-delivery") ?? "",
           event = request.headers.get("x-github-event") ?? "";
+        if (body.length > 2 * 1024 * 1024) {
+          return Response.json({ error: "Webhook payload too large" }, { status: 413 });
+        }
         if (
           !delivery ||
           !(await verifyGitHubWebhook({

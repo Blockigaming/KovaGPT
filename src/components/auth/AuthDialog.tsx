@@ -21,10 +21,12 @@ export function AuthDialog({
   open,
   mode: initialMode,
   onOpenChange,
+  returnFocusTarget,
 }: {
   open: boolean;
   mode: Mode;
   onOpenChange: (open: boolean) => void;
+  returnFocusTarget?: HTMLElement | null;
 }) {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [step, setStep] = useState<Step>("identify");
@@ -81,10 +83,11 @@ export function AuthDialog({
     if (!guard()) return;
     try {
       if (isSignUp) {
+        const normalizedEmail = email.trim().toLowerCase();
         const metadata: Record<string, string> = {};
         if (fullName.trim()) metadata.full_name = fullName.trim();
         const { data, error } = await supabase.auth.signUp({
-          email,
+          email: normalizedEmail,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
@@ -94,25 +97,31 @@ export function AuthDialog({
         if (error) throw error;
         const isRepeat = !!data.user && (data.user.identities?.length ?? 0) === 0;
         if (isRepeat) {
-          await supabase.auth.resend({
+          const { error: resendError } = await supabase.auth.resend({
             type: "signup",
-            email,
+            email: normalizedEmail,
             options: { emailRedirectTo: `${window.location.origin}/` },
           });
+          if (resendError) throw resendError;
           toast.success("Already registered - we resent the verification link.");
         } else {
           toast.success("Verification email sent. Check your inbox.");
         }
         onOpenChange(false);
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const normalizedEmail = email.trim().toLowerCase();
+        const { error } = await supabase.auth.signInWithPassword({
+          email: normalizedEmail,
+          password,
+        });
         if (error) {
           if (/confirm|not confirmed|email.*verif/i.test(error.message)) {
-            await supabase.auth.resend({
+            const { error: resendError } = await supabase.auth.resend({
               type: "signup",
-              email,
+              email: normalizedEmail,
               options: { emailRedirectTo: `${window.location.origin}/` },
             });
+            if (resendError) throw resendError;
             toast.error("Please verify your email - we just resent the link.");
             return;
           }
@@ -163,8 +172,9 @@ export function AuthDialog({
     }
     if (!guard()) return;
     try {
+      const normalizedEmail = email.trim().toLowerCase();
       const { error } = await supabase.auth.signInWithOtp({
-        email,
+        email: normalizedEmail,
         options: { emailRedirectTo: `${window.location.origin}/` },
       });
       if (error) throw error;
@@ -179,19 +189,26 @@ export function AuthDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[440px] p-0 border-0 bg-transparent shadow-none overflow-visible [&>button.absolute]:hidden">
+        <DialogContent
+          className="sm:max-w-[440px] p-0 border-0 bg-transparent shadow-none overflow-visible [&>button.absolute]:hidden"
+          onCloseAutoFocus={(event) => {
+            if (!returnFocusTarget?.isConnected) return;
+            event.preventDefault();
+            returnFocusTarget.focus();
+          }}
+        >
           <div
             className={cn(
-              "relative rounded-3xl border border-border/60 bg-card shadow-2xl",
+              "kova-auth-surface relative rounded-2xl border border-border/60 bg-card",
               "p-7 sm:p-9",
               "animate-in fade-in-0 zoom-in-95 duration-300",
             )}
           >
             {/* Header */}
             <div className="flex flex-col items-center text-center">
-              <div className="mb-5 animate-in fade-in-0 zoom-in-75 duration-500">
-                <div className="relative w-14 h-14 rounded-2xl bg-foreground/[0.04] ring-1 ring-border flex items-center justify-center transition-transform hover:scale-105">
-                  <NovaLogo className="w-9 h-9 [animation:spin_18s_linear_infinite]" />
+              <div className="mb-5 animate-in fade-in-0 duration-300">
+                <div className="relative w-14 h-14 rounded-xl bg-foreground/[0.04] ring-1 ring-border flex items-center justify-center">
+                  <NovaLogo className="w-9 h-9" />
                 </div>
               </div>
               <h1 className="text-[26px] leading-tight font-semibold tracking-tight">

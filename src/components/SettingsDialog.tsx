@@ -1,4 +1,13 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 
 import { Button } from "@/components/ui/button";
@@ -74,6 +83,7 @@ import { getUsage } from "@/lib/limits";
 import { useUser, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, DEFAULT_THEME, type ThemeColors, type ThemeMode } from "@/lib/theme";
+import { authFetch } from "@/lib/auth-fetch";
 
 export type Mood = "neutral" | "friendly" | "professional" | "concise";
 
@@ -201,6 +211,7 @@ export function SettingsDialog({
   onClearAll,
   initialTab,
   onOpenHelp,
+  returnFocusTarget,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -209,7 +220,17 @@ export function SettingsDialog({
   onClearAll: () => void;
   initialTab?: string;
   onOpenHelp?: () => void;
+  returnFocusTarget?: HTMLElement | null;
 }) {
+  const returnFocusRef = useRef<HTMLElement | null>(
+    returnFocusTarget ??
+      (typeof document !== "undefined" && document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null),
+  );
+  useEffect(() => {
+    if (open && returnFocusTarget) returnFocusRef.current = returnFocusTarget;
+  }, [open, returnFocusTarget]);
   const localUsage = open ? getUsage() : { images: 0, uploads: 0, date: "" };
 
   const { isSignedIn, user } = useUser();
@@ -225,6 +246,9 @@ export function SettingsDialog({
   const [usageLoading, setUsageLoading] = useState(false);
   const [subSummary, setSubSummary] = useState<SubscriptionSummary | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deleteAccountBusy, setDeleteAccountBusy] = useState(false);
 
   useEffect(() => {
     if (!open || tab !== "subscription" || !loggedIn) return;
@@ -301,6 +325,32 @@ export function SettingsDialog({
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmation !== "DELETE" || deleteAccountBusy) return;
+    setDeleteAccountBusy(true);
+    try {
+      const response = await authFetch("/api/account", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmation: deleteConfirmation }),
+      });
+      if (!response.ok) {
+        const result = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(result?.error || "Account deletion failed. Your account remains active.");
+      }
+      clearConversations();
+      onClearAll();
+      await clerk?.signOut();
+      setDeleteAccountOpen(false);
+      onOpenChange(false);
+      toast.success("Your account and subscription were deleted.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Account deletion failed.");
+    } finally {
+      setDeleteAccountBusy(false);
+    }
+  };
+
   const visibleTabGroups = useMemo<TabGroup[]>(() => {
     const hideSubscription = tier === "plus" || tier === "pro";
     if (!hideSubscription) return TAB_GROUPS;
@@ -345,7 +395,22 @@ export function SettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-background border border-border max-w-4xl max-h-[92vh] overflow-hidden flex flex-col gap-0 p-0 rounded-2xl">
+      <DialogContent
+        className="kova-settings-dialog bg-background border border-border max-w-4xl max-h-[92vh] overflow-hidden flex flex-col gap-0 p-0 rounded-2xl"
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          if (window.innerWidth < 1024) {
+            document.querySelector<HTMLElement>('[aria-label="Open menu"]')?.focus();
+            return;
+          }
+          const previous = returnFocusRef.current;
+          if (previous?.isConnected && previous.getClientRects().length > 0) {
+            previous.focus();
+            return;
+          }
+          document.querySelector<HTMLElement>('[aria-label="Open menu"]')?.focus();
+        }}
+      >
         <DialogHeader className="px-5 sm:px-7 pt-5 pb-4 border-b border-border">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -1087,13 +1152,8 @@ export function SettingsDialog({
                   actionLabel="Delete account"
                   danger
                   onAction={() => {
-                    // User is already signed in when this dialog is open (SignInGate above).
-                    // Open the account management surface directly.
-                    try {
-                      clerk?.openUserProfile();
-                    } catch {
-                      toast.error("Could not open account settings.");
-                    }
+                    setDeleteConfirmation("");
+                    setDeleteAccountOpen(true);
                   }}
                 />
               </TabsContent>
@@ -1204,6 +1264,42 @@ export function SettingsDialog({
         onOpenChange={setLogoutConfirmOpen}
         onConfirm={handleLogout}
       />
+      <AlertDialog
+        open={deleteAccountOpen}
+        onOpenChange={(next) => {
+          if (deleteAccountBusy) return;
+          setDeleteAccountOpen(next);
+          if (!next) setDeleteConfirmation("");
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete your account permanently?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This cancels active subscriptions and deletes your KovaGPT account and cloud data.
+              This action cannot be undone. Type DELETE to continue.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            value={deleteConfirmation}
+            onChange={(event) => setDeleteConfirmation(event.target.value)}
+            placeholder="Type DELETE"
+            aria-label="Type DELETE to confirm"
+            autoComplete="off"
+            disabled={deleteAccountBusy}
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteAccountBusy}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteAccount}
+              disabled={deleteConfirmation !== "DELETE" || deleteAccountBusy}
+            >
+              {deleteAccountBusy ? "Deleting…" : "Delete account"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
@@ -1612,12 +1708,14 @@ function LibraryPanel() {
   );
   const [mine, setMine] = useState<import("@/lib/shared-chats.functions").SharedChatSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [viewing, setViewing] = useState<LibItem | null>(null);
 
   const load = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const [lib, inbox, mineShares] = await Promise.all([
         (await import("@/lib/library.functions")).listMyLibrary(),
@@ -1629,6 +1727,7 @@ function LibraryPanel() {
       setMine(mineShares);
     } catch (e) {
       console.error(e);
+      setLoadError(e instanceof Error ? e.message : "Library data could not be loaded.");
     } finally {
       setLoading(false);
     }
@@ -1713,7 +1812,18 @@ function LibraryPanel() {
           </Select>
         </div>
 
-        {filtered.length === 0 ? (
+        {loadError ? (
+          <div
+            role="alert"
+            className="rounded-lg border border-destructive/30 bg-destructive/5 p-4"
+          >
+            <p className="text-sm font-medium text-destructive">Library data is unavailable</p>
+            <p className="mt-1 text-xs text-muted-foreground">{loadError}</p>
+            <Button size="sm" variant="outline" onClick={load} className="mt-3">
+              <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Retry
+            </Button>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
             {loading
               ? "Loading…"

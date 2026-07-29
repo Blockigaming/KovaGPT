@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, useCallback, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Sidebar } from "@/components/Sidebar";
 import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
@@ -10,7 +10,6 @@ const OnboardingDialog = lazy(() =>
 );
 import { TimersWidget } from "@/components/TimersWidget";
 import { AppErrorBoundary, OfflineBanner } from "@/components/states";
-import { MobileFabs } from "@/components/MobileFabs";
 import { MobileTopBar } from "@/components/MobileTopBar";
 import { installShortcutListener } from "@/lib/shortcuts";
 import { PanelLeft } from "lucide-react";
@@ -46,6 +45,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [sidebarOpen]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
+  const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
   const openHelp = useCallback(() => {
     navigate({ to: "/help" as never });
   }, [navigate]);
@@ -75,6 +75,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         navigate({ to: "/library" });
       },
       "open-settings": () => {
+        settingsReturnFocusRef.current =
+          document.activeElement instanceof HTMLElement ? document.activeElement : null;
         setSettingsTab(undefined);
         setSettingsOpen(true);
       },
@@ -94,6 +96,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [navigate]);
 
   const openSettings = useCallback((tab?: string) => {
+    settingsReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setSettingsTab(tab);
     setSettingsOpen(true);
   }, []);
@@ -149,8 +153,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         delete (e.currentTarget as HTMLDivElement).dataset.swipeStart;
       }}
     >
-      {/* Animated brand mesh background - sits behind everything, no pointer events. */}
-      <div aria-hidden="true" className="kova-bg" />
       <Sidebar
         conversations={conversations}
         activeId={null}
@@ -178,17 +180,13 @@ export function AppShell({ children }: { children: ReactNode }) {
         <AppErrorBoundary>{children}</AppErrorBoundary>
       </div>
 
-      {/* Mobile/tablet floating actions: bottom-left New Chat + Settings.
-          Replaces the previous bottom tab bar so the phone/tablet UX feels
-          native — thumb-reachable, unobtrusive, no fixed chrome strip. */}
-      <MobileFabs onNewChat={handleNew} onOpenSettings={() => openSettings()} />
-
       <Suspense fallback={null}>
         {settingsOpen && (
           <SettingsDialog
             open={settingsOpen}
             onOpenChange={setSettingsOpen}
             settings={settings}
+            returnFocusTarget={settingsReturnFocusRef.current}
             onChange={setSettings}
             onClearAll={() => {
               try {
