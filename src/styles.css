@@ -590,6 +590,7 @@ input {
   }
 }
 
+
 /* Core chat workspace primitives. Component classes keep the highest-traffic
    interactions consistent across desktop, narrow phones, and mobile sheets. */
 @layer components {
@@ -1865,6 +1866,7 @@ body {
   }
 }
 
+
 /* Interaction-quality layer. These shared rules refine existing surfaces
    without changing route behavior or introducing page-specific themes. */
 @layer components {
@@ -2102,3 +2104,4 @@ body {
     transform: none;
   }
 }
+

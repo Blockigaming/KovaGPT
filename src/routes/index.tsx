@@ -1217,7 +1217,7 @@ function KovaGPT() {
                   onRecentLibraryRetry={loadRecentLibraryFiles}
                 />
 
-                <div className="kova-capability-grid mx-auto mt-3 hidden max-w-[48rem] grid-cols-3 gap-1.5 lg:grid">
+<div className="kova-capability-grid mx-auto mt-3 hidden max-w-[48rem] grid-cols-3 gap-1.5 lg:grid">
                   {assistantCapabilities.map((p) => {
                     const Icon = p.icon;
                     return (
@@ -1225,7 +1225,7 @@ function KovaGPT() {
                         key={p.label}
                         type="button"
                         onClick={() => setInput((v) => (v.trim() ? v : p.prompt))}
-                        className="kova-capability-card inline-flex min-h-10 items-center gap-2 rounded-md border border-border/70 bg-transparent px-3 text-left text-[13px] font-medium text-foreground transition hover:border-foreground/20 hover:bg-accent"
+className="kova-capability-card inline-flex min-h-10 items-center gap-2 rounded-md border border-border/70 bg-transparent px-3 text-left text-[13px] font-medium text-foreground transition hover:border-foreground/20 hover:bg-accent"
                       >
                         <Icon className="h-4 w-4 text-muted-foreground" />
                         <span>{p.label}</span>
@@ -1263,7 +1263,7 @@ function KovaGPT() {
                       key={p.label}
                       type="button"
                       onClick={() => setInput((v) => (v ? v : p.prompt))}
-                      className="kova-starter-card min-w-0 text-left px-3.5 py-3 rounded-lg border border-border bg-card/70 active:bg-accent/60 transition-colors"
+className="kova-starter-card min-w-0 text-left px-3.5 py-3 rounded-lg border border-border bg-card/70 active:bg-accent/60 transition-colors"
                     >
                       <div className="text-[15px] font-medium text-foreground">{p.label}</div>
                       <div className="text-[12.5px] text-muted-foreground mt-0.5">{p.hint}</div>
