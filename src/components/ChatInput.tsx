@@ -141,6 +141,7 @@ export function ChatInput({
   const photoRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const plusWrapRef = useRef<HTMLDivElement>(null);
+  const plusTriggerRef = useRef<HTMLButtonElement>(null);
 
   const [sendFlash, setSendFlash] = useState(false);
   const [actionColor, setActionColor] = useState<string>("#3b82f6");
@@ -215,6 +216,7 @@ export function ChatInput({
     const onEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setPlusOpen(false);
+        window.requestAnimationFrame(() => plusTriggerRef.current?.focus());
       }
     };
     document.addEventListener("mousedown", onDoc);
@@ -765,6 +767,7 @@ export function ChatInput({
           {selectedToolOption && ActiveToolIcon && onToolSelect ? (
             <div className="flex px-3 pt-2">
               <button
+                ref={plusTriggerRef}
                 type="button"
                 disabled={isStreaming}
                 onClick={() => chooseTool(selectedToolOption)}
