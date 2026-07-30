@@ -1196,7 +1196,7 @@ if (imageBytes > MAX_ATTACHMENT_BYTES) {
                     if (WRITE_TOOL_NAMES.has(tc.function.name)) {
                       try {
                         const staged = await stagePendingAction(
-                          auth.userId,
+                          auth!.userId,
                           tc.function.name,
                           parsedArgs,
                         );
@@ -1226,7 +1226,7 @@ if (imageBytes > MAX_ATTACHMENT_BYTES) {
                       }
                     }
                     try {
-                      const out = await runGoogleTool(auth.userId, tc.function.name, parsedArgs);
+                      const out = await runGoogleTool(auth!.userId, tc.function.name, parsedArgs);
                       const content = JSON.stringify(out).slice(0, 24000);
                       dedupCache.set(key, content);
                       return { role: "tool", tool_call_id: tc.id, content };
