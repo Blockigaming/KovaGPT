@@ -174,6 +174,7 @@ export function Sidebar({
       className={navItemClass(active)}
       title={title}
       aria-label={collapsed ? title : undefined}
+      aria-current={active ? "page" : undefined}
       onClick={closeAfterMobileNavigation}
     >
       <Icon className="h-[18px] w-[18px] shrink-0" />
@@ -205,6 +206,7 @@ export function Sidebar({
           closeAfterMobileNavigation();
         }}
         aria-label={`Open chat ${c.title}`}
+        aria-current={activeId === c.id ? "page" : undefined}
         title={c.title}
       >
         {c.pinned ? <Pin className="h-3 w-3 shrink-0 fill-current text-muted-foreground" /> : null}
