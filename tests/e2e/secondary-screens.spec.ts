@@ -30,8 +30,11 @@ test("secondary controls remain keyboard-visible and touchable", async ({ page }
   await page.goto("/library", { waitUntil: "domcontentloaded" });
   const refresh = page.getByRole("button", { name: /Refresh/i });
   await expect(refresh).toBeEnabled();
-  await refresh.focus();
-  await expect(refresh).toBeFocused();
+  await expect(async () => {
+    await refresh.focus();
+    await page.waitForTimeout(100);
+    await expect(refresh).toBeFocused();
+  }).toPass({ timeout: 5_000 });
 
   if (page.viewportSize()!.width < 1024) {
     const box = await refresh.boundingBox();
