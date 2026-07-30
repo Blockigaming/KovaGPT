@@ -8,13 +8,16 @@ const input = await readFile("src/components/ChatInput.tsx", "utf8");
 const index = await readFile("src/routes/index.tsx", "utf8");
 const message = await readFile("src/components/ChatMessage.tsx", "utf8");
 
-test("sidebar uses durable desktop widths, mobile drawer, focus trap, and required navigation order", () => {
+test("sidebar uses a stable desktop width, hidden collapse, mobile drawer, and focus trap", () => {
   assert.match(sidebar, /const EXPANDED_WIDTH = 260/);
-  assert.match(sidebar, /const COLLAPSED_WIDTH = 64/);
-  assert.match(sidebar, /min\(88vw, 340px\)/);
+  assert.doesNotMatch(sidebar, /COLLAPSED_WIDTH/);
+  assert.match(sidebar, /lg:!w-0 lg:border-r-0/);
+  assert.match(sidebar, /min\(88vw,320px\)/);
   assert.match(sidebar, /document\.body\.style\.overflow = "hidden"/);
   assert.match(sidebar, /event\.key === "Escape"/);
   assert.match(sidebar, /aria-label="Primary navigation"/);
+  assert.match(sidebar, /aria-hidden=\{collapsed \? true : undefined\}/);
+  assert.match(sidebar, /inert=\{collapsed \? true : undefined\}/);
   const order = [
     'aria-label="New chat"',
     ">Search</span>",
@@ -36,9 +39,10 @@ test("mobile header and sidebar controls meet touch and accessible-name contract
   assert.match(topbar, /min-h-14/);
   assert.match(topbar, /w-11 h-11/);
   assert.match(topbar, /aria-label="Open menu"/);
-  assert.match(sidebar, /aria-label="Expand sidebar"/);
   assert.match(sidebar, /aria-label="Collapse sidebar"/);
+  assert.match(sidebar, /aria-label="Close navigation"/);
   assert.match(sidebar, /Close navigation menu/);
+  assert.doesNotMatch(sidebar, /aria-label="Expand sidebar"/);
 });
 
 test("shared composer protects input, attachments, IME submission, and upload announcements", () => {
@@ -64,7 +68,9 @@ test("chat viewport only autoscrolls near bottom and exposes jump-to-latest", ()
 test("message component keeps reachable assistant actions and safe streaming states", () => {
   assert.match(message, /StreamingStatus/);
   assert.match(message, /onRetry/);
-  assert.doesNotMatch(message, /readAloud|speechSynthesis|Read aloud|Volume2/);
+  assert.match(message, /readAloudSupported/);
+  assert.match(message, /window\.speechSynthesis/);
+  assert.match(message, /Read response aloud/);
   assert.match(message, /saveItem/);
   assert.match(message, /MobileBottomSheet/);
   assert.match(message, /cleanAssistantText/);
