@@ -1,6 +1,8 @@
 import { Menu, SquarePen } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { useUser, SignInButton, clerkEnabled } from "@/components/auth/ClerkSafe";
+import { ResponsiveModelSelector } from "@/components/ResponsiveModelSelector";
+import type { ModeId, Tier } from "@/lib/modes";
 
 /**
  * Compact sticky top bar shown on phones and tablets (any viewport below the
@@ -14,10 +16,16 @@ export function MobileTopBar({
   onOpenSidebar,
   onNewChat,
   title,
+  mode,
+  onModeChange,
+  userTier = "free",
 }: {
   onOpenSidebar: () => void;
   onNewChat: () => void;
   title?: string;
+  mode?: ModeId;
+  onModeChange?: (mode: ModeId) => void;
+  userTier?: Tier;
 }) {
   const { isLoaded, isSignedIn } = useUser();
   const showAuth = isLoaded && clerkEnabled && !isSignedIn;
@@ -32,11 +40,23 @@ export function MobileTopBar({
         >
           <Menu className="w-5 h-5" />
         </button>
-        <div className="flex items-center justify-center gap-2 min-w-0">
-          <NovaLogo className="w-5 h-5 shrink-0" />
-          <span className="font-display font-semibold tracking-tight text-[15px] truncate">
-            {title || "KovaGPT"}
-          </span>
+        <div className="flex min-w-0 items-center justify-center">
+          {mode && onModeChange ? (
+            <ResponsiveModelSelector
+              mode={mode}
+              onChange={onModeChange}
+              userTier={userTier}
+              placement="topbar"
+              compact
+            />
+          ) : (
+            <div className="flex min-w-0 items-center justify-center gap-2">
+              <NovaLogo className="w-5 h-5 shrink-0" />
+              <span className="font-display font-semibold tracking-tight text-[15px] truncate">
+                {title || "KovaGPT"}
+              </span>
+            </div>
+          )}
         </div>
         {showAuth ? (
           <SignInButton mode="modal">
