@@ -37,8 +37,6 @@ import type { Conversation } from "@/lib/chat-store";
 import { searchConversations } from "@/lib/conversation-search";
 
 const EXPANDED_WIDTH = 260;
-const COLLAPSED_WIDTH = 64;
-const MOBILE_DRAWER_WIDTH = "min(88vw, 340px)";
 
 function isMobileViewport() {
   return typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches;
@@ -77,6 +75,7 @@ export function Sidebar({
   const { tier } = useTier();
   const drawerRef = useRef<HTMLElement | null>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
+  const previousOpenRef = useRef(open);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -85,6 +84,32 @@ export function Sidebar({
   const collapsed = !open;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isOn = (p: string) => pathname === p;
+
+  useEffect(() => {
+    const openSearch = () => {
+      setSearchOpen(true);
+      if (!open) onToggle();
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          document.querySelector<HTMLInputElement>("#sidebar-chat-search")?.focus();
+        });
+      });
+    };
+
+    window.addEventListener("kova-open-search", openSearch);
+    return () => window.removeEventListener("kova-open-search", openSearch);
+  }, [open, onToggle]);
+
+  useEffect(() => {
+    const wasOpen = previousOpenRef.current;
+    previousOpenRef.current = open;
+    if (wasOpen === open || isMobileViewport()) return;
+
+    window.requestAnimationFrame(() => {
+      const label = open ? "Collapse sidebar" : "Open sidebar";
+      document.querySelector<HTMLElement>(`[aria-label="${label}"]`)?.focus();
+    });
+  }, [open]);
 
   useEffect(() => {
     if (!open || !isMobileViewport()) return;
@@ -142,13 +167,6 @@ export function Sidebar({
         ? "bg-sidebar-active text-foreground font-medium"
         : "text-sidebar-foreground hover:bg-sidebar-hover"
     }`;
-  const ActiveBar = ({ on }: { on: boolean }) =>
-    on ? (
-      <span
-        aria-hidden="true"
-        className="absolute -left-2.5 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r bg-[var(--kova-blue)]"
-      />
-    ) : null;
 
   const renderNavLink = (to: string, title: string, Icon: LucideIcon, active = isOn(to)) => (
     <Link
@@ -156,9 +174,9 @@ export function Sidebar({
       className={navItemClass(active)}
       title={title}
       aria-label={collapsed ? title : undefined}
+      aria-current={active ? "page" : undefined}
       onClick={closeAfterMobileNavigation}
     >
-      <ActiveBar on={active} />
       <Icon className="h-[18px] w-[18px] shrink-0" />
       <span className={labelClass}>{title}</span>
     </Link>
@@ -176,58 +194,30 @@ export function Sidebar({
   const renderRow = (c: Conversation) => (
     <div
       key={c.id}
-      className={`kova-chat-row group relative mx-2 my-0.5 flex min-h-9 cursor-pointer items-center gap-1 rounded-md px-2.5 py-1.5 text-[13px] transition ${
-        activeId === c.id
-          ? "bg-sidebar-active before:absolute before:-left-2 before:h-5 before:w-0.5 before:bg-[var(--kova-blue)]"
-          : "hover:bg-sidebar-hover/60"
-      } ${collapsed ? "lg:justify-center lg:px-0" : ""}`}
-      onClick={() => {
-        onSelect(c.id);
-        closeAfterMobileNavigation();
-      }}
-      role="button"
-      tabIndex={0}
-      aria-label={`Open chat ${c.title}`}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
+      className={`kova-chat-row group relative mx-2 my-0.5 flex min-h-9 items-center gap-1 rounded-md px-1.5 text-[13px] transition ${
+        activeId === c.id ? "bg-sidebar-active" : "hover:bg-sidebar-hover/60"
+      }`}
+    >
+      <button
+        type="button"
+        className="flex min-w-0 flex-1 items-center gap-1.5 rounded px-1 py-1.5 text-left focus-visible:ring-2 focus-visible:ring-ring"
+        onClick={() => {
           onSelect(c.id);
           closeAfterMobileNavigation();
-        }
-      }}
-      title={c.title}
-    >
-      {c.pinned ? (
-        <Pin className="mr-1 h-3 w-3 shrink-0 fill-current text-muted-foreground" />
-      ) : null}
-      <span className={collapsed ? "sr-only" : "min-w-0 flex-1 truncate"}>{c.title}</span>
-      {!collapsed && onTogglePin ? (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onTogglePin(c.id);
-          }}
-          className={`rounded p-1 transition hover:bg-background/40 active:scale-95 focus-visible:ring-2 focus-visible:ring-ring ${
-            c.pinned
-              ? "opacity-100"
-              : "opacity-100 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100"
-          }`}
-          aria-label={c.pinned ? "Unpin chat" : "Pin chat"}
-          title={c.pinned ? "Unpin chat" : "Pin chat"}
-        >
-          {c.pinned ? (
-            <PinOff className="h-3.5 w-3.5 text-muted-foreground" />
-          ) : (
-            <Pin className="h-3.5 w-3.5 text-muted-foreground" />
-          )}
-        </button>
-      ) : null}
+        }}
+        aria-label={`Open chat ${c.title}`}
+        aria-current={activeId === c.id ? "page" : undefined}
+        title={c.title}
+      >
+        {c.pinned ? <Pin className="h-3 w-3 shrink-0 fill-current text-muted-foreground" /> : null}
+        <span className="min-w-0 flex-1 truncate">{c.title}</span>
+      </button>
       {!collapsed ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               onClick={(e) => e.stopPropagation()}
-              className="rounded p-1 opacity-100 transition hover:bg-background/40 active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:opacity-70 lg:hover:opacity-100 lg:group-focus-within:opacity-100 lg:data-[state=open]:opacity-100"
+              className="rounded p-1 opacity-100 transition hover:bg-background/40 focus-visible:ring-2 focus-visible:ring-ring lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100 lg:data-[state=open]:opacity-100"
               aria-label="Chat options"
             >
               <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
@@ -274,7 +264,7 @@ export function Sidebar({
         <button
           type="button"
           onClick={onToggle}
-          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-[2px] lg:hidden"
+          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
           aria-label="Close navigation menu"
         />
       ) : null}
@@ -284,64 +274,45 @@ export function Sidebar({
         style={
           {
             "--sidebar-expanded": `${EXPANDED_WIDTH}px`,
-            "--sidebar-collapsed": `${COLLAPSED_WIDTH}px`,
-            "--mobile-sidebar-width": open ? MOBILE_DRAWER_WIDTH : "0px",
           } as React.CSSProperties
         }
-        className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-border/60 bg-sidebar/95 text-sidebar-foreground transition-[width,transform] duration-200 ease-[var(--ease-spring)] lg:w-[var(--sidebar-expanded)] ${
-          collapsed ? "lg:!w-[var(--sidebar-collapsed)]" : ""
-        } max-lg:kova-glass max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[var(--mobile-sidebar-width)] max-lg:rounded-r-xl max-lg:shadow-2xl`}
+        className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-border/60 bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 ease-[var(--ease-spring)] lg:w-[var(--sidebar-expanded)] ${
+          collapsed ? "lg:!w-0 lg:border-r-0" : ""
+        } max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,320px)] max-lg:shadow-2xl ${
+          open ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"
+        }`}
         aria-label="Primary navigation"
         aria-modal={open && isMobileViewport() ? true : undefined}
+        aria-hidden={collapsed ? true : undefined}
+        inert={collapsed ? true : undefined}
         role={open && isMobileViewport() ? "dialog" : "navigation"}
       >
-        <div className="flex h-full min-w-[var(--sidebar-collapsed)] flex-col overflow-hidden">
+        <div className="flex h-full min-w-[var(--sidebar-expanded)] flex-col overflow-hidden">
           <div className="relative z-20 flex min-h-[52px] items-center gap-1 bg-sidebar/90 px-2.5 pt-[var(--safe-top)]">
-            {collapsed ? (
-              <button
-                onClick={onToggle}
-                className="mx-auto hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:flex"
-                aria-label="Expand sidebar"
-                title="Expand sidebar"
-              >
+            <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
+              <span className="inline-flex shrink-0">
                 <NovaLogo className="h-6 w-6" />
-              </button>
-            ) : (
-              <>
-                <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
-                  <span className="inline-flex shrink-0">
-                    <NovaLogo className="h-6 w-6" />
-                  </span>
-                  <span className="truncate font-display text-[15px] font-semibold tracking-[-0.01em]">
-                    KovaGPT
-                  </span>
-                </div>
-                <button
-                  onClick={() => setSearchOpen((v) => !v)}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label="Search chats"
-                  title="Search chats"
-                >
-                  <Search className="h-[17px] w-[17px]" />
-                </button>
-                <button
-                  onClick={onToggle}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
-                  aria-label="Close navigation"
-                  title="Close navigation"
-                >
-                  <X className="h-[18px] w-[18px]" />
-                </button>
-                <button
-                  onClick={onToggle}
-                  className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:flex"
-                  aria-label="Collapse sidebar"
-                  title="Collapse sidebar"
-                >
-                  <PanelLeft className="h-[17px] w-[17px]" />
-                </button>
-              </>
-            )}
+              </span>
+              <span className="truncate font-display text-[15px] font-semibold tracking-[-0.01em]">
+                KovaGPT
+              </span>
+            </div>
+            <button
+              onClick={onToggle}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+              aria-label="Close navigation"
+              title="Close navigation"
+            >
+              <X className="h-[18px] w-[18px]" />
+            </button>
+            <button
+              onClick={onToggle}
+              className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:flex"
+              aria-label="Collapse sidebar"
+              title="Collapse sidebar"
+            >
+              <PanelLeft className="h-[17px] w-[17px]" />
+            </button>
           </div>
 
           <div
@@ -405,7 +376,11 @@ export function Sidebar({
               : null}
           </div>
 
-          <nav className="relative mt-2 min-h-0 flex-1 overflow-y-auto pb-4" aria-label="Chats">
+          <div
+            className="relative mt-2 min-h-0 flex-1 overflow-y-auto pb-4"
+            role="group"
+            aria-label="Chats"
+          >
             <div
               aria-hidden="true"
               className="pointer-events-none sticky top-0 z-10 h-4 bg-gradient-to-b from-sidebar to-transparent"
@@ -459,7 +434,7 @@ export function Sidebar({
               aria-hidden="true"
               className="pointer-events-none sticky bottom-0 z-10 h-8 bg-gradient-to-t from-sidebar to-transparent"
             />
-          </nav>
+          </div>
 
           <div
             className={`mt-auto border-t border-border/60 bg-sidebar/95 p-2.5 pb-[max(.625rem,var(--safe-bottom))] ${collapsed ? "lg:px-2" : ""}`}
@@ -500,7 +475,10 @@ export function Sidebar({
             ) : showSignedOut ? (
               <div className="space-y-2">
                 <button
-                  onClick={() => onOpenSettings("general")}
+                  onClick={() => {
+                    onOpenSettings("general");
+                    closeAfterMobileNavigation();
+                  }}
                   className={`flex min-h-11 w-full items-center rounded-xl py-2 text-sm transition hover:bg-sidebar-hover ${iconOnly}`}
                   aria-label="Settings"
                 >

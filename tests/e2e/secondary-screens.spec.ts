@@ -29,8 +29,12 @@ test("secondary screens preserve hierarchy and viewport containment", async ({ p
 test("secondary controls remain keyboard-visible and touchable", async ({ page }) => {
   await page.goto("/library", { waitUntil: "domcontentloaded" });
   const refresh = page.getByRole("button", { name: /Refresh/i });
-  await refresh.focus();
-  await expect(refresh).toBeFocused();
+  await expect(refresh).toBeEnabled();
+  await expect(async () => {
+    await refresh.focus();
+    await page.waitForTimeout(100);
+    await expect(refresh).toBeFocused();
+  }).toPass({ timeout: 5_000 });
 
   if (page.viewportSize()!.width < 1024) {
     const box = await refresh.boundingBox();

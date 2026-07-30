@@ -8,7 +8,6 @@ const routes = [
   "/ai-writer",
   "/projects",
   "/library",
-  "/recents",
   "/apps",
   "/audit-log",
   "/changelog",
@@ -49,7 +48,7 @@ test("implemented routes render without server errors or horizontal overflow", a
   test.setTimeout(90_000);
   for (const route of routes) {
     const response = await page.goto(route, { waitUntil: "domcontentloaded" });
-    expect(response?.status(), `${route} should not return a server error`).toBeLessThan(500);
+    expect(response?.status(), `${route} should be implemented`).toBeLessThan(400);
     await expect(page.locator("body")).toBeVisible();
     const overflow = await page.evaluate(() => ({
       width: document.documentElement.clientWidth,

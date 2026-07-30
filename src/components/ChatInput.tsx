@@ -59,6 +59,30 @@ export type ComposerToolId =
   | "data_analysis"
   | "file_analysis";
 
+type ComposerAction = {
+  id: ComposerToolId;
+  label: string;
+  icon: LucideIcon;
+};
+
+const COMPOSER_TOOLS: readonly ComposerAction[] = [
+  { id: "web_search", label: "Search the web", icon: Search },
+  { id: "deep_research", label: "Deep research", icon: Brain },
+  { id: "image", label: "Create an image", icon: Sparkles },
+  { id: "study", label: "Study and learn", icon: GraduationCap },
+  { id: "data_analysis", label: "Analyze data", icon: Lightbulb },
+  { id: "file_analysis", label: "Analyze files", icon: FileText },
+];
+
+const PROMPT_SHORTCUTS = [
+  { label: "Brainstorm ideas", prompt: "Help me brainstorm ideas about " },
+  { label: "Make a plan", prompt: "Create a practical step-by-step plan for " },
+  {
+    label: "Improve writing",
+    prompt: "Help me rewrite this clearly while preserving the meaning:\n\n",
+  },
+] as const;
+
 const TEXT_LIKE_EXT =
   /\.(txt|md|markdown|csv|tsv|json|jsonl|ya?ml|toml|xml|html?|css|scss|less|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|h|cc|cpp|hpp|cs|php|sql|sh|bash|zsh|fish|env|ini|conf|log|srt|vtt)$/i;
 const MAX_TEXT_FILE_BYTES = 256 * 1024; // 256 KB inline cap to keep prompts reasonable
@@ -79,6 +103,7 @@ export function ChatInput({
   onUploadLimit,
   placeholder,
   onPromptShortcut,
+  selectedTool,
   onToolSelect,
   recentLibraryFiles = [],
   recentLibraryLoading = false,
@@ -101,7 +126,8 @@ export function ChatInput({
   onUploadLimit?: () => void;
   placeholder?: string;
   onPromptShortcut?: (prompt: string) => void;
-  onToolSelect?: (tool: ComposerToolId) => void;
+  selectedTool?: ComposerToolId | null;
+  onToolSelect?: (tool: ComposerToolId | null) => void;
   recentLibraryFiles?: RecentLibraryFile[];
   recentLibraryLoading?: boolean;
   recentLibraryError?: string | null;
@@ -115,6 +141,7 @@ export function ChatInput({
   const photoRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const plusWrapRef = useRef<HTMLDivElement>(null);
+  const plusTriggerRef = useRef<HTMLButtonElement>(null);
 
   const [sendFlash, setSendFlash] = useState(false);
   const [actionColor, setActionColor] = useState<string>("#3b82f6");
@@ -189,6 +216,7 @@ export function ChatInput({
     const onEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setPlusOpen(false);
+        window.requestAnimationFrame(() => plusTriggerRef.current?.focus());
       }
     };
     document.addEventListener("mousedown", onDoc);
@@ -546,7 +574,6 @@ export function ChatInput({
               <button
                 key={item.id}
                 type="button"
-                role="menuitem"
                 onClick={() => attachLibraryFile(item)}
                 className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
               >
@@ -571,6 +598,77 @@ export function ChatInput({
     </div>
   );
 
+  const selectedToolOption = COMPOSER_TOOLS.find((item) => item.id === selectedTool);
+  const ActiveToolIcon = selectedToolOption?.icon;
+
+  const chooseTool = (tool: ComposerAction) => {
+    const next = selectedTool === tool.id ? null : tool.id;
+    onToolSelect?.(next);
+    setPlusOpen(false);
+    setUploadAnnouncement(next ? `${tool.label} selected` : `${tool.label} removed`);
+    window.requestAnimationFrame(() => ref.current?.focus());
+  };
+
+  const choosePromptShortcut = (label: string, prompt: string) => {
+    onPromptShortcut?.(prompt);
+    setPlusOpen(false);
+    setUploadAnnouncement(`${label} added`);
+    window.requestAnimationFrame(() => ref.current?.focus());
+  };
+
+  const renderComposerActions = (mobile: boolean) => (
+    <>
+      {onToolSelect ? (
+        <div className="mt-1 border-t border-border/70 pt-1" aria-label="Tools">
+          <div className="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            Tools
+          </div>
+          {COMPOSER_TOOLS.map((tool) => {
+            const Icon = tool.icon;
+            const active = selectedTool === tool.id;
+
+            return (
+              <button
+                key={tool.id}
+                type="button"
+                aria-pressed={active}
+                disabled={isStreaming}
+                onClick={() => chooseTool(tool)}
+                className={`kova-tool-button flex w-full items-center gap-3 rounded-xl text-left text-sm transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 ${
+                  mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5"
+                } ${active ? "bg-accent text-foreground" : ""}`}
+              >
+                <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span>{tool.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {onPromptShortcut && !value.trim() ? (
+        <div className="mt-1 border-t border-border/70 pt-1" aria-label="Prompt starters">
+          <div className="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            Prompt starters
+          </div>
+          {PROMPT_SHORTCUTS.map((shortcut) => (
+            <button
+              key={shortcut.label}
+              type="button"
+              onClick={() => choosePromptShortcut(shortcut.label, shortcut.prompt)}
+              className={`flex w-full items-center gap-3 rounded-xl text-left text-sm transition hover:bg-accent ${
+                mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5"
+              }`}
+            >
+              <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span>{shortcut.label}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </>
+  );
+
   return (
     <div
       className="w-full px-2.5 pb-[max(.75rem,var(--safe-bottom))] pt-2 transition-[padding] duration-150 sm:px-6 lg:px-8"
@@ -589,12 +687,8 @@ export function ChatInput({
                 } as React.CSSProperties)
               : undefined
           }
-          className={`kova-composer kova-glass overflow-visible rounded-[26px] transition-[border-color,box-shadow,transform] duration-200 focus-within:border-foreground/20 focus-within:shadow-[0_0_0_3px_color-mix(in_oklab,var(--ring)_12%,transparent)] ${
-            sendFlash
-              ? "scale-[0.995]"
-              : isStreaming
-                ? "border-foreground/40 ring-1 ring-foreground/10"
-                : "border-border"
+          className={`kova-composer overflow-visible rounded-[28px] transition-[border-color,box-shadow,transform] duration-200 ${
+            sendFlash ? "scale-[0.995]" : isStreaming ? "ring-1 ring-foreground/10" : ""
           }`}
         >
           {attachments.length > 0 && (
@@ -670,6 +764,22 @@ export function ChatInput({
               ))}
             </div>
           )}
+          {selectedToolOption && ActiveToolIcon && onToolSelect ? (
+            <div className="flex px-3 pt-2">
+              <button
+                ref={plusTriggerRef}
+                type="button"
+                disabled={isStreaming}
+                onClick={() => chooseTool(selectedToolOption)}
+                className="kova-tool-button flex h-8 items-center gap-2 rounded-xl bg-accent px-2.5 text-xs font-medium text-foreground transition hover:bg-accent/80 disabled:opacity-60"
+                aria-label={`Remove ${selectedToolOption.label}`}
+              >
+                <ActiveToolIcon className="h-3.5 w-3.5" />
+                <span>{selectedToolOption.label}</span>
+                <X className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+            </div>
+          ) : null}
           <div aria-live="polite" className="sr-only">
             {uploadAnnouncement}
           </div>
@@ -707,8 +817,8 @@ export function ChatInput({
                 type="button"
                 onClick={() => setPlusOpen((v) => !v)}
                 className={`kova-attach-button w-11 h-11 lg:w-9 lg:h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/60 active:scale-95 transition ${plusOpen && !isMobileLayout ? "rotate-45 text-foreground" : ""}`}
-                aria-label="Attach"
-                aria-haspopup="menu"
+                aria-label="Add files, tools, or prompts"
+                aria-haspopup="dialog"
                 aria-expanded={plusOpen}
                 title="Add"
               >
@@ -716,11 +826,11 @@ export function ChatInput({
               </button>
               {plusOpen && !isMobileLayout && (
                 <div
-                  role="menu"
-                  className="kova-glass absolute bottom-11 left-0 z-50 min-w-[220px] rounded-xl p-1.5 animate-in fade-in slide-in-from-bottom-1"
+                  role="dialog"
+                  aria-label="Add files, tools, or prompts"
+                  className="kova-glass absolute bottom-11 left-0 z-50 max-h-[70vh] min-w-[240px] overflow-y-auto rounded-xl p-1.5 animate-in fade-in slide-in-from-bottom-1"
                 >
                   <button
-                    role="menuitem"
                     type="button"
                     onClick={() => {
                       setPlusOpen(false);
@@ -732,7 +842,6 @@ export function ChatInput({
                     <span>Camera</span>
                   </button>
                   <button
-                    role="menuitem"
                     type="button"
                     onClick={() => {
                       setPlusOpen(false);
@@ -744,7 +853,6 @@ export function ChatInput({
                     <span>Photos</span>
                   </button>
                   <button
-                    role="menuitem"
                     type="button"
                     onClick={() => {
                       setPlusOpen(false);
@@ -756,7 +864,6 @@ export function ChatInput({
                     <span>Plugins</span>
                   </button>
                   <button
-                    role="menuitem"
                     type="button"
                     onClick={() => {
                       setPlusOpen(false);
@@ -767,6 +874,7 @@ export function ChatInput({
                     <FileText className="w-4 h-4 text-muted-foreground" />
                     <span>Files</span>
                   </button>
+                  {renderComposerActions(false)}
                   {renderRecentLibraryFiles()}
                 </div>
               )}
@@ -775,10 +883,10 @@ export function ChatInput({
               <MobileBottomSheet
                 open={plusOpen}
                 onOpenChange={setPlusOpen}
-                title="Attach"
-                ariaLabel="Attach media or files"
+                title="Add to your message"
+                ariaLabel="Add files, tools, or prompts"
               >
-                <div className="flex flex-col gap-1 p-1">
+                <div className="flex max-h-[70vh] flex-col gap-1 overflow-y-auto p-1">
                   <button
                     type="button"
                     onClick={() => {
@@ -823,6 +931,7 @@ export function ChatInput({
                     <Puzzle className="w-5 h-5 text-muted-foreground" />
                     <span>Plugins</span>
                   </button>
+                  {renderComposerActions(true)}
                   {renderRecentLibraryFiles()}
                 </div>
               </MobileBottomSheet>
@@ -839,12 +948,12 @@ export function ChatInput({
               onCompositionEnd={() => {
                 composingRef.current = false;
               }}
-              placeholder={placeholder ?? "Message KovaGPT"}
+              placeholder={placeholder ?? "Ask anything"}
               rows={1}
-              spellCheck={false}
+              spellCheck
               autoComplete="off"
-              autoCorrect="off"
-              autoCapitalize="off"
+              autoCorrect="on"
+              autoCapitalize="sentences"
               className="min-h-[44px] max-h-[200px] flex-1 resize-none border-0 bg-transparent px-2 py-[.72rem] text-[16px] leading-[1.45] text-foreground outline-none placeholder:text-muted-foreground focus:outline-none focus:ring-0 lg:text-[15px]"
               aria-label="Message KovaGPT"
             />
@@ -878,11 +987,10 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={onStop}
-                  style={{ backgroundColor: "var(--kova-blue)" }}
-                  className="kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-lg text-white transition hover:opacity-80 lg:h-9 lg:w-9"
+                  className="kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-80 lg:h-9 lg:w-9"
                   aria-label="Stop"
                 >
-                  <Square className="w-4 h-4 fill-current" />
+                  <Square className="h-3.5 w-3.5 fill-current" />
                 </button>
               ) : (value.trim() || attachments.length > 0) &&
                 !attachments.some(
@@ -892,8 +1000,7 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={triggerSubmit}
-                  style={{ backgroundColor: "var(--kova-blue)" }}
-                  className={`kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-lg text-white shadow-sm transition duration-150 hover:opacity-90 active:scale-90 active:opacity-70 lg:h-9 lg:w-9 ${sendFlash ? "scale-90 opacity-80" : ""}`}
+                  className={`kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-foreground text-background transition duration-150 hover:opacity-90 active:scale-90 active:opacity-70 lg:h-9 lg:w-9 ${sendFlash ? "scale-90 opacity-80" : ""}`}
                   aria-label="Send"
                 >
                   <ArrowUp
@@ -904,7 +1011,7 @@ export function ChatInput({
                 <button
                   type="button"
                   disabled
-                  className="kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-muted-foreground lg:h-9 lg:w-9"
+                  className="kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground lg:h-9 lg:w-9"
                   aria-label="Send"
                   title="Type a message to send"
                 >

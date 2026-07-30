@@ -17,7 +17,8 @@ async function expectNoPageOverflow(page: Page) {
   expect(size.scroll).toBeLessThanOrEqual(size.client + 1);
 }
 
-test.beforeEach((_, testInfo) => {
+test.beforeEach(({ page }, testInfo) => {
+  void page;
   test.skip(!mobileProjects.has(testInfo.project.name));
 });
 
@@ -43,7 +44,7 @@ test("composer and attachment sheet stay reachable on narrow screens", async ({ 
   expect(box).not.toBeNull();
   expect(box!.x).toBeGreaterThanOrEqual(0);
   expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
-  await page.getByRole("button", { name: "Attach" }).click();
+  await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
   const sheet = page.getByTestId("mobile-bottom-sheet");
   await expect(sheet).toBeVisible();
   await expect(sheet.getByRole("button", { name: "Close sheet" })).toBeVisible();

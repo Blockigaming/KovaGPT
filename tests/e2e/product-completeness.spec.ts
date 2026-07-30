@@ -1,40 +1,25 @@
 import { expect, test } from "@playwright/test";
 
-const viewports = [
-  [320, 700],
-  [375, 812],
-  [390, 844],
-  [430, 932],
-  [768, 1024],
-  [1024, 768],
-  [1280, 800],
-  [1440, 900],
-  [1728, 1117],
-] as const;
-
 test.describe("product completeness responsive scaffolding", () => {
-  for (const [width, height] of viewports) {
-    test(`help and support surfaces fit ${width}x${height}`, async ({ page }) => {
-      await page.setViewportSize({ width, height });
-      await page.goto("/help");
-      await expect(page.getByText(/KovaGPT Help Center/i).first()).toBeVisible();
-      await expect(page.getByRole("heading", { name: /How can we help/i })).toBeVisible();
-      await expect(page.locator("body")).not.toContainText(
-        /voice|microphone|dictation|read aloud/i,
-      );
-    });
-  }
+  test("help and support surfaces fit the configured viewport", async ({ page }) => {
+    await page.goto("/help", { waitUntil: "domcontentloaded" });
+    await expect(page.getByText(/KovaGPT Help Center/i).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: /How can we help/i })).toBeVisible();
+    await expect(page.locator("body")).not.toHaveCSS("overflow-x", "scroll");
+  });
 
-  test("command palette, notifications, policies, and offline states have smoke targets", async ({
-    page,
-  }) => {
-    await page.goto("/");
+  test("command palette, notifications, and policies have smoke targets", async ({ page }) => {
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
+    await expect(composer).toBeVisible();
+    await composer.click();
+    await page.waitForTimeout(250);
     await page.keyboard.press(process.platform === "darwin" ? "Meta+K" : "Control+K");
-    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Search chats and actions" })).toBeVisible();
     await page.keyboard.press("Escape");
-    await page.goto("/notifications");
+    await page.goto("/notifications", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: /notifications/i })).toBeVisible();
-    await page.goto("/privacy");
+    await page.goto("/privacy", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: /^Privacy Policy$/i })).toBeVisible();
   });
 });

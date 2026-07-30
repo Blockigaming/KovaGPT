@@ -102,6 +102,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     setSettingsOpen(true);
   }, []);
 
+  useEffect(() => {
+    const handleOpenSettings = (event: Event) => {
+      const tab = (event as CustomEvent<{ tab?: string }>).detail?.tab;
+      openSettings(tab);
+    };
+    window.addEventListener("kova-open-settings", handleOpenSettings);
+    return () => window.removeEventListener("kova-open-settings", handleOpenSettings);
+  }, [openSettings]);
+
   const goToConversation = (id: string) => {
     try {
       localStorage.setItem("nova-gpt-pending-active", id);

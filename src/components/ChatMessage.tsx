@@ -41,7 +41,6 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import { ArtifactEditor, detectArtifactKind, extractCodeBlocks } from "./ArtifactEditor";
 import { ToolConfirmCard } from "./ToolConfirmCard";
 import type { PendingConfirm } from "@/lib/chat-store";
-import { LongResponseCard, shouldWrapAsDocument } from "./LongResponseCard";
 import { InfoChip, detectInfoChip } from "./InfoChip";
 import { canReadAloud, speechText } from "@/lib/browser-voice";
 
@@ -90,14 +89,12 @@ const markdownComponents = {
   ),
 };
 
-// Strip numbered citation markers like [1], [2], [3] that web-search-augmented
-// answers sometimes still inject, and normalize en/em dashes to a hyphen
-// so the assistant never shows them in the UI.
+// Preserve the model's markdown exactly enough for source links, citation
+// markers, lists, and typography to survive rendering. ReactMarkdown handles
+// escaping; this normalization only makes streamed Windows line endings
+// deterministic.
 function cleanAssistantText(text: string): string {
-  return text
-    .replace(/\s?\[\d+\](?:\[\d+\])*/g, "")
-    .replace(/\s?\[\d+(?:\s*,\s*\d+)+\]/g, "")
-    .replace(/[\u2013\u2014]/g, "-");
+  return text.replace(/\r\n?/g, "\n");
 }
 
 // Detect email-like assistant output and extract subject + body so the
@@ -190,7 +187,7 @@ function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store
   }
   return (
     <div className="kova-thinking-indicator flex items-center gap-2 py-1" aria-live="polite">
-      <span className="h-1.5 w-1.5 rounded-full bg-[var(--kova-blue)]" aria-hidden="true" />
+      <span className="h-1.5 w-1.5 rounded-full bg-foreground" aria-hidden="true" />
       <span key={label} className="text-sm font-medium text-muted-foreground">
         {label}…
       </span>
@@ -434,15 +431,31 @@ function ChatMessageInner({
                 {message.content}
               </div>
             )}
-            {onBranch && (
-              <button
-                type="button"
-                onClick={onBranch}
-                className="mt-1.5 inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-muted-foreground opacity-100 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100"
-                aria-label="Branch from this message in a new chat"
-              >
-                <GitBranch className="h-3.5 w-3.5" /> Branch
-              </button>
+            {(onEdit || onBranch) && (
+              <div className="mt-1 flex min-h-9 items-center opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
+                {onEdit && (
+                  <button
+                    type="button"
+                    onClick={onEdit}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label="Edit message"
+                    title="Edit message"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                {onBranch && (
+                  <button
+                    type="button"
+                    onClick={onBranch}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label="Branch from this message in a new chat"
+                    title="Branch in new chat"
+                  >
+                    <GitBranch className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -541,9 +554,6 @@ function ChatMessageInner({
                     </ReactMarkdown>
                   );
                   if (artifactKind || streaming) return md;
-                  if (shouldWrapAsDocument(cleaned)) {
-                    return <LongResponseCard content={cleaned}>{md}</LongResponseCard>;
-                  }
                   const chip = detectInfoChip(cleaned);
                   if (chip)
                     return (
