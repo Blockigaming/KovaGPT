@@ -21,11 +21,13 @@ export function ResponsiveModelSelector({
   onChange,
   userTier = "free",
   compact = false,
+  placement = "composer",
 }: {
   mode: ModeId;
   onChange: (m: ModeId) => void;
   userTier?: Tier;
   compact?: boolean;
+  placement?: "composer" | "topbar";
 }) {
   const { isDesktop, interaction } = useLayout();
   const useSheet = !isDesktop || interaction === "touch";
@@ -37,8 +39,18 @@ export function ResponsiveModelSelector({
   const current = MODES.find((m) => m.id === mode) ?? MODES[0];
 
   if (!useSheet) {
-    return <ModelSelector mode={mode} onChange={onChange} userTier={userTier} compact={compact} />;
+    return (
+      <ModelSelector
+        mode={mode}
+        onChange={onChange}
+        userTier={userTier}
+        compact={compact}
+        placement={placement}
+      />
+    );
   }
+
+  const topbar = placement === "topbar";
 
   return (
     <>
@@ -46,18 +58,20 @@ export function ResponsiveModelSelector({
         type="button"
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
-        aria-label={`Choose model: Kova ${version} ${current.label}`}
+        aria-label={`Choose model: KovaGPT ${version} ${current.label}`}
         aria-expanded={open}
         data-testid="model-selector-trigger"
-        className={`inline-flex items-center gap-1.5 rounded-full bg-accent/70 active:bg-accent transition ${
-          compact ? "h-8 px-3.5 text-[13px]" : "h-9 px-4 text-sm"
+        className={`kova-model-trigger inline-flex items-center gap-1.5 font-medium transition active:bg-accent ${
+          topbar
+            ? "h-11 max-w-full rounded-lg bg-transparent px-2 text-[15px]"
+            : `rounded-full bg-accent/70 ${
+                compact ? "h-8 px-3.5 text-[13px]" : "h-9 px-4 text-sm"
+              }`
         }`}
       >
-        <span className="text-foreground font-medium leading-none tabular-nums">
-          Kova {version}
-          {version === "3.5" && (
-            <span className="text-muted-foreground font-normal"> · {current.label}</span>
-          )}
+        <span className="truncate text-foreground leading-none">
+          {topbar ? "KovaGPT" : `Kova ${version}`}
+          <span className="ml-1 text-muted-foreground font-normal">· {current.label}</span>
         </span>
         <ChevronDown className="w-4 h-4 text-muted-foreground" />
       </button>
@@ -94,8 +108,8 @@ export function ResponsiveModelSelector({
           </div>
         ) : null}
         <div className="mt-3 pt-3 border-t border-border">
-          <div className="px-1 pb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Kova version
+          <div className="px-1 pb-2 text-xs font-medium text-muted-foreground">
+            KovaGPT version
           </div>
           <div className="flex flex-wrap gap-1.5">
             {KOVA_VERSIONS.map((v) => (
@@ -106,7 +120,7 @@ export function ResponsiveModelSelector({
                   setKovaVersion(v);
                   setVersion(v);
                 }}
-                className={`text-sm px-3 py-1.5 rounded-full border transition ${
+                className={`text-sm px-3 py-1.5 rounded-lg border transition ${
                   v === version
                     ? "bg-foreground text-background border-foreground"
                     : "bg-transparent text-foreground border-border active:bg-accent"
