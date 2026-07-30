@@ -64,9 +64,7 @@ export function ResponsiveModelSelector({
         className={`kova-model-trigger inline-flex items-center gap-1.5 font-medium transition active:bg-accent ${
           topbar
             ? "h-11 max-w-full rounded-lg bg-transparent px-2 text-[15px]"
-            : `rounded-full bg-accent/70 ${
-                compact ? "h-8 px-3.5 text-[13px]" : "h-9 px-4 text-sm"
-              }`
+            : `rounded-full bg-accent/70 ${compact ? "h-8 px-3.5 text-[13px]" : "h-9 px-4 text-sm"}`
         }`}
       >
         <span className="truncate text-foreground leading-none">
@@ -108,9 +106,7 @@ export function ResponsiveModelSelector({
           </div>
         ) : null}
         <div className="mt-3 pt-3 border-t border-border">
-          <div className="px-1 pb-2 text-xs font-medium text-muted-foreground">
-            KovaGPT version
-          </div>
+          <div className="px-1 pb-2 text-xs font-medium text-muted-foreground">KovaGPT version</div>
           <div className="flex flex-wrap gap-1.5">
             {KOVA_VERSIONS.map((v) => (
               <button
