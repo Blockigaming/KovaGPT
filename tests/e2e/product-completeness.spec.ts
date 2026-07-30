@@ -10,9 +10,12 @@ test.describe("product completeness responsive scaffolding", () => {
 
   test("command palette, notifications, and policies have smoke targets", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeVisible();
+    const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
+    await expect(composer).toBeVisible();
+    await composer.click();
+    await page.waitForTimeout(250);
     await page.keyboard.press(process.platform === "darwin" ? "Meta+K" : "Control+K");
-    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Search chats and actions" })).toBeVisible();
     await page.keyboard.press("Escape");
     await page.goto("/notifications", { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: /notifications/i })).toBeVisible();
