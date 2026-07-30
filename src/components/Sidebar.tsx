@@ -85,6 +85,21 @@ export function Sidebar({
   const isOn = (p: string) => pathname === p;
 
   useEffect(() => {
+    const openSearch = () => {
+      setSearchOpen(true);
+      if (!open) onToggle();
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          document.querySelector<HTMLInputElement>("#sidebar-chat-search")?.focus();
+        });
+      });
+    };
+
+    window.addEventListener("kova-open-search", openSearch);
+    return () => window.removeEventListener("kova-open-search", openSearch);
+  }, [open, onToggle]);
+
+  useEffect(() => {
     if (!open || !isMobileViewport()) return;
     lastFocusedRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -260,43 +275,30 @@ export function Sidebar({
       >
         <div className="flex h-full min-w-[var(--sidebar-expanded)] flex-col overflow-hidden">
           <div className="relative z-20 flex min-h-[52px] items-center gap-1 bg-sidebar/90 px-2.5 pt-[var(--safe-top)]">
-            {collapsed ? (
-              <button
-                onClick={onToggle}
-                className="mx-auto hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:flex"
-                aria-label="Expand sidebar"
-                title="Expand sidebar"
-              >
-                <PanelLeft className="h-[18px] w-[18px]" />
-              </button>
-            ) : (
-              <>
-                <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
-                  <span className="inline-flex shrink-0">
-                    <NovaLogo className="h-6 w-6" />
-                  </span>
-                  <span className="truncate font-display text-[15px] font-semibold tracking-[-0.01em]">
-                    KovaGPT
-                  </span>
-                </div>
-                <button
-                  onClick={onToggle}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
-                  aria-label="Close navigation"
-                  title="Close navigation"
-                >
-                  <X className="h-[18px] w-[18px]" />
-                </button>
-                <button
-                  onClick={onToggle}
-                  className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:flex"
-                  aria-label="Collapse sidebar"
-                  title="Collapse sidebar"
-                >
-                  <PanelLeft className="h-[17px] w-[17px]" />
-                </button>
-              </>
-            )}
+            <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
+              <span className="inline-flex shrink-0">
+                <NovaLogo className="h-6 w-6" />
+              </span>
+              <span className="truncate font-display text-[15px] font-semibold tracking-[-0.01em]">
+                KovaGPT
+              </span>
+            </div>
+            <button
+              onClick={onToggle}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+              aria-label="Close navigation"
+              title="Close navigation"
+            >
+              <X className="h-[18px] w-[18px]" />
+            </button>
+            <button
+              onClick={onToggle}
+              className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:flex"
+              aria-label="Collapse sidebar"
+              title="Collapse sidebar"
+            >
+              <PanelLeft className="h-[17px] w-[17px]" />
+            </button>
           </div>
 
           <div
