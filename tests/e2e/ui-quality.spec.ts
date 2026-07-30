@@ -47,7 +47,7 @@ test("mobile greeting and composer actions fit the viewport", async ({ page }) =
   await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
   const sheet = page.getByTestId("mobile-bottom-sheet");
   await expect(sheet).toBeVisible();
-  await expect(sheet.getByRole("button", { name: "Web Search" })).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Search the web" })).toBeVisible();
   await sheet.getByRole("button", { name: "Close sheet" }).click();
   await expect(sheet).toBeHidden();
 });
