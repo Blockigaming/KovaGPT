@@ -61,11 +61,9 @@ test.describe("KovaGPT responsive shell", () => {
     const width = page.viewportSize()?.width ?? 0;
     const isPhone = width < 768;
 
-    // The compact top bar preserves a reachable New chat affordance on phones.
-    const fabs = page.getByRole("button", { name: /new chat/i });
     if (isPhone) {
-      // At least one visible "New chat" affordance
-      await expect(fabs.first()).toBeVisible({ timeout: 5000 });
+      await expect(page.getByRole("button", { name: "Open menu" })).toBeVisible();
+      await expect(page.locator('[data-testid="model-selector-trigger"]:visible')).toBeVisible();
     }
 
     // Desktop-only PanelLeft trigger appears only when sidebar is collapsed on md+
