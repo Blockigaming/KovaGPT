@@ -13,7 +13,7 @@ import {
   Loader2,
   Sparkles,
   ShieldAlert,
-  Plug,
+  PanelsTopLeft,
   AlertCircle,
   X,
   LogIn,
@@ -786,7 +786,10 @@ function AppsPage() {
         </Dialog>
         <header className="space-y-3">
           <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
-            <Link2 className="w-3.5 h-3.5" /> Apps
+            <span className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-sky-500 to-violet-500 text-white shadow-sm">
+              <PanelsTopLeft className="h-4 w-4" />
+            </span>
+            Apps
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">Your KovaGPT workspace</h1>
           <p className="text-sm text-muted-foreground max-w-2xl">

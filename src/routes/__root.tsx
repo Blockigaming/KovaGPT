@@ -16,7 +16,6 @@ import { applyThemeMode } from "@/lib/theme";
 import { loadSettings } from "@/lib/use-nova-settings";
 import { useEffect, useLayoutEffect } from "react";
 import { PlatformRuntime } from "@/components/PlatformRuntime";
-import { KovaLens } from "@/components/KovaLens";
 
 function NotFoundComponent() {
   return (
@@ -41,7 +40,7 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  const correlationId = `kova-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  const correlationId = `kova-${crypto.randomUUID()}`;
   console.error("[KovaRouteError]", { correlationId, error });
   const router = useRouter();
   return (
@@ -210,7 +209,6 @@ function RootComponent() {
       <QueryClientProvider client={queryClient}>
         <RootThemeManager />
         <PlatformRuntime />
-        <KovaLens />
         <Outlet />
         <Toaster />
       </QueryClientProvider>

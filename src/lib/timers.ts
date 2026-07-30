@@ -54,7 +54,7 @@ export function subscribeTimers(cb: () => void): () => void {
 
 export function addTimer(durationMs: number, label = "Timer"): TimerItem {
   const item: TimerItem = {
-    id: `t_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    id: `t_${crypto.randomUUID()}`,
     kind: "timer",
     label,
     durationMs,
@@ -66,7 +66,7 @@ export function addTimer(durationMs: number, label = "Timer"): TimerItem {
 
 export function addAlarm(fireAt: number, label = "Alarm"): TimerItem {
   const item: TimerItem = {
-    id: `a_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    id: `a_${crypto.randomUUID()}`,
     kind: "alarm",
     label,
     fireAt,

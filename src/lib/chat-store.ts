@@ -107,7 +107,7 @@ export function removeArchivedConversation(id: string) {
 }
 
 export function newId() {
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+  return crypto.randomUUID();
 }
 
 export function deriveTitle(text: string) {

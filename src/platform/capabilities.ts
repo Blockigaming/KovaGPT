@@ -149,17 +149,6 @@ export const CAPABILITIES = Object.freeze([
     keywords: ["relationships", "timeline"],
   }),
   define({
-    id: "recents",
-    label: "Recents",
-    route: "/recents",
-    permission: "authenticated",
-    requiredPlan: "free",
-    providers: [],
-    flags: [],
-    dependencies: ["projects", "library"],
-    keywords: ["history", "activity"],
-  }),
-  define({
     id: "automations",
     label: "Scheduled Tasks",
     route: "/scheduled-tasks",

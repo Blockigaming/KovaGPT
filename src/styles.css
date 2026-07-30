@@ -57,7 +57,7 @@
 }
 
 :root {
-  --radius: 0.75rem;
+  --radius: 1rem;
   /* KovaGPT light theme - ChatGPT-like restrained neutrals */
   --background: oklch(0.982 0 0);
   --foreground: oklch(0.19 0 0);
@@ -119,9 +119,9 @@
   --space-6: 1.5rem;
   --space-8: 2rem;
   --kova-radius-compact: 8px;
-  --kova-radius-input: 12px;
-  --kova-radius-card: 16px;
-  --kova-radius-panel: 20px;
+  --kova-radius-input: 18px;
+  --kova-radius-card: 20px;
+  --kova-radius-panel: 24px;
   --kova-control-sm: 36px;
   --kova-control-md: 40px;
   --kova-touch: 44px;
@@ -832,12 +832,6 @@ body {
 
 .kova-bg,
 .animate-pulse-slow {
-  display: none !important;
-}
-
-/* Lens remains in primary navigation and the command palette rather than
-   covering workspace content as a floating widget. */
-button[aria-label="Open Kova Lens"].fixed {
   display: none !important;
 }
 
@@ -1869,12 +1863,10 @@ body {
    without changing route behavior or introducing page-specific themes. */
 @layer components {
   .kova-composer {
-    border-radius: 1.125rem !important;
-    border-color: color-mix(in oklab, var(--foreground) 13%, transparent) !important;
-    background: color-mix(in oklab, var(--surface-composer) 96%, transparent) !important;
-    box-shadow:
-      0 10px 30px -24px oklch(0 0 0 / 55%),
-      0 1px 2px oklch(0 0 0 / 10%) !important;
+    border-radius: 1.75rem !important;
+    border-color: transparent !important;
+    background: var(--surface-composer) !important;
+    box-shadow: none !important;
     transition:
       border-color var(--motion-standard) var(--ease-standard),
       box-shadow var(--motion-standard) var(--ease-standard),
@@ -1882,14 +1874,12 @@ body {
   }
 
   .kova-composer:hover {
-    border-color: color-mix(in oklab, var(--foreground) 19%, transparent) !important;
+    border-color: transparent !important;
   }
 
   .kova-composer:focus-within {
-    border-color: color-mix(in oklab, var(--kova-blue) 62%, var(--border)) !important;
-    box-shadow:
-      0 0 0 3px color-mix(in oklab, var(--kova-blue) 13%, transparent),
-      0 16px 38px -28px oklch(0 0 0 / 60%) !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
   }
 
   .kova-capability-card,
