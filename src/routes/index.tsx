@@ -1461,44 +1461,6 @@ className="kova-starter-card min-w-0 text-left px-3.5 py-3 rounded-lg border bor
                                       },
                               ),
                             );
-                          }
-                        : undefined
-                    }
-                    onEdit={
-                      priorUser
-                        ? () => {
-                            setInput(priorUser.content);
-                            setAttachments(
-                              (priorUser.attachments ?? []).map((attachment) =>
-                                attachment.kind === "image"
-                                  ? {
-                                      kind: "image" as const,
-                                      dataUrl: attachment.dataUrl,
-                                      name: "Attached image",
-                                      status: "complete" as const,
-                                    }
-                                  : attachment.kind === "text_file"
-                                    ? {
-                                        kind: "text_file" as const,
-                                        dataUrl: "",
-                                        name: attachment.name,
-                                        size: attachment.size ?? undefined,
-                                        fileType: attachment.fileType,
-                                        textContent: attachment.content,
-                                        status: "complete" as const,
-                                      }
-                                    : {
-                                        kind: "library_file" as const,
-                                        dataUrl: "",
-                                        name: attachment.name,
-                                        size: attachment.size ?? undefined,
-                                        libraryItemId: attachment.libraryItemId,
-                                        fileType: attachment.fileType,
-                                        sourceProject: attachment.sourceProject,
-                                        status: "complete" as const,
-                                      },
-                              ),
-                            );
                             setEditingMessage({
                               conversationId: active.id,
                               messageId: priorUser.id,

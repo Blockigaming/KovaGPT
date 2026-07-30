@@ -20,6 +20,7 @@ async function expectNoPageOverflow(page: Page) {
 test.beforeEach((_, testInfo) => {
   test.skip(!mobileProjects.has(testInfo.project.name));
 });
+
 test("navigation opens, contains its controls, and dismisses predictably", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "Open menu" }).click();

@@ -593,6 +593,9 @@ input {
 /* Core chat workspace primitives. Component classes keep the highest-traffic
    interactions consistent across desktop, narrow phones, and mobile sheets. */
 @layer components {
+/* Core chat workspace primitives. Component classes keep the highest-traffic
+   interactions consistent across desktop, narrow phones, and mobile sheets. */
+@layer components {
   .kova-sidebar {
     background: color-mix(in oklab, var(--sidebar) 97%, var(--background));
     box-shadow: inset -1px 0 color-mix(in oklab, var(--foreground) 3%, transparent);
@@ -1868,6 +1871,9 @@ body {
 /* Interaction-quality layer. These shared rules refine existing surfaces
    without changing route behavior or introducing page-specific themes. */
 @layer components {
+/* Interaction-quality layer. These shared rules refine existing surfaces
+   without changing route behavior or introducing page-specific themes. */
+@layer components {
   .kova-composer {
     border-radius: 1.125rem !important;
     border-color: color-mix(in oklab, var(--foreground) 13%, transparent) !important;
@@ -2102,4 +2108,3 @@ body {
     transform: none;
   }
 }
-

@@ -215,3 +215,4 @@ test("chat API rejects malformed text attachments at the server boundary", async
     expect.objectContaining({ error: "Invalid text file attachment." }),
   );
 });
+
