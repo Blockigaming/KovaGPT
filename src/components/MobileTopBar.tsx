@@ -30,7 +30,7 @@ export function MobileTopBar({
   const { isLoaded, isSignedIn } = useUser();
   const showAuth = isLoaded && clerkEnabled && !isSignedIn;
   return (
-    <header className="kova-topbar sticky top-0 z-30 lg:hidden" role="banner">
+    <header className="kova-topbar sticky top-0 z-30 lg:hidden">
       <div className="kova-topbar-inner grid min-h-14 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1">
         <button
           type="button"
