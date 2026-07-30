@@ -15,7 +15,7 @@ import {
 import { AIStatus } from "@/components/AIStatus";
 import { MobileTopBar } from "@/components/MobileTopBar";
 import { CommandPalette } from "@/components/CommandPalette";
-import { ConversationOutline } from "@/components/ConversationOutline";
+import { ResponsiveModelSelector } from "@/components/ResponsiveModelSelector";
 
 import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 
@@ -263,6 +263,9 @@ function KovaGPT() {
     message?: string;
   }>({ open: false, kind: "image" });
   const abortRef = useRef<AbortController | null>(null);
+  const inFlightRef = useRef(false);
+  const retryTimerRef = useRef<number | null>(null);
+  const activeIdRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
@@ -383,42 +386,20 @@ function KovaGPT() {
     [conversations, activeId],
   );
 
-  // Personalized greeting for the landing screen.
-  const firstName = useMemo(() => {
-    const candidate =
-      settings.displayName?.trim() ||
-      (user as { firstName?: string; username?: string; fullName?: string } | null | undefined)
-        ?.firstName ||
-      (user as { firstName?: string; username?: string; fullName?: string } | null | undefined)
-        ?.username ||
-      (
-        user as { firstName?: string; username?: string; fullName?: string } | null | undefined
-      )?.fullName?.split(" ")[0] ||
-      "";
-    return typeof candidate === "string" ? candidate.split(" ")[0] : "";
-  }, [settings.displayName, user]);
+  useEffect(() => {
+    activeIdRef.current = activeId;
+  }, [activeId]);
 
-  const greeting = useMemo(() => {
-    if (!isLoaded) return "What can I help with?";
-    if (clerkEnabled && !isSignedIn) return "What can I help with?";
-    const name = firstName;
-    const prompts = name
-      ? [
-          `Welcome back, ${name}.`,
-          `Hey, ${name}.`,
-          `Good to see you, ${name}.`,
-          `Ready, ${name}?`,
-          `Let's go, ${name}.`,
-        ]
-      : [
-          "What can I help with?",
-          "How can I help you today?",
-          "Ready when you are.",
-          "What are we working on?",
-          "Ask anything.",
-        ];
-    return prompts[0];
-  }, [firstName, isLoaded, isSignedIn]);
+  useEffect(
+    () => () => {
+      if (retryTimerRef.current !== null) {
+        window.clearTimeout(retryTimerRef.current);
+      }
+    },
+    [],
+  );
+
+  const greeting = "What can I help with?";
 
   const updateNearBottom = useCallback(() => {
     const el = scrollRef.current;
@@ -557,13 +538,27 @@ function KovaGPT() {
   }, []);
 
   const send = useCallback(
-    async (text: string, atts: PendingAttachment[], _retryAttempt = 0) => {
+    async (
+      text: string,
+      atts: PendingAttachment[],
+      _retryAttempt = 0,
+      retryConversationId?: string,
+      retryHistory?: Message[],
+    ) => {
       const MAX_AUTO_RETRIES = 2;
       const trimmed = text.trim();
-      if ((!trimmed && atts.length === 0) || isStreaming) return;
+      if ((!trimmed && atts.length === 0) || inFlightRef.current) return;
 
-      const nextConvId = activeId ?? newId();
-      const isNewConversation = !activeId;
+      if (_retryAttempt === 0 && retryTimerRef.current !== null) {
+        window.clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+
+      const nextConvId = retryConversationId ?? activeId ?? newId();
+      const existingConversation = nextConvId
+        ? conversations.find((conversation) => conversation.id === nextConvId)
+        : undefined;
+      const isNewConversation = !retryConversationId && !existingConversation;
 
       const activeTool = selectedTool;
 
@@ -594,7 +589,19 @@ function KovaGPT() {
       };
       const assistantMsg: Message = { id: newId(), role: "assistant", content: "" };
 
-      let priorMessages: Message[] = [];
+      const editIndex =
+        existingConversation && editingMessage?.conversationId === existingConversation.id
+          ? existingConversation.messages.findIndex(
+              (message) => message.id === editingMessage.messageId,
+            )
+          : -1;
+      const priorMessages =
+        retryHistory ??
+        (existingConversation
+          ? editIndex >= 0
+            ? existingConversation.messages.slice(0, editIndex)
+            : existingConversation.messages.slice()
+          : []);
 
       setConversations((prev) => {
         if (isNewConversation) {
@@ -607,47 +614,25 @@ function KovaGPT() {
             updatedAt: Date.now(),
             temporary: tempChat,
           };
-          priorMessages = [];
-          return [c, ...prev];
+          return [c, ...prev.filter((conversation) => conversation.id !== nextConvId)];
         }
 
-        let found = false;
-        return prev
-          .map((c) => {
-            if (c.id !== nextConvId) return c;
-            found = true;
-            const editIndex =
-              editingMessage?.conversationId === c.id
-                ? c.messages.findIndex((message) => message.id === editingMessage.messageId)
-                : -1;
-            priorMessages = editIndex >= 0 ? c.messages.slice(0, editIndex) : c.messages.slice();
-            return {
-              ...c,
-              messages: [...priorMessages, userMsg, assistantMsg],
-              updatedAt: Date.now(),
-            };
-          })
-          .concat(
-            found
-              ? []
-              : [
-                  {
-                    id: nextConvId,
-                    title: "New chat",
-                    messages: [userMsg, assistantMsg],
-                    mode,
-                    createdAt: Date.now(),
-                    updatedAt: Date.now(),
-                    temporary: tempChat,
-                  },
-                ],
-          );
+        return prev.map((c) =>
+          c.id === nextConvId
+            ? {
+                ...c,
+                messages: [...priorMessages, userMsg, assistantMsg],
+                updatedAt: Date.now(),
+              }
+            : c,
+        );
       });
       setActiveId(nextConvId);
       setInput("");
       setAttachments([]);
       setEditingMessage(null);
       setIsStreaming(true);
+      inFlightRef.current = true;
 
       const controller = new AbortController();
       abortRef.current = controller;
@@ -838,7 +823,22 @@ function KovaGPT() {
           autoTitle(nextConvId, fullMsgs);
         }
       } catch (e: unknown) {
-        if ((e as Error).name !== "AbortError") {
+        if ((e as Error).name === "AbortError") {
+          if (!assembledReply.trim()) {
+            setConversations((prev) =>
+              prev.map((conversation) =>
+                conversation.id === nextConvId
+                  ? {
+                      ...conversation,
+                      messages: conversation.messages.filter(
+                        (message) => message.id !== assistantMsg.id,
+                      ),
+                    }
+                  : conversation,
+              ),
+            );
+          }
+        } else {
           const err = e as Error & { requestId?: string; category?: string; retryable?: boolean };
           const raw = err.message || "Something went wrong";
           const isNetwork =
@@ -857,13 +857,9 @@ function KovaGPT() {
             err.retryable !== false && retryableCategory && _retryAttempt < MAX_AUTO_RETRIES;
 
           if (canAutoRetry) {
-            // Silent exponential backoff: 600ms, 1800ms. Strip the empty
-            // assistant + user bubble so the retry recreates them cleanly.
+            // Exponential backoff: 600ms, 1800ms. Strip the failed turn so
+            // the retry can recreate it without duplicate messages.
             const backoffMs = 600 * Math.pow(3, _retryAttempt);
-            const attemptLabel = _retryAttempt + 1;
-            updateAssistant(
-              `\n\n_Reconnecting… (attempt ${attemptLabel + 1}/${MAX_AUTO_RETRIES + 1})_`,
-            );
             setConversations((prev) =>
               prev.map((c) =>
                 c.id === nextConvId
@@ -878,8 +874,11 @@ function KovaGPT() {
             );
             setIsStreaming(false);
             abortRef.current = null;
-            setTimeout(() => {
-              void send(text, atts, _retryAttempt + 1);
+            inFlightRef.current = false;
+            retryTimerRef.current = window.setTimeout(() => {
+              retryTimerRef.current = null;
+              if (activeIdRef.current !== nextConvId) return;
+              void send(text, atts, _retryAttempt + 1, nextConvId, priorMessages);
             }, backoffMs);
             return;
           }
@@ -919,7 +918,11 @@ function KovaGPT() {
                       : c,
                   ),
                 );
-                setTimeout(() => send(text, atts, 0), 100);
+                retryTimerRef.current = window.setTimeout(() => {
+                  retryTimerRef.current = null;
+                  if (activeIdRef.current !== nextConvId) return;
+                  void send(text, atts, 0, nextConvId, priorMessages);
+                }, 100);
               },
             },
           });
@@ -929,13 +932,20 @@ function KovaGPT() {
         setIsStreaming(false);
         setSelectedTool(null);
         abortRef.current = null;
+        inFlightRef.current = false;
       }
     },
-    [activeId, isStreaming, mode, autoTitle, settings, selectedTool, tempChat, editingMessage],
+    [activeId, conversations, mode, autoTitle, settings, selectedTool, tempChat, editingMessage],
   );
 
   const stop = useCallback(() => {
+    if (retryTimerRef.current !== null) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
     abortRef.current?.abort();
+    abortRef.current = null;
+    inFlightRef.current = false;
     setIsStreaming(false);
   }, []);
 
@@ -1053,6 +1063,9 @@ function KovaGPT() {
           onOpenSidebar={() => setSidebarOpen(true)}
           onNewChat={newChat}
           title={active?.title}
+          mode={mode}
+          onModeChange={setMode}
+          userTier={tier}
         />
         <header
           className="kova-topbar relative hidden h-[52px] items-center gap-1 px-3 lg:flex"
@@ -1079,11 +1092,13 @@ function KovaGPT() {
             </div>
           )}
 
-          {/* AI status: live indicator to the right of the KovaGPT mark while streaming */}
           <div className="flex items-center min-w-0 flex-1 relative">
-            <div className="mr-3 flex min-h-10 items-center px-2.5 py-1.5 text-sm font-semibold text-foreground">
-              KovaGPT
-            </div>
+            <ResponsiveModelSelector
+              mode={mode}
+              onChange={setMode}
+              userTier={tier}
+              placement="topbar"
+            />
             <AIStatus
               streaming={isStreaming}
               message={active?.messages[active.messages.length - 1]}
@@ -1187,8 +1202,8 @@ function KovaGPT() {
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button className="text-sm font-semibold px-4 h-9 rounded-full bg-[var(--kova-blue)] text-white hover:opacity-90 active:scale-[0.98] transition whitespace-nowrap shadow-sm">
-                    Sign up for free
+                  <button className="text-sm font-semibold px-4 h-9 rounded-full bg-foreground text-background hover:opacity-90 active:scale-[0.98] transition whitespace-nowrap">
+                    Sign up
                   </button>
                 </SignUpButton>
               </>
@@ -1241,10 +1256,11 @@ function KovaGPT() {
                   mode={mode}
                   onModeChange={setMode}
                   userTier={tier}
-                  canChangeAgent={Boolean(isSignedIn)}
+                  canChangeAgent={false}
                   onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
-                  placeholder="Message KovaGPT"
+                  placeholder="Ask anything"
                   onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
+                  selectedTool={selectedTool}
                   onToolSelect={setSelectedTool}
                   recentLibraryFiles={recentLibraryFiles}
                   recentLibraryLoading={recentLibraryLoading}
@@ -1256,7 +1272,6 @@ function KovaGPT() {
           </section>
         ) : (
           <>
-            <ConversationOutline messages={active.messages} />
             <div
               ref={scrollRef}
               onScroll={updateNearBottom}
@@ -1323,6 +1338,57 @@ function KovaGPT() {
                     onFollowUp={
                       isLastAssistant && !isStreaming ? (prompt) => send(prompt, []) : undefined
                     }
+                    onEdit={
+                      m.role === "user" && !isStreaming
+                        ? () => {
+                            setInput(m.content);
+                            setAttachments(
+                              (m.attachments ?? []).map((attachment) =>
+                                attachment.kind === "image"
+                                  ? {
+                                      kind: "image" as const,
+                                      dataUrl: attachment.dataUrl,
+                                      name: "Attached image",
+                                      status: "complete" as const,
+                                    }
+                                  : attachment.kind === "text_file"
+                                    ? {
+                                        kind: "text_file" as const,
+                                        dataUrl: "",
+                                        name: attachment.name,
+                                        size: attachment.size ?? undefined,
+                                        fileType: attachment.fileType,
+                                        textContent: attachment.content,
+                                        status: "complete" as const,
+                                      }
+                                    : {
+                                        kind: "library_file" as const,
+                                        dataUrl: "",
+                                        name: attachment.name,
+                                        size: attachment.size ?? undefined,
+                                        libraryItemId: attachment.libraryItemId,
+                                        fileType: attachment.fileType,
+                                        sourceProject: attachment.sourceProject,
+                                        status: "complete" as const,
+                                      },
+                              ),
+                            );
+                            setEditingMessage({
+                              conversationId: active.id,
+                              messageId: m.id,
+                            });
+                            window.setTimeout(
+                              () =>
+                                document
+                                  .querySelector<HTMLTextAreaElement>(
+                                    'textarea[aria-label="Message KovaGPT"]',
+                                  )
+                                  ?.focus(),
+                              0,
+                            );
+                          }
+                        : undefined
+                    }
                     onRetry={
                       isLastAssistant && !isStreaming && priorUser
                         ? () => {
@@ -1364,15 +1430,8 @@ function KovaGPT() {
                                         sourceProject: attachment.sourceProject,
                                         status: "complete" as const,
                                       },
-                              ),
+                                ),
                             );
-                            setEditingMessage({
-                              conversationId: active.id,
-                              messageId: priorUser.id,
-                            });
-                            toast.message("Editing your prompt", {
-                              description: "Sending will replace this turn and its later replies.",
-                            });
                           }
                         : undefined
                     }
@@ -1443,39 +1502,20 @@ function KovaGPT() {
                 mode={mode}
                 onModeChange={setMode}
                 userTier={tier}
-                canChangeAgent={Boolean(isSignedIn)}
+                canChangeAgent={false}
                 onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
-                placeholder="Message KovaGPT"
+                placeholder="Ask anything"
                 onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
+                selectedTool={selectedTool}
                 onToolSelect={setSelectedTool}
                 recentLibraryFiles={recentLibraryFiles}
                 recentLibraryLoading={recentLibraryLoading}
                 recentLibraryError={recentLibraryError}
                 onRecentLibraryRetry={loadRecentLibraryFiles}
               />
-              <div className="hidden lg:flex flex-col items-center gap-2 text-[11px] text-muted-foreground/70 mt-2 select-none">
-                <div className="flex justify-center gap-3">
-                  <span>
-                    <kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">
-                      Enter
-                    </kbd>{" "}
-                    to send
-                  </span>
-                  <span>
-                    <kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">
-                      Shift+Enter
-                    </kbd>{" "}
-                    newline
-                  </span>
-                  <span>
-                    <kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">
-                      ⌘K
-                    </kbd>{" "}
-                    search
-                  </span>
-                </div>
-                <p>KovaGPT can make mistakes. Check important info.</p>
-              </div>
+              <p className="kova-disclaimer mt-2 select-none text-center text-[11px] leading-4 text-muted-foreground/80">
+                KovaGPT can make mistakes. Check important info.
+              </p>
             </div>
           </>
         )}
