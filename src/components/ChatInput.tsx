@@ -632,7 +632,7 @@ export function ChatInput({
                 aria-pressed={active}
                 disabled={isStreaming}
                 onClick={() => chooseTool(tool)}
-                className={`flex w-full items-center gap-3 rounded-xl text-left text-sm transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 ${
+                className={`kova-tool-button flex w-full items-center gap-3 rounded-xl text-left text-sm transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 ${
                   mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5"
                 } ${active ? "bg-accent text-foreground" : ""}`}
               >
@@ -768,7 +768,7 @@ export function ChatInput({
                 type="button"
                 disabled={isStreaming}
                 onClick={() => chooseTool(selectedToolOption)}
-                className="flex h-8 items-center gap-2 rounded-xl bg-accent px-2.5 text-xs font-medium text-foreground transition hover:bg-accent/80 disabled:opacity-60"
+                className="kova-tool-button flex h-8 items-center gap-2 rounded-xl bg-accent px-2.5 text-xs font-medium text-foreground transition hover:bg-accent/80 disabled:opacity-60"
                 aria-label={`Remove ${selectedToolOption.label}`}
               >
                 <ActiveToolIcon className="h-3.5 w-3.5" />
