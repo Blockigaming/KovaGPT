@@ -71,6 +71,8 @@ test("sending snapshots history and serializes automatic retries", () => {
   assert.match(route, /retryTimerRef\.current = window\.setTimeout/);
   assert.match(route, /window\.clearTimeout\(retryTimerRef\.current\)/);
   assert.match(route, /activeIdRef\.current !== nextConvId/);
+  assert.match(route, /const retryHistory = active\.messages\.slice\(0, -2\);/);
+  assert.match(route, /active\.id,\s+retryHistory,/);
   assert.doesNotMatch(route, /const attemptLabel|_Reconnecting…/);
 });
 
