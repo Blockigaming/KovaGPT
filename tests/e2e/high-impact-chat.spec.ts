@@ -101,7 +101,7 @@ test("regenerate resends the prompt with its attachment without duplicating the 
   ]);
 });
 
-test("archived chats can be cleared with explicit confirmation", async ({ page }) => {
+test("archived chats can be removed from Settings data controls", async ({ page }) => {
   await page.addInitScript(() => {
     const now = Date.now();
     localStorage.setItem(
@@ -122,14 +122,15 @@ test("archived chats can be cleared with explicit confirmation", async ({ page }
   if (page.viewportSize()!.width < 1024) {
     await page.getByRole("button", { name: "Open menu" }).click();
   }
-  await page.getByRole("button", { name: "Archived chats" }).click();
-  await expect(page.getByRole("heading", { name: "Archived chats" })).toBeVisible();
-  page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("button", { name: "Delete all archived" }).click();
-  await expect(page.getByText("No archived chats.")).toBeVisible();
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("tab", { name: "Data control" }).click();
+
+  const archived = page.getByRole("region", { name: "Archived chats" });
+  await expect(archived).toBeVisible();
+  await archived.getByRole("button", { name: "Delete archived chat Archived chat" }).click();
+  await expect(archived.getByText("No archived chats", { exact: true })).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem("kovagpt:archived"))).toBe("[]");
 });
-
 test("deleting a chat offers a working undo", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   if (page.viewportSize()!.width < 1024) {
@@ -158,7 +159,7 @@ test("text files are attached as real request context and remain visible in hist
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeVisible();
-  await page.getByRole("button", { name: "Attach" }).click();
+  await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
   await page.locator('input[type="file"][accept*=".csv"]').setInputFiles({
     name: "quarterly.csv",
     mimeType: "text/csv",
