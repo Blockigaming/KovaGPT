@@ -13,11 +13,13 @@ export function ModelSelector({
   onChange,
   userTier = "free",
   compact = false,
+  placement = "composer",
 }: {
   mode: ModeId;
   onChange: (m: ModeId) => void;
   userTier?: Tier;
   compact?: boolean;
+  placement?: "composer" | "topbar";
 }) {
   const [open, setOpen] = useState(false);
   const [version, setVersion] = useState<KovaVersion>("3.5");
@@ -26,6 +28,7 @@ export function ModelSelector({
   }, []);
   const ref = useRef<HTMLDivElement>(null);
   const current = MODES.find((m) => m.id === mode) ?? MODES[0];
+  const topbar = placement === "topbar";
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -36,30 +39,38 @@ export function ModelSelector({
   }, []);
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="kova-model-selector relative" ref={ref}>
       <button
         type="button"
-        aria-label={`Choose model: Kova ${version} ${current.label}`}
+        aria-label={`Choose model: KovaGPT ${version} ${current.label}`}
         data-testid="model-selector-trigger"
         onClick={() => setOpen((v) => !v)}
-        className={`inline-flex items-center gap-1.5 rounded-full bg-accent/70 hover:bg-accent transition ${
-          compact ? "h-8 px-3.5 text-[13px]" : "h-9 px-4 text-sm"
+        className={`kova-model-trigger inline-flex items-center gap-1.5 font-medium transition ${
+          topbar
+            ? "h-10 rounded-lg bg-transparent px-2.5 text-[15px] hover:bg-accent"
+            : `rounded-full bg-accent/70 hover:bg-accent ${
+                compact ? "h-8 px-3.5 text-[13px]" : "h-9 px-4 text-sm"
+              }`
         }`}
       >
-        <span className="text-foreground font-medium leading-none tabular-nums">
-          Kova {version}
-          {version === "3.5" && (
-            <span className="text-muted-foreground font-normal"> · {current.label}</span>
-          )}
+        <span className="text-foreground leading-none">
+          {topbar ? "KovaGPT" : `Kova ${version}`}
+          <span className="ml-1 text-muted-foreground font-normal">· {current.label}</span>
         </span>
-        <ChevronDown className="w-4 h-4 text-muted-foreground" />
+        <ChevronDown
+          className={`w-4 h-4 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
+        />
       </button>
       {open && (
-        <div className="absolute bottom-full mb-2 left-0 w-56 rounded-xl border border-border bg-popover shadow-xl z-50 p-1 animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-1 duration-150">
+        <div
+          className={`kova-model-menu absolute left-0 z-50 w-64 rounded-2xl border border-border bg-popover p-1.5 shadow-xl animate-in fade-in-0 zoom-in-95 duration-150 ${
+            topbar ? "top-full mt-1 origin-top-left" : "bottom-full mb-2 origin-bottom-left"
+          }`}
+        >
           {version === "3.5" && (
             <>
-              <div className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Intelligence
+              <div className="px-3 pt-2 pb-1.5 text-xs font-medium text-muted-foreground">
+                Choose how KovaGPT responds
               </div>
               {modesForTier(userTier).map((m) => {
                 const selected = m.id === mode;
@@ -75,7 +86,7 @@ export function ModelSelector({
                     className="w-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <div
-                      className={`w-full text-left px-3 py-2 rounded-lg transition flex items-center gap-2 ${selected ? "bg-accent" : "hover:bg-accent/60"}`}
+                      className={`w-full text-left px-3 py-2.5 rounded-xl transition flex items-center gap-2 ${selected ? "bg-accent" : "hover:bg-accent/60"}`}
                     >
                       <span className="font-medium text-sm flex-1">{m.label}</span>
                       {selected && <Check className="w-4 h-4 text-foreground" />}
@@ -86,8 +97,8 @@ export function ModelSelector({
             </>
           )}
           <div className="mt-1 pt-2 border-t border-border">
-            <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Kova version
+            <div className="px-3 pb-1.5 text-xs font-medium text-muted-foreground">
+              KovaGPT version
             </div>
             <div className="flex flex-wrap gap-1 px-2 pb-1.5">
               {KOVA_VERSIONS.map((v) => (
@@ -98,13 +109,13 @@ export function ModelSelector({
                     setKovaVersion(v);
                     setVersion(v);
                   }}
-                  className={`text-[11px] px-2 py-1 rounded-full border transition ${
+                  className={`text-xs px-2.5 py-1.5 rounded-lg border transition ${
                     v === version
                       ? "bg-foreground text-background border-foreground"
                       : "bg-transparent text-foreground border-border hover:bg-accent"
                   }`}
                 >
-                  {v}
+                  Kova {v}
                 </button>
               ))}
             </div>
