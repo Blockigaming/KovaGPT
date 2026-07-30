@@ -1,0 +1,145 @@
+import { expect, test } from "@playwright/test";
+
+const projects = new Set(["phone-390x844", "desktop-1440x900"]);
+
+test.beforeEach(async ({ page }, testInfo) => {
+  test.skip(!projects.has(testInfo.project.name));
+  await page.addInitScript(() => {
+    const now = Date.now();
+    localStorage.setItem(
+      "nova-gpt-conversations-v2",
+      JSON.stringify([
+        {
+          id: "editable-chat",
+          title: "Editable conversation",
+          mode: "instant",
+          createdAt: now,
+          updatedAt: now,
+          messages: [
+            {
+              id: "original-user",
+              role: "user",
+              content: "Original prompt",
+              attachments: [
+                {
+                  kind: "library_file",
+                  libraryItemId: "library-1",
+                  name: "brief.txt",
+                  fileType: "text/plain",
+                  size: 42,
+                },
+              ],
+            },
+            { id: "original-assistant", role: "assistant", content: "Original response" },
+          ],
+        },
+      ]),
+    );
+    localStorage.setItem("nova-gpt-pending-active", "editable-chat");
+  });
+});
+
+test("editing a prompt replaces its turn and keeps attachments", async ({ page }) => {
+  let requestBody: Record<string, unknown> | undefined;
+  await page.route("**/api/chat", async (route) => {
+    requestBody = route.request().postDataJSON();
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body: 'data: {"choices":[{"delta":{"content":"Updated response"}}]}\n\ndata: [DONE]\n\n',
+    });
+  });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Edit" }).click();
+  const editingBanner = page.getByText("Editing a previous prompt", { exact: true });
+  await expect(editingBanner).toBeVisible();
+
+  const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
+  await expect(composer).toHaveValue("Original prompt");
+  await composer.fill("Updated prompt");
+  await page.getByRole("button", { name: "Send" }).click();
+
+  await expect(page.locator(".kova-user-message")).toHaveCount(1);
+  await expect(page.locator(".kova-user-message")).toContainText("Updated prompt");
+  await expect(page.locator(".kova-assistant-message")).toContainText("Updated response");
+  await expect(editingBanner).toHaveCount(0);
+
+  const messages = requestBody?.messages as Array<Record<string, unknown>>;
+  expect(messages).toHaveLength(1);
+  expect(messages[0].content).toBe("Updated prompt");
+  expect(messages[0].attachments).toEqual([
+    expect.objectContaining({ kind: "library_file", libraryItemId: "library-1" }),
+  ]);
+
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+});
+
+test("regenerate resends the prompt with its attachment without duplicating the turn", async ({
+  page,
+}) => {
+  let requestBody: Record<string, unknown> | undefined;
+  await page.route("**/api/chat", async (route) => {
+    requestBody = route.request().postDataJSON();
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body: 'data: {"choices":[{"delta":{"content":"Regenerated response"}}]}\n\ndata: [DONE]\n\n',
+    });
+  });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "More actions" }).click();
+  await page.getByRole("menuitem", { name: "Retry" }).click();
+
+  await expect(page.locator(".kova-user-message")).toHaveCount(1);
+  await expect(page.locator(".kova-assistant-message")).toContainText("Regenerated response");
+  const messages = requestBody?.messages as Array<Record<string, unknown>>;
+  expect(messages).toHaveLength(1);
+  expect(messages[0].attachments).toEqual([
+    expect.objectContaining({ kind: "library_file", libraryItemId: "library-1" }),
+  ]);
+});
+
+test("archived chats can be cleared with explicit confirmation", async ({ page }) => {
+  await page.addInitScript(() => {
+    const now = Date.now();
+    localStorage.setItem(
+      "kovagpt:archived",
+      JSON.stringify([
+        {
+          id: "archived-1",
+          title: "Archived chat",
+          mode: "instant",
+          createdAt: now,
+          updatedAt: now,
+          messages: [{ id: "archived-message", role: "user", content: "Old chat" }],
+        },
+      ]),
+    );
+  });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  if (page.viewportSize()!.width < 1024) {
+    await page.getByRole("button", { name: "Open menu" }).click();
+  }
+  await page.getByRole("button", { name: "Archived chats" }).click();
+  await expect(page.getByRole("heading", { name: "Archived chats" })).toBeVisible();
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Delete all archived" }).click();
+  await expect(page.getByText("No archived chats.")).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem("kovagpt:archived"))).toBe("[]");
+});
+
+test("deleting a chat offers a working undo", async ({ page }) => {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  if (page.viewportSize()!.width < 1024) {
+    await page.getByRole("button", { name: "Open menu" }).click();
+  }
+  const row = page.locator(".kova-chat-row", { hasText: "Editable conversation" });
+  await expect(row).toBeVisible();
+  await row.getByRole("button", { name: "Chat options" }).click();
+  await page.getByRole("menuitem", { name: "Delete" }).click();
+  await expect(row).toHaveCount(0);
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.locator(".kova-chat-row", { hasText: "Editable conversation" })).toBeVisible();
+});

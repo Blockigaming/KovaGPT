@@ -805,7 +805,7 @@ className="kova-send-button mb-1 flex h-10 w-10 items-center justify-center roun
                   type="button"
                   onClick={triggerSubmit}
                   style={{ backgroundColor: "var(--kova-blue)" }}
-
+className={`kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-lg text-white shadow-sm transition duration-150 hover:opacity-90 active:scale-90 active:opacity-70 lg:h-9 lg:w-9 ${sendFlash ? "scale-90 opacity-80" : ""}`}
                   aria-label="Send"
                 >
                   <ArrowUp

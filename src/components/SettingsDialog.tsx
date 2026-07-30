@@ -78,7 +78,18 @@ import { PersonalitySliders } from "@/components/PersonalitySliders";
 import { StorageDashboard } from "@/components/StorageDashboard";
 import { FamilySharingPanel } from "@/components/FamilySharingPanel";
 import { MfaPanel } from "@/components/MfaPanel";
-import { clearConversations } from "@/lib/chat-store";
+import {
+  clearConversations,
+  loadArchivedConversations,
+  loadConversations,
+  saveArchivedConversations,
+  saveConversations,
+} from "@/lib/chat-store";
+import {
+  DEVICE_EXPORT_VERSION,
+  mergeConversations,
+  parseDeviceDataExport,
+} from "@/lib/device-data-portability";
 import { getUsage } from "@/lib/limits";
 import { useUser, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
@@ -378,6 +389,7 @@ export function SettingsDialog({
   // a subtle pill for ~1.5s. Skips the very first render so it doesn't fire on
   // open.
   const [savedPulse, setSavedPulse] = useState(false);
+  const importFileRef = useRef<HTMLInputElement>(null);
   const firstRunRef = useRef(true);
   useEffect(() => {
     if (!open) {
@@ -1118,16 +1130,18 @@ export function SettingsDialog({
                 />
                 <SecurityRow
                   title="Export your data"
-                  body="Download a copy of your account data right now."
+                  body="Download chats, archived chats, and preferences stored on this device. Cloud account records are not included."
                   actionLabel="Download"
                   onAction={() => {
                     try {
                       const payload = {
+                        format: "kovagpt-device-export",
+                        version: DEVICE_EXPORT_VERSION,
                         exportedAt: new Date().toISOString(),
+                        scope: "this-device",
                         settings,
-                        conversations: JSON.parse(
-                          localStorage.getItem("nova-gpt-conversations-v2") || "[]",
-                        ),
+                        conversations: loadConversations(),
+                        archivedConversations: loadArchivedConversations(),
                       };
                       const blob = new Blob([JSON.stringify(payload, null, 2)], {
                         type: "application/json",
@@ -1145,6 +1159,45 @@ export function SettingsDialog({
                       toast.error("Could not build export. Try again.");
                     }
                   }}
+                />
+                <input
+                  ref={importFileRef}
+                  type="file"
+                  accept="application/json,.json"
+                  className="sr-only"
+                  aria-label="Choose KovaGPT export"
+                  onChange={async (event) => {
+                    const file = event.currentTarget.files?.[0];
+                    event.currentTarget.value = "";
+                    if (!file) return;
+                    try {
+                      const imported = parseDeviceDataExport(await file.text());
+                      const conversations = mergeConversations(
+                        loadConversations(),
+                        imported.conversations,
+                      );
+                      const archived = mergeConversations(
+                        loadArchivedConversations(),
+                        imported.archivedConversations,
+                      );
+                      saveConversations(conversations);
+                      saveArchivedConversations(archived);
+                      window.dispatchEvent(new Event("kova:conversations-imported"));
+                      toast.success(
+                        `Imported ${imported.conversations.length + imported.archivedConversations.length} chats.`,
+                      );
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error ? error.message : "Could not import data.",
+                      );
+                    }
+                  }}
+                />
+                <SecurityRow
+                  title="Import chat history"
+                  body="Merge active and archived chats from a KovaGPT device-data export. Existing newer chats are kept."
+                  actionLabel="Choose file"
+                  onAction={() => importFileRef.current?.click()}
                 />
                 <SecurityRow
                   title="Delete account"

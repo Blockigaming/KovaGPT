@@ -87,6 +87,11 @@ export function archiveConversation(conversation: Conversation) {
   localStorage.setItem(ARCHIVED_KEY, JSON.stringify(next));
 }
 
+export function saveArchivedConversations(conversations: Conversation[]) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(ARCHIVED_KEY, JSON.stringify(conversations.slice(0, 500)));
+}
+
 export function removeArchivedConversation(id: string) {
   localStorage.setItem(
     ARCHIVED_KEY,
