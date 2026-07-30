@@ -401,7 +401,7 @@ function ChatMessageInner({
               </div>
             )}
             {message.content && (
-              <div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-lg border border-border/60 bg-[var(--user-bubble)] px-3.5 py-2.5 text-foreground">
+<div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-lg border border-border/60 bg-[var(--user-bubble)] px-3.5 py-2.5 text-foreground">
                 {message.content}
               </div>
             )}
@@ -418,7 +418,7 @@ function ChatMessageInner({
           </div>
         </div>
       ) : (
-        <div className="kova-assistant-message mx-auto flex max-w-[48rem] animate-fade-up items-start justify-start">
+<div className="kova-assistant-message mx-auto flex max-w-[48rem] animate-fade-up items-start justify-start">
           <div
             className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text"
             onTouchStart={startLongPress}

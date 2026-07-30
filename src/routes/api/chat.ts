@@ -468,19 +468,19 @@ export const Route = createFileRoute("/api/chat")({
               if (m.attachments !== undefined && !Array.isArray(m.attachments)) {
                 return Response.json({ error: "attachments must be an array." }, { status: 400 });
               }
-              if (m.attachments && m.attachments.length > 2) {
-                return Response.json(
-                  { error: "A message can include at most 2 attachments." },
-                  { status: 400 },
-                );
-              }
-              if (m.attachments) {
-                for (const a of m.attachments) {
-                  if (
-                    !a ||
-                    typeof a !== "object" ||
-                    !["image", "text_file", "library_file"].includes(a.kind)
-                  ) {
+if (m.attachments && m.attachments.length > 2) {
+  return Response.json(
+    { error: "A message can include at most 2 attachments." },
+    { status: 400 },
+  );
+}
+if (m.attachments) {
+  for (const a of m.attachments) {
+    if (
+      !a ||
+      typeof a !== "object" ||
+      !["image", "text_file", "library_file"].includes(a.kind)
+    ) {
                     return Response.json({ error: "Invalid attachment." }, { status: 400 });
                   }
                   if (a.kind === "library_file") {
@@ -497,29 +497,29 @@ export const Route = createFileRoute("/api/chat")({
                     }
                     continue;
                   }
-                  if (a.kind === "text_file") {
-                    if (
-                      typeof a.name !== "string" ||
-                      a.name.length === 0 ||
-                      a.name.length > 255 ||
-                      typeof a.content !== "string" ||
-                      a.content.length === 0 ||
-                      a.content.length > MAX_TEXT_ATTACHMENT_CHARS ||
-                      (a.fileType != null &&
-                        (typeof a.fileType !== "string" ||
-                          a.fileType.length > 100 ||
-                          (!a.fileType.startsWith("text/") &&
-                            a.fileType !== "application/json"))) ||
-                      (a.size != null &&
-                        (typeof a.size !== "number" || a.size < 0 || a.size > 256 * 1024))
-                    ) {
-                      return Response.json(
-                        { error: "Invalid text file attachment." },
-                        { status: 400 },
-                      );
-                    }
-                    continue;
-                  }
+if (a.kind === "text_file") {
+  if (
+    typeof a.name !== "string" ||
+    a.name.length === 0 ||
+    a.name.length > 255 ||
+    typeof a.content !== "string" ||
+    a.content.length === 0 ||
+    a.content.length > MAX_TEXT_ATTACHMENT_CHARS ||
+    (a.fileType != null &&
+      (typeof a.fileType !== "string" ||
+        a.fileType.length > 100 ||
+        (!a.fileType.startsWith("text/") &&
+          a.fileType !== "application/json"))) ||
+    (a.size != null &&
+      (typeof a.size !== "number" || a.size < 0 || a.size > 256 * 1024))
+  ) {
+    return Response.json(
+      { error: "Invalid text file attachment." },
+      { status: 400 },
+    );
+  }
+  continue;
+}
                   if (
                     typeof a.dataUrl !== "string" ||
                     !/^data:image\/(?:png|jpe?g|webp|gif);base64,/i.test(a.dataUrl)
@@ -529,9 +529,9 @@ export const Route = createFileRoute("/api/chat")({
                       { status: 400 },
                     );
                   }
-                  const encodedImage = a.dataUrl.slice(a.dataUrl.indexOf(",") + 1);
-                  const imageBytes = Math.floor((encodedImage.length * 3) / 4);
-                  if (imageBytes > MAX_ATTACHMENT_BYTES) {
+const encodedImage = a.dataUrl.slice(a.dataUrl.indexOf(",") + 1);
+const imageBytes = Math.floor((encodedImage.length * 3) / 4);
+if (imageBytes > MAX_ATTACHMENT_BYTES) {
                     return new Response(
                       JSON.stringify({ error: "An image attachment exceeds the 3 MB limit." }),
                       { status: 413, headers: { "Content-Type": "application/json" } },
