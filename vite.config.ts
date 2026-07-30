@@ -1,10 +1,17 @@
-import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import tsconfigPaths from "vite-tsconfig-paths";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 
-// Lovable's TanStack config wrapper owns the plugin stack (Start, React,
-// Tailwind, tsconfig paths) and produces a correctly bundled server output.
-// Only the custom server entry is overridden here.
 export default defineConfig({
-  tanstackStart: {
-    server: { entry: "server" },
+  plugins: [
+    tailwindcss(),
+    tsconfigPaths({ projects: ["./tsconfig.json"] }),
+    tanstackStart({ server: { entry: "src/server.ts" } }),
+    react(),
+  ],
+  ssr: {
+    noExternal: ["h3-v2", "rou3"],
   },
 });

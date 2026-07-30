@@ -13,7 +13,6 @@ export type PlatformDomain =
   | "apps"
   | "context"
   | "intelligence"
-  | "recents"
   | "platform";
 export type PlatformEvent<T = unknown> = Readonly<{
   id: string;

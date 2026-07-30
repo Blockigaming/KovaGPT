@@ -2,7 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Check, ArrowLeft, Sparkles, Zap, Crown, X, Building2 } from "lucide-react";
 import { useState } from "react";
 import { NovaLogo } from "@/components/NovaLogo";
-import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { useUser, useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 import { EnterpriseContactDialog } from "@/components/EnterpriseContactDialog";
@@ -155,7 +154,6 @@ function PricingPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <PaymentTestModeBanner />
       <header className="border-b border-border">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-sm hover:opacity-80">
@@ -239,17 +237,18 @@ function PricingPage() {
             icon={Building2}
             name="Enterprise"
             price="Custom"
-            period="pricing"
-            description="Built around your team's needs."
+            period="annual agreement"
+            description="Secure AI for organizations that need governance, support, and predictable scale."
             cta="Contact sales"
+            enterprise
             onCta={() => setEnterpriseOpen(true)}
             features={[
               "Everything in Pro",
-              "Estimated $500 - $5,000 / month (depends on needs)",
-              "Custom usage limits & SLAs",
-              "Dedicated support contact",
-              "Team accounts & billing",
-              "Final pricing tailored to your use case",
+              "Centralized workspace and consolidated billing",
+              "SAML SSO, role controls, and audit logs",
+              "Custom retention and data governance",
+              "Priority onboarding and support SLA",
+              "Volume-based usage and invoicing",
             ]}
           />
         </div>
@@ -324,11 +323,13 @@ type CardProps = {
   cta: string;
   features: string[];
   highlight?: boolean;
+  enterprise?: boolean;
   ctaDisabled?: boolean;
   onCta?: () => void;
 };
 
 function PlanCard({
+  icon: Icon,
   name,
   price,
   period,
@@ -336,13 +337,18 @@ function PlanCard({
   cta,
   features,
   highlight,
+  enterprise,
   ctaDisabled,
   onCta,
 }: CardProps) {
   return (
     <div
-      className={`kova-plan-card relative rounded-2xl border p-6 flex flex-col ${
-        highlight ? "border-[var(--kova-blue)] bg-card" : "border-border bg-card/50"
+      className={`kova-plan-card relative flex flex-col rounded-[24px] border p-6 shadow-[0_1px_2px_rgb(0_0_0/.04)] ${
+        enterprise
+          ? "border-foreground/20 bg-foreground text-background"
+          : highlight
+            ? "border-[var(--kova-blue)] bg-card"
+            : "border-border bg-card/50"
       }`}
     >
       {highlight && (
@@ -350,21 +356,32 @@ function PlanCard({
           MOST POPULAR
         </div>
       )}
-      <div className="mb-2">
+      <div className="mb-3 flex items-center gap-2.5">
+        {Icon ? (
+          <span
+            className={`grid h-9 w-9 place-items-center rounded-xl ${enterprise ? "bg-background/15" : "bg-muted"}`}
+          >
+            <Icon className="h-4 w-4" />
+          </span>
+        ) : null}
         <h2 className="text-xl font-semibold">{name}</h2>
       </div>
       <div className="flex items-baseline gap-1 mb-2">
         <span className="text-4xl font-bold">{price}</span>
         <span className="text-muted-foreground text-sm">{period}</span>
       </div>
-      <p className="text-sm text-muted-foreground mb-6">{description}</p>
+      <p className={`mb-6 text-sm ${enterprise ? "text-background/70" : "text-muted-foreground"}`}>
+        {description}
+      </p>
       <button
         onClick={onCta}
         disabled={ctaDisabled}
-        className={`w-full py-2.5 rounded-lg font-medium text-sm transition mb-6 ${
-          highlight
-            ? "bg-foreground text-background hover:opacity-90"
-            : "border border-border hover:bg-accent"
+        className={`mb-6 w-full rounded-full py-2.5 text-sm font-medium transition ${
+          enterprise
+            ? "bg-background text-foreground hover:bg-background/90"
+            : highlight
+              ? "bg-foreground text-background hover:opacity-90"
+              : "border border-border hover:bg-accent"
         } ${ctaDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
       >
         {cta}

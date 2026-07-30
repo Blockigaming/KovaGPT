@@ -276,8 +276,8 @@ export function WorkspaceIntelligence() {
             Real activity from your account and this device.
           </p>
         </div>
-        <Link to="/recents" className="text-sm font-medium hover:underline">
-          View all recents
+        <Link to="/library" className="text-sm font-medium hover:underline">
+          View full library
         </Link>
       </div>
       {loading ? (

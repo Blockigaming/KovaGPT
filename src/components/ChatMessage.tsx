@@ -19,6 +19,8 @@ import {
   Globe,
   Mail,
   FileText,
+  Volume2,
+  CircleStop,
 } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileBottomSheet } from "./MobileBottomSheet";
@@ -41,6 +43,7 @@ import { ToolConfirmCard } from "./ToolConfirmCard";
 import type { PendingConfirm } from "@/lib/chat-store";
 import { LongResponseCard, shouldWrapAsDocument } from "./LongResponseCard";
 import { InfoChip, detectInfoChip } from "./InfoChip";
+import { canReadAloud, speechText } from "@/lib/browser-voice";
 
 function MarkdownCode({ className, children }: React.ComponentProps<"code">) {
   const language = /language-([\w-]+)/.exec(className ?? "")?.[1];
@@ -262,9 +265,35 @@ function ChatMessageInner({
   const [saved, setSaved] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState<"edit" | "preview">("edit");
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [readAloudSupported, setReadAloudSupported] = useState(false);
   const { isSignedIn } = useUser();
 
   const saveFn = useServerFn(saveToLibrary);
+
+  useEffect(() => {
+    setReadAloudSupported(canReadAloud());
+    return () => {
+      if (typeof window !== "undefined") window.speechSynthesis?.cancel();
+    };
+  }, []);
+
+  const toggleReadAloud = useCallback(() => {
+    if (!canReadAloud()) return;
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(speechText(message.content));
+    utterance.lang = document.documentElement.lang || navigator.language || "en-US";
+    utterance.rate = 1;
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    setIsSpeaking(true);
+    window.speechSynthesis.speak(utterance);
+  }, [isSpeaking, message.content]);
 
   const artifactKind = useMemo(
     () => (isUser ? null : detectArtifactKind(message.content || "")),
@@ -401,7 +430,7 @@ function ChatMessageInner({
               </div>
             )}
             {message.content && (
-<div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-lg border border-border/60 bg-[var(--user-bubble)] px-3.5 py-2.5 text-foreground">
+              <div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-lg border border-border/60 bg-[var(--user-bubble)] px-3.5 py-2.5 text-foreground">
                 {message.content}
               </div>
             )}
@@ -418,7 +447,7 @@ function ChatMessageInner({
           </div>
         </div>
       ) : (
-<div className="kova-assistant-message mx-auto flex max-w-[48rem] animate-fade-up items-start justify-start">
+        <div className="kova-assistant-message mx-auto flex max-w-[48rem] animate-fade-up items-start justify-start">
           <div
             className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text"
             onTouchStart={startLongPress}
@@ -606,6 +635,23 @@ function ChatMessageInner({
                 <Share2 className="w-4 h-4" />
               </button>
 
+              {readAloudSupported && (
+                <button
+                  type="button"
+                  onClick={toggleReadAloud}
+                  className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-all hover:scale-[1.08] hover:bg-accent hover:text-foreground active:scale-95"
+                  title={isSpeaking ? "Stop reading" : "Read aloud"}
+                  aria-label={isSpeaking ? "Stop reading response" : "Read response aloud"}
+                  aria-pressed={isSpeaking}
+                >
+                  {isSpeaking ? (
+                    <CircleStop className="h-4 w-4" />
+                  ) : (
+                    <Volume2 className="h-4 w-4" />
+                  )}
+                </button>
+              )}
+
               {email && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -655,30 +701,21 @@ function ChatMessageInner({
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-52">
-                  <DropdownMenuItem
-                    onClick={() => {
-                      if (onEdit) onEdit();
-                      else toast.message("Edit your previous message above");
-                    }}
-                  >
-                    <Pencil className="w-4 h-4 mr-2" /> Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      if (onRetry) onRetry();
-                      else toast.message("Retry available on the latest response");
-                    }}
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2" /> Retry
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      if (onBranch) onBranch();
-                      else toast.message("Branching coming to this chat");
-                    }}
-                  >
-                    <GitBranch className="w-4 h-4 mr-2" /> Branch in new chat
-                  </DropdownMenuItem>
+                  {onEdit ? (
+                    <DropdownMenuItem onClick={onEdit}>
+                      <Pencil className="w-4 h-4 mr-2" /> Edit
+                    </DropdownMenuItem>
+                  ) : null}
+                  {onRetry ? (
+                    <DropdownMenuItem onClick={onRetry}>
+                      <RefreshCw className="w-4 h-4 mr-2" /> Retry
+                    </DropdownMenuItem>
+                  ) : null}
+                  {onBranch ? (
+                    <DropdownMenuItem onClick={onBranch}>
+                      <GitBranch className="w-4 h-4 mr-2" /> Branch in new chat
+                    </DropdownMenuItem>
+                  ) : null}
                   <DropdownMenuItem
                     onClick={() => {
                       const q = encodeURIComponent(message.content.slice(0, 300));

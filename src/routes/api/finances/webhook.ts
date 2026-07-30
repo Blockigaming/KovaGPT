@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { timingSafeEqualText } from "@/lib/http-security.server";
 export const Route = createFileRoute("/api/finances/webhook")({
   server: {
     handlers: {
@@ -7,7 +8,8 @@ export const Route = createFileRoute("/api/finances/webhook")({
         const verificationToken = process.env.FINANCE_WEBHOOK_VERIFICATION_TOKEN;
         if (!verificationToken)
           return Response.json({ error: "webhook_verification_unavailable" }, { status: 503 });
-        if (request.headers.get("x-kova-webhook-verified") !== verificationToken)
+        const suppliedToken = request.headers.get("x-kova-webhook-verified") ?? "";
+        if (!timingSafeEqualText(suppliedToken, verificationToken))
           return Response.json({ error: "invalid_webhook_signature" }, { status: 401 });
         const contentLength = Number(request.headers.get("content-length") ?? "0");
         if (contentLength > 256 * 1024)

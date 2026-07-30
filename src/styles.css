@@ -57,7 +57,7 @@
 }
 
 :root {
-  --radius: 0.75rem;
+  --radius: 1rem;
   /* KovaGPT light theme - ChatGPT-like restrained neutrals */
   --background: oklch(0.982 0 0);
   --foreground: oklch(0.19 0 0);
@@ -119,9 +119,9 @@
   --space-6: 1.5rem;
   --space-8: 2rem;
   --kova-radius-compact: 8px;
-  --kova-radius-input: 12px;
-  --kova-radius-card: 16px;
-  --kova-radius-panel: 20px;
+  --kova-radius-input: 18px;
+  --kova-radius-card: 20px;
+  --kova-radius-panel: 24px;
   --kova-control-sm: 36px;
   --kova-control-md: 40px;
   --kova-touch: 44px;
@@ -832,12 +832,6 @@ body {
 
 .kova-bg,
 .animate-pulse-slow {
-  display: none !important;
-}
-
-/* Lens remains in primary navigation and the command palette rather than
-   covering workspace content as a floating widget. */
-button[aria-label="Open Kova Lens"].fixed {
   display: none !important;
 }
 

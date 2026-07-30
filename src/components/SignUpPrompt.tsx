@@ -18,7 +18,7 @@ export function SignUpPrompt({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm rounded-[28px] border-border/70 p-7 shadow-2xl">
         <DialogHeader>
           <div className="flex justify-center mb-2">
             <NovaLogo className="w-14 h-14" />
@@ -31,11 +31,11 @@ export function SignUpPrompt({
         </DialogHeader>
         <div className="flex flex-col gap-2 mt-2">
           <SignInButton mode="modal">
-            <Button className="w-full">Sign in</Button>
+            <Button className="h-11 w-full rounded-full">Log in</Button>
           </SignInButton>
           <SignUpButton mode="modal">
-            <Button variant="outline" className="w-full">
-              Create account
+            <Button variant="outline" className="h-11 w-full rounded-full">
+              Sign up
             </Button>
           </SignUpButton>
           <button

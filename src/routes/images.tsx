@@ -334,7 +334,7 @@ function ImagesPage() {
   function addToHistory(p: string, imageUrl: string) {
     if (!isSignedIn || !userKey) return;
     const item: HistoryItem = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      id: crypto.randomUUID(),
       prompt: p,
       imageUrl,
       createdAt: Date.now(),

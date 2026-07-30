@@ -41,11 +41,14 @@ export const Route = createFileRoute("/library")({
 
 type LibItem = import("@/lib/library.functions").LibraryItem;
 
-type FilterId = "all" | "recent" | "favorites" | "images" | "documents" | "other";
+type FilterId = "all" | "favorites" | "chats" | "work" | "images" | "documents" | "other";
 type SortId = "newest" | "oldest" | "name" | "size";
 type ViewId = "grid" | "list";
 
 import { loadGuestLibrary, deleteGuestItem } from "@/lib/guest-library";
+import { loadConversations, saveConversations } from "@/lib/chat-store";
+import { loadWorkTasks, saveWorkTasks } from "@/lib/work-store";
+import { safeNavigationUrl } from "@/lib/safe-url";
 import {
   addManyToContextPack,
   addToContextPack,
@@ -108,14 +111,68 @@ function LibraryPage() {
 
   const load = async () => {
     setLoadError(null);
+    const localItems: LibItem[] = [
+      ...loadConversations().map(
+        (chat): LibItem => ({
+          id: `chat:${chat.id}`,
+          title: chat.title,
+          item_type: "chat_artifact",
+          source: "chat",
+          content_text: chat.messages
+            .map((message) => `${message.role}: ${message.content}`)
+            .join("\n\n"),
+          file_url: null,
+          file_name: null,
+          file_type: "application/x-kova-chat",
+          file_size: null,
+          created_at: new Date(chat.updatedAt).toISOString(),
+        }),
+      ),
+      ...loadWorkTasks().map(
+        (task): LibItem => ({
+          id: `work:${task.id}`,
+          title: task.objective,
+          item_type: "other",
+          source: "other",
+          content_text: [
+            task.context,
+            ...task.steps.map((step) => `${step.done ? "✓" : "○"} ${step.text}`),
+          ]
+            .filter(Boolean)
+            .join("\n"),
+          file_url: null,
+          file_name: null,
+          file_type: "application/x-kova-work",
+          file_size: null,
+          created_at: new Date(task.updatedAt).toISOString(),
+        }),
+      ),
+    ];
     if (!isSignedIn) {
-      setItems(loadGuestLibrary());
+      setItems([...localItems, ...loadGuestLibrary()]);
       return;
     }
     setLoading(true);
     try {
       const { listMyLibrary } = await import("@/lib/library.functions");
-      setItems(await listMyLibrary());
+      const { listWorkspaceRecents } = await import("@/lib/workspace.functions");
+      const [saved, workspace] = await Promise.all([listMyLibrary(), listWorkspaceRecents()]);
+      const savedIds = new Set(saved.map((item) => item.id));
+      const workspaceItems: LibItem[] = workspace
+        .filter((item) => item.type !== "library" && !savedIds.has(item.id))
+        .map((item) => ({
+          id: `workspace:${item.type}:${item.id}`,
+          title: item.title,
+          item_type: item.type === "image" ? "image" : "other",
+          source: "other",
+          content_text: item.subtitle,
+          file_url: null,
+          file_name: null,
+          file_type: `application/x-kova-${item.type}`,
+          file_size: null,
+          created_at: item.updatedAt,
+        }));
+      setItems([...localItems, ...saved, ...workspaceItems]);
     } catch (e) {
       console.error(e);
       setLoadError(e instanceof Error ? e.message : "Could not load your library.");
@@ -148,6 +205,16 @@ function LibraryPage() {
     const existing = items;
     if (!confirm("Delete this Library item?")) return;
     setItems((prev) => prev.filter((i) => i.id !== id));
+    if (id.startsWith("chat:")) {
+      saveConversations(loadConversations().filter((chat) => `chat:${chat.id}` !== id));
+      toast.success("Chat deleted.");
+      return;
+    }
+    if (id.startsWith("work:")) {
+      saveWorkTasks(loadWorkTasks().filter((task) => `work:${task.id}` !== id));
+      toast.success("Work item deleted.");
+      return;
+    }
     if (!isSignedIn) {
       deleteGuestItem(id);
       toast.success("Deleted.");
@@ -182,13 +249,23 @@ function LibraryPage() {
       if (isSignedIn) {
         const { deleteLibraryItem } = await import("@/lib/library.functions");
         const results = await Promise.allSettled(
-          selected.map((id) => deleteLibraryItem({ data: { id } })),
+          selected
+            .filter((id) => !id.startsWith("chat:") && !id.startsWith("work:"))
+            .map((id) => deleteLibraryItem({ data: { id } })),
         );
         if (results.some((result) => result.status === "rejected")) {
           await load();
           throw new Error("Some selected items could not be deleted. Library was refreshed.");
         }
-      } else selected.forEach(deleteGuestItem);
+      } else {
+        selected
+          .filter((id) => !id.startsWith("chat:") && !id.startsWith("work:"))
+          .forEach(deleteGuestItem);
+      }
+      saveConversations(
+        loadConversations().filter((chat) => !selected.includes(`chat:${chat.id}`)),
+      );
+      saveWorkTasks(loadWorkTasks().filter((task) => !selected.includes(`work:${task.id}`)));
       setSelected([]);
       toast.success("Selected items deleted.");
     } catch (error) {
@@ -215,11 +292,9 @@ function LibraryPage() {
     const q = query.trim().toLowerCase();
     return items
       .filter((item) => {
-        if (filter === "recent") {
-          const age = Date.now() - new Date(item.created_at).getTime();
-          if (age > 1000 * 60 * 60 * 24 * 30) return false;
-        }
         if (filter === "favorites" && !favorites.has(item.id)) return false;
+        if (filter === "chats" && !item.id.startsWith("chat:")) return false;
+        if (filter === "work" && !item.id.startsWith("work:")) return false;
         if (filter === "images" && !isImageItem(item)) return false;
         if (filter === "documents" && !isDocumentItem(item)) return false;
         if (filter === "other" && (isImageItem(item) || isDocumentItem(item))) return false;
@@ -250,8 +325,9 @@ function LibraryPage() {
 
   const filters: Array<{ id: FilterId; label: string }> = [
     { id: "all", label: "All" },
-    { id: "recent", label: "Recent" },
     { id: "favorites", label: "Favorites" },
+    { id: "chats", label: "Chats" },
+    { id: "work", label: "Work" },
     { id: "images", label: "Images" },
     { id: "documents", label: "Documents" },
     { id: "other", label: "Other" },
@@ -284,9 +360,9 @@ function LibraryPage() {
         <DropdownMenuItem onClick={() => addToContextPack(toHandoff(item))}>
           Add to Context Pack
         </DropdownMenuItem>
-        {item.file_url ? (
+        {safeNavigationUrl(item.file_url) ? (
           <DropdownMenuItem asChild>
-            <a href={item.file_url} target="_blank" rel="noreferrer">
+            <a href={safeNavigationUrl(item.file_url)!} target="_blank" rel="noopener noreferrer">
               <Download className="mr-2 h-4 w-4" /> Open or download
             </a>
           </DropdownMenuItem>
@@ -294,13 +370,17 @@ function LibraryPage() {
         <DropdownMenuItem onClick={() => toggleFavorite(item.id)}>
           <Star className="mr-2 h-4 w-4" /> {favorites.has(item.id) ? "Unfavorite" : "Favorite"}
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={() => remove(item.id)}
-          className="text-destructive focus:text-destructive"
-        >
-          <Trash2 className="mr-2 h-4 w-4" /> Delete
-        </DropdownMenuItem>
+        {!item.id.startsWith("workspace:") ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => remove(item.id)}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" /> Delete
+            </DropdownMenuItem>
+          </>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -314,6 +394,7 @@ function LibraryPage() {
 
   const renderItem = (item: LibItem) => {
     const image = isImageItem(item);
+    const workspaceReference = item.id.startsWith("workspace:");
     const size = humanBytes(item.file_size);
     const meta = [
       item.item_type.replace(/_/g, " "),
@@ -329,19 +410,21 @@ function LibraryPage() {
           className="kova-row min-h-14 items-center gap-3"
           data-library-item={item.item_type}
         >
-          <input
-            type="checkbox"
-            checked={selected.includes(item.id)}
-            onChange={() =>
-              setSelected((current) =>
-                current.includes(item.id)
-                  ? current.filter((id) => id !== item.id)
-                  : [...current, item.id],
-              )
-            }
-            aria-label={`Select ${item.title}`}
-            className="h-4 w-4 shrink-0"
-          />
+          {!workspaceReference ? (
+            <input
+              type="checkbox"
+              checked={selected.includes(item.id)}
+              onChange={() =>
+                setSelected((current) =>
+                  current.includes(item.id)
+                    ? current.filter((id) => id !== item.id)
+                    : [...current, item.id],
+                )
+              }
+              aria-label={`Select ${item.title}`}
+              className="h-4 w-4 shrink-0"
+            />
+          ) : null}
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--kova-radius-input)] bg-[var(--surface-secondary)] text-muted-foreground">
             {image ? <ImageIcon className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
           </div>
@@ -363,21 +446,23 @@ function LibraryPage() {
         className="group kova-card relative overflow-hidden"
         data-library-item={item.item_type}
       >
-        <label className="absolute z-10 m-3 grid h-9 w-9 place-items-center rounded-lg bg-background/85 shadow-sm">
-          <span className="sr-only">Select {item.title}</span>
-          <input
-            type="checkbox"
-            checked={selected.includes(item.id)}
-            onChange={() =>
-              setSelected((current) =>
-                current.includes(item.id)
-                  ? current.filter((id) => id !== item.id)
-                  : [...current, item.id],
-              )
-            }
-            className="h-4 w-4"
-          />
-        </label>
+        {!workspaceReference ? (
+          <label className="absolute z-10 m-3 grid h-9 w-9 place-items-center rounded-lg bg-background/85 shadow-sm">
+            <span className="sr-only">Select {item.title}</span>
+            <input
+              type="checkbox"
+              checked={selected.includes(item.id)}
+              onChange={() =>
+                setSelected((current) =>
+                  current.includes(item.id)
+                    ? current.filter((id) => id !== item.id)
+                    : [...current, item.id],
+                )
+              }
+              className="h-4 w-4"
+            />
+          </label>
+        ) : null}
         {image ? (
           <div className="aspect-square overflow-hidden bg-[var(--surface-secondary)]">
             <img
@@ -420,7 +505,7 @@ function LibraryPage() {
               Library
             </h1>
             <p className="kova-page-description">
-              Saved files, images, responses, and reusable context.
+              Chats, work, files, images, responses, and reusable context in one place.
             </p>
             {storageTotal !== null ? (
               <p className="mt-1 text-xs text-muted-foreground">

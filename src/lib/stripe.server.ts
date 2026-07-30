@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { timingSafeEqualText } from "@/lib/http-security.server";
 
 const getEnv = (key: string): string => {
   const value = process.env[key];
@@ -76,7 +77,7 @@ export async function verifyWebhook(
   );
   const expected = Buffer.from(new Uint8Array(signed)).toString("hex");
 
-  if (!v1Signatures.includes(expected)) {
+  if (!v1Signatures.some((candidate) => timingSafeEqualText(candidate, expected))) {
     throw new Error("Invalid webhook signature");
   }
 

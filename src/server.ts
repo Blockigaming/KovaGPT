@@ -2,10 +2,52 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { rejectCrossSiteRequest } from "./lib/http-security.server";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
 };
+
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'self'",
+  "form-action 'self' https://checkout.stripe.com",
+  "script-src 'self' 'unsafe-inline' https://js.stripe.com https://*.clerk.accounts.dev https://*.clerk.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.clerk.accounts.dev https://*.clerk.com",
+  "frame-src https://js.stripe.com https://hooks.stripe.com https://*.clerk.accounts.dev https://*.clerk.com",
+  "worker-src 'self' blob:",
+  "media-src 'self' blob:",
+  "upgrade-insecure-requests",
+].join("; ");
+
+function hardenResponse(response: Response): Response {
+  const headers = new Headers(response.headers);
+  const securityHeaders: Record<string, string> = {
+    "Content-Security-Policy": CONTENT_SECURITY_POLICY,
+    "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
+    "Cross-Origin-Resource-Policy": "same-origin",
+    "Origin-Agent-Cluster": "?1",
+    "Permissions-Policy": "camera=(), geolocation=(self), microphone=(), payment=(self), usb=()",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "SAMEORIGIN",
+  };
+  for (const [name, value] of Object.entries(securityHeaders)) headers.set(name, value);
+  if (!headers.has("Cache-Control") && response.status >= 400) {
+    headers.set("Cache-Control", "no-store");
+  }
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
 
 let serverEntryPromise: Promise<ServerEntry> | undefined;
 
@@ -69,12 +111,20 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
+        const rejected = rejectCrossSiteRequest(request);
+        if (rejected) return hardenResponse(rejected);
+      }
+      const contentLength = Number(request.headers.get("content-length") ?? "0");
+      if (Number.isFinite(contentLength) && contentLength > 16 * 1024 * 1024) {
+        return hardenResponse(Response.json({ error: "Request too large" }, { status: 413 }));
+      }
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      return hardenResponse(await normalizeCatastrophicSsrResponse(response));
     } catch (error) {
       console.error(error);
-      return brandedErrorResponse();
+      return hardenResponse(brandedErrorResponse());
     }
   },
 };

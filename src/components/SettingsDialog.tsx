@@ -258,6 +258,7 @@ export function SettingsDialog({
   const [subSummary, setSubSummary] = useState<SubscriptionSummary | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const [archivedRevision, setArchivedRevision] = useState(0);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [deleteAccountBusy, setDeleteAccountBusy] = useState(false);
 
@@ -1122,6 +1123,62 @@ export function SettingsDialog({
               {/* DATA CONTROL */}
               <TabsContent value="data" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
                 <h3 className="text-sm font-semibold">Data controls</h3>
+                <section
+                  className="rounded-2xl border border-border/70 bg-card/60 p-4"
+                  aria-label="Archived chats"
+                >
+                  <div className="mb-3">
+                    <h4 className="text-sm font-medium">Archived chats</h4>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Review or restore conversations you moved out of your sidebar.
+                    </p>
+                  </div>
+                  <div className="space-y-1" key={archivedRevision}>
+                    {loadArchivedConversations().length ? (
+                      loadArchivedConversations().map((chat) => (
+                        <div
+                          key={chat.id}
+                          className="flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-accent/60"
+                        >
+                          <span className="min-w-0 flex-1 truncate text-sm">{chat.title}</span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="rounded-full"
+                            onClick={() => {
+                              saveConversations(mergeConversations(loadConversations(), [chat]));
+                              saveArchivedConversations(
+                                loadArchivedConversations().filter((item) => item.id !== chat.id),
+                              );
+                              setArchivedRevision((value) => value + 1);
+                              window.dispatchEvent(new Event("kova:conversations-imported"));
+                              toast.success("Chat restored");
+                            }}
+                          >
+                            Restore
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive"
+                            aria-label={`Delete archived chat ${chat.title}`}
+                            onClick={() => {
+                              saveArchivedConversations(
+                                loadArchivedConversations().filter((item) => item.id !== chat.id),
+                              );
+                              setArchivedRevision((value) => value + 1);
+                              toast.success("Archived chat deleted");
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="px-3 py-2 text-sm text-muted-foreground">No archived chats</p>
+                    )}
+                  </div>
+                </section>
                 <ToggleRow
                   title="Improve the model for everyone"
                   hint="Allow KovaGPT to use your conversations to improve quality. Turn off to opt out."
