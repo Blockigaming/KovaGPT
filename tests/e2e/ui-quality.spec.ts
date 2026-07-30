@@ -33,18 +33,24 @@ test("empty workspace remains contained and composer focus is deliberate", async
   expect(overflow.scroll).toBeLessThanOrEqual(overflow.client + 1);
 });
 
-test("mobile starters fit the viewport without a clipped carousel", async ({ page }) => {
+test("mobile greeting and composer actions fit the viewport", async ({ page }) => {
   test.skip(page.viewportSize()!.width >= 1024);
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  const grid = page.locator(".kova-mobile-starters");
-  await expect(grid).toBeVisible();
-  const box = await grid.boundingBox();
+  await expect(page.getByText("What can I help with?", { exact: true })).toBeVisible();
+
+  const composer = page.locator(".kova-composer");
+  const box = await composer.boundingBox();
   expect(box).not.toBeNull();
   expect(box!.x).toBeGreaterThanOrEqual(0);
   expect(box!.x + box!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
-  await expect(grid.locator(".kova-starter-card")).toHaveCount(4);
-});
 
+  await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
+  const sheet = page.getByTestId("mobile-bottom-sheet");
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Web Search" })).toBeVisible();
+  await sheet.getByRole("button", { name: "Close sheet" }).click();
+  await expect(sheet).toBeHidden();
+});
 test("rich conversation rhythm and actions remain stable at every core viewport", async ({
   page,
 }) => {
