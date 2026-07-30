@@ -1067,10 +1067,7 @@ function KovaGPT() {
           onModeChange={setMode}
           userTier={tier}
         />
-        <header
-          className="kova-topbar relative hidden h-[52px] items-center gap-1 px-3 lg:flex"
-          role="banner"
-        >
+        <header className="kova-topbar relative hidden h-[52px] items-center gap-1 px-3 lg:flex">
           {!sidebarOpen && (
             <div className="flex items-center gap-1 mr-2 shrink-0">
               <button
