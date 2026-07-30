@@ -1,5 +1,5 @@
 import { ChevronDown, Check } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useId } from "react";
 import { MODES, modesForTier, type ModeId, type Tier } from "@/lib/modes";
 import {
   KOVA_VERSIONS,
@@ -27,6 +27,8 @@ export function ModelSelector({
     setVersion(getKovaVersion());
   }, []);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
   const current = MODES.find((m) => m.id === mode) ?? MODES[0];
   const topbar = placement === "topbar";
 
@@ -39,10 +41,23 @@ export function ModelSelector({
   }, []);
 
   return (
-    <div className="kova-model-selector relative" ref={ref}>
+    <div
+      className="kova-model-selector relative"
+      ref={ref}
+      onKeyDown={(event) => {
+        if (event.key !== "Escape" || !open) return;
+        event.preventDefault();
+        setOpen(false);
+        window.requestAnimationFrame(() => triggerRef.current?.focus());
+      }}
+    >
       <button
+        ref={triggerRef}
         type="button"
+        aria-haspopup="dialog"
         aria-label={`Choose model: KovaGPT ${version} ${current.label}`}
+        aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
         data-testid="model-selector-trigger"
         onClick={() => setOpen((v) => !v)}
         className={`kova-model-trigger inline-flex items-center gap-1.5 font-medium transition ${
@@ -63,6 +78,9 @@ export function ModelSelector({
       </button>
       {open && (
         <div
+          id={menuId}
+          role="dialog"
+          aria-label="Choose model"
           className={`kova-model-menu absolute left-0 z-50 w-64 rounded-2xl border border-border bg-popover p-1.5 shadow-xl animate-in fade-in-0 zoom-in-95 duration-150 ${
             topbar ? "top-full mt-1 origin-top-left" : "bottom-full mb-2 origin-bottom-left"
           }`}
@@ -78,10 +96,12 @@ export function ModelSelector({
                   <button
                     key={m.id}
                     type="button"
+                    aria-pressed={selected}
                     data-testid={`model-option-${m.id}`}
                     onClick={() => {
                       onChange(m.id);
                       setOpen(false);
+                      window.requestAnimationFrame(() => triggerRef.current?.focus());
                     }}
                     className="w-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
@@ -105,6 +125,7 @@ export function ModelSelector({
                 <button
                   key={v}
                   type="button"
+                  aria-pressed={v === version}
                   onClick={() => {
                     setKovaVersion(v);
                     setVersion(v);
