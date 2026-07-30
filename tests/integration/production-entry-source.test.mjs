@@ -22,7 +22,11 @@ test("production bundles TanStack's H3 routing graph instead of importing it at 
   const javascriptFiles = serverFiles.filter((file) => file.endsWith(".js"));
   for (const file of javascriptFiles) {
     const output = await readFile(`dist/server/${file}`, "utf8");
-    assert.doesNotMatch(output, /(?:from\s*|import\s*)["'](?:h3-v2|rou3)["']/, file);
+    assert.doesNotMatch(
+      output,
+      /(?:from\s*|import\s*\(?)["'](?:h3-v2|h3|rou3)(?:\/[^"']*)?["']/,
+      `${file} must not require Nitro's routing graph from the deployment runtime`,
+    );
   }
 });
 
