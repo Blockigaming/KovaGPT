@@ -1,15 +1,18 @@
 import { loadStripe, type Stripe } from "@stripe/stripe-js";
 
-type StripeEnv = "sandbox" | "live";
+type StripeEnv = "live";
 
 const clientToken = import.meta.env.VITE_PAYMENTS_CLIENT_TOKEN as string | undefined;
-const environment: StripeEnv = clientToken?.startsWith("pk_test_") ? "sandbox" : "live";
+const environment: StripeEnv = "live";
 
 let stripePromise: Promise<Stripe | null> | null = null;
 
 export function getStripe(): Promise<Stripe | null> {
   if (!stripePromise) {
     if (!clientToken) throw new Error("VITE_PAYMENTS_CLIENT_TOKEN is not set");
+    if (!clientToken.startsWith("pk_live_")) {
+      throw new Error("Live billing requires a Stripe pk_live publishable key");
+    }
     stripePromise = loadStripe(clientToken);
   }
   return stripePromise;

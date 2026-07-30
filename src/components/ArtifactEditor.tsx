@@ -181,13 +181,13 @@ export function ArtifactEditor({
       }
       setCopied(false);
       setSaved(false);
-      let preferred = "";
+      let preferred: string | undefined;
 
       try {
         preferred =
           JSON.parse(localStorage.getItem("kova-workspace-defaults-v1") ?? "{}").artifact ?? "";
       } catch {
-        preferred = "";
+        /* Invalid local preferences fall back to the requested initial mode. */
       }
       setMode(preferred === "Preview" && kind === "website" ? "preview" : initialMode);
       setSplitView(preferred === "Split view" && kind === "website");

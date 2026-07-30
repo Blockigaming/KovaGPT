@@ -1,3 +1,5 @@
+import { runtimeEnv } from "@/lib/runtime-env.server";
+
 export type JsonObject = Record<string, unknown>;
 
 export type ProviderCapability =
@@ -97,8 +99,7 @@ export class AiProviderError extends Error {
 }
 
 function env(name: string): string | undefined {
-  const value = process.env[name];
-  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+  return runtimeEnv(name);
 }
 
 function parseTimeout(value: string | undefined): number {
@@ -153,7 +154,11 @@ export function validateAiProviderConfig(): ProviderErrorEnvelope | null {
     error: "AI provider is not configured. Set LOVABLE_API_KEY or OPENAI_API_KEY on the server.",
     code: "missing_openai_api_key",
     retryable: false,
-    status: 500,
+    // A missing deployment dependency is a temporary service-availability
+    // problem, not an opaque application crash. Returning 503 lets the client
+    // show the actionable message and avoids the generic "Internal Server
+    // Error" page produced by some hosting layers for status 500 responses.
+    status: 503,
   };
 }
 

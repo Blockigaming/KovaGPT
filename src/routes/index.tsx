@@ -2,20 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
-import {
-  PanelLeft,
-  Search,
-  MessageSquareDashed,
-  Check,
-  Sparkles,
-  Globe2,
-  Code2,
-  GraduationCap,
-  Image as ImageIcon,
-  FileText,
-  Share2,
-  Download,
-} from "lucide-react";
+import { PanelLeft, Search, MessageSquareDashed, Check, Share2, Download } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 
 import { ChatMessage } from "@/components/ChatMessage";
@@ -44,14 +31,6 @@ const LimitReachedDialog = lazy(() =>
 const ShareChatDialog = lazy(() =>
   import("@/components/ShareChatDialog").then((m) => ({ default: m.ShareChatDialog })),
 );
-const ArchivedChatsDialog = lazy(() =>
-  import("@/components/ArchivedChatsDialog").then((m) => ({ default: m.ArchivedChatsDialog })),
-);
-const WorkspaceIntelligence = lazy(() =>
-  import("@/components/WorkspaceIntelligence").then((module) => ({
-    default: module.WorkspaceIntelligence,
-  })),
-);
 import { applyThemeMode } from "@/lib/theme";
 import { loadSettings, settingsKey } from "@/lib/use-nova-settings";
 
@@ -79,6 +58,7 @@ import {
 } from "@/lib/chat-store";
 import { toast } from "sonner";
 import { loadPersonality, personalityToInstruction } from "@/components/PersonalitySliders";
+import { useTier } from "@/hooks/useTier";
 
 export const Route = createFileRoute("/")({
   component: KovaGPT,
@@ -115,6 +95,7 @@ export const Route = createFileRoute("/")({
 
 function KovaGPT() {
   const { isSignedIn, isLoaded, user } = useUser();
+  const { tier } = useTier();
   const { openSignUp } = useClerkSafe();
   const userKey = user?.id ?? null;
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -127,7 +108,6 @@ function KovaGPT() {
   const [tempChatConfirmed, setTempChatConfirmed] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
-  const [archivedOpen, setArchivedOpen] = useState(false);
   const [selectedTool, setSelectedTool] = useState<ComposerToolId | null>(null);
   const [recentLibraryFiles, setRecentLibraryFiles] = useState<RecentLibraryFile[]>([]);
   const [recentLibraryLoading, setRecentLibraryLoading] = useState(false);
@@ -487,7 +467,7 @@ function KovaGPT() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active?.id, active?.messages.length, isStreaming, isSignedIn]);
 
-  // After 3 user messages in this session while signed out, prompt to sign up.
+  // After 4 user messages in this session while signed out, prompt to sign up.
   useEffect(() => {
     if (!isLoaded) return;
     if (signupPromptShown) return;
@@ -496,7 +476,7 @@ function KovaGPT() {
       (sum, c) => sum + c.messages.filter((m) => m.role === "user").length,
       0,
     );
-    if (userMsgCount >= 3 && !isStreaming) {
+    if (userMsgCount >= 4 && !isStreaming) {
       setSignupPromptOpen(true);
       setSignupPromptShown(true);
     }
@@ -712,7 +692,7 @@ function KovaGPT() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             messages: payloadMessages,
-            mode: activeTool === "deep_research" ? "high" : mode,
+            mode: activeTool === "deep_research" ? "thinking" : mode,
             clientTool: activeTool,
             chatId: nextConvId,
             temporary: tempChat,
@@ -870,7 +850,11 @@ function KovaGPT() {
             category === "streaming_interruption" ||
             category === "network_failure" ||
             category === "model_provider_failure";
-          const canAutoRetry = retryableCategory && _retryAttempt < MAX_AUTO_RETRIES;
+          // Respect the server's retryability signal. Configuration and
+          // authentication failures cannot heal through repeated requests and
+          // previously made the composer look stuck while it silently retried.
+          const canAutoRetry =
+            err.retryable !== false && retryableCategory && _retryAttempt < MAX_AUTO_RETRIES;
 
           if (canAutoRetry) {
             // Silent exponential backoff: 600ms, 1800ms. Strip the empty
@@ -909,7 +893,9 @@ function KovaGPT() {
                 : category === "model_timeout"
                   ? "The model took too long to respond. Tap retry."
                   : category === "model_provider_failure"
-                    ? "The AI provider had a hiccup. Tap retry."
+                    ? err.retryable === false
+                      ? raw
+                      : "KovaGPT is temporarily unavailable. Tap retry."
                     : category === "streaming_interruption"
                       ? "The connection dropped mid-response. Tap retry."
                       : isNetwork
@@ -952,23 +938,6 @@ function KovaGPT() {
     abortRef.current?.abort();
     setIsStreaming(false);
   }, []);
-
-  const assistantCapabilities = [
-    { label: "Create image", icon: ImageIcon, prompt: "Create a detailed image prompt for: " },
-    {
-      label: "Summarize text",
-      icon: FileText,
-      prompt: "Summarize this into clear bullet points: ",
-    },
-    {
-      label: "Analyze data",
-      icon: Sparkles,
-      prompt: "Analyze this data and explain the key insights: ",
-    },
-    { label: "Write code", icon: Code2, prompt: "Help me write code for: " },
-    { label: "Learn", icon: GraduationCap, prompt: "Teach me this topic like a patient tutor: " },
-    { label: "Web research", icon: Globe2, prompt: "Research this online and cite sources: " },
-  ];
 
   // Image generation removed; can be reintroduced when user explicitly asks.
 
@@ -1074,7 +1043,6 @@ function KovaGPT() {
             ),
           );
         }}
-        onOpenArchived={() => setArchivedOpen(true)}
       />
 
       <main
@@ -1113,9 +1081,8 @@ function KovaGPT() {
 
           {/* AI status: live indicator to the right of the KovaGPT mark while streaming */}
           <div className="flex items-center min-w-0 flex-1 relative">
-            <div className="mr-3 flex min-h-10 items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-foreground transition hover:bg-accent">
-              <span>KovaGPT</span>
-              <span className="text-muted-foreground">⌄</span>
+            <div className="mr-3 flex min-h-10 items-center px-2.5 py-1.5 text-sm font-semibold text-foreground">
+              KovaGPT
             </div>
             <AIStatus
               streaming={isStreaming}
@@ -1220,7 +1187,7 @@ function KovaGPT() {
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button className="text-sm font-semibold px-4 h-9 rounded-md bg-[var(--kova-blue)] text-background hover:opacity-90 active:scale-[0.98] transition whitespace-nowrap shadow-sm">
+                  <button className="text-sm font-semibold px-4 h-9 rounded-full bg-[var(--kova-blue)] text-white hover:opacity-90 active:scale-[0.98] transition whitespace-nowrap shadow-sm">
                     Sign up for free
                   </button>
                 </SignUpButton>
@@ -1260,9 +1227,6 @@ function KovaGPT() {
                 >
                   {greeting}
                 </h1>
-                <p className="max-w-lg text-center text-sm leading-relaxed text-muted-foreground">
-                  What would you like to work on?
-                </p>
               </div>
 
               <div className="mx-auto w-full max-w-[48rem]">
@@ -1276,6 +1240,8 @@ function KovaGPT() {
                   onAttachmentsChange={setAttachments}
                   mode={mode}
                   onModeChange={setMode}
+                  userTier={tier}
+                  canChangeAgent={Boolean(isSignedIn)}
                   onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
                   placeholder="Message KovaGPT"
                   onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
@@ -1285,69 +1251,8 @@ function KovaGPT() {
                   recentLibraryError={recentLibraryError}
                   onRecentLibraryRetry={loadRecentLibraryFiles}
                 />
-
-<div className="kova-capability-grid mx-auto mt-3 hidden max-w-[48rem] grid-cols-3 gap-1.5 lg:grid">
-                  {assistantCapabilities.map((p) => {
-                    const Icon = p.icon;
-                    return (
-                      <button
-                        key={p.label}
-                        type="button"
-                        onClick={() => setInput((v) => (v.trim() ? v : p.prompt))}
-className="kova-capability-card inline-flex min-h-10 items-center gap-2 rounded-md border border-border/70 bg-transparent px-3 text-left text-[13px] font-medium text-foreground transition hover:border-foreground/20 hover:bg-accent"
-                      >
-                        <Icon className="h-4 w-4 text-muted-foreground" />
-                        <span>{p.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="kova-mobile-starters mt-3 grid grid-cols-2 gap-2 lg:hidden">
-                  {[
-                    {
-                      label: "Summarize a file",
-                      hint: "PDF or doc to key points",
-                      prompt:
-                        "Summarize the attached file into the key points, decisions, and action items.",
-                    },
-                    {
-                      label: "Research a topic",
-                      hint: "Briefing with sources",
-                      prompt: "Research this topic and give me a concise briefing with sources: ",
-                    },
-                    {
-                      label: "Improve my writing",
-                      hint: "Clearer and tighter",
-                      prompt:
-                        "Improve the clarity and tone of this text without changing its meaning:\n\n",
-                    },
-                    {
-                      label: "Debug my code",
-                      hint: "Find and fix the bug",
-                      prompt:
-                        "Here's my code and the error I'm seeing. Explain what's wrong and give a corrected version.\n\n",
-                    },
-                  ].map((p) => (
-                    <button
-                      key={p.label}
-                      type="button"
-                      onClick={() => setInput((v) => (v ? v : p.prompt))}
-className="kova-starter-card min-w-0 text-left px-3.5 py-3 rounded-lg border border-border bg-card/70 active:bg-accent/60 transition-colors"
-                    >
-                      <div className="text-[15px] font-medium text-foreground">{p.label}</div>
-                      <div className="text-[12.5px] text-muted-foreground mt-0.5">{p.hint}</div>
-                    </button>
-                  ))}
-                </div>
               </div>
             </div>
-            <Suspense
-              fallback={
-                <div className="mx-auto mb-6 h-32 w-full max-w-[56rem] animate-pulse rounded-2xl bg-muted" />
-              }
-            >
-              <WorkspaceIntelligence />
-            </Suspense>
           </section>
         ) : (
           <>
@@ -1537,6 +1442,8 @@ className="kova-starter-card min-w-0 text-left px-3.5 py-3 rounded-lg border bor
                 onAttachmentsChange={setAttachments}
                 mode={mode}
                 onModeChange={setMode}
+                userTier={tier}
+                canChangeAgent={Boolean(isSignedIn)}
                 onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
                 placeholder="Message KovaGPT"
                 onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
@@ -1607,17 +1514,6 @@ className="kova-starter-card min-w-0 text-left px-3.5 py-3 rounded-lg border bor
             resetsAt={getUsage().resetsAt}
           />
         )}
-        <ArchivedChatsDialog
-          open={archivedOpen}
-          onClose={() => setArchivedOpen(false)}
-          onRestore={(conversation) => {
-            setConversations((all) => [
-              conversation,
-              ...all.filter((item) => item.id !== conversation.id),
-            ]);
-            toast.success("Chat restored");
-          }}
-        />
       </Suspense>
 
       <SignUpPrompt open={signupPromptOpen} onOpenChange={setSignupPromptOpen} />

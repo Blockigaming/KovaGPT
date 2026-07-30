@@ -57,7 +57,7 @@
 }
 
 :root {
-  --radius: 0.75rem;
+  --radius: 1rem;
   /* KovaGPT light theme - ChatGPT-like restrained neutrals */
   --background: oklch(0.982 0 0);
   --foreground: oklch(0.19 0 0);
@@ -119,9 +119,9 @@
   --space-6: 1.5rem;
   --space-8: 2rem;
   --kova-radius-compact: 8px;
-  --kova-radius-input: 12px;
-  --kova-radius-card: 16px;
-  --kova-radius-panel: 20px;
+  --kova-radius-input: 18px;
+  --kova-radius-card: 20px;
+  --kova-radius-panel: 24px;
   --kova-control-sm: 36px;
   --kova-control-md: 40px;
   --kova-touch: 44px;
@@ -695,14 +695,14 @@ input {
 
   .kova-new-chat {
     margin-bottom: 0.2rem;
-    border: 1px solid color-mix(in oklab, var(--foreground) 7%, transparent);
-    background: color-mix(in oklab, var(--sidebar-hover) 55%, transparent);
+    border: 1px solid transparent;
+    background: transparent;
     font-weight: 550;
   }
 
   .kova-new-chat:hover {
-    border-color: color-mix(in oklab, var(--kova-blue) 25%, var(--border));
-    background: color-mix(in oklab, var(--sidebar-hover) 85%, transparent);
+    border-color: transparent;
+    background: var(--sidebar-hover);
   }
 
   .prose-chat {
@@ -763,7 +763,7 @@ input {
    A deliberately quiet final layer shared by every product route. */
 :root {
   --radius: 0.5rem;
-  --background: oklch(0.985 0.002 255);
+  --background: oklch(1 0 0);
   --foreground: oklch(0.19 0.008 255);
   --card: oklch(0.998 0.001 255);
   --popover: oklch(0.998 0.001 255);
@@ -775,7 +775,8 @@ input {
   --accent: oklch(0.945 0.008 255);
   --border: oklch(0.2 0.01 255 / 11%);
   --ring: oklch(0.58 0.18 257);
-  --sidebar: oklch(0.965 0.004 255);
+  --sidebar: oklch(0.975 0.002 255);
+  --surface-composer: oklch(0.955 0.002 255);
   --sidebar-active: color-mix(in oklab, var(--kova-blue) 9%, transparent);
   --surface-workspace: var(--background);
   --kova-blue: oklch(0.57 0.19 257);
@@ -793,7 +794,7 @@ input {
 
 .dark {
   color-scheme: dark;
-  --background: oklch(0.145 0.006 255);
+  --background: oklch(0.235 0.004 255);
   --foreground: oklch(0.94 0.004 255);
   --card: oklch(0.185 0.007 255);
   --popover: oklch(0.205 0.008 255);
@@ -805,13 +806,13 @@ input {
   --accent: oklch(0.235 0.009 255);
   --border: oklch(1 0 0 / 9%);
   --ring: oklch(0.68 0.17 257);
-  --sidebar: oklch(0.165 0.007 255);
+  --sidebar: oklch(0.175 0.004 255);
   --sidebar-hover: oklch(1 0 0 / 5%);
   --sidebar-active: color-mix(in oklab, var(--kova-blue) 13%, transparent);
   --surface-workspace: var(--background);
   --surface-raised: var(--card);
   --surface-floating: oklch(0.205 0.008 255 / 97%);
-  --surface-composer: oklch(0.19 0.008 255);
+  --surface-composer: oklch(0.3 0.004 255);
   --kova-blue: oklch(0.68 0.17 257);
   --code-block-bg: oklch(0.12 0.008 255);
   --shadow-soft: 0 1px 2px oklch(0 0 0 / 22%);
@@ -832,12 +833,6 @@ body {
 
 .kova-bg,
 .animate-pulse-slow {
-  display: none !important;
-}
-
-/* Lens remains in primary navigation and the command palette rather than
-   covering workspace content as a floating widget. */
-button[aria-label="Open Kova Lens"].fixed {
   display: none !important;
 }
 
@@ -1518,7 +1513,7 @@ body {
     min-height: calc(52px + var(--safe-top));
     padding-top: var(--safe-top);
     background: color-mix(in oklab, var(--background) 88%, transparent);
-    border-bottom: 1px solid color-mix(in oklab, var(--foreground) 7%, transparent);
+    border-bottom: 1px solid transparent;
     backdrop-filter: blur(14px) saturate(120%);
   }
   .kova-divider {
@@ -1869,12 +1864,10 @@ body {
    without changing route behavior or introducing page-specific themes. */
 @layer components {
   .kova-composer {
-    border-radius: 1.125rem !important;
-    border-color: color-mix(in oklab, var(--foreground) 13%, transparent) !important;
-    background: color-mix(in oklab, var(--surface-composer) 96%, transparent) !important;
-    box-shadow:
-      0 10px 30px -24px oklch(0 0 0 / 55%),
-      0 1px 2px oklch(0 0 0 / 10%) !important;
+    border-radius: 1.75rem !important;
+    border-color: transparent !important;
+    background: var(--surface-composer) !important;
+    box-shadow: none !important;
     transition:
       border-color var(--motion-standard) var(--ease-standard),
       box-shadow var(--motion-standard) var(--ease-standard),
@@ -1882,14 +1875,12 @@ body {
   }
 
   .kova-composer:hover {
-    border-color: color-mix(in oklab, var(--foreground) 19%, transparent) !important;
+    border-color: transparent !important;
   }
 
   .kova-composer:focus-within {
-    border-color: color-mix(in oklab, var(--kova-blue) 62%, var(--border)) !important;
-    box-shadow:
-      0 0 0 3px color-mix(in oklab, var(--kova-blue) 13%, transparent),
-      0 16px 38px -28px oklch(0 0 0 / 60%) !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
   }
 
   .kova-capability-card,

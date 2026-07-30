@@ -3,6 +3,9 @@ import { type StripeEnv, createStripeClient, getStripeErrorMessage } from "@/lib
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 type CheckoutSessionResult = { clientSecret: string } | { error: string };
+// Customer-facing billing is production-only. The environment supplied by a
+// browser is never trusted to select Stripe credentials or subscription rows.
+const BILLING_ENV: StripeEnv = "live";
 
 async function resolveOrCreateCustomer(
   stripe: ReturnType<typeof createStripeClient>,
@@ -50,14 +53,14 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       const userId = context.userId;
       const customerEmail =
         typeof context.claims.email === "string" ? context.claims.email : undefined;
-      const stripe = createStripeClient(data.environment);
+      const stripe = createStripeClient(BILLING_ENV);
 
       // Prevent duplicate active subscriptions for the same user in this env.
       const { data: existing } = await context.supabase
         .from("subscriptions")
         .select("status, current_period_end, cancel_at_period_end")
         .eq("user_id", userId)
-        .eq("environment", data.environment)
+        .eq("environment", BILLING_ENV)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -141,7 +144,7 @@ export const createPortalSession = createServerFn({ method: "POST" })
       .from("subscriptions")
       .select("stripe_customer_id")
       .eq("user_id", userId)
-      .eq("environment", data.environment)
+      .eq("environment", BILLING_ENV)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -149,7 +152,7 @@ export const createPortalSession = createServerFn({ method: "POST" })
       return { error: "No billing account found. Start a subscription first." };
     }
     try {
-      const stripe = createStripeClient(data.environment);
+      const stripe = createStripeClient(BILLING_ENV);
       const portal = await stripe.billingPortal.sessions.create({
         customer: sub.stripe_customer_id,
         ...(data.returnUrl && { return_url: data.returnUrl }),
@@ -182,7 +185,7 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
       .from("subscriptions")
       .select("stripe_customer_id, price_id, status, current_period_end, cancel_at_period_end")
       .eq("user_id", userId)
-      .eq("environment", data.environment)
+      .eq("environment", BILLING_ENV)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();

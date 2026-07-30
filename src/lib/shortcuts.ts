@@ -9,8 +9,7 @@ export type ShortcutId =
   | "open-settings"
   | "generate-image"
   | "toggle-sidebar"
-  | "focus-input"
-  | "open-lens";
+  | "focus-input";
 
 export type Shortcut = {
   id: ShortcutId;
@@ -63,12 +62,6 @@ export const DEFAULT_SHORTCUTS: Shortcut[] = [
     label: "Focus chat input",
     description: "Move cursor to the composer",
     combo: "Mod+/",
-  },
-  {
-    id: "open-lens",
-    label: "Open Kova Lens",
-    description: "Capture selected text or an idea and continue anywhere",
-    combo: "Mod+Shift+K",
   },
 ];
 

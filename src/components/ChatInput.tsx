@@ -11,10 +11,11 @@ import {
   Lightbulb,
   Sparkles,
   GraduationCap,
-  SlidersHorizontal,
   Brain,
   AlertCircle,
   RotateCcw,
+  Mic,
+  MicOff,
   type LucideIcon,
 } from "lucide-react";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
@@ -25,6 +26,7 @@ import { tryUseUpload, DAILY_UPLOAD_LIMIT, getUsage } from "@/lib/limits";
 import { toast } from "sonner";
 import { ResponsiveModelSelector as ModelSelector } from "@/components/ResponsiveModelSelector";
 import type { ModeId, Tier } from "@/lib/modes";
+import { createSpeechRecognition, type BrowserSpeechRecognition } from "@/lib/browser-voice";
 
 export type PendingAttachment = {
   kind: "image" | "text_file" | "library_file";
@@ -50,7 +52,12 @@ export type RecentLibraryFile = {
   projectName?: string | null;
 };
 export type ComposerToolId =
-  "web_search" | "deep_research" | "image" | "study" | "data_analysis" | "file_analysis";
+  | "web_search"
+  | "deep_research"
+  | "image"
+  | "study"
+  | "data_analysis"
+  | "file_analysis";
 
 const TEXT_LIKE_EXT =
   /\.(txt|md|markdown|csv|tsv|json|jsonl|ya?ml|toml|xml|html?|css|scss|less|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|h|cc|cpp|hpp|cs|php|sql|sh|bash|zsh|fish|env|ini|conf|log|srt|vtt)$/i;
@@ -68,6 +75,7 @@ export function ChatInput({
   mode,
   onModeChange,
   userTier = "free",
+  canChangeAgent = true,
   onUploadLimit,
   placeholder,
   onPromptShortcut,
@@ -87,6 +95,8 @@ export function ChatInput({
   mode?: ModeId;
   onModeChange?: (m: ModeId) => void;
   userTier?: Tier;
+  /** Guests use the basic agent and cannot change versions or reasoning levels. */
+  canChangeAgent?: boolean;
   /** Called when the user hits their daily upload quota. */
   onUploadLimit?: () => void;
   placeholder?: string;
@@ -105,29 +115,80 @@ export function ChatInput({
   const photoRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const plusWrapRef = useRef<HTMLDivElement>(null);
-  const toolsWrapRef = useRef<HTMLDivElement>(null);
 
   const [sendFlash, setSendFlash] = useState(false);
   const [actionColor, setActionColor] = useState<string>("#3b82f6");
   const [plusOpen, setPlusOpen] = useState(false);
-  const [toolsOpen, setToolsOpen] = useState(false);
   const [kbOffset, setKbOffset] = useState(0);
   const submittingRef = useRef(false);
   const composingRef = useRef(false);
+  const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
+  const dictationBaseRef = useRef("");
+  const onChangeRef = useRef(onChange);
   const [uploadAnnouncement, setUploadAnnouncement] = useState("");
   const [recentQuery, setRecentQuery] = useState("");
+  const [dictationSupported, setDictationSupported] = useState(false);
+  const [isListening, setIsListening] = useState(false);
 
   useEffect(() => {
-    if (!plusOpen && !toolsOpen) return;
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  useEffect(() => {
+    const recognition = createSpeechRecognition();
+    setDictationSupported(Boolean(recognition));
+    if (!recognition) return;
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = navigator.language || "en-US";
+    recognition.onresult = (event) => {
+      let transcript = "";
+      for (let index = 0; index < event.results.length; index += 1) {
+        transcript += event.results[index]?.[0]?.transcript ?? "";
+      }
+      const separator = dictationBaseRef.current.trim() && transcript.trim() ? " " : "";
+      onChangeRef.current(`${dictationBaseRef.current}${separator}${transcript}`);
+    };
+    recognition.onerror = (event) => {
+      setIsListening(false);
+      if (event.error !== "aborted" && event.error !== "no-speech") {
+        toast.error("Voice input is unavailable. Check microphone access and try again.");
+      }
+    };
+    recognition.onend = () => setIsListening(false);
+    recognitionRef.current = recognition;
+    return () => {
+      recognition.abort();
+      recognitionRef.current = null;
+    };
+  }, []);
+
+  const toggleDictation = () => {
+    const recognition = recognitionRef.current;
+    if (!recognition) return;
+    if (isListening) {
+      recognition.stop();
+      setIsListening(false);
+      return;
+    }
+    dictationBaseRef.current = value.trimEnd();
+    try {
+      recognition.start();
+      setIsListening(true);
+    } catch {
+      toast.error("Voice input is already starting. Try again in a moment.");
+    }
+  };
+
+  useEffect(() => {
+    if (!plusOpen) return;
     const onDoc = (e: MouseEvent) => {
       const target = e.target as Node;
       if (!plusWrapRef.current?.contains(target)) setPlusOpen(false);
-      if (!toolsWrapRef.current?.contains(target)) setToolsOpen(false);
     };
     const onEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setPlusOpen(false);
-        setToolsOpen(false);
       }
     };
     document.addEventListener("mousedown", onDoc);
@@ -136,7 +197,7 @@ export function ChatInput({
       document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onEsc);
     };
-  }, [plusOpen, toolsOpen]);
+  }, [plusOpen]);
 
   useEffect(() => {
     try {
@@ -212,80 +273,6 @@ export function ChatInput({
     setUploadAnnouncement("Message submitted");
     window.setTimeout(() => setSendFlash(false), 380);
     onSubmit();
-  };
-
-  const shortcutActions = [
-    {
-      label: "Search",
-      icon: Search,
-      prompt: "Search the web and cite sources for this: ",
-    },
-    {
-      label: "Reason",
-      icon: Lightbulb,
-      prompt: "Think step by step and solve this carefully: ",
-    },
-    {
-      label: "Create image",
-      icon: Sparkles,
-      prompt: "Create an image prompt for: ",
-    },
-    {
-      label: "Study",
-      icon: GraduationCap,
-      prompt: "Tutor me on this topic with examples and a short quiz: ",
-    },
-  ];
-
-  const toolActions: Array<{
-    id: ComposerToolId;
-    label: string;
-    icon: LucideIcon;
-    prompt: string;
-  }> = [
-    {
-      id: "web_search",
-      label: "Search the web",
-      icon: Search,
-      prompt: "Search the web and cite sources for: ",
-    },
-    {
-      id: "deep_research",
-      label: "Deep research",
-      icon: GraduationCap,
-      prompt: "Research this deeply with sources and a structured report: ",
-    },
-    { id: "image", label: "Create an image", icon: ImageIcon, prompt: "Create an image of: " },
-    {
-      id: "data_analysis",
-      label: "Analyze data",
-      icon: Brain,
-      prompt: "Analyze this data and show the key findings: ",
-    },
-    {
-      id: "study",
-      label: "Study mode",
-      icon: Lightbulb,
-      prompt: "Tutor me on this step by step, then quiz me: ",
-    },
-    {
-      id: "file_analysis",
-      label: "Analyze files",
-      icon: FileText,
-      prompt: "Analyze the attached file and summarize the important details.",
-    },
-  ];
-
-  const applyShortcut = (prompt: string) => {
-    onPromptShortcut?.(prompt);
-    if (!value.trim()) onChange(prompt);
-    setToolsOpen(false);
-    ref.current?.focus();
-  };
-
-  const applyTool = (tool: ComposerToolId, prompt: string) => {
-    onToolSelect?.(tool);
-    applyShortcut(prompt);
   };
 
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -602,7 +589,7 @@ export function ChatInput({
                 } as React.CSSProperties)
               : undefined
           }
-          className={`kova-composer kova-glass overflow-visible rounded-xl transition-[border-color,box-shadow,transform] duration-200 focus-within:border-foreground/20 focus-within:shadow-[0_0_0_3px_color-mix(in_oklab,var(--ring)_12%,transparent)] ${
+          className={`kova-composer kova-glass overflow-visible rounded-[26px] transition-[border-color,box-shadow,transform] duration-200 focus-within:border-foreground/20 focus-within:shadow-[0_0_0_3px_color-mix(in_oklab,var(--ring)_12%,transparent)] ${
             sendFlash
               ? "scale-[0.995]"
               : isStreaming
@@ -862,17 +849,37 @@ export function ChatInput({
               aria-label="Message KovaGPT"
             />
             <div className="flex items-center gap-1.5 pr-1.5">
-              {mode && onModeChange && (
-                <div className="hidden lg:flex items-center">
+              {canChangeAgent && mode && onModeChange && (
+                <div className="flex items-center">
                   <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
                 </div>
+              )}
+              {dictationSupported && !isStreaming && (
+                <button
+                  type="button"
+                  onClick={toggleDictation}
+                  className={`mb-1 flex h-10 w-10 items-center justify-center rounded-full transition active:scale-95 lg:h-9 lg:w-9 ${
+                    isListening
+                      ? "bg-destructive text-destructive-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                  }`}
+                  aria-label={isListening ? "Stop voice input" : "Start voice input"}
+                  aria-pressed={isListening}
+                  title={isListening ? "Stop dictation" : "Use voice input"}
+                >
+                  {isListening ? (
+                    <MicOff className="h-4.5 w-4.5" />
+                  ) : (
+                    <Mic className="h-4.5 w-4.5" />
+                  )}
+                </button>
               )}
               {isStreaming ? (
                 <button
                   type="button"
                   onClick={onStop}
                   style={{ backgroundColor: "var(--kova-blue)" }}
-className="kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-lg text-white transition hover:opacity-80 lg:h-9 lg:w-9"
+                  className="kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-lg text-white transition hover:opacity-80 lg:h-9 lg:w-9"
                   aria-label="Stop"
                 >
                   <Square className="w-4 h-4 fill-current" />
@@ -886,7 +893,7 @@ className="kova-send-button mb-1 flex h-10 w-10 items-center justify-center roun
                   type="button"
                   onClick={triggerSubmit}
                   style={{ backgroundColor: "var(--kova-blue)" }}
-className={`kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-lg text-white shadow-sm transition duration-150 hover:opacity-90 active:scale-90 active:opacity-70 lg:h-9 lg:w-9 ${sendFlash ? "scale-90 opacity-80" : ""}`}
+                  className={`kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-lg text-white shadow-sm transition duration-150 hover:opacity-90 active:scale-90 active:opacity-70 lg:h-9 lg:w-9 ${sendFlash ? "scale-90 opacity-80" : ""}`}
                   aria-label="Send"
                 >
                   <ArrowUp
@@ -906,94 +913,6 @@ className={`kova-send-button mb-1 flex h-10 w-10 items-center justify-center rou
               )}
             </div>
           </div>
-          <div className="flex min-h-9 items-center justify-between gap-2 px-2 pb-2">
-            <div className="relative flex items-center gap-1.5" ref={toolsWrapRef}>
-              <button
-                type="button"
-                onClick={() => setToolsOpen((value) => !value)}
-className={`kova-tool-button inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-[13px] font-medium transition ${
-                  toolsOpen
-                    ? "border-foreground/20 bg-accent text-foreground"
-                    : "border-border/70 bg-background/55 text-muted-foreground hover:bg-accent hover:text-foreground"
-                }`}
-                aria-label="Open tools"
-                aria-haspopup="menu"
-                aria-expanded={toolsOpen}
-              >
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-                <span>Tools</span>
-              </button>
-              {toolsOpen && !isMobileLayout && (
-                <div
-                  role="menu"
-                  className="kova-glass absolute bottom-10 left-0 z-50 w-64 rounded-xl p-1.5 animate-in fade-in slide-in-from-bottom-1"
-                >
-                  {toolActions.map((tool) => {
-                    const Icon = tool.icon;
-                    return (
-                      <button
-                        key={tool.label}
-                        role="menuitem"
-                        type="button"
-                        onClick={() => applyTool(tool.id, tool.prompt)}
-                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent"
-                      >
-                        <Icon className="h-4 w-4 text-muted-foreground" />
-                        <span>{tool.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-            <div className="kova-composer-shortcuts flex min-w-0 flex-wrap items-center gap-1.5">
-              {shortcutActions.map((action) => {
-                const Icon = action.icon;
-                return (
-                  <button
-                    key={action.label}
-                    type="button"
-                    onClick={() => applyShortcut(action.prompt)}
-                    className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border/70 bg-background/55 px-2.5 text-[12.5px] font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
-                    aria-label={`${action.label} shortcut`}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">{action.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-            {mode && onModeChange && (
-              <div className="flex items-center lg:hidden">
-                <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
-              </div>
-            )}
-          </div>
-          {isMobileLayout && (
-            <MobileBottomSheet
-              open={toolsOpen}
-              onOpenChange={setToolsOpen}
-              title="Tools"
-              ariaLabel="Choose a tool"
-            >
-              <div className="flex flex-col gap-1 p-1">
-                {toolActions.map((tool) => {
-                  const Icon = tool.icon;
-                  return (
-                    <button
-                      key={tool.label}
-                      type="button"
-                      onClick={() => applyTool(tool.id, tool.prompt)}
-                      className="flex min-h-14 w-full items-center gap-3 rounded-xl px-4 py-4 text-left text-base hover:bg-accent active:bg-accent"
-                    >
-                      <Icon className="h-5 w-5 text-muted-foreground" />
-                      <span>{tool.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </MobileBottomSheet>
-          )}
         </div>
       </div>
     </div>

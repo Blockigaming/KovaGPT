@@ -1,40 +1,29 @@
 import {
   Archive,
-  Bell,
-  Boxes,
-  Brain,
-  BriefcaseBusiness,
   Calendar,
-  Clock3,
   Copy as CopyIcon,
   CreditCard,
   FolderKanban,
   FolderOpen,
-  Files,
-  FlaskConical,
   HelpCircle,
   ImageIcon,
   MoreHorizontal,
-  Network,
   PanelLeft,
   Pin,
   PinOff,
-  Plug,
-  ScrollText,
+  PanelsTopLeft,
   Search,
-  ScanSearch,
   Settings as SettingsIcon,
   Share2,
   SquarePen,
   Trash2,
   X,
-  Orbit,
   type LucideIcon,
 } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
-import { SignInButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
+import { SignInButton, SignUpButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
 import { NovaLogo } from "@/components/NovaLogo";
 import {
   DropdownMenu,
@@ -69,7 +58,6 @@ export function Sidebar({
   onToggle,
   onOpenSettings,
   onOpenHelp,
-  onOpenArchived,
 }: {
   conversations: Conversation[];
   activeId: string | null;
@@ -84,7 +72,6 @@ export function Sidebar({
   onToggle: () => void;
   onOpenSettings: (tab?: string) => void;
   onOpenHelp: () => void;
-  onOpenArchived?: () => void;
 }) {
   const { user, isSignedIn, isLoaded } = useUser();
   const { tier } = useTier();
@@ -189,7 +176,7 @@ export function Sidebar({
   const renderRow = (c: Conversation) => (
     <div
       key={c.id}
-className={`kova-chat-row group relative mx-2 my-0.5 flex min-h-9 cursor-pointer items-center gap-1 rounded-md px-2.5 py-1.5 text-[13px] transition ${
+      className={`kova-chat-row group relative mx-2 my-0.5 flex min-h-9 cursor-pointer items-center gap-1 rounded-md px-2.5 py-1.5 text-[13px] transition ${
         activeId === c.id
           ? "bg-sidebar-active before:absolute before:-left-2 before:h-5 before:w-0.5 before:bg-[var(--kova-blue)]"
           : "hover:bg-sidebar-hover/60"
@@ -401,45 +388,10 @@ className={`kova-chat-row group relative mx-2 my-0.5 flex min-h-9 cursor-pointer
               <Search className="h-[18px] w-[18px] shrink-0" />
               <span className={labelClass}>Search</span>
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                window.dispatchEvent(new CustomEvent("kova-open-lens"));
-                closeAfterMobileNavigation();
-              }}
-              className={`kova-nav-row ${iconOnly}`}
-              aria-label="Open Kova Lens"
-              title="Open Kova Lens"
-            >
-              <ScanSearch className="h-[18px] w-[18px] shrink-0" />
-              <span className={labelClass}>Kova Lens</span>
-            </button>
-            {onOpenArchived ? (
-              <button
-                type="button"
-                onClick={onOpenArchived}
-                className={`kova-nav-row ${iconOnly}`}
-                aria-label="Archived chats"
-                title="Archived chats"
-              >
-                <Archive className="h-[18px] w-[18px] shrink-0" />
-                <span className={labelClass}>Archived chats</span>
-              </button>
-            ) : null}
             {showSignedIn ? renderNavLink("/projects", "Projects", FolderKanban) : null}
-            {renderNavLink("/recents", "Recents", Clock3)}
-            {showSignedIn ? renderNavLink("/work", "Work", BriefcaseBusiness) : null}
-            {showSignedIn ? renderNavLink("/notifications", "Notifications", Bell) : null}
-            {showSignedIn ? renderNavLink("/research-planner", "Research", FlaskConical) : null}
-            {showSignedIn ? renderNavLink("/prompt-studio", "Prompt Studio", ScrollText) : null}
-            {showSignedIn ? renderNavLink("/knowledge-graph", "Knowledge Graph", Network) : null}
-            {showSignedIn ? renderNavLink("/omega", "Omega Control Center", Orbit) : null}
             {renderNavLink("/library", "Library", FolderOpen)}
-            {showSignedIn ? renderNavLink("/files", "Files", Files) : null}
-            {showSignedIn ? renderNavLink("/context-packs", "Context packs", Boxes) : null}
-            {showSignedIn ? renderNavLink("/memory", "Memory", Brain) : null}
             {renderNavLink("/images", "Images", ImageIcon)}
-            {renderNavLink("/apps", "Apps", Plug)}
+            {renderNavLink("/apps", "Apps", PanelsTopLeft)}
             {showSignedIn && (tier === "plus" || tier === "pro")
               ? renderNavLink(
                   "/scheduled-tasks",
@@ -556,11 +508,18 @@ className={`kova-chat-row group relative mx-2 my-0.5 flex min-h-9 cursor-pointer
                   <span className={labelClass}>Settings</span>
                 </button>
                 {!collapsed ? (
-                  <SignInButton mode="modal">
-                    <button className="flex min-h-11 w-full items-center justify-center rounded-full bg-foreground px-3 py-2 text-sm font-medium text-background transition hover:opacity-90">
-                      Log in
-                    </button>
-                  </SignInButton>
+                  <div className="grid grid-cols-2 gap-2">
+                    <SignInButton mode="modal">
+                      <button className="flex min-h-10 items-center justify-center rounded-full border border-border bg-background px-3 text-sm font-medium transition hover:bg-sidebar-hover">
+                        Log in
+                      </button>
+                    </SignInButton>
+                    <SignUpButton mode="modal">
+                      <button className="flex min-h-10 items-center justify-center rounded-full bg-foreground px-3 text-sm font-medium text-background transition hover:opacity-90">
+                        Sign up
+                      </button>
+                    </SignUpButton>
+                  </div>
                 ) : null}
               </div>
             ) : null}

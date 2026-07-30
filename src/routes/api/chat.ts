@@ -468,19 +468,19 @@ export const Route = createFileRoute("/api/chat")({
               if (m.attachments !== undefined && !Array.isArray(m.attachments)) {
                 return Response.json({ error: "attachments must be an array." }, { status: 400 });
               }
-if (m.attachments && m.attachments.length > 2) {
-  return Response.json(
-    { error: "A message can include at most 2 attachments." },
-    { status: 400 },
-  );
-}
-if (m.attachments) {
-  for (const a of m.attachments) {
-    if (
-      !a ||
-      typeof a !== "object" ||
-      !["image", "text_file", "library_file"].includes(a.kind)
-    ) {
+              if (m.attachments && m.attachments.length > 2) {
+                return Response.json(
+                  { error: "A message can include at most 2 attachments." },
+                  { status: 400 },
+                );
+              }
+              if (m.attachments) {
+                for (const a of m.attachments) {
+                  if (
+                    !a ||
+                    typeof a !== "object" ||
+                    !["image", "text_file", "library_file"].includes(a.kind)
+                  ) {
                     return Response.json({ error: "Invalid attachment." }, { status: 400 });
                   }
                   if (a.kind === "library_file") {
@@ -497,29 +497,29 @@ if (m.attachments) {
                     }
                     continue;
                   }
-if (a.kind === "text_file") {
-  if (
-    typeof a.name !== "string" ||
-    a.name.length === 0 ||
-    a.name.length > 255 ||
-    typeof a.content !== "string" ||
-    a.content.length === 0 ||
-    a.content.length > MAX_TEXT_ATTACHMENT_CHARS ||
-    (a.fileType != null &&
-      (typeof a.fileType !== "string" ||
-        a.fileType.length > 100 ||
-        (!a.fileType.startsWith("text/") &&
-          a.fileType !== "application/json"))) ||
-    (a.size != null &&
-      (typeof a.size !== "number" || a.size < 0 || a.size > 256 * 1024))
-  ) {
-    return Response.json(
-      { error: "Invalid text file attachment." },
-      { status: 400 },
-    );
-  }
-  continue;
-}
+                  if (a.kind === "text_file") {
+                    if (
+                      typeof a.name !== "string" ||
+                      a.name.length === 0 ||
+                      a.name.length > 255 ||
+                      typeof a.content !== "string" ||
+                      a.content.length === 0 ||
+                      a.content.length > MAX_TEXT_ATTACHMENT_CHARS ||
+                      (a.fileType != null &&
+                        (typeof a.fileType !== "string" ||
+                          a.fileType.length > 100 ||
+                          (!a.fileType.startsWith("text/") &&
+                            a.fileType !== "application/json"))) ||
+                      (a.size != null &&
+                        (typeof a.size !== "number" || a.size < 0 || a.size > 256 * 1024))
+                    ) {
+                      return Response.json(
+                        { error: "Invalid text file attachment." },
+                        { status: 400 },
+                      );
+                    }
+                    continue;
+                  }
                   if (
                     typeof a.dataUrl !== "string" ||
                     !/^data:image\/(?:png|jpe?g|webp|gif);base64,/i.test(a.dataUrl)
@@ -529,9 +529,9 @@ if (a.kind === "text_file") {
                       { status: 400 },
                     );
                   }
-const encodedImage = a.dataUrl.slice(a.dataUrl.indexOf(",") + 1);
-const imageBytes = Math.floor((encodedImage.length * 3) / 4);
-if (imageBytes > MAX_ATTACHMENT_BYTES) {
+                  const encodedImage = a.dataUrl.slice(a.dataUrl.indexOf(",") + 1);
+                  const imageBytes = Math.floor((encodedImage.length * 3) / 4);
+                  if (imageBytes > MAX_ATTACHMENT_BYTES) {
                     return new Response(
                       JSON.stringify({ error: "An image attachment exceeds the 3 MB limit." }),
                       { status: 413, headers: { "Content-Type": "application/json" } },
@@ -612,7 +612,9 @@ if (imageBytes > MAX_ATTACHMENT_BYTES) {
             const TIER_RANK: Record<"free" | "plus" | "pro", number> = { free: 0, plus: 1, pro: 2 };
             const requested = getMode(mode ?? "auto");
             const allowed = isOwner || TIER_RANK[requested.tier] <= TIER_RANK[callerTier];
-            const m = allowed ? requested : getMode("auto");
+            // Guests always receive the basic instant agent, even if a custom
+            // client attempts to submit a higher mode directly to the API.
+            const m = !auth ? getMode("instant") : allowed ? requested : getMode("auto");
             const MAX_ATTACHMENTS_PER_REQUEST = 2;
             // Quotas apply to files submitted in this turn, not attachments in
             // older conversation history. This also keeps edit/regenerate from
@@ -811,7 +813,7 @@ if (imageBytes > MAX_ATTACHMENT_BYTES) {
                   .select("title, summary, updated_at")
                   .eq("user_id", auth.userId)
                   .order("updated_at", { ascending: false })
-                  .limit(8);
+                  .limit(callerTier === "pro" ? 500 : callerTier === "plus" ? 12 : 0);
                 if (Array.isArray(memRows) && memRows.length > 0) {
                   const memories = (memRows as { title?: string | null; summary: string }[]).map(
                     (r, i): KovaMemory => ({
@@ -825,7 +827,7 @@ if (imageBytes > MAX_ATTACHMENT_BYTES) {
                     selectRelevantMemories(memories, lastText, {
                       enabled: user?.rememberAcross === true,
                       temporary: Boolean(temporary),
-                      maxItems: 8,
+                      maxItems: callerTier === "pro" ? 200 : callerTier === "plus" ? 12 : 0,
                     }),
                   );
                 }
@@ -967,7 +969,7 @@ if (imageBytes > MAX_ATTACHMENT_BYTES) {
             // reason mode  -  reasoning adds significant latency.
             // Legacy Kova versions (<3.5) never use extended reasoning:
             // they are intentionally "slightly less smart" than 3.5.
-            if (m.reasoning && m.id === "high" && !IS_LEGACY_KOVA) {
+            if (m.reasoning && !IS_LEGACY_KOVA) {
               body.reasoning = { effort: m.reasoning };
             }
             if (IS_LEGACY_KOVA) {
@@ -1427,7 +1429,9 @@ if (imageBytes > MAX_ATTACHMENT_BYTES) {
               headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
             });
           } catch (e) {
-            const envelope = buildErrorEnvelope(e, requestId, 500);
+            const providerError = mapProviderError(e);
+            const status = providerError.status;
+            const envelope = buildErrorEnvelope(providerError, requestId, status);
             console.error("[chat] handler error", {
               requestId,
               category: envelope.category,
@@ -1435,7 +1439,7 @@ if (imageBytes > MAX_ATTACHMENT_BYTES) {
               error: e instanceof Error ? { name: e.name, message: e.message, stack: e.stack } : e,
             });
             return new Response(JSON.stringify(envelope), {
-              status: 500,
+              status,
               headers: { "Content-Type": "application/json" },
             });
           }

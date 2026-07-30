@@ -1,15 +1,12 @@
-import { ChevronDown, Check, Lock } from "lucide-react";
+import { ChevronDown, Check } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import { MODES, type ModeId, type Tier } from "@/lib/modes";
-import { Link } from "@tanstack/react-router";
+import { MODES, modesForTier, type ModeId, type Tier } from "@/lib/modes";
 import {
   KOVA_VERSIONS,
   getKovaVersion,
   setKovaVersion,
   type KovaVersion,
 } from "@/lib/kova-version";
-
-const TIER_RANK: Record<Tier, number> = { free: 0, plus: 1, pro: 2 };
 
 export function ModelSelector({
   mode,
@@ -38,12 +35,6 @@ export function ModelSelector({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const tierBadge = (t: Tier) => {
-    if (t === "plus") return "Plus";
-    if (t === "pro") return "Pro";
-    return null;
-  };
-
   return (
     <div className="relative" ref={ref}>
       <button
@@ -70,52 +61,25 @@ export function ModelSelector({
               <div className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Intelligence
               </div>
-              {MODES.map((m) => {
-                const locked = TIER_RANK[m.tier] > TIER_RANK[userTier];
-                const badge = tierBadge(m.tier);
+              {modesForTier(userTier).map((m) => {
                 const selected = m.id === mode;
-                const inner = (
-                  <div
-                    className={`w-full text-left px-3 py-2 rounded-lg transition flex items-center gap-2 ${selected ? "bg-accent" : "hover:bg-accent/60"}`}
-                  >
-                    <span className="font-medium text-sm flex-1">{m.label}</span>
-                    {badge && (
-                      <span
-                        className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${
-                          m.tier === "pro"
-                            ? "bg-foreground text-background"
-                            : "bg-accent text-foreground"
-                        }`}
-                      >
-                        {badge}
-                      </span>
-                    )}
-                    {locked && <Lock className="w-3 h-3 text-muted-foreground" />}
-                    {selected && !locked && <Check className="w-4 h-4 text-foreground" />}
-                  </div>
-                );
-                if (locked) {
-                  return (
-                    <Link
-                      key={m.id}
-                      to="/pricing"
-                      onClick={() => setOpen(false)}
-                      className="block opacity-70 hover:opacity-100 outline-none focus:outline-none focus-visible:ring-0"
-                    >
-                      {inner}
-                    </Link>
-                  );
-                }
                 return (
                   <button
                     key={m.id}
+                    type="button"
+                    data-testid={`model-option-${m.id}`}
                     onClick={() => {
                       onChange(m.id);
                       setOpen(false);
                     }}
-                    className="w-full outline-none focus:outline-none focus-visible:ring-0"
+                    className="w-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    {inner}
+                    <div
+                      className={`w-full text-left px-3 py-2 rounded-lg transition flex items-center gap-2 ${selected ? "bg-accent" : "hover:bg-accent/60"}`}
+                    >
+                      <span className="font-medium text-sm flex-1">{m.label}</span>
+                      {selected && <Check className="w-4 h-4 text-foreground" />}
+                    </div>
                   </button>
                 );
               })}

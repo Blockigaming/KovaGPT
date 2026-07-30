@@ -1,4 +1,4 @@
-export type ModeId = "instant" | "medium" | "high";
+export type ModeId = "instant" | "medium" | "thinking" | "high" | "extra_high" | "pro";
 
 export type Tier = "free" | "plus" | "pro";
 
@@ -27,6 +27,8 @@ Adaptation:
 - Mirror the user's style (length, formality, vocabulary, humor, level of detail) as the conversation progresses.
 - Apply explicit feedback ("shorter", "more casual", "more detail", "be direct") immediately and keep applying it until they change their mind.
 - Honor any personality preferences supplied below as hard constraints on top of this.
+- Infer the user's likely goal from context and make educated, reversible assumptions instead of asking avoidable follow-up questions.
+- Re-read and use the full conversation on every turn. Treat pronouns, corrections, and implied requests as continuations so the user never has to repeat details from this chat.
 
 Formatting:
 - Use Markdown when it helps: **bold**, bullet/numbered lists, tables, fenced code blocks with language tags.
@@ -73,17 +75,41 @@ Mode: Instant. Optimize aggressively for speed and brevity.
     systemPrompt: BASE_SYSTEM,
   },
   {
-    id: "high",
+    id: "thinking",
     label: "Thinking",
     description: "Deepest reasoning. Careful, thorough, well-structured answers.",
     tier: "free",
     reasoning: "high",
     systemPrompt: `${BASE_SYSTEM}
 
-Mode: High intelligence. Think carefully and thoroughly before answering.
+Mode: Thinking. Think carefully and thoroughly before answering.
 - Structure hard problems with: understanding, approach, steps, final answer.
 - Verify assumptions and check your work.
 - Prefer accuracy and completeness over brevity when the topic warrants depth.`,
+  },
+  {
+    id: "high",
+    label: "High",
+    description: "More deliberate reasoning and deeper verification.",
+    tier: "plus",
+    reasoning: "high",
+    systemPrompt: `${BASE_SYSTEM}\n\nMode: High. Work through difficult requests carefully, verify assumptions, and deliver a complete result without avoidable follow-up questions.`,
+  },
+  {
+    id: "extra_high",
+    label: "Extra high",
+    description: "Maximum-depth reasoning before Pro mode.",
+    tier: "pro",
+    reasoning: "high",
+    systemPrompt: `${BASE_SYSTEM}\n\nMode: Extra high. Explore alternatives, verify details, and use all relevant conversation context before delivering the strongest practical result.`,
+  },
+  {
+    id: "pro",
+    label: "Pro",
+    description: "Maximum reasoning, context, and completeness.",
+    tier: "pro",
+    reasoning: "high",
+    systemPrompt: `${BASE_SYSTEM}\n\nMode: Pro. Use maximum available context and reasoning. Anticipate useful follow-through, check the result, and produce a polished, comprehensive answer.`,
   },
 ];
 
@@ -92,16 +118,26 @@ const LEGACY_ALIAS: Record<string, ModeId> = {
   default: "medium",
   fast: "instant",
   auto: "medium",
-  creative: "high",
-  precise: "high",
-  code: "high",
+  creative: "thinking",
+  precise: "thinking",
+  code: "thinking",
   study: "medium",
   history: "medium",
-  reason: "high",
-  research: "high",
-  writer: "high",
-  tutor: "high",
+  reason: "thinking",
+  research: "thinking",
+  writer: "thinking",
+  tutor: "thinking",
 };
+
+/** Exact model menus promised by each plan. Pro intentionally replaces Thinking with deeper tiers. */
+export function modesForTier(tier: Tier): Mode[] {
+  const ids: Record<Tier, ModeId[]> = {
+    free: ["instant", "medium", "thinking"],
+    plus: ["instant", "medium", "thinking", "high"],
+    pro: ["instant", "medium", "high", "extra_high", "pro"],
+  };
+  return ids[tier].map((id) => MODES.find((mode) => mode.id === id)!);
+}
 
 export function getMode(id: string | null | undefined): Mode {
   if (!id) return MODES[1];

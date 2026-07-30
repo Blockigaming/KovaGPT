@@ -3,8 +3,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { getCallerTier, requireUser, type AuthedCaller } from "@/lib/api-auth.server";
 import { chatCompletions, chatModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
 
-const MAX_SUMMARIES_RETURNED = 8;
-const MAX_MEMORIES_PER_USER = 100;
+const MEMORY_LIMITS = {
+  plus: { returned: 12, stored: 250 },
+  // Pro memories are not automatically pruned. Retrieval is bounded per turn
+  // to protect the model context window, while the durable store keeps growing.
+  pro: { returned: 500, stored: null },
+} as const;
 
 // `chat_memories` was added in a recent migration; the generated Database
 // types haven't been refreshed yet, so we go through a permissive client
@@ -57,11 +61,18 @@ export const Route = createFileRoute("/api/memory")({
       GET: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
+        const tier = await getCallerTier(auth);
+        const returned =
+          tier === "pro"
+            ? MEMORY_LIMITS.pro.returned
+            : tier === "plus"
+              ? MEMORY_LIMITS.plus.returned
+              : 0;
         const { data } = await tbl(auth)
           .select("chat_id, title, summary, updated_at")
           .eq("user_id", auth.userId)
           .order("updated_at", { ascending: false })
-          .limit(MAX_SUMMARIES_RETURNED);
+          .limit(returned);
         return new Response(JSON.stringify({ memories: data ?? [] }), {
           headers: { "Content-Type": "application/json" },
         });
@@ -126,18 +137,21 @@ export const Route = createFileRoute("/api/memory")({
         );
 
         // Prune oldest beyond cap (best-effort).
-        const { data: extra } = await tbl(auth)
-          .select("id")
-          .eq("user_id", auth.userId)
-          .order("updated_at", { ascending: false })
-          .range(MAX_MEMORIES_PER_USER, MAX_MEMORIES_PER_USER + 50);
-        if (Array.isArray(extra) && extra.length > 0) {
-          await tbl(auth)
-            .delete()
-            .in(
-              "id",
-              (extra as { id: string }[]).map((r) => r.id),
-            );
+        if (tier === "plus") {
+          const memoryCap = MEMORY_LIMITS.plus.stored;
+          const { data: extra } = await tbl(auth)
+            .select("id")
+            .eq("user_id", auth.userId)
+            .order("updated_at", { ascending: false })
+            .range(memoryCap, memoryCap + 50);
+          if (Array.isArray(extra) && extra.length > 0) {
+            await tbl(auth)
+              .delete()
+              .in(
+                "id",
+                (extra as { id: string }[]).map((r) => r.id),
+              );
+          }
         }
         return new Response(JSON.stringify({ ok: true }), {
           headers: { "Content-Type": "application/json" },

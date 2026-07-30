@@ -23,6 +23,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { loadConversations, type Conversation } from "@/lib/chat-store";
+import { safeNavigationUrl } from "@/lib/safe-url";
 import {
   getSummaryProjects,
   getSummaryImages,
@@ -563,9 +564,9 @@ function SummaryPage() {
                 <ul className="space-y-1">
                   {(qFiles.data ?? []).slice(0, 5).map((f) => (
                     <li key={f.id}>
-                      {f.file_url ? (
+                      {safeNavigationUrl(f.file_url) ? (
                         <a
-                          href={f.file_url}
+                          href={safeNavigationUrl(f.file_url)!}
                           target="_blank"
                           rel="noopener"
                           className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm hover:bg-accent/40"

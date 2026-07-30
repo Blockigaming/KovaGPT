@@ -273,11 +273,15 @@ export function selectModelForMode(
   if (options.hasImages) required.push("vision");
   if (options.needsSearch) required.push("search");
   const preferred =
-    mode === "instant" ? cfg.fastModel : mode === "high" ? cfg.deepModel : cfg.chatModel;
+    mode === "instant"
+      ? cfg.fastModel
+      : ["thinking", "high", "extra_high", "pro"].includes(mode)
+        ? cfg.deepModel
+        : cfg.chatModel;
   return selectModelForCapabilities(
     preferred,
     required,
-    mode === "high" ? "advanced_chat" : "normal_chat",
+    ["thinking", "high", "extra_high", "pro"].includes(mode) ? "advanced_chat" : "normal_chat",
   );
 }
 

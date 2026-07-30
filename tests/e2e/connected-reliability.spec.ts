@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 const projects = new Set(["phone-390x844", "desktop-1440x900"]);
 
-test.beforeEach(({}, testInfo) => {
+test.beforeEach((_fixtures, testInfo) => {
   test.skip(!projects.has(testInfo.project.name));
 });
 
