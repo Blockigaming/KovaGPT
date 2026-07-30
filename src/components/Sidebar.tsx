@@ -167,9 +167,7 @@ export function Sidebar({
     <div
       key={c.id}
       className={`kova-chat-row group relative mx-2 my-0.5 flex min-h-9 items-center gap-1 rounded-md px-1.5 text-[13px] transition ${
-        activeId === c.id
-          ? "bg-sidebar-active"
-          : "hover:bg-sidebar-hover/60"
+        activeId === c.id ? "bg-sidebar-active" : "hover:bg-sidebar-hover/60"
       }`}
     >
       <button
@@ -182,9 +180,7 @@ export function Sidebar({
         aria-label={`Open chat ${c.title}`}
         title={c.title}
       >
-        {c.pinned ? (
-          <Pin className="h-3 w-3 shrink-0 fill-current text-muted-foreground" />
-        ) : null}
+        {c.pinned ? <Pin className="h-3 w-3 shrink-0 fill-current text-muted-foreground" /> : null}
         <span className="min-w-0 flex-1 truncate">{c.title}</span>
       </button>
       {!collapsed ? (
