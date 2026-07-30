@@ -10,6 +10,7 @@ test.describe("product completeness responsive scaffolding", () => {
 
   test("command palette, notifications, and policies have smoke targets", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeVisible();
     await page.keyboard.press(process.platform === "darwin" ? "Meta+K" : "Control+K");
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.keyboard.press("Escape");
