@@ -75,6 +75,7 @@ export function Sidebar({
   const { tier } = useTier();
   const drawerRef = useRef<HTMLElement | null>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
+  const previousOpenRef = useRef(open);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -98,6 +99,17 @@ export function Sidebar({
     window.addEventListener("kova-open-search", openSearch);
     return () => window.removeEventListener("kova-open-search", openSearch);
   }, [open, onToggle]);
+
+  useEffect(() => {
+    const wasOpen = previousOpenRef.current;
+    previousOpenRef.current = open;
+    if (wasOpen === open || isMobileViewport()) return;
+
+    window.requestAnimationFrame(() => {
+      const label = open ? "Collapse sidebar" : "Open sidebar";
+      document.querySelector<HTMLElement>(`[aria-label="${label}"]`)?.focus();
+    });
+  }, [open]);
 
   useEffect(() => {
     if (!open || !isMobileViewport()) return;
@@ -362,7 +374,11 @@ export function Sidebar({
               : null}
           </div>
 
-          <nav className="relative mt-2 min-h-0 flex-1 overflow-y-auto pb-4" aria-label="Chats">
+          <div
+            className="relative mt-2 min-h-0 flex-1 overflow-y-auto pb-4"
+            role="group"
+            aria-label="Chats"
+          >
             <div
               aria-hidden="true"
               className="pointer-events-none sticky top-0 z-10 h-4 bg-gradient-to-b from-sidebar to-transparent"
@@ -416,7 +432,7 @@ export function Sidebar({
               aria-hidden="true"
               className="pointer-events-none sticky bottom-0 z-10 h-8 bg-gradient-to-t from-sidebar to-transparent"
             />
-          </nav>
+          </div>
 
           <div
             className={`mt-auto border-t border-border/60 bg-sidebar/95 p-2.5 pb-[max(.625rem,var(--safe-bottom))] ${collapsed ? "lg:px-2" : ""}`}
@@ -457,7 +473,10 @@ export function Sidebar({
             ) : showSignedOut ? (
               <div className="space-y-2">
                 <button
-                  onClick={() => onOpenSettings("general")}
+                  onClick={() => {
+                    onOpenSettings("general");
+                    closeAfterMobileNavigation();
+                  }}
                   className={`flex min-h-11 w-full items-center rounded-xl py-2 text-sm transition hover:bg-sidebar-hover ${iconOnly}`}
                   aria-label="Settings"
                 >
