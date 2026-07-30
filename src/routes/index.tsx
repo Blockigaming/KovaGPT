@@ -1430,7 +1430,7 @@ function KovaGPT() {
                                         sourceProject: attachment.sourceProject,
                                         status: "complete" as const,
                                       },
-                                ),
+                              ),
                             );
                           }
                         : undefined
