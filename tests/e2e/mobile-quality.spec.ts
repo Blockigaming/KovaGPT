@@ -17,8 +17,7 @@ async function expectNoPageOverflow(page: Page) {
   expect(size.scroll).toBeLessThanOrEqual(size.client + 1);
 }
 
-test.beforeEach(({ page }, testInfo) => {
-  void page;
+test.beforeEach((_, testInfo) => {
   test.skip(!mobileProjects.has(testInfo.project.name));
 });
 
