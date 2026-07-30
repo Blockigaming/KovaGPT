@@ -591,6 +591,175 @@ input {
 }
 
 
+/* Core chat workspace primitives. Component classes keep the highest-traffic
+   interactions consistent across desktop, narrow phones, and mobile sheets. */
+@layer components {
+  .kova-sidebar {
+    background: color-mix(in oklab, var(--sidebar) 97%, var(--background));
+    box-shadow: inset -1px 0 color-mix(in oklab, var(--foreground) 3%, transparent);
+  }
+
+  .kova-chat-row {
+    transition:
+      background-color var(--motion-fast) var(--ease-standard),
+      color var(--motion-fast) var(--ease-standard),
+      transform var(--motion-fast) var(--ease-standard);
+  }
+
+  .kova-chat-row:hover {
+    transform: translateX(1px);
+  }
+
+  .kova-chat-row:active {
+    transform: scale(0.992);
+  }
+
+  .kova-conversation-scroll {
+    scrollbar-gutter: stable;
+    overflow-anchor: auto;
+    scroll-padding-block: 4rem 8rem;
+  }
+
+  .kova-message {
+    contain: layout style;
+    overflow-anchor: none;
+  }
+
+  .kova-message:last-child {
+    overflow-anchor: auto;
+  }
+
+  .kova-assistant-message {
+    width: min(100%, var(--kova-content-max));
+  }
+
+  .kova-user-message {
+    border-color: color-mix(in oklab, var(--foreground) 7%, transparent);
+    border-radius: 1.125rem 1.125rem 0.4rem 1.125rem;
+    box-shadow: 0 1px 1px oklch(0 0 0 / 5%);
+  }
+
+  .kova-message-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    min-height: 2.25rem;
+  }
+
+  .kova-message-actions > button,
+  .kova-message-actions [data-radix-collection-item] {
+    transition:
+      color var(--motion-fast) var(--ease-standard),
+      background-color var(--motion-fast) var(--ease-standard),
+      opacity var(--motion-fast) var(--ease-standard) !important;
+  }
+
+  .kova-message-actions > button:hover {
+    transform: none !important;
+  }
+
+  .kova-attach-button,
+  .kova-tool-button,
+  .kova-send-button {
+    outline: none;
+    transition:
+      background-color var(--motion-fast) var(--ease-standard),
+      border-color var(--motion-fast) var(--ease-standard),
+      color var(--motion-fast) var(--ease-standard),
+      opacity var(--motion-fast) var(--ease-standard),
+      transform var(--motion-fast) var(--ease-standard);
+  }
+
+  .kova-attach-button:focus-visible,
+  .kova-tool-button:focus-visible,
+  .kova-send-button:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  .kova-send-button {
+    animation: kova-control-enter var(--motion-standard) var(--ease-spring);
+    box-shadow:
+      0 1px 2px oklch(0 0 0 / 18%),
+      0 6px 16px -10px color-mix(in oklab, var(--kova-blue) 75%, transparent);
+  }
+
+  .kova-send-button:active {
+    transform: scale(0.92);
+  }
+
+  .kova-send-button:disabled {
+    cursor: default;
+    opacity: 0.5;
+    box-shadow: none;
+  }
+
+  .kova-new-chat {
+    margin-bottom: 0.2rem;
+    border: 1px solid color-mix(in oklab, var(--foreground) 7%, transparent);
+    background: color-mix(in oklab, var(--sidebar-hover) 55%, transparent);
+    font-weight: 550;
+  }
+
+  .kova-new-chat:hover {
+    border-color: color-mix(in oklab, var(--kova-blue) 25%, var(--border));
+    background: color-mix(in oklab, var(--sidebar-hover) 85%, transparent);
+  }
+
+  .prose-chat {
+    text-wrap: pretty;
+  }
+
+  .prose-chat pre,
+  .kova-code-block {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--foreground) 24%, transparent) transparent;
+  }
+
+  .prose-chat table {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .prose-chat img {
+    box-shadow: 0 10px 32px -24px oklch(0 0 0 / 45%);
+  }
+}
+
+@keyframes kova-control-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+}
+
+@media (max-width: 1023px) {
+  .kova-message {
+    padding-inline: 0.75rem;
+    padding-block: 0.7rem;
+  }
+
+  .kova-user-message {
+    border-radius: 1rem 1rem 0.35rem 1rem;
+  }
+
+  .kova-conversation-scroll {
+    scrollbar-gutter: auto;
+    scroll-padding-bottom: calc(7rem + var(--safe-bottom));
+  }
+
+  .kova-sidebar {
+    box-shadow: var(--shadow-drawer);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kova-chat-row:hover,
+  .kova-chat-row:active,
+  .kova-send-button:active {
+    transform: none;
+  }
+}
+
 /* Kova professional workspace system
    A deliberately quiet final layer shared by every product route. */
 :root {
@@ -1697,3 +1866,241 @@ body {
   }
 }
 
+
+/* Interaction-quality layer. These shared rules refine existing surfaces
+   without changing route behavior or introducing page-specific themes. */
+@layer components {
+  .kova-composer {
+    border-radius: 1.125rem !important;
+    border-color: color-mix(in oklab, var(--foreground) 13%, transparent) !important;
+    background: color-mix(in oklab, var(--surface-composer) 96%, transparent) !important;
+    box-shadow:
+      0 10px 30px -24px oklch(0 0 0 / 55%),
+      0 1px 2px oklch(0 0 0 / 10%) !important;
+    transition:
+      border-color var(--motion-standard) var(--ease-standard),
+      box-shadow var(--motion-standard) var(--ease-standard),
+      background-color var(--motion-standard) var(--ease-standard) !important;
+  }
+
+  .kova-composer:hover {
+    border-color: color-mix(in oklab, var(--foreground) 19%, transparent) !important;
+  }
+
+  .kova-composer:focus-within {
+    border-color: color-mix(in oklab, var(--kova-blue) 62%, var(--border)) !important;
+    box-shadow:
+      0 0 0 3px color-mix(in oklab, var(--kova-blue) 13%, transparent),
+      0 16px 38px -28px oklch(0 0 0 / 60%) !important;
+  }
+
+  .kova-capability-card,
+  .kova-starter-card {
+    transition:
+      background-color var(--motion-fast) var(--ease-standard),
+      border-color var(--motion-fast) var(--ease-standard),
+      transform var(--motion-fast) var(--ease-standard);
+  }
+
+  .kova-capability-card:hover,
+  .kova-starter-card:hover {
+    transform: translateY(-1px);
+  }
+
+  .kova-capability-card:active,
+  .kova-starter-card:active {
+    transform: translateY(0) scale(0.99);
+  }
+
+  [role="menuitem"]:focus-visible,
+  [role="option"]:focus-visible {
+    outline: 2px solid var(--ring) !important;
+    outline-offset: -2px !important;
+    background: var(--accent) !important;
+  }
+
+  .kova-thinking-indicator > :first-child {
+    animation: kova-status-pulse 1.4s var(--ease-standard) infinite;
+  }
+}
+
+@keyframes kova-status-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (min-width: 1024px) {
+  .kova-empty-chat > div:first-child {
+    padding-bottom: clamp(3rem, 11vh, 7.5rem);
+  }
+
+  .kova-greeting {
+    margin-bottom: 1.4rem;
+  }
+
+  .kova-capability-grid {
+    margin-top: 0.75rem;
+  }
+}
+
+@media (max-width: 1023px) {
+  .kova-empty-chat > div:first-child {
+    flex: 0 0 auto;
+    justify-content: flex-start;
+    padding-top: clamp(5.5rem, 20vh, 9rem);
+  }
+
+  .kova-mobile-starters {
+    width: 100%;
+  }
+
+  .kova-starter-card {
+    min-height: 4.5rem;
+    background: color-mix(in oklab, var(--card) 72%, transparent);
+  }
+}
+
+@media (max-width: 359px) {
+  .kova-mobile-starters {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kova-thinking-indicator > :first-child {
+    animation: none;
+    opacity: 1;
+  }
+
+  .kova-capability-card:hover,
+  .kova-starter-card:hover {
+    transform: none;
+  }
+}
+
+/* Secondary workspace primitives: settings, collections, connectors, tasks,
+   pricing, and account entry points share one density and interaction model. */
+@layer components {
+  .kova-secondary-page {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .kova-secondary-page :is(input, textarea, select),
+  .kova-settings-dialog :is(input, textarea, select),
+  .kova-auth-surface :is(input, textarea, select) {
+    border-color: var(--border-subtle);
+    transition:
+      border-color var(--motion-fast) var(--ease-standard),
+      box-shadow var(--motion-fast) var(--ease-standard),
+      background-color var(--motion-fast) var(--ease-standard);
+  }
+
+  .kova-secondary-page :is(input, textarea, select):focus-visible,
+  .kova-settings-dialog :is(input, textarea, select):focus-visible,
+  .kova-auth-surface :is(input, textarea, select):focus-visible {
+    border-color: color-mix(in oklab, var(--kova-blue) 55%, var(--border));
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--kova-blue) 12%, transparent);
+    outline: none;
+  }
+
+  .kova-form-surface {
+    background: color-mix(in oklab, var(--surface-raised) 96%, transparent);
+    box-shadow: none;
+  }
+
+  .kova-connector-card,
+  .kova-plan-card {
+    transition:
+      border-color var(--motion-standard) var(--ease-standard),
+      background-color var(--motion-standard) var(--ease-standard),
+      box-shadow var(--motion-standard) var(--ease-standard),
+      transform var(--motion-standard) var(--ease-standard);
+  }
+
+  .kova-connector-card:hover,
+  .kova-plan-card:hover {
+    border-color: color-mix(in oklab, var(--kova-blue) 28%, var(--border));
+    box-shadow: 0 12px 30px -26px oklch(0 0 0 / 50%);
+    transform: translateY(-1px);
+  }
+
+  .kova-plan-card {
+    border-radius: var(--kova-radius-card);
+  }
+
+  .kova-auth-page {
+    padding-top: max(1rem, var(--safe-top));
+    padding-bottom: max(1rem, var(--safe-bottom));
+  }
+
+  .kova-auth-surface {
+    border-radius: var(--kova-radius-panel);
+    box-shadow: var(--shadow-floating);
+  }
+
+  .kova-settings-dialog [role="tablist"] {
+    scrollbar-width: none;
+  }
+
+  .kova-settings-dialog [role="tab"] {
+    min-height: 2.5rem;
+    transition:
+      color var(--motion-fast) var(--ease-standard),
+      background-color var(--motion-fast) var(--ease-standard);
+  }
+
+  .kova-secondary-page [role="tab"][aria-selected="true"],
+  .kova-settings-dialog [role="tab"][aria-selected="true"] {
+    box-shadow: inset 0 -2px var(--kova-blue);
+  }
+}
+
+@media (max-width: 1023px) {
+  .kova-secondary-page {
+    padding-inline: max(0.875rem, var(--safe-left));
+    padding-bottom: max(2rem, var(--safe-bottom));
+  }
+
+  .kova-secondary-page button,
+  .kova-settings-dialog button,
+  .kova-auth-surface button {
+    min-height: 44px;
+  }
+
+  .kova-pricing-page {
+    padding-top: 2.5rem;
+  }
+
+  .kova-pricing-page > div:first-child {
+    margin-bottom: 2rem;
+  }
+}
+
+@media (max-width: 479px) {
+  .kova-secondary-page .kova-toolbar {
+    align-items: stretch;
+  }
+
+  .kova-secondary-page .kova-toolbar > * {
+    min-width: 0;
+  }
+
+  .kova-plan-card {
+    padding: 1.15rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kova-connector-card:hover,
+  .kova-plan-card:hover {
+    transform: none;
+  }
+}
