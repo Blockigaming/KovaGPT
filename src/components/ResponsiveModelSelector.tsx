@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { ChevronDown, Check, Lock } from "lucide-react";
-import { Link } from "@tanstack/react-router";
-import { MODES, type ModeId, type Tier } from "@/lib/modes";
+import { ChevronDown, Check } from "lucide-react";
+import { MODES, modesForTier, type ModeId, type Tier } from "@/lib/modes";
 import { useLayout } from "@/hooks/use-mobile";
 import { ModelSelector } from "@/components/ModelSelector";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
@@ -11,8 +10,6 @@ import {
   setKovaVersion,
   type KovaVersion,
 } from "@/lib/kova-version";
-
-const TIER_RANK: Record<Tier, number> = { free: 0, plus: 1, pro: 2 };
 
 /**
  * Adaptive model selector:
@@ -43,8 +40,6 @@ export function ResponsiveModelSelector({
     return <ModelSelector mode={mode} onChange={onChange} userTier={userTier} compact={compact} />;
   }
 
-  const tierBadge = (t: Tier) => (t === "plus" ? "Plus" : t === "pro" ? "Pro" : null);
-
   return (
     <>
       <button
@@ -74,47 +69,8 @@ export function ResponsiveModelSelector({
       >
         {version === "3.5" ? (
           <div className="flex flex-col gap-1">
-            {MODES.map((m) => {
-              const locked = TIER_RANK[m.tier] > TIER_RANK[userTier];
-              const badge = tierBadge(m.tier);
+            {modesForTier(userTier).map((m) => {
               const selected = m.id === mode;
-              const inner = (
-                <div
-                  className={`w-full text-left px-4 py-3.5 rounded-xl min-h-11 flex items-center gap-3 ${
-                    selected ? "bg-accent" : "hover:bg-accent/60 active:bg-accent"
-                  }`}
-                >
-                  <span className="font-medium text-base flex-1">{m.label}</span>
-                  {badge && (
-                    <span
-                      className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${
-                        m.tier === "pro"
-                          ? "bg-foreground text-background"
-                          : "bg-accent text-foreground"
-                      }`}
-                    >
-                      {badge}
-                    </span>
-                  )}
-                  {locked && <Lock className="w-4 h-4 text-muted-foreground" aria-label="Locked" />}
-                  {selected && !locked && (
-                    <Check className="w-5 h-5 text-foreground" aria-label="Selected" />
-                  )}
-                </div>
-              );
-              if (locked) {
-                return (
-                  <Link
-                    key={m.id}
-                    to="/pricing"
-                    onClick={() => setOpen(false)}
-                    className="block opacity-70 active:opacity-100"
-                    aria-disabled="true"
-                  >
-                    {inner}
-                  </Link>
-                );
-              }
               return (
                 <button
                   key={m.id}
@@ -126,7 +82,12 @@ export function ResponsiveModelSelector({
                   className="w-full"
                   data-testid={`model-option-${m.id}`}
                 >
-                  {inner}
+                  <div
+                    className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left ${selected ? "bg-accent" : "hover:bg-accent/60 active:bg-accent"}`}
+                  >
+                    <span className="flex-1 text-base font-medium">{m.label}</span>
+                    {selected && <Check className="h-5 w-5" aria-label="Selected" />}
+                  </div>
                 </button>
               );
             })}

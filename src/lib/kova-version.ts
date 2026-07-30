@@ -1,4 +1,4 @@
-export const KOVA_VERSIONS = ["3.5", "3.4", "3.3", "3.2", "3.1", "3.0"] as const;
+export const KOVA_VERSIONS = ["3.5", "3.4", "3.3"] as const;
 export type KovaVersion = (typeof KOVA_VERSIONS)[number];
 export const DEFAULT_KOVA_VERSION: KovaVersion = "3.5";
 const KEY = "kova-version";

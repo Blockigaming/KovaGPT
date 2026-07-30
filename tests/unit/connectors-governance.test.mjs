@@ -47,13 +47,13 @@ test("Google OAuth routes use the documented configuration, exact redirect, and 
   assert.match(callbackRoute, /Max-Age=0/);
 });
 
-test("voice remains deferred and no voice feature surfaces are reintroduced", () => {
+test("voice uses browser capabilities without adding provider secrets or billing claims", () => {
   const matrix = read("docs/kova-final-completion-matrix.md");
-  const settings = read("src/components/SettingsDialog.tsx");
-  const chat = read("src/routes/index.tsx");
+  const voice = read("src/lib/browser-voice.ts");
+  const chat = read("src/components/ChatInput.tsx");
   const pricing = read("src/routes/pricing.tsx");
-  assert.match(matrix, /Voice: DEFERRED BY PRODUCT DECISION/);
-  assert.doesNotMatch(settings, /autoSpeak|voiceRate|voiceName|Read aloud|Dictation|Microphone/i);
-  assert.doesNotMatch(chat, /label: "Voice"|Mic\b|microphone|dictation/i);
+  assert.match(matrix, /Voice: IMPLEMENTED AT SOURCE LEVEL/);
+  assert.match(voice, /SpeechRecognition/);
+  assert.match(chat, /Start voice input/);
   assert.doesNotMatch(pricing, /voice generations|voice, and advanced/i);
 });

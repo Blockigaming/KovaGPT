@@ -7,6 +7,7 @@ import { MagicLinkEmail } from "@/lib/email-templates/magic-link";
 import { RecoveryEmail } from "@/lib/email-templates/recovery";
 import { EmailChangeEmail } from "@/lib/email-templates/email-change";
 import { ReauthenticationEmail } from "@/lib/email-templates/reauthentication";
+import { timingSafeEqualText } from "@/lib/http-security.server";
 
 const EMAIL_TEMPLATES: Record<string, React.ElementType> = {
   signup: SignupEmail,
@@ -72,7 +73,7 @@ export const Route = createFileRoute("/lovable/email/auth/preview")({
 
         // Verify the caller is authorized with EMAIL_PREVIEW_TOKEN
         const authHeader = request.headers.get("Authorization");
-        if (!authHeader || authHeader !== `Bearer ${apiKey}`) {
+        if (!authHeader || !timingSafeEqualText(authHeader, `Bearer ${apiKey}`)) {
           return Response.json({ error: "Unauthorized" }, { status: 401 });
         }
 

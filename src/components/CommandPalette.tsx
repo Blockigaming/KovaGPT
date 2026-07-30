@@ -38,8 +38,8 @@ const fixedActions: PaletteAction[] = [
   { label: "New chat", href: "/", icon: SquarePen },
   { label: "Search workspace", action: "search", icon: Search },
   {
-    label: "Open Kova Lens",
-    action: "kova-lens",
+    label: "Focus message box",
+    action: "focus-input",
     icon: Zap,
     keywords: ["capture", "send", "continue", "selection"],
   },
@@ -186,8 +186,8 @@ export function CommandPalette({
       onClose();
       return;
     }
-    if (action === "kova-lens") {
-      window.dispatchEvent(new CustomEvent("kova-open-lens"));
+    if (action === "focus-input") {
+      document.querySelector<HTMLTextAreaElement>("textarea")?.focus();
       platformEvents.publish("platform", "command.executed", { command: action });
       onClose();
       return;
@@ -366,8 +366,8 @@ export function CommandPalette({
                 onClick={() => {
                   const targetIndex = actionItems.indexOf(action.action);
                   if (targetIndex >= 0) setActiveIndex(targetIndex);
-                  if (action.action === "kova-lens") {
-                    window.dispatchEvent(new CustomEvent("kova-open-lens"));
+                  if (action.action === "focus-input") {
+                    document.querySelector<HTMLTextAreaElement>("textarea")?.focus();
                     platformEvents.publish("platform", "command.executed", {
                       command: action.action,
                     });

@@ -27,10 +27,7 @@ export type ChatErrorEnvelope = {
 };
 
 export function newRequestId(): string {
-  // 12-char base36 id; collision-safe for observability, unlike sensitive PII.
-  const rand = Math.random().toString(36).slice(2, 8);
-  const time = Date.now().toString(36);
-  return `req_${time}_${rand}`;
+  return `req_${crypto.randomUUID()}`;
 }
 
 export function categorizeError(err: unknown, statusHint?: number): ChatErrorCategory {
