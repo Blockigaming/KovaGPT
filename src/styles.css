@@ -1791,8 +1791,8 @@ body {
   }
 
   .kova-composer:focus-within {
-    border-color: color-mix(in oklab, var(--foreground) 16%, transparent) !important;
-    box-shadow: 0 0 0 1px color-mix(in oklab, var(--foreground) 5%, transparent) !important;
+    border-color: color-mix(in oklab, var(--ring) 72%, transparent) !important;
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--ring) 72%, transparent) !important;
   }
 
   .kova-capability-card,
