@@ -1430,7 +1430,9 @@ export const Route = createFileRoute("/api/chat")({
               headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
             });
           } catch (e) {
-            const envelope = buildErrorEnvelope(e, requestId, 500);
+            const providerError = mapProviderError(e);
+            const status = providerError.status;
+            const envelope = buildErrorEnvelope(providerError, requestId, status);
             console.error("[chat] handler error", {
               requestId,
               category: envelope.category,
@@ -1438,7 +1440,7 @@ export const Route = createFileRoute("/api/chat")({
               error: e instanceof Error ? { name: e.name, message: e.message, stack: e.stack } : e,
             });
             return new Response(JSON.stringify(envelope), {
-              status: 500,
+              status,
               headers: { "Content-Type": "application/json" },
             });
           }

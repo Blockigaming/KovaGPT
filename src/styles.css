@@ -1863,12 +1863,10 @@ body {
    without changing route behavior or introducing page-specific themes. */
 @layer components {
   .kova-composer {
-    border-radius: 1.125rem !important;
-    border-color: color-mix(in oklab, var(--foreground) 13%, transparent) !important;
-    background: color-mix(in oklab, var(--surface-composer) 96%, transparent) !important;
-    box-shadow:
-      0 10px 30px -24px oklch(0 0 0 / 55%),
-      0 1px 2px oklch(0 0 0 / 10%) !important;
+    border-radius: 1.75rem !important;
+    border-color: transparent !important;
+    background: var(--surface-composer) !important;
+    box-shadow: none !important;
     transition:
       border-color var(--motion-standard) var(--ease-standard),
       box-shadow var(--motion-standard) var(--ease-standard),
@@ -1876,14 +1874,12 @@ body {
   }
 
   .kova-composer:hover {
-    border-color: color-mix(in oklab, var(--foreground) 19%, transparent) !important;
+    border-color: transparent !important;
   }
 
   .kova-composer:focus-within {
-    border-color: color-mix(in oklab, var(--kova-blue) 62%, var(--border)) !important;
-    box-shadow:
-      0 0 0 3px color-mix(in oklab, var(--kova-blue) 13%, transparent),
-      0 16px 38px -28px oklch(0 0 0 / 60%) !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
   }
 
   .kova-capability-card,
