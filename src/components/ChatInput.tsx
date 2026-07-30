@@ -686,11 +686,7 @@ export function ChatInput({
               : undefined
           }
           className={`kova-composer overflow-visible rounded-[28px] transition-[border-color,box-shadow,transform] duration-200 ${
-            sendFlash
-              ? "scale-[0.995]"
-              : isStreaming
-                ? "ring-1 ring-foreground/10"
-                : ""
+            sendFlash ? "scale-[0.995]" : isStreaming ? "ring-1 ring-foreground/10" : ""
           }`}
         >
           {attachments.length > 0 && (
