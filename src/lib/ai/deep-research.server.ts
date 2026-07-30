@@ -252,7 +252,7 @@ async function writeReport(
         {
           role: "system",
           content:
-            "Write a structured deep-research report from the provided evidence only. Include concise headings, explicitly note uncertainty, and cite claims with the provided source ids like [src-1]. Do not invent citations or URLs. End with a Sources section listing each cited source id and title.",
+            "Write a structured deep-research report from the provided evidence only. Include concise headings, explicitly note uncertainty, and cite factual claims with Markdown links whose labels name the source and whose URLs exactly match the evidence. Do not invent citations, sources, or URLs. End with a Sources section that lists each cited source id, title, and exact URL as a Markdown link.",
         },
         { role: "user", content: evidencePrompt(query, plan, evidence) },
       ],
