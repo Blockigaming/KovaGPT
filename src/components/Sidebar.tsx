@@ -189,7 +189,7 @@ export function Sidebar({
   const renderRow = (c: Conversation) => (
     <div
       key={c.id}
-      className={`group relative mx-2 my-0.5 flex min-h-9 cursor-pointer items-center gap-1 rounded-md px-2.5 py-1.5 text-[13px] transition ${
+className={`kova-chat-row group relative mx-2 my-0.5 flex min-h-9 cursor-pointer items-center gap-1 rounded-md px-2.5 py-1.5 text-[13px] transition ${
         activeId === c.id
           ? "bg-sidebar-active before:absolute before:-left-2 before:h-5 before:w-0.5 before:bg-[var(--kova-blue)]"
           : "hover:bg-sidebar-hover/60"
@@ -301,7 +301,7 @@ export function Sidebar({
             "--mobile-sidebar-width": open ? MOBILE_DRAWER_WIDTH : "0px",
           } as React.CSSProperties
         }
-        className={`relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-border/60 bg-sidebar/95 text-sidebar-foreground transition-[width,transform] duration-200 ease-[var(--ease-spring)] lg:w-[var(--sidebar-expanded)] ${
+        className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-border/60 bg-sidebar/95 text-sidebar-foreground transition-[width,transform] duration-200 ease-[var(--ease-spring)] lg:w-[var(--sidebar-expanded)] ${
           collapsed ? "lg:!w-[var(--sidebar-collapsed)]" : ""
         } max-lg:kova-glass max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[var(--mobile-sidebar-width)] max-lg:rounded-r-xl max-lg:shadow-2xl`}
         aria-label="Primary navigation"
@@ -384,7 +384,7 @@ export function Sidebar({
                 onNew();
                 closeAfterMobileNavigation();
               }}
-              className={`kova-nav-row ${iconOnly}`}
+              className={`kova-nav-row kova-new-chat ${iconOnly}`}
               aria-label="New chat"
               title="New chat"
             >

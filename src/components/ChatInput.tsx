@@ -642,7 +642,7 @@ export function ChatInput({
               <button
                 type="button"
                 onClick={() => setPlusOpen((v) => !v)}
-                className={`w-11 h-11 lg:w-9 lg:h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/60 active:scale-95 transition outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${plusOpen && !isMobileLayout ? "rotate-45 text-foreground" : ""}`}
+                className={`kova-attach-button w-11 h-11 lg:w-9 lg:h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/60 active:scale-95 transition ${plusOpen && !isMobileLayout ? "rotate-45 text-foreground" : ""}`}
                 aria-label="Attach"
                 aria-haspopup="menu"
                 aria-expanded={plusOpen}
@@ -795,7 +795,7 @@ export function ChatInput({
                   type="button"
                   onClick={onStop}
                   style={{ backgroundColor: "var(--kova-blue)" }}
-                  className="mb-1 flex h-10 w-10 items-center justify-center rounded-lg text-white transition hover:opacity-80 lg:h-9 lg:w-9"
+className="kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-lg text-white transition hover:opacity-80 lg:h-9 lg:w-9"
                   aria-label="Stop"
                 >
                   <Square className="w-4 h-4 fill-current" />
@@ -805,14 +805,24 @@ export function ChatInput({
                   type="button"
                   onClick={triggerSubmit}
                   style={{ backgroundColor: "var(--kova-blue)" }}
-                  className={`mb-1 flex h-10 w-10 items-center justify-center rounded-lg text-white shadow-sm transition duration-150 hover:opacity-90 active:scale-90 active:opacity-70 lg:h-9 lg:w-9 ${sendFlash ? "scale-90 opacity-80" : ""}`}
+className={`kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-lg text-white shadow-sm transition duration-150 hover:opacity-90 active:scale-90 active:opacity-70 lg:h-9 lg:w-9 ${sendFlash ? "scale-90 opacity-80" : ""}`}
                   aria-label="Send"
                 >
                   <ArrowUp
                     className={`w-5 h-5 transition-transform duration-300 ${sendFlash ? "-translate-y-1.5 opacity-0" : ""}`}
                   />
                 </button>
-              ) : null}
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-muted-foreground lg:h-9 lg:w-9"
+                  aria-label="Send"
+                  title="Type a message to send"
+                >
+                  <ArrowUp className="h-5 w-5" />
+                </button>
+              )}
             </div>
           </div>
           <div className="flex min-h-9 items-center justify-between gap-2 px-2 pb-2">
@@ -820,7 +830,7 @@ export function ChatInput({
               <button
                 type="button"
                 onClick={() => setToolsOpen((value) => !value)}
-                className={`inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-[13px] font-medium transition ${
+className={`kova-tool-button inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-[13px] font-medium transition ${
                   toolsOpen
                     ? "border-foreground/20 bg-accent text-foreground"
                     : "border-border/70 bg-background/55 text-muted-foreground hover:bg-accent hover:text-foreground"

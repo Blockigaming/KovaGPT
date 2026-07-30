@@ -413,7 +413,7 @@ function LibraryPage() {
 
   return (
     <AppShell>
-      <main className="kova-page" aria-labelledby="library-title">
+      <main className="kova-page kova-secondary-page" aria-labelledby="library-title">
         <header className="kova-page-header">
           <div className="min-w-0">
             <h1 id="library-title" className="kova-page-title">

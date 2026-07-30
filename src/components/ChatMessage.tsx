@@ -165,32 +165,13 @@ export async function openEmailCompose(
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
-// Rotating idle statuses cycled while the assistant is streaming with no
-// tool activity, so users see progression rather than a static "Thinking".
-const IDLE_STATUSES = [
-  "Thinking",
-  "Planning response",
-  "Reasoning",
-  "Analyzing",
-  "Writing draft",
-  "Formatting",
-  "Finishing response",
-];
-
 // Short status label shown while the assistant is streaming but has no text yet.
 // Derives from the latest running/last activity tool, so users see
 // "Searching", "Reading Files", "Interacting with Gmail", etc.
 function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store").Activity[] }) {
   const last = activities && activities.length > 0 ? activities[activities.length - 1] : null;
   const tool = (last?.tool ?? "").toLowerCase();
-  const [idleIdx, setIdleIdx] = useState(0);
-  useEffect(() => {
-    if (tool) return;
-    const t = setInterval(() => setIdleIdx((i) => (i + 1) % IDLE_STATUSES.length), 2200);
-    return () => clearInterval(t);
-  }, [tool]);
-
-  let label = IDLE_STATUSES[idleIdx];
+  let label = "Thinking";
   if (tool) {
     if (tool.includes("image")) label = "Creating Image";
     else if (tool.includes("gmail") || tool.includes("mail")) label = "Checking Gmail";
@@ -204,17 +185,9 @@ function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store
     else label = last?.label ?? "Working";
   }
   return (
-    <div className="flex items-center gap-2 py-1" aria-live="polite">
-      <span
-        key={label}
-        className="text-sm font-medium bg-clip-text text-transparent animate-in fade-in duration-300"
-        style={{
-          backgroundImage:
-            "linear-gradient(90deg, var(--color-muted-foreground) 0%, var(--color-foreground) 50%, var(--color-muted-foreground) 100%)",
-          backgroundSize: "200% 100%",
-          animation: "shimmer 1.8s linear infinite",
-        }}
-      >
+    <div className="kova-thinking-indicator flex items-center gap-2 py-1" aria-live="polite">
+      <span className="h-1.5 w-1.5 rounded-full bg-[var(--kova-blue)]" aria-hidden="true" />
+      <span key={label} className="text-sm font-medium text-muted-foreground">
         {label}…
       </span>
     </div>
@@ -383,7 +356,7 @@ function ChatMessageInner({
     <article
       id={`message-${message.id}`}
       data-message-id={message.id}
-      className="group w-full animate-fade-in px-3 py-3 text-[15px] leading-[1.65] sm:px-5 lg:px-10 lg:py-4 lg:text-[16px] lg:leading-[1.7]"
+      className="kova-message group w-full animate-fade-in px-3 py-3 text-[15px] leading-[1.65] sm:px-5 lg:px-10 lg:py-4 lg:text-[16px] lg:leading-[1.7]"
       aria-label={isUser ? "Your message" : "KovaGPT response"}
     >
       {isUser ? (
@@ -408,7 +381,7 @@ function ChatMessageInner({
               </div>
             )}
             {message.content && (
-              <div className="prose-chat whitespace-pre-wrap break-words rounded-lg border border-border/60 bg-[var(--user-bubble)] px-3.5 py-2.5 text-foreground">
+<div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-lg border border-border/60 bg-[var(--user-bubble)] px-3.5 py-2.5 text-foreground">
                 {message.content}
               </div>
             )}
@@ -425,7 +398,7 @@ function ChatMessageInner({
           </div>
         </div>
       ) : (
-        <div className="mx-auto flex max-w-[48rem] animate-fade-up items-start justify-start">
+<div className="kova-assistant-message mx-auto flex max-w-[48rem] animate-fade-up items-start justify-start">
           <div
             className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text"
             onTouchStart={startLongPress}

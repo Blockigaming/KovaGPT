@@ -96,8 +96,8 @@ function ResetPassword() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-background">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-sm">
+    <div className="kova-auth-page min-h-screen flex items-center justify-center px-4 bg-background">
+      <div className="kova-auth-surface w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div className="flex flex-col items-center text-center mb-6">
           <div className="w-12 h-12 rounded-2xl bg-foreground text-background flex items-center justify-center mb-3">
             <KeyRound className="w-6 h-6" />

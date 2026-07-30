@@ -75,6 +75,7 @@ import {
   newId,
   saveConversations,
   archiveConversation,
+  removeArchivedConversation,
 } from "@/lib/chat-store";
 import { toast } from "sonner";
 import { loadPersonality, personalityToInstruction } from "@/components/PersonalitySliders";
@@ -131,6 +132,10 @@ function KovaGPT() {
   const [recentLibraryFiles, setRecentLibraryFiles] = useState<RecentLibraryFile[]>([]);
   const [recentLibraryLoading, setRecentLibraryLoading] = useState(false);
   const [recentLibraryError, setRecentLibraryError] = useState<string | null>(null);
+  const [editingMessage, setEditingMessage] = useState<{
+    conversationId: string;
+    messageId: string;
+  } | null>(null);
 
   // Start closed to avoid a flash-of-open sidebar on narrow viewports during
   // SSR/hydration. On desktop we honor the persisted user preference so the
@@ -193,6 +198,11 @@ function KovaGPT() {
   const lastLoadedDraftRef = useRef<string | null>(null);
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (tempChat) {
+      lastLoadedDraftRef.current = null;
+      setInput("");
+      return;
+    }
     if (lastLoadedDraftRef.current === activeId) return;
     lastLoadedDraftRef.current = activeId;
     try {
@@ -201,9 +211,10 @@ function KovaGPT() {
     } catch {
       setInput("");
     }
-  }, [activeId]);
+  }, [activeId, tempChat]);
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (tempChat) return;
     if (lastLoadedDraftRef.current !== activeId) return;
     const key = `kova-draft:${activeId ?? "__new__"}`;
     try {
@@ -212,7 +223,7 @@ function KovaGPT() {
     } catch {
       /* ignore */
     }
-  }, [input, activeId]);
+  }, [input, activeId, tempChat]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
   const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
@@ -495,6 +506,17 @@ function KovaGPT() {
     setActiveId(null);
     setInput("");
     setAttachments([]);
+    setEditingMessage(null);
+  }, []);
+
+  useEffect(() => {
+    const reloadImportedChats = () => {
+      setConversations(loadConversations());
+      setActiveId(null);
+      setEditingMessage(null);
+    };
+    window.addEventListener("kova:conversations-imported", reloadImportedChats);
+    return () => window.removeEventListener("kova:conversations-imported", reloadImportedChats);
   }, []);
 
   useEffect(() => {
@@ -515,10 +537,25 @@ function KovaGPT() {
 
   const deleteChat = useCallback(
     (id: string) => {
-      setConversations((prev) => prev.filter((c) => c.id !== id));
+      const deleted = conversations.find((conversation) => conversation.id === id);
+      setConversations((prev) => prev.filter((conversation) => conversation.id !== id));
       if (activeId === id) setActiveId(null);
+      if (deleted) {
+        toast.success("Chat deleted", {
+          action: {
+            label: "Undo",
+            onClick: () => {
+              setConversations((current) => [
+                deleted!,
+                ...current.filter((conversation) => conversation.id !== deleted!.id),
+              ]);
+              setActiveId(deleted!.id);
+            },
+          },
+        });
+      }
     },
-    [activeId],
+    [activeId, conversations],
   );
 
   const autoTitle = useCallback(async (convId: string, msgs: Message[]) => {
@@ -591,10 +628,14 @@ function KovaGPT() {
           .map((c) => {
             if (c.id !== nextConvId) return c;
             found = true;
-            priorMessages = c.messages.slice();
+            const editIndex =
+              editingMessage?.conversationId === c.id
+                ? c.messages.findIndex((message) => message.id === editingMessage.messageId)
+                : -1;
+            priorMessages = editIndex >= 0 ? c.messages.slice(0, editIndex) : c.messages.slice();
             return {
               ...c,
-              messages: [...c.messages, userMsg, assistantMsg],
+              messages: [...priorMessages, userMsg, assistantMsg],
               updatedAt: Date.now(),
             };
           })
@@ -617,6 +658,7 @@ function KovaGPT() {
       setActiveId(nextConvId);
       setInput("");
       setAttachments([]);
+      setEditingMessage(null);
       setIsStreaming(true);
 
       const controller = new AbortController();
@@ -895,7 +937,7 @@ function KovaGPT() {
         abortRef.current = null;
       }
     },
-    [activeId, isStreaming, mode, autoTitle, settings, selectedTool, tempChat],
+    [activeId, isStreaming, mode, autoTitle, settings, selectedTool, tempChat, editingMessage],
   );
 
   const stop = useCallback(() => {
@@ -993,13 +1035,27 @@ function KovaGPT() {
           toast.success("Chat duplicated");
         }}
         onArchive={(id) => {
+          const archived = conversations.find((conversation) => conversation.id === id);
           setConversations((prev) => {
-            const target = prev.find((c) => c.id === id);
-            if (target) archiveConversation(target);
+            if (archived) archiveConversation(archived);
             return prev.filter((c) => c.id !== id);
           });
           if (activeId === id) setActiveId(null);
-          toast.success("Chat archived");
+          toast.success("Chat archived", {
+            action: archived
+              ? {
+                  label: "Undo",
+                  onClick: () => {
+                    removeArchivedConversation(archived!.id);
+                    setConversations((current) => [
+                      archived!,
+                      ...current.filter((conversation) => conversation.id !== archived!.id),
+                    ]);
+                    setActiveId(archived!.id);
+                  },
+                }
+              : undefined,
+          });
         }}
         onTogglePin={(id) => {
           setConversations((prev) =>
@@ -1115,6 +1171,11 @@ function KovaGPT() {
                   const next = !tempChat;
                   setTempChat(next);
                   if (next) {
+                    try {
+                      localStorage.removeItem(`kova-draft:${activeId ?? "__new__"}`);
+                    } catch {
+                      /* Storage may be unavailable; temporary input still stays in memory only. */
+                    }
                     setTempChatConfirmed(true);
                     setTimeout(() => setTempChatConfirmed(false), 1400);
                     toast.success("Temporary chat enabled", {
@@ -1180,11 +1241,11 @@ function KovaGPT() {
 
         {!active || active.messages.length === 0 ? (
           <section
-            className="flex flex-1 flex-col overflow-y-auto px-3 lg:px-6"
+            className="kova-empty-chat flex flex-1 flex-col overflow-y-auto px-3 lg:px-6"
             aria-labelledby="chat-greeting"
           >
             <div className="flex w-full flex-1 flex-col items-center justify-center py-6 lg:py-10">
-              <div className="mb-5 flex animate-fade-in flex-col items-center gap-2.5 lg:mb-6">
+              <div className="kova-greeting mb-5 flex animate-fade-in flex-col items-center gap-2.5 lg:mb-6">
                 <h1
                   id="chat-greeting"
                   className="text-balance px-4 text-center font-display text-[26px] font-semibold leading-[1.15] tracking-[-.025em] text-foreground lg:text-[32px]"
@@ -1217,7 +1278,7 @@ function KovaGPT() {
                   onRecentLibraryRetry={loadRecentLibraryFiles}
                 />
 
-                <div className="mx-auto mt-3 hidden max-w-[48rem] grid-cols-3 gap-1.5 lg:grid">
+<div className="kova-capability-grid mx-auto mt-3 hidden max-w-[48rem] grid-cols-3 gap-1.5 lg:grid">
                   {assistantCapabilities.map((p) => {
                     const Icon = p.icon;
                     return (
@@ -1225,7 +1286,7 @@ function KovaGPT() {
                         key={p.label}
                         type="button"
                         onClick={() => setInput((v) => (v.trim() ? v : p.prompt))}
-                        className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border/70 bg-transparent px-3 text-left text-[13px] font-medium text-foreground transition hover:border-foreground/20 hover:bg-accent"
+className="kova-capability-card inline-flex min-h-10 items-center gap-2 rounded-md border border-border/70 bg-transparent px-3 text-left text-[13px] font-medium text-foreground transition hover:border-foreground/20 hover:bg-accent"
                       >
                         <Icon className="h-4 w-4 text-muted-foreground" />
                         <span>{p.label}</span>
@@ -1233,7 +1294,7 @@ function KovaGPT() {
                     );
                   })}
                 </div>
-                <div className="mt-3 lg:hidden flex gap-2 overflow-x-auto -mx-4 px-4 snap-x snap-mandatory no-scrollbar">
+                <div className="kova-mobile-starters mt-3 grid grid-cols-2 gap-2 lg:hidden">
                   {[
                     {
                       label: "Summarize a file",
@@ -1263,7 +1324,7 @@ function KovaGPT() {
                       key={p.label}
                       type="button"
                       onClick={() => setInput((v) => (v ? v : p.prompt))}
-                      className="shrink-0 snap-start w-[72%] max-w-[17rem] text-left px-3.5 py-3 rounded-lg border border-border bg-card/70 active:bg-accent/60 transition-colors"
+className="kova-starter-card min-w-0 text-left px-3.5 py-3 rounded-lg border border-border bg-card/70 active:bg-accent/60 transition-colors"
                     >
                       <div className="text-[15px] font-medium text-foreground">{p.label}</div>
                       <div className="text-[12.5px] text-muted-foreground mt-0.5">{p.hint}</div>
@@ -1286,7 +1347,7 @@ function KovaGPT() {
             <div
               ref={scrollRef}
               onScroll={updateNearBottom}
-              className="flex-1 overflow-y-auto overscroll-contain scroll-smooth pb-14 pt-5 lg:pb-20 lg:pt-8"
+              className="kova-conversation-scroll flex-1 overflow-y-auto overscroll-contain scroll-smooth pb-14 pt-5 lg:pb-20 lg:pt-8"
               aria-label="Conversation"
             >
               {active.branchOrigin && (
@@ -1360,7 +1421,28 @@ function KovaGPT() {
                                   : c,
                               ),
                             );
-                            send(priorUser.content, []);
+                            send(
+                              priorUser.content,
+                              (priorUser.attachments ?? []).map((attachment) =>
+                                attachment.kind === "image"
+                                  ? {
+                                      kind: "image" as const,
+                                      dataUrl: attachment.dataUrl,
+                                      name: "Attached image",
+                                      status: "complete" as const,
+                                    }
+                                  : {
+                                      kind: "library_file" as const,
+                                      dataUrl: "",
+                                      name: attachment.name,
+                                      size: attachment.size ?? undefined,
+                                      libraryItemId: attachment.libraryItemId,
+                                      fileType: attachment.fileType,
+                                      sourceProject: attachment.sourceProject,
+                                      status: "complete" as const,
+                                    },
+                              ),
+                            );
                           }
                         : undefined
                     }
@@ -1368,7 +1450,34 @@ function KovaGPT() {
                       priorUser
                         ? () => {
                             setInput(priorUser.content);
-                            toast.message("Edit your prompt below, then press Enter");
+                            setAttachments(
+                              (priorUser.attachments ?? []).map((attachment) =>
+                                attachment.kind === "image"
+                                  ? {
+                                      kind: "image" as const,
+                                      dataUrl: attachment.dataUrl,
+                                      name: "Attached image",
+                                      status: "complete" as const,
+                                    }
+                                  : {
+                                      kind: "library_file" as const,
+                                      dataUrl: "",
+                                      name: attachment.name,
+                                      size: attachment.size ?? undefined,
+                                      libraryItemId: attachment.libraryItemId,
+                                      fileType: attachment.fileType,
+                                      sourceProject: attachment.sourceProject,
+                                      status: "complete" as const,
+                                    },
+                              ),
+                            );
+                            setEditingMessage({
+                              conversationId: active.id,
+                              messageId: priorUser.id,
+                            });
+                            toast.message("Editing your prompt", {
+                              description: "Sending will replace this turn and its later replies.",
+                            });
                           }
                         : undefined
                     }
@@ -1409,6 +1518,25 @@ function KovaGPT() {
               </button>
             )}
             <div className="lg:pb-2 lg:pt-2">
+              {editingMessage?.conversationId === active.id && (
+                <div
+                  className="mx-auto mb-2 flex w-full max-w-[48rem] items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-sm"
+                  role="status"
+                >
+                  <span className="min-w-0 truncate">Editing a previous prompt</span>
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-md px-2 py-1 font-medium text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                    onClick={() => {
+                      setEditingMessage(null);
+                      setInput("");
+                      setAttachments([]);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
               <ChatInput
                 value={input}
                 onChange={setInput}

@@ -285,7 +285,7 @@ function AppCard({
   }
 
   return (
-    <li className="rounded-xl border border-border bg-card p-4 flex items-start gap-3 hover:border-foreground/20 transition h-full">
+    <li className="kova-card kova-connector-card rounded-xl border border-border bg-card p-4 flex items-start gap-3 hover:border-foreground/20 transition h-full">
       <AppLogo domain={item.domain} label={item.label} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
@@ -364,7 +364,7 @@ function GitHubManager() {
     }
   }
   return (
-    <section className="rounded-2xl border bg-card p-5" aria-labelledby="github-manager">
+    <section className="kova-card p-5" aria-labelledby="github-manager">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex gap-3">
           <Github className="h-9 w-9" />
@@ -721,7 +721,7 @@ function AppsPage() {
 
   return (
     <AppShell>
-      <main className="max-w-5xl mx-auto w-full px-4 py-8 space-y-8">
+      <main className="kova-page kova-secondary-page max-w-5xl space-y-8">
         <Dialog open={!!selectedApp} onOpenChange={(open) => !open && setSelectedApp(null)}>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
@@ -819,7 +819,7 @@ function AppsPage() {
         {isSignedIn && <GitHubManager />}
 
         {filtered.length === 0 ? (
-          <div className="rounded-xl border border-border p-10 text-center">
+          <div className="kova-empty-state">
             <Search className="w-5 h-5 mx-auto text-muted-foreground mb-2" />
             <p className="text-sm font-medium">No apps match your filters</p>
             <p className="text-xs text-muted-foreground mt-1">Try a different name or category.</p>

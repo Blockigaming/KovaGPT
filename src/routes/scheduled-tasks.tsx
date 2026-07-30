@@ -201,7 +201,7 @@ function ScheduledTasksPage() {
   return (
     <AppShell>
       <div className="min-h-screen bg-background text-foreground">
-        <div className="max-w-3xl mx-auto px-4 py-8">
+        <div className="kova-page kova-secondary-page max-w-3xl">
           <Link
             to="/"
             className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6"
@@ -220,7 +220,7 @@ function ScheduledTasksPage() {
           {plan === "loading" && <div className="text-sm text-muted-foreground">Loading…</div>}
 
           {plan === "signed-out" && (
-            <div className="rounded-2xl border border-border p-6 text-center">
+            <div className="kova-empty-state">
               <Lock className="w-6 h-6 mx-auto mb-3 text-muted-foreground" />
               <div className="font-medium mb-1">Sign in to use scheduled tasks</div>
               <p className="text-sm text-muted-foreground mb-4">
@@ -236,7 +236,7 @@ function ScheduledTasksPage() {
           )}
 
           {plan === "free" && (
-            <div className="rounded-2xl border border-border p-6 text-center">
+            <div className="kova-empty-state">
               <Lock className="w-6 h-6 mx-auto mb-3 text-muted-foreground" />
               <div className="font-medium mb-1">Scheduled Tasks is a Plus feature</div>
               <p className="text-sm text-muted-foreground mb-4">
@@ -269,7 +269,7 @@ function ScheduledTasksPage() {
               />
               <form
                 onSubmit={submit}
-                className="rounded-2xl border border-border p-4 sm:p-5 mb-8 space-y-3"
+                className="kova-card kova-form-surface p-4 sm:p-5 mb-8 space-y-3"
               >
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Title</label>
@@ -406,7 +406,7 @@ function ScheduledTasksPage() {
                   ))}
                 </ul>
               ) : tasks.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border p-10 text-center">
+                <div className="kova-empty-state">
                   <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
                     <Calendar className="w-5 h-5 text-muted-foreground" />
                   </div>
@@ -417,7 +417,7 @@ function ScheduledTasksPage() {
                   </p>
                 </div>
               ) : visibleTasks.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border p-8 text-center">
+                <div className="kova-empty-state">
                   <div className="font-medium">No matching tasks</div>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Try another search or filter.
@@ -428,7 +428,7 @@ function ScheduledTasksPage() {
                   {visibleTasks.map((t) => (
                     <li
                       key={t.id}
-                      className="rounded-xl border border-border p-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4"
+                      className="kova-row flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4"
                     >
                       <div className="flex-1 min-w-0">
                         <div className="font-medium truncate">{t.title}</div>

@@ -21,10 +21,12 @@ export function AuthDialog({
   open,
   mode: initialMode,
   onOpenChange,
+  returnFocusTarget,
 }: {
   open: boolean;
   mode: Mode;
   onOpenChange: (open: boolean) => void;
+  returnFocusTarget?: HTMLElement | null;
 }) {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [step, setStep] = useState<Step>("identify");
@@ -187,19 +189,26 @@ export function AuthDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[440px] p-0 border-0 bg-transparent shadow-none overflow-visible [&>button.absolute]:hidden">
+        <DialogContent
+          className="sm:max-w-[440px] p-0 border-0 bg-transparent shadow-none overflow-visible [&>button.absolute]:hidden"
+          onCloseAutoFocus={(event) => {
+            if (!returnFocusTarget?.isConnected) return;
+            event.preventDefault();
+            returnFocusTarget.focus();
+          }}
+        >
           <div
             className={cn(
-              "relative rounded-3xl border border-border/60 bg-card shadow-2xl",
+              "kova-auth-surface relative rounded-2xl border border-border/60 bg-card",
               "p-7 sm:p-9",
               "animate-in fade-in-0 zoom-in-95 duration-300",
             )}
           >
             {/* Header */}
             <div className="flex flex-col items-center text-center">
-              <div className="mb-5 animate-in fade-in-0 zoom-in-75 duration-500">
-                <div className="relative w-14 h-14 rounded-2xl bg-foreground/[0.04] ring-1 ring-border flex items-center justify-center transition-transform hover:scale-105">
-                  <NovaLogo className="w-9 h-9 [animation:spin_18s_linear_infinite]" />
+              <div className="mb-5 animate-in fade-in-0 duration-300">
+                <div className="relative w-14 h-14 rounded-xl bg-foreground/[0.04] ring-1 ring-border flex items-center justify-center">
+                  <NovaLogo className="w-9 h-9" />
                 </div>
               </div>
               <h1 className="text-[26px] leading-tight font-semibold tracking-tight">
