@@ -4,6 +4,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 import { cancelPendingAction, executePendingAction } from "@/lib/google-tools.server";
+import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
 
 type Body = { action_id?: string; decision?: "confirm" | "cancel" };
 
@@ -13,6 +14,8 @@ export const Route = createFileRoute("/api/chat/confirm")({
       POST: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
+        const limited = enforceGoogleRateLimit(auth.userId, "confirmation", 20);
+        if (limited) return limited;
         let body: Body;
         try {
           body = (await request.json()) as Body;

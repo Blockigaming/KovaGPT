@@ -2,6 +2,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 import { getValidGoogleAccessToken, logAudit } from "@/lib/google-oauth.server";
+import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
 
 const CAL = "https://www.googleapis.com/calendar/v3/calendars/primary";
 
@@ -23,6 +24,11 @@ export const Route = createFileRoute("/api/google/calendar")({
       POST: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
+        const limited = enforceGoogleRateLimit(auth.userId, "calendar", 60);
+        if (limited) return limited;
+        if (Number(request.headers.get("content-length") ?? 0) > 64 * 1024) {
+          return Response.json({ error: "request_too_large" }, { status: 413 });
+        }
         let body: JsonRecord;
         try {
           body = await request.json();
@@ -30,6 +36,15 @@ export const Route = createFileRoute("/api/google/calendar")({
           return Response.json({ error: "invalid_json" }, { status: 400 });
         }
         const action = body?.action as string;
+        if (action !== "list") {
+          return Response.json(
+            {
+              error: "confirmation_required",
+              message: "Prepare a calendar event from chat and confirm it there.",
+            },
+            { status: 409 },
+          );
+        }
         let token: string;
         try {
           token = await getValidGoogleAccessToken(auth.userId);

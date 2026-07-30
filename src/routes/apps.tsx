@@ -544,7 +544,7 @@ function AppsPage() {
       const s = await getGoogleStatus();
       setGoogleStatus(s);
     } catch {
-      setGoogleStatus({ connected: false });
+      setGoogleStatus({ connected: false, state: "temporarily_unavailable" });
     } finally {
       setGoogleLoading(false);
     }
@@ -553,7 +553,7 @@ function AppsPage() {
   useEffect(() => {
     if (!isSignedIn) {
       setGoogleLoading(false);
-      setGoogleStatus({ connected: false });
+      setGoogleStatus({ connected: false, state: "disconnected" });
       return;
     }
     refreshGoogle();
@@ -613,7 +613,7 @@ function AppsPage() {
     if (isGoogleId(item.id)) {
       try {
         await disconnectGoogleAccount();
-        setGoogleStatus({ connected: false });
+        setGoogleStatus({ connected: false, state: "disconnected" });
         recordActivity(item.label, "Disconnected");
         toast("Google account disconnected");
       } catch {
@@ -656,10 +656,14 @@ function AppsPage() {
   const stateOf = (id: string): ConnState => {
     if (!isSignedIn) return "idle";
     if (isGoogleId(id)) {
-      if (googleLoading) return "idle";
+      if (googleLoading) return "syncing";
       if (connecting[id]) return "connecting";
       if (failed[id]) return "failed";
-      return isGoogleConnected(id) ? "connected" : "idle";
+      if (googleStatus?.state === "temporarily_unavailable") return "temporarily_unavailable";
+      if (googleStatus?.state === "reauthorization_required") return "reauthorize";
+      if (isGoogleConnected(id)) return "connected";
+      if (googleStatus?.connected) return "permission_incomplete";
+      return "idle";
     }
     return "temporarily_unavailable";
   };
@@ -741,6 +745,22 @@ function AppsPage() {
                           ? "Search and read files covered by the Drive scopes you granted."
                           : "Manage the Google connection shared by supported Google apps."}
                   </p>
+                  {isGoogleId(selectedApp.id) && googleStatus?.email ? (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Connected as {googleStatus.email}. Only permissions granted by Google are
+                      available in chat.
+                    </p>
+                  ) : null}
+                  {isGoogleId(selectedApp.id) &&
+                  googleStatus?.state === "reauthorization_required" ? (
+                    <button
+                      type="button"
+                      className="mt-3 min-h-11 rounded-lg bg-foreground px-4 text-sm font-medium text-background"
+                      onClick={() => void handleConnect(selectedApp)}
+                    >
+                      Reconnect Google
+                    </button>
+                  ) : null}
                 </section>
                 <section>
                   <h3 className="font-medium">Recent activity</h3>

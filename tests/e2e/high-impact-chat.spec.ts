@@ -143,3 +143,76 @@ test("deleting a chat offers a working undo", async ({ page }) => {
   await page.getByRole("button", { name: "Undo" }).click();
   await expect(page.locator(".kova-chat-row", { hasText: "Editable conversation" })).toBeVisible();
 });
+
+test("text files are attached as real request context and remain visible in history", async ({
+  page,
+}) => {
+  let requestBody: Record<string, unknown> | undefined;
+  await page.route("**/api/chat", async (route) => {
+    requestBody = route.request().postDataJSON();
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body: 'data: {"choices":[{"delta":{"content":"The total is 42."}}]}\n\ndata: [DONE]\n\n',
+    });
+  });
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeVisible();
+  await page.getByRole("button", { name: "Attach" }).click();
+  await page.locator('input[type="file"][accept*=".csv"]').setInputFiles({
+    name: "quarterly.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from("metric,value\nrevenue,42"),
+  });
+  await page.keyboard.press("Escape");
+  await expect(page.getByText("quarterly.csv", { exact: true })).toBeVisible();
+  await expect(page.getByText("Ready", { exact: true })).toBeVisible();
+
+  await page.getByRole("textbox", { name: "Message KovaGPT" }).fill("What is the revenue?");
+  await page.getByRole("button", { name: "Send" }).click();
+
+  await expect(page.locator(".kova-user-message").last()).toContainText("What is the revenue?");
+  await expect(page.getByText("quarterly.csv", { exact: true })).toBeVisible();
+  await expect(page.locator(".kova-assistant-message").last()).toContainText("The total is 42.");
+  const messages = requestBody?.messages as Array<{
+    attachments?: Array<Record<string, unknown>>;
+  }>;
+  expect(messages.at(-1)?.attachments).toEqual([
+    expect.objectContaining({
+      kind: "text_file",
+      name: "quarterly.csv",
+      content: "metric,value\nrevenue,42",
+      fileType: "text/csv",
+    }),
+  ]);
+
+  await page.getByRole("button", { name: "More actions" }).last().click();
+  await page.getByRole("menuitem", { name: "Edit" }).click();
+  await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toHaveValue(
+    "What is the revenue?",
+  );
+  await expect(
+    page.getByLabel("Attachments").getByText("quarterly.csv", { exact: true }),
+  ).toBeVisible();
+});
+
+test("chat API rejects malformed text attachments at the server boundary", async ({ request }) => {
+  const response = await request.post("/api/chat", {
+    data: {
+      messages: [
+        {
+          role: "user",
+          content: "Analyze this",
+          attachments: [
+            { kind: "text_file", name: "empty.txt", content: "", fileType: "text/plain" },
+          ],
+        },
+      ],
+    },
+  });
+  expect(response.status()).toBe(400);
+  await expect(response.json()).resolves.toEqual(
+    expect.objectContaining({ error: "Invalid text file attachment." }),
+  );
+});
+

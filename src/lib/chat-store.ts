@@ -4,6 +4,13 @@ export type Role = "user" | "assistant";
 export type Attachment =
   | { kind: "image"; dataUrl: string }
   | {
+      kind: "text_file";
+      name: string;
+      content: string;
+      fileType?: string | null;
+      size?: number | null;
+    }
+  | {
       kind: "library_file";
       libraryItemId: string;
       name: string;

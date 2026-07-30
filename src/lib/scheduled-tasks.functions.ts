@@ -90,21 +90,26 @@ async function ensurePlusOrAbove(supabase: unknown, userId: string): Promise<"pl
 
 const MAX_TASKS: Record<"plus" | "pro", number> = { plus: 5, pro: 20 };
 
+// This repository currently has no deployed process that claims due rows and
+// executes them. Keep creation/resume fail-closed until that real worker is
+// added rather than storing tasks that can never run.
+export const scheduledExecutionAvailable = false;
+
 export const isScheduledTasksEligible = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<{ eligible: boolean }> => {
+  .handler(async ({ context }): Promise<{ eligible: boolean; executionAvailable: boolean }> => {
     const { data, error } = await context.supabase
       .from("subscriptions")
       .select("status, current_period_end")
       .eq("user_id", context.userId)
       .in("status", ["active", "trialing"]);
-    if (error) return { eligible: false };
+    if (error) throw new Error("Plan status could not be checked. Please try again.");
     const ok = (data ?? []).some(
       (r: { status?: string; current_period_end?: string | null; price_id?: string | null }) =>
         ["active", "trialing"].includes(r.status ?? "") &&
         (!r.current_period_end || new Date(r.current_period_end) > new Date()),
     );
-    return { eligible: ok };
+    return { eligible: ok, executionAvailable: scheduledExecutionAvailable };
   });
 
 export const listScheduledTasks = createServerFn({ method: "POST" })
@@ -133,6 +138,11 @@ export const createScheduledTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i: unknown) => CreateSchema.parse(i))
   .handler(async ({ data, context }): Promise<ScheduledTask> => {
+    if (!scheduledExecutionAvailable) {
+      throw new Error(
+        "Scheduled execution is not available in this deployment. No task was created.",
+      );
+    }
     const tier = await ensurePlusOrAbove(context.supabase, context.userId);
     const { count, error: countError } = await context.supabase
       .from("scheduled_tasks")
@@ -194,6 +204,9 @@ export const updateScheduledTask = createServerFn({ method: "POST" })
     }
     if (data.repeat !== undefined) patch.repeat = data.repeat;
     if (data.status !== undefined) patch.status = data.status;
+    if (data.status === "scheduled" && !scheduledExecutionAvailable) {
+      throw new Error("Scheduled execution is not available, so this task cannot be resumed.");
+    }
     const { data: row, error } = await (context.supabase as unknown as SupabaseQueryLike)
       .from("scheduled_tasks")
       .update(patch)

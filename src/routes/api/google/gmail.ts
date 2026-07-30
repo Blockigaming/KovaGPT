@@ -3,6 +3,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 import { getValidGoogleAccessToken, logAudit } from "@/lib/google-oauth.server";
+import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
 
 const GMAIL = "https://gmail.googleapis.com/gmail/v1/users/me";
 
@@ -66,6 +67,11 @@ export const Route = createFileRoute("/api/google/gmail")({
       POST: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
+        const limited = enforceGoogleRateLimit(auth.userId, "gmail", 60);
+        if (limited) return limited;
+        if (Number(request.headers.get("content-length") ?? 0) > 64 * 1024) {
+          return Response.json({ error: "request_too_large" }, { status: 413 });
+        }
         let body: JsonRecord;
         try {
           body = await request.json();
@@ -73,6 +79,15 @@ export const Route = createFileRoute("/api/google/gmail")({
           return Response.json({ error: "invalid_json" }, { status: 400 });
         }
         const action = body?.action as string;
+        if (!new Set(["search", "read"]).has(action)) {
+          return Response.json(
+            {
+              error: "confirmation_required",
+              message: "Prepare Gmail drafts from chat and confirm the action there.",
+            },
+            { status: 409 },
+          );
+        }
         let token: string;
         try {
           token = await getValidGoogleAccessToken(auth.userId);

@@ -18,12 +18,11 @@ import {
   unauthorized,
 } from "@/lib/api-auth.server";
 import {
-  ALL_TOOLS,
+  getAvailableGoogleTools,
   TOOL_ACTIVITY,
   WRITE_TOOL_NAMES,
   runGoogleTool,
   stagePendingAction,
-  userHasGoogle,
 } from "@/lib/google-tools.server";
 import {
   chatCompletions,
@@ -78,6 +77,13 @@ type IncomingMessage = {
   content: string;
   attachments?: Array<
     | { kind: "image"; dataUrl: string }
+    | {
+        kind: "text_file";
+        name: string;
+        content: string;
+        fileType?: string | null;
+        size?: number | null;
+      }
     | {
         kind: "library_file";
         libraryItemId: string;
@@ -426,7 +432,8 @@ export const Route = createFileRoute("/api/chat")({
             // callers also have a daily quota enforced below.
             const MAX_MESSAGES = 100;
             const MAX_MESSAGE_CHARS = 32 * 1024; // 32 KB per text message
-            const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024; // 5 MB per image data URL
+            const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024;
+            const MAX_TEXT_ATTACHMENT_CHARS = 256 * 1024;
             if (!Array.isArray(messages) || messages.length === 0) {
               return new Response(
                 JSON.stringify({ error: "messages must be a non-empty array." }),
@@ -461,9 +468,19 @@ export const Route = createFileRoute("/api/chat")({
               if (m.attachments !== undefined && !Array.isArray(m.attachments)) {
                 return Response.json({ error: "attachments must be an array." }, { status: 400 });
               }
-              if (m.attachments) {
-                for (const a of m.attachments) {
-                  if (!a || typeof a !== "object" || !["image", "library_file"].includes(a.kind)) {
+if (m.attachments && m.attachments.length > 2) {
+  return Response.json(
+    { error: "A message can include at most 2 attachments." },
+    { status: 400 },
+  );
+}
+if (m.attachments) {
+  for (const a of m.attachments) {
+    if (
+      !a ||
+      typeof a !== "object" ||
+      !["image", "text_file", "library_file"].includes(a.kind)
+    ) {
                     return Response.json({ error: "Invalid attachment." }, { status: 400 });
                   }
                   if (a.kind === "library_file") {
@@ -480,6 +497,29 @@ export const Route = createFileRoute("/api/chat")({
                     }
                     continue;
                   }
+if (a.kind === "text_file") {
+  if (
+    typeof a.name !== "string" ||
+    a.name.length === 0 ||
+    a.name.length > 255 ||
+    typeof a.content !== "string" ||
+    a.content.length === 0 ||
+    a.content.length > MAX_TEXT_ATTACHMENT_CHARS ||
+    (a.fileType != null &&
+      (typeof a.fileType !== "string" ||
+        a.fileType.length > 100 ||
+        (!a.fileType.startsWith("text/") &&
+          a.fileType !== "application/json"))) ||
+    (a.size != null &&
+      (typeof a.size !== "number" || a.size < 0 || a.size > 256 * 1024))
+  ) {
+    return Response.json(
+      { error: "Invalid text file attachment." },
+      { status: 400 },
+    );
+  }
+  continue;
+}
                   if (
                     typeof a.dataUrl !== "string" ||
                     !/^data:image\/(?:png|jpe?g|webp|gif);base64,/i.test(a.dataUrl)
@@ -489,9 +529,11 @@ export const Route = createFileRoute("/api/chat")({
                       { status: 400 },
                     );
                   }
-                  if (a.dataUrl.length > MAX_ATTACHMENT_BYTES) {
+const encodedImage = a.dataUrl.slice(a.dataUrl.indexOf(",") + 1);
+const imageBytes = Math.floor((encodedImage.length * 3) / 4);
+if (imageBytes > MAX_ATTACHMENT_BYTES) {
                     return new Response(
-                      JSON.stringify({ error: "An attachment exceeds the 5 MB limit." }),
+                      JSON.stringify({ error: "An image attachment exceeds the 3 MB limit." }),
                       { status: 413, headers: { "Content-Type": "application/json" } },
                     );
                   }
@@ -499,11 +541,13 @@ export const Route = createFileRoute("/api/chat")({
               }
             }
 
+            const lastUser = [...messages].reverse().find((m) => m.role === "user");
+            const currentAttachments = lastUser?.attachments ?? [];
+
             const missingProvider = missingAiProviderResponse();
             if (missingProvider) return missingProvider;
 
             // Detect image-generation intent on the latest user message
-            const lastUser = [...messages].reverse().find((m) => m.role === "user");
             const lastText = lastUser?.content?.trim() ?? "";
             const isImageRequest =
               lastText.length > 0 &&
@@ -570,10 +614,10 @@ export const Route = createFileRoute("/api/chat")({
             const allowed = isOwner || TIER_RANK[requested.tier] <= TIER_RANK[callerTier];
             const m = allowed ? requested : getMode("auto");
             const MAX_ATTACHMENTS_PER_REQUEST = 2;
-            const totalAttachments = messages.reduce(
-              (n, msg) => n + (msg.attachments?.length ?? 0),
-              0,
-            );
+            // Quotas apply to files submitted in this turn, not attachments in
+            // older conversation history. This also keeps edit/regenerate from
+            // being charged for unrelated files in prior turns.
+            const totalAttachments = currentAttachments.length;
             // File / photo uploads require an account.
             if (totalAttachments > 0 && !auth) {
               return unauthorized("Sign in to upload files or photos.");
@@ -609,26 +653,29 @@ export const Route = createFileRoute("/api/chat")({
               if (quota) return quota;
               // Enforce cumulative storage cap per tier (5 / 25 / 50 GB).
               let totalBytes = 0;
-              for (const msg of messages) {
-                for (const att of msg.attachments ?? []) {
-                  if (att.kind !== "image") continue;
-                  const url = att.dataUrl ?? "";
-                  const commaIdx = url.indexOf(",");
-                  if (commaIdx > -1) {
-                    // base64 length * 3/4 approx. raw byte size
-                    totalBytes += Math.floor(((url.length - commaIdx - 1) * 3) / 4);
-                  } else {
-                    totalBytes += url.length;
-                  }
+              for (const att of currentAttachments) {
+                if (att.kind === "text_file") {
+                  totalBytes += new TextEncoder().encode(att.content).byteLength;
+                  continue;
+                }
+                if (att.kind !== "image") continue;
+                const url = att.dataUrl ?? "";
+                const commaIdx = url.indexOf(",");
+                if (commaIdx > -1) {
+                  // base64 length * 3/4 approx. raw byte size
+                  totalBytes += Math.floor(((url.length - commaIdx - 1) * 3) / 4);
+                } else {
+                  totalBytes += url.length;
                 }
               }
               const tier = await getCallerTier(auth);
               const storage = await enforceStorage(auth, totalBytes, STORAGE_LIMITS_BYTES[tier]);
               if (storage) return storage;
             }
-            const hasImages = totalAttachments > 0;
+            const hasAttachments = totalAttachments > 0;
+            const hasImages = currentAttachments.some((attachment) => attachment.kind === "image");
 
-            if (clientTool === "deep_research" && lastText && !hasImages) {
+            if (clientTool === "deep_research" && lastText && !hasAttachments) {
               return handleDeepResearchRequest(lastText, {
                 signal: request.signal,
                 persistence: auth
@@ -658,29 +705,51 @@ export const Route = createFileRoute("/api/chat")({
             const trimmedMessages =
               messages.length > HISTORY_TURNS ? messages.slice(-HISTORY_TURNS) : messages;
 
-            const transformed = trimmedMessages.map((msg) => {
-              // SECURITY: client-supplied "system" messages would otherwise sit
-              // next to the server's authoritative system prompt and could
-              // override it. Demote any non-assistant/non-user role to "user".
-              const safeRole: "user" | "assistant" =
-                msg.role === "assistant" ? "assistant" : "user";
-              if (safeRole === "user" && msg.attachments && msg.attachments.length > 0) {
-                const parts: ChatContentPart[] = [];
-                if (msg.content) parts.push({ type: "text", text: msg.content });
-                for (const att of msg.attachments) {
-                  if (att.kind === "image") {
-                    parts.push({ type: "image_url", image_url: { url: att.dataUrl } });
-                  } else if (att.kind === "library_file") {
-                    parts.push({
-                      type: "text",
-                      text: `[Attached Library file: ${att.name} (${att.fileType ?? "unknown type"}). Library item ID ${att.libraryItemId}. Treat this as user-provided context metadata only; do not expose private URLs.]`,
-                    });
+            const transformed = await Promise.all(
+              trimmedMessages.map(async (msg) => {
+                // SECURITY: client-supplied "system" messages would otherwise sit
+                // next to the server's authoritative system prompt and could
+                // override it. Demote any non-assistant/non-user role to "user".
+                const safeRole: "user" | "assistant" =
+                  msg.role === "assistant" ? "assistant" : "user";
+                if (safeRole === "user" && msg.attachments && msg.attachments.length > 0) {
+                  const parts: ChatContentPart[] = [];
+                  if (msg.content) parts.push({ type: "text", text: msg.content });
+                  for (const att of msg.attachments) {
+                    if (att.kind === "image") {
+                      parts.push({ type: "image_url", image_url: { url: att.dataUrl } });
+                    } else if (att.kind === "text_file") {
+                      parts.push({
+                        type: "text",
+                        text: `[Attached text file: ${att.name} (${att.fileType ?? "text/plain"})]\n--- BEGIN ATTACHED FILE ---\n${att.content}\n--- END ATTACHED FILE ---`,
+                      });
+                    } else if (att.kind === "library_file") {
+                      let libraryContent = "";
+                      if (auth && msg === lastUser) {
+                        const { data } = await auth.supabaseAdmin
+                          .from("user_library_items")
+                          .select("content_text")
+                          .eq("id", att.libraryItemId)
+                          .eq("user_id", auth.userId)
+                          .maybeSingle();
+                        const row = data as { content_text?: unknown } | null;
+                        if (typeof row?.content_text === "string") {
+                          libraryContent = row.content_text.slice(0, MAX_TEXT_ATTACHMENT_CHARS);
+                        }
+                      }
+                      parts.push({
+                        type: "text",
+                        text: libraryContent
+                          ? `[Attached Library file: ${att.name} (${att.fileType ?? "unknown type"}). Do not expose private URLs.]\n--- BEGIN LIBRARY CONTENT ---\n${libraryContent}\n--- END LIBRARY CONTENT ---`
+                          : `[Attached Library file: ${att.name} (${att.fileType ?? "unknown type"}). The file's extracted content is unavailable, so do not claim to have read it and do not expose private URLs.]`,
+                      });
+                    }
                   }
+                  return { role: "user", content: parts };
                 }
-                return { role: "user", content: parts };
-              }
-              return { role: safeRole, content: msg.content };
-            });
+                return { role: safeRole, content: msg.content };
+              }),
+            );
 
             // Model routing:
             // - instant: fastest available (Gemini flash-lite) for snappy replies.
@@ -930,12 +999,11 @@ export const Route = createFileRoute("/api/chat")({
             //
             // If any step fails, or the user has no Google connection, we fall
             // through to the original streaming behavior with zero change.
-            const enableTools =
-              !!auth &&
-              !hasImages &&
-              m.id !== "instant" &&
-              lastText.length > 0 &&
-              (await userHasGoogle(auth.userId).catch(() => false));
+            const availableTools =
+              auth && !hasImages && m.id !== "instant" && lastText.length > 0
+                ? await getAvailableGoogleTools(auth.userId).catch(() => [])
+                : [];
+            const enableTools = availableTools.length > 0;
 
             type ToolCall = {
               id: string;
@@ -993,7 +1061,7 @@ export const Route = createFileRoute("/api/chat")({
                     {
                       model,
                       messages: workingMessages,
-                      tools: ALL_TOOLS,
+                      tools: availableTools,
                       tool_choice: "auto",
                       stream: false,
                     },
