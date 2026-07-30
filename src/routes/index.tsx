@@ -1389,15 +1389,8 @@ function KovaGPT() {
                     onRetry={
                       isLastAssistant && !isStreaming && priorUser
                         ? () => {
-                            // Drop the last assistant message, then resend the prior user prompt.
-                            setConversations((prev) =>
-                              prev.map((c) =>
-                                c.id === active.id
-                                  ? { ...c, messages: c.messages.slice(0, -2) }
-                                  : c,
-                              ),
-                            );
-                            send(
+                            const retryHistory = active.messages.slice(0, -2);
+                            void send(
                               priorUser.content,
                               (priorUser.attachments ?? []).map((attachment) =>
                                 attachment.kind === "image"
@@ -1428,6 +1421,9 @@ function KovaGPT() {
                                         status: "complete" as const,
                                       },
                               ),
+                              0,
+                              active.id,
+                              retryHistory,
                             );
                           }
                         : undefined
