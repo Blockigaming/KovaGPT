@@ -795,7 +795,7 @@ export function ChatInput({
                   type="button"
                   onClick={onStop}
                   style={{ backgroundColor: "var(--kova-blue)" }}
-                  className="kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-lg text-white transition hover:opacity-80 lg:h-9 lg:w-9"
+className="kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-lg text-white transition hover:opacity-80 lg:h-9 lg:w-9"
                   aria-label="Stop"
                 >
                   <Square className="w-4 h-4 fill-current" />
@@ -805,7 +805,7 @@ export function ChatInput({
                   type="button"
                   onClick={triggerSubmit}
                   style={{ backgroundColor: "var(--kova-blue)" }}
-                  className={`kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-lg text-white shadow-sm transition duration-150 hover:opacity-90 active:scale-90 active:opacity-70 lg:h-9 lg:w-9 ${sendFlash ? "scale-90 opacity-80" : ""}`}
+className={`kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-lg text-white shadow-sm transition duration-150 hover:opacity-90 active:scale-90 active:opacity-70 lg:h-9 lg:w-9 ${sendFlash ? "scale-90 opacity-80" : ""}`}
                   aria-label="Send"
                 >
                   <ArrowUp
@@ -830,7 +830,7 @@ export function ChatInput({
               <button
                 type="button"
                 onClick={() => setToolsOpen((value) => !value)}
-                className={`kova-tool-button inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-[13px] font-medium transition ${
+className={`kova-tool-button inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-[13px] font-medium transition ${
                   toolsOpen
                     ? "border-foreground/20 bg-accent text-foreground"
                     : "border-border/70 bg-background/55 text-muted-foreground hover:bg-accent hover:text-foreground"

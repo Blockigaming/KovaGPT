@@ -189,7 +189,7 @@ export function Sidebar({
   const renderRow = (c: Conversation) => (
     <div
       key={c.id}
-      className={`kova-chat-row group relative mx-2 my-0.5 flex min-h-9 cursor-pointer items-center gap-1 rounded-md px-2.5 py-1.5 text-[13px] transition ${
+className={`kova-chat-row group relative mx-2 my-0.5 flex min-h-9 cursor-pointer items-center gap-1 rounded-md px-2.5 py-1.5 text-[13px] transition ${
         activeId === c.id
           ? "bg-sidebar-active before:absolute before:-left-2 before:h-5 before:w-0.5 before:bg-[var(--kova-blue)]"
           : "hover:bg-sidebar-hover/60"
