@@ -16,11 +16,13 @@ export function timingSafeEqualText(left: string, right: string): boolean {
 export function hasTrustedBrowserOrigin(request: Request): boolean {
   const fetchSite = request.headers.get("sec-fetch-site");
   if (fetchSite === "cross-site") return false;
+
   // Browsers set this header from the public-facing URL. In production a
   // reverse proxy may expose a different internal request URL, so an explicit
   // same-origin signal is stronger and more reliable than comparing Origin to
   // that rewritten URL.
   if (fetchSite === "same-origin" || fetchSite === "same-site") return true;
+
   const origin = request.headers.get("origin");
   if (!origin) return true;
   try {
