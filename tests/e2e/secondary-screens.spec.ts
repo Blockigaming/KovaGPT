@@ -29,6 +29,7 @@ test("secondary screens preserve hierarchy and viewport containment", async ({ p
 test("secondary controls remain keyboard-visible and touchable", async ({ page }) => {
   await page.goto("/library", { waitUntil: "domcontentloaded" });
   const refresh = page.getByRole("button", { name: /Refresh/i });
+  await expect(refresh).toBeEnabled();
   await refresh.focus();
   await expect(refresh).toBeFocused();
 
