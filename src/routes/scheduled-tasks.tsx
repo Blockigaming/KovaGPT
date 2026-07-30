@@ -374,67 +374,6 @@ function ScheduledTasksPage() {
                   </div>
                 </form>
               ) : null}
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground">Title</label>
-                    <input
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                      placeholder="Morning market summary"
-                      className="mt-1 w-full rounded-lg bg-accent/40 px-3 py-2 text-sm outline-none focus:bg-accent transition"
-                      maxLength={200}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground">
-                      What should Kova do?
-                    </label>
-                    <textarea
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                      placeholder="Summarize the top 5 AI news stories from the last 24 hours."
-                      className="mt-1 w-full rounded-lg bg-accent/40 px-3 py-2 text-sm outline-none focus:bg-accent transition min-h-[90px]"
-                      maxLength={4000}
-                      required
-                    />
-                  </div>
-                  <div className="grid sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground">When</label>
-                      <input
-                        type="datetime-local"
-                        value={when}
-                        onChange={(e) => setWhen(e.target.value)}
-                        className="mt-1 w-full rounded-lg bg-accent/40 px-3 py-2 text-sm outline-none focus:bg-accent transition"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground">Repeat</label>
-                      <select
-                        value={repeat}
-                        onChange={(e) => setRepeat(e.target.value as ScheduledTask["repeat"])}
-                        className="mt-1 w-full rounded-lg bg-accent/40 px-3 py-2 text-sm outline-none focus:bg-accent transition"
-                      >
-                        <option value="none">Once</option>
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly</option>
-                        <option value="monthly">Monthly</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <button
-                      type="submit"
-                      disabled={creating}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-foreground text-background text-sm font-medium hover:opacity-90 disabled:opacity-50 transition active:scale-[0.98]"
-                    >
-                      <Plus className="w-4 h-4" />
-                      {creating ? "Scheduling…" : "Schedule"}
-                    </button>
-                  </div>
-                </form>
-              ) : null}
 
               <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
                 <div>
