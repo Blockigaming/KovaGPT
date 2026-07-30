@@ -21,6 +21,8 @@ export function hasTrustedBrowserOrigin(request: Request): boolean {
   // reverse proxy may expose a different internal request URL, so an explicit
   // same-origin signal is stronger and more reliable than comparing Origin to
   // that rewritten URL.
+  if (fetchSite === "same-origin") return true;
+=======
   if (fetchSite === "same-origin" || fetchSite === "same-site") return true;
 
   const origin = request.headers.get("origin");

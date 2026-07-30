@@ -11,7 +11,7 @@ const wranglerConfig = await readFile("wrangler.jsonc", "utf8");
 test("production uses the repository server entry without a private Vite wrapper", () => {
   assert.doesNotMatch(viteConfig, /@lovable\.dev\/vite-tanstack-config/);
   assert.doesNotMatch(packageJson, /@lovable\.dev\/vite-tanstack-config/);
-  assert.match(viteConfig, /tanstackStart\(\{ server: \{ entry: "src\/server\.ts" \} \}\)/);
+  assert.match(viteConfig, /tanstackStart\(\{ server: \{ entry: "server" \} \}\)/);
   assert.match(wranglerConfig, /"main": "src\/server\.ts"/);
 });
 
@@ -65,4 +65,25 @@ test("generated production server entry can be imported by Node", async () => {
   const entry = `${pathToFileURL(resolve("dist/server/server.js")).href}?audit=${Date.now()}`;
   const loaded = await import(entry);
   assert.equal(typeof loaded.default?.fetch, "function");
+});
+
+test("generated production entry preserves fetch-runtime AI bindings across lazy chunks", async () => {
+  const entry = `${pathToFileURL(resolve("dist/server/server.js")).href}?bindings=${Date.now()}`;
+  const loaded = await import(entry);
+  const response = await loaded.default.fetch(
+    new Request("https://kovagpt.com/api/chat", {
+      method: "POST",
+      headers: { "content-type": "application/json", "sec-fetch-site": "same-origin" },
+      body: JSON.stringify({ messages: [{ role: "user", content: "Hello" }] }),
+    }),
+    {
+      OPENAI_API_KEY: "production-binding-smoke-value",
+      OPENAI_BASE_URL: "http://127.0.0.1:1/v1",
+      KOVA_AI_TIMEOUT_MS: "5000",
+    },
+    {},
+  );
+  const body = await response.text();
+  assert.doesNotMatch(body, /AI provider is not configured/);
+  assert.notEqual(response.status, 500);
 });

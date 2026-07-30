@@ -850,7 +850,11 @@ function KovaGPT() {
             category === "streaming_interruption" ||
             category === "network_failure" ||
             category === "model_provider_failure";
-          const canAutoRetry = retryableCategory && _retryAttempt < MAX_AUTO_RETRIES;
+          // Respect the server's retryability signal. Configuration and
+          // authentication failures cannot heal through repeated requests and
+          // previously made the composer look stuck while it silently retried.
+          const canAutoRetry =
+            err.retryable !== false && retryableCategory && _retryAttempt < MAX_AUTO_RETRIES;
 
           if (canAutoRetry) {
             // Silent exponential backoff: 600ms, 1800ms. Strip the empty
@@ -889,7 +893,9 @@ function KovaGPT() {
                 : category === "model_timeout"
                   ? "The model took too long to respond. Tap retry."
                   : category === "model_provider_failure"
-                    ? "The AI provider had a hiccup. Tap retry."
+                    ? err.retryable === false
+                      ? raw
+                      : "KovaGPT is temporarily unavailable. Tap retry."
                     : category === "streaming_interruption"
                       ? "The connection dropped mid-response. Tap retry."
                       : isNetwork

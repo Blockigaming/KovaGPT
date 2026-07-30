@@ -1,3 +1,5 @@
+import { runtimeEnv } from "@/lib/runtime-env.server";
+
 export type JsonObject = Record<string, unknown>;
 
 export type ProviderCapability =
@@ -97,8 +99,7 @@ export class AiProviderError extends Error {
 }
 
 function env(name: string): string | undefined {
-  const value = process.env[name];
-  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+  return runtimeEnv(name);
 }
 
 function parseTimeout(value: string | undefined): number {
