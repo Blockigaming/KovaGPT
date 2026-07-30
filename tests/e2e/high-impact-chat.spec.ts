@@ -50,8 +50,7 @@ test("editing a prompt replaces its turn and keeps attachments", async ({ page }
     });
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: "More actions" }).click();
-  await page.getByRole("menuitem", { name: "Edit" }).click();
+  await page.getByRole("button", { name: "Edit message" }).click();
   const editingBanner = page.getByText("Editing a previous prompt", { exact: true });
   await expect(editingBanner).toBeVisible();
 
@@ -123,10 +122,14 @@ test("archived chats can be removed from Settings data controls", async ({ page 
     await page.getByRole("button", { name: "Open menu" }).click();
   }
   await page.getByRole("button", { name: "Settings" }).click();
-  await page.getByRole("tab", { name: "Data control" }).click();
+  const dataControl = page.getByRole("tab", { name: "Data control" });
+  if ((await dataControl.count()) > 0) {
+    await dataControl.click();
+  }
 
   const archived = page.getByRole("region", { name: "Archived chats" });
   await expect(archived).toBeVisible();
+  page.once("dialog", (dialog) => dialog.accept());
   await archived.getByRole("button", { name: "Delete archived chat Archived chat" }).click();
   await expect(archived.getByText("No archived chats", { exact: true })).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem("kovagpt:archived"))).toBe("[]");
@@ -187,8 +190,7 @@ test("text files are attached as real request context and remain visible in hist
     }),
   ]);
 
-  await page.getByRole("button", { name: "More actions" }).last().click();
-  await page.getByRole("menuitem", { name: "Edit" }).click();
+  await page.getByRole("button", { name: "Edit message" }).last().click();
   await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toHaveValue(
     "What is the revenue?",
   );
@@ -216,4 +218,3 @@ test("chat API rejects malformed text attachments at the server boundary", async
     expect.objectContaining({ error: "Invalid text file attachment." }),
   );
 });
-
