@@ -32,7 +32,7 @@ const seedGuestTheme = async (page: import("@playwright/test").Page, mode: "dark
 };
 
 test.describe("Theme handling", () => {
-  const directRoutes = ["/", "/images", "/projects", "/settings"] as const;
+  const directRoutes = ["/", "/images", "/projects", "/library"] as const;
 
   test("dark guest theme hydrates on direct app-route navigation", async ({ page }) => {
     await seedGuestTheme(page, "dark");
