@@ -2177,6 +2177,7 @@ function ArchivedChatsPanel() {
                 className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive"
                 aria-label={`Delete archived chat ${chat.title}`}
                 onClick={() => {
+                  if (!window.confirm(`Permanently delete "${chat.title}"?`)) return;
                   saveArchivedConversations(
                     loadArchivedConversations().filter((item) => item.id !== chat.id),
                   );
