@@ -8,10 +8,8 @@ export default defineConfig({
   plugins: [
     tailwindcss(),
     tsconfigPaths({ projects: ["./tsconfig.json"] }),
-    // TanStack resolves custom entries relative to srcDirectory ("src" by
-    // default). Using "src/server.ts" resolves to src/src/server.ts and
-    // silently falls back to the framework entry, bypassing our production
-    // error handling, security headers, and runtime bindings.
+    // TanStack resolves this entry relative to the default src directory.
+    // Using "src/server.ts" would incorrectly resolve to "src/src/server.ts".
     tanstackStart({ server: { entry: "server" } }),
     react(),
   ],
