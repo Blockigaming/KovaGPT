@@ -13,7 +13,6 @@ export type LibraryItem = {
   file_type: string | null;
   file_size: number | null;
   created_at: string;
-  dedupe_key: string | null;
 };
 
 const ItemTypeEnum = z.enum([
@@ -33,7 +32,7 @@ export const listMyLibrary = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("user_library_items")
       .select(
-        "id, title, item_type, source, content_text, file_url, file_name, file_type, file_size, created_at, dedupe_key",
+        "id, title, item_type, source, content_text, file_url, file_name, file_type, file_size, created_at",
       )
       .eq("user_id", context.userId)
       .order("created_at", { ascending: false })
@@ -54,22 +53,12 @@ const SaveSchema = z.object({
   file_name: z.string().max(300).optional().nullable(),
   file_type: z.string().max(100).optional().nullable(),
   file_size: z.number().int().nonnegative().optional().nullable(),
-  dedupe_key: z.string().trim().min(1).max(200).optional().nullable(),
 });
 
 export const saveToLibrary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => SaveSchema.parse(input))
   .handler(async ({ data, context }): Promise<{ id: string }> => {
-    if (data.dedupe_key) {
-      const { data: existing } = await context.supabase
-        .from("user_library_items")
-        .select("id")
-        .eq("user_id", context.userId)
-        .eq("dedupe_key", data.dedupe_key)
-        .maybeSingle();
-      if (existing) return { id: existing.id };
-    }
     const { data: row, error } = await context.supabase
       .from("user_library_items")
       .insert({
@@ -82,19 +71,9 @@ export const saveToLibrary = createServerFn({ method: "POST" })
         file_name: data.file_name ?? null,
         file_type: data.file_type ?? null,
         file_size: data.file_size ?? null,
-        dedupe_key: data.dedupe_key ?? null,
       })
       .select("id")
       .single();
-    if ((error || !row) && data.dedupe_key) {
-      const { data: concurrent } = await context.supabase
-        .from("user_library_items")
-        .select("id")
-        .eq("user_id", context.userId)
-        .eq("dedupe_key", data.dedupe_key)
-        .maybeSingle();
-      if (concurrent) return { id: concurrent.id };
-    }
     if (error || !row) {
       console.error("[serverfn]", error?.message);
       throw new Error("Failed to save");

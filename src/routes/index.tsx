@@ -15,8 +15,6 @@ import {
   FileText,
   Share2,
   Download,
-  Cloud,
-  RefreshCw,
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 
@@ -74,16 +72,13 @@ import {
   deriveTitle,
   branchConversation,
   loadConversations,
-  loadArchivedConversations,
   newId,
   saveConversations,
   archiveConversation,
   removeArchivedConversation,
-  saveArchivedConversations,
 } from "@/lib/chat-store";
 import { toast } from "sonner";
 import { loadPersonality, personalityToInstruction } from "@/components/PersonalitySliders";
-import { useCloudChatHistory } from "@/hooks/use-cloud-chat-history";
 
 export const Route = createFileRoute("/")({
   component: KovaGPT,
@@ -314,14 +309,6 @@ function KovaGPT() {
       /* ignore */
     }
   }, [isLoaded, userKey, isSignedIn]);
-
-  const cloudHistory = useCloudChatHistory({
-    enabled: Boolean(isLoaded && isSignedIn),
-    userId: userKey,
-    conversations,
-    setConversations,
-    paused: isStreaming,
-  });
 
   // Re-apply theme mode whenever it changes
   useEffect(() => {
@@ -554,24 +541,21 @@ function KovaGPT() {
       setConversations((prev) => prev.filter((conversation) => conversation.id !== id));
       if (activeId === id) setActiveId(null);
       if (deleted) {
-        cloudHistory.markDeleted(deleted);
         toast.success("Chat deleted", {
           action: {
             label: "Undo",
             onClick: () => {
-              cloudHistory.cancelDeletion(deleted.id);
-              const restored = { ...deleted, updatedAt: Date.now() };
               setConversations((current) => [
-                restored,
-                ...current.filter((conversation) => conversation.id !== restored.id),
+                deleted!,
+                ...current.filter((conversation) => conversation.id !== deleted!.id),
               ]);
-              setActiveId(restored.id);
+              setActiveId(deleted!.id);
             },
           },
         });
       }
     },
-    [activeId, cloudHistory, conversations],
+    [activeId, conversations],
   );
 
   const autoTitle = useCallback(async (convId: string, msgs: Message[]) => {
@@ -585,9 +569,7 @@ function KovaGPT() {
       });
       const { title } = await resp.json();
       if (title) {
-        setConversations((prev) =>
-          prev.map((c) => (c.id === convId ? { ...c, title, updatedAt: Date.now() } : c)),
-        );
+        setConversations((prev) => prev.map((c) => (c.id === convId ? { ...c, title } : c)));
       }
     } catch {
       /* ignore */
@@ -1060,20 +1042,10 @@ function KovaGPT() {
           });
           toast.success("Chat duplicated");
         }}
-        onRename={(id, title) => {
-          setConversations((current) =>
-            current.map((conversation) =>
-              conversation.id === id
-                ? { ...conversation, title, updatedAt: Date.now() }
-                : conversation,
-            ),
-          );
-          toast.success("Chat renamed");
-        }}
         onArchive={(id) => {
           const archived = conversations.find((conversation) => conversation.id === id);
           setConversations((prev) => {
-            if (archived) archiveConversation({ ...archived, updatedAt: Date.now() });
+            if (archived) archiveConversation(archived);
             return prev.filter((c) => c.id !== id);
           });
           if (activeId === id) setActiveId(null);
@@ -1083,12 +1055,11 @@ function KovaGPT() {
                   label: "Undo",
                   onClick: () => {
                     removeArchivedConversation(archived!.id);
-                    const restored = { ...archived!, updatedAt: Date.now() };
                     setConversations((current) => [
-                      restored,
-                      ...current.filter((conversation) => conversation.id !== restored.id),
+                      archived!,
+                      ...current.filter((conversation) => conversation.id !== archived!.id),
                     ]);
-                    setActiveId(restored.id);
+                    setActiveId(archived!.id);
                   },
                 }
               : undefined,
@@ -1098,12 +1069,7 @@ function KovaGPT() {
           setConversations((prev) =>
             prev.map((c) =>
               c.id === id
-                ? {
-                    ...c,
-                    pinned: !c.pinned,
-                    pinnedAt: !c.pinned ? Date.now() : undefined,
-                    updatedAt: Date.now(),
-                  }
+                ? { ...c, pinned: !c.pinned, pinnedAt: !c.pinned ? Date.now() : undefined }
                 : c,
             ),
           );
@@ -1120,29 +1086,6 @@ function KovaGPT() {
           onNewChat={newChat}
           title={active?.title}
         />
-        {isSignedIn && cloudHistory.state === "loading" && conversations.length === 0 ? (
-          <div
-            className="mx-auto mt-3 flex items-center gap-2 rounded-lg border border-border/70 bg-card px-3 py-2 text-sm text-muted-foreground"
-            role="status"
-          >
-            <Cloud className="h-4 w-4" /> Loading your cloud chats…
-          </div>
-        ) : null}
-        {isSignedIn && cloudHistory.state === "error" ? (
-          <div
-            className="mx-3 mt-3 flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm lg:mx-auto lg:w-full lg:max-w-[48rem]"
-            role="alert"
-          >
-            <span className="min-w-0">{cloudHistory.error}</span>
-            <button
-              type="button"
-              onClick={() => void cloudHistory.refresh()}
-              className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-md px-2.5 font-medium hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <RefreshCw className="h-3.5 w-3.5" /> Retry
-            </button>
-          </div>
-        ) : null}
         <header
           className="kova-topbar relative hidden h-[52px] items-center gap-1 px-3 lg:flex"
           role="banner"
@@ -1676,15 +1619,7 @@ function KovaGPT() {
             onOpenChange={setSettingsOpen}
             settings={settings}
             onChange={setSettings}
-            onClearAll={(scope) => {
-              if (scope === "everywhere") {
-                [...conversations, ...loadArchivedConversations()].forEach(
-                  cloudHistory.markDeleted,
-                );
-                saveArchivedConversations([]);
-              }
-              setConversations([]);
-            }}
+            onClearAll={() => setConversations([])}
             onOpenHelp={openHelp}
             initialTab={settingsTab}
             returnFocusTarget={settingsReturnFocusRef.current}
@@ -1714,11 +1649,12 @@ function KovaGPT() {
           open={archivedOpen}
           onClose={() => setArchivedOpen(false)}
           onRestore={(conversation) => {
-            const restored = { ...conversation, updatedAt: Date.now() };
-            setConversations((all) => [restored, ...all.filter((item) => item.id !== restored.id)]);
+            setConversations((all) => [
+              conversation,
+              ...all.filter((item) => item.id !== conversation.id),
+            ]);
             toast.success("Chat restored");
           }}
-          onPermanentDelete={(items) => items.forEach(cloudHistory.markDeleted)}
         />
       </Suspense>
 

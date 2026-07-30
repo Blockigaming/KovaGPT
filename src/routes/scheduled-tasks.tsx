@@ -24,6 +24,7 @@ import {
   Search,
   RotateCcw,
   WandSparkles,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AutomationBuilder, type AutomationDraft } from "@/components/AutomationBuilder";
@@ -40,7 +41,7 @@ export const Route = createFileRoute("/scheduled-tasks")({
   }),
 });
 
-type PlanState = "loading" | "free" | "paid" | "signed-out";
+type PlanState = "loading" | "free" | "paid" | "signed-out" | "error";
 type TaskFilter = "all" | "active" | "paused" | "history" | "failed";
 
 function ScheduledTasksPage() {
@@ -53,6 +54,7 @@ function ScheduledTasksPage() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<TaskFilter>("all");
   const [builderOpen, setBuilderOpen] = useState(false);
+  const [executionAvailable, setExecutionAvailable] = useState(false);
 
   const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
@@ -75,10 +77,11 @@ function ScheduledTasksPage() {
     checkEligible({})
       .then((r) => {
         if (cancel) return;
+        setExecutionAvailable(r.executionAvailable);
         setPlan(r.eligible ? "paid" : "free");
       })
       .catch(() => {
-        if (!cancel) setPlan("free");
+        if (!cancel) setPlan("error");
       });
     return () => {
       cancel = true;
@@ -214,7 +217,8 @@ function ScheduledTasksPage() {
             <h1 className="font-display text-2xl font-semibold tracking-tight">Scheduled Tasks</h1>
           </div>
           <p className="text-sm text-muted-foreground mb-8">
-            Ask KovaGPT to do something at a specific time. Results show up in your task history.
+            Review scheduled work and its real execution status. New tasks are available only when a
+            background runner is configured.
           </p>
 
           {plan === "loading" && <div className="text-sm text-muted-foreground">Loading…</div>}
@@ -251,86 +255,121 @@ function ScheduledTasksPage() {
             </div>
           )}
 
+          {plan === "error" && (
+            <div className="kova-empty-state" role="alert">
+              <AlertCircle className="mx-auto mb-3 h-6 w-6 text-destructive" />
+              <div className="font-medium mb-1">Plan status is unavailable</div>
+              <p className="text-sm text-muted-foreground mb-4">
+                KovaGPT could not safely verify access to Scheduled Tasks. No plan restriction was
+                inferred.
+              </p>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border px-4 text-sm font-medium"
+              >
+                Try again
+              </button>
+            </div>
+          )}
+
           {plan === "paid" && (
             <>
-              <div className="mb-4 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => setBuilderOpen(true)}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border bg-card px-3.5 text-sm font-medium shadow-sm hover:bg-accent"
+              {!executionAvailable ? (
+                <div
+                  className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 text-sm"
+                  role="status"
                 >
-                  <WandSparkles className="h-4 w-4" /> Build an automation
-                </button>
-              </div>
+                  <div className="font-medium">Scheduled execution is not available yet</div>
+                  <p className="mt-1 text-muted-foreground">
+                    This deployment does not have a background task runner. KovaGPT will not accept
+                    new tasks or claim that saved tasks will run. You can still review, pause, or
+                    delete previously saved tasks below.
+                  </p>
+                </div>
+              ) : null}
+              {executionAvailable ? (
+                <div className="mb-4 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setBuilderOpen(true)}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-border bg-card px-3.5 text-sm font-medium shadow-sm hover:bg-accent"
+                  >
+                    <WandSparkles className="h-4 w-4" /> Build an automation
+                  </button>
+                </div>
+              ) : null}
               <AutomationBuilder
-                open={builderOpen}
+                open={executionAvailable && builderOpen}
                 onOpenChange={setBuilderOpen}
                 onCreate={createAutomation}
               />
-              <form
-                onSubmit={submit}
-                className="kova-card kova-form-surface p-4 sm:p-5 mb-8 space-y-3"
-              >
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">Title</label>
-                  <input
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Morning market summary"
-                    className="mt-1 w-full rounded-lg bg-accent/40 px-3 py-2 text-sm outline-none focus:bg-accent transition"
-                    maxLength={200}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">
-                    What should Kova do?
-                  </label>
-                  <textarea
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    placeholder="Summarize the top 5 AI news stories from the last 24 hours."
-                    className="mt-1 w-full rounded-lg bg-accent/40 px-3 py-2 text-sm outline-none focus:bg-accent transition min-h-[90px]"
-                    maxLength={4000}
-                    required
-                  />
-                </div>
-                <div className="grid sm:grid-cols-2 gap-3">
+              {executionAvailable ? (
+                <form
+                  onSubmit={submit}
+                  className="kova-card kova-form-surface p-4 sm:p-5 mb-8 space-y-3"
+                >
                   <div>
-                    <label className="text-xs font-medium text-muted-foreground">When</label>
+                    <label className="text-xs font-medium text-muted-foreground">Title</label>
                     <input
-                      type="datetime-local"
-                      value={when}
-                      onChange={(e) => setWhen(e.target.value)}
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Morning market summary"
                       className="mt-1 w-full rounded-lg bg-accent/40 px-3 py-2 text-sm outline-none focus:bg-accent transition"
+                      maxLength={200}
                       required
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-muted-foreground">Repeat</label>
-                    <select
-                      value={repeat}
-                      onChange={(e) => setRepeat(e.target.value as ScheduledTask["repeat"])}
-                      className="mt-1 w-full rounded-lg bg-accent/40 px-3 py-2 text-sm outline-none focus:bg-accent transition"
-                    >
-                      <option value="none">Once</option>
-                      <option value="daily">Daily</option>
-                      <option value="weekly">Weekly</option>
-                      <option value="monthly">Monthly</option>
-                    </select>
+                    <label className="text-xs font-medium text-muted-foreground">
+                      What should Kova do?
+                    </label>
+                    <textarea
+                      value={prompt}
+                      onChange={(e) => setPrompt(e.target.value)}
+                      placeholder="Summarize the top 5 AI news stories from the last 24 hours."
+                      className="mt-1 w-full rounded-lg bg-accent/40 px-3 py-2 text-sm outline-none focus:bg-accent transition min-h-[90px]"
+                      maxLength={4000}
+                      required
+                    />
                   </div>
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    disabled={creating}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-foreground text-background text-sm font-medium hover:opacity-90 disabled:opacity-50 transition active:scale-[0.98]"
-                  >
-                    <Plus className="w-4 h-4" />
-                    {creating ? "Scheduling…" : "Schedule"}
-                  </button>
-                </div>
-              </form>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">When</label>
+                      <input
+                        type="datetime-local"
+                        value={when}
+                        onChange={(e) => setWhen(e.target.value)}
+                        className="mt-1 w-full rounded-lg bg-accent/40 px-3 py-2 text-sm outline-none focus:bg-accent transition"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">Repeat</label>
+                      <select
+                        value={repeat}
+                        onChange={(e) => setRepeat(e.target.value as ScheduledTask["repeat"])}
+                        className="mt-1 w-full rounded-lg bg-accent/40 px-3 py-2 text-sm outline-none focus:bg-accent transition"
+                      >
+                        <option value="none">Once</option>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={creating}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-foreground text-background text-sm font-medium hover:opacity-90 disabled:opacity-50 transition active:scale-[0.98]"
+                    >
+                      <Plus className="w-4 h-4" />
+                      {creating ? "Scheduling…" : "Schedule"}
+                    </button>
+                  </div>
+                </form>
+              ) : null}
 
               <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
                 <div>
@@ -434,8 +473,10 @@ function ScheduledTasksPage() {
                         <div className="font-medium truncate">{t.title}</div>
                         <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
                           <Clock className="w-3.5 h-3.5" />
-                          {new Date(t.run_at).toLocaleString()} ·{" "}
-                          {t.repeat === "none" ? "Once" : t.repeat}
+                          {t.next_run_at
+                            ? `Next ${new Date(t.next_run_at).toLocaleString()}`
+                            : `Originally ${new Date(t.run_at).toLocaleString()}`}{" "}
+                          · {t.repeat === "none" ? "Once" : t.repeat}
                           <span className="ml-1 px-1.5 py-0.5 rounded bg-accent/60">
                             {t.status}
                           </span>
@@ -443,11 +484,18 @@ function ScheduledTasksPage() {
                         <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
                           {t.prompt}
                         </p>
+                        {t.last_run_at ? (
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            Last run {new Date(t.last_run_at).toLocaleString()}
+                            {t.last_result ? ` · ${t.last_result}` : ""}
+                          </p>
+                        ) : null}
                       </div>
                       <div className="flex items-center gap-1">
                         {t.status === "failed" ? (
                           <button
                             onClick={() => retry(t)}
+                            disabled={!executionAvailable}
                             className="p-2 rounded-md hover:bg-accent transition"
                             aria-label="Retry failed task"
                             title="Retry"
@@ -457,6 +505,7 @@ function ScheduledTasksPage() {
                         ) : null}
                         <button
                           onClick={() => togglePause(t)}
+                          disabled={t.status === "paused" && !executionAvailable}
                           className="p-2 rounded-md hover:bg-accent transition"
                           aria-label={t.status === "paused" ? "Resume" : "Pause"}
                           title={t.status === "paused" ? "Resume" : "Pause"}
@@ -480,10 +529,6 @@ function ScheduledTasksPage() {
                   ))}
                 </ul>
               )}
-              <p className="text-xs text-muted-foreground mt-6">
-                Heads up: scheduled execution is being rolled out gradually. Tasks are stored safely
-                and will run once the runner is fully enabled for your account.
-              </p>
             </>
           )}
         </div>

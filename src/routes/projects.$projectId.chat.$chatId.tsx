@@ -1,11 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, Loader2, RefreshCw, Send, Square, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { authFetch } from "@/lib/auth-fetch";
 import {
@@ -34,44 +34,39 @@ function ProjectChatPage() {
   const [messages, setMessages] = useState<ProjectChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const abortRef = useRef<AbortController | null>(null);
 
   const fnGetChat = useServerFn(getProjectChat);
   const fnGetProject = useServerFn(getProject);
   const fnSave = useServerFn(saveProjectChat);
   const fnDelete = useServerFn(deleteProjectChat);
 
-  const loadChat = useCallback(async () => {
-    if (!isSignedIn) return;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const [c, p] = await Promise.all([
-        fnGetChat({ data: { id: chatId } }),
-        fnGetProject({ data: { id: projectId } }),
-      ]);
-      if (!c) {
-        setLoadError("This project chat was deleted or you no longer have access to it.");
-        return;
-      }
-      setProject(p);
-      setTitle(c.title);
-      setMessages(c.snapshot.messages ?? []);
-    } catch (error) {
-      console.error(error);
-      setLoadError("Project chat could not be loaded. Check your connection and try again.");
-    } finally {
-      setLoading(false);
-    }
-  }, [chatId, fnGetChat, fnGetProject, isSignedIn, projectId]);
-
   useEffect(() => {
-    void loadChat();
-  }, [loadChat]);
+    if (!isSignedIn) return;
+    (async () => {
+      try {
+        const [c, p] = await Promise.all([
+          fnGetChat({ data: { id: chatId } }),
+          fnGetProject({ data: { id: projectId } }),
+        ]);
+        if (!c) {
+          toast.error("Chat not found");
+          navigate({ to: "/projects/$projectId", params: { projectId } });
+          return;
+        }
+        setProject(p);
+        setTitle(c.title);
+        setMessages(c.snapshot.messages ?? []);
+      } catch (e) {
+        console.error(e);
+        toast.error("Failed to load chat");
+      } finally {
+        setLoading(false);
+      }
+    })();
+    // eslint-disable-next-line
+  }, [isSignedIn, chatId, projectId]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -105,26 +100,6 @@ function ProjectChatPage() {
       </AppShell>
     );
   }
-  if (loadError) {
-    return (
-      <AppShell>
-        <div className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center p-6 text-center">
-          <h1 className="text-lg font-semibold">Project chat unavailable</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{loadError}</p>
-          <div className="mt-4 flex gap-2">
-            <Button onClick={() => void loadChat()}>
-              <RefreshCw className="mr-2 h-4 w-4" /> Retry
-            </Button>
-            <Button variant="outline" asChild>
-              <Link to="/projects/$projectId" params={{ projectId }}>
-                Back to project
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </AppShell>
-    );
-  }
 
   const canEdit = project?.role === "owner" || project?.role === "editor";
 
@@ -132,25 +107,24 @@ function ProjectChatPage() {
     const text = input.trim();
     if (!text || sending || !canEdit) return;
     setInput("");
-    setSendError(null);
     const userMsg: ProjectChatMessage = { role: "user", content: text };
+    const priorSystem: ProjectChatMessage[] = project?.system_prompt
+      ? [{ role: "system", content: project.system_prompt }]
+      : [];
     const nextHistory = [...messages, userMsg];
     setMessages(nextHistory);
     setSending(true);
-    const controller = new AbortController();
-    abortRef.current = controller;
     let assistant = "";
     try {
       const resp = await authFetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        signal: controller.signal,
         body: JSON.stringify({
-          messages: nextHistory.map((m) => ({
+          messages: [...priorSystem, ...nextHistory].map((m) => ({
             role: m.role,
             content: m.content,
           })),
-          mode: "instant",
+          mode: "default",
           user: {},
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           locale: typeof navigator !== "undefined" ? navigator.language : "en-US",
@@ -199,26 +173,9 @@ function ProjectChatPage() {
         { role: "assistant", content: assistant },
       ];
       await fnSave({ data: { id: chatId, messages: finalMsgs } });
-    } catch (error) {
-      if (controller.signal.aborted) {
-        const stopped: ProjectChatMessage[] = [
-          ...nextHistory,
-          ...(assistant ? [{ role: "assistant" as const, content: assistant }] : []),
-        ];
-        setMessages(stopped);
-        try {
-          await fnSave({ data: { id: chatId, messages: stopped } });
-          toast.message("Generation stopped. The partial conversation was saved.");
-        } catch {
-          setSendError("Generation stopped, but the partial conversation could not be saved.");
-        }
-      } else {
-        setMessages(messages);
-        setInput(text);
-        setSendError(error instanceof Error ? error.message : "Message could not be sent.");
-      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
     } finally {
-      abortRef.current = null;
       setSending(false);
     }
   }
@@ -247,22 +204,12 @@ function ProjectChatPage() {
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="truncate">{project?.name ?? "Project"}</span>
-              {project?.system_prompt ? (
-                <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-                  Instructions active
-                </span>
-              ) : null}
-            </div>
-            <button
-              className="block max-w-full truncate text-left font-medium hover:underline"
-              onClick={handleRename}
-            >
-              {title}
-            </button>
-          </div>
+          <button
+            className="font-medium truncate flex-1 text-left hover:underline"
+            onClick={handleRename}
+          >
+            {title}
+          </button>
           {canEdit && (
             <Button variant="ghost" size="icon" onClick={handleDelete} aria-label="Delete">
               <Trash2 className="w-4 h-4" />
@@ -296,17 +243,6 @@ function ProjectChatPage() {
             ))}
         </div>
         <div className="border-t p-3">
-          {sendError ? (
-            <div
-              className="mx-auto mb-2 flex max-w-3xl items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm"
-              role="alert"
-            >
-              <span>{sendError}</span>
-              <Button variant="ghost" size="sm" onClick={() => void handleSend()}>
-                Retry
-              </Button>
-            </div>
-          ) : null}
           <div className="max-w-3xl mx-auto flex gap-2 items-end">
             <Textarea
               value={input}
@@ -322,19 +258,13 @@ function ProjectChatPage() {
               rows={2}
               className="resize-none"
             />
-            {sending ? (
-              <Button
-                type="button"
-                onClick={() => abortRef.current?.abort()}
-                aria-label="Stop generating"
-              >
-                <Square className="h-4 w-4 fill-current" />
-              </Button>
-            ) : (
-              <Button onClick={handleSend} disabled={!canEdit || !input.trim()} aria-label="Send">
+            <Button onClick={handleSend} disabled={!canEdit || sending || !input.trim()}>
+              {sending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
                 <Send className="w-4 h-4" />
-              </Button>
-            )}
+              )}
+            </Button>
           </div>
         </div>
       </div>

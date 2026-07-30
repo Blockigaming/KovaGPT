@@ -18,7 +18,6 @@ export type GuestSaveInput = {
   file_name?: string | null;
   file_type?: string | null;
   file_size?: number | null;
-  dedupe_key?: string | null;
 };
 
 export function loadGuestLibrary(): LibraryItem[] {
@@ -57,7 +56,6 @@ export function saveGuestItem(input: GuestSaveInput): LibraryItem {
     file_type: input.file_type ?? null,
     file_size: input.file_size ?? null,
     created_at: new Date().toISOString(),
-    dedupe_key: input.dedupe_key ?? null,
   };
   const next = [item, ...loadGuestLibrary()];
   writeGuestLibrary(next);

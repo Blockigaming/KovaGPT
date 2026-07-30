@@ -228,7 +228,7 @@ export function SettingsDialog({
   onOpenChange: (v: boolean) => void;
   settings: Settings;
   onChange: (s: Settings) => void;
-  onClearAll: (scope?: "device" | "everywhere") => void;
+  onClearAll: () => void;
   initialTab?: string;
   onOpenHelp?: () => void;
   returnFocusTarget?: HTMLElement | null;
@@ -350,7 +350,7 @@ export function SettingsDialog({
         throw new Error(result?.error || "Account deletion failed. Your account remains active.");
       }
       clearConversations();
-      onClearAll("device");
+      onClearAll();
       await clerk?.signOut();
       setDeleteAccountOpen(false);
       onOpenChange(false);
@@ -693,7 +693,7 @@ export function SettingsDialog({
                     size="sm"
                     onClick={() => {
                       clearConversations();
-                      onClearAll("everywhere");
+                      onClearAll();
                       toast.success("All conversation memory cleared.");
                     }}
                   >
@@ -1225,7 +1225,7 @@ export function SettingsDialog({
                     size="sm"
                     onClick={() => {
                       clearConversations();
-                      onClearAll("device");
+                      onClearAll();
                       toast.success("Local storage cleared.");
                     }}
                   >

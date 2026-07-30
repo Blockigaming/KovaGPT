@@ -13,6 +13,7 @@ import type { Database } from "@/integrations/supabase/types";
 import {
   getValidGoogleAccessToken,
   getGoogleConnection,
+  getGoogleConnectionHealth,
   logAudit,
 } from "@/lib/google-oauth.server";
 
@@ -45,14 +46,7 @@ export const TOOL_ACTIVITY: Record<string, ActivityLabel> = {
 // Tools the model may call whose *effects* only happen after the user
 // explicitly confirms in the UI. runGoogleTool never runs these - the
 // chat loop intercepts them and stages a pending action instead.
-export const WRITE_TOOL_NAMES = new Set<string>([
-  "gmail_send",
-  "gmail_create_draft",
-  "calendar_create_event",
-  "calendar_delete_event",
-  "drive_upload_text_file",
-  "drive_create_doc",
-]);
+export const WRITE_TOOL_NAMES = new Set<string>(["gmail_create_draft", "calendar_create_event"]);
 
 export const READ_ONLY_TOOLS: ToolDef[] = [
   {
@@ -275,7 +269,27 @@ export const WRITE_TOOLS: ToolDef[] = [
   },
 ];
 
-export const ALL_TOOLS: ToolDef[] = [...READ_ONLY_TOOLS, ...WRITE_TOOLS];
+const SUPPORTED_WRITE_TOOLS = new Set(["gmail_create_draft", "calendar_create_event"]);
+export const ALL_TOOLS: ToolDef[] = [
+  ...READ_ONLY_TOOLS,
+  ...WRITE_TOOLS.filter((tool) => SUPPORTED_WRITE_TOOLS.has(tool.function.name)),
+];
+
+export async function getAvailableGoogleTools(userId: string): Promise<ToolDef[]> {
+  const health = await getGoogleConnectionHealth(userId);
+  if (!health.connected) return [];
+  return ALL_TOOLS.filter((tool) => {
+    const name = tool.function.name;
+    if (name.startsWith("gmail_")) {
+      return name === "gmail_create_draft" ? health.has.gmailWrite : health.has.gmail;
+    }
+    if (name.startsWith("calendar_")) {
+      return name === "calendar_create_event" ? health.has.calendarWrite : health.has.calendar;
+    }
+    if (name.startsWith("drive_")) return health.has.drive;
+    return false;
+  });
+}
 
 const GMAIL = "https://gmail.googleapis.com/gmail/v1";
 const CAL = "https://www.googleapis.com/calendar/v3";
@@ -631,6 +645,41 @@ function truncate(s: unknown, n: number): string {
   return str.length > n ? str.slice(0, n) + "…" : str;
 }
 
+function validateSupportedWrite(tool: string, args: WriteArgs): WriteArgs {
+  if (!SUPPORTED_WRITE_TOOLS.has(tool)) throw new Error("This Google action is not supported.");
+  const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (tool === "gmail_create_draft") {
+    const recipients = String(args.to ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+    const subject = String(args.subject ?? "").trim();
+    const body = String(args.body ?? "");
+    if (
+      !recipients.length ||
+      recipients.length > 25 ||
+      recipients.some((value) => !email.test(value))
+    )
+      throw new Error("Enter 1–25 valid draft recipients.");
+    if (!subject || subject.length > 300)
+      throw new Error("Draft subject is required and must be under 300 characters.");
+    if (!body.trim() || body.length > 50_000)
+      throw new Error("Draft body is required and must be under 50,000 characters.");
+    return { ...args, to: recipients.join(", "), subject, body };
+  }
+  const summary = String(args.summary ?? "").trim();
+  const start = new Date(String(args.start ?? ""));
+  const end = args.end ? new Date(String(args.end)) : new Date(start.getTime() + 30 * 60_000);
+  const attendees = Array.isArray(args.attendees) ? args.attendees.map(String) : [];
+  if (!summary || summary.length > 300)
+    throw new Error("Event title is required and must be under 300 characters.");
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start)
+    throw new Error("Event start and end times are invalid.");
+  if (attendees.length > 25 || attendees.some((value) => !email.test(value)))
+    throw new Error("Use no more than 25 valid attendee email addresses.");
+  return { ...args, summary, start: start.toISOString(), end: end.toISOString(), attendees };
+}
+
 /**
  * Build a short, human-readable summary + a redacted preview of the args so
  * the confirmation card can show the user exactly what will happen. We never
@@ -711,10 +760,11 @@ export async function stagePendingAction(
   tool: string,
   args: WriteArgs,
 ): Promise<PendingAction> {
-  const { summary, preview } = summarizeWriteTool(tool, args);
+  const validated = validateSupportedWrite(tool, args);
+  const { summary, preview } = summarizeWriteTool(tool, validated);
   const { data, error } = await admin()
     .from("pending_tool_actions" as never)
-    .insert({ user_id: userId, tool, args: args as never, summary } as never)
+    .insert({ user_id: userId, tool, args: validated as never, summary } as never)
     .select("id")
     .single();
   if (error || !data) {
@@ -758,6 +808,9 @@ export async function executePendingAction(
       .eq("id", actionId);
     return { ok: false, error: "Action expired. Ask me to prepare it again." };
   }
+  if (!SUPPORTED_WRITE_TOOLS.has(pendingRow.tool)) {
+    return { ok: false, error: "This Google action is not supported." };
+  }
 
   // Atomically claim the row BEFORE performing the external side effect.
   // Without this, a duplicate confirmation request that races the first one
@@ -776,7 +829,12 @@ export async function executePendingAction(
   try {
     token = await getValidGoogleAccessToken(userId);
   } catch {
-    return { ok: false, error: "Google account is not connected." };
+    await (db as unknown as SupabaseQueryLike)
+      .from("pending_tool_actions")
+      .update({ status: "pending" })
+      .eq("id", actionId)
+      .eq("status", "processing");
+    return { ok: false, error: "Google needs to be reconnected before this action can run." };
   }
   const H: HeadersInit = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
   const a = (pendingRow.args ?? {}) as WriteArgs;
@@ -820,7 +878,7 @@ export async function executePendingAction(
           headers: H,
           body: JSON.stringify({ message: { raw } }),
         });
-        if (!r.ok) throw new Error(`gmail draft ${r.status} ${await r.text().catch(() => "")}`);
+        if (!r.ok) throw new Error(`Gmail could not save the draft (${r.status}).`);
         resultText = `Draft saved to Gmail for ${to}.`;
         await logAudit({
           userId,
@@ -850,7 +908,7 @@ export async function executePendingAction(
         headers: H,
         body: JSON.stringify(eventBody),
       });
-      if (!r.ok) throw new Error(`calendar create ${r.status} ${await r.text().catch(() => "")}`);
+      if (!r.ok) throw new Error(`Google Calendar could not create the event (${r.status}).`);
       const created = (await r.json()) as { id: string; htmlLink?: string };
       resultText = `Event created${created.htmlLink ? ` - [open in Google Calendar](${created.htmlLink})` : "."}`;
       await logAudit({

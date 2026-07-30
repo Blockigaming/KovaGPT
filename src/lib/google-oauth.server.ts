@@ -6,10 +6,9 @@ export const GOOGLE_SCOPES = [
   "openid",
   "email",
   "profile",
-  "https://www.googleapis.com/auth/gmail.modify",
-  "https://www.googleapis.com/auth/gmail.send",
   "https://www.googleapis.com/auth/gmail.compose",
-  "https://www.googleapis.com/auth/calendar",
+  "https://www.googleapis.com/auth/gmail.readonly",
+  "https://www.googleapis.com/auth/calendar.events.readonly",
   "https://www.googleapis.com/auth/calendar.events",
   "https://www.googleapis.com/auth/drive.readonly",
 ].join(" ");
@@ -87,8 +86,7 @@ export async function exchangeCodeForTokens(
     }),
   });
   if (!res.ok) {
-    const txt = await res.text().catch(() => "");
-    throw new Error(`google token exchange failed: ${res.status} ${txt}`);
+    throw new Error(`google_token_exchange_failed_${res.status}`);
   }
   return res.json();
 }
@@ -135,10 +133,124 @@ export async function getGoogleConnection(userId: string) {
   const db = admin();
   const { data } = await db
     .from("google_oauth_tokens")
-    .select("email, scopes, expires_at")
+    .select("email, scopes, expires_at, refresh_token")
     .eq("user_id", userId)
     .maybeSingle();
   return data;
+}
+
+export type GoogleConnectionHealth = {
+  connected: boolean;
+  state:
+    | "connected"
+    | "disconnected"
+    | "reauthorization_required"
+    | "permission_incomplete"
+    | "temporarily_unavailable";
+  email?: string | null;
+  scopes: string[];
+  has: {
+    gmail: boolean;
+    gmailWrite: boolean;
+    calendar: boolean;
+    calendarWrite: boolean;
+    drive: boolean;
+  };
+};
+
+export function googleOAuthConfigured(): boolean {
+  return Boolean(
+    process.env.SUPABASE_URL &&
+    process.env.SUPABASE_SERVICE_ROLE_KEY &&
+    process.env.GOOGLE_OAUTH_CLIENT_ID &&
+    process.env.GOOGLE_OAUTH_CLIENT_SECRET &&
+    process.env.GOOGLE_REDIRECT_URI,
+  );
+}
+
+export async function getGoogleConnectionHealth(userId: string): Promise<GoogleConnectionHealth> {
+  if (!googleOAuthConfigured()) {
+    return {
+      connected: false,
+      state: "temporarily_unavailable",
+      scopes: [],
+      has: { gmail: false, gmailWrite: false, calendar: false, calendarWrite: false, drive: false },
+    };
+  }
+  const connection = await getGoogleConnection(userId);
+  if (!connection) {
+    return {
+      connected: false,
+      state: "disconnected",
+      scopes: [],
+      has: { gmail: false, gmailWrite: false, calendar: false, calendarWrite: false, drive: false },
+    };
+  }
+  const scopes = (connection.scopes ?? "").split(/\s+/).filter(Boolean);
+  const has = {
+    gmail: scopes.some((scope) =>
+      [
+        "https://www.googleapis.com/auth/gmail.readonly",
+        "https://www.googleapis.com/auth/gmail.modify",
+      ].includes(scope),
+    ),
+    gmailWrite: scopes.some((scope) =>
+      [
+        "https://www.googleapis.com/auth/gmail.compose",
+        "https://www.googleapis.com/auth/gmail.modify",
+      ].includes(scope),
+    ),
+    calendar: scopes.some((scope) =>
+      [
+        "https://www.googleapis.com/auth/calendar.events.readonly",
+        "https://www.googleapis.com/auth/calendar.events",
+        "https://www.googleapis.com/auth/calendar",
+      ].includes(scope),
+    ),
+    calendarWrite: scopes.some((scope) =>
+      [
+        "https://www.googleapis.com/auth/calendar.events",
+        "https://www.googleapis.com/auth/calendar",
+      ].includes(scope),
+    ),
+    drive: scopes.some((scope) =>
+      [
+        "https://www.googleapis.com/auth/drive.readonly",
+        "https://www.googleapis.com/auth/drive.file",
+      ].includes(scope),
+    ),
+  };
+  const expired = new Date(connection.expires_at).getTime() <= Date.now() + 5_000;
+  if (expired && !connection.refresh_token) {
+    return {
+      connected: false,
+      state: "reauthorization_required",
+      email: connection.email,
+      scopes,
+      has,
+    };
+  }
+  if (expired) {
+    try {
+      await refreshAccessToken(userId);
+    } catch {
+      return {
+        connected: false,
+        state: "reauthorization_required",
+        email: connection.email,
+        scopes,
+        has,
+      };
+    }
+  }
+  const complete = has.gmail && has.gmailWrite && has.calendar && has.calendarWrite && has.drive;
+  return {
+    connected: true,
+    state: complete ? "connected" : "permission_incomplete",
+    email: connection.email,
+    scopes,
+    has,
+  };
 }
 
 export async function disconnectGoogle(userId: string) {
@@ -179,8 +291,11 @@ async function refreshAccessToken(userId: string): Promise<string> {
     }),
   });
   if (!res.ok) {
-    const txt = await res.text().catch(() => "");
-    throw new Error(`google refresh failed: ${res.status} ${txt}`);
+    throw new Error(
+      res.status === 400 || res.status === 401
+        ? "google_reauthorization_required"
+        : "google_temporarily_unavailable",
+    );
   }
   const t = (await res.json()) as TokenResponse;
   const expiresAt = new Date(Date.now() + (t.expires_in - 30) * 1000).toISOString();

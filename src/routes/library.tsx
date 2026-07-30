@@ -57,19 +57,6 @@ import {
 const VIEW_KEY = "kova-library-view";
 const FAVORITES_KEY = "kova-library-favorites";
 
-function clearSavedMessageMarker(key: string | null) {
-  if (!key || typeof window === "undefined") return;
-  try {
-    const storageKey = "kovagpt:savedMessageIds";
-    const ids = JSON.parse(localStorage.getItem(storageKey) || "[]") as unknown;
-    if (Array.isArray(ids)) {
-      localStorage.setItem(storageKey, JSON.stringify(ids.filter((id) => id !== key)));
-    }
-  } catch {
-    // The cloud deletion still succeeded; a malformed device marker is non-authoritative.
-  }
-}
-
 function readFavorites(): Set<string> {
   if (typeof window === "undefined") return new Set();
   try {
@@ -159,12 +146,10 @@ function LibraryPage() {
 
   const remove = async (id: string) => {
     const existing = items;
-    const removed = items.find((item) => item.id === id);
     if (!confirm("Delete this Library item?")) return;
     setItems((prev) => prev.filter((i) => i.id !== id));
     if (!isSignedIn) {
       deleteGuestItem(id);
-      clearSavedMessageMarker(removed?.dedupe_key ?? null);
       toast.success("Deleted.");
       return;
     }
@@ -172,7 +157,6 @@ function LibraryPage() {
     try {
       const { deleteLibraryItem } = await import("@/lib/library.functions");
       await deleteLibraryItem({ data: { id } });
-      clearSavedMessageMarker(removed?.dedupe_key ?? null);
       toast.success("Deleted.");
     } catch (e) {
       setItems(existing);
@@ -204,15 +188,7 @@ function LibraryPage() {
           await load();
           throw new Error("Some selected items could not be deleted. Library was refreshed.");
         }
-        items
-          .filter((item) => selected.includes(item.id))
-          .forEach((item) => clearSavedMessageMarker(item.dedupe_key));
-      } else {
-        selected.forEach(deleteGuestItem);
-        items
-          .filter((item) => selected.includes(item.id))
-          .forEach((item) => clearSavedMessageMarker(item.dedupe_key));
-      }
+      } else selected.forEach(deleteGuestItem);
       setSelected([]);
       toast.success("Selected items deleted.");
     } catch (error) {
