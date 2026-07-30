@@ -63,9 +63,9 @@ import { Route as ApiTitleRouteImport } from './routes/api/title'
 import { Route as ApiProjectSuggestRouteImport } from './routes/api/project-suggest'
 import { Route as ApiMemoryRouteImport } from './routes/api/memory'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
-import { Route as ApiAccountRouteImport } from './routes/api/account'
 import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiAccountRouteImport } from './routes/api/account'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
@@ -373,11 +373,6 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAccountRoute = ApiAccountRouteImport.update({
-  id: '/api/account',
-  path: '/api/account',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiGenerateImageRoute = ApiGenerateImageRouteImport.update({
   id: '/api/generate-image',
   path: '/api/generate-image',
@@ -386,6 +381,11 @@ const ApiGenerateImageRoute = ApiGenerateImageRouteImport.update({
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAccountRoute = ApiAccountRouteImport.update({
+  id: '/api/account',
+  path: '/api/account',
   getParentRoute: () => rootRouteImport,
 } as any)
 const Char91DotwellKnownChar93OauthProtectedResourceRoute =
@@ -615,8 +615,8 @@ export interface FileRoutesByFullPath {
   '/write': typeof WriteRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/api/chat': typeof ApiChatRouteWithChildren
   '/api/account': typeof ApiAccountRoute
+  '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
   '/api/memory': typeof ApiMemoryRoute
@@ -708,8 +708,8 @@ export interface FileRoutesByTo {
   '/write': typeof WriteRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/api/chat': typeof ApiChatRouteWithChildren
   '/api/account': typeof ApiAccountRoute
+  '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
   '/api/memory': typeof ApiMemoryRoute
@@ -802,8 +802,8 @@ export interface FileRoutesById {
   '/write': typeof WriteRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/api/chat': typeof ApiChatRouteWithChildren
   '/api/account': typeof ApiAccountRoute
+  '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
   '/api/memory': typeof ApiMemoryRoute
@@ -897,8 +897,8 @@ export interface FileRouteTypes {
     | '/write'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
-    | '/api/chat'
     | '/api/account'
+    | '/api/chat'
     | '/api/generate-image'
     | '/api/health'
     | '/api/memory'
@@ -990,8 +990,8 @@ export interface FileRouteTypes {
     | '/write'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
-    | '/api/chat'
     | '/api/account'
+    | '/api/chat'
     | '/api/generate-image'
     | '/api/health'
     | '/api/memory'
@@ -1083,8 +1083,8 @@ export interface FileRouteTypes {
     | '/write'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
-    | '/api/chat'
     | '/api/account'
+    | '/api/chat'
     | '/api/generate-image'
     | '/api/health'
     | '/api/memory'
@@ -1177,8 +1177,8 @@ export interface RootRouteChildren {
   WriteRoute: typeof WriteRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  ApiChatRoute: typeof ApiChatRouteWithChildren
   ApiAccountRoute: typeof ApiAccountRoute
+  ApiChatRoute: typeof ApiChatRouteWithChildren
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiMemoryRoute: typeof ApiMemoryRoute
@@ -1603,13 +1603,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/account': {
-      id: '/api/account'
-      path: '/api/account'
-      fullPath: '/api/account'
-      preLoaderRoute: typeof ApiAccountRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/generate-image': {
       id: '/api/generate-image'
       path: '/api/generate-image'
@@ -1622,6 +1615,13 @@ declare module '@tanstack/react-router' {
       path: '/api/chat'
       fullPath: '/api/chat'
       preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/account': {
+      id: '/api/account'
+      path: '/api/account'
+      fullPath: '/api/account'
+      preLoaderRoute: typeof ApiAccountRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.well-known/oauth-protected-resource': {
@@ -1945,8 +1945,8 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
-  ApiChatRoute: ApiChatRouteWithChildren,
   ApiAccountRoute: ApiAccountRoute,
+  ApiChatRoute: ApiChatRouteWithChildren,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiMemoryRoute: ApiMemoryRoute,
