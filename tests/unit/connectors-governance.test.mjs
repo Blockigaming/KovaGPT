@@ -47,13 +47,14 @@ test("Google OAuth routes use the documented configuration, exact redirect, and 
   assert.match(callbackRoute, /Max-Age=0/);
 });
 
-test("voice uses browser capabilities without adding provider secrets or billing claims", () => {
+test("voice stays disabled without adding provider secrets or billing claims", () => {
   const matrix = read("docs/kova-final-completion-matrix.md");
-  const voice = read("src/lib/browser-voice.ts");
   const chat = read("src/components/ChatInput.tsx");
   const pricing = read("src/routes/pricing.tsx");
-  assert.match(matrix, /Voice: IMPLEMENTED AT SOURCE LEVEL/);
-  assert.match(voice, /SpeechRecognition/);
-  assert.match(chat, /Start voice input/);
+  const start = read("src/start.ts");
+
+  assert.match(matrix, /Voice: INTENTIONALLY DISABLED/);
+  assert.doesNotMatch(chat, /Start voice input|createSpeechRecognition|MicOff/);
+  assert.match(start, /microphone=\(\)/);
   assert.doesNotMatch(pricing, /voice generations|voice, and advanced/i);
 });
