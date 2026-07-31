@@ -19,8 +19,6 @@ import {
   Globe,
   Mail,
   FileText,
-  Volume2,
-  CircleStop,
 } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileBottomSheet } from "./MobileBottomSheet";
@@ -42,7 +40,6 @@ import { ArtifactEditor, detectArtifactKind, extractCodeBlocks } from "./Artifac
 import { ToolConfirmCard } from "./ToolConfirmCard";
 import type { PendingConfirm } from "@/lib/chat-store";
 import { InfoChip, detectInfoChip } from "./InfoChip";
-import { canReadAloud, speechText } from "@/lib/browser-voice";
 
 function MarkdownCode({ className, children }: React.ComponentProps<"code">) {
   const language = /language-([\w-]+)/.exec(className ?? "")?.[1];
@@ -262,35 +259,10 @@ function ChatMessageInner({
   const [saved, setSaved] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState<"edit" | "preview">("edit");
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [readAloudSupported, setReadAloudSupported] = useState(false);
   const { isSignedIn } = useUser();
 
   const saveFn = useServerFn(saveToLibrary);
 
-  useEffect(() => {
-    setReadAloudSupported(canReadAloud());
-    return () => {
-      if (typeof window !== "undefined") window.speechSynthesis?.cancel();
-    };
-  }, []);
-
-  const toggleReadAloud = useCallback(() => {
-    if (!canReadAloud()) return;
-    if (isSpeaking) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-      return;
-    }
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(speechText(message.content));
-    utterance.lang = document.documentElement.lang || navigator.language || "en-US";
-    utterance.rate = 1;
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-    setIsSpeaking(true);
-    window.speechSynthesis.speak(utterance);
-  }, [isSpeaking, message.content]);
 
   const artifactKind = useMemo(
     () => (isUser ? null : detectArtifactKind(message.content || "")),
@@ -644,23 +616,6 @@ function ChatMessageInner({
               >
                 <Share2 className="w-4 h-4" />
               </button>
-
-              {readAloudSupported && (
-                <button
-                  type="button"
-                  onClick={toggleReadAloud}
-                  className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-all hover:scale-[1.08] hover:bg-accent hover:text-foreground active:scale-95"
-                  title={isSpeaking ? "Stop reading" : "Read aloud"}
-                  aria-label={isSpeaking ? "Stop reading response" : "Read response aloud"}
-                  aria-pressed={isSpeaking}
-                >
-                  {isSpeaking ? (
-                    <CircleStop className="h-4 w-4" />
-                  ) : (
-                    <Volume2 className="h-4 w-4" />
-                  )}
-                </button>
-              )}
 
               {email && (
                 <DropdownMenu>
