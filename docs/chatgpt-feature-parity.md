@@ -23,7 +23,7 @@ This ledger records product truth, not marketing claims. “Complete” means th
 | Memory                              | Complete           | `/memory`, memory settings and authorized memory functions               | Durable conversation/project sources can be searched, edited, deleted and merged. Per-response attribution needs model metadata.                             |
 | Temporary Chat                      | Complete           | temporary conversation mode and non-durable behavior                     | None for core workflow.                                                                                                                                      |
 | Lockdown Mode                       | Missing            | tool authorization exists                                                | Account setting plus enforcement across every outbound tool is backend-dependent.                                                                            |
-| Voice                               | Complete           | Browser speech recognition in the composer and read-aloud message action | Uses installed browser speech services, exposes controls only when supported, handles denial/errors, and cancels speech on unmount.                          |
+| Voice                               | Intentionally omitted | None                                                                      | KovaGPT keeps microphone dictation and read-aloud disabled by product decision. No voice controls are exposed.                                              |
 | Scheduled Tasks                     | Complete           | scheduled task route and server runner                                   | External triggers remain unsupported.                                                                                                                        |
 | Sharing                             | Complete           | share routes and message sharing                                         | Collaborative permissions remain backend-dependent.                                                                                                          |
 | Conversation branching              | Complete           | local persisted chat flow and message actions                            | Safe truncation, valid metadata copies, origin metadata and source navigation use the actual local-first persistence flow. Cross-device sync is unavailable. |
@@ -68,7 +68,6 @@ This ledger records product truth, not marketing claims. “Complete” means th
 - **Prompt Studio:** owner-scoped reusable prompts with variables, categories, favorites, recent use, Project/Context Pack associations, and one-click testing.
 - **Advanced Artifacts:** document statistics, reading time, outline search, revision comparison, and session comments.
 - **Advanced Work:** reusable templates, Context Pack handoff, approval checkpoints, deliverables, and Scheduled Task follow-up drafts.
-- **Voice input and read aloud:** capability-detected browser dictation with live transcript editing plus safe, cancelable speech playback for assistant responses.
 
 ## Guardrails
 
