@@ -14,8 +14,6 @@ import {
   Brain,
   AlertCircle,
   RotateCcw,
-  Mic,
-  MicOff,
   type LucideIcon,
 } from "lucide-react";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
@@ -26,7 +24,6 @@ import { tryUseUpload, DAILY_UPLOAD_LIMIT, getUsage } from "@/lib/limits";
 import { toast } from "sonner";
 import { ResponsiveModelSelector as ModelSelector } from "@/components/ResponsiveModelSelector";
 import type { ModeId, Tier } from "@/lib/modes";
-import { createSpeechRecognition, type BrowserSpeechRecognition } from "@/lib/browser-voice";
 
 export type PendingAttachment = {
   kind: "image" | "text_file" | "library_file";
@@ -149,63 +146,8 @@ export function ChatInput({
   const [kbOffset, setKbOffset] = useState(0);
   const submittingRef = useRef(false);
   const composingRef = useRef(false);
-  const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
-  const dictationBaseRef = useRef("");
-  const onChangeRef = useRef(onChange);
   const [uploadAnnouncement, setUploadAnnouncement] = useState("");
   const [recentQuery, setRecentQuery] = useState("");
-  const [dictationSupported, setDictationSupported] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-
-  useEffect(() => {
-    onChangeRef.current = onChange;
-  }, [onChange]);
-
-  useEffect(() => {
-    const recognition = createSpeechRecognition();
-    setDictationSupported(Boolean(recognition));
-    if (!recognition) return;
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = navigator.language || "en-US";
-    recognition.onresult = (event) => {
-      let transcript = "";
-      for (let index = 0; index < event.results.length; index += 1) {
-        transcript += event.results[index]?.[0]?.transcript ?? "";
-      }
-      const separator = dictationBaseRef.current.trim() && transcript.trim() ? " " : "";
-      onChangeRef.current(`${dictationBaseRef.current}${separator}${transcript}`);
-    };
-    recognition.onerror = (event) => {
-      setIsListening(false);
-      if (event.error !== "aborted" && event.error !== "no-speech") {
-        toast.error("Voice input is unavailable. Check microphone access and try again.");
-      }
-    };
-    recognition.onend = () => setIsListening(false);
-    recognitionRef.current = recognition;
-    return () => {
-      recognition.abort();
-      recognitionRef.current = null;
-    };
-  }, []);
-
-  const toggleDictation = () => {
-    const recognition = recognitionRef.current;
-    if (!recognition) return;
-    if (isListening) {
-      recognition.stop();
-      setIsListening(false);
-      return;
-    }
-    dictationBaseRef.current = value.trimEnd();
-    try {
-      recognition.start();
-      setIsListening(true);
-    } catch {
-      toast.error("Voice input is already starting. Try again in a moment.");
-    }
-  };
 
   useEffect(() => {
     if (!plusOpen) return;
@@ -962,26 +904,6 @@ export function ChatInput({
                 <div className="flex items-center">
                   <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
                 </div>
-              )}
-              {dictationSupported && !isStreaming && (
-                <button
-                  type="button"
-                  onClick={toggleDictation}
-                  className={`mb-1 flex h-10 w-10 items-center justify-center rounded-full transition active:scale-95 lg:h-9 lg:w-9 ${
-                    isListening
-                      ? "bg-destructive text-destructive-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                  }`}
-                  aria-label={isListening ? "Stop voice input" : "Start voice input"}
-                  aria-pressed={isListening}
-                  title={isListening ? "Stop dictation" : "Use voice input"}
-                >
-                  {isListening ? (
-                    <MicOff className="h-4.5 w-4.5" />
-                  ) : (
-                    <Mic className="h-4.5 w-4.5" />
-                  )}
-                </button>
               )}
               {isStreaming ? (
                 <button
