@@ -10,7 +10,7 @@ const SECURITY_HEADERS: Record<string, string> = {
   "Referrer-Policy": "strict-origin-when-cross-origin",
   // Location is an explicit, user-triggered feature in Settings and Summary.
   // Keep it same-origin while denying unrelated camera access and cross-origin use.
-  "Permissions-Policy": "camera=(), geolocation=(self), microphone=(self), payment=(self)",
+  "Permissions-Policy": "camera=(), geolocation=(self), microphone=(), payment=(self)",
   "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
   "Content-Security-Policy": [
     "default-src 'self'",
