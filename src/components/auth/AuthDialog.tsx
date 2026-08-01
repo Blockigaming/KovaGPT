@@ -7,7 +7,10 @@ import { toast } from "sonner";
 import { Loader2, Eye, EyeOff, ArrowLeft, Mail, Sparkles } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { ForgotPasswordDialog } from "@/components/auth/ForgotPasswordDialog";
-import { getOAuthRedirectUri, rememberPostAuthRedirect } from "@/lib/oauth-session";
+import {
+  getOAuthRedirectUri,
+  rememberPostAuthRedirect,
+} from "@/lib/oauth-session";
 import { cn } from "@/lib/utils";
 
 type Mode = "sign-in" | "sign-up";
@@ -86,7 +89,7 @@ export function AuthDialog({
         const normalizedEmail = email.trim().toLowerCase();
         const metadata: Record<string, string> = {};
         if (fullName.trim()) metadata.full_name = fullName.trim();
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email: normalizedEmail,
           password,
           options: {
@@ -95,18 +98,11 @@ export function AuthDialog({
           },
         });
         if (error) throw error;
-        const isRepeat = !!data.user && (data.user.identities?.length ?? 0) === 0;
-        if (isRepeat) {
-          const { error: resendError } = await supabase.auth.resend({
-            type: "signup",
-            email: normalizedEmail,
-            options: { emailRedirectTo: `${window.location.origin}/` },
-          });
-          if (resendError) throw resendError;
-          toast.success("Already registered - we resent the verification link.");
-        } else {
-          toast.success("Verification email sent. Check your inbox.");
-        }
+        // Keep duplicate-account behavior indistinguishable to prevent email
+        // enumeration. Supabase decides whether a message should be delivered.
+        toast.success(
+          "If this address can be registered, check your inbox to continue.",
+        );
         onOpenChange(false);
       } else {
         const normalizedEmail = email.trim().toLowerCase();
@@ -115,28 +111,23 @@ export function AuthDialog({
           password,
         });
         if (error) {
-          if (/confirm|not confirmed|email.*verif/i.test(error.message)) {
-            const { error: resendError } = await supabase.auth.resend({
-              type: "signup",
-              email: normalizedEmail,
-              options: { emailRedirectTo: `${window.location.origin}/` },
-            });
-            if (resendError) throw resendError;
-            toast.error("Please verify your email - we just resent the link.");
-            return;
-          }
-          if (/invalid.*credentials|invalid_grant/i.test(error.message)) {
-            toast.error("That email and password don't match.");
-            return;
-          }
-          throw error;
+          // Do not distinguish unknown, unverified, or incorrect-password
+          // accounts. Different responses turn this form into an email
+          // enumeration oracle.
+          console.error("[KovaAuth] Password authentication was rejected", {
+            error: error.name || "auth_error",
+          });
+          toast.error("That email and password could not be verified.");
+          return;
         }
         toast.success("Welcome back.");
         onOpenChange(false);
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      toast.error(msg);
+      console.error("[KovaAuth] Email authentication failed", {
+        error: err instanceof Error ? err.name : "unknown_error",
+      });
+      toast.error("Authentication could not be completed. Please try again.");
     } finally {
       release();
     }
@@ -151,14 +142,23 @@ export function AuthDialog({
         redirect_uri: getOAuthRedirectUri(),
       });
       if (result.error) {
-        toast.error(result.error instanceof Error ? result.error.message : String(result.error));
+        console.error("[KovaAuth] Google authentication could not start", {
+          error:
+            result.error instanceof Error
+              ? result.error.name
+              : "provider_error",
+        });
+        toast.error("Google sign in could not start. Please try again.");
         release();
         return;
       }
       if (result.redirected) return;
       onOpenChange(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err));
+      console.error("[KovaAuth] Google authentication failed", {
+        error: err instanceof Error ? err.name : "unknown_error",
+      });
+      toast.error("Google sign in could not start. Please try again.");
     } finally {
       release();
     }
@@ -180,7 +180,10 @@ export function AuthDialog({
       if (error) throw error;
       setStep("magic-sent");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err));
+      console.error("[KovaAuth] Magic-link request failed", {
+        error: err instanceof Error ? err.name : "unknown_error",
+      });
+      toast.error("The sign-in link could not be requested. Please try again.");
     } finally {
       release();
     }
@@ -238,6 +241,7 @@ export function AuthDialog({
                         placeholder="Email address"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        maxLength={320}
                         onBlur={() => setEmailTouched(true)}
                         aria-invalid={emailTouched && !emailValid}
                         className={cn(
@@ -282,7 +286,11 @@ export function AuthDialog({
                     {loading ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
                     ) : (
-                      <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+                      <svg
+                        className="h-5 w-5"
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                      >
                         <path
                           fill="#4285F4"
                           d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -344,21 +352,32 @@ export function AuthDialog({
                   <div className="relative">
                     <Input
                       type={showPassword ? "text" : "password"}
-                      autoComplete={isSignUp ? "new-password" : "current-password"}
+                      autoComplete={
+                        isSignUp ? "new-password" : "current-password"
+                      }
                       autoFocus
-                      placeholder={isSignUp ? "Create a password (min 6)" : "Password"}
+                      placeholder={
+                        isSignUp ? "Create a password (min 6)" : "Password"
+                      }
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       minLength={6}
+                      maxLength={1024}
                       className="h-14 rounded-2xl text-[15px] px-4 pr-12"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
-                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }
                       className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition"
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
 
@@ -379,7 +398,9 @@ export function AuthDialog({
                     disabled={loading}
                     className="w-full h-14 rounded-2xl text-[15px] font-medium"
                   >
-                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {loading && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
                     {isSignUp ? "Create account" : "Sign in"}
                   </Button>
 
