@@ -7,7 +7,11 @@ import {
   requireUser,
   type AuthedCaller,
 } from "@/lib/api-auth.server";
-import { chatCompletions, chatModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
+import {
+  chatCompletions,
+  chatModel,
+  missingAiProviderResponse,
+} from "@/lib/ai/provider.server";
 import {
   assertDatabaseSuccess,
   BodyReadError,
@@ -16,6 +20,7 @@ import {
   persistMemorySafely,
   readUtf8BodyBounded,
 } from "@/lib/endpoint-reliability.mjs";
+import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
 
 const MEMORY_LIMITS = {
   plus: { returned: 12, stored: 250 },
@@ -43,7 +48,10 @@ function tbl(auth: AuthedCaller): MemoryTableQuery {
 }
 
 function jsonError(error: string, status: number) {
-  return Response.json({ error }, { status, headers: { "Cache-Control": "no-store" } });
+  return Response.json(
+    { error },
+    { status, headers: { "Cache-Control": "no-store" } },
+  );
 }
 
 async function identifyMemoryCaller(request: Request) {
@@ -63,9 +71,14 @@ async function authorizePaidMemory(
   return caller;
 }
 
-async function summarize(messages: Array<{ role: "user" | "assistant"; content: string }>) {
+async function summarize(
+  messages: Array<{ role: "user" | "assistant"; content: string }>,
+) {
   const transcript = messages
-    .map((message) => `${message.role === "user" ? "User" : "KovaGPT"}: ${message.content}`)
+    .map(
+      (message) =>
+        `${message.role === "user" ? "User" : "KovaGPT"}: ${message.content}`,
+    )
     .join("\n");
   const response = await chatCompletions({
     model: chatModel("fast"),
@@ -93,14 +106,19 @@ export const Route = createFileRoute("/api/memory")({
         if (caller instanceof Response) return caller;
         // Preserve the existing client contract: memory is invisible on free plans.
         if (caller.tier === "free") {
-          return Response.json({ memories: [] }, { headers: { "Cache-Control": "no-store" } });
+          return Response.json(
+            { memories: [] },
+            { headers: { "Cache-Control": "no-store" } },
+          );
         }
         const authorized = await authorizePaidMemory(caller);
         if (authorized instanceof Response) return authorized;
 
         try {
           const returned =
-            authorized.tier === "pro" ? MEMORY_LIMITS.pro.returned : MEMORY_LIMITS.plus.returned;
+            authorized.tier === "pro"
+              ? MEMORY_LIMITS.pro.returned
+              : MEMORY_LIMITS.plus.returned;
           const result = await tbl(authorized.auth)
             .select("chat_id, title, summary, updated_at")
             .eq("user_id", authorized.auth.userId)
@@ -118,12 +136,18 @@ export const Route = createFileRoute("/api/memory")({
       },
 
       POST: async ({ request }) => {
+        if (isCrossSiteMutation(request)) {
+          return jsonError("Cross-site memory changes are not allowed.", 403);
+        }
         const caller = await identifyMemoryCaller(request);
         if (caller instanceof Response) return caller;
         // This endpoint is called automatically after conversation updates. Free
         // accounts have always received a silent no-op and the client relies on it.
         if (caller.tier === "free") {
-          return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
+          return new Response(null, {
+            status: 204,
+            headers: { "Cache-Control": "no-store" },
+          });
         }
         const authorized = await authorizePaidMemory(caller);
         if (authorized instanceof Response) return authorized;
@@ -133,7 +157,10 @@ export const Route = createFileRoute("/api/memory")({
           raw = await readUtf8BodyBounded(request, REQUEST_LIMITS.maxBodyBytes);
         } catch (error) {
           if (error instanceof BodyReadError) {
-            const message = error.status === 413 ? "Request too large." : "Invalid request body.";
+            const message =
+              error.status === 413
+                ? "Request too large."
+                : "Invalid request body.";
             return jsonError(message, error.status);
           }
           console.error("[memory] body read failed", error);
@@ -152,7 +179,8 @@ export const Route = createFileRoute("/api/memory")({
           console.error("[memory] summarizer failed", error);
           summary = null;
         }
-        if (!summary) return jsonError("Memory summarization failed. Please retry.", 502);
+        if (!summary)
+          return jsonError("Memory summarization failed. Please retry.", 502);
 
         const row = {
           user_id: authorized.auth.userId,
@@ -167,7 +195,9 @@ export const Route = createFileRoute("/api/memory")({
           const memoryCap = MEMORY_LIMITS.plus.stored;
           await persistMemorySafely({
             upsert: async () =>
-              await tbl(authorized.auth).upsert(row, { onConflict: "user_id,chat_id" }),
+              await tbl(authorized.auth).upsert(row, {
+                onConflict: "user_id,chat_id",
+              }),
             listOverflow:
               authorized.tier === "plus"
                 ? async () =>
@@ -183,35 +213,55 @@ export const Route = createFileRoute("/api/memory")({
                 .eq("user_id", authorized.auth.userId)
                 .in(
                   "id",
-                  (overflow as Array<{ id: string }>).map((record) => record.id),
+                  (overflow as Array<{ id: string }>).map(
+                    (record) => record.id,
+                  ),
                 ),
           });
         } catch (error) {
           console.error("[memory] durable write failed", error);
-          return jsonError("Memory storage is temporarily unavailable. Please retry.", 503);
+          return jsonError(
+            "Memory storage is temporarily unavailable. Please retry.",
+            503,
+          );
         }
 
-        return Response.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
+        return Response.json(
+          { ok: true },
+          { headers: { "Cache-Control": "no-store" } },
+        );
       },
 
       DELETE: async ({ request }) => {
+        if (isCrossSiteMutation(request)) {
+          return jsonError("Cross-site memory changes are not allowed.", 403);
+        }
         // Deleting personal memory remains available after a downgrade or ban.
         // Subscription and maintenance gates must never block privacy cleanup.
         const caller = await identifyMemoryCaller(request);
         if (caller instanceof Response) return caller;
-        const chatId = new URL(request.url).searchParams.get("chatId")?.trim() || null;
+        const chatId =
+          new URL(request.url).searchParams.get("chatId")?.trim() || null;
         if (chatId && chatId.length > REQUEST_LIMITS.maxChatIdChars) {
           return jsonError("Invalid chat ID.", 400);
         }
 
         try {
-          let query = tbl(caller.auth).delete().eq("user_id", caller.auth.userId);
+          let query = tbl(caller.auth)
+            .delete()
+            .eq("user_id", caller.auth.userId);
           if (chatId) query = query.eq("chat_id", chatId);
           assertDatabaseSuccess(await query, "memory_delete");
-          return Response.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
+          return Response.json(
+            { ok: true },
+            { headers: { "Cache-Control": "no-store" } },
+          );
         } catch (error) {
           console.error("[memory] delete failed", error);
-          return jsonError("Memory storage is temporarily unavailable. Please retry.", 503);
+          return jsonError(
+            "Memory storage is temporarily unavailable. Please retry.",
+            503,
+          );
         }
       },
     },
