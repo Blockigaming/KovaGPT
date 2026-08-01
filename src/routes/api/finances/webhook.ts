@@ -1,5 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { financeQueueUnavailableResponse } from "@/lib/endpoint-reliability.mjs";
+import {
+  BodyReadError,
+  financeQueueUnavailableResponse,
+  readUtf8BodyBounded,
+} from "@/lib/endpoint-reliability.mjs";
 import { timingSafeEqualText } from "@/lib/http-security.server";
 
 export const Route = createFileRoute("/api/finances/webhook")({
@@ -16,13 +20,15 @@ export const Route = createFileRoute("/api/finances/webhook")({
           return Response.json({ error: "invalid_webhook_signature" }, { status: 401 });
         }
 
-        const contentLength = Number(request.headers.get("content-length") ?? "0");
-        if (!Number.isFinite(contentLength) || contentLength > 256 * 1024) {
-          return Response.json({ error: "webhook_too_large" }, { status: 413 });
-        }
-        const raw = await request.text();
-        if (raw.length > 256 * 1024) {
-          return Response.json({ error: "webhook_too_large" }, { status: 413 });
+        let raw: string;
+        try {
+          raw = await readUtf8BodyBounded(request, 256 * 1024);
+        } catch (error) {
+          if (error instanceof BodyReadError) {
+            const code = error.status === 413 ? "webhook_too_large" : "invalid_webhook_body";
+            return Response.json({ error: code }, { status: error.status });
+          }
+          return Response.json({ error: "invalid_webhook_body" }, { status: 400 });
         }
         const body = (await Promise.resolve()
           .then(() => JSON.parse(raw))
