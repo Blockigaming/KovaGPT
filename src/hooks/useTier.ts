@@ -2,7 +2,7 @@
 // row from Supabase (RLS scoped to auth.uid()) and resolves to free/plus/pro.
 import { useEffect, useState } from "react";
 import { getSupabaseClientConfigStatus, supabase } from "@/integrations/supabase/client";
-import { tierForLookupKey, type BillingTier } from "@/lib/billing-plans";
+import { BILLING_ENV, tierForLookupKey, type BillingTier } from "@/lib/billing-plans";
 
 export type Tier = BillingTier;
 
@@ -33,6 +33,7 @@ export function useTier(): { tier: Tier; loading: boolean } {
           .from("subscriptions")
           .select("price_id, status, current_period_end")
           .eq("user_id", targetUid)
+          .eq("environment", BILLING_ENV)
           .order("created_at", { ascending: false })
           .limit(5);
         const now = Date.now();
