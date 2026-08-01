@@ -1359,8 +1359,8 @@ export function SettingsDialog({
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     The removed model-improvement switch changed only a
                     browser-local value; it was not wired to an account-level or
-                    AI-provider training control. No toggle is shown until a real
-                    remote control exists. See the{" "}
+                    AI-provider training control. No toggle is shown until a
+                    real remote control exists. See the{" "}
                     <Link
                       to="/privacy"
                       onClick={() => onOpenChange(false)}
