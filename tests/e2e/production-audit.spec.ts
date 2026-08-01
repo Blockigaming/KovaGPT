@@ -60,6 +60,9 @@ test("implemented routes render without server errors or horizontal overflow", a
       overflow.width + 1,
     );
   }
+  // Detach from the local preview origin while this test still owns the page,
+  // so Playwright teardown cannot abort a proxy request after the test returns.
+  await page.goto("about:blank");
 });
 
 test("guest chat, authentication, command palette, and mobile navigation stay operable", async ({
