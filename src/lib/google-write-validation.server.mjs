@@ -1,7 +1,4 @@
-const SUPPORTED_WRITE_TOOLS = new Set([
-  "gmail_create_draft",
-  "calendar_create_event",
-]);
+const SUPPORTED_WRITE_TOOLS = new Set(["gmail_create_draft", "calendar_create_event"]);
 const HEADER_BREAK = /[\r\n]/;
 const EMAIL =
   /^(?=.{3,254}$)[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?$/i;
@@ -17,20 +14,12 @@ export class GoogleWriteValidationError extends Error {
 
 function requireRecord(args) {
   if (args === null || Array.isArray(args) || typeof args !== "object") {
-    throw new GoogleWriteValidationError(
-      "Google action arguments must be an object.",
-    );
+    throw new GoogleWriteValidationError("Google action arguments must be an object.");
   }
   return args;
 }
 
-function requiredString(
-  args,
-  key,
-  label,
-  maxLength,
-  { trim = false, header = false } = {},
-) {
+function requiredString(args, key, label, maxLength, { trim = false, header = false } = {}) {
   const value = args[key];
   if (typeof value !== "string") {
     throw new GoogleWriteValidationError(`${label} is required.`);
@@ -60,10 +49,7 @@ function optionalString(args, key, label, maxLength) {
 
 function recipientList(value, label, required = false) {
   if (value === undefined || value === null || value === "") {
-    if (required)
-      throw new GoogleWriteValidationError(
-        `${label} requires at least one address.`,
-      );
+    if (required) throw new GoogleWriteValidationError(`${label} requires at least one address.`);
     return [];
   }
   if (
@@ -71,20 +57,14 @@ function recipientList(value, label, required = false) {
     value.length > MAX_RECIPIENT_FIELD_LENGTH ||
     HEADER_BREAK.test(value)
   ) {
-    throw new GoogleWriteValidationError(
-      `${label} contains an invalid email address.`,
-    );
+    throw new GoogleWriteValidationError(`${label} contains an invalid email address.`);
   }
   const recipients = value.split(",").map((address) => address.trim());
   if (
     recipients.length > MAX_RECIPIENTS ||
-    recipients.some(
-      (address) => !address || address.length > 254 || !EMAIL.test(address),
-    )
+    recipients.some((address) => !address || address.length > 254 || !EMAIL.test(address))
   ) {
-    throw new GoogleWriteValidationError(
-      `${label} contains an invalid email address.`,
-    );
+    throw new GoogleWriteValidationError(`${label} contains an invalid email address.`);
   }
   return recipients;
 }
@@ -103,26 +83,17 @@ function attendeeList(value) {
   if (
     attendees.some(
       (address) =>
-        !address ||
-        address.length > 254 ||
-        HEADER_BREAK.test(address) ||
-        !EMAIL.test(address),
+        !address || address.length > 254 || HEADER_BREAK.test(address) || !EMAIL.test(address),
     )
   ) {
-    throw new GoogleWriteValidationError(
-      "Attendees contains an invalid email address.",
-    );
+    throw new GoogleWriteValidationError("Attendees contains an invalid email address.");
   }
   return attendees;
 }
 
 function timezone(value) {
   if (value === undefined || value === null || value === "") return undefined;
-  if (
-    typeof value !== "string" ||
-    value.length > 100 ||
-    HEADER_BREAK.test(value)
-  ) {
+  if (typeof value !== "string" || value.length > 100 || HEADER_BREAK.test(value)) {
     throw new GoogleWriteValidationError("Event timezone is invalid.");
   }
   try {
@@ -135,18 +106,14 @@ function timezone(value) {
 
 function rfc3339Date(value, label) {
   if (typeof value !== "string" || value.length > 40) {
-    throw new GoogleWriteValidationError(
-      `${label} must be an RFC 3339 date-time.`,
-    );
+    throw new GoogleWriteValidationError(`${label} must be an RFC 3339 date-time.`);
   }
   const match =
     /^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)(?:\.\d{1,9})?(Z|[+-](\d{2}):(\d{2}))$/.exec(
       value,
     );
   if (!match) {
-    throw new GoogleWriteValidationError(
-      `${label} must include an explicit timezone.`,
-    );
+    throw new GoogleWriteValidationError(`${label} must include an explicit timezone.`);
   }
   const year = Number(match[1]);
   const month = Number(match[2]);
@@ -154,9 +121,7 @@ function rfc3339Date(value, label) {
   const offsetHours = Number(match[8] ?? 0);
   const offsetMinutes = Number(match[9] ?? 0);
   const daysInMonth =
-    month >= 1 && month <= 12
-      ? new Date(Date.UTC(year, month, 0)).getUTCDate()
-      : 0;
+    month >= 1 && month <= 12 ? new Date(Date.UTC(year, month, 0)).getUTCDate() : 0;
   if (
     year === 0 ||
     day < 1 ||
@@ -165,15 +130,11 @@ function rfc3339Date(value, label) {
     offsetMinutes > 59 ||
     (offsetHours === 14 && offsetMinutes !== 0)
   ) {
-    throw new GoogleWriteValidationError(
-      `${label} is not a valid RFC 3339 date-time.`,
-    );
+    throw new GoogleWriteValidationError(`${label} is not a valid RFC 3339 date-time.`);
   }
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
-    throw new GoogleWriteValidationError(
-      `${label} is not a valid RFC 3339 date-time.`,
-    );
+    throw new GoogleWriteValidationError(`${label} is not a valid RFC 3339 date-time.`);
   }
   return date;
 }
@@ -217,16 +178,9 @@ function validateCalendarEvent(args) {
     ? rfc3339Date(endValue, "Event end")
     : new Date(start.getTime() + 30 * 60_000);
   if (end <= start) {
-    throw new GoogleWriteValidationError(
-      "Event start and end times are invalid.",
-    );
+    throw new GoogleWriteValidationError("Event start and end times are invalid.");
   }
-  const description = optionalString(
-    args,
-    "description",
-    "Event description",
-    8_000,
-  );
+  const description = optionalString(args, "description", "Event description", 8_000);
   const location = optionalString(args, "location", "Event location", 500);
   const attendees = attendeeList(args.attendees);
   const eventTimezone = timezone(args.timezone);
@@ -243,12 +197,8 @@ function validateCalendarEvent(args) {
 
 export function validateSupportedGoogleWrite(tool, input) {
   if (!SUPPORTED_WRITE_TOOLS.has(tool)) {
-    throw new GoogleWriteValidationError(
-      "This Google action is not supported.",
-    );
+    throw new GoogleWriteValidationError("This Google action is not supported.");
   }
   const args = requireRecord(input);
-  return tool === "gmail_create_draft"
-    ? validateDraft(args)
-    : validateCalendarEvent(args);
+  return tool === "gmail_create_draft" ? validateDraft(args) : validateCalendarEvent(args);
 }
