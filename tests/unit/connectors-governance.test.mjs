@@ -88,23 +88,55 @@ test("connector OAuth callbacks are browser-bound and keep returns same-origin",
   assert.match(githubOauth, /browserState !== state/);
 });
 
-test("account deletion disconnects generalized OAuth accounts before removing auth", () => {
+test("account deletion verifies every credential store before removing auth", () => {
   const account = read("src/routes/api/account.ts");
+  const google = read("src/lib/google-oauth.server.ts");
+  const github = read("src/lib/github-oauth.server.ts");
+  const finance = read("src/finances/plaid.server.ts");
   const lifecycle = read("src/integrations/oauth-lifecycle.server.ts");
+  const authDeletion = account.indexOf("auth.admin.deleteUser(auth.userId)");
 
-  assert.ok(
-    account.indexOf("disconnectAllOAuth(auth.userId)") <
-      account.indexOf("auth.admin.deleteUser(auth.userId)"),
-  );
-  assert.match(account, /Connected accounts could not be disconnected/);
+  for (const cleanup of [
+    "disconnectAllFinance(auth)",
+    "disconnectGoogle(auth.userId)",
+    "disconnectAllGitHub(auth.userId)",
+    "disconnectAllOAuth(auth.userId)",
+  ]) {
+    const cleanupIndex = account.indexOf(cleanup);
+    assert.ok(cleanupIndex > -1 && cleanupIndex < authDeletion, cleanup);
+  }
+
+  assert.match(google, /\.from\("google_oauth_tokens"\)\.delete\(\)\.eq\("user_id", userId\)/);
+  assert.match(google, /google_token_purge_failed/);
+  assert.match(account, /Google credentials could not be removed/);
+
+  assert.match(github, /export async function disconnectAllGitHub\(ownerId: string\)/);
+  assert.match(github, /\.from\("github_accounts"\)/);
+  assert.match(github, /\/applications\/\$\{encodeURIComponent\(clientId\)\}\/grant/);
+  assert.match(github, /Authorization: `Basic \$\{Buffer\.from/);
+  assert.match(github, /JSON\.stringify\(\{ access_token: token \}\)/);
+  assert.match(github, /token_ciphertext: "deleted"/);
+  assert.match(github, /purgeError \|\| !purgedAccount/);
+  assert.match(github, /github_account_purge_failed/);
+  assert.match(account, /GitHub credentials could not be removed/);
+
+  assert.match(finance, /export async function disconnectAllFinance\(caller: AuthedCaller\)/);
+  assert.match(finance, /\.from\("financial_connections"\)/);
+  assert.match(finance, /"\/item\/remove", \{ access_token: accessToken \}/);
+  assert.match(finance, /\.delete\(\)/);
+  assert.match(finance, /purgeError \|\| !purgedConnection/);
+  assert.match(finance, /finance_connection_purge_failed/);
+  assert.match(account, /Financial connections could not be removed/);
+
   assert.match(lifecycle, /export async function disconnectAllOAuth\(ownerId: string\)/);
   assert.match(
     lifecycle,
     /\.from\("integration_linked_accounts"\)[\s\S]*\.eq\("owner_id", ownerId\)/,
   );
   assert.match(lifecycle, /await disconnectOAuth\(ownerId, account\.id\)/);
+  assert.match(lifecycle, /let providerRevoked = false/);
+  assert.doesNotMatch(lifecycle, /providerRevoked = !provider\.revocationEndpoint/);
   assert.match(lifecycle, /data: purgedAccount, error: credentialDeletionError/);
-  assert.match(lifecycle, /\.select\("id"\)\s*\.maybeSingle\(\)/);
   assert.match(lifecycle, /credentialDeletionError \|\| !purgedAccount/);
   assert.match(lifecycle, /linked_account_purge_failed/);
   assert.match(
@@ -112,4 +144,5 @@ test("account deletion disconnects generalized OAuth accounts before removing au
     /if \(failures\.length\) throw new Error\("linked_account_disconnect_failed"\)/,
   );
   assert.equal((lifecycle.match(/event_type: "disconnect"/g) ?? []).length, 1);
+  assert.match(account, /Connected accounts could not be disconnected/);
 });
