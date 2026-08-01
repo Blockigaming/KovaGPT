@@ -3,12 +3,13 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("AI provider configuration has no Lovable credit path", async () => {
-  const [providerSource, envExample] = await Promise.all([
+  const [providerSource, diagnosticsSource, envExample] = await Promise.all([
     readFile(new URL("../../src/lib/ai/provider.server.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/lib/config/diagnostics.server.ts", import.meta.url), "utf8"),
     readFile(new URL("../../.env.example", import.meta.url), "utf8"),
   ]);
 
-  for (const source of [providerSource, envExample]) {
+  for (const source of [providerSource, diagnosticsSource, envExample]) {
     assert.doesNotMatch(source, /LOVABLE_API_KEY/i);
     assert.doesNotMatch(source, /LOVABLE_AI_BASE_URL/i);
     assert.doesNotMatch(source, /ai\.gateway\.lovable\.dev/i);
@@ -17,6 +18,7 @@ test("AI provider configuration has no Lovable credit path", async () => {
 
   assert.match(providerSource, /provider:\s*"openai"/);
   assert.match(providerSource, /configured:\s*Boolean\(env\("OPENAI_API_KEY"\)\)/);
+  assert.match(diagnosticsSource, /aiProvider:\s*feature\(\["OPENAI_API_KEY"\]\)/);
 });
 
 test("title validation runs before the provider module is loaded", async () => {
