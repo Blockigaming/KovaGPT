@@ -68,11 +68,14 @@ test("command palette traps and restores focus with safe-area and reduced-motion
 
   assert.match(palette, /returnFocusRef/);
   assert.match(palette, /const returnTarget = returnFocusRef\.current/);
-  assert.match(palette, /returnTarget\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(palette, /function resolveReturnFocusTarget/);
+  assert.match(palette, /target\?\.isConnected/);
+  assert.match(palette, /data-testid="model-selector-trigger"/);
+  assert.match(palette, /target\.focus\(\{ preventScroll: true \}\)/);
   assert.match(palette, /requestAnimationFrame\(restoreFocus\)/);
   assert.match(palette, /const closePalette = \(\) =>/);
   assert.match(palette, /queueMicrotask\(restoreFocus\)/);
-  assert.match(palette, /document\.activeElement !== returnTarget/);
+  assert.match(palette, /document\.activeElement !== target/);
   assert.match(palette, /searchInputRef\.current\?\.focus\(\)/);
   assert.doesNotMatch(palette, /<input\s+autoFocus/);
   assert.match(palette, /event\.key === "Tab"/);
