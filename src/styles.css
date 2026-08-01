@@ -848,13 +848,13 @@ body {
   cursor: not-allowed;
   opacity: 0.48;
 }
-:where([role="dialog"], [role="menu"], [role="listbox"], [data-radix-popper-content-wrapper]) {
+:where([data-kova-dialog-surface], [role="menu"], [role="listbox"], [data-radix-popper-content-wrapper]) {
   transform-origin: var(--radix-popover-content-transform-origin, center);
 }
-:where([role="dialog"], [role="menu"], [role="listbox"])[data-state="open"] {
+:where([data-kova-dialog-surface], [role="menu"], [role="listbox"])[data-state="open"] {
   animation: kova-surface-in var(--motion-menu) var(--ease-spring) both;
 }
-:where([role="dialog"], [role="menu"], [role="listbox"])[data-state="closed"] {
+:where([data-kova-dialog-surface], [role="menu"], [role="listbox"])[data-state="closed"] {
   animation: kova-surface-out var(--motion-fast) var(--ease-standard) both;
 }
 @keyframes kova-surface-in {
