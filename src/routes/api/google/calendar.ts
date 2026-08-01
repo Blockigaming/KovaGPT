@@ -1,7 +1,10 @@
 // Real Google Calendar CRUD on the signed-in user's primary calendar.
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
-import { BoundedJsonError, readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
+import {
+  BoundedJsonError,
+  readBoundedJsonObject,
+} from "@/lib/bounded-json.server.mjs";
 import { getValidGoogleAccessToken, logAudit } from "@/lib/google-oauth.server";
 import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
 
@@ -32,16 +35,23 @@ export const Route = createFileRoute("/api/google/calendar")({
           body = await readBoundedJsonObject(request, 64 * 1024);
         } catch (error) {
           if (error instanceof BoundedJsonError) {
-            return Response.json({ error: error.code }, { status: error.status });
+            return Response.json(
+              { error: error.code },
+              { status: error.status },
+            );
           }
-          return Response.json({ error: "invalid_request_body" }, { status: 400 });
+          return Response.json(
+            { error: "invalid_request_body" },
+            { status: 400 },
+          );
         }
         const action = body?.action as string;
         if (action !== "list") {
           return Response.json(
             {
               error: "confirmation_required",
-              message: "Prepare a calendar event from chat and confirm it there.",
+              message:
+                "Prepare a calendar event from chat and confirm it there.",
             },
             { status: 409 },
           );
@@ -50,15 +60,22 @@ export const Route = createFileRoute("/api/google/calendar")({
         try {
           token = await getValidGoogleAccessToken(auth.userId);
         } catch {
-          return Response.json({ error: "google_not_connected" }, { status: 400 });
+          return Response.json(
+            { error: "google_not_connected" },
+            { status: 400 },
+          );
         }
-        const H = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+        const H = {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        };
 
         try {
           if (action === "list") {
             const timeMin = String(body.timeMin ?? new Date().toISOString());
             const timeMax = String(
-              body.timeMax ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+              body.timeMax ??
+                new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
             );
             const max = Math.min(50, Number(body.maxResults ?? 25));
             const url = `${CAL}/events?singleEvents=true&orderBy=startTime&timeMin=${encodeURIComponent(
@@ -88,16 +105,25 @@ export const Route = createFileRoute("/api/google/calendar")({
 
           if (action === "create") {
             if (!body.summary || !body.start || !body.end) {
-              return Response.json({ error: "missing_fields" }, { status: 400 });
+              return Response.json(
+                { error: "missing_fields" },
+                { status: 400 },
+              );
             }
             const event: JsonRecord = {
               summary: String(body.summary).slice(0, 300),
-              description: body.description ? String(body.description).slice(0, 8000) : undefined,
-              location: body.location ? String(body.location).slice(0, 500) : undefined,
+              description: body.description
+                ? String(body.description).slice(0, 8000)
+                : undefined,
+              location: body.location
+                ? String(body.location).slice(0, 500)
+                : undefined,
               start: body.start,
               end: body.end,
               attendees: Array.isArray(body.attendees)
-                ? body.attendees.slice(0, 25).map((e: string) => ({ email: String(e) }))
+                ? body.attendees
+                    .slice(0, 25)
+                    .map((e: string) => ({ email: String(e) }))
                 : undefined,
             };
             const r = await fetch(`${CAL}/events`, {
@@ -105,7 +131,8 @@ export const Route = createFileRoute("/api/google/calendar")({
               headers: H,
               body: JSON.stringify(event),
             });
-            if (!r.ok) throw new Error(`calendar create ${r.status} ${await r.text()}`);
+            if (!r.ok)
+              throw new Error(`calendar create ${r.status} ${await r.text()}`);
             const j = (await r.json()) as { id?: string; htmlLink?: string };
             await logAudit({
               userId: auth.userId,
@@ -119,9 +146,16 @@ export const Route = createFileRoute("/api/google/calendar")({
 
           if (action === "update") {
             const id = String(body.id ?? "");
-            if (!id) return Response.json({ error: "missing_id" }, { status: 400 });
+            if (!id)
+              return Response.json({ error: "missing_id" }, { status: 400 });
             const patch: JsonRecord = {};
-            for (const k of ["summary", "description", "location", "start", "end"]) {
+            for (const k of [
+              "summary",
+              "description",
+              "location",
+              "start",
+              "end",
+            ]) {
               if (body[k] !== undefined) patch[k] = body[k];
             }
             const r = await fetch(`${CAL}/events/${id}`, {
@@ -143,9 +177,14 @@ export const Route = createFileRoute("/api/google/calendar")({
 
           if (action === "delete") {
             const id = String(body.id ?? "");
-            if (!id) return Response.json({ error: "missing_id" }, { status: 400 });
-            const r = await fetch(`${CAL}/events/${id}`, { method: "DELETE", headers: H });
-            if (!r.ok && r.status !== 410) throw new Error(`calendar delete ${r.status}`);
+            if (!id)
+              return Response.json({ error: "missing_id" }, { status: 400 });
+            const r = await fetch(`${CAL}/events/${id}`, {
+              method: "DELETE",
+              headers: H,
+            });
+            if (!r.ok && r.status !== 410)
+              throw new Error(`calendar delete ${r.status}`);
             await logAudit({
               userId: auth.userId,
               provider: "calendar",
