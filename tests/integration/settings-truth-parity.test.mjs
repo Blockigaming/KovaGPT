@@ -18,10 +18,16 @@ test("Send on Enter is shared, reactive, and applied across main and project cha
   assert.match(composer, /const effectiveSendOnEnter = sendOnEnter \?\? sharedSendOnEnter/);
   assert.match(composer, /keyCode: native\.keyCode/);
   assert.match(composer, /isCoarsePointer/);
-  assert.equal((main.match(/sendOnEnter=\{settings\.sendOnEnter\}/g) ?? []).length, 2);
+  assert.equal(
+    (main.match(/sendOnEnter=\{settings\.sendOnEnter\}/g) ?? []).length,
+    0,
+    "main composers must not mask reactive per-user store updates with a stale settings prop",
+  );
 
   assert.match(preferences, /useSyncExternalStore/);
+  assert.match(preferences, /listeners\.get\(scope\)\?\.forEach\(\(listener\) => listener\(\)\)/);
   assert.match(preferences, /window\.addEventListener\("storage"/);
+  assert.match(preferences, /event\.key === composerPreferenceKey\(scope\)/);
   assert.match(storage, /readPersistedSendOnEnter/);
   assert.match(storage, /Migration still applies in memory/);
   assert.doesNotMatch(preferences, /useState\([^\n]*localStorage/);
