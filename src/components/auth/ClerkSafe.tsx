@@ -24,13 +24,18 @@ import {
   useState,
 } from "react";
 import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
-import { getSupabaseClientConfigStatus, supabase } from "@/integrations/supabase/client";
+import {
+  getSupabaseClientConfigStatus,
+  supabase,
+} from "@/integrations/supabase/client";
 import { AuthDialog } from "@/components/auth/AuthDialog";
+import { MfaChallengeDialog } from "@/components/auth/MfaChallengeDialog";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import {
   clearOAuthResponseFromUrl,
   completeOAuthSessionFromUrl,
   hasOAuthResponseInUrl,
+  markPasswordRecoveryFlow,
   OAUTH_CALLBACK_PATH,
 } from "@/lib/oauth-session";
 import {
@@ -57,11 +62,111 @@ type AuthCtx = {
 
 const Ctx = createContext<AuthCtx | null>(null);
 
+function clearPrivateBrowserState() {
+  try {
+    const keep = new Set(["nova-gpt-theme"]);
+    const toRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (
+        key &&
+        !keep.has(key) &&
+        (key.startsWith("nova-") ||
+          key.startsWith("kova") ||
+          key.startsWith("sb-"))
+      ) {
+        toRemove.push(key);
+      }
+    }
+    toRemove.forEach((key) => localStorage.removeItem(key));
+  } catch {
+    // A storage failure must not keep private in-memory state signed in.
+  }
+}
+
+function isActiveBan(bannedUntil: string | undefined) {
+  if (!bannedUntil) return false;
+  const timestamp = Date.parse(bannedUntil);
+  return !Number.isFinite(timestamp) || timestamp > Date.now();
+}
+
 export function ClerkProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
+  const [pendingMfaSession, setPendingMfaSession] = useState<Session | null>(
+    null,
+  );
   const [isLoaded, setIsLoaded] = useState(false);
-  const [dialog, setDialog] = useState<AuthDialogState>({ open: false, mode: "sign-in" });
+  const [dialog, setDialog] = useState<AuthDialogState>({
+    open: false,
+    mode: "sign-in",
+  });
   const authReturnFocusRef = useRef<HTMLElement | null>(null);
+  const sessionValidationRef = useRef(0);
+
+  const acceptSession = useCallback(async (candidate: Session | null) => {
+    const validation = ++sessionValidationRef.current;
+    if (!candidate) {
+      setSession(null);
+      setPendingMfaSession(null);
+      setIsLoaded(true);
+      return;
+    }
+
+    try {
+      const [
+        { data: userData, error: userError },
+        { data: assurance, error: assuranceError },
+      ] = await Promise.all([
+        supabase.auth.getUser(candidate.access_token),
+        supabase.auth.mfa.getAuthenticatorAssuranceLevel(
+          candidate.access_token,
+        ),
+      ]);
+      if (validation !== sessionValidationRef.current) return;
+
+      const invalidUser =
+        userError ||
+        !userData.user ||
+        Boolean(userData.user.deleted_at) ||
+        isActiveBan(userData.user.banned_until);
+      if (invalidUser || assuranceError) {
+        console.error("[KovaAuth] Session validation failed", {
+          userStatus: userError
+            ? "invalid"
+            : invalidUser
+              ? "unavailable"
+              : "valid",
+          assuranceStatus: assuranceError ? "unavailable" : "valid",
+        });
+        await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+        if (validation !== sessionValidationRef.current) return;
+        setSession(null);
+        setPendingMfaSession(null);
+        setIsLoaded(true);
+        return;
+      }
+
+      if (assurance.nextLevel === "aal2" && assurance.currentLevel !== "aal2") {
+        setSession(null);
+        setPendingMfaSession(candidate);
+        setDialog((current) => ({ ...current, open: false }));
+        setIsLoaded(true);
+        return;
+      }
+
+      setPendingMfaSession(null);
+      setSession({ ...candidate, user: userData.user });
+      setIsLoaded(true);
+    } catch (error) {
+      if (validation !== sessionValidationRef.current) return;
+      console.error("[KovaAuth] Session validation could not complete", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      setSession(null);
+      setPendingMfaSession(null);
+      setIsLoaded(true);
+    }
+  }, []);
 
   useEffect(() => {
     // Register listener first so we capture the SIGNED_IN that fires when
@@ -71,7 +176,9 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     const config = getSupabaseClientConfigStatus();
     if (!config.configured) {
-      console.warn(`[KovaAuth] Supabase auth unavailable. Missing: ${config.missing.join(", ")}`);
+      console.warn(
+        `[KovaAuth] Supabase auth unavailable. Missing: ${config.missing.join(", ")}`,
+      );
       setSession(null);
       setIsLoaded(true);
       return () => {
@@ -79,52 +186,53 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
       };
     }
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      if (cancelled) return;
-      if (!newSession && hasOAuthResponseInUrl()) return;
-      setSession(newSession);
-      setIsLoaded(true);
-    });
+    const { data: sub } = supabase.auth.onAuthStateChange(
+      (event, newSession) => {
+        if (cancelled) return;
+        if (!newSession && hasOAuthResponseInUrl()) return;
+        if (event === "PASSWORD_RECOVERY" && newSession) {
+          markPasswordRecoveryFlow(newSession.user.id);
+        }
+        // Supabase warns against awaiting auth methods while its auth-state lock
+        // is held. Schedule the authoritative user/MFA validation after this
+        // callback returns.
+        window.setTimeout(() => {
+          if (!cancelled) void acceptSession(newSession);
+        }, 0);
+      },
+    );
 
     async function hydrateSession() {
       try {
-        if (hasOAuthResponseInUrl() && window.location.pathname !== OAUTH_CALLBACK_PATH) {
+        if (
+          hasOAuthResponseInUrl() &&
+          window.location.pathname !== OAUTH_CALLBACK_PATH
+        ) {
           // Clear the OAuth params from the URL up-front so a StrictMode
           // double-invoke / reload can't re-trigger exchange.
-          const oauthSession = await completeOAuthSessionFromUrl("app bootstrap");
+          const oauthSession =
+            await completeOAuthSessionFromUrl("app bootstrap");
           clearOAuthResponseFromUrl();
           if (cancelled) return;
           if (oauthSession) {
-            setSession(oauthSession);
-            setIsLoaded(true);
+            await acceptSession(oauthSession);
             return;
           }
         }
 
         const { data, error } = await supabase.auth.getSession();
         if (error) {
-          console.error("[KovaAuth] Initial session restore failed.", error);
-        }
-        if (data.session) {
-          const { data: userData, error: userError } = await supabase.auth.getUser();
-          if (userError || !userData.user) {
-            console.error(
-              "[KovaAuth] Current user check failed during session restore.",
-              userError,
-            );
-            if (!cancelled) {
-              setSession(null);
-              setIsLoaded(true);
-            }
-            return;
-          }
+          console.error("[KovaAuth] Initial session restore failed.", {
+            error: error.name || "unknown_error",
+          });
         }
         if (cancelled) return;
-        setSession(data.session);
-        setIsLoaded(true);
+        await acceptSession(data.session);
       } catch (error) {
-        console.error("[KovaAuth] Auth initialization failed.", error);
-        if (!cancelled) setIsLoaded(true);
+        console.error("[KovaAuth] Auth initialization failed", {
+          error: error instanceof Error ? error.name : "unknown_error",
+        });
+        if (!cancelled) await acceptSession(null);
       }
     }
 
@@ -134,7 +242,7 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       sub.subscription.unsubscribe();
     };
-  }, []);
+  }, [acceptSession]);
 
   // Support ?sign-in=1 / ?sign-up=1 deep links (legacy behavior).
   useEffect(() => {
@@ -157,30 +265,20 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
 
   const openAuth = useCallback((mode: "sign-in" | "sign-up") => {
     authReturnFocusRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     setDialog({ open: true, mode });
   }, []);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
-    // Clear any cached private user data from the device on sign-out.
-    try {
-      const keep = new Set(["nova-gpt-theme"]);
-      const toRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (
-          k &&
-          !keep.has(k) &&
-          (k.startsWith("nova-") || k.startsWith("kova") || k.startsWith("sb-"))
-        ) {
-          toRemove.push(k);
-        }
-      }
-      toRemove.forEach((k) => localStorage.removeItem(k));
-    } catch {
-      // Ignore local sign-out cleanup errors.
-    }
+    // Normal sign-out is intentionally device-local. "Sign out other
+    // sessions" remains a separate, explicit security action.
+    await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+    sessionValidationRef.current += 1;
+    setSession(null);
+    setPendingMfaSession(null);
+    clearPrivateBrowserState();
     // Hard reload drops any in-memory React-Query / router caches too.
     if (typeof window !== "undefined") window.location.assign("/");
   }, []);
@@ -204,6 +302,11 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
         mode={dialog.mode}
         returnFocusTarget={authReturnFocusRef.current}
         onOpenChange={(open) => setDialog((d) => ({ ...d, open }))}
+      />
+      <MfaChallengeDialog
+        open={Boolean(pendingMfaSession)}
+        onVerified={(verifiedSession) => void acceptSession(verifiedSession)}
+        onCancel={() => void signOut()}
       />
     </Ctx.Provider>
   );
@@ -240,10 +343,14 @@ function adaptUser(u: SupabaseUser | null): UserShape {
   const email = u.email ?? undefined;
   const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
   const fullName =
-    (meta.full_name as string | undefined) ?? (meta.name as string | undefined) ?? null;
+    (meta.full_name as string | undefined) ??
+    (meta.name as string | undefined) ??
+    null;
   const firstName = fullName ? fullName.split(" ")[0] : null;
   const imageUrl =
-    (meta.avatar_url as string | undefined) ?? (meta.picture as string | undefined) ?? null;
+    (meta.avatar_url as string | undefined) ??
+    (meta.picture as string | undefined) ??
+    null;
   return {
     id: u.id,
     email,
@@ -306,7 +413,9 @@ function AuthTrigger({
   };
 
   if (isValidElement(children)) {
-    const child = children as ReactElement<{ onClick?: (e: MouseEvent<HTMLElement>) => void }>;
+    const child = children as ReactElement<{
+      onClick?: (e: MouseEvent<HTMLElement>) => void;
+    }>;
 
     return cloneElement(child, {
       onClick: (e: MouseEvent<HTMLElement>) => {
@@ -324,11 +433,21 @@ function AuthTrigger({
   );
 }
 
-export function SignInButton({ children }: { children?: ReactNode; mode?: "modal" | "redirect" }) {
+export function SignInButton({
+  children,
+}: {
+  children?: ReactNode;
+  mode?: "modal" | "redirect";
+}) {
   return <AuthTrigger variant="sign-in">{children}</AuthTrigger>;
 }
 
-export function SignUpButton({ children }: { children?: ReactNode; mode?: "modal" | "redirect" }) {
+export function SignUpButton({
+  children,
+}: {
+  children?: ReactNode;
+  mode?: "modal" | "redirect";
+}) {
   return <AuthTrigger variant="sign-up">{children}</AuthTrigger>;
 }
 
@@ -342,7 +461,10 @@ export function UserButton(_props?: {
   const adapted = adaptUser(user);
   const avatar = adapted?.imageUrl;
   const label = adapted?.fullName || adapted?.email || "Account";
-  const initial = (adapted?.fullName || adapted?.email || "?").trim().charAt(0).toUpperCase();
+  const initial = (adapted?.fullName || adapted?.email || "?")
+    .trim()
+    .charAt(0)
+    .toUpperCase();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   if (!user) return null;
@@ -355,7 +477,11 @@ export function UserButton(_props?: {
           aria-label="Account menu"
         >
           {avatar ? (
-            <img src={avatar} alt={label} className="h-full w-full object-cover" />
+            <img
+              src={avatar}
+              alt={label}
+              className="h-full w-full object-cover"
+            />
           ) : (
             <span>{initial}</span>
           )}
@@ -372,7 +498,9 @@ export function UserButton(_props?: {
             onClick={() => {
               if (typeof window !== "undefined") {
                 window.dispatchEvent(
-                  new CustomEvent("kova-open-settings", { detail: { tab: "general" } }),
+                  new CustomEvent("kova-open-settings", {
+                    detail: { tab: "general" },
+                  }),
                 );
               }
             }}
