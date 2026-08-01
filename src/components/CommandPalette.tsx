@@ -135,6 +135,7 @@ export function CommandPalette({
   const [recentCommands, setRecentCommands] = useState<string[]>([]);
   const [pinnedCommands, setPinnedCommands] = useState<string[]>([]);
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const shouldRestoreFocusRef = useRef(true);
 
@@ -146,6 +147,8 @@ export function CommandPalette({
       (document.activeElement instanceof HTMLElement ? document.activeElement : null);
 
     const returnTarget = returnFocusRef.current;
+    window.requestAnimationFrame(() => searchInputRef.current?.focus());
+
     return () => {
       if (!shouldRestoreFocusRef.current) return;
       window.requestAnimationFrame(() => returnTarget?.focus());
@@ -300,7 +303,7 @@ export function CommandPalette({
         <div className="flex items-center gap-3 border-b border-border px-4 py-3">
           <Search className="h-5 w-5 text-muted-foreground" />
           <input
-            autoFocus
+            ref={searchInputRef}
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Search chats, apps, files, and actions"
