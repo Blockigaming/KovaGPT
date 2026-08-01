@@ -80,16 +80,18 @@ test("temporary chat changes create a clean privacy boundary", () => {
   assert.match(index, /historyConversations = useMemo\([\s\S]*!conversation\.temporary/);
   assert.match(index, /setConversations\(\(previous\) =>[\s\S]*!conversation\.temporary/);
 
-  const marker = index.indexOf('aria-label="Toggle temporary chat"');
+  const marker = index.indexOf("const setTemporaryChatEnabled");
   assert.notEqual(marker, -1);
-  const toggle = index.slice(Math.max(0, marker - 1800), marker);
-  assert.match(toggle, /const next = !tempChat/);
+  const toggle = index.slice(marker, marker + 1800);
+  assert.match(toggle, /\(enabled: boolean\)/);
   assert.match(toggle, /newChat\(\)/);
-  assert.match(toggle, /setTempChat\(next\)/);
+  assert.match(toggle, /setTempChat\(enabled\)/);
   assert.ok(
-    toggle.lastIndexOf("newChat()") < toggle.lastIndexOf("setTempChat(next)"),
+    toggle.indexOf("newChat()") < toggle.indexOf("setTempChat(enabled)"),
     "the clean conversation boundary should be created before the privacy mode changes",
   );
+  assert.match(index, /onTemporaryChatChange=\{setTemporaryChatEnabled\}/);
+  assert.match(index, /aria-pressed=\{tempChat\}/);
   assert.match(index, /temporary: tempChat/);
   assert.match(index, /saveConversations\(conversations\.filter\(\(c\) => !c\.temporary\)\)/);
 });

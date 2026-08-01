@@ -12,7 +12,6 @@ import {
   type PendingAttachment,
   type RecentLibraryFile,
 } from "@/components/ChatInput";
-import { AIStatus } from "@/components/AIStatus";
 import { MobileTopBar } from "@/components/MobileTopBar";
 import { CommandPalette } from "@/components/CommandPalette";
 import { ResponsiveModelSelector } from "@/components/ResponsiveModelSelector";
@@ -107,6 +106,7 @@ function KovaGPT() {
   const [tempChat, setTempChat] = useState(false);
   const [tempChatConfirmed, setTempChatConfirmed] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
+  const commandReturnFocusRef = useRef<HTMLElement | null>(null);
   const [commandQuery, setCommandQuery] = useState("");
   const [selectedTool, setSelectedTool] = useState<ComposerToolId | null>(null);
   const [recentLibraryFiles, setRecentLibraryFiles] = useState<RecentLibraryFile[]>([]);
@@ -480,6 +480,44 @@ function KovaGPT() {
     setEditingMessage(null);
   }, []);
 
+  const setTemporaryChatEnabled = useCallback(
+    (enabled: boolean) => {
+      if (enabled === tempChat) return;
+
+      if (enabled) {
+        try {
+          localStorage.removeItem(`kova-draft:${activeId ?? "__new__"}`);
+        } catch {
+          /* Storage may be unavailable; temporary input still stays in memory only. */
+        }
+      }
+
+      // Persisted and temporary turns must never share one conversation.
+      newChat();
+      setTempChat(enabled);
+
+      if (enabled) {
+        setTempChatConfirmed(true);
+        window.setTimeout(() => setTempChatConfirmed(false), 1400);
+        toast.success("Temporary chat enabled", {
+          description:
+            "Memory is off. This chat won't appear in history or be used for cross-chat memory.",
+        });
+      } else {
+        toast.message("Temporary chat disabled", {
+          description: "New chats will be saved and use memory again.",
+        });
+      }
+    },
+    [activeId, newChat, tempChat],
+  );
+
+  const openCommandPalette = useCallback(() => {
+    commandReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setCommandOpen(true);
+  }, []);
+
   useEffect(() => {
     const reloadImportedChats = () => {
       setConversations(loadConversations());
@@ -495,7 +533,8 @@ function KovaGPT() {
       const key = event.key.toLowerCase();
       if ((event.metaKey || event.ctrlKey) && key === "k") {
         event.preventDefault();
-        setCommandOpen((value) => !value);
+        if (commandOpen) setCommandOpen(false);
+        else openCommandPalette();
       }
       if ((event.metaKey || event.ctrlKey) && event.shiftKey && key === "o") {
         event.preventDefault();
@@ -504,7 +543,7 @@ function KovaGPT() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [newChat]);
+  }, [commandOpen, newChat, openCommandPalette]);
 
   const deleteChat = useCallback(
     (id: string) => {
@@ -1073,6 +1112,8 @@ function KovaGPT() {
           mode={mode}
           onModeChange={setMode}
           userTier={tier}
+          temporaryChat={tempChat}
+          onTemporaryChatChange={setTemporaryChatEnabled}
         />
         <header className="kova-topbar relative hidden h-[52px] items-center gap-1 px-3 lg:flex">
           {!sidebarOpen && (
@@ -1086,7 +1127,7 @@ function KovaGPT() {
                 <PanelLeft className="w-5 h-5" />
               </button>
               <button
-                onClick={() => setCommandOpen(true)}
+                onClick={openCommandPalette}
                 className="shrink-0 p-2 rounded-lg hover:bg-accent transition"
                 aria-label="Search chats"
                 title="Search chats"
@@ -1102,17 +1143,6 @@ function KovaGPT() {
               onChange={setMode}
               userTier={tier}
               placement="topbar"
-            />
-            <AIStatus
-              streaming={isStreaming}
-              message={active?.messages[active.messages.length - 1]}
-              lastUserPrompt={(() => {
-                const msgs = active?.messages ?? [];
-                for (let i = msgs.length - 1; i >= 0; i--) {
-                  if (msgs[i].role === "user") return msgs[i].content;
-                }
-                return undefined;
-              })()}
             />
           </div>
 
@@ -1161,34 +1191,9 @@ function KovaGPT() {
             )}
             {isLoaded && isSignedIn && (
               <button
-                onClick={() => {
-                  const next = !tempChat;
-                  if (next) {
-                    try {
-                      localStorage.removeItem(`kova-draft:${activeId ?? "__new__"}`);
-                    } catch {
-                      /* Storage may be unavailable; temporary input still stays in memory only. */
-                    }
-                  }
-
-                  // Persisted and temporary turns must never share one conversation.
-                  newChat();
-                  setTempChat(next);
-
-                  if (next) {
-                    setTempChatConfirmed(true);
-                    setTimeout(() => setTempChatConfirmed(false), 1400);
-                    toast.success("Temporary chat enabled", {
-                      description:
-                        "Memory is off for this chat. It's private and won't be saved to your history.",
-                    });
-                  } else {
-                    toast.message("Temporary chat disabled", {
-                      description: "New chats will be saved and use memory again.",
-                    });
-                  }
-                }}
-                aria-label="Toggle temporary chat"
+                onClick={() => setTemporaryChatEnabled(!tempChat)}
+                aria-label={tempChat ? "Turn off temporary chat" : "Start temporary chat"}
+                aria-pressed={tempChat}
                 title={tempChat ? "Temporary chat on" : "Start temporary chat"}
                 className={`relative shrink-0 p-2 rounded-lg transition ${
                   tempChat ? "bg-primary/15 text-primary" : "hover:bg-accent text-foreground"
@@ -1231,7 +1236,7 @@ function KovaGPT() {
             </div>
             <button
               type="button"
-              onClick={() => setTempChat(false)}
+              onClick={() => setTemporaryChatEnabled(false)}
               className="shrink-0 rounded-md px-2.5 py-1 text-xs font-medium hover:bg-accent"
             >
               Turn off
@@ -1573,6 +1578,7 @@ function KovaGPT() {
         onNewChat={newChat}
         onSelectChat={setActiveId}
         onOpenSettings={() => openSettings("general")}
+        returnFocusTarget={commandReturnFocusRef.current}
       />
     </div>
   );

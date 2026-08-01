@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Search,
   SquarePen,
@@ -111,6 +111,7 @@ export function CommandPalette({
   onNewChat,
   onSelectChat,
   onOpenSettings,
+  returnFocusTarget,
 }: {
   open: boolean;
   query: string;
@@ -120,6 +121,7 @@ export function CommandPalette({
   onNewChat: () => void;
   onSelectChat: (id: string) => void;
   onOpenSettings: () => void;
+  returnFocusTarget?: HTMLElement | null;
 }) {
   const normalized = query.trim().toLowerCase();
   const conversationMatches = normalized
@@ -132,6 +134,30 @@ export function CommandPalette({
   const [activeIndex, setActiveIndex] = useState(0);
   const [recentCommands, setRecentCommands] = useState<string[]>([]);
   const [pinnedCommands, setPinnedCommands] = useState<string[]>([]);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+  const shouldRestoreFocusRef = useRef(true);
+
+  useEffect(() => {
+    if (!open) return;
+    shouldRestoreFocusRef.current = true;
+    returnFocusRef.current =
+      returnFocusTarget ??
+      (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+
+    const returnTarget = returnFocusRef.current;
+    window.requestAnimationFrame(() => searchInputRef.current?.focus());
+
+    return () => {
+      if (!shouldRestoreFocusRef.current || !returnTarget?.isConnected) return;
+      const restoreFocus = () => {
+        if (returnTarget.isConnected) returnTarget.focus({ preventScroll: true });
+      };
+      restoreFocus();
+      window.requestAnimationFrame(restoreFocus);
+    };
+  }, [open, returnFocusTarget]);
   useEffect(() => {
     try {
       setRecentCommands(JSON.parse(localStorage.getItem("kova-command-history-v1") ?? "[]"));
@@ -166,49 +192,76 @@ export function CommandPalette({
     setActiveIndex(0);
   }, [query, open]);
 
+  const suppressFocusRestore = () => {
+    shouldRestoreFocusRef.current = false;
+  };
+
+  const closePalette = () => {
+    const returnTarget = returnFocusRef.current;
+    const shouldRestore = shouldRestoreFocusRef.current;
+    onClose();
+    if (!shouldRestore || !returnTarget?.isConnected) return;
+
+    const restoreFocus = () => {
+      if (returnTarget.isConnected && document.activeElement !== returnTarget) {
+        returnTarget.focus({ preventScroll: true });
+      }
+    };
+    queueMicrotask(restoreFocus);
+    window.setTimeout(restoreFocus, 0);
+    window.requestAnimationFrame(() => {
+      restoreFocus();
+      window.requestAnimationFrame(restoreFocus);
+    });
+  };
+
   const chooseActive = () => {
     const action = actionItems[activeIndex];
     if (action === "new-chat") {
       onNewChat();
-      onClose();
+      closePalette();
       return;
     }
     if (action === "settings") {
+      suppressFocusRestore();
       onOpenSettings();
-      onClose();
+      closePalette();
       return;
     }
     if (typeof action === "string" && action.startsWith("/")) {
+      suppressFocusRestore();
       const next = [action, ...recentCommands.filter((item) => item !== action)].slice(0, 12);
       localStorage.setItem("kova-command-history-v1", JSON.stringify(next));
       platformEvents.publish("platform", "command.executed", { command: action });
       window.location.assign(action);
-      onClose();
+      closePalette();
       return;
     }
     if (action === "focus-input") {
+      suppressFocusRestore();
       document.querySelector<HTMLTextAreaElement>("textarea")?.focus();
       platformEvents.publish("platform", "command.executed", { command: action });
-      onClose();
+      closePalette();
       return;
     }
     if (action === "theme") {
       applyThemeMode(document.documentElement.classList.contains("dark") ? "light" : "dark");
       platformEvents.publish("platform", "command.executed", { command: action });
-      onClose();
+      closePalette();
       return;
     }
     if (action === "search") {
+      suppressFocusRestore();
       window.dispatchEvent(new CustomEvent("kova-open-search"));
       platformEvents.publish("platform", "command.executed", { command: action });
-      onClose();
+      closePalette();
       return;
     }
     if (!action) {
       const match = conversationMatches[activeIndex - actionItems.length];
       if (match) {
         onSelectChat(match.conversation.id);
-        onClose();
+        closePalette();
       }
     }
   };
@@ -217,14 +270,32 @@ export function CommandPalette({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-start justify-center bg-black/35 px-3 pt-[12vh] backdrop-blur-sm"
+      ref={dialogRef}
+      data-kova-shell-overlay=""
+      className="fixed inset-0 z-[70] flex items-start justify-center bg-black/35 px-[max(.75rem,var(--safe-left),var(--safe-right))] pb-[var(--safe-bottom)] pt-[max(12vh,var(--safe-top))] backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label="Search chats and actions"
       onKeyDown={(event) => {
+        if (event.key === "Tab" && dialogRef.current) {
+          const focusable = Array.from(
+            dialogRef.current.querySelectorAll<HTMLElement>(
+              'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+            ),
+          ).filter((element) => element.offsetParent !== null);
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (first && last && event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+          } else if (first && last && !event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          }
+        }
         if (event.key === "Escape") {
           event.preventDefault();
-          onClose();
+          closePalette();
         }
         if (event.key === "ArrowDown") {
           event.preventDefault();
@@ -255,7 +326,7 @@ export function CommandPalette({
         <div className="flex items-center gap-3 border-b border-border px-4 py-3">
           <Search className="h-5 w-5 text-muted-foreground" />
           <input
-            autoFocus
+            ref={searchInputRef}
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Search chats, apps, files, and actions"
@@ -268,8 +339,8 @@ export function CommandPalette({
           />
           <button
             type="button"
-            onClick={onClose}
-            className="rounded-full p-2 text-muted-foreground hover:bg-accent hover:text-foreground"
+            onClick={closePalette}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
             aria-label="Close command palette"
           >
             <X className="h-4 w-4" />
@@ -287,12 +358,12 @@ export function CommandPalette({
             type="button"
             onClick={() => {
               onNewChat();
-              onClose();
+              closePalette();
             }}
             id="command-option-0"
             role="option"
             aria-selected={activeIndex === 0}
-            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 0 ? "bg-accent" : ""}`}
+            className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 0 ? "bg-accent" : ""}`}
           >
             <SquarePen className="h-4 w-4 text-muted-foreground" />
             <span>Start a new chat</span>
@@ -303,13 +374,14 @@ export function CommandPalette({
           <button
             type="button"
             onClick={() => {
+              suppressFocusRestore();
               onOpenSettings();
-              onClose();
+              closePalette();
             }}
             id="command-option-1"
             role="option"
             aria-selected={activeIndex === 1}
-            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 1 ? "bg-accent" : ""}`}
+            className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 1 ? "bg-accent" : ""}`}
           >
             <Settings className="h-4 w-4 text-muted-foreground" />
             <span>Open settings</span>
@@ -317,7 +389,7 @@ export function CommandPalette({
           {visibleActions.map((action, actionIndex) => {
             const Icon = action.icon;
             const index = actionIndex + 2;
-            const className = `flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === index ? "bg-accent" : ""} ${action.disabledReason ? "text-muted-foreground" : ""}`;
+            const className = `flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === index ? "bg-accent" : ""} ${action.disabledReason ? "text-muted-foreground" : ""}`;
             const content = (
               <>
                 <Icon className="h-4 w-4 text-muted-foreground" />
@@ -339,6 +411,7 @@ export function CommandPalette({
                   aria-selected={activeIndex === index}
                   to={action.href as never}
                   onClick={() => {
+                    suppressFocusRestore();
                     const next = [
                       action.href!,
                       ...recentCommands.filter((item) => item !== action.href),
@@ -347,7 +420,7 @@ export function CommandPalette({
                     platformEvents.publish("platform", "command.executed", {
                       command: action.href,
                     });
-                    onClose();
+                    closePalette();
                   }}
                   className={className}
                 >
@@ -367,11 +440,12 @@ export function CommandPalette({
                   const targetIndex = actionItems.indexOf(action.action);
                   if (targetIndex >= 0) setActiveIndex(targetIndex);
                   if (action.action === "focus-input") {
+                    suppressFocusRestore();
                     document.querySelector<HTMLTextAreaElement>("textarea")?.focus();
                     platformEvents.publish("platform", "command.executed", {
                       command: action.action,
                     });
-                    onClose();
+                    closePalette();
                   } else if (action.action === "theme") {
                     applyThemeMode(
                       document.documentElement.classList.contains("dark") ? "light" : "dark",
@@ -379,13 +453,14 @@ export function CommandPalette({
                     platformEvents.publish("platform", "command.executed", {
                       command: action.action,
                     });
-                    onClose();
+                    closePalette();
                   } else if (action.action === "search") {
+                    suppressFocusRestore();
                     window.dispatchEvent(new CustomEvent("kova-open-search"));
                     platformEvents.publish("platform", "command.executed", {
                       command: action.action,
                     });
-                    onClose();
+                    closePalette();
                   }
                 }}
                 className={className}
@@ -412,12 +487,12 @@ export function CommandPalette({
                 type="button"
                 onClick={() => {
                   onSelectChat(chat.id);
-                  onClose();
+                  closePalette();
                 }}
                 id={`command-option-${actionItems.length + chatIndex}`}
                 role="option"
                 aria-selected={activeIndex === actionItems.length + chatIndex}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === actionItems.length + chatIndex ? "bg-accent" : ""}`}
+                className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === actionItems.length + chatIndex ? "bg-accent" : ""}`}
               >
                 <span className="h-2 w-2 rounded-full bg-muted-foreground/50" />
                 <span className="min-w-0 flex-1 truncate">{chat.title}</span>
