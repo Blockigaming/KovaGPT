@@ -15,6 +15,9 @@ test("production deployment is manual, protected, and uses the generated Nitro a
   assert.match(workflow, /vars\.CLOUDFLARE_ACCOUNT_ID/);
   assert.match(workflow, /vars\.KOVA_CLOUDFLARE_WORKER_NAME/);
   assert.doesNotMatch(workflow, /set -x/);
+  assert.doesNotMatch(workflow, /^    env:\n      CLOUDFLARE_API_TOKEN:/m);
+  assert.match(workflow, /actions\/checkout@[a-f0-9]{40}/);
+  assert.match(workflow, /actions\/setup-node@[a-f0-9]{40}/);
 
   assert.match(workflow, /npm run build/);
   assert.match(workflow, /tests\/integration\/production-worker-artifact\.test\.mjs/);
