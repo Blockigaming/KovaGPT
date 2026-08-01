@@ -20,10 +20,10 @@ import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { useLayout } from "@/hooks/use-mobile";
 
 import { useEffect, useRef, useState } from "react";
-import { tryUseUpload, DAILY_UPLOAD_LIMIT, getUsage } from "@/lib/limits";
+import { tryUseUpload } from "@/lib/limits";
 import { toast } from "sonner";
 import { ResponsiveModelSelector as ModelSelector } from "@/components/ResponsiveModelSelector";
-import type { ModeId, Tier } from "@/lib/modes";
+import { DAILY_UPLOAD_LIMIT_BY_TIER, type ModeId, type Tier } from "@/lib/modes";
 
 export type PendingAttachment = {
   kind: "image" | "text_file" | "library_file";
@@ -268,6 +268,7 @@ export function ChatInput({
     }
     let nextAttachments = [...attachments];
     const seen = new Set(nextAttachments.map((a) => `${a.name}:${a.size ?? 0}`));
+    const uploadLimit = DAILY_UPLOAD_LIMIT_BY_TIER[userTier];
 
     for (const f of files.slice(0, availableSlots)) {
       const isImage = f.type.startsWith("image/");
@@ -295,12 +296,6 @@ export function ChatInput({
         continue;
       }
 
-      const u = getUsage();
-      if (u.uploads >= DAILY_UPLOAD_LIMIT || !tryUseUpload()) {
-        onUploadLimit?.();
-        return;
-      }
-
       if (isImage) {
         if (f.size > MAX_IMAGE_FILE_BYTES) {
           nextAttachments = [
@@ -316,6 +311,10 @@ export function ChatInput({
           ];
           setUploadAnnouncement(`${f.name}: image is larger than 3 MB`);
           continue;
+        }
+        if (!tryUseUpload(uploadLimit)) {
+          onUploadLimit?.();
+          break;
         }
         const uploading: PendingAttachment = {
           kind: "image",
@@ -368,6 +367,10 @@ export function ChatInput({
           ];
           setUploadAnnouncement(`${f.name}: text file is larger than 256 KB`);
           continue;
+        }
+        if (!tryUseUpload(uploadLimit)) {
+          onUploadLimit?.();
+          break;
         }
         const uploading: PendingAttachment = {
           kind: "text_file",
