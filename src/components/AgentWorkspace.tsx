@@ -1,8 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Bot, CheckCircle2, Globe2, LockKeyhole, Play, RotateCcw } from "lucide-react";
+import { useUser } from "@/components/auth/ClerkSafe";
 import { useTier } from "@/hooks/useTier";
-import { loadAgentRuns, saveAgentRuns, type AgentRun, type AgentRunStatus } from "@/lib/work-store";
+import {
+  loadAgentRuns,
+  saveAgentRuns,
+  workStoragePrincipal,
+  type AgentRun,
+  type AgentRunStatus,
+} from "@/lib/work-store";
 
 const DEFAULT_STEPS = [
   "Review the objective and context",
@@ -10,12 +17,21 @@ const DEFAULT_STEPS = [
   "Request approval before external or destructive actions",
   "Prepare the deliverable",
 ];
+const EMPTY_AGENT_RUNS: AgentRun[] = [];
 
 export function AgentWorkspace() {
   const navigate = useNavigate();
+  const { isLoaded, user } = useUser();
+  const userKey = user?.id ?? null;
+  const principal = isLoaded ? workStoragePrincipal(userKey) : null;
   const { tier, loading } = useTier();
   const available = tier === "plus" || tier === "pro";
-  const [runs, setRuns] = useState<AgentRun[]>([]);
+  const [runState, setRunState] = useState<{
+    principal: string | null;
+    items: AgentRun[];
+  }>({ principal: null, items: [] });
+  const principalReady = principal !== null && runState.principal === principal;
+  const runs = principalReady ? runState.items : EMPTY_AGENT_RUNS;
   const [name, setName] = useState("Research and deliver");
   const [objective, setObjective] = useState("");
   const [instructions, setInstructions] = useState("");
@@ -26,12 +42,32 @@ export function AgentWorkspace() {
   const [tools, setTools] = useState<AgentRun["tools"]>(["web", "files"]);
   const [validation, setValidation] = useState<string[]>([]);
 
-  useEffect(() => setRuns(loadAgentRuns()), []);
+  useEffect(() => {
+    setName("Research and deliver");
+    setObjective("");
+    setInstructions("");
+    setProject("");
+    setContext("");
+    setSteps(DEFAULT_STEPS);
+    setApprovalSteps([2]);
+    setTools(["web", "files"]);
+    setValidation([]);
+    if (!isLoaded || principal === null) {
+      setRunState({ principal: null, items: [] });
+      return;
+    }
+    setRunState({ principal, items: loadAgentRuns(userKey) });
+  }, [isLoaded, principal, userKey]);
   const persist = (next: AgentRun[]) => {
-    setRuns(next);
-    saveAgentRuns(next);
+    if (!principalReady || principal === null) return;
+    setRunState({ principal, items: next });
+    saveAgentRuns(userKey, next);
   };
-  const canSave = available && objective.trim().length > 4 && steps.every((step) => step.trim());
+  const canSave =
+    principalReady &&
+    available &&
+    objective.trim().length > 4 &&
+    steps.every((step) => step.trim());
   const contextItems = useMemo(
     () =>
       context
@@ -144,6 +180,10 @@ export function AgentWorkspace() {
             View plans
           </button>
         </div>
+      ) : !principalReady ? (
+        <p className="mt-4 text-sm text-muted-foreground" role="status">
+          Loading agent workspace…
+        </p>
       ) : (
         <>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -269,7 +309,7 @@ export function AgentWorkspace() {
           )}
         </>
       )}
-      {available && (
+      {available && principalReady && (
         <div className="mt-6">
           <h3 className="font-medium">Execution history</h3>
           {runs.length === 0 ? (
