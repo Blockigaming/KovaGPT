@@ -4,13 +4,21 @@ const OAUTH_COOKIE_MAX_AGE = 600;
 export const INTEGRATION_OAUTH_COOKIE = "__Host-kova_integration_oauth";
 export const GITHUB_OAUTH_COOKIE = "__Host-kova_github_oauth";
 
+function hasControlCharacters(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code <= 0x1f || code === 0x7f) return true;
+  }
+  return false;
+}
+
 export function normalizeOAuthReturnPath(value: unknown): string {
   if (
     typeof value !== "string" ||
     !value.startsWith("/") ||
     value.startsWith("//") ||
     value.includes("\\") ||
-    /[\u0000-\u001f\u007f]/.test(value)
+    hasControlCharacters(value)
   ) {
     return "/apps";
   }
