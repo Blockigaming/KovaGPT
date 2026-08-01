@@ -142,9 +142,10 @@ export function CommandPalette({
     returnFocusRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
+    const returnTarget = returnFocusRef.current;
     return () => {
       if (!shouldRestoreFocusRef.current) return;
-      window.requestAnimationFrame(() => returnFocusRef.current?.focus());
+      window.requestAnimationFrame(() => returnTarget?.focus());
     };
   }, [open]);
   useEffect(() => {
@@ -181,6 +182,10 @@ export function CommandPalette({
     setActiveIndex(0);
   }, [query, open]);
 
+  const suppressFocusRestore = () => {
+    suppressFocusRestore();
+  };
+
   const chooseActive = () => {
     const action = actionItems[activeIndex];
     if (action === "new-chat") {
@@ -189,13 +194,13 @@ export function CommandPalette({
       return;
     }
     if (action === "settings") {
-      shouldRestoreFocusRef.current = false;
+      suppressFocusRestore();
       onOpenSettings();
       onClose();
       return;
     }
     if (typeof action === "string" && action.startsWith("/")) {
-      shouldRestoreFocusRef.current = false;
+      suppressFocusRestore();
       const next = [action, ...recentCommands.filter((item) => item !== action)].slice(0, 12);
       localStorage.setItem("kova-command-history-v1", JSON.stringify(next));
       platformEvents.publish("platform", "command.executed", { command: action });
@@ -204,7 +209,7 @@ export function CommandPalette({
       return;
     }
     if (action === "focus-input") {
-      shouldRestoreFocusRef.current = false;
+      suppressFocusRestore();
       document.querySelector<HTMLTextAreaElement>("textarea")?.focus();
       platformEvents.publish("platform", "command.executed", { command: action });
       onClose();
@@ -217,6 +222,7 @@ export function CommandPalette({
       return;
     }
     if (action === "search") {
+      suppressFocusRestore();
       window.dispatchEvent(new CustomEvent("kova-open-search"));
       platformEvents.publish("platform", "command.executed", { command: action });
       onClose();
@@ -339,6 +345,7 @@ export function CommandPalette({
           <button
             type="button"
             onClick={() => {
+              suppressFocusRestore();
               onOpenSettings();
               onClose();
             }}
@@ -375,6 +382,7 @@ export function CommandPalette({
                   aria-selected={activeIndex === index}
                   to={action.href as never}
                   onClick={() => {
+                    suppressFocusRestore();
                     const next = [
                       action.href!,
                       ...recentCommands.filter((item) => item !== action.href),
@@ -403,6 +411,7 @@ export function CommandPalette({
                   const targetIndex = actionItems.indexOf(action.action);
                   if (targetIndex >= 0) setActiveIndex(targetIndex);
                   if (action.action === "focus-input") {
+                    suppressFocusRestore();
                     document.querySelector<HTMLTextAreaElement>("textarea")?.focus();
                     platformEvents.publish("platform", "command.executed", {
                       command: action.action,
@@ -417,6 +426,7 @@ export function CommandPalette({
                     });
                     onClose();
                   } else if (action.action === "search") {
+                    suppressFocusRestore();
                     window.dispatchEvent(new CustomEvent("kova-open-search"));
                     platformEvents.publish("platform", "command.executed", {
                       command: action.action,
