@@ -122,3 +122,28 @@ test("tool activity covers multimodal and Canvas operations without secret metad
     assert.match(activity, new RegExp(`\\b${token}\\b`), `activity should include ${token}`);
   }
 });
+
+
+test("image lightbox delegates modal lifecycle and restores intentional focus", () => {
+  const images = read("src/routes/images.tsx");
+  for (const token of [
+    "DialogContent",
+    "DialogTitle",
+    "DialogDescription",
+    "data-image-lightbox",
+    "onOpenAutoFocus",
+    "onCloseAutoFocus",
+    "lightboxInitialFocusRef",
+    "lightboxReturnFocusRef",
+    "lightboxReturnToPromptRef",
+    "isConnected",
+  ]) {
+    assert.match(images, new RegExp(token));
+  }
+  assert.doesNotMatch(images, /window\.addEventListener\("keydown", onKey\)/);
+  assert.doesNotMatch(images, /aria-modal="true"/);
+
+  const styles = read("src/styles.css");
+  assert.match(styles, /:not\(\[data-image-lightbox\]\)/);
+  assert.match(styles, /\.image-lightbox > button:last-child/);
+});
