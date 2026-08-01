@@ -122,6 +122,7 @@ test("the affected browser specs wait for readiness and assert principal-scoped 
     "tests/e2e/core-chat-experience.spec.ts",
     "tests/e2e/desktop-polish.spec.ts",
     "tests/e2e/high-impact-chat.spec.ts",
+    "tests/e2e/mobile-shell-ui-truth.spec.ts",
   ];
   const [helper, guardSpec, ...specs] = await Promise.all([
     read("tests/e2e/hydration.ts"),
@@ -142,7 +143,7 @@ test("the affected browser specs wait for readiness and assert principal-scoped 
     assert.equal(waitCount, gotoCount, paths[index]);
   }
 
-  const highImpact = specs.at(-1);
+  const highImpact = specs.at(-2);
   assert.match(highImpact, /legacy: localStorage\.getItem\("kovagpt:archived"\)/);
   assert.match(highImpact, /guest: localStorage\.getItem\("kovagpt:archived:v2:guest"\)/);
   assert.match(highImpact, /toEqual\(\{ legacy: null, guest: "\[\]" \}\)/);
