@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import { nitro } from "nitro/vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
@@ -11,6 +12,18 @@ export default defineConfig({
     // TanStack resolves this entry relative to the default src directory.
     // Using "src/server.ts" would incorrectly resolve to "src/src/server.ts".
     tanstackStart({ server: { entry: "server" } }),
+    // Production deploys the generated Nitro Cloudflare module, not the raw
+    // TypeScript Worker entry. Keep the output contract explicit so a manual
+    // Wrangler deployment cannot silently fall back to src/server.ts.
+    nitro({
+      preset: "cloudflare-module",
+      output: {
+        dir: "dist",
+        serverDir: "dist/server",
+        publicDir: "dist/client",
+      },
+      cloudflare: { nodeCompat: true, deployConfig: true },
+    }),
     react(),
   ],
   ssr: {
