@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Sidebar } from "@/components/Sidebar";
-import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog })),
 );
@@ -13,7 +12,16 @@ import { AppErrorBoundary, OfflineBanner } from "@/components/states";
 import { MobileTopBar } from "@/components/MobileTopBar";
 import { installShortcutListener } from "@/lib/shortcuts";
 import { PanelLeft } from "lucide-react";
-import { type Conversation, loadConversations, saveConversations } from "@/lib/chat-store";
+import { useUser } from "@/components/auth/ClerkSafe";
+import {
+  type Conversation,
+  chatStoragePrincipal,
+  clearPendingActive,
+  loadConversations,
+  saveConversations,
+  savePendingActive,
+} from "@/lib/chat-store";
+import { useNovaSettings } from "@/lib/use-nova-settings";
 
 /**
  * Shared shell that renders the chat Sidebar alongside any page (e.g. /apps,
@@ -21,7 +29,15 @@ import { type Conversation, loadConversations, saveConversations } from "@/lib/c
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const { isLoaded, user } = useUser();
+  const userKey = user?.id ?? null;
+  const storagePrincipal = chatStoragePrincipal(userKey);
+  const [conversationState, setConversationState] = useState<{
+    principal: string | null;
+    items: Conversation[];
+  }>({ principal: null, items: [] });
+  const principalReady = isLoaded && conversationState.principal === storagePrincipal;
+  const conversations = principalReady ? conversationState.items : [];
   // Default closed to avoid a flash-of-open sidebar during SSR/hydration on
   // narrow viewports; on desktop we restore the persisted user preference.
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -49,17 +65,26 @@ export function AppShell({ children }: { children: ReactNode }) {
   const openHelp = useCallback(() => {
     navigate({ to: "/help" as never });
   }, [navigate]);
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useNovaSettings(userKey, isLoaded);
 
   useEffect(() => {
-    setConversations(loadConversations());
-  }, []);
+    if (!isLoaded) {
+      setConversationState({ principal: null, items: [] });
+      setSettingsOpen(false);
+      return;
+    }
+    setSettingsOpen(false);
+    setConversationState({
+      principal: storagePrincipal,
+      items: loadConversations(userKey),
+    });
+  }, [isLoaded, storagePrincipal, userKey]);
 
   useEffect(() => {
     return installShortcutListener({
       "new-chat": () => {
         try {
-          localStorage.removeItem("nova-gpt-pending-active");
+          clearPendingActive(userKey);
         } catch {
           /* ignore */
         }
@@ -93,7 +118,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         el?.focus();
       },
     });
-  }, [navigate]);
+  }, [navigate, userKey]);
 
   const openSettings = useCallback((tab?: string) => {
     settingsReturnFocusRef.current =
@@ -112,8 +137,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [openSettings]);
 
   const goToConversation = (id: string) => {
+    if (!principalReady) return;
     try {
-      localStorage.setItem("nova-gpt-pending-active", id);
+      savePendingActive(userKey, id);
     } catch {
       /* ignore */
     }
@@ -122,7 +148,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const handleNew = () => {
     try {
-      localStorage.removeItem("nova-gpt-pending-active");
+      clearPendingActive(userKey);
     } catch {
       /* ignore */
     }
@@ -130,9 +156,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   const handleDelete = (id: string) => {
+    if (!principalReady) return;
     const next = conversations.filter((c) => c.id !== id);
-    setConversations(next);
-    saveConversations(next);
+    setConversationState({ principal: storagePrincipal, items: next });
+    saveConversations(userKey, next);
   };
 
   return (
@@ -205,12 +232,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             returnFocusTarget={settingsReturnFocusRef.current}
             onChange={setSettings}
             onClearAll={() => {
-              try {
-                localStorage.removeItem("nova-gpt-conversations-v2");
-              } catch {
-                /* ignore */
-              }
-              setConversations([]);
+              setConversationState((previous) =>
+                previous.principal === storagePrincipal
+                  ? { principal: storagePrincipal, items: [] }
+                  : previous,
+              );
             }}
             onOpenHelp={openHelp}
             initialTab={settingsTab}
