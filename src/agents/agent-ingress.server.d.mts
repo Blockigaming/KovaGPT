@@ -5,14 +5,7 @@ export const AGENT_TEAM_MAX_TASKS: number;
 
 export type AgentTeamTask = {
   key: string;
-  role:
-    | "planner"
-    | "research"
-    | "browser"
-    | "file"
-    | "coding"
-    | "writing"
-    | "review";
+  role: "planner" | "research" | "browser" | "file" | "coding" | "writing" | "review";
   title: string;
   instructions: string;
   dependencies: string[];
