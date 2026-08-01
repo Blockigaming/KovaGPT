@@ -7,10 +7,11 @@ const base = () =>
     : process.env.PLAID_ENV === "development"
       ? "https://development.plaid.com"
       : "https://sandbox.plaid.com";
-const configured = () =>
-  Boolean(process.env.PLAID_CLIENT_ID && process.env.PLAID_SECRET && process.env.PLAID_WEBHOOK_URL);
+const credentialsConfigured = () =>
+  Boolean(process.env.PLAID_CLIENT_ID && process.env.PLAID_SECRET);
+const configured = () => Boolean(credentialsConfigured() && process.env.PLAID_WEBHOOK_URL);
 async function call<T>(path: string, body: Record<string, unknown>): Promise<T> {
-  if (!configured()) throw new Error("plaid_not_configured");
+  if (!credentialsConfigured()) throw new Error("plaid_not_configured");
   const response = await fetch(`${base()}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -24,6 +25,7 @@ async function call<T>(path: string, body: Record<string, unknown>): Promise<T> 
   return response.json() as Promise<T>;
 }
 export async function createFinanceLinkToken(caller: AuthedCaller, country: string) {
+  if (!configured()) throw new Error("plaid_not_configured");
   const allowed = (process.env.KOVA_FINANCE_REGIONS ?? "US")
     .split(",")
     .map((v) => v.trim().toUpperCase());
