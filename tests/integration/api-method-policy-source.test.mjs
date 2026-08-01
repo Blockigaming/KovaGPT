@@ -16,7 +16,8 @@ async function readRouteSource(routeId) {
 }
 
 function routeIdToPath(routeId) {
-  return `/${routeId.replaceAll("[.]", ".")}`;
+  const literalDots = routeId.replaceAll("[.]", ".");
+  return `/${literalDots.replace(/\[\.(?<segment>[^\]]+)\]/gu, ".$<segment>")}`;
 }
 
 test("the centralized inventory exactly covers every generated server route handler", async () => {
