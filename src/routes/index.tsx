@@ -20,24 +20,16 @@ import { ResponsiveModelSelector } from "@/components/ResponsiveModelSelector";
 import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 
 const SettingsDialog = lazy(() =>
-  import("@/components/SettingsDialog").then((m) => ({
-    default: m.SettingsDialog,
-  })),
+  import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog })),
 );
 const OnboardingDialog = lazy(() =>
-  import("@/components/OnboardingDialog").then((m) => ({
-    default: m.OnboardingDialog,
-  })),
+  import("@/components/OnboardingDialog").then((m) => ({ default: m.OnboardingDialog })),
 );
 const LimitReachedDialog = lazy(() =>
-  import("@/components/LimitReachedDialog").then((m) => ({
-    default: m.LimitReachedDialog,
-  })),
+  import("@/components/LimitReachedDialog").then((m) => ({ default: m.LimitReachedDialog })),
 );
 const ShareChatDialog = lazy(() =>
-  import("@/components/ShareChatDialog").then((m) => ({
-    default: m.ShareChatDialog,
-  })),
+  import("@/components/ShareChatDialog").then((m) => ({ default: m.ShareChatDialog })),
 );
 import { applyThemeMode } from "@/lib/theme";
 import { loadSettings, settingsKey } from "@/lib/use-nova-settings";
@@ -361,10 +353,7 @@ function KovaGPT() {
       } else if (rawPrompt) {
         const launch = JSON.parse(rawPrompt) as {
           prompt: string;
-          pack?: {
-            name: string;
-            items: { title: string; content: string }[];
-          } | null;
+          pack?: { name: string; items: { title: string; content: string }[] } | null;
         };
         const context = launch.pack
           ? `\n\nContext pack “${launch.pack.name}”:\n${launch.pack.items.map((item) => `## ${item.title}\n${item.content}`).join("\n\n")}`
@@ -437,10 +426,7 @@ function KovaGPT() {
     const el = scrollRef.current;
     if (!el) return;
     if (nearBottomRef.current) {
-      el.scrollTo({
-        top: el.scrollHeight,
-        behavior: isStreaming ? "auto" : "smooth",
-      });
+      el.scrollTo({ top: el.scrollHeight, behavior: isStreaming ? "auto" : "smooth" });
       setShowJumpToLatest(false);
     } else {
       setShowJumpToLatest(true);
@@ -457,10 +443,7 @@ function KovaGPT() {
       const payload = {
         chatId: active.id,
         title: active.title,
-        messages: active.messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
+        messages: active.messages.map((m) => ({ role: m.role, content: m.content })),
       };
       authFetch("/api/memory", {
         method: "POST",
@@ -614,11 +597,7 @@ function KovaGPT() {
               : { kind: "image" as const, dataUrl: a.dataUrl },
         ),
       };
-      const assistantMsg: Message = {
-        id: newId(),
-        role: "assistant",
-        content: "",
-      };
+      const assistantMsg: Message = { id: newId(), role: "assistant", content: "" };
 
       const editIndex =
         existingConversation && editingMessage?.conversationId === existingConversation.id
@@ -867,11 +846,7 @@ function KovaGPT() {
             );
           }
         } else {
-          const err = e as Error & {
-            requestId?: string;
-            category?: string;
-            retryable?: boolean;
-          };
+          const err = e as Error & { requestId?: string; category?: string; retryable?: boolean };
           const raw = err.message || "Something went wrong";
           const isNetwork =
             /load failed|networkerror|failed to fetch|network request failed/i.test(raw) ||
@@ -1080,11 +1055,7 @@ function KovaGPT() {
           setConversations((prev) =>
             prev.map((c) =>
               c.id === id
-                ? {
-                    ...c,
-                    pinned: !c.pinned,
-                    pinnedAt: !c.pinned ? Date.now() : undefined,
-                  }
+                ? { ...c, pinned: !c.pinned, pinnedAt: !c.pinned ? Date.now() : undefined }
                 : c,
             ),
           );
@@ -1154,9 +1125,7 @@ function KovaGPT() {
                     const transcript = active.messages
                       .map((m) => `${m.role === "user" ? "You" : "KovaGPT"}: ${m.content}`)
                       .join("\n\n");
-                    const blob = new Blob([transcript], {
-                      type: "text/markdown;charset=utf-8",
-                    });
+                    const blob = new Blob([transcript], { type: "text/markdown;charset=utf-8" });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement("a");
                     a.href = url;
