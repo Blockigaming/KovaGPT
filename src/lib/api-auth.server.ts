@@ -2,6 +2,7 @@
 // callers and enforce per-user daily quotas. NEVER import from client code.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { tierForLookupKey, type BillingTier } from "@/lib/billing-plans";
 
 export const DAILY_IMAGE_LIMIT = 1;
 export const DAILY_CHAT_LIMIT = 50;
@@ -151,7 +152,7 @@ export async function enforceStorage(
  * latest active subscription row. Never trust the client's `mode` choice
  * without checking this - the client can be edited.
  */
-export type CallerTier = "free" | "plus" | "pro";
+export type CallerTier = BillingTier;
 
 export async function getCallerTier(caller: AuthedCaller): Promise<CallerTier> {
   const { data } = await caller.supabaseAdmin
@@ -169,9 +170,8 @@ export async function getCallerTier(caller: AuthedCaller): Promise<CallerTier> {
         (!row.current_period_end || end > now)) ||
       (row.status === "canceled" && end > now);
     if (!active) continue;
-    const id = (row.price_id ?? "").toLowerCase();
-    if (id.includes("pro")) return "pro";
-    if (id.includes("plus")) return "plus";
+    const tier = tierForLookupKey(row.price_id);
+    if (tier !== "free") return tier;
   }
   return "free";
 }
