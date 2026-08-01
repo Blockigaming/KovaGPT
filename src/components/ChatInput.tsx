@@ -439,7 +439,7 @@ export function ChatInput({
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    if (e.dataTransfer.types.includes("Files")) e.preventDefault();
+    if (!disabled && showAddMenu && e.dataTransfer.types.includes("Files")) e.preventDefault();
   };
 
   const attachLibraryFile = (item: RecentLibraryFile) => {
