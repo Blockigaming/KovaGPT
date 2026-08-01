@@ -1,12 +1,13 @@
 /**
- * Decide whether an Enter key event should submit the composer.
+ * Decide whether a key event should submit the composer.
  *
- * Plain Enter is a desktop preference. Mobile Enter always inserts a newline,
- * while Ctrl/Command+Enter remains an explicit, layout-independent submit
- * shortcut. Composition and newline modifiers always win.
+ * Plain Enter is a desktop pointer preference. Mobile/coarse-pointer Enter
+ * always inserts a newline, while Ctrl/Command+Enter remains an explicit,
+ * layout-independent submit shortcut. Composition and newline modifiers win.
  */
 export function shouldSubmitComposerOnEnter({
   key,
+  keyCode = 0,
   shiftKey = false,
   ctrlKey = false,
   metaKey = false,
@@ -14,8 +15,13 @@ export function shouldSubmitComposerOnEnter({
   isComposing = false,
   sendOnEnter = true,
   isMobileLayout = false,
+  isCoarsePointer = false,
+  hasContent = true,
+  disabled = false,
+  isStreaming = false,
 }) {
-  if (key !== "Enter" || isComposing || shiftKey || altKey) return false;
+  if (key !== "Enter" || keyCode === 229 || isComposing) return false;
+  if (disabled || isStreaming || !hasContent || shiftKey || altKey) return false;
   if (ctrlKey || metaKey) return true;
-  return sendOnEnter && !isMobileLayout;
+  return sendOnEnter && !isMobileLayout && !isCoarsePointer;
 }
