@@ -1,5 +1,7 @@
 export type BillingTier = "free" | "plus" | "pro";
 
+export const BILLING_ENV = "live" as const;
+
 export const BILLING_PLANS = Object.freeze({
   plus_monthly: {
     lookupKey: "plus_monthly",
