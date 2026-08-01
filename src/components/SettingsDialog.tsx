@@ -479,6 +479,7 @@ export function SettingsDialog({
             onChange={onChange}
             setMode={setMode}
             onSignIn={() => clerk?.openSignIn()}
+            onClose={() => onOpenChange(false)}
           />
         ) : (
           <Tabs
@@ -2092,11 +2093,13 @@ function SignedOutSettings({
   onChange,
   setMode,
   onSignIn,
+  onClose,
 }: {
   settings: Settings;
   onChange: (s: Settings) => void;
   setMode: (m: ThemeMode) => void;
   onSignIn: () => void;
+  onClose: () => void;
 }) {
   return (
     <div className="overflow-y-auto max-h-[78vh] bg-background">
@@ -2182,7 +2185,7 @@ function SignedOutSettings({
               functional controls. Read the{" "}
               <Link
                 to="/privacy"
-                onClick={() => onOpenChange(false)}
+                onClick={onClose}
                 className="underline underline-offset-2 hover:text-foreground"
               >
                 Privacy Policy
