@@ -3,6 +3,7 @@
 // is called from the confirmation card the user sees in chat.
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
+import { BoundedJsonError, readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
 import { cancelPendingAction, executePendingAction } from "@/lib/google-tools.server";
 import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
 
@@ -18,9 +19,12 @@ export const Route = createFileRoute("/api/chat/confirm")({
         if (limited) return limited;
         let body: Body;
         try {
-          body = (await request.json()) as Body;
-        } catch {
-          return Response.json({ ok: false, error: "Invalid JSON" }, { status: 400 });
+          body = (await readBoundedJsonObject(request, 8 * 1024)) as Body;
+        } catch (error) {
+          if (error instanceof BoundedJsonError) {
+            return Response.json({ ok: false, error: error.code }, { status: error.status });
+          }
+          return Response.json({ ok: false, error: "invalid_request_body" }, { status: 400 });
         }
         const id = String(body.action_id ?? "");
         const decision = body.decision;
