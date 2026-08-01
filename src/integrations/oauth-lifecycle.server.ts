@@ -202,30 +202,54 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
   if (!account) throw new Error("linked_account_not_found");
   const provider = OAUTH_PROVIDERS[account.provider_id as OAuthProviderId];
   if (!provider) throw new Error("unsupported_linked_account_provider");
-  const token = account.refresh_token_ciphertext
-    ? await decryptCredential(account.refresh_token_ciphertext)
-    : await decryptCredential(account.access_token_ciphertext);
-  let providerRevoked = !provider.revocationEndpoint;
-  if (provider.revocationEndpoint) {
-    const endpoint = provider.revocationEndpoint.replace(
-      "{client_id}",
-      process.env[provider.clientIdEnv] ?? "",
-    );
+  const clientId = process.env[provider.clientIdEnv];
+  const clientSecret = process.env[provider.clientSecretEnv];
+  const revocationCiphertext =
+    provider.id === "github"
+      ? account.access_token_ciphertext
+      : (account.refresh_token_ciphertext ?? account.access_token_ciphertext);
+  let token: string | null = null;
+  try {
+    token = await decryptCredential(revocationCiphertext);
+  } catch {
+    console.error("[oauth-disconnect] revocation credential unavailable", {
+      providerId: provider.id,
+      ownerId,
+    });
+  }
+
+  // Only a confirmed provider response counts as remote revocation. Providers
+  // without an implemented endpoint remain pending even though local
+  // credentials are still destroyed below.
+  let providerRevoked = false;
+  const canAttemptRevocation =
+    Boolean(provider.revocationEndpoint && token) &&
+    (provider.id !== "github" || Boolean(clientId && clientSecret));
+  if (provider.revocationEndpoint && token && canAttemptRevocation) {
+    const endpoint = provider.revocationEndpoint.replace("{client_id}", clientId ?? "");
+    const githubAuthorization =
+      provider.id === "github"
+        ? `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`
+        : null;
     const response = await fetch(endpoint, {
       method: provider.id === "github" ? "DELETE" : "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-        Accept: "application/json",
+        Authorization: githubAuthorization ?? `Bearer ${token}`,
+        "Content-Type":
+          provider.id === "github" ? "application/json" : "application/x-www-form-urlencoded",
+        Accept: provider.id === "github" ? "application/vnd.github+json" : "application/json",
+        ...(provider.id === "github" ? { "X-GitHub-Api-Version": "2022-11-28" } : {}),
       },
       body:
-        provider.id === "box"
-          ? new URLSearchParams({
-              token,
-              client_id: process.env[provider.clientIdEnv]!,
-              client_secret: process.env[provider.clientSecretEnv]!,
-            })
-          : undefined,
+        provider.id === "github"
+          ? JSON.stringify({ access_token: token })
+          : provider.id === "box"
+            ? new URLSearchParams({
+                token,
+                client_id: clientId!,
+                client_secret: clientSecret!,
+              })
+            : undefined,
     });
     providerRevoked = response.ok;
   }
