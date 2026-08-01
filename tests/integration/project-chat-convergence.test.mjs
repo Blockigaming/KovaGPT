@@ -10,6 +10,10 @@ test("project chat uses the shared chat surface without unsupported controls", (
   assert.match(projectChat, /import \{ ChatMessage \}/);
   assert.match(projectChat, /<ChatInput/);
   assert.match(projectChat, /<ChatMessage/);
+  assert.match(projectChat, /<Dialog/);
+  assert.match(projectChat, /<AlertDialog/);
+  assert.match(projectChat, /onCloseAutoFocus/);
+  assert.match(projectChat, /flex min-h-0 w-full flex-1 flex-col overflow-hidden/);
   assert.match(projectChat, /showAddMenu=\{false\}/);
   assert.match(projectChat, /disabled=\{!canEdit\}/);
   assert.doesNotMatch(projectChat, /@\/components\/ui\/textarea/);
@@ -28,6 +32,14 @@ test("project chat can stop generation and saves only non-empty assistant output
     projectChat,
     /await fnSave\(\{ data: \{ id: requestChatId, messages: finalMessages \} \}\)/,
   );
+  assert.match(
+    projectChat,
+    /if \(activeChatIdRef\.current === requestChatId\) \{\s*toast\.error\("The chat could not be saved"\)/,
+  );
+  assert.match(projectChat, /setRenameOpen\(false\)/);
+  assert.match(projectChat, /setRenaming\(false\)/);
+  assert.match(projectChat, /setDeleteOpen\(false\)/);
+  assert.match(projectChat, /setDeleting\(false\)/);
   assert.match(projectChat, /project\?\.role === "owner" \|\| project\?\.role === "editor"/);
   assert.match(projectChat, /projectId,/);
 });
@@ -40,4 +52,8 @@ test("shared composer defaults preserve existing callers while supporting projec
   assert.match(chatInput, /if \(disabled \|\| submittingRef\.current \|\| isStreaming\) return/);
   assert.match(chatInput, /disabled=\{disabled\}/);
   assert.match(chatInput, /showAddMenu && isMobileLayout/);
+  assert.match(
+    chatInput,
+    /if \(!disabled && showAddMenu && e\.dataTransfer\.types\.includes\("Files"\)\)/,
+  );
 });
