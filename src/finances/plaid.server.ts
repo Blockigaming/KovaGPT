@@ -1,7 +1,4 @@
-import {
-  decryptCredential,
-  encryptCredential,
-} from "@/integrations/credential-vault.server";
+import { decryptCredential, encryptCredential } from "@/integrations/credential-vault.server";
 import type { AuthedCaller } from "@/lib/api-auth.server";
 import { createClient } from "@supabase/supabase-js";
 const base = () =>
@@ -78,7 +75,6 @@ export async function exchangeFinanceToken(
   } as never);
   return data;
 }
-
 
 export async function disconnectAllFinance(caller: AuthedCaller) {
   const db = caller.supabaseAdmin as unknown as ReturnType<typeof createClient>;
