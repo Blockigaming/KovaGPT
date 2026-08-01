@@ -9,24 +9,37 @@ test("each browser group runs on a fresh runner without reducing coverage", () =
   assert.match(workflow, /needs: verify/);
   assert.match(workflow, /fail-fast: false/);
 
-  const groups = [
-    ["phone-320x700", "phone-375x812", "phone-390x844", "phone-412x915", "phone-430x932"],
-    ["tablet-768x1024", "phone-landscape-844x390", "tablet-1024x768"],
-    ["desktop-1280x800"],
-    ["desktop-1440x900"],
-    ["desktop-1728x1117"],
+  const singleRunProjects = [
+    "phone-320x700",
+    "phone-375x812",
+    "phone-390x844",
+    "phone-412x915",
+    "phone-430x932",
+    "tablet-768x1024",
+    "phone-landscape-844x390",
+    "tablet-1024x768",
+    "desktop-1280x800",
+    "desktop-1728x1117",
   ];
-  for (const projects of groups) {
-    for (const project of projects) {
-      assert.equal(
-        workflow.match(new RegExp(`--project=${project}`, "g"))?.length,
-        1,
-        `${project} must appear exactly once`,
-      );
-    }
+  for (const project of singleRunProjects) {
+    assert.equal(
+      workflow.match(new RegExp(`--project=${project}`, "g"))?.length,
+      1,
+      `${project} must appear exactly once`,
+    );
   }
 
-  assert.match(workflow, /npm run test:e2e -- \$\{\{ matrix\.projects \}\}/);
+  assert.equal(
+    workflow.match(/--project=desktop-1440x900/g)?.length,
+    2,
+    "desktop-1440x900 must be split across two fresh runners",
+  );
+  assert.match(workflow, /id: desktop-1440-a[\s\S]*?shard: 1\/2/);
+  assert.match(workflow, /id: desktop-1440-b[\s\S]*?shard: 2\/2/);
+  assert.match(
+    workflow,
+    /npm run test:e2e -- \$\{\{ matrix\.projects \}\} --shard=\$\{\{ matrix\.shard \}\}/,
+  );
   assert.match(workflow, /name: playwright-artifacts-\$\{\{ matrix\.id \}\}/);
 });
 
