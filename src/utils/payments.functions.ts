@@ -155,7 +155,7 @@ type PortalResult = { url: string } | { error: string };
 export const createPortalSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { returnUrl?: string; environment: StripeEnv }) => data)
-  .handler(async ({ data, context }): Promise<PortalResult> => {
+  .handler(async ({ context }): Promise<PortalResult> => {
     const { supabase, userId } = context;
     const { data: sub, error: subscriptionError } = await supabase
       .from("subscriptions")
