@@ -19,8 +19,7 @@ export function unscopedLegacyComposerSettingsKey() {
   return LEGACY_SETTINGS_KEY_BASE;
 }
 
-function readLegacyValue(storage, key) {
-  const raw = storage.getItem(key);
+function readLegacyValue(raw) {
   if (!raw) return undefined;
   const value = JSON.parse(raw)?.sendOnEnter;
   return typeof value === "boolean" ? value : undefined;
@@ -40,10 +39,10 @@ export function readPersistedSendOnEnter(storage, scope) {
     if (scopedLegacy) {
       // A scoped record belongs to this user. Never replace it with the old
       // unscoped value, even when the scoped record omits this preference.
-      sendOnEnter = readLegacyValue(storage, legacyComposerSettingsKey(scope));
+      sendOnEnter = readLegacyValue(scopedLegacy);
       if (sendOnEnter === undefined) return DEFAULT_SEND_ON_ENTER;
     } else {
-      sendOnEnter = readLegacyValue(storage, unscopedLegacyComposerSettingsKey());
+      sendOnEnter = readLegacyValue(storage.getItem(unscopedLegacyComposerSettingsKey()));
     }
   } catch {
     return DEFAULT_SEND_ON_ENTER;
