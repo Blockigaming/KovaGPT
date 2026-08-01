@@ -1,7 +1,14 @@
 // Google OAuth callback. Verifies HMAC-signed state, exchanges code,
 // stores per-user tokens, then bounces back into the app.
 import { createFileRoute } from "@tanstack/react-router";
-import { exchangeCodeForTokens, storeGoogleTokens, logAudit } from "@/lib/google-oauth.server";
+import {
+  exchangeCodeForTokens,
+  googleOAuthConfigured,
+  logAudit,
+  prepareGoogleTokenStorage,
+  storeGoogleTokens,
+} from "@/lib/google-oauth.server";
+import { runAfterGoogleTokenStorageReady } from "@/lib/google-token-bundle.mjs";
 
 async function verifyState(state: string): Promise<string | null> {
   const parts = state.split(".");
@@ -57,19 +64,17 @@ function readOAuthCookie(request: Request): { state: string; verifier: string } 
   if (!value) return null;
   const separator = value.lastIndexOf(".");
   if (separator < 1) return null;
-  return { state: value.slice(0, separator), verifier: value.slice(separator + 1) };
+  return {
+    state: value.slice(0, separator),
+    verifier: value.slice(separator + 1),
+  };
 }
 
 export const Route = createFileRoute("/api/google/callback")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        if (
-          !process.env.SUPABASE_SERVICE_ROLE_KEY ||
-          !process.env.GOOGLE_OAUTH_CLIENT_ID ||
-          !process.env.GOOGLE_OAUTH_CLIENT_SECRET ||
-          !process.env.GOOGLE_REDIRECT_URI
-        ) {
+        if (!googleOAuthConfigured()) {
           return bounce(request, { google_error: "not_configured" }, true);
         }
         const url = new URL(request.url);
@@ -85,7 +90,10 @@ export const Route = createFileRoute("/api/google/callback")({
         const userId = await verifyState(state);
         if (!userId) return bounce(request, { google_error: "invalid_state" }, true);
         try {
-          const tokens = await exchangeCodeForTokens(code, request, oauthCookie.verifier);
+          const tokens = await runAfterGoogleTokenStorageReady(
+            () => prepareGoogleTokenStorage(userId),
+            () => exchangeCodeForTokens(code, request, oauthCookie.verifier),
+          );
           await storeGoogleTokens(userId, tokens);
           await logAudit({
             userId,
@@ -94,8 +102,9 @@ export const Route = createFileRoute("/api/google/callback")({
             summary: "Connected Google account",
           });
           return bounce(request, { google_connected: "1" }, true);
-        } catch (e) {
-          console.error("[google callback]", e);
+        } catch {
+          // Never log tokens, ciphertext, provider response bodies, or arbitrary thrown values.
+          console.error("[google callback] exchange or storage failed");
           return bounce(request, { google_error: "exchange_failed" }, true);
         }
       },

@@ -1,7 +1,11 @@
 // Start Google OAuth flow. Requires a signed-in KovaGPT user.
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
-import { buildGoogleAuthUrl } from "@/lib/google-oauth.server";
+import {
+  buildGoogleAuthUrl,
+  googleOAuthConfigured,
+  prepareGoogleTokenStorage,
+} from "@/lib/google-oauth.server";
 import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
 
 export const Route = createFileRoute("/api/google/auth")({
@@ -12,33 +16,31 @@ export const Route = createFileRoute("/api/google/auth")({
         if (auth instanceof Response) return auth;
         const limited = enforceGoogleRateLimit(auth.userId, "oauth", 10);
         if (limited) return limited;
-        if (
-          !process.env.GOOGLE_OAUTH_CLIENT_ID ||
-          !process.env.GOOGLE_OAUTH_CLIENT_SECRET ||
-          !process.env.GOOGLE_REDIRECT_URI
-        ) {
+        if (!googleOAuthConfigured()) {
           return Response.json({ error: "Google OAuth is not configured" }, { status: 503 });
         }
-        // State encodes the user id so the callback (which is not
-        // authenticated by the bearer flow) can identify who to store
-        // tokens for. Signed with SUPABASE_SERVICE_ROLE_KEY as an HMAC
-        // secret to prevent forgery.
-        const nonce = crypto.randomUUID();
-        const payload = `${auth.userId}.${nonce}.${Date.now()}`;
-        const key = await crypto.subtle.importKey(
-          "raw",
-          new TextEncoder().encode(process.env.SUPABASE_SERVICE_ROLE_KEY!),
-          { name: "HMAC", hash: "SHA-256" },
-          false,
-          ["sign"],
-        );
-        const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
-        const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig)))
-          .replace(/\+/g, "-")
-          .replace(/\//g, "_")
-          .replace(/=+$/, "");
-        const state = `${payload}.${sigB64}`;
         try {
+          // Validate the encryption key, applied schema, and any legacy row before sending the user
+          // to Google. The callback repeats this gate before exchanging the authorization code.
+          await prepareGoogleTokenStorage(auth.userId);
+
+          // State encodes the user id so the callback (which is not authenticated by the bearer
+          // flow) can identify who to store tokens for. Sign it to prevent forgery.
+          const nonce = crypto.randomUUID();
+          const payload = `${auth.userId}.${nonce}.${Date.now()}`;
+          const key = await crypto.subtle.importKey(
+            "raw",
+            new TextEncoder().encode(process.env.SUPABASE_SERVICE_ROLE_KEY!),
+            { name: "HMAC", hash: "SHA-256" },
+            false,
+            ["sign"],
+          );
+          const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
+          const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig)))
+            .replace(/\+/g, "-")
+            .replace(/\//g, "_")
+            .replace(/=+$/, "");
+          const state = `${payload}.${sigB64}`;
           const verifierBytes = crypto.getRandomValues(new Uint8Array(32));
           const codeVerifier = btoa(String.fromCharCode(...verifierBytes))
             .replace(/\+/g, "-")
