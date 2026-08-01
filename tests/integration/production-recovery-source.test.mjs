@@ -20,10 +20,12 @@ test("Supabase browser config is feature-scoped and cannot crash public boot", (
 
 test("root route has a safe branded error boundary with retry and home actions", () => {
   assert.match(rootRoute, /KovaGPT couldn't load this page/);
-  assert.match(rootRoute, /correlationId/);
   assert.match(rootRoute, /Retry/);
   assert.match(rootRoute, /Return home/);
-  assert.doesNotMatch(rootRoute, /error\.stack/);
+  assert.match(rootRoute, /contact support and describe what you were doing/);
+  assert.doesNotMatch(rootRoute, /correlationId|randomUUID|error\.stack/);
+  assert.doesNotMatch(rootRoute, /console\.error/);
+  assert.doesNotMatch(rootRoute, /diagnostic details server-side|while we log/i);
 });
 
 test("CI blocks changed-file formatting while isolating legacy repository drift", () => {

@@ -788,6 +788,7 @@ function ImagesPage() {
       >
         {lightbox && (
           <DialogContent
+            constrainToViewport={false}
             data-image-lightbox
             className="image-lightbox left-0 right-0 top-0 bottom-0 h-dvh w-screen max-h-none max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-none border-0 bg-black/85 p-4 pb-4 text-white shadow-none backdrop-blur-md sm:inset-0 sm:h-dvh sm:w-screen sm:max-h-none sm:max-w-none sm:translate-x-0 sm:translate-y-0 sm:rounded-none sm:border-0 sm:p-8 sm:pb-8"
             onOpenAutoFocus={(event) => {

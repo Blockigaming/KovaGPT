@@ -1,7 +1,7 @@
-// Real Gmail actions on the signed-in user's account.
-// Actions: search, read, draft, send, trash.
+// Read-only Gmail access for the signed-in user.
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
+import { BoundedJsonError, readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
 import { getValidGoogleAccessToken, logAudit } from "@/lib/google-oauth.server";
 import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
 
@@ -15,14 +15,12 @@ type GmailPayload = {
   parts?: GmailPayload[];
   headers?: GmailHeader[];
 };
-type GmailMessage = { id?: string; threadId?: string; snippet?: string; payload?: GmailPayload };
-
-function base64UrlEncode(s: string): string {
-  return btoa(unescape(encodeURIComponent(s)))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-}
+type GmailMessage = {
+  id?: string;
+  threadId?: string;
+  snippet?: string;
+  payload?: GmailPayload;
+};
 
 function decodeBody(data: string | undefined): string {
   if (!data) return "";
@@ -47,20 +45,6 @@ function extractText(payload: GmailPayload | undefined): string {
   return "";
 }
 
-function buildRawEmail(opts: {
-  to: string;
-  subject: string;
-  body: string;
-  cc?: string;
-  threadId?: string;
-}): string {
-  const headers = [`To: ${opts.to}`, `Subject: ${opts.subject}`];
-  if (opts.cc) headers.push(`Cc: ${opts.cc}`);
-  headers.push('Content-Type: text/plain; charset="UTF-8"', "MIME-Version: 1.0");
-  const raw = `${headers.join("\r\n")}\r\n\r\n${opts.body}`;
-  return base64UrlEncode(raw);
-}
-
 export const Route = createFileRoute("/api/google/gmail")({
   server: {
     handlers: {
@@ -69,14 +53,14 @@ export const Route = createFileRoute("/api/google/gmail")({
         if (auth instanceof Response) return auth;
         const limited = enforceGoogleRateLimit(auth.userId, "gmail", 60);
         if (limited) return limited;
-        if (Number(request.headers.get("content-length") ?? 0) > 64 * 1024) {
-          return Response.json({ error: "request_too_large" }, { status: 413 });
-        }
         let body: JsonRecord;
         try {
-          body = await request.json();
-        } catch {
-          return Response.json({ error: "invalid_json" }, { status: 400 });
+          body = await readBoundedJsonObject(request, 64 * 1024);
+        } catch (error) {
+          if (error instanceof BoundedJsonError) {
+            return Response.json({ error: error.code }, { status: error.status });
+          }
+          return Response.json({ error: "invalid_request_body" }, { status: 400 });
         }
         const action = body?.action as string;
         if (!new Set(["search", "read"]).has(action)) {
@@ -105,7 +89,9 @@ export const Route = createFileRoute("/api/google/gmail")({
               { headers: H },
             );
             if (!listRes.ok) throw new Error(`gmail list ${listRes.status}`);
-            const list = (await listRes.json()) as { messages?: { id?: string }[] };
+            const list = (await listRes.json()) as {
+              messages?: { id?: string }[];
+            };
             const ids: string[] = (list.messages ?? []).map((m) => String(m.id ?? ""));
             const messages = await Promise.all(
               ids.map(async (id) => {
@@ -140,7 +126,9 @@ export const Route = createFileRoute("/api/google/gmail")({
           if (action === "read") {
             const id = String(body.id ?? "");
             if (!id) return Response.json({ error: "missing_id" }, { status: 400 });
-            const r = await fetch(`${GMAIL}/messages/${id}?format=full`, { headers: H });
+            const r = await fetch(`${GMAIL}/messages/${id}?format=full`, {
+              headers: H,
+            });
             if (!r.ok) throw new Error(`gmail get ${r.status}`);
             const m = (await r.json()) as GmailMessage;
             const h = (name: string) =>
@@ -163,116 +151,6 @@ export const Route = createFileRoute("/api/google/gmail")({
               body: text,
               link: `https://mail.google.com/mail/u/0/#inbox/${m.id}`,
             });
-          }
-
-          if (action === "draft") {
-            const to = String(body.to ?? "").trim();
-            const subject = String(body.subject ?? "").slice(0, 300);
-            const messageBody = String(body.body ?? "").slice(0, 50000);
-            if (!to || !subject) {
-              return Response.json({ error: "missing_fields" }, { status: 400 });
-            }
-            const raw = buildRawEmail({
-              to,
-              subject,
-              body: messageBody,
-              cc: typeof body.cc === "string" ? body.cc : undefined,
-              threadId: typeof body.threadId === "string" ? body.threadId : undefined,
-            });
-            const draftBody: { message: { raw: string; threadId?: string } } = { message: { raw } };
-            if (typeof body.threadId === "string") draftBody.message.threadId = body.threadId;
-            const r = await fetch(`${GMAIL}/drafts`, {
-              method: "POST",
-              headers: { ...H, "Content-Type": "application/json" },
-              body: JSON.stringify(draftBody),
-            });
-            if (!r.ok) throw new Error(`gmail draft ${r.status} ${await r.text()}`);
-            const d = await r.json();
-            await logAudit({
-              userId: auth.userId,
-              provider: "gmail",
-              action: "draft",
-              resourceId: d.id,
-              summary: `Created draft: ${subject} → ${to}`,
-            });
-            return Response.json({
-              draftId: d.id,
-              messageId: d.message?.id,
-              link: `https://mail.google.com/mail/u/0/#drafts`,
-            });
-          }
-
-          if (action === "send") {
-            // Explicit send. Requires either draftId (send existing draft)
-            // or {to, subject, body} for a new send.
-            if (body.draftId) {
-              const r = await fetch(`${GMAIL}/drafts/send`, {
-                method: "POST",
-                headers: { ...H, "Content-Type": "application/json" },
-                body: JSON.stringify({ id: String(body.draftId) }),
-              });
-              if (!r.ok) throw new Error(`gmail send draft ${r.status} ${await r.text()}`);
-              const m = await r.json();
-              await logAudit({
-                userId: auth.userId,
-                provider: "gmail",
-                action: "send",
-                resourceId: m.id,
-                summary: `Sent draft ${body.draftId}`,
-              });
-              return Response.json({
-                messageId: m.id,
-                link: `https://mail.google.com/mail/u/0/#sent/${m.id}`,
-              });
-            }
-            const to = String(body.to ?? "").trim();
-            const subject = String(body.subject ?? "").slice(0, 300);
-            const messageBody = String(body.body ?? "").slice(0, 50000);
-            if (!to || !subject) {
-              return Response.json({ error: "missing_fields" }, { status: 400 });
-            }
-            const raw = buildRawEmail({
-              to,
-              subject,
-              body: messageBody,
-              cc: typeof body.cc === "string" ? body.cc : undefined,
-            });
-            const r = await fetch(`${GMAIL}/messages/send`, {
-              method: "POST",
-              headers: { ...H, "Content-Type": "application/json" },
-              body: JSON.stringify({ raw }),
-            });
-            if (!r.ok) throw new Error(`gmail send ${r.status} ${await r.text()}`);
-            const m = await r.json();
-            await logAudit({
-              userId: auth.userId,
-              provider: "gmail",
-              action: "send",
-              resourceId: m.id,
-              summary: `Sent email: ${subject} → ${to}`,
-            });
-            return Response.json({
-              messageId: m.id,
-              link: `https://mail.google.com/mail/u/0/#sent/${m.id}`,
-            });
-          }
-
-          if (action === "trash") {
-            const id = String(body.id ?? "");
-            if (!id) return Response.json({ error: "missing_id" }, { status: 400 });
-            const r = await fetch(`${GMAIL}/messages/${id}/trash`, {
-              method: "POST",
-              headers: H,
-            });
-            if (!r.ok) throw new Error(`gmail trash ${r.status}`);
-            await logAudit({
-              userId: auth.userId,
-              provider: "gmail",
-              action: "trash",
-              resourceId: id,
-              summary: `Moved email ${id} to trash`,
-            });
-            return Response.json({ ok: true });
           }
 
           return Response.json({ error: "unknown_action" }, { status: 400 });

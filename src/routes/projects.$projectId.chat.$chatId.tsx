@@ -8,6 +8,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, Loader2, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { authFetch } from "@/lib/auth-fetch";
+import { useLayout } from "@/hooks/use-mobile";
+import { useSharedSendOnEnter } from "@/lib/composer-preferences";
+import { shouldSubmitComposerOnEnter } from "@/lib/composer-keyboard.mjs";
 import {
   getProjectChat,
   saveProjectChat,
@@ -26,7 +29,9 @@ export const Route = createFileRoute("/projects/$projectId/chat/$chatId")({
 
 function ProjectChatPage() {
   const { projectId, chatId } = Route.useParams();
-  const { isSignedIn, isLoaded } = useUser();
+  const { isSignedIn, isLoaded, user } = useUser();
+  const { isDesktop, interaction } = useLayout();
+  const sendOnEnter = useSharedSendOnEnter(user?.id ?? null);
   const navigate = useNavigate();
 
   const [project, setProject] = useState<ProjectDetail | null>(null);
@@ -36,6 +41,7 @@ function ProjectChatPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const composingRef = useRef(false);
 
   const fnGetChat = useServerFn(getProjectChat);
   const fnGetProject = useServerFn(getProject);
@@ -159,7 +165,10 @@ function ProjectChatPage() {
               assistant += delta;
               setMessages((prev) => {
                 const copy = prev.slice();
-                copy[copy.length - 1] = { role: "assistant", content: assistant };
+                copy[copy.length - 1] = {
+                  role: "assistant",
+                  content: assistant,
+                };
                 return copy;
               });
             }
@@ -248,11 +257,40 @@ function ProjectChatPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
+                const native = e.nativeEvent as KeyboardEvent & {
+                  isComposing?: boolean;
+                  keyCode?: number;
+                };
+                const shouldSubmit = shouldSubmitComposerOnEnter({
+                  key: e.key,
+                  keyCode: native.keyCode,
+                  shiftKey: e.shiftKey,
+                  ctrlKey: e.ctrlKey,
+                  metaKey: e.metaKey,
+                  altKey: e.altKey,
+                  isComposing: Boolean(native.isComposing || composingRef.current),
+                  sendOnEnter,
+                  isMobileLayout: !isDesktop,
+                  isCoarsePointer: interaction === "touch",
+                  hasContent: Boolean(input.trim()),
+                  disabled: !canEdit,
+                  isStreaming: sending,
+                });
+                if (!shouldSubmit) return;
+                e.preventDefault();
+                handleSend();
               }}
+              onCompositionStart={() => {
+                composingRef.current = true;
+              }}
+              onCompositionEnd={() => {
+                composingRef.current = false;
+              }}
+              aria-keyshortcuts={
+                sendOnEnter && isDesktop && interaction !== "touch"
+                  ? "Enter Control+Enter Meta+Enter"
+                  : "Control+Enter Meta+Enter"
+              }
               placeholder={canEdit ? "Message the project…" : "You have view-only access"}
               disabled={!canEdit || sending}
               rows={2}

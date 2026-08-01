@@ -65,7 +65,7 @@ import {
 } from "@/lib/connectors-catalog";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { getMyDailyUsage, type DailyUsageDto } from "@/utils/usage.functions";
 import {
@@ -74,6 +74,8 @@ import {
   type SubscriptionSummary,
 } from "@/utils/payments.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
+import { parseAllowedBillingPortalUrl } from "@/lib/billing-portal-url.mjs";
+import { setSharedSendOnEnter, useSharedSendOnEnter } from "@/lib/composer-preferences";
 import { PersonalitySliders } from "@/components/PersonalitySliders";
 import { StorageDashboard } from "@/components/StorageDashboard";
 import { FamilySharingPanel } from "@/components/FamilySharingPanel";
@@ -114,7 +116,8 @@ export type Settings = {
   notifyProduct?: boolean;
   // Parental controls
   parentalMode?: boolean;
-  // Data control
+  // Deprecated local-only value retained so old device exports still import safely.
+  // It is not exposed as an account- or provider-level training control.
   trainingOptOut?: boolean;
   // deprecated fields kept so old localStorage payloads still load
   preferredPronouns?: string;
@@ -245,6 +248,7 @@ export function SettingsDialog({
   const localUsage = open ? getUsage() : { images: 0, uploads: 0, date: "" };
 
   const { isSignedIn, user } = useUser();
+  const sharedSendOnEnter = useSharedSendOnEnter(user?.id ?? null);
   const clerk = useClerk();
   const loggedIn = !clerkEnabled || isSignedIn;
   const { tier } = useTier();
@@ -256,6 +260,8 @@ export function SettingsDialog({
   const [usage, setUsage] = useState<DailyUsageDto | null>(null);
   const [usageLoading, setUsageLoading] = useState(false);
   const [subSummary, setSubSummary] = useState<SubscriptionSummary | null>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
@@ -283,12 +289,23 @@ export function SettingsDialog({
   useEffect(() => {
     if (!open || tab !== "subscription" || !loggedIn) return;
     let cancelled = false;
+    setSubSummary(null);
+    setSubscriptionError(null);
+    setSubscriptionLoading(true);
     getSubscriptionSummary({ data: { environment: getStripeEnvironment() } })
-      .then((s) => {
-        if (!cancelled) setSubSummary(s);
+      .then((summary) => {
+        if (!cancelled) setSubSummary(summary);
       })
       .catch(() => {
-        if (!cancelled) setSubSummary(null);
+        if (!cancelled) {
+          setSubSummary(null);
+          setSubscriptionError(
+            "Billing details couldn't be verified. Select Refresh billing status to retry.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setSubscriptionLoading(false);
       });
     return () => {
       cancelled = true;
@@ -296,18 +313,16 @@ export function SettingsDialog({
   }, [open, tab, loggedIn]);
 
   const handleManageBilling = async () => {
+    if (portalLoading || !subSummary?.hasBillingAccount) return;
     setPortalLoading(true);
     try {
-      const res = await createPortalSession({
-        data: {
-          environment: getStripeEnvironment(),
-          returnUrl: `${window.location.origin}/`,
-        },
-      });
-      if ("error" in res) throw new Error(res.error);
-      window.open(res.url, "_blank", "noopener,noreferrer");
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Couldn't open the billing portal.");
+      const res = await createPortalSession({ data: {} });
+      if ("error" in res) throw new Error("billing_portal_unavailable");
+      const portalUrl = parseAllowedBillingPortalUrl(res.url);
+      if (!portalUrl) throw new Error("billing_portal_url_rejected");
+      window.location.assign(portalUrl);
+    } catch {
+      toast.error("The billing portal couldn't be opened. Try again.");
     } finally {
       setPortalLoading(false);
     }
@@ -346,7 +361,9 @@ export function SettingsDialog({
         body: JSON.stringify({ confirmation: deleteConfirmation }),
       });
       if (!response.ok) {
-        const result = (await response.json().catch(() => null)) as { error?: string } | null;
+        const result = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
         throw new Error(result?.error || "Account deletion failed. Your account remains active.");
       }
       clearConversations();
@@ -362,28 +379,33 @@ export function SettingsDialog({
     }
   };
 
-  const visibleTabGroups = useMemo<TabGroup[]>(() => {
-    const hideSubscription = tier === "plus" || tier === "pro";
-    if (!hideSubscription) return TAB_GROUPS;
-    return TAB_GROUPS.map((g) => ({
-      ...g,
-      tabs: g.tabs.filter((t) => t.v !== "subscription"),
-    })).filter((g) => g.tabs.length > 0);
-  }, [tier]);
-
   const handleRestore = async () => {
+    if (subscriptionLoading) return;
+    setSubscriptionLoading(true);
+    setSubscriptionError(null);
     try {
-      const s = await getSubscriptionSummary({ data: { environment: getStripeEnvironment() } });
-      setSubSummary(s);
-      if (s.tier === "free") {
+      const summary = await getSubscriptionSummary({
+        data: { environment: getStripeEnvironment() },
+      });
+      setSubSummary(summary);
+      if (summary.tier === "free") {
         toast.message("No active subscription found on this account.");
       } else {
-        toast.success(`${s.tier === "pro" ? "Pro" : "Plus"} plan restored.`);
+        toast.success(`${summary.tier === "pro" ? "Pro" : "Plus"} plan refreshed.`);
       }
     } catch {
+      setSubSummary(null);
+      setSubscriptionError(
+        "Billing details couldn't be verified. Select Refresh billing status to retry.",
+      );
       toast.error("Couldn't check your subscription. Try again.");
+    } finally {
+      setSubscriptionLoading(false);
     }
   };
+
+  const inheritedSubscription = !!subSummary && tierRank(tier) > tierRank(subSummary.tier);
+  const displayedSubscriptionTier = inheritedSubscription ? tier : subSummary?.tier;
 
   // "Saved" indicator: whenever settings change while the dialog is open, show
   // a subtle pill for ~1.5s. Skips the very first render so it doesn't fire on
@@ -457,6 +479,7 @@ export function SettingsDialog({
             onChange={onChange}
             setMode={setMode}
             onSignIn={() => clerk?.openSignIn()}
+            onClose={() => onOpenChange(false)}
           />
         ) : (
           <Tabs
@@ -467,23 +490,21 @@ export function SettingsDialog({
           >
             {/* Mobile: horizontal scrolling section nav */}
             <TabsList className="md:hidden flex w-full overflow-x-auto scrollbar-none justify-start gap-1 p-2 bg-muted/40 border-b border-border rounded-none h-auto shrink-0">
-              {visibleTabGroups
-                .flatMap((g) => g.tabs)
-                .map(({ v, icon: Icon, label }) => (
-                  <TabsTrigger
-                    key={v}
-                    value={v}
-                    className="shrink-0 gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                    <span>{label}</span>
-                  </TabsTrigger>
-                ))}
+              {TAB_GROUPS.flatMap((g) => g.tabs).map(({ v, icon: Icon, label }) => (
+                <TabsTrigger
+                  key={v}
+                  value={v}
+                  className="shrink-0 gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{label}</span>
+                </TabsTrigger>
+              ))}
             </TabsList>
 
             {/* Desktop: grouped sidebar */}
             <TabsList className="hidden md:flex flex-col h-full w-64 shrink-0 overflow-y-auto items-stretch justify-start gap-4 p-3 bg-muted/40 border-r border-border rounded-none">
-              {visibleTabGroups.map((group) => (
+              {TAB_GROUPS.map((group) => (
                 <div key={group.title} className="flex flex-col gap-0.5">
                   <div className="px-2 pt-1 pb-1.5">
                     <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
@@ -522,9 +543,12 @@ export function SettingsDialog({
                   />
                   <ToggleRow
                     title="Send on Enter"
-                    hint="Enter sends; Shift+Enter for a new line."
-                    checked={settings.sendOnEnter}
-                    onCheckedChange={(v) => onChange({ ...settings, sendOnEnter: v })}
+                    hint="On desktop, Enter sends when enabled. Shift+Enter always starts a new line; Ctrl/⌘+Enter sends either way. Mobile Enter starts a new line."
+                    checked={sharedSendOnEnter}
+                    onCheckedChange={(v) => {
+                      setSharedSendOnEnter(user?.id ?? null, v);
+                      onChange({ ...settings, sendOnEnter: v });
+                    }}
                   />
                   <div>
                     <label className="text-xs text-muted-foreground mb-1.5 block">
@@ -533,7 +557,10 @@ export function SettingsDialog({
                     <Select
                       value={settings.responseLength}
                       onValueChange={(v) =>
-                        onChange({ ...settings, responseLength: v as Settings["responseLength"] })
+                        onChange({
+                          ...settings,
+                          responseLength: v as Settings["responseLength"],
+                        })
                       }
                     >
                       <SelectTrigger>
@@ -627,7 +654,10 @@ export function SettingsDialog({
                       placeholder="e.g. Answer in clear bullets. Use simple language. Skip disclaimers."
                       value={settings.customInstructions}
                       onChange={(e) =>
-                        onChange({ ...settings, customInstructions: e.target.value })
+                        onChange({
+                          ...settings,
+                          customInstructions: e.target.value,
+                        })
                       }
                       className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm resize-y min-h-[90px]"
                     />
@@ -789,15 +819,31 @@ export function SettingsDialog({
                 <div className="rounded-lg border border-border p-4 flex items-center justify-between gap-3">
                   <div>
                     <div className="text-sm font-medium">Current plan</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      You're on the {tier === "free" ? "Free" : tier === "plus" ? "Plus" : "Pro"}{" "}
-                      plan
-                      {subSummary?.trialing ? " (free trial)" : ""}
-                      {subSummary?.status === "past_due" ? " - payment past due" : ""}
-                      {subSummary?.status === "unpaid" ? " - payment failed" : ""}
-                      {subSummary?.status === "incomplete" ? " - awaiting first payment" : ""}.
-                    </div>
-                    {subSummary?.currentPeriodEnd && (
+                    {subscriptionLoading ? (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Checking billing status…
+                      </div>
+                    ) : subscriptionError ? (
+                      <div className="text-xs text-destructive mt-1">
+                        Billing details unavailable.
+                      </div>
+                    ) : displayedSubscriptionTier ? (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        You're on the{" "}
+                        {displayedSubscriptionTier === "free"
+                          ? "Free"
+                          : displayedSubscriptionTier === "plus"
+                            ? "Plus"
+                            : "Pro"}{" "}
+                        plan
+                        {inheritedSubscription ? " through Family Sharing" : ""}
+                        {subSummary?.trialing ? " (free trial)" : ""}
+                        {subSummary?.status === "past_due" ? " - payment past due" : ""}
+                        {subSummary?.status === "unpaid" ? " - payment failed" : ""}
+                        {subSummary?.status === "incomplete" ? " - awaiting first payment" : ""}.
+                      </div>
+                    ) : null}
+                    {subSummary?.currentPeriodEnd && !inheritedSubscription && (
                       <div className="text-[11px] text-muted-foreground mt-1">
                         {subSummary.trialing
                           ? `Trial ends ${new Date(subSummary.currentPeriodEnd).toLocaleDateString()} - billing starts then unless you cancel.`
@@ -807,14 +853,18 @@ export function SettingsDialog({
                       </div>
                     )}
                   </div>
-                  <Link
-                    to="/pricing"
-                    onClick={() => onOpenChange(false)}
-                    className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition whitespace-nowrap"
-                  >
-                    <Sparkles className="w-4 h-4" />{" "}
-                    {tier === "free" ? "Start free month" : "Change plan"}
-                  </Link>
+                  {!subscriptionLoading &&
+                    !subscriptionError &&
+                    displayedSubscriptionTier === "free" &&
+                    !subSummary?.hasBillingAccount && (
+                      <Link
+                        to="/pricing"
+                        onClick={() => onOpenChange(false)}
+                        className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition whitespace-nowrap"
+                      >
+                        <Sparkles className="w-4 h-4" /> View plans
+                      </Link>
+                    )}
                 </div>
 
                 <div className="rounded-lg border border-border p-4 space-y-3">
@@ -864,33 +914,62 @@ export function SettingsDialog({
                   )}
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleManageBilling}
-                    disabled={portalLoading || !subSummary?.hasBillingAccount}
-                    title={
-                      !subSummary?.hasBillingAccount
-                        ? "Start a subscription to manage billing"
-                        : undefined
-                    }
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleManageBilling}
+                      disabled={
+                        portalLoading ||
+                        subscriptionLoading ||
+                        !!subscriptionError ||
+                        !subSummary?.hasBillingAccount ||
+                        inheritedSubscription
+                      }
+                      aria-describedby="billing-management-status"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      {portalLoading ? "Opening…" : "Manage subscription"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRestore}
+                      disabled={subscriptionLoading || portalLoading}
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      {subscriptionLoading ? "Checking…" : "Refresh billing status"}
+                    </Button>
+                  </div>
+                  <p
+                    id="billing-management-status"
+                    role={subscriptionError ? "alert" : undefined}
+                    className={`text-xs ${subscriptionError ? "text-destructive" : "text-muted-foreground"}`}
                   >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    {portalLoading ? "Opening…" : "Manage subscription"}
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handleRestore}>
-                    <RefreshCw className="w-4 h-4 mr-2" /> Restore purchases
-                  </Button>
-                </div>
-
-                <div className="rounded-lg border border-border p-4 space-y-2">
-                  <div className="text-sm font-medium">Cancel subscription</div>
-                  <p className="text-xs text-muted-foreground">
-                    You can cancel anytime from the billing portal above. After canceling, you'll
-                    keep access to your current plan until the end of the billing period.
+                    {subscriptionError
+                      ? subscriptionError
+                      : subscriptionLoading
+                        ? "Checking the billing account linked to this KovaGPT account."
+                        : inheritedSubscription
+                          ? "This shared plan is managed by the Family Sharing owner."
+                          : subSummary?.hasBillingAccount
+                            ? "Manage payment methods, invoices, cancellation, and plan changes in the Stripe billing portal."
+                            : "No Stripe billing account is linked to this KovaGPT account."}
                   </p>
                 </div>
+
+                {subSummary?.hasBillingAccount &&
+                  !inheritedSubscription &&
+                  displayedSubscriptionTier !== "free" && (
+                    <div className="rounded-lg border border-border p-4 space-y-2">
+                      <div className="text-sm font-medium">Cancel subscription</div>
+                      <p className="text-xs text-muted-foreground">
+                        You can cancel from the Stripe billing portal above. After canceling, you'll
+                        keep access to your current plan until the end of the billing period.
+                      </p>
+                    </div>
+                  )}
 
                 <div className="rounded-lg border border-border p-4 space-y-2">
                   <div className="text-sm font-medium">Account and data deletion</div>
@@ -1018,7 +1097,9 @@ export function SettingsDialog({
                               try {
                                 localStorage.setItem("kova-action-color", c);
                                 window.dispatchEvent(
-                                  new CustomEvent("kova-action-color", { detail: c }),
+                                  new CustomEvent("kova-action-color", {
+                                    detail: c,
+                                  }),
                                 );
                               } catch {
                                 /* ignore */
@@ -1123,12 +1204,25 @@ export function SettingsDialog({
               <TabsContent value="data" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
                 <h3 className="text-sm font-semibold">Data controls</h3>
                 <ArchivedChatsPanel />
-                <ToggleRow
-                  title="Improve the model for everyone"
-                  hint="Allow KovaGPT to use your conversations to improve quality. Turn off to opt out."
-                  checked={!(settings.trainingOptOut ?? false)}
-                  onCheckedChange={(v) => onChange({ ...settings, trainingOptOut: !v })}
-                />
+                <div
+                  role="note"
+                  className="rounded-lg border border-border bg-muted/30 p-4 space-y-2"
+                >
+                  <div className="text-sm font-medium">Model training</div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    The removed model-improvement switch changed only a browser-local value; it was
+                    not wired to an account-level or AI-provider training control. No toggle is
+                    shown until a real remote control exists. See the{" "}
+                    <Link
+                      to="/privacy"
+                      onClick={() => onOpenChange(false)}
+                      className="underline underline-offset-2 hover:text-foreground"
+                    >
+                      Privacy Policy
+                    </Link>{" "}
+                    for how provider processing is described.
+                  </p>
+                </div>
                 <SecurityRow
                   title="Export your data"
                   body="Download chats, archived chats, and preferences stored on this device. Cloud account records are not included."
@@ -1999,11 +2093,13 @@ function SignedOutSettings({
   onChange,
   setMode,
   onSignIn,
+  onClose,
 }: {
   settings: Settings;
   onChange: (s: Settings) => void;
   setMode: (m: ThemeMode) => void;
   onSignIn: () => void;
+  onClose: () => void;
 }) {
   return (
     <div className="overflow-y-auto max-h-[78vh] bg-background">
@@ -2081,43 +2177,21 @@ function SignedOutSettings({
           <h3 className="text-[11px] uppercase tracking-[0.08em] font-medium text-muted-foreground px-1 mb-2.5">
             Privacy
           </h3>
-          <div className="rounded-2xl border border-border/60 bg-card/40 divide-y divide-border/60 overflow-hidden">
-            <div className="px-4 py-3.5">
-              <ToggleRow
-                title="Help improve Kova"
-                hint="Allow your content to help improve Kova's models."
-                checked={settings.trainingOptOut !== true}
-                onCheckedChange={(v) => onChange({ ...settings, trainingOptOut: !v })}
-              />
-            </div>
-            <div className="px-4 py-3.5">
-              <GuestToggleRow
-                storageKey="kova-guest-campaign-measurement"
-                title="Campaign measurement"
-                hint="Help Kova measure marketing performance."
-              />
-            </div>
-            <div className="px-4 py-3.5">
-              <GuestToggleRow
-                storageKey="kova-guest-personalized-marketing"
-                title="Personalized marketing"
-                hint="Personalize marketing on third party platforms."
-              />
-            </div>
-            <div className="px-4 py-3.5">
-              <GuestToggleRow
-                storageKey="kova-guest-ad-personalization"
-                title="Ad personalization"
-                hint="Use recent activity to make ads more relevant."
-              />
-            </div>
-            <div className="px-4 py-3.5">
-              <GuestToggleRow
-                storageKey="kova-guest-past-chat-relevance"
-                title="Past chat relevance"
-                hint="Use past chats to improve ad relevance. Chats are never shared with advertisers."
-              />
-            </div>
+          <div className="rounded-2xl border border-border/60 bg-card/40 p-4 space-y-2">
+            <div className="text-sm font-medium">No browser-only provider controls</div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              The removed guest training and marketing switches changed only browser-local values;
+              they were not wired to account-level or AI-provider controls. They are not shown as
+              functional controls. Read the{" "}
+              <Link
+                to="/privacy"
+                onClick={onClose}
+                className="underline underline-offset-2 hover:text-foreground"
+              >
+                Privacy Policy
+              </Link>{" "}
+              for the data-processing terms that apply.
+            </p>
           </div>
         </section>
 
@@ -2278,40 +2352,6 @@ function GuestLanguageSelect() {
   );
 }
 
-function GuestToggleRow({
-  storageKey,
-  title,
-  hint,
-}: {
-  storageKey: string;
-  title: string;
-  hint: string;
-}) {
-  const [checked, setChecked] = useState(false);
-  useEffect(() => {
-    try {
-      setChecked(localStorage.getItem(storageKey) === "1");
-    } catch {
-      /* noop */
-    }
-  }, [storageKey]);
-  return (
-    <ToggleRow
-      title={title}
-      hint={hint}
-      checked={checked}
-      onCheckedChange={(v) => {
-        setChecked(v);
-        try {
-          localStorage.setItem(storageKey, v ? "1" : "0");
-        } catch {
-          /* noop */
-        }
-      }}
-    />
-  );
-}
-
 // ---------- Family-safe audience + PIN ----------
 
 type SafeAudience = "myself" | "child" | "none";
@@ -2330,13 +2370,21 @@ function FamilySafeAudience() {
     }
   };
   const opts: { v: SafeAudience; label: string; hint: string }[] = [
-    { v: "myself", label: "Myself", hint: "I'm using Family-safe mode for me." },
+    {
+      v: "myself",
+      label: "Myself",
+      hint: "I'm using Family-safe mode for me.",
+    },
     {
       v: "child",
       label: "My child",
       hint: "A child uses this device - enable a PIN below to lock changes.",
     },
-    { v: "none", label: "None of the above", hint: "Don't apply Family-safe defaults." },
+    {
+      v: "none",
+      label: "None of the above",
+      hint: "Don't apply Family-safe defaults.",
+    },
   ];
   return (
     <div className="space-y-2">

@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { type StripeEnv, createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
+import { type StripeEnv, createStripeClient } from "@/lib/stripe.server";
+import { parseAllowedBillingPortalUrl } from "@/lib/billing-portal-url.mjs";
 import { BILLING_ENV, resolveBillingPlan, tierForLookupKey } from "@/lib/billing-plans";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -22,7 +23,10 @@ async function resolveOrCreateCustomer(
     if (found.data.length) return found.data[0].id;
   }
   if (options.email) {
-    const existing = await stripe.customers.list({ email: options.email, limit: 1 });
+    const existing = await stripe.customers.list({
+      email: options.email,
+      limit: 1,
+    });
     if (existing.data.length) {
       const customer = existing.data[0];
       if (options.userId && customer.metadata?.userId !== options.userId) {
@@ -59,7 +63,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       const stripe = createStripeClient(BILLING_ENV);
 
       // Prevent duplicate active subscriptions for the same user in this env.
-      const { data: existing } = await context.supabase
+      const { data: existing, error: existingError } = await context.supabase
         .from("subscriptions")
         .select("status, current_period_end, cancel_at_period_end")
         .eq("user_id", userId)
@@ -67,6 +71,9 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
+      if (existingError) {
+        return { error: "Billing status couldn't be verified. Try again." };
+      }
       if (existing) {
         const periodEnd = existing.current_period_end
           ? new Date(existing.current_period_end).getTime()
@@ -127,7 +134,9 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         metadata: { userId },
         subscription_data: {
           metadata: { userId },
-          ...(isPlusTrialEligible && { trial_period_days: plan.trialPeriodDays }),
+          ...(isPlusTrialEligible && {
+            trial_period_days: plan.trialPeriodDays,
+          }),
         },
       };
       const session = await stripe.checkout.sessions.create(
@@ -136,7 +145,10 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
 
       return { clientSecret: session.client_secret ?? "" };
     } catch (error) {
-      return { error: getStripeErrorMessage(error) };
+      console.error("[billing-checkout] Stripe request failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      return { error: "Checkout is unavailable right now. Try again." };
     }
   });
 
@@ -147,10 +159,10 @@ type PortalResult = { url: string } | { error: string };
 // recent subscription row for this user + env (RLS-scoped via `context.supabase`).
 export const createPortalSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { returnUrl?: string; environment: StripeEnv }) => data)
-  .handler(async ({ data, context }): Promise<PortalResult> => {
+  .inputValidator((data: Record<string, never>) => data)
+  .handler(async ({ context }): Promise<PortalResult> => {
     const { supabase, userId } = context;
-    const { data: sub } = await supabase
+    const { data: sub, error: subscriptionError } = await supabase
       .from("subscriptions")
       .select("stripe_customer_id")
       .eq("user_id", userId)
@@ -158,6 +170,9 @@ export const createPortalSession = createServerFn({ method: "POST" })
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+    if (subscriptionError) {
+      return { error: "Billing account couldn't be verified. Try again." };
+    }
     if (!sub?.stripe_customer_id) {
       return { error: "No billing account found. Start a subscription first." };
     }
@@ -165,11 +180,24 @@ export const createPortalSession = createServerFn({ method: "POST" })
       const stripe = createStripeClient(BILLING_ENV);
       const portal = await stripe.billingPortal.sessions.create({
         customer: sub.stripe_customer_id,
-        ...(data.returnUrl && { return_url: data.returnUrl }),
+        // The browser cannot choose an arbitrary post-portal redirect.
+        return_url: "https://kovagpt.com/",
       });
-      return { url: portal.url };
+      const portalUrl = parseAllowedBillingPortalUrl(portal.url);
+      if (!portalUrl) {
+        console.error("[billing-portal] Stripe returned a URL outside the allowlist");
+        return {
+          error: "The billing portal is unavailable right now. Try again.",
+        };
+      }
+      return { url: portalUrl };
     } catch (error) {
-      return { error: getStripeErrorMessage(error) };
+      console.error("[billing-portal] Stripe request failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      return {
+        error: "The billing portal is unavailable right now. Try again.",
+      };
     }
   });
 
@@ -191,7 +219,7 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
   .inputValidator((data: { environment: StripeEnv }) => data)
   .handler(async ({ data, context }): Promise<SubscriptionSummary> => {
     const { supabase, userId } = context;
-    const { data: row } = await supabase
+    const { data: row, error: subscriptionError } = await supabase
       .from("subscriptions")
       .select("stripe_customer_id, price_id, status, current_period_end, cancel_at_period_end")
       .eq("user_id", userId)
@@ -199,6 +227,9 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+    if (subscriptionError) {
+      throw new Error("Billing details couldn't be verified.");
+    }
     const priceId = row?.price_id ?? null;
     const now = Date.now();
     const end = row?.current_period_end ? new Date(row.current_period_end).getTime() : 0;
