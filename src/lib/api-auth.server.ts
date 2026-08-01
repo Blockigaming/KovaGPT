@@ -216,7 +216,10 @@ export async function assertFeatureEnabled(
     .maybeSingle();
   if (error) {
     console.error("[assertFeatureEnabled] lookup error", error);
-    return jsonError(\n      "Feature availability could not be verified. Please try again shortly.",\n      503,\n    );
+    return jsonError(
+      "Feature availability could not be verified. Please try again shortly.",
+      503,
+    );
   }
   if (data && data.enabled === false) {
     return jsonError(
