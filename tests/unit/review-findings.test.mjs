@@ -196,8 +196,7 @@ test("billing checkout and entitlements use exact supported plan keys", () => {
   assert.doesNotMatch(plans, /toLowerCase|includes\(["'](?:plus|pro)/);
 
   assert.ok(
-    checkout.indexOf("resolveBillingPlan(data.priceId)") <
-      checkout.indexOf("stripe.prices.list"),
+    checkout.indexOf("resolveBillingPlan(data.priceId)") < checkout.indexOf("stripe.prices.list"),
   );
   assert.match(checkout, /data\.quantity !== undefined && data\.quantity !== 1/);
   assert.match(checkout, /lookup_keys: \[plan\.lookupKey\]/);
