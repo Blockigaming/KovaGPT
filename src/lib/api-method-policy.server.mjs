@@ -11,7 +11,9 @@ function apiRoute(path, methods) {
 }
 
 /**
- * This is the fail-closed method inventory for every TanStack API route.
+ * This is the fail-closed method inventory for every dedicated TanStack
+ * server-handler route, including legacy endpoints that do not live under
+ * `/api`.
  * Keep it in sync with the route handlers; the source contract test enforces
  * complete coverage and exact method parity.
  */
@@ -47,6 +49,13 @@ export const API_METHOD_POLICY_ROUTES = Object.freeze([
   apiRoute("/api/public/payments/webhook", ["POST"]),
   apiRoute("/api/title", ["POST"]),
   apiRoute("/api/write", ["POST"]),
+  apiRoute("/email/unsubscribe", ["GET", "POST"]),
+  apiRoute("/lovable/email/auth/preview", ["POST"]),
+  apiRoute("/lovable/email/auth/webhook", ["POST"]),
+  apiRoute("/lovable/email/queue/process", ["POST"]),
+  apiRoute("/lovable/email/suppression", ["POST"]),
+  apiRoute("/lovable/email/transactional/preview", ["POST"]),
+  apiRoute("/lovable/email/transactional/send", ["POST"]),
 ]);
 
 const DYNAMIC_OAUTH_CALLBACK_PATH = "/api/integrations/oauth/callback/$provider";
@@ -98,8 +107,9 @@ function effectiveAllowedMethods(declaredMethods) {
 }
 
 /**
- * Returns a deterministic 405 for a known API route with an unsupported
- * method. Unknown paths and supported methods continue to TanStack unchanged.
+ * Returns a deterministic 405 for a known server-handler route with an
+ * unsupported method. Unknown paths and supported methods continue to
+ * TanStack unchanged.
  *
  * @param {Request} request
  * @returns {Response | null}
