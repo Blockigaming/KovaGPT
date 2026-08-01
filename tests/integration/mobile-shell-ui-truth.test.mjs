@@ -69,6 +69,8 @@ test("command palette traps and restores focus with safe-area and reduced-motion
   assert.match(palette, /returnFocusRef/);
   assert.match(palette, /const returnTarget = returnFocusRef\.current/);
   assert.match(palette, /requestAnimationFrame\(\(\) => returnTarget\?\.focus\(\)\)/);
+  assert.match(palette, /searchInputRef\.current\?\.focus\(\)/);
+  assert.doesNotMatch(palette, /<input\s+autoFocus/);
   assert.match(palette, /event\.key === "Tab"/);
   assert.match(
     palette,
