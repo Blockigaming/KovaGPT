@@ -374,9 +374,14 @@ export const Route = createFileRoute("/api/chat")({
               temporary,
               clientTool,
             } = ingress;
-            const personalityBlock = personality
-              ? `\n\n--- User personality preferences ---\n${personality}\n--- End personality ---`
-              : "";
+            // Temporary Chat is a clean-room request: even a custom client
+            // cannot combine `temporary: true` with profile or personality
+            // fields and have those values reach the model prompt.
+            const personalContext = temporary ? undefined : user;
+            const personalityBlock =
+              !temporary && personality
+                ? `\n\n--- User personality preferences ---\n${personality}\n--- End personality ---`
+                : "";
             const MAX_TEXT_ATTACHMENT_CHARS = 256 * 1024;
 
             const lastUser = [...messages].reverse().find((m) => m.role === "user");
@@ -406,7 +411,7 @@ export const Route = createFileRoute("/api/chat")({
             if (auth) {
               const banned = await assertNotBanned(auth);
               if (banned) return banned;
-              if (!isOwner) callerTier = await getCallerTier(auth);
+              callerTier = isOwner ? "pro" : await getCallerTier(auth);
             }
 
             // Deep Research is a paid, high-cost operation. Authorize it before
@@ -651,7 +656,7 @@ export const Route = createFileRoute("/api/chat")({
               if (
                 clientTool === "web_search" ||
                 clientTool === "deep_research" ||
-                shouldRunWebSearch(lastText, user?.webSearch)
+                shouldRunWebSearch(lastText, personalContext?.webSearch)
               ) {
                 const activity = createToolActivityEvent(
                   "search_web",
@@ -671,9 +676,15 @@ export const Route = createFileRoute("/api/chat")({
 
             // Cross-chat memory: for Plus+ signed-in users, inject short
             // summaries of their recent past chats so KovaGPT can recall
-            // context across conversations. Respects user.rememberAcross.
+            // context across conversations. Consent is opt-in and Temporary
+            // Chat never reaches the memory table.
             let memoryBlock = "";
-            if (auth && user?.rememberAcross !== false && !temporary) {
+            if (
+              auth &&
+              (callerTier === "plus" || callerTier === "pro") &&
+              personalContext?.rememberAcross === true &&
+              !temporary
+            ) {
               try {
                 const { data: memRows } = await (
                   auth.supabaseAdmin as unknown as {
@@ -696,7 +707,7 @@ export const Route = createFileRoute("/api/chat")({
                   );
                   memoryBlock = formatMemoryBlock(
                     selectRelevantMemories(memories, lastText, {
-                      enabled: user?.rememberAcross === true,
+                      enabled: personalContext.rememberAcross === true,
                       temporary: Boolean(temporary),
                       maxItems: callerTier === "pro" ? 200 : callerTier === "plus" ? 12 : 0,
                     }),
@@ -828,7 +839,7 @@ export const Route = createFileRoute("/api/chat")({
                     ACCURACY_INSTRUCTION +
                     CHART_INSTRUCTION +
                     CREATOR_INSTRUCTION +
-                    buildUserContextBlock(user ?? {}) +
+                    buildUserContextBlock(personalContext ?? {}) +
                     personalityBlock +
                     memoryBlock +
                     projectBlock +
