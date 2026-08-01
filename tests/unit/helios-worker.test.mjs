@@ -4,13 +4,22 @@ import { readFile } from "node:fs/promises";
 import { assertPublicUrl, isPrivateAddress } from "../../worker/src/network-safety.mjs";
 
 const worker = await readFile("worker/src/index.mjs", "utf8");
-const networkSafety = await readFile("worker/src/network-safety.mjs", "utf8");
 const migration = await readFile(
   "supabase/migrations/20260728090000_helios_agent_runtime.sql",
   "utf8",
 );
+const compatibilityMigration = await readFile(
+  "supabase/migrations/20260801235959_agent_runtime_event_schema_compatibility.sql",
+  "utf8",
+);
+const constellationMigration = await readFile(
+  "supabase/migrations/20260727210000_constellation_connectors_agents.sql",
+  "utf8",
+);
 const workFunctions = await readFile("src/lib/work.functions.ts", "utf8");
-test("worker exposes health, readiness, shutdown, recovery, and SSRF controls", () => {
+const smokeTest = await readFile("worker/scripts/smoke-test.mjs", "utf8");
+const dockerfile = await readFile("worker/Dockerfile", "utf8");
+test("worker exposes health, readiness, shutdown, recovery, and team-only execution", () => {
   for (const control of [
     "/healthz",
     "/readyz",
@@ -18,10 +27,11 @@ test("worker exposes health, readiness, shutdown, recovery, and SSRF controls", 
     "recover_expired_agent_leases",
     "heartbeat_agent_job",
     "release_agent_lease",
-    "page.route",
+    'job.kind !== "team"',
   ])
     assert.match(worker, new RegExp(control.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-  assert.match(networkSafety, /Private network navigation is blocked/);
+  assert.match(worker, /\.from\("agent_job_events"\)/);
+  assert.doesNotMatch(worker, /browserJob|chromium|page\.goto|agent_run_events/);
 });
 test("SSRF protection rejects private IPv4, IPv6, mapped IPv4, and private DNS answers", async () => {
   for (const address of [
@@ -75,6 +85,28 @@ test("worker queue RPCs are not callable by browser roles", () => {
     assert.ok(migration.toLowerCase().includes(role));
   assert.match(migration, /grant execute on function public\.lease_agent_job[\s\S]+service_role/);
   assert.match(migration, /grant execute on function public\.settle_interrupted_agent_job/);
+  assert.match(migration, /where kind='team'/);
+});
+test("fresh and existing schemas keep run events separate from job events", () => {
+  assert.match(constellationMigration, /create table if not exists public\.agent_run_events/);
+  assert.match(migration, /create table public\.agent_job_events/);
+  assert.doesNotMatch(migration, /create table public\.agent_run_events/);
+  assert.match(compatibilityMigration, /create table if not exists public\.agent_job_events/);
+  assert.match(compatibilityMigration, /before insert or update of kind on public\.agent_jobs/);
+  assert.match(compatibilityMigration, /if new\.kind <> 'team'/);
+  assert.match(compatibilityMigration, /where kind = 'team'/);
+  assert.doesNotMatch(
+    compatibilityMigration,
+    /(?:drop|truncate|rename|alter\s+table)\s+(?:table\s+)?public\.agent_run_events/i,
+  );
+  assert.match(workFunctions, /\.from\("agent_job_events"\)/);
+});
+test("worker smoke validation is read-only and the image has no browser runtime", () => {
+  assert.match(smokeTest, /\.from\("agent_run_events"\)/);
+  assert.match(smokeTest, /\.from\("agent_job_events"\)/);
+  assert.doesNotMatch(smokeTest, /\.insert\(|\.update\(|\.delete\(|createUser|AI_PROVIDER/);
+  assert.match(dockerfile, /FROM node:22-bookworm-slim/);
+  assert.doesNotMatch(dockerfile, /playwright|chromium|pwuser/i);
 });
 test("deliverables and notifications are owner scoped", () => {
   assert.match(migration, /agent_deliverables[\s\S]+Owners manage deliverables/);
