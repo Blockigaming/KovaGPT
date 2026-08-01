@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  BoundedJsonError,
-  readBoundedJsonObject,
-} from "../../src/lib/bounded-json.server.mjs";
+import { BoundedJsonError, readBoundedJsonObject } from "../../src/lib/bounded-json.server.mjs";
 import {
   GoogleWriteValidationError,
   validateSupportedGoogleWrite,
@@ -13,10 +10,7 @@ import {
 async function expectBodyError(request, code, status, maxBytes = 64) {
   await assert.rejects(
     readBoundedJsonObject(request, maxBytes),
-    (error) =>
-      error instanceof BoundedJsonError &&
-      error.code === code &&
-      error.status === status,
+    (error) => error instanceof BoundedJsonError && error.code === code && error.status === status,
   );
 }
 
@@ -150,10 +144,7 @@ test("draft validation normalizes and validates to, cc, and bcc together", () =>
 });
 
 test("draft validation caps total recipients and relevant field lengths", () => {
-  const recipients = Array.from(
-    { length: 25 },
-    (_, index) => `person${index}@example.com`,
-  );
+  const recipients = Array.from({ length: 25 }, (_, index) => `person${index}@example.com`);
   assert.throws(
     () =>
       validateSupportedGoogleWrite("gmail_create_draft", {
@@ -200,10 +191,7 @@ test("calendar validation is strict, bounded, and removes unexpected fields", ()
       }),
     GoogleWriteValidationError,
   );
-  assert.throws(
-    () => validateSupportedGoogleWrite("gmail_send", {}),
-    /not supported/,
-  );
+  assert.throws(() => validateSupportedGoogleWrite("gmail_send", {}), /not supported/);
 });
 
 test("calendar validation requires real RFC 3339 instants with explicit timezones", () => {
