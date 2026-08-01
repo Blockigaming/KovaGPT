@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { decryptCredential, encryptCredential, sha256 } from "./credential-vault.server";
 import { OAUTH_PROVIDERS, type OAuthProviderId } from "./oauth-providers.server";
+import { normalizeOAuthReturnPath } from "@/lib/oauth-security.server";
 
 const admin = () =>
   createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
@@ -17,6 +18,7 @@ export async function beginOAuth(input: {
   ownerId: string;
   providerId: OAuthProviderId;
   request: Request;
+  browserNonce: string;
   optionalScopes?: string[];
   returnPath?: string;
 }) {
@@ -26,7 +28,6 @@ export async function beginOAuth(input: {
     throw new Error("provider_not_configured");
   const state = random();
   const verifier = provider.usesPkce ? random(48) : undefined;
-  const nonce = random();
   const scopes = [
     ...new Set([
       ...provider.requiredScopes,
@@ -41,9 +42,9 @@ export async function beginOAuth(input: {
       provider_id: provider.id,
       state_hash: await sha256(state),
       pkce_verifier_ciphertext: verifier ? await encryptCredential(verifier) : null,
-      nonce_hash: await sha256(nonce),
+      nonce_hash: await sha256(input.browserNonce),
       requested_scopes: scopes,
-      return_path: input.returnPath?.startsWith("/") ? input.returnPath : "/apps",
+      return_path: normalizeOAuthReturnPath(input.returnPath),
       expires_at: new Date(Date.now() + 10 * 60_000).toISOString(),
     });
   if (error) throw new Error("oauth_state_store_failed");
@@ -83,6 +84,7 @@ export async function completeOAuth(input: {
   code: string;
   state: string;
   request: Request;
+  browserNonce: string;
 }) {
   const provider = OAUTH_PROVIDERS[input.providerId];
   const db = admin();
@@ -95,6 +97,9 @@ export async function completeOAuth(input: {
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
   if (!record) throw new Error("invalid_or_expired_oauth_state");
+  if (record.nonce_hash !== (await sha256(input.browserNonce))) {
+    throw new Error("invalid_oauth_browser_binding");
+  }
   const consumed = await db
     .from("integration_oauth_states")
     .update({ consumed_at: new Date().toISOString() })
@@ -167,26 +172,22 @@ export async function completeOAuth(input: {
     .select("id, owner_id, provider_id, account_label, granted_scopes, status")
     .single();
   if (error || !account) throw new Error("linked_account_store_failed");
-  await db
-    .from("integration_consents")
-    .insert({
-      owner_id: record.owner_id,
-      linked_account_id: account.id,
-      scopes: granted,
-      purpose: "Connect provider services to KovaGPT",
-      decision: "granted",
-    });
+  await db.from("integration_consents").insert({
+    owner_id: record.owner_id,
+    linked_account_id: account.id,
+    scopes: granted,
+    purpose: "Connect provider services to KovaGPT",
+    decision: "granted",
+  });
 
-  await db
-    .from("integration_audit_events")
-    .insert({
-      owner_id: record.owner_id,
-      linked_account_id: account.id,
-      provider_id: provider.id,
-      event_type: "connect",
-      result: "success",
-      safe_summary: `Connected ${provider.name} account`,
-    });
+  await db.from("integration_audit_events").insert({
+    owner_id: record.owner_id,
+    linked_account_id: account.id,
+    provider_id: provider.id,
+    event_type: "connect",
+    result: "success",
+    safe_summary: `Connected ${provider.name} account`,
+  });
   return { account, returnPath: record.return_path as string };
 }
 
@@ -227,24 +228,20 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     });
     providerRevoked = response.ok;
   }
-  await db
-    .from("integration_deletion_requests")
-    .insert({
-      owner_id: ownerId,
-      linked_account_id: account.id,
-      status: providerRevoked ? "provider_revoked" : "pending",
-    });
+  await db.from("integration_deletion_requests").insert({
+    owner_id: ownerId,
+    linked_account_id: account.id,
+    status: providerRevoked ? "provider_revoked" : "pending",
+  });
 
-  await db
-    .from("integration_audit_events")
-    .insert({
-      owner_id: ownerId,
-      linked_account_id: account.id,
-      provider_id: provider.id,
-      event_type: "disconnect",
-      result: providerRevoked ? "success" : "failure",
-      safe_summary: `Disconnected ${provider.name} account`,
-    });
+  await db.from("integration_audit_events").insert({
+    owner_id: ownerId,
+    linked_account_id: account.id,
+    provider_id: provider.id,
+    event_type: "disconnect",
+    result: providerRevoked ? "success" : "failure",
+    safe_summary: `Disconnected ${provider.name} account`,
+  });
   await db
     .from("integration_sync_jobs")
     .update({ status: "cancelled" })
@@ -261,15 +258,13 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     })
     .eq("id", account.id)
     .eq("owner_id", ownerId);
-  await db
-    .from("integration_audit_events")
-    .insert({
-      owner_id: ownerId,
-      linked_account_id: account.id,
-      provider_id: provider.id,
-      event_type: "disconnect",
-      result: providerRevoked ? "success" : "failure",
-      safe_summary: `Disconnected ${provider.name} account`,
-    });
+  await db.from("integration_audit_events").insert({
+    owner_id: ownerId,
+    linked_account_id: account.id,
+    provider_id: provider.id,
+    event_type: "disconnect",
+    result: providerRevoked ? "success" : "failure",
+    safe_summary: `Disconnected ${provider.name} account`,
+  });
   return { providerRevoked };
 }
