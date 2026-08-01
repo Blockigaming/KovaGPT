@@ -1,4 +1,4 @@
-import { Menu, SquarePen } from "lucide-react";
+import { Menu, MessageSquareDashed, SquarePen } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { useUser, SignInButton, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { ResponsiveModelSelector } from "@/components/ResponsiveModelSelector";
@@ -19,6 +19,8 @@ export function MobileTopBar({
   mode,
   onModeChange,
   userTier = "free",
+  temporaryChat = false,
+  onTemporaryChatChange,
 }: {
   onOpenSidebar: () => void;
   onNewChat: () => void;
@@ -26,6 +28,8 @@ export function MobileTopBar({
   mode?: ModeId;
   onModeChange?: (mode: ModeId) => void;
   userTier?: Tier;
+  temporaryChat?: boolean;
+  onTemporaryChatChange?: (enabled: boolean) => void;
 }) {
   const { isLoaded, isSignedIn } = useUser();
   const showAuth = isLoaded && clerkEnabled && !isSignedIn;
@@ -65,14 +69,33 @@ export function MobileTopBar({
             </button>
           </SignInButton>
         ) : (
-          <button
-            type="button"
-            onClick={onNewChat}
-            aria-label="New chat"
-            className="kova-action w-11 h-11 text-foreground"
-          >
-            <SquarePen className="w-5 h-5" />
-          </button>
+          <div className="flex items-center">
+            {isSignedIn && onTemporaryChatChange ? (
+              <button
+                type="button"
+                onClick={() => onTemporaryChatChange(!temporaryChat)}
+                aria-label={temporaryChat ? "Turn off temporary chat" : "Start temporary chat"}
+                aria-pressed={temporaryChat}
+                title={temporaryChat ? "Temporary chat on" : "Start temporary chat"}
+                data-state={temporaryChat ? "on" : "off"}
+                className={`kova-action h-11 w-11 ${
+                  temporaryChat
+                    ? "bg-primary/15 text-primary"
+                    : "text-foreground hover:bg-accent/60"
+                }`}
+              >
+                <MessageSquareDashed className="h-5 w-5" />
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={onNewChat}
+              aria-label="New chat"
+              className="kova-action h-11 w-11 text-foreground"
+            >
+              <SquarePen className="h-5 w-5" />
+            </button>
+          </div>
         )}
       </div>
     </header>
