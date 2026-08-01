@@ -50,6 +50,8 @@ test("browser auth gates aal1 sessions and keeps normal sign-out device-local", 
   assert.match(provider, /signOut\(\{ scope: "local" \}\)/);
   assert.match(challenge, /challengeAndVerify/);
   assert.match(challenge, /\^\\d\{6\}\$/);
+  assert.match(challenge, /expires_at: Math\.round\(Date\.now\(\) \/ 1000\) \+ data\.expires_in/);
+  assert.doesNotMatch(challenge, /data\.session/);
   assert.match(panel, /signOut\(\{ scope: "others" \}\)/);
 });
 
