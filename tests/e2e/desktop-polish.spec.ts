@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { waitForKovaHydration } from "./hydration";
 
 const desktopProjects = new Set(["desktop-1280x800", "desktop-1440x900", "desktop-1728x1117"]);
 
@@ -8,6 +9,7 @@ test("collapsed sidebar leaves the layout and reopens from its external control"
   test.skip(!desktopProjects.has(testInfo.project.name));
   await page.addInitScript(() => localStorage.setItem("kova-sidebar-open", "0"));
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
 
   const sidebar = page.locator(".kova-sidebar");
   await expect(sidebar).toHaveCSS("width", "0px");
@@ -42,6 +44,7 @@ test("desktop workspaces remain overflow-free at supported widths", async ({ pag
   test.skip(!desktopProjects.has(testInfo.project.name));
   for (const route of ["/projects", "/library", "/apps", "/scheduled-tasks", "/help"]) {
     await page.goto(route, { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
     await expect(page.locator("body")).toBeVisible();
     const overflow = await page.evaluate(() => ({
       client: document.documentElement.clientWidth,
