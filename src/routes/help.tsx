@@ -107,13 +107,6 @@ const FAQS: Faq[] = [
     keywords: ["chat", "mode", "temporary"],
   },
   {
-    id: "voice-1",
-    category: "Chat basics",
-    question: "Does KovaGPT support voice or audio conversations?",
-    answer: FEATURES.voice.summary,
-    keywords: ["voice", "audio", "microphone", "speech"],
-  },
-  {
     id: "search-1",
     category: "Search",
     question: "When should I enable Search?",
