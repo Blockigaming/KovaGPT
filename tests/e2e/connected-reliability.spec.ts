@@ -7,37 +7,25 @@ test.beforeEach(({ page }, testInfo) => {
   test.skip(!projects.has(testInfo.project.name));
 });
 
-test("connected apps and scheduled tasks expose truthful signed-out states", async ({
-  page,
-}) => {
+test("connected apps and scheduled tasks expose truthful signed-out states", async ({ page }) => {
   await page.goto("/apps", { waitUntil: "domcontentloaded" });
-  await expect(
-    page.getByRole("heading", { name: "Your KovaGPT workspace" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your KovaGPT workspace" })).toBeVisible();
   await expect(page.getByText("Sign in to connect apps.")).toBeVisible();
   await expect(page.getByText(/connected/i).first()).toBeVisible();
 
   await page.goto("/scheduled-tasks", { waitUntil: "domcontentloaded" });
-  await expect(
-    page.getByRole("heading", { name: "Scheduled Tasks" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Scheduled Tasks" })).toBeVisible();
   await expect(page.getByText("Sign in to review task history")).toBeVisible();
   await expect(
     page.getByText("Background execution is unavailable in this deployment."),
   ).toBeVisible();
-  await expect(
-    page.getByText(/will run once|runner is fully enabled/i),
-  ).toHaveCount(0);
+  await expect(page.getByText(/will run once|runner is fully enabled/i)).toHaveCount(0);
 
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - innerWidth,
-  );
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);
 });
 
-test("the production-style Worker serves its safe health endpoint", async ({
-  request,
-}) => {
+test("the production-style Worker serves its safe health endpoint", async ({ request }) => {
   const response = await request.get("/api/health");
   expect(response.status()).toBe(200);
 
