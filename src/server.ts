@@ -1,6 +1,3 @@
-import "./lib/error-capture";
-
-import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { rejectCrossSiteRequest } from "./lib/http-security.server";
 
@@ -57,9 +54,13 @@ let serverEntryPromise: Promise<ServerEntry> | undefined;
 
 async function getServerEntry(): Promise<ServerEntry> {
   if (!serverEntryPromise) {
-    serverEntryPromise = import("@tanstack/react-start/server-entry").then(
+    const pending = import("@tanstack/react-start/server-entry").then(
       (m) => (m as { default?: ServerEntry }).default ?? (m as unknown as ServerEntry),
     );
+    serverEntryPromise = pending;
+    void pending.catch(() => {
+      if (serverEntryPromise === pending) serverEntryPromise = undefined;
+    });
   }
   return serverEntryPromise;
 }
@@ -108,7 +109,7 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
     return response;
   }
 
-  console.error(consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`));
+  console.error("[server] unhandled SSR response", { status: response.status });
   return brandedErrorResponse();
 }
 
@@ -129,7 +130,9 @@ export default {
       );
       return hardenResponse(await normalizeCatastrophicSsrResponse(response));
     } catch (error) {
-      console.error(error);
+      console.error("[server] request failed", {
+        name: error instanceof Error ? error.name : "UnknownError",
+      });
       return hardenResponse(brandedErrorResponse());
     }
   },
