@@ -31,12 +31,18 @@ test("header progress never invents activity", async () => {
 });
 
 test("narrow-phone constraints are scoped to real modal surfaces", async () => {
-  const [styles, dialog] = await Promise.all([
+  const [styles, dialog, alertDialog, sheet, drawer] = await Promise.all([
     read("src/styles.css"),
     read("src/components/ui/dialog.tsx"),
+    read("src/components/ui/alert-dialog.tsx"),
+    read("src/components/ui/sheet.tsx"),
+    read("src/components/ui/drawer.tsx"),
   ]);
 
   assert.match(dialog, /data-kova-dialog-surface=""/);
+  assert.match(alertDialog, /data-kova-dialog-surface=""/);
+  assert.doesNotMatch(sheet, /data-kova-dialog-surface/);
+  assert.doesNotMatch(drawer, /data-kova-dialog-surface/);
   assert.match(styles, /\[data-kova-dialog-surface\]/);
   assert.doesNotMatch(
     styles,
