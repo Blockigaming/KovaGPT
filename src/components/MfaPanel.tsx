@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
-import { ShieldCheck, KeyRound, LogOut, Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import {
+  ShieldCheck,
+  KeyRound,
+  LogOut,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,7 +57,9 @@ export function MfaPanel() {
   async function startEnroll() {
     setBusy(true);
     try {
-      const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp" });
+      const { data, error } = await supabase.auth.mfa.enroll({
+        factorType: "totp",
+      });
       if (error) throw error;
       setEnrolling({
         factorId: data.id,
@@ -58,8 +67,11 @@ export function MfaPanel() {
         secret: data.totp.secret,
         uri: data.totp.uri,
       });
-    } catch (e: unknown) {
-      toast.error((e as Error).message || "Couldn't start enrollment");
+    } catch (error) {
+      console.error("[mfa] enrollment failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      toast.error("Authenticator setup could not start. Please try again.");
     }
     setBusy(false);
   }
@@ -82,8 +94,13 @@ export function MfaPanel() {
       setCode("");
       toast.success("Two-factor authentication enabled");
       load();
-    } catch (e: unknown) {
-      toast.error((e as Error).message || "Verification failed");
+    } catch (error) {
+      console.error("[mfa] enrollment verification failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      toast.error(
+        "That code was not accepted. Check your authenticator and try again.",
+      );
     }
     setBusy(false);
   }
@@ -95,8 +112,11 @@ export function MfaPanel() {
       if (error) throw error;
       toast.success("Two-factor removed");
       load();
-    } catch (e: unknown) {
-      toast.error((e as Error).message || "Couldn't remove factor");
+    } catch (error) {
+      console.error("[mfa] factor removal failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      toast.error("The authenticator could not be removed. Please try again.");
     }
     setBusy(false);
   }
@@ -107,8 +127,11 @@ export function MfaPanel() {
       const { error } = await supabase.auth.signOut({ scope: "others" });
       if (error) throw error;
       toast.success("Signed out on other devices");
-    } catch (e: unknown) {
-      toast.error((e as Error).message || "Couldn't sign out other sessions");
+    } catch (error) {
+      console.error("[mfa] remote session sign-out failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      toast.error("Other sessions could not be signed out. Please try again.");
     }
     setBusy(false);
   }
@@ -121,8 +144,8 @@ export function MfaPanel() {
           <h3 className="text-sm font-semibold">Two-factor authentication</h3>
         </div>
         <p className="text-xs text-muted-foreground mb-4">
-          Add an authenticator app (Google Authenticator, 1Password, Authy) for a second layer of
-          security.
+          Add an authenticator app (Google Authenticator, 1Password, Authy) for
+          a second layer of security.
         </p>
 
         {loading ? (
@@ -175,29 +198,47 @@ export function MfaPanel() {
                 className="w-32 h-32 rounded-md border border-border bg-white p-1"
               />
               <div className="text-xs text-muted-foreground space-y-2">
-                <p>Scan the QR code, then enter the 6-digit code from your app.</p>
+                <p>
+                  Scan the QR code, then enter the 6-digit code from your app.
+                </p>
                 <p>
                   Can't scan? Enter this secret manually:
                   <br />
-                  <code className="text-[11px] break-all">{enrolling.secret}</code>
+                  <code className="text-[11px] break-all">
+                    {enrolling.secret}
+                  </code>
                 </p>
               </div>
             </div>
             <Input
               placeholder="123 456"
               value={code}
-              onChange={(e) => setCode(e.target.value)}
-              maxLength={8}
+              onChange={(e) =>
+                setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+              }
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
               className="tracking-widest text-center"
             />
             <div className="flex gap-2">
-              <Button onClick={verify} disabled={busy || code.length < 6} className="flex-1">
-                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify & enable"}
+              <Button
+                onClick={verify}
+                disabled={busy || code.length !== 6}
+                className="flex-1"
+              >
+                {busy ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Verify & enable"
+                )}
               </Button>
               <Button
                 variant="ghost"
                 onClick={() => {
-                  supabase.auth.mfa.unenroll({ factorId: enrolling.factorId }).catch(() => {});
+                  supabase.auth.mfa
+                    .unenroll({ factorId: enrolling.factorId })
+                    .catch(() => {});
                   setEnrolling(null);
                   setCode("");
                 }}
@@ -221,9 +262,15 @@ export function MfaPanel() {
           <h3 className="text-sm font-semibold">Active sessions</h3>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
-          Sign out of KovaGPT on every other device where your account is currently active.
+          Sign out of KovaGPT on every other device where your account is
+          currently active.
         </p>
-        <Button variant="outline" size="sm" onClick={signOutOthers} disabled={busy}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={signOutOthers}
+          disabled={busy}
+        >
           Sign out other sessions
         </Button>
       </div>
