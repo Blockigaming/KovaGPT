@@ -16,9 +16,7 @@ export function evaluateAuthenticatedUser(user, claims, now = Date.now()) {
 
   if (user.banned_until) {
     const bannedUntil =
-      typeof user.banned_until === "string"
-        ? Date.parse(user.banned_until)
-        : Number.NaN;
+      typeof user.banned_until === "string" ? Date.parse(user.banned_until) : Number.NaN;
     if (!Number.isFinite(bannedUntil) || bannedUntil > now) {
       return { ok: false, status: 403, code: "account_suspended" };
     }
@@ -55,11 +53,7 @@ export function isCrossSiteMutation(request) {
   }
 }
 
-export function safeRelativeRedirect(
-  candidate,
-  baseOrigin,
-  blockedPrefix = "/~oauth/callback",
-) {
+export function safeRelativeRedirect(candidate, baseOrigin, blockedPrefix = "/~oauth/callback") {
   if (typeof candidate !== "string" || !candidate.startsWith("/")) return "/";
   try {
     const parsed = new URL(candidate, baseOrigin);
