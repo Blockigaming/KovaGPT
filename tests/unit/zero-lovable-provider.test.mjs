@@ -28,6 +28,9 @@ test("title validation runs before the provider module is loaded", async () => {
   const providerImport = source.indexOf('await import(\n            "@/lib/ai/provider.server"');
 
   assert.ok(invalidMessagesGuard >= 0, "missing invalid-message guard");
-  assert.ok(providerImport > invalidMessagesGuard, "provider runtime loads before input validation");
+  assert.ok(
+    providerImport > invalidMessagesGuard,
+    "provider runtime loads before input validation",
+  );
   assert.doesNotMatch(source, /^import .*provider\.server/m);
 });
