@@ -319,10 +319,7 @@ export function SettingsDialog({
     setPortalLoading(true);
     try {
       const res = await createPortalSession({
-        data: {
-          environment: getStripeEnvironment(),
-          returnUrl: `${window.location.origin}/`,
-        },
+        data: { environment: getStripeEnvironment() },
       });
       if ("error" in res) throw new Error("billing_portal_unavailable");
       const portalUrl = parseAllowedBillingPortalUrl(res.url);
