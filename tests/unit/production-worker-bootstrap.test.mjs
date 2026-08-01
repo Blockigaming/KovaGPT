@@ -7,14 +7,8 @@ const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 test("the production Worker bundles the TanStack server entry statically", () => {
   const source = read("../../src/server.ts");
 
-  assert.match(
-    source,
-    /import startServerEntry from ["']@tanstack\/react-start\/server-entry["']/,
-  );
-  assert.doesNotMatch(
-    source,
-    /import\(\s*["']@tanstack\/react-start\/server-entry["']\s*\)/,
-  );
+  assert.match(source, /import startServerEntry from ["']@tanstack\/react-start\/server-entry["']/);
+  assert.doesNotMatch(source, /import\(\s*["']@tanstack\/react-start\/server-entry["']\s*\)/);
   assert.match(source, /const serverEntry = startServerEntry/);
   assert.match(source, /serverEntry\.fetch\(request\)/);
 });
