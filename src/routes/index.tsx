@@ -872,7 +872,7 @@ function KovaGPT() {
             messages: payloadMessages,
             mode: activeTool === "deep_research" ? "thinking" : mode,
             clientTool: activeTool,
-            chatId: nextConvId,
+            // Main-chat ids are device-local until a user-owned memory row\n            // exists. Do not submit an unclaimable relationship for a\n            // service-role Deep Research write.\n            chatId: activeTool === "deep_research" ? undefined : nextConvId,
             temporary: tempChat,
             user: tempChat
               ? undefined
