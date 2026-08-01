@@ -53,7 +53,10 @@ export async function startGitHubOAuth(ownerId: string, origin: string) {
   url.searchParams.set("code_challenge_method", "S256");
   return url.toString();
 }
-export async function completeGitHubOAuth(code: string, state: string) {
+export async function completeGitHubOAuth(code: string, state: string, browserState: string) {
+  if (!browserState || browserState !== state) {
+    throw new Error("Invalid OAuth browser binding");
+  }
   const stateHash = createHash("sha256").update(state).digest("hex");
   const { data, error } = await (supabaseAdmin as any)
     .from("github_oauth_states")
