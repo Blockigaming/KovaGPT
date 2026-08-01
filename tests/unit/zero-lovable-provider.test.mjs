@@ -38,21 +38,12 @@ async function runtimeFiles(relativePath) {
 }
 
 test("AI provider configuration has no Lovable credit path", async () => {
-  const [providerSource, diagnosticsSource, envExample, discoveredFiles] =
-    await Promise.all([
-      readFile(
-        new URL("../../src/lib/ai/provider.server.ts", import.meta.url),
-        "utf8",
-      ),
-      readFile(
-        new URL("../../src/lib/config/diagnostics.server.ts", import.meta.url),
-        "utf8",
-      ),
-      readFile(new URL("../../.env.example", import.meta.url), "utf8"),
-      Promise.all(runtimeRoots.map(runtimeFiles)).then((groups) =>
-        groups.flat(),
-      ),
-    ]);
+  const [providerSource, diagnosticsSource, envExample, discoveredFiles] = await Promise.all([
+    readFile(new URL("../../src/lib/ai/provider.server.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/lib/config/diagnostics.server.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../.env.example", import.meta.url), "utf8"),
+    Promise.all(runtimeRoots.map(runtimeFiles)).then((groups) => groups.flat()),
+  ]);
 
   const violations = [];
   for (const file of discoveredFiles) {
@@ -66,28 +57,17 @@ test("AI provider configuration has no Lovable credit path", async () => {
   );
 
   assert.match(providerSource, /provider:\s*"openai"/);
-  assert.match(
-    providerSource,
-    /configured:\s*Boolean\(env\("OPENAI_API_KEY"\)\)/,
-  );
+  assert.match(providerSource, /configured:\s*Boolean\(env\("OPENAI_API_KEY"\)\)/);
   assert.match(providerSource, /https:\/\/api\.openai\.com\/v1/);
   assert.match(providerSource, /redirect:\s*"error"/);
-  assert.match(
-    diagnosticsSource,
-    /aiProvider:\s*feature\(\["OPENAI_API_KEY"\]\)/,
-  );
+  assert.match(diagnosticsSource, /aiProvider:\s*feature\(\["OPENAI_API_KEY"\]\)/);
   assert.doesNotMatch(envExample, /OPENAI_BASE_URL/);
 });
 
 test("title validation runs before the provider module is loaded", async () => {
-  const source = await readFile(
-    new URL("../../src/routes/api/title.ts", import.meta.url),
-    "utf8",
-  );
+  const source = await readFile(new URL("../../src/routes/api/title.ts", import.meta.url), "utf8");
   const invalidMessagesGuard = source.indexOf("if (!messages)");
-  const providerImport = source.indexOf(
-    'await import("@/lib/ai/provider.server")',
-  );
+  const providerImport = source.indexOf('await import("@/lib/ai/provider.server")');
 
   assert.ok(invalidMessagesGuard >= 0, "missing invalid-message guard");
   assert.ok(
