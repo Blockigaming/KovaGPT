@@ -42,5 +42,5 @@ test("chat sends temporary semantics and omits unowned research chat relations",
   assert.match(ingressTypes, /temporary\?: boolean/);
   assert.match(route, /temporary: Boolean\(temporary\)/);
   assert.match(index, /temporary: tempChat/);
-  assert.match(index, /chatId:\\s*activeTool === "deep_research" \\? undefined : nextConvId/);
+  assert.match(index, /chatId: activeTool === "deep_research" \? undefined : nextConvId/);
 });
