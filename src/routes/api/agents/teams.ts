@@ -1,10 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
-import {
-  controlAgentTeamRun,
-  createAgentTeamRun,
-  getAgentTeamRuns,
-} from "@/agents/team.server";
+import { controlAgentTeamRun, createAgentTeamRun, getAgentTeamRuns } from "@/agents/team.server";
 import { validateTaskGraph } from "@/agents/team";
 import {
   AGENT_TEAM_CONTROL_BODY_LIMIT_BYTES,
@@ -31,11 +27,7 @@ const TEAM_CONTROL_ERRORS = new Set([
   "approval_not_pending",
 ]);
 
-function agentRequestError(
-  error: unknown,
-  fallback: string,
-  fallbackStatus = 400,
-) {
+function agentRequestError(error: unknown, fallback: string, fallbackStatus = 400) {
   if (error instanceof AgentRequestError) {
     return Response.json(
       { error: error.publicMessage },
@@ -74,17 +66,13 @@ export const Route = createFileRoute("/api/agents/teams")({
         let body: ReturnType<typeof parseAgentTeamCreatePayload>;
         try {
           body = parseAgentTeamCreatePayload(
-            await readAgentJsonRequest(
-              request,
-              AGENT_TEAM_CREATE_BODY_LIMIT_BYTES,
-            ),
+            await readAgentJsonRequest(request, AGENT_TEAM_CREATE_BODY_LIMIT_BYTES),
           );
           if (validateTaskGraph(body.tasks).length) {
             throw new AgentRequestError("invalid_agent_graph", 400);
           }
           body.projectId = await authorizeAgentProject({
-            supabaseUser:
-              auth.supabaseUser as unknown as AgentProjectAuthorizationClient,
+            supabaseUser: auth.supabaseUser as unknown as AgentProjectAuthorizationClient,
             projectId: body.projectId,
           });
         } catch (error) {
@@ -102,11 +90,8 @@ export const Route = createFileRoute("/api/agents/teams")({
             { status: 202, headers: { "Cache-Control": "no-store" } },
           );
         } catch (error) {
-          const message =
-            error instanceof Error ? error.message : "agent_team_failed";
-          const safeMessage = TEAM_CREATE_ERRORS.has(message)
-            ? message
-            : "agent_team_failed";
+          const message = error instanceof Error ? error.message : "agent_team_failed";
+          const safeMessage = TEAM_CREATE_ERRORS.has(message) ? message : "agent_team_failed";
           const status =
             safeMessage === "agent_plan_required"
               ? 403
@@ -125,32 +110,21 @@ export const Route = createFileRoute("/api/agents/teams")({
         let body: ReturnType<typeof parseAgentTeamControlPayload>;
         try {
           body = parseAgentTeamControlPayload(
-            await readAgentJsonRequest(
-              request,
-              AGENT_TEAM_CONTROL_BODY_LIMIT_BYTES,
-            ),
+            await readAgentJsonRequest(request, AGENT_TEAM_CONTROL_BODY_LIMIT_BYTES),
           );
         } catch (error) {
           return agentRequestError(error, "invalid_agent_control");
         }
         try {
           return Response.json(
-            await controlAgentTeamRun(
-              auth,
-              body.runId,
-              body.command,
-              body.taskId,
-            ),
+            await controlAgentTeamRun(auth, body.runId, body.command, body.taskId),
             { headers: { "Cache-Control": "no-store" } },
           );
         } catch (error) {
-          const message =
-            error instanceof Error ? error.message : "agent_control_failed";
+          const message = error instanceof Error ? error.message : "agent_control_failed";
           return Response.json(
             {
-              error: TEAM_CONTROL_ERRORS.has(message)
-                ? message
-                : "agent_control_failed",
+              error: TEAM_CONTROL_ERRORS.has(message) ? message : "agent_control_failed",
             },
             {
               status: TEAM_CONTROL_ERRORS.has(message) ? 400 : 500,
