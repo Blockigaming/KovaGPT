@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { type StripeEnv, createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
+import { type StripeEnv, createStripeClient } from "@/lib/stripe.server";
+import { parseAllowedBillingPortalUrl } from "@/lib/billing-portal-url.mjs";
 import { BILLING_ENV, resolveBillingPlan, tierForLookupKey } from "@/lib/billing-plans";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -139,7 +140,10 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
 
       return { clientSecret: session.client_secret ?? "" };
     } catch (error) {
-      return { error: getStripeErrorMessage(error) };
+      console.error("[billing-checkout] Stripe request failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      return { error: "Checkout is unavailable right now. Try again." };
     }
   });
 
@@ -173,9 +177,17 @@ export const createPortalSession = createServerFn({ method: "POST" })
         customer: sub.stripe_customer_id,
         ...(data.returnUrl && { return_url: data.returnUrl }),
       });
-      return { url: portal.url };
+      const portalUrl = parseAllowedBillingPortalUrl(portal.url);
+      if (!portalUrl) {
+        console.error("[billing-portal] Stripe returned a URL outside the allowlist");
+        return { error: "The billing portal is unavailable right now. Try again." };
+      }
+      return { url: portalUrl };
     } catch (error) {
-      return { error: getStripeErrorMessage(error) };
+      console.error("[billing-portal] Stripe request failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      return { error: "The billing portal is unavailable right now. Try again." };
     }
   });
 
