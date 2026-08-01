@@ -1,8 +1,23 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
-import { PanelLeft, Search, MessageSquareDashed, Check, Share2, Download } from "lucide-react";
+import {
+  PanelLeft,
+  Search,
+  MessageSquareDashed,
+  Check,
+  Share2,
+  Download,
+} from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 
 import { ChatMessage } from "@/components/ChatMessage";
@@ -20,16 +35,24 @@ import { ResponsiveModelSelector } from "@/components/ResponsiveModelSelector";
 import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 
 const SettingsDialog = lazy(() =>
-  import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog })),
+  import("@/components/SettingsDialog").then((m) => ({
+    default: m.SettingsDialog,
+  })),
 );
 const OnboardingDialog = lazy(() =>
-  import("@/components/OnboardingDialog").then((m) => ({ default: m.OnboardingDialog })),
+  import("@/components/OnboardingDialog").then((m) => ({
+    default: m.OnboardingDialog,
+  })),
 );
 const LimitReachedDialog = lazy(() =>
-  import("@/components/LimitReachedDialog").then((m) => ({ default: m.LimitReachedDialog })),
+  import("@/components/LimitReachedDialog").then((m) => ({
+    default: m.LimitReachedDialog,
+  })),
 );
 const ShareChatDialog = lazy(() =>
-  import("@/components/ShareChatDialog").then((m) => ({ default: m.ShareChatDialog })),
+  import("@/components/ShareChatDialog").then((m) => ({
+    default: m.ShareChatDialog,
+  })),
 );
 import { applyThemeMode } from "@/lib/theme";
 import { loadSettings, settingsKey } from "@/lib/use-nova-settings";
@@ -57,7 +80,10 @@ import {
   removeArchivedConversation,
 } from "@/lib/chat-store";
 import { toast } from "sonner";
-import { loadPersonality, personalityToInstruction } from "@/components/PersonalitySliders";
+import {
+  loadPersonality,
+  personalityToInstruction,
+} from "@/components/PersonalitySliders";
 import { useTier } from "@/hooks/useTier";
 
 export const Route = createFileRoute("/")({
@@ -109,9 +135,13 @@ function KovaGPT() {
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
   const [selectedTool, setSelectedTool] = useState<ComposerToolId | null>(null);
-  const [recentLibraryFiles, setRecentLibraryFiles] = useState<RecentLibraryFile[]>([]);
+  const [recentLibraryFiles, setRecentLibraryFiles] = useState<
+    RecentLibraryFile[]
+  >([]);
   const [recentLibraryLoading, setRecentLibraryLoading] = useState(false);
-  const [recentLibraryError, setRecentLibraryError] = useState<string | null>(null);
+  const [recentLibraryError, setRecentLibraryError] = useState<string | null>(
+    null,
+  );
   const [editingMessage, setEditingMessage] = useState<{
     conversationId: string;
     messageId: string;
@@ -149,7 +179,9 @@ function KovaGPT() {
       const rows = isSignedIn ? await listMyLibrary() : [];
       setRecentLibraryFiles(
         rows
-          .filter((item) => item.file_name || item.content_text || item.file_type)
+          .filter(
+            (item) => item.file_name || item.content_text || item.file_type,
+          )
           .slice(0, 12)
           .map((item) => ({
             id: item.id,
@@ -209,7 +241,9 @@ function KovaGPT() {
   const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
   const openSettings = useCallback((tab?: string) => {
     settingsReturnFocusRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     setSettingsTab(tab);
     setSettingsOpen(true);
   }, []);
@@ -309,7 +343,10 @@ function KovaGPT() {
   }, [isLoaded, settings, userKey]);
 
   useEffect(() => {
-    const t = setTimeout(() => saveConversations(conversations.filter((c) => !c.temporary)), 400);
+    const t = setTimeout(
+      () => saveConversations(conversations.filter((c) => !c.temporary)),
+      400,
+    );
     return () => clearTimeout(t);
   }, [conversations]);
 
@@ -323,14 +360,17 @@ function KovaGPT() {
         sessionStorage.getItem("kova-app-chat-context") ??
         localStorage.getItem("kova-app-chat-context");
       const rawPrompt =
-        sessionStorage.getItem("kova-prompt-launch") ?? localStorage.getItem("kova-prompt-launch");
+        sessionStorage.getItem("kova-prompt-launch") ??
+        localStorage.getItem("kova-prompt-launch");
       const rawResearch = localStorage.getItem("kova-research-launch");
       if (rawPack) {
         const pack = JSON.parse(rawPack) as {
           name: string;
           items: { title: string; content: string }[];
         };
-        const context = pack.items.map((item) => `## ${item.title}\n${item.content}`).join("\n\n");
+        const context = pack.items
+          .map((item) => `## ${item.title}\n${item.content}`)
+          .join("\n\n");
         setInput(
           `Use this saved context pack, “${pack.name}”, to help with my request:\n\n${context}\n\nMy request: `,
         );
@@ -353,7 +393,10 @@ function KovaGPT() {
       } else if (rawPrompt) {
         const launch = JSON.parse(rawPrompt) as {
           prompt: string;
-          pack?: { name: string; items: { title: string; content: string }[] } | null;
+          pack?: {
+            name: string;
+            items: { title: string; content: string }[];
+          } | null;
         };
         const context = launch.pack
           ? `\n\nContext pack “${launch.pack.name}”:\n${launch.pack.items.map((item) => `## ${item.title}\n${item.content}`).join("\n\n")}`
@@ -426,7 +469,10 @@ function KovaGPT() {
     const el = scrollRef.current;
     if (!el) return;
     if (nearBottomRef.current) {
-      el.scrollTo({ top: el.scrollHeight, behavior: isStreaming ? "auto" : "smooth" });
+      el.scrollTo({
+        top: el.scrollHeight,
+        behavior: isStreaming ? "auto" : "smooth",
+      });
       setShowJumpToLatest(false);
     } else {
       setShowJumpToLatest(true);
@@ -443,7 +489,10 @@ function KovaGPT() {
       const payload = {
         chatId: active.id,
         title: active.title,
-        messages: active.messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: active.messages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
       };
       authFetch("/api/memory", {
         method: "POST",
@@ -473,7 +522,9 @@ function KovaGPT() {
   }, [conversations, isLoaded, isSignedIn, isStreaming, signupPromptShown]);
 
   const newChat = useCallback(() => {
-    setConversations((previous) => previous.filter((conversation) => !conversation.temporary));
+    setConversations((previous) =>
+      previous.filter((conversation) => !conversation.temporary),
+    );
     setActiveId(null);
     setInput("");
     setAttachments([]);
@@ -487,7 +538,11 @@ function KovaGPT() {
       setEditingMessage(null);
     };
     window.addEventListener("kova:conversations-imported", reloadImportedChats);
-    return () => window.removeEventListener("kova:conversations-imported", reloadImportedChats);
+    return () =>
+      window.removeEventListener(
+        "kova:conversations-imported",
+        reloadImportedChats,
+      );
   }, []);
 
   useEffect(() => {
@@ -508,8 +563,12 @@ function KovaGPT() {
 
   const deleteChat = useCallback(
     (id: string) => {
-      const deleted = conversations.find((conversation) => conversation.id === id);
-      setConversations((prev) => prev.filter((conversation) => conversation.id !== id));
+      const deleted = conversations.find(
+        (conversation) => conversation.id === id,
+      );
+      setConversations((prev) =>
+        prev.filter((conversation) => conversation.id !== id),
+      );
       if (activeId === id) setActiveId(null);
       if (deleted) {
         toast.success("Chat deleted", {
@@ -518,7 +577,9 @@ function KovaGPT() {
             onClick: () => {
               setConversations((current) => [
                 deleted!,
-                ...current.filter((conversation) => conversation.id !== deleted!.id),
+                ...current.filter(
+                  (conversation) => conversation.id !== deleted!.id,
+                ),
               ]);
               setActiveId(deleted!.id);
             },
@@ -535,12 +596,16 @@ function KovaGPT() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: msgs.slice(0, 4).map((m) => ({ role: m.role, content: m.content })),
+          messages: msgs
+            .slice(0, 4)
+            .map((m) => ({ role: m.role, content: m.content })),
         }),
       });
       const { title } = await resp.json();
       if (title) {
-        setConversations((prev) => prev.map((c) => (c.id === convId ? { ...c, title } : c)));
+        setConversations((prev) =>
+          prev.map((c) => (c.id === convId ? { ...c, title } : c)),
+        );
       }
     } catch {
       /* ignore */
@@ -597,10 +662,15 @@ function KovaGPT() {
               : { kind: "image" as const, dataUrl: a.dataUrl },
         ),
       };
-      const assistantMsg: Message = { id: newId(), role: "assistant", content: "" };
+      const assistantMsg: Message = {
+        id: newId(),
+        role: "assistant",
+        content: "",
+      };
 
       const editIndex =
-        existingConversation && editingMessage?.conversationId === existingConversation.id
+        existingConversation &&
+        editingMessage?.conversationId === existingConversation.id
           ? existingConversation.messages.findIndex(
               (message) => message.id === editingMessage.messageId,
             )
@@ -624,7 +694,10 @@ function KovaGPT() {
             updatedAt: Date.now(),
             temporary: tempChat,
           };
-          return [c, ...prev.filter((conversation) => conversation.id !== nextConvId)];
+          return [
+            c,
+            ...prev.filter((conversation) => conversation.id !== nextConvId),
+          ];
         }
 
         return prev.map((c) =>
@@ -715,19 +788,26 @@ function KovaGPT() {
               webSearch: settings.webSearch,
             },
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            locale: typeof navigator !== "undefined" ? navigator.language : "en-US",
-            personality: personalityToInstruction(loadPersonality()) || undefined,
+            locale:
+              typeof navigator !== "undefined" ? navigator.language : "en-US",
+            personality:
+              personalityToInstruction(loadPersonality()) || undefined,
           }),
           signal: controller.signal,
         });
 
         if (!resp.ok || !resp.body) {
-          const errJson = await resp.json().catch(() => ({ error: "Request failed" }));
+          const errJson = await resp
+            .json()
+            .catch(() => ({ error: "Request failed" }));
           const errMsg = errJson.error || `HTTP ${resp.status}`;
-          const requestId = errJson.requestId || resp.headers.get("x-request-id") || undefined;
+          const requestId =
+            errJson.requestId || resp.headers.get("x-request-id") || undefined;
           const category = errJson.category || undefined;
           if (resp.status === 429 && /limit/i.test(errMsg)) {
-            const kind: "image" | "chat" = /image/i.test(errMsg) ? "image" : "chat";
+            const kind: "image" | "chat" = /image/i.test(errMsg)
+              ? "image"
+              : "chat";
             setLimitDialog({ open: true, kind, message: errMsg });
           }
           const err = new Error(errMsg) as Error & {
@@ -799,7 +879,10 @@ function KovaGPT() {
                           actionId: String(delta.action_id),
                           tool: String(delta.tool ?? ""),
                           summary: String(delta.summary ?? "Confirm action"),
-                          argsPreview: (delta.args_preview ?? {}) as Record<string, unknown>,
+                          argsPreview: (delta.args_preview ?? {}) as Record<
+                            string,
+                            unknown
+                          >,
                           status: "pending" as const,
                         },
                       ];
@@ -846,12 +929,18 @@ function KovaGPT() {
             );
           }
         } else {
-          const err = e as Error & { requestId?: string; category?: string; retryable?: boolean };
+          const err = e as Error & {
+            requestId?: string;
+            category?: string;
+            retryable?: boolean;
+          };
           const raw = err.message || "Something went wrong";
           const isNetwork =
-            /load failed|networkerror|failed to fetch|network request failed/i.test(raw) ||
-            e instanceof TypeError;
-          const category = err.category || (isNetwork ? "network_failure" : undefined);
+            /load failed|networkerror|failed to fetch|network request failed/i.test(
+              raw,
+            ) || e instanceof TypeError;
+          const category =
+            err.category || (isNetwork ? "network_failure" : undefined);
           const retryableCategory =
             category === "model_timeout" ||
             category === "streaming_interruption" ||
@@ -861,7 +950,9 @@ function KovaGPT() {
           // authentication failures cannot heal through repeated requests and
           // previously made the composer look stuck while it silently retried.
           const canAutoRetry =
-            err.retryable !== false && retryableCategory && _retryAttempt < MAX_AUTO_RETRIES;
+            err.retryable !== false &&
+            retryableCategory &&
+            _retryAttempt < MAX_AUTO_RETRIES;
 
           if (canAutoRetry) {
             // Exponential backoff: 600ms, 1800ms. Strip the failed turn so
@@ -885,7 +976,13 @@ function KovaGPT() {
             retryTimerRef.current = window.setTimeout(() => {
               retryTimerRef.current = null;
               if (activeIdRef.current !== nextConvId) return;
-              void send(text, atts, _retryAttempt + 1, nextConvId, priorMessages);
+              void send(
+                text,
+                atts,
+                _retryAttempt + 1,
+                nextConvId,
+                priorMessages,
+              );
             }, backoffMs);
             return;
           }
@@ -907,7 +1004,9 @@ function KovaGPT() {
                       : isNetwork
                         ? "Connection lost while generating a response. Check your internet and tap retry."
                         : raw;
-          const detail = requestId ? `${friendly} (ref: ${requestId})` : friendly;
+          const detail = requestId
+            ? `${friendly} (ref: ${requestId})`
+            : friendly;
           toast.error(friendly, {
             description: requestId ? `Reference ID: ${requestId}` : undefined,
             action: {
@@ -919,7 +1018,8 @@ function KovaGPT() {
                       ? {
                           ...c,
                           messages: c.messages.filter(
-                            (m) => m.id !== assistantMsg.id && m.id !== userMsg.id,
+                            (m) =>
+                              m.id !== assistantMsg.id && m.id !== userMsg.id,
                           ),
                         }
                       : c,
@@ -942,7 +1042,16 @@ function KovaGPT() {
         inFlightRef.current = false;
       }
     },
-    [activeId, conversations, mode, autoTitle, settings, selectedTool, tempChat, editingMessage],
+    [
+      activeId,
+      conversations,
+      mode,
+      autoTitle,
+      settings,
+      selectedTool,
+      tempChat,
+      editingMessage,
+    ],
   );
 
   const stop = useCallback(() => {
@@ -1029,7 +1138,9 @@ function KovaGPT() {
           toast.success("Chat duplicated");
         }}
         onArchive={(id) => {
-          const archived = conversations.find((conversation) => conversation.id === id);
+          const archived = conversations.find(
+            (conversation) => conversation.id === id,
+          );
           setConversations((prev) => {
             if (archived) archiveConversation(archived);
             return prev.filter((c) => c.id !== id);
@@ -1043,7 +1154,9 @@ function KovaGPT() {
                     removeArchivedConversation(archived!.id);
                     setConversations((current) => [
                       archived!,
-                      ...current.filter((conversation) => conversation.id !== archived!.id),
+                      ...current.filter(
+                        (conversation) => conversation.id !== archived!.id,
+                      ),
                     ]);
                     setActiveId(archived!.id);
                   },
@@ -1055,7 +1168,11 @@ function KovaGPT() {
           setConversations((prev) =>
             prev.map((c) =>
               c.id === id
-                ? { ...c, pinned: !c.pinned, pinnedAt: !c.pinned ? Date.now() : undefined }
+                ? {
+                    ...c,
+                    pinned: !c.pinned,
+                    pinnedAt: !c.pinned ? Date.now() : undefined,
+                  }
                 : c,
             ),
           );
@@ -1123,9 +1240,14 @@ function KovaGPT() {
                   type="button"
                   onClick={() => {
                     const transcript = active.messages
-                      .map((m) => `${m.role === "user" ? "You" : "KovaGPT"}: ${m.content}`)
+                      .map(
+                        (m) =>
+                          `${m.role === "user" ? "You" : "KovaGPT"}: ${m.content}`,
+                      )
                       .join("\n\n");
-                    const blob = new Blob([transcript], { type: "text/markdown;charset=utf-8" });
+                    const blob = new Blob([transcript], {
+                      type: "text/markdown;charset=utf-8",
+                    });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement("a");
                     a.href = url;
@@ -1165,7 +1287,9 @@ function KovaGPT() {
                   const next = !tempChat;
                   if (next) {
                     try {
-                      localStorage.removeItem(`kova-draft:${activeId ?? "__new__"}`);
+                      localStorage.removeItem(
+                        `kova-draft:${activeId ?? "__new__"}`,
+                      );
                     } catch {
                       /* Storage may be unavailable; temporary input still stays in memory only. */
                     }
@@ -1184,14 +1308,17 @@ function KovaGPT() {
                     });
                   } else {
                     toast.message("Temporary chat disabled", {
-                      description: "New chats will be saved and use memory again.",
+                      description:
+                        "New chats will be saved and use memory again.",
                     });
                   }
                 }}
                 aria-label="Toggle temporary chat"
                 title={tempChat ? "Temporary chat on" : "Start temporary chat"}
                 className={`relative shrink-0 p-2 rounded-lg transition ${
-                  tempChat ? "bg-primary/15 text-primary" : "hover:bg-accent text-foreground"
+                  tempChat
+                    ? "bg-primary/15 text-primary"
+                    : "hover:bg-accent text-foreground"
                 }`}
               >
                 <MessageSquareDashed className="w-5 h-5" />
@@ -1203,7 +1330,10 @@ function KovaGPT() {
               </button>
             )}
             {!isLoaded ? null : isSignedIn ? (
-              <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: "w-8 h-8" } }} />
+              <UserButton
+                afterSignOutUrl="/"
+                appearance={{ elements: { avatarBox: "w-8 h-8" } }}
+              />
             ) : (
               <>
                 <SignInButton mode="modal">
@@ -1268,9 +1398,13 @@ function KovaGPT() {
                   onModeChange={setMode}
                   userTier={tier}
                   canChangeAgent={false}
-                  onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
+                  onUploadLimit={() =>
+                    setLimitDialog({ open: true, kind: "upload" })
+                  }
                   placeholder="Ask anything"
-                  onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
+                  onPromptShortcut={(prompt) =>
+                    setInput((v) => (v.trim() ? v : prompt))
+                  }
                   selectedTool={selectedTool}
                   onToolSelect={setSelectedTool}
                   recentLibraryFiles={recentLibraryFiles}
@@ -1304,10 +1438,14 @@ function KovaGPT() {
                       const origin = active.branchOrigin;
                       if (!origin) return;
                       const sourceExists = conversations.some(
-                        (conversation) => conversation.id === origin.conversationId,
+                        (conversation) =>
+                          conversation.id === origin.conversationId,
                       );
                       if (sourceExists) setActiveId(origin.conversationId);
-                      else toast.error("The source conversation is no longer available");
+                      else
+                        toast.error(
+                          "The source conversation is no longer available",
+                        );
                     }}
                   >
                     View source
@@ -1315,10 +1453,13 @@ function KovaGPT() {
                 </div>
               )}
               {active.messages.map((m, i) => {
-                const isLastAssistant = m.role === "assistant" && i === active.messages.length - 1;
+                const isLastAssistant =
+                  m.role === "assistant" && i === active.messages.length - 1;
                 // Find the user message that prompted this assistant reply (immediately before).
                 const priorUser =
-                  m.role === "assistant" && i > 0 && active.messages[i - 1]?.role === "user"
+                  m.role === "assistant" &&
+                  i > 0 &&
+                  active.messages[i - 1]?.role === "user"
                     ? active.messages[i - 1]
                     : null;
                 return (
@@ -1337,7 +1478,9 @@ function KovaGPT() {
                                 ? msg
                                 : {
                                     ...msg,
-                                    pendingConfirms: (msg.pendingConfirms ?? []).map((pc) =>
+                                    pendingConfirms: (
+                                      msg.pendingConfirms ?? []
+                                    ).map((pc) =>
                                       pc.actionId === next.actionId ? next : pc,
                                     ),
                                   },
@@ -1347,7 +1490,9 @@ function KovaGPT() {
                       );
                     }}
                     onFollowUp={
-                      isLastAssistant && !isStreaming ? (prompt) => send(prompt, []) : undefined
+                      isLastAssistant && !isStreaming
+                        ? (prompt) => send(prompt, [])
+                        : undefined
                     }
                     onEdit={
                       m.role === "user" && !isStreaming
@@ -1444,7 +1589,9 @@ function KovaGPT() {
                     }
                     onBranch={() => {
                       if (isStreaming) {
-                        toast.message("Wait for this response to finish before branching");
+                        toast.message(
+                          "Wait for this response to finish before branching",
+                        );
                         return;
                       }
                       try {
@@ -1454,7 +1601,9 @@ function KovaGPT() {
                         toast.success("Branched into a new chat");
                       } catch (error) {
                         toast.error(
-                          error instanceof Error ? error.message : "Could not branch chat",
+                          error instanceof Error
+                            ? error.message
+                            : "Could not branch chat",
                         );
                       }
                     }}
@@ -1484,7 +1633,9 @@ function KovaGPT() {
                   className="mx-auto mb-2 flex w-full max-w-[48rem] items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-sm"
                   role="status"
                 >
-                  <span className="min-w-0 truncate">Editing a previous prompt</span>
+                  <span className="min-w-0 truncate">
+                    Editing a previous prompt
+                  </span>
                   <button
                     type="button"
                     className="shrink-0 rounded-md px-2 py-1 font-medium text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
@@ -1511,9 +1662,13 @@ function KovaGPT() {
                 onModeChange={setMode}
                 userTier={tier}
                 canChangeAgent={false}
-                onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
+                onUploadLimit={() =>
+                  setLimitDialog({ open: true, kind: "upload" })
+                }
                 placeholder="Ask anything"
-                onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
+                onPromptShortcut={(prompt) =>
+                  setInput((v) => (v.trim() ? v : prompt))
+                }
                 selectedTool={selectedTool}
                 onToolSelect={setSelectedTool}
                 recentLibraryFiles={recentLibraryFiles}
@@ -1549,7 +1704,9 @@ function KovaGPT() {
           <ShareChatDialog
             open={shareChatId !== null}
             onOpenChange={(v) => !v && setShareChatId(null)}
-            conversation={conversations.find((c) => c.id === shareChatId) ?? null}
+            conversation={
+              conversations.find((c) => c.id === shareChatId) ?? null
+            }
           />
         )}
 
@@ -1564,7 +1721,10 @@ function KovaGPT() {
         )}
       </Suspense>
 
-      <SignUpPrompt open={signupPromptOpen} onOpenChange={setSignupPromptOpen} />
+      <SignUpPrompt
+        open={signupPromptOpen}
+        onOpenChange={setSignupPromptOpen}
+      />
 
       <CommandPalette
         open={commandOpen}
