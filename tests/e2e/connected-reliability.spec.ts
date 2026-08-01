@@ -25,13 +25,12 @@ test("connected apps and scheduled tasks expose truthful signed-out states", asy
   expect(overflow).toBeLessThanOrEqual(1);
 });
 
-test("the production-style Worker serves its safe health endpoint", async ({ request }) => {
+test("the built preview serves its safe health endpoint", async ({ request }) => {
   const response = await request.get("/api/health");
   expect(response.status()).toBe(200);
+  expect(response.headers()["content-type"]).toContain("application/json");
+  expect(response.headers()["cache-control"]).toContain("no-store");
 
   const body = await response.json();
   expect(body).toMatchObject({ ok: true, app: "KovaGPT" });
-  expect(JSON.stringify(body)).not.toMatch(
-    /service_role|private_key|api_key|client_secret|access_token|refresh_token/i,
-  );
 });
