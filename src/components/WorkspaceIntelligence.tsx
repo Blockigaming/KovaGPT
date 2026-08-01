@@ -254,7 +254,7 @@ export function WorkspaceIntelligence() {
   }, [isLoaded, isSignedIn, list, principal]);
   const local = useMemo<DashboardItem[]>(() => {
     if (!isLoaded || !isSignedIn) return [];
-    const work = loadWorkTasks()
+    const work = loadWorkTasks(userKey)
       .filter((task) => task.status === "planning" || task.status === "paused")
       .map((task) => ({
         id: task.id,
