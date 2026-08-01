@@ -1,12 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { type StripeEnv, createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
-import { resolveBillingPlan, tierForLookupKey } from "@/lib/billing-plans";
+import { BILLING_ENV, resolveBillingPlan, tierForLookupKey } from "@/lib/billing-plans";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 type CheckoutSessionResult = { clientSecret: string } | { error: string };
 // Customer-facing billing is production-only. The environment supplied by a
 // browser is never trusted to select Stripe credentials or subscription rows.
-const BILLING_ENV: StripeEnv = "live";
 
 async function resolveOrCreateCustomer(
   stripe: ReturnType<typeof createStripeClient>,
