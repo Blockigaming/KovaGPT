@@ -23,11 +23,7 @@ import { useEffect, useRef, useState } from "react";
 import { tryUseUpload } from "@/lib/limits";
 import { toast } from "sonner";
 import { ResponsiveModelSelector as ModelSelector } from "@/components/ResponsiveModelSelector";
-import {
-  DAILY_UPLOAD_LIMIT_BY_TIER,
-  type ModeId,
-  type Tier,
-} from "@/lib/modes";
+import { DAILY_UPLOAD_LIMIT_BY_TIER, type ModeId, type Tier } from "@/lib/modes";
 
 export type PendingAttachment = {
   kind: "image" | "text_file" | "library_file";
@@ -187,11 +183,7 @@ export function ChatInput({
       /* ignore */
     }
     const onStorage = (e: StorageEvent) => {
-      if (
-        e.key === "kova-action-color" &&
-        e.newValue &&
-        /^#[0-9a-f]{6}$/i.test(e.newValue)
-      ) {
+      if (e.key === "kova-action-color" && e.newValue && /^#[0-9a-f]{6}$/i.test(e.newValue)) {
         setActionColor(e.newValue);
       }
     };
@@ -241,8 +233,7 @@ export function ChatInput({
     if (disabled || submittingRef.current || isStreaming) return;
     if (!value.trim() && attachments.length === 0) return;
     const blocked = attachments.find(
-      (attachment) =>
-        attachment.status === "uploading" || attachment.status === "failed",
+      (attachment) => attachment.status === "uploading" || attachment.status === "failed",
     );
     if (blocked) {
       const message =
@@ -262,12 +253,7 @@ export function ChatInput({
 
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const native = e.nativeEvent as KeyboardEvent & { isComposing?: boolean };
-    if (
-      e.key === "Enter" &&
-      !e.shiftKey &&
-      !native.isComposing &&
-      !composingRef.current
-    ) {
+    if (e.key === "Enter" && !e.shiftKey && !native.isComposing && !composingRef.current) {
       e.preventDefault();
       triggerSubmit();
     }
@@ -287,17 +273,13 @@ export function ChatInput({
       );
     }
     let nextAttachments = [...attachments];
-    const seen = new Set(
-      nextAttachments.map((a) => `${a.name}:${a.size ?? 0}`),
-    );
+    const seen = new Set(nextAttachments.map((a) => `${a.name}:${a.size ?? 0}`));
     const uploadLimit = DAILY_UPLOAD_LIMIT_BY_TIER[userTier];
 
     for (const f of files.slice(0, availableSlots)) {
       const isImage = f.type.startsWith("image/");
       const isTextLike =
-        f.type.startsWith("text/") ||
-        f.type === "application/json" ||
-        TEXT_LIKE_EXT.test(f.name);
+        f.type.startsWith("text/") || f.type === "application/json" || TEXT_LIKE_EXT.test(f.name);
 
       if (!isImage && !isTextLike) {
         const failed: PendingAttachment = {
@@ -358,9 +340,7 @@ export function ChatInput({
             r.readAsDataURL(f);
           });
           nextAttachments = nextAttachments.map((a) =>
-            a === uploading
-              ? { ...uploading, dataUrl, status: "complete" as const }
-              : a,
+            a === uploading ? { ...uploading, dataUrl, status: "complete" as const } : a,
           );
           seen.add(duplicateKey);
           setUploadAnnouncement(`${f.name} attached`);
@@ -370,10 +350,7 @@ export function ChatInput({
               ? {
                   ...uploading,
                   status: "failed" as const,
-                  error:
-                    error instanceof Error
-                      ? error.message
-                      : "Could not read image",
+                  error: error instanceof Error ? error.message : "Could not read image",
                 }
               : a,
           );
@@ -427,10 +404,7 @@ export function ChatInput({
               ? {
                   ...uploading,
                   status: "failed" as const,
-                  error:
-                    error instanceof Error
-                      ? error.message
-                      : "Could not read file",
+                  error: error instanceof Error ? error.message : "Could not read file",
                 }
               : attachment,
           );
@@ -513,10 +487,7 @@ export function ChatInput({
     .slice(0, 8);
 
   const renderRecentLibraryFiles = () => (
-    <div
-      className="mt-1 border-t border-border/70 pt-1"
-      aria-label="Recent Library files"
-    >
+    <div className="mt-1 border-t border-border/70 pt-1" aria-label="Recent Library files">
       <div className="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
         Recent Library files
       </div>
@@ -532,9 +503,7 @@ export function ChatInput({
         </label>
       ) : null}
       {recentLibraryLoading ? (
-        <div className="px-3 py-3 text-sm text-muted-foreground">
-          Loading recent files…
-        </div>
+        <div className="px-3 py-3 text-sm text-muted-foreground">Loading recent files…</div>
       ) : recentLibraryError ? (
         <div className="px-3 py-2 text-sm text-muted-foreground">
           <div>{recentLibraryError}</div>
@@ -549,9 +518,7 @@ export function ChatInput({
           ) : null}
         </div>
       ) : visibleRecentLibraryFiles.length === 0 ? (
-        <div className="px-3 py-3 text-sm text-muted-foreground">
-          No reusable files yet.
-        </div>
+        <div className="px-3 py-3 text-sm text-muted-foreground">No reusable files yet.</div>
       ) : (
         <div className="max-h-64 overflow-y-auto p-1">
           {visibleRecentLibraryFiles.map((item) => {
@@ -570,9 +537,7 @@ export function ChatInput({
                     {[
                       item.fileType || "Library file",
                       item.projectName,
-                      item.createdAt
-                        ? new Date(item.createdAt).toLocaleDateString()
-                        : null,
+                      item.createdAt ? new Date(item.createdAt).toLocaleDateString() : null,
                     ]
                       .filter(Boolean)
                       .join(" · ")}
@@ -586,18 +551,14 @@ export function ChatInput({
     </div>
   );
 
-  const selectedToolOption = COMPOSER_TOOLS.find(
-    (item) => item.id === selectedTool,
-  );
+  const selectedToolOption = COMPOSER_TOOLS.find((item) => item.id === selectedTool);
   const ActiveToolIcon = selectedToolOption?.icon;
 
   const chooseTool = (tool: ComposerAction) => {
     const next = selectedTool === tool.id ? null : tool.id;
     onToolSelect?.(next);
     setPlusOpen(false);
-    setUploadAnnouncement(
-      next ? `${tool.label} selected` : `${tool.label} removed`,
-    );
+    setUploadAnnouncement(next ? `${tool.label} selected` : `${tool.label} removed`);
     window.requestAnimationFrame(() => ref.current?.focus());
   };
 
@@ -639,10 +600,7 @@ export function ChatInput({
       ) : null}
 
       {onPromptShortcut && !value.trim() ? (
-        <div
-          className="mt-1 border-t border-border/70 pt-1"
-          aria-label="Prompt starters"
-        >
+        <div className="mt-1 border-t border-border/70 pt-1" aria-label="Prompt starters">
           <div className="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             Prompt starters
           </div>
@@ -650,9 +608,7 @@ export function ChatInput({
             <button
               key={shortcut.label}
               type="button"
-              onClick={() =>
-                choosePromptShortcut(shortcut.label, shortcut.prompt)
-              }
+              onClick={() => choosePromptShortcut(shortcut.label, shortcut.prompt)}
               className={`flex w-full items-center gap-3 rounded-xl text-left text-sm transition hover:bg-accent ${
                 mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5"
               }`}
@@ -669,11 +625,7 @@ export function ChatInput({
   return (
     <div
       className="w-full px-2.5 pb-[max(.75rem,var(--safe-bottom))] pt-2 transition-[padding] duration-150 sm:px-6 lg:px-8"
-      style={
-        isMobileLayout && kbOffset > 0
-          ? { paddingBottom: `${kbOffset + 8}px` }
-          : undefined
-      }
+      style={isMobileLayout && kbOffset > 0 ? { paddingBottom: `${kbOffset + 8}px` } : undefined}
       onPaste={handlePaste}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
@@ -689,18 +641,11 @@ export function ChatInput({
               : undefined
           }
           className={`kova-composer overflow-visible rounded-[28px] transition-[border-color,box-shadow,transform] duration-200 ${
-            sendFlash
-              ? "scale-[0.995]"
-              : isStreaming
-                ? "ring-1 ring-foreground/10"
-                : ""
+            sendFlash ? "scale-[0.995]" : isStreaming ? "ring-1 ring-foreground/10" : ""
           }`}
         >
           {attachments.length > 0 && (
-            <div
-              className="flex flex-wrap gap-2 p-3 pb-0"
-              aria-label="Attachments"
-            >
+            <div className="flex flex-wrap gap-2 p-3 pb-0" aria-label="Attachments">
               {attachments.map((a, i) => (
                 <div
                   key={`${a.name}:${a.size ?? i}:${i}`}
@@ -750,9 +695,7 @@ export function ChatInput({
                     <button
                       type="button"
                       onClick={() => {
-                        onAttachmentsChange(
-                          attachments.filter((_, j) => j !== i),
-                        );
+                        onAttachmentsChange(attachments.filter((_, j) => j !== i));
                         fileRef.current?.click();
                       }}
                       className="absolute bottom-5 left-1 flex h-7 w-7 items-center justify-center rounded-full bg-background/90 hover:bg-background"
@@ -764,9 +707,7 @@ export function ChatInput({
                   ) : null}
                   <button
                     type="button"
-                    onClick={() =>
-                      onAttachmentsChange(attachments.filter((_, j) => j !== i))
-                    }
+                    onClick={() => onAttachmentsChange(attachments.filter((_, j) => j !== i))}
                     className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-background/85 hover:bg-background"
                     aria-label={`Remove ${a.name}`}
                   >
@@ -776,10 +717,7 @@ export function ChatInput({
               ))}
             </div>
           )}
-          {showAddMenu &&
-          selectedToolOption &&
-          ActiveToolIcon &&
-          onToolSelect ? (
+          {showAddMenu && selectedToolOption && ActiveToolIcon && onToolSelect ? (
             <div className="flex px-3 pt-2">
               <button
                 ref={plusTriggerRef}
@@ -812,8 +750,8 @@ export function ChatInput({
                 onChange={onFileChange}
               />
               <span className="sr-only" id="file-upload-guidance">
-                Text, code, CSV, JSON, and image files. Text files may be up to
-                256 KB and images up to 3 MB.
+                Text, code, CSV, JSON, and image files. Text files may be up to 256 KB and images up
+                to 3 MB.
               </span>
               <input
                 ref={photoRef}
@@ -980,12 +918,7 @@ export function ChatInput({
             <div className="flex items-center gap-1.5 pr-1.5">
               {canChangeAgent && mode && onModeChange && (
                 <div className="flex items-center">
-                  <ModelSelector
-                    mode={mode}
-                    onChange={onModeChange}
-                    userTier={userTier}
-                    compact
-                  />
+                  <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
                 </div>
               )}
               {isStreaming ? (
@@ -1001,8 +934,7 @@ export function ChatInput({
                 (value.trim() || attachments.length > 0) &&
                 !attachments.some(
                   (attachment) =>
-                    attachment.status === "uploading" ||
-                    attachment.status === "failed",
+                    attachment.status === "uploading" || attachment.status === "failed",
                 ) ? (
                 <button
                   type="button"
@@ -1020,11 +952,7 @@ export function ChatInput({
                   disabled
                   className="kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground lg:h-9 lg:w-9"
                   aria-label="Send"
-                  title={
-                    disabled
-                      ? "Messaging is unavailable"
-                      : "Type a message to send"
-                  }
+                  title={disabled ? "Messaging is unavailable" : "Type a message to send"}
                 >
                   <ArrowUp className="h-5 w-5" />
                 </button>
