@@ -7,7 +7,7 @@ declare module "@/lib/webhook-reliability.mjs" {
   export function processStripeEvent(input: {
     supabase: unknown;
     event: unknown;
-    environment: "live" | "test";
+    environment: "live" | "sandbox";
     resolvePriceId: (item: never) => string | undefined;
     now?: () => string;
   }): Promise<{ duplicate: boolean }>;
