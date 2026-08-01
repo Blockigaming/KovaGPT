@@ -69,7 +69,12 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Build the Nitro Cloudflare module
-        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          node scripts/validate-public-build-env.mjs
+          npm run build
 
       - name: Validate the generated Worker artifact
         run: node --test tests/integration/production-worker-artifact.test.mjs
