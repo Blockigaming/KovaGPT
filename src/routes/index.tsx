@@ -500,7 +500,7 @@ function KovaGPT() {
         window.setTimeout(() => setTempChatConfirmed(false), 1400);
         toast.success("Temporary chat enabled", {
           description:
-            "Memory is off for this chat. It's private and won't be saved to your history.",
+            "Memory is off. This chat won't appear in history or be used for cross-chat memory.",
         });
       } else {
         toast.message("Temporary chat disabled", {
