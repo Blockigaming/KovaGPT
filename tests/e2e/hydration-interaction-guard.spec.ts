@@ -16,13 +16,8 @@ test("SSR controls wait for hydration and early shortcuts replay once", async ({
   });
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  await expect(page.locator("html")).toHaveAttribute(
-    "data-kova-hydration",
-    "pending",
-  );
-  await expect(
-    page.locator('button[aria-label="Add files, tools, or prompts"]'),
-  ).toBeDisabled();
+  await expect(page.locator("html")).toHaveAttribute("data-kova-hydration", "pending");
+  await expect(page.locator('button[aria-label="Add files, tools, or prompts"]')).toBeDisabled();
 
   await page.evaluate(() => {
     const replayed: string[] = [];
@@ -38,9 +33,7 @@ test("SSR controls wait for hydration and early shortcuts replay once", async ({
 
   releaseScripts();
   await waitForKovaHydration(page);
-  await expect(
-    page.locator('button[aria-label="Add files, tools, or prompts"]'),
-  ).toBeEnabled();
+  await expect(page.locator('button[aria-label="Add files, tools, or prompts"]')).toBeEnabled();
   await expect
     .poll(() =>
       page.evaluate(
