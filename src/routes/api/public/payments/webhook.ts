@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { type StripeEnv, verifyWebhook } from "@/lib/stripe.server";
+import { resolveBillingPlan } from "@/lib/billing-plans";
 import type { Database } from "@/integrations/supabase/types";
 
 let _supabase: ReturnType<typeof createClient<Database>> | null = null;
@@ -36,7 +37,16 @@ type StripeSubscriptionLike = {
 };
 
 function priceIdFrom(item: StripeLineItemLike | undefined): string | undefined {
-  return item?.price?.lookup_key || item?.price?.metadata?.lovable_external_id || item?.price?.id;
+  const candidates = [
+    item?.price?.lookup_key,
+    item?.price?.metadata?.lovable_external_id,
+    item?.price?.id,
+  ];
+  for (const candidate of candidates) {
+    const plan = resolveBillingPlan(candidate);
+    if (plan) return plan.lookupKey;
+  }
+  return undefined;
 }
 
 async function handleSubscriptionCreated(subscription: StripeSubscriptionLike, env: StripeEnv) {
