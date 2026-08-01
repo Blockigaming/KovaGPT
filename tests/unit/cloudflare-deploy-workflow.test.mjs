@@ -9,7 +9,10 @@ test("production deployment is manual, protected, and uses the generated Nitro a
 
   assert.match(workflow, /^on:\n  workflow_dispatch:/m);
   assert.doesNotMatch(workflow, /^  (?:push|pull_request|schedule):/m);
-  assert.match(workflow, /if: inputs\.confirmation == 'DEPLOY'/);
+  assert.match(
+    workflow,
+    /if: inputs\.confirmation == 'DEPLOY' && github\.ref == 'refs\/heads\/main'/,
+  );
   assert.match(workflow, /environment:\n      name: production/);
   assert.match(workflow, /secrets\.CLOUDFLARE_API_TOKEN/);
   assert.match(workflow, /vars\.CLOUDFLARE_ACCOUNT_ID/);
