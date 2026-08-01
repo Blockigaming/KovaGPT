@@ -19,10 +19,7 @@ test("Google JSON endpoints enforce streamed byte limits instead of trusting hea
     assert.match(route, /readBoundedJsonObject\(request,/);
     assert.match(route, /error instanceof BoundedJsonError/);
     assert.doesNotMatch(route, /request\.json\(\)/);
-    assert.doesNotMatch(
-      route,
-      /Number\(request\.headers\.get\("content-length"\)/,
-    );
+    assert.doesNotMatch(route, /Number\(request\.headers\.get\("content-length"\)/);
   }
 });
 
@@ -35,27 +32,18 @@ test("direct Google endpoints remain read-only", () => {
   assert.match(gmail, /confirmation_required/);
   assert.match(calendar, /confirmation_required/);
   assert.doesNotMatch(gmail, /action === "(?:draft|send|trash)"/);
-  assert.doesNotMatch(
-    gmail,
-    /buildRawEmail|base64UrlEncode|\/drafts\/send|\/messages\/send/,
-  );
+  assert.doesNotMatch(gmail, /buildRawEmail|base64UrlEncode|\/drafts\/send|\/messages\/send/);
   assert.doesNotMatch(calendar, /action === "(?:create|update|delete)"/);
 });
 
 test("confirmation reads and claims only the signed-in owner's row", () => {
   const executor = read("src/lib/google-tools.server.ts");
   const start = executor.indexOf("export async function executePendingAction");
-  const end = executor.indexOf(
-    "export async function cancelPendingAction",
-    start,
-  );
+  const end = executor.indexOf("export async function cancelPendingAction", start);
   const execute = executor.slice(start, end);
 
   const lookup = execute.slice(0, execute.indexOf("const pendingRow"));
-  assert.match(
-    lookup,
-    /\.eq\("id", actionId\)\s*\.eq\("user_id", userId\)\s*\.maybeSingle\(\)/,
-  );
+  assert.match(lookup, /\.eq\("id", actionId\)\s*\.eq\("user_id", userId\)\s*\.maybeSingle\(\)/);
   const claim = execute.slice(
     execute.indexOf("Atomically claim"),
     execute.indexOf("let token", execute.indexOf("Atomically claim")),
@@ -68,14 +56,8 @@ test("confirmation reads and claims only the signed-in owner's row", () => {
 test("claimed legacy arguments are revalidated immediately before Google access", () => {
   const executor = read("src/lib/google-tools.server.ts");
   const claim = executor.indexOf('.select("id, tool, args")');
-  const revalidate = executor.indexOf(
-    "validateSupportedWrite(claimedTool,",
-    claim,
-  );
-  const token = executor.indexOf(
-    "getValidGoogleAccessToken(userId)",
-    revalidate,
-  );
+  const revalidate = executor.indexOf("validateSupportedWrite(claimedTool,", claim);
+  const token = executor.indexOf("getValidGoogleAccessToken(userId)", revalidate);
 
   assert.ok(claim > -1 && revalidate > claim && token > revalidate);
   assert.match(executor, /const SUPPORTED_WRITE_TOOLS = new Set\(\[/);
@@ -105,18 +87,9 @@ test("confirmation results fail safely when final persistence is ambiguous", () 
   const executor = read("src/lib/google-tools.server.ts");
 
   assert.match(executor, /Action already completed\./);
-  assert.match(
-    executor,
-    /confirmationPersistError \|\| !confirmationPersisted/,
-  );
-  assert.match(
-    executor,
-    /Google completed the action, but KovaGPT could not verify completion/,
-  );
-  assert.match(
-    executor,
-    /Google could not confirm whether the action completed/,
-  );
+  assert.match(executor, /confirmationPersistError \|\| !confirmationPersisted/);
+  assert.match(executor, /Google completed the action, but KovaGPT could not verify completion/);
+  assert.match(executor, /Google could not confirm whether the action completed/);
   assert.doesNotMatch(executor, /return \{ ok: false, error: msg \}/);
   assert.doesNotMatch(executor, /result: \{ error: msg \}/);
 });
