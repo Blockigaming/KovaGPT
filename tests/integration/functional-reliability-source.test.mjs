@@ -15,7 +15,7 @@ test("anonymous protected requests fail as unauthorized before auth configuratio
   const headerCheck = apiAuth.indexOf('request.headers.get("authorization")');
   const envCheck = apiAuth.indexOf("process.env.SUPABASE_URL");
   assert.ok(headerCheck > -1 && envCheck > -1 && headerCheck < envCheck);
-  assert.match(apiAuth, /parseBearerToken\(authHeader\)/);
+  assert.match(apiAuth, /parseBearerToken\(header\)/);
   assert.match(authSecurity, /export function parseBearerToken/);
   assert.match(authSecurity, /const match = \/\^Bearer/);
 });
