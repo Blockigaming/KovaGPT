@@ -6,6 +6,15 @@ import { API_METHOD_POLICY_ROUTES } from "../../src/lib/api-method-policy.server
 
 const HTTP_METHOD_PATTERN = /^\s+(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS):\s*(?:async\s*)?\(/gmu;
 
+async function readRouteSource(routeId) {
+  try {
+    return await readFile(`src/routes/${routeId}.ts`, "utf8");
+  } catch (error) {
+    if (!error || typeof error !== "object" || error.code !== "ENOENT") throw error;
+    return readFile(`src/routes/${routeId}.tsx`, "utf8");
+  }
+}
+
 test("the centralized inventory exactly covers every generated server route handler", async () => {
   const routeTree = await readFile("src/routeTree.gen.ts", "utf8");
   const routeIds = [...routeTree.matchAll(/from ["']\.\/routes\/([^"']+)["']/gu)].map(
@@ -16,7 +25,7 @@ test("the centralized inventory exactly covers every generated server route hand
   const auditedRoutes = (
     await Promise.all(
       uniqueRouteIds.map(async (routeId) => {
-        const source = await readFile(`src/routes/${routeId}.ts`, "utf8");
+        const source = await readRouteSource(routeId);
         if (!/server:\s*\{\s*handlers:\s*\{/u.test(source)) return null;
         const methods = [...source.matchAll(HTTP_METHOD_PATTERN)].map((match) => match[1]);
         assert.ok(methods.length > 0, `${routeId} must expose at least one HTTP method`);
