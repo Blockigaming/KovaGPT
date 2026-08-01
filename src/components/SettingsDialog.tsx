@@ -74,6 +74,8 @@ import {
   type SubscriptionSummary,
 } from "@/utils/payments.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
+import { parseAllowedBillingPortalUrl } from "@/lib/billing-portal-url.mjs";
+import { setSharedSendOnEnter } from "@/lib/composer-preferences";
 import { PersonalitySliders } from "@/components/PersonalitySliders";
 import { StorageDashboard } from "@/components/StorageDashboard";
 import { FamilySharingPanel } from "@/components/FamilySharingPanel";
@@ -265,6 +267,11 @@ export function SettingsDialog({
   const [deleteAccountBusy, setDeleteAccountBusy] = useState(false);
 
   useEffect(() => {
+    if (!open) return;
+    setSharedSendOnEnter(user?.id ?? null, settings.sendOnEnter);
+  }, [open, settings.sendOnEnter, user?.id]);
+
+  useEffect(() => {
     if (!open || tab !== "subscription" || !loggedIn) return;
     let cancelled = false;
     setUsageLoading(true);
@@ -296,7 +303,7 @@ export function SettingsDialog({
       .catch(() => {
         if (!cancelled) {
           setSubSummary(null);
-          setSubscriptionError("Billing details couldn't be verified. Try again.");
+          setSubscriptionError("Billing details couldn't be verified. Select Refresh billing status to retry.");
         }
       })
       .finally(() => {
@@ -317,10 +324,12 @@ export function SettingsDialog({
           returnUrl: `${window.location.origin}/`,
         },
       });
-      if ("error" in res) throw new Error(res.error);
-      window.location.assign(res.url);
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Couldn't open the billing portal.");
+      if ("error" in res) throw new Error("billing_portal_unavailable");
+      const portalUrl = parseAllowedBillingPortalUrl(res.url);
+      if (!portalUrl) throw new Error("billing_portal_url_rejected");
+      window.location.assign(portalUrl);
+    } catch {
+      toast.error("The billing portal couldn't be opened. Try again.");
     } finally {
       setPortalLoading(false);
     }
@@ -391,7 +400,7 @@ export function SettingsDialog({
       }
     } catch {
       setSubSummary(null);
-      setSubscriptionError("Billing details couldn't be verified. Try again.");
+      setSubscriptionError("Billing details couldn't be verified. Select Refresh billing status to retry.");
       toast.error("Couldn't check your subscription. Try again.");
     } finally {
       setSubscriptionLoading(false);
@@ -2157,7 +2166,7 @@ function SignedOutSettings({
             Privacy
           </h3>
           <div className="rounded-2xl border border-border/60 bg-card/40 p-4 space-y-2">
-            <div className="text-sm font-medium">Provider data controls require an account</div>
+            <div className="text-sm font-medium">No browser-only provider controls</div>
             <p className="text-xs text-muted-foreground leading-relaxed">
               Guest preferences are stored on this device only. KovaGPT does not present browser
               switches as account-level or AI-provider controls. Read the{" "}
