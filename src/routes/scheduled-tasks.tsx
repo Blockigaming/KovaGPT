@@ -34,8 +34,12 @@ export const Route = createFileRoute("/scheduled-tasks")({
   component: ScheduledTasksPage,
   head: () => ({
     meta: [
-      { title: "Scheduled Tasks - KovaGPT" },
-      { name: "description", content: "Schedule KovaGPT to do something for you later." },
+      { title: "Scheduled Tasks Status - KovaGPT" },
+      {
+        name: "description",
+        content:
+          "Review historical scheduled-task status. Background execution is unavailable in this deployment.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -214,7 +218,9 @@ function ScheduledTasksPage() {
 
           <div className="flex items-center gap-3 mb-2">
             <Calendar className="w-6 h-6" />
-            <h1 className="font-display text-2xl font-semibold tracking-tight">Scheduled Tasks</h1>
+            <h1 className="font-display text-2xl font-semibold tracking-tight">
+              Scheduled Tasks Status
+            </h1>
           </div>
           <p className="text-sm text-muted-foreground mb-8">
             Review scheduled work and its real execution status. New tasks are available only when a
@@ -226,9 +232,9 @@ function ScheduledTasksPage() {
           {plan === "signed-out" && (
             <div className="kova-empty-state">
               <Lock className="w-6 h-6 mx-auto mb-3 text-muted-foreground" />
-              <div className="font-medium mb-1">Sign in to use scheduled tasks</div>
+              <div className="font-medium mb-1">Sign in to review task history</div>
               <p className="text-sm text-muted-foreground mb-4">
-                Available on Plus, Pro, and higher plans.
+                Background execution is unavailable in this deployment.
               </p>
               <Link
                 to="/"
@@ -242,15 +248,16 @@ function ScheduledTasksPage() {
           {plan === "free" && (
             <div className="kova-empty-state">
               <Lock className="w-6 h-6 mx-auto mb-3 text-muted-foreground" />
-              <div className="font-medium mb-1">Scheduled Tasks is a Plus feature</div>
+              <div className="font-medium mb-1">Scheduled execution is unavailable</div>
               <p className="text-sm text-muted-foreground mb-4">
-                Upgrade to Plus, Pro, or higher to schedule Kova to do things for you later.
+                This deployment has no background runner. Upgrading will not enable scheduled
+                execution.
               </p>
               <Link
-                to="/pricing"
+                to="/"
                 className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-foreground text-background text-sm font-medium"
               >
-                View plans
+                Back to chat
               </Link>
             </div>
           )}
