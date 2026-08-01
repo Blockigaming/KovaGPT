@@ -80,7 +80,10 @@ import {
 } from "@/utils/payments.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { parseAllowedBillingPortalUrl } from "@/lib/billing-portal-url.mjs";
-import { setSharedSendOnEnter } from "@/lib/composer-preferences";
+import {
+  setSharedSendOnEnter,
+  useSharedSendOnEnter,
+} from "@/lib/composer-preferences";
 import { PersonalitySliders } from "@/components/PersonalitySliders";
 import { StorageDashboard } from "@/components/StorageDashboard";
 import { FamilySharingPanel } from "@/components/FamilySharingPanel";
@@ -259,6 +262,7 @@ export function SettingsDialog({
   const localUsage = open ? getUsage() : { images: 0, uploads: 0, date: "" };
 
   const { isSignedIn, user } = useUser();
+  const sharedSendOnEnter = useSharedSendOnEnter(user?.id ?? null);
   const clerk = useClerk();
   const loggedIn = !clerkEnabled || isSignedIn;
   const { tier } = useTier();
@@ -280,11 +284,6 @@ export function SettingsDialog({
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [deleteAccountBusy, setDeleteAccountBusy] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    setSharedSendOnEnter(user?.id ?? null, settings.sendOnEnter);
-  }, [open, settings.sendOnEnter, user?.id]);
 
   useEffect(() => {
     if (!open || tab !== "subscription" || !loggedIn) return;
@@ -585,10 +584,11 @@ export function SettingsDialog({
                   <ToggleRow
                     title="Send on Enter"
                     hint="On desktop, Enter sends when enabled. Shift+Enter always starts a new line; Ctrl/⌘+Enter sends either way. Mobile Enter starts a new line."
-                    checked={settings.sendOnEnter}
-                    onCheckedChange={(v) =>
-                      onChange({ ...settings, sendOnEnter: v })
-                    }
+                    checked={sharedSendOnEnter}
+                    onCheckedChange={(v) => {
+                      setSharedSendOnEnter(user?.id ?? null, v);
+                      onChange({ ...settings, sendOnEnter: v });
+                    }}
                   />
                   <div>
                     <label className="text-xs text-muted-foreground mb-1.5 block">
@@ -1359,9 +1359,10 @@ export function SettingsDialog({
                 >
                   <div className="text-sm font-medium">Model training</div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    KovaGPT does not expose an account-level model-training
-                    switch. Device settings are not sent to an AI provider, so
-                    no local toggle is presented as a provider control. See the{" "}
+                    The removed model-improvement switch changed only a
+                    browser-local value; it was not wired to an account-level or
+                    AI-provider training control. No toggle is shown until a real
+                    remote control exists. See the{" "}
                     <Link
                       to="/privacy"
                       onClick={() => onOpenChange(false)}
@@ -2472,8 +2473,9 @@ function SignedOutSettings({
               No browser-only provider controls
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Guest preferences are stored on this device only. KovaGPT does not
-              present browser switches as account-level or AI-provider controls.
+              The removed guest training and marketing switches changed only
+              browser-local values; they were not wired to account-level or
+              AI-provider controls. They are not shown as functional controls.
               Read the{" "}
               <Link
                 to="/privacy"
