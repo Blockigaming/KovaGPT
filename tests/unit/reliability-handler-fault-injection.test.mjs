@@ -111,14 +111,13 @@ test("memory payload validation accepts only bounded user and assistant messages
   const oversized = parseMemoryPayload(
     JSON.stringify({
       chatId: "chat-1",
+      title: "t".repeat(121),
       messages: [...messages(3), { role: "user", content: "x".repeat(2_001) }],
     }),
   );
-  assert.deepEqual(oversized, {
-    ok: false,
-    status: 400,
-    error: "Invalid message content",
-  });
+  assert.equal(oversized.ok, true);
+  assert.equal(oversized.value.title.length, 120);
+  assert.equal(oversized.value.messages.at(-1).content.length, 2_000);
 });
 
 test("memory persistence never succeeds after an upsert failure", async () => {
@@ -160,6 +159,8 @@ test("automatic memory summarization never consumes the foreground chat quota", 
     "utf8",
   );
   assert.match(clientSource, /active\.messages\s*\.slice\(-30\)/);
+  assert.match(clientSource, /active\.title\.slice\(0, 120\)/);
+  assert.match(clientSource, /message\.content\.slice\(0, 2000\)/);
 });
 
 test("memory persistence surfaces pruning lookup and deletion failures", async () => {
