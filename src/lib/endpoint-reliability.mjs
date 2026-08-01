@@ -85,6 +85,12 @@ export async function suppressThenConsumeToken({ alreadyUsed, suppress, consume 
   if (!alreadyUsed) assertDatabaseSuccess(await consume(), "unsubscribe_token_update");
 }
 
+export function unsubscribeLinkState({ alreadyUsed, suppressionResult }) {
+  if (!alreadyUsed) return { valid: true };
+  const suppression = assertDatabaseSuccess(suppressionResult, "unsubscribe_suppression_lookup");
+  return suppression ? { valid: false, reason: "already_unsubscribed" } : { valid: true };
+}
+
 export function retryableUnavailable(error) {
   return Response.json(
     { error },
