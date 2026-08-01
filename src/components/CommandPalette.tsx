@@ -196,17 +196,36 @@ export function CommandPalette({
     shouldRestoreFocusRef.current = false;
   };
 
+  const closePalette = () => {
+    const returnTarget = returnFocusRef.current;
+    const shouldRestore = shouldRestoreFocusRef.current;
+    onClose();
+    if (!shouldRestore || !returnTarget?.isConnected) return;
+
+    const restoreFocus = () => {
+      if (returnTarget.isConnected && document.activeElement !== returnTarget) {
+        returnTarget.focus({ preventScroll: true });
+      }
+    };
+    queueMicrotask(restoreFocus);
+    window.setTimeout(restoreFocus, 0);
+    window.requestAnimationFrame(() => {
+      restoreFocus();
+      window.requestAnimationFrame(restoreFocus);
+    });
+  };
+
   const chooseActive = () => {
     const action = actionItems[activeIndex];
     if (action === "new-chat") {
       onNewChat();
-      onClose();
+      closePalette();
       return;
     }
     if (action === "settings") {
       suppressFocusRestore();
       onOpenSettings();
-      onClose();
+      closePalette();
       return;
     }
     if (typeof action === "string" && action.startsWith("/")) {
@@ -215,34 +234,34 @@ export function CommandPalette({
       localStorage.setItem("kova-command-history-v1", JSON.stringify(next));
       platformEvents.publish("platform", "command.executed", { command: action });
       window.location.assign(action);
-      onClose();
+      closePalette();
       return;
     }
     if (action === "focus-input") {
       suppressFocusRestore();
       document.querySelector<HTMLTextAreaElement>("textarea")?.focus();
       platformEvents.publish("platform", "command.executed", { command: action });
-      onClose();
+      closePalette();
       return;
     }
     if (action === "theme") {
       applyThemeMode(document.documentElement.classList.contains("dark") ? "light" : "dark");
       platformEvents.publish("platform", "command.executed", { command: action });
-      onClose();
+      closePalette();
       return;
     }
     if (action === "search") {
       suppressFocusRestore();
       window.dispatchEvent(new CustomEvent("kova-open-search"));
       platformEvents.publish("platform", "command.executed", { command: action });
-      onClose();
+      closePalette();
       return;
     }
     if (!action) {
       const match = conversationMatches[activeIndex - actionItems.length];
       if (match) {
         onSelectChat(match.conversation.id);
-        onClose();
+        closePalette();
       }
     }
   };
@@ -276,7 +295,7 @@ export function CommandPalette({
         }
         if (event.key === "Escape") {
           event.preventDefault();
-          onClose();
+          closePalette();
         }
         if (event.key === "ArrowDown") {
           event.preventDefault();
@@ -320,7 +339,7 @@ export function CommandPalette({
           />
           <button
             type="button"
-            onClick={onClose}
+            onClick={closePalette}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
             aria-label="Close command palette"
           >
@@ -339,7 +358,7 @@ export function CommandPalette({
             type="button"
             onClick={() => {
               onNewChat();
-              onClose();
+              closePalette();
             }}
             id="command-option-0"
             role="option"
@@ -357,7 +376,7 @@ export function CommandPalette({
             onClick={() => {
               suppressFocusRestore();
               onOpenSettings();
-              onClose();
+              closePalette();
             }}
             id="command-option-1"
             role="option"
@@ -401,7 +420,7 @@ export function CommandPalette({
                     platformEvents.publish("platform", "command.executed", {
                       command: action.href,
                     });
-                    onClose();
+                    closePalette();
                   }}
                   className={className}
                 >
@@ -426,7 +445,7 @@ export function CommandPalette({
                     platformEvents.publish("platform", "command.executed", {
                       command: action.action,
                     });
-                    onClose();
+                    closePalette();
                   } else if (action.action === "theme") {
                     applyThemeMode(
                       document.documentElement.classList.contains("dark") ? "light" : "dark",
@@ -434,14 +453,14 @@ export function CommandPalette({
                     platformEvents.publish("platform", "command.executed", {
                       command: action.action,
                     });
-                    onClose();
+                    closePalette();
                   } else if (action.action === "search") {
                     suppressFocusRestore();
                     window.dispatchEvent(new CustomEvent("kova-open-search"));
                     platformEvents.publish("platform", "command.executed", {
                       command: action.action,
                     });
-                    onClose();
+                    closePalette();
                   }
                 }}
                 className={className}
@@ -468,7 +487,7 @@ export function CommandPalette({
                 type="button"
                 onClick={() => {
                   onSelectChat(chat.id);
-                  onClose();
+                  closePalette();
                 }}
                 id={`command-option-${actionItems.length + chatIndex}`}
                 role="option"
