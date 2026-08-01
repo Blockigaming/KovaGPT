@@ -87,6 +87,11 @@ function ProjectChatPage() {
     setSending(false);
     setInput("");
     setComposerAttachments([]);
+    setRenameOpen(false);
+    setRenameDraft("");
+    setRenaming(false);
+    setDeleteOpen(false);
+    setDeleting(false);
     abortControllerRef.current?.abort();
 
     void (async () => {
@@ -264,7 +269,9 @@ function ProjectChatPage() {
         await fnSave({ data: { id: requestChatId, messages: finalMessages } });
       } catch (error) {
         console.error(error);
-        toast.error("The chat could not be saved");
+        if (activeChatIdRef.current === requestChatId) {
+          toast.error("The chat could not be saved");
+        }
       }
 
       if (abortControllerRef.current === controller) {
