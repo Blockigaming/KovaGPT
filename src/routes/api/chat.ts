@@ -32,6 +32,7 @@ import {
   missingAiProviderResponse,
 } from "@/lib/ai/provider.server";
 import { NEWS_TRIGGER, runWebSearch, shouldRunWebSearch } from "@/lib/ai/search.server";
+import { getDeepResearchAccess } from "@/lib/ai/deep-research-access.mjs";
 import { runDeepResearch, type ResearchProgressEvent } from "@/lib/ai/deep-research.server";
 import { activityToSseDelta, createToolActivityEvent } from "@/lib/ai/activity.server";
 import { selectModelForMode, mapProviderError } from "@/lib/ai/registry.server";
@@ -541,9 +542,6 @@ export const Route = createFileRoute("/api/chat")({
             const lastUser = [...messages].reverse().find((m) => m.role === "user");
             const currentAttachments = lastUser?.attachments ?? [];
 
-            const missingProvider = missingAiProviderResponse();
-            if (missingProvider) return missingProvider;
-
             // Detect image-generation intent on the latest user message
             const lastText = lastUser?.content?.trim() ?? "";
             const isImageRequest =
@@ -570,6 +568,25 @@ export const Route = createFileRoute("/api/chat")({
               if (banned) return banned;
               if (!isOwner) callerTier = await getCallerTier(auth);
             }
+
+            // Deep Research is a paid, high-cost operation. Authorize it before
+            // checking or invoking any AI/search provider so forged clientTool
+            // values cannot become a denial-of-wallet path.
+            const researchAccess = getDeepResearchAccess({
+              requested: clientTool === "deep_research",
+              authenticated: Boolean(auth),
+              tier: callerTier,
+              owner: isOwner,
+            });
+            if (!researchAccess.allowed) {
+              return Response.json(
+                { error: researchAccess.error },
+                { status: researchAccess.status },
+              );
+            }
+
+            const missingProvider = missingAiProviderResponse();
+            if (missingProvider) return missingProvider;
 
             // Image generation requires an account. For signed-out users,
             // silently fall through to normal chat so the model can respond
