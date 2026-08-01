@@ -6,6 +6,8 @@ const read = (path) => readFileSync(path, "utf8");
 
 test("externally merged production and security slices coexist on the current main line", () => {
   const deployment = read(".github/workflows/deploy-cloudflare-production.yml");
+  const ci = read(".github/workflows/ci.yml");
+  const playwright = read("playwright.config.ts");
   const vite = read("vite.config.ts");
   const boundedJson = read("src/lib/bounded-json.server.mjs");
   const confirmation = read("src/routes/api/chat/confirm.ts");
@@ -27,8 +29,16 @@ test("externally merged production and security slices coexist on the current ma
   assert.doesNotMatch(deployment, /^  (push|pull_request):/m);
 
   assert.match(vite, /preset: "cloudflare-module"/);
-  assert.match(vite, /output:\s*{\s*dir: "dist\/server"/s);
+  assert.match(vite, /output:\s*{\s*dir: "dist"/s);
+  assert.match(vite, /serverDir: "dist\/server"/);
   assert.match(vite, /publicDir: "dist\/client"/);
+
+  assert.match(playwright, /process\.env\.PLAYWRIGHT_PREBUILT === "1"/);
+  assert.match(playwright, /usePrebuiltPreview \? \[\] : \["npm run build"\]/);
+  assert.match(ci, /PLAYWRIGHT_PREBUILT: "1"/);
+  assert.match(ci, /--project=phone-320x700[\s\S]*--project=phone-430x932/);
+  assert.match(ci, /--project=tablet-768x1024[\s\S]*--project=tablet-1024x768/);
+  assert.match(ci, /--project=desktop-1280x800[\s\S]*--project=desktop-1728x1117/);
 
   assert.match(boundedJson, /new TextDecoder\("utf-8", { fatal: true }\)/);
   assert.match(boundedJson, /bytesRead \+= value\.byteLength/);

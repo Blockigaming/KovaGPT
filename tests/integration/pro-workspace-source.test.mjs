@@ -35,15 +35,16 @@ test("Context Packs are owner scoped, persisted, and attach to chat", () => {
   assert.match(route, /Use in new chat/);
   assert.match(chat, /kova-active-context-pack/);
 });
-test("Work mode is durable, approval-gated, and never claims background work", () => {
+test("Work preserves durable history and denial-only controls without background claims", () => {
   const route = read("src/routes/work.tsx"),
     functions = read("src/lib/work.functions.ts");
   assert.match(functions, /requireSupabaseAuth/);
-  assert.match(route, /Approval required/);
+  assert.match(route, /Agent execution is unavailable/);
   assert.match(route, /decideApproval/);
+  assert.match(route, /decision: "denied"/);
   assert.match(route, /Deliverables/);
-  assert.match(route, /Waiting for worker/);
   assert.match(route, /controlWorkRun/);
+  assert.doesNotMatch(route, /Waiting for worker|Approval required|decision: "approved"/);
 });
 test("Files and Apps expose truthful professional workflows", () => {
   const files = read("src/routes/files.tsx"),
