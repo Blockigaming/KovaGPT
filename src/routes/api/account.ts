@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 import { createStripeClient, type StripeEnv } from "@/lib/stripe.server";
 import { disconnectGoogle } from "@/lib/google-oauth.server";
+import { disconnectAllGitHub } from "@/lib/github-oauth.server";
 import { disconnectAllOAuth } from "@/integrations/oauth-lifecycle.server";
 
 const TERMINAL_SUBSCRIPTION_STATES = new Set(["canceled", "incomplete_expired"]);
@@ -73,9 +74,31 @@ export const Route = createFileRoute("/api/account")({
         try {
           await disconnectGoogle(auth.userId);
         } catch (error) {
-          console.error("[account-delete] Google revocation failed", {
-            error: error instanceof Error ? error.name : "unknown_error",
+          console.error("[account-delete] Google token purge failed", {
+            error: error instanceof Error ? error.message : "unknown_error",
           });
+          return Response.json(
+            {
+              error:
+                "Google credentials could not be removed, so your account was not deleted. Please try again.",
+            },
+            { status: 503 },
+          );
+        }
+
+        try {
+          await disconnectAllGitHub(auth.userId);
+        } catch (error) {
+          console.error("[account-delete] GitHub credential purge failed", {
+            error: error instanceof Error ? error.message : "unknown_error",
+          });
+          return Response.json(
+            {
+              error:
+                "GitHub credentials could not be removed, so your account was not deleted. Please try again.",
+            },
+            { status: 503 },
+          );
         }
 
         try {
