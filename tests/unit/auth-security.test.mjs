@@ -6,10 +6,7 @@ import {
   parseBearerToken,
   safeRelativeRedirect,
 } from "../../src/lib/auth-security.mjs";
-import {
-  BodyReadError,
-  readUtf8BodyBounded,
-} from "../../src/lib/endpoint-reliability.mjs";
+import { BodyReadError, readUtf8BodyBounded } from "../../src/lib/endpoint-reliability.mjs";
 
 test("bearer parsing accepts one token and rejects ambiguous credentials", () => {
   assert.equal(parseBearerToken("Bearer abc.def"), "abc.def");
@@ -27,44 +24,22 @@ test("deleted and actively banned users fail closed", () => {
     status: 401,
     code: "invalid_session",
   });
+  assert.deepEqual(evaluateAuthenticatedUser({ id: "user-1", deleted_at: "2026-08-01" }, {}, now), {
+    ok: false,
+    status: 401,
+    code: "invalid_session",
+  });
   assert.deepEqual(
-    evaluateAuthenticatedUser(
-      { id: "user-1", deleted_at: "2026-08-01" },
-      {},
-      now,
-    ),
-    {
-      ok: false,
-      status: 401,
-      code: "invalid_session",
-    },
-  );
-  assert.deepEqual(
-    evaluateAuthenticatedUser(
-      { id: "user-1", banned_until: "2026-08-02T12:00:00Z" },
-      {},
-      now,
-    ),
+    evaluateAuthenticatedUser({ id: "user-1", banned_until: "2026-08-02T12:00:00Z" }, {}, now),
     { ok: false, status: 403, code: "account_suspended" },
   );
-  assert.deepEqual(
-    evaluateAuthenticatedUser(
-      { id: "user-1", banned_until: "invalid" },
-      {},
-      now,
-    ),
-    {
-      ok: false,
-      status: 403,
-      code: "account_suspended",
-    },
-  );
+  assert.deepEqual(evaluateAuthenticatedUser({ id: "user-1", banned_until: "invalid" }, {}, now), {
+    ok: false,
+    status: 403,
+    code: "account_suspended",
+  });
   assert.equal(
-    evaluateAuthenticatedUser(
-      { id: "user-1", banned_until: "2026-07-31T12:00:00Z" },
-      {},
-      now,
-    ).ok,
+    evaluateAuthenticatedUser({ id: "user-1", banned_until: "2026-07-31T12:00:00Z" }, {}, now).ok,
     true,
   );
 });
@@ -136,10 +111,7 @@ test("mutation origin checks reject cross-origin and opaque browser requests", (
 
 test("post-auth redirects stay on the current origin", () => {
   const base = "https://kovagpt.com";
-  assert.equal(
-    safeRelativeRedirect("/projects/123?q=1#chat", base),
-    "/projects/123?q=1#chat",
-  );
+  assert.equal(safeRelativeRedirect("/projects/123?q=1#chat", base), "/projects/123?q=1#chat");
   assert.equal(safeRelativeRedirect("//evil.example/path", base), "/");
   assert.equal(safeRelativeRedirect("/\\evil.example/path", base), "/");
   assert.equal(safeRelativeRedirect("https://evil.example/path", base), "/");
