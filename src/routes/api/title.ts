@@ -15,7 +15,12 @@ function parseMessages(raw: string): TitleMessage[] | null {
   }
   if (!value || typeof value !== "object") return null;
   const messages = (value as { messages?: unknown }).messages;
-  if (!Array.isArray(messages) || messages.length === 0 || messages.length > 100) return null;
+  if (
+    !Array.isArray(messages) ||
+    messages.length === 0 ||
+    messages.length > 100
+  )
+    return null;
   const valid = messages.every(
     (message) =>
       message !== null &&
@@ -57,31 +62,43 @@ export const Route = createFileRoute("/api/title")({
           }
 
           const MAX_BODY = 1 * 1024 * 1024;
-          const contentLength = Number(request.headers.get("content-length") ?? "0");
+          const contentLength = Number(
+            request.headers.get("content-length") ?? "0",
+          );
           if (contentLength > MAX_BODY) {
-            return new Response(JSON.stringify({ error: "Request too large." }), {
-              status: 413,
-              headers: { "Content-Type": "application/json" },
-            });
+            return new Response(
+              JSON.stringify({ error: "Request too large." }),
+              {
+                status: 413,
+                headers: { "Content-Type": "application/json" },
+              },
+            );
           }
           const raw = await request.text();
           if (raw.length > MAX_BODY) {
-            return new Response(JSON.stringify({ error: "Request too large." }), {
-              status: 413,
-              headers: { "Content-Type": "application/json" },
-            });
+            return new Response(
+              JSON.stringify({ error: "Request too large." }),
+              {
+                status: 413,
+                headers: { "Content-Type": "application/json" },
+              },
+            );
           }
           const messages = parseMessages(raw);
           if (!messages) {
-            return new Response(JSON.stringify({ error: "Invalid messages." }), {
-              status: 400,
-              headers: { "Content-Type": "application/json" },
-            });
+            return new Response(
+              JSON.stringify({ error: "Invalid messages." }),
+              {
+                status: 400,
+                headers: { "Content-Type": "application/json" },
+              },
+            );
           }
-          const { chatCompletions, chatModel, missingAiProviderResponse } = await import(
-            "@/lib/ai/provider.server"
-          );
-          const missingProvider = missingAiProviderResponse({ title: "New chat" });
+          const { chatCompletions, chatModel, missingAiProviderResponse } =
+            await import("@/lib/ai/provider.server");
+          const missingProvider = missingAiProviderResponse({
+            title: "New chat",
+          });
           if (missingProvider) return missingProvider;
 
           const excerpt = messages
@@ -108,7 +125,9 @@ export const Route = createFileRoute("/api/title")({
             });
           }
           const data = await upstream.json();
-          let title = (data.choices?.[0]?.message?.content ?? "New chat").trim();
+          let title = (
+            data.choices?.[0]?.message?.content ?? "New chat"
+          ).trim();
           title = title.replace(/^["']|["']$/g, "").slice(0, 50);
           return new Response(JSON.stringify({ title }), {
             headers: { "Content-Type": "application/json" },
