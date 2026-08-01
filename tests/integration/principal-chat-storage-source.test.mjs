@@ -12,7 +12,11 @@ test("home chat and shared shell hide stale account state before loading the nex
 
   assert.match(home, /const storagePrincipal = chatStoragePrincipal\(userKey\)/);
   assert.match(home, /conversationState\.principal === storagePrincipal/);
-  assert.match(home, /const conversations = principalReady \? conversationState\.items : \[\]/);
+  assert.match(home, /const EMPTY_CONVERSATIONS: Conversation\[\] = \[\]/);
+  assert.match(
+    home,
+    /const conversations = principalReady \? conversationState\.items : EMPTY_CONVERSATIONS/,
+  );
   assert.match(home, /storagePrincipalRef\.current !== storagePrincipal/);
   assert.match(home, /abortRef\.current\?\.abort\(\)/);
   assert.match(home, /loadConversations\(userKey\)/);
