@@ -14,4 +14,6 @@ export type ComposerKeyboardEvent = {
   isStreaming?: boolean;
 };
 
-export function shouldSubmitComposerOnEnter(options: ComposerKeyboardEvent): boolean;
+export function shouldSubmitComposerOnEnter(
+  options: ComposerKeyboardEvent,
+): boolean;
