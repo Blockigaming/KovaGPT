@@ -10,6 +10,7 @@ export const DAILY_CHAT_LIMIT = 50;
 export const DAILY_UPLOAD_LIMIT = 2;
 export type AuthedCaller = {
   userId: string;
+  supabaseUser: SupabaseClient<Database>;
   supabaseAdmin: SupabaseClient<Database>;
   emailVerified: boolean;
 };
@@ -68,6 +69,7 @@ export async function optionalUser(request: Request): Promise<AuthedCaller | nul
     return jsonError("Authentication is temporarily unavailable.", 503);
   }
   const verifier = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
     auth: {
       storage: undefined,
       persistSession: false,
@@ -107,6 +109,9 @@ export async function optionalUser(request: Request): Promise<AuthedCaller | nul
   });
   return {
     userId: access.userId,
+    // This client carries the verified caller's JWT and is therefore subject
+    // to RLS. Use it for authorization lookups before service-role writes.
+    supabaseUser: verifier,
     supabaseAdmin,
     emailVerified: access.emailVerified,
   };
