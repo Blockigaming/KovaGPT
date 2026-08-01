@@ -51,7 +51,7 @@ async function stopWorker(worker) {
   if (worker.exitCode === null) signal("SIGKILL");
 }
 
-test("production build emits Lovable's deployable Cloudflare Worker", () => {
+test("production build emits Nitro's deployable Cloudflare Worker", () => {
   assert.equal(existsSync(workerEntry), true, "dist/server/index.mjs is missing");
   assert.equal(existsSync(workerConfig), true, "dist/server/wrangler.json is missing");
 
