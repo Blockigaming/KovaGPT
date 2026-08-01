@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { waitForKovaHydration } from "./hydration";
 
 test.describe("core shell and chat experience", () => {
   test("empty chat, sidebar drawer, multiline composer, and theme states render", async ({
@@ -6,6 +7,7 @@ test.describe("core shell and chat experience", () => {
   }) => {
     await page.addInitScript(() => localStorage.setItem("kova-theme-mode", "dark"));
     await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
     await expect(page.locator("body")).toBeVisible();
     await expect(page.getByRole("textbox").first()).toBeVisible();
     await expect(page.getByText(/What can I help|Ask, search, analyze/i).first()).toBeVisible();
@@ -39,6 +41,7 @@ test.describe("core shell and chat experience", () => {
       });
     });
     await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
     const textbox = page.getByRole("textbox").first();
     await textbox.fill("Hello from the retry test");
     if (testInfo.project.use.hasTouch) {
