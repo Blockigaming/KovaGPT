@@ -1,10 +1,7 @@
 // Read-only Google Calendar access for the signed-in user's primary calendar.
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
-import {
-  BoundedJsonError,
-  readBoundedJsonObject,
-} from "@/lib/bounded-json.server.mjs";
+import { BoundedJsonError, readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
 import { getValidGoogleAccessToken, logAudit } from "@/lib/google-oauth.server";
 import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
 
@@ -35,23 +32,16 @@ export const Route = createFileRoute("/api/google/calendar")({
           body = await readBoundedJsonObject(request, 64 * 1024);
         } catch (error) {
           if (error instanceof BoundedJsonError) {
-            return Response.json(
-              { error: error.code },
-              { status: error.status },
-            );
+            return Response.json({ error: error.code }, { status: error.status });
           }
-          return Response.json(
-            { error: "invalid_request_body" },
-            { status: 400 },
-          );
+          return Response.json({ error: "invalid_request_body" }, { status: 400 });
         }
         const action = body?.action as string;
         if (action !== "list") {
           return Response.json(
             {
               error: "confirmation_required",
-              message:
-                "Prepare a calendar event from chat and confirm it there.",
+              message: "Prepare a calendar event from chat and confirm it there.",
             },
             { status: 409 },
           );
@@ -60,10 +50,7 @@ export const Route = createFileRoute("/api/google/calendar")({
         try {
           token = await getValidGoogleAccessToken(auth.userId);
         } catch {
-          return Response.json(
-            { error: "google_not_connected" },
-            { status: 400 },
-          );
+          return Response.json({ error: "google_not_connected" }, { status: 400 });
         }
         const H = {
           Authorization: `Bearer ${token}`,
@@ -74,8 +61,7 @@ export const Route = createFileRoute("/api/google/calendar")({
           if (action === "list") {
             const timeMin = String(body.timeMin ?? new Date().toISOString());
             const timeMax = String(
-              body.timeMax ??
-                new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+              body.timeMax ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
             );
             const max = Math.min(50, Number(body.maxResults ?? 25));
             const url = `${CAL}/events?singleEvents=true&orderBy=startTime&timeMin=${encodeURIComponent(
