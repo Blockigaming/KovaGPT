@@ -40,6 +40,7 @@ test("narrow-phone constraints are scoped to real modal surfaces", async () => {
     styles,
     /:where\(\[role="dialog"\]\):not\(\[data-side\]\):not\(\[data-image-lightbox\]\)/,
   );
+  assert.doesNotMatch(styles, /\[role="dialog"\][\s\S]{0,200}max-(?:width|height)/);
   assert.match(
     styles,
     /\.kova-sidebar \[aria-label="Chat options"\][\s\S]*min-width: var\(--kova-touch\)/,
