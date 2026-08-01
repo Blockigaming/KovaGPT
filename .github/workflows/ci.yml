@@ -86,15 +86,23 @@ jobs:
           - id: phone
             projects: >-
               --project=phone-320x700 --project=phone-375x812 --project=phone-390x844 --project=phone-412x915 --project=phone-430x932
+            shard: 1/1
           - id: tablet
             projects: >-
               --project=tablet-768x1024 --project=phone-landscape-844x390 --project=tablet-1024x768
+            shard: 1/1
           - id: desktop-1280
             projects: --project=desktop-1280x800
-          - id: desktop-1440
+            shard: 1/1
+          - id: desktop-1440-a
             projects: --project=desktop-1440x900
+            shard: 1/2
+          - id: desktop-1440-b
+            projects: --project=desktop-1440x900
+            shard: 2/2
           - id: desktop-1728
             projects: --project=desktop-1728x1117
+            shard: 1/1
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -117,7 +125,7 @@ jobs:
       - name: Browser tests
         env:
           PLAYWRIGHT_PREBUILT: "1"
-        run: npm run test:e2e -- ${{ matrix.projects }}
+        run: npm run test:e2e -- ${{ matrix.projects }} --shard=${{ matrix.shard }}
 
       - name: Upload Playwright report
         if: always()
