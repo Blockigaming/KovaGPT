@@ -123,7 +123,6 @@ test("tool activity covers multimodal and Canvas operations without secret metad
   }
 });
 
-
 test("image lightbox delegates modal lifecycle and restores intentional focus", () => {
   const images = read("src/routes/images.tsx");
   for (const token of [
