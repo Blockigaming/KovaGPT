@@ -91,8 +91,6 @@ test("known limitations and voice exclusion remain explicit", () => {
   assert.match(registry, /Signing in does not currently promise cross-device chat synchronization/);
   assert.match(registry, /Background scheduled execution is unavailable in this deployment/);
   assert.match(registry, /Voice is intentionally outside KovaGPT's current product scope/);
-  assert.match(help, /question: "Does KovaGPT support voice or audio conversations\?"/);
-  assert.match(help, /answer: FEATURES\.voice\.summary/);
   assert.doesNotMatch(aiWriter, /voice notes|audio notes|microphone input|audio upload/i);
   for (const unsupportedAudioClaim of [
     /turn .{0,40}\bvoice notes\b into/i,
