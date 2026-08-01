@@ -5,11 +5,19 @@ import { shouldSubmitComposerOnEnter } from "../../src/lib/composer-keyboard.mjs
 
 test("plain Enter follows the desktop send preference", () => {
   assert.equal(
-    shouldSubmitComposerOnEnter({ key: "Enter", sendOnEnter: true, isMobileLayout: false }),
+    shouldSubmitComposerOnEnter({
+      key: "Enter",
+      sendOnEnter: true,
+      isMobileLayout: false,
+    }),
     true,
   );
   assert.equal(
-    shouldSubmitComposerOnEnter({ key: "Enter", sendOnEnter: false, isMobileLayout: false }),
+    shouldSubmitComposerOnEnter({
+      key: "Enter",
+      sendOnEnter: false,
+      isMobileLayout: false,
+    }),
     false,
   );
 });
@@ -35,7 +43,11 @@ test("Shift+Enter, Alt+Enter, IME composition, and keyCode 229 preserve text ent
 
 test("mobile and coarse-pointer Enter insert a newline", () => {
   assert.equal(
-    shouldSubmitComposerOnEnter({ key: "Enter", sendOnEnter: true, isMobileLayout: true }),
+    shouldSubmitComposerOnEnter({
+      key: "Enter",
+      sendOnEnter: true,
+      isMobileLayout: true,
+    }),
     false,
   );
   assert.equal(
@@ -90,7 +102,11 @@ test("empty, disabled, and streaming composers never submit from the keyboard", 
 
 test("non-Enter keys never submit", () => {
   assert.equal(
-    shouldSubmitComposerOnEnter({ key: "Tab", sendOnEnter: true, isMobileLayout: false }),
+    shouldSubmitComposerOnEnter({
+      key: "Tab",
+      sendOnEnter: true,
+      isMobileLayout: false,
+    }),
     false,
   );
 });
