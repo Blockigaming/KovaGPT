@@ -1,6 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  BodyReadError,
+  noStoreJson,
+  readUtf8BodyBounded,
   retryableUnavailable,
   suppressThenConsumeToken,
   unsubscribeLinkState,
@@ -33,12 +36,12 @@ export const Route = createFileRoute("/email/unsubscribe")({
       GET: async ({ request }) => {
         const supabase = configuredClient();
         if (!supabase) {
-          return Response.json({ error: "Server configuration error" }, { status: 500 });
+          return noStoreJson({ error: "Server configuration error" }, { status: 500 });
         }
 
         const token = new URL(request.url).searchParams.get("token");
         if (!validToken(token)) {
-          return Response.json({ error: "Token is required" }, { status: 400 });
+          return noStoreJson({ error: "Token is required" }, { status: 400 });
         }
 
         const { data: tokenRecord, error: lookupError } = await supabase
@@ -47,15 +50,13 @@ export const Route = createFileRoute("/email/unsubscribe")({
           .eq("token", token)
           .maybeSingle();
         if (lookupError) {
-          console.error("Failed to look up unsubscribe token", {
-            token_prefix: token.slice(0, 8) + "…",
-          });
+          console.error("Failed to look up unsubscribe token", { code: lookupError.code });
           return retryableUnavailable("unsubscribe_backend_unavailable");
         }
         if (!tokenRecord) {
-          return Response.json({ error: "Invalid or expired token" }, { status: 404 });
+          return noStoreJson({ error: "Invalid or expired token" }, { status: 404 });
         }
-        if (!tokenRecord.used_at) return Response.json({ valid: true });
+        if (!tokenRecord.used_at) return noStoreJson({ valid: true });
 
         const normalizedEmail = tokenRecord.email?.trim().toLowerCase();
         if (!normalizedEmail) return retryableUnavailable("unsubscribe_backend_unavailable");
@@ -68,7 +69,7 @@ export const Route = createFileRoute("/email/unsubscribe")({
           // A legacy token may have been marked used before its suppression write
           // failed. Only report "already" after proving durable suppression;
           // otherwise let the page POST again so it can self-heal.
-          return Response.json(unsubscribeLinkState({ alreadyUsed: true, suppressionResult }));
+          return noStoreJson(unsubscribeLinkState({ alreadyUsed: true, suppressionResult }));
         } catch (error) {
           console.error("Failed to verify durable unsubscribe suppression", {
             error,
@@ -81,30 +82,28 @@ export const Route = createFileRoute("/email/unsubscribe")({
       POST: async ({ request }) => {
         const supabase = configuredClient();
         if (!supabase) {
-          return Response.json({ error: "Server configuration error" }, { status: 500 });
+          return noStoreJson({ error: "Server configuration error" }, { status: 500 });
         }
 
-        const contentLength = Number(request.headers.get("content-length") ?? "0");
-        if (!Number.isFinite(contentLength) || contentLength > MAX_UNSUBSCRIBE_BODY_BYTES) {
-          return Response.json({ error: "Request too large" }, { status: 413 });
+        let raw: string;
+        try {
+          raw = await readUtf8BodyBounded(request, MAX_UNSUBSCRIBE_BODY_BYTES);
+        } catch (error) {
+          if (error instanceof BodyReadError) {
+            const message = error.status === 413 ? "Request too large" : "Invalid request body";
+            return noStoreJson({ error: message }, { status: error.status });
+          }
+          return noStoreJson({ error: "Invalid request body" }, { status: 400 });
         }
 
         const url = new URL(request.url);
         let token: string | null = url.searchParams.get("token");
         const contentType = request.headers.get("content-type") ?? "";
         if (contentType.includes("application/x-www-form-urlencoded")) {
-          const formText = await request.text();
-          if (formText.length > MAX_UNSUBSCRIBE_BODY_BYTES) {
-            return Response.json({ error: "Request too large" }, { status: 413 });
-          }
-          const params = new URLSearchParams(formText);
+          const params = new URLSearchParams(raw);
           if (!params.get("List-Unsubscribe")) token = params.get("token") || token;
         } else {
           try {
-            const raw = await request.text();
-            if (raw.length > MAX_UNSUBSCRIBE_BODY_BYTES) {
-              return Response.json({ error: "Request too large" }, { status: 413 });
-            }
             const body = JSON.parse(raw) as { token?: unknown };
             if (typeof body.token === "string") token = body.token;
           } catch {
@@ -113,7 +112,7 @@ export const Route = createFileRoute("/email/unsubscribe")({
         }
 
         if (!validToken(token)) {
-          return Response.json({ error: "Token is required" }, { status: 400 });
+          return noStoreJson({ error: "Token is required" }, { status: 400 });
         }
 
         const { data: tokenRecord, error: lookupError } = await supabase
@@ -122,20 +121,16 @@ export const Route = createFileRoute("/email/unsubscribe")({
           .eq("token", token)
           .maybeSingle();
         if (lookupError) {
-          console.error("Failed to look up unsubscribe token", {
-            token_prefix: token.slice(0, 8) + "…",
-          });
+          console.error("Failed to look up unsubscribe token", { code: lookupError.code });
           return retryableUnavailable("unsubscribe_backend_unavailable");
         }
         if (!tokenRecord || typeof tokenRecord.email !== "string") {
-          return Response.json({ error: "Invalid or expired token" }, { status: 404 });
+          return noStoreJson({ error: "Invalid or expired token" }, { status: 404 });
         }
 
         const normalizedEmail = tokenRecord.email.trim().toLowerCase();
         if (!normalizedEmail) {
-          console.error("Unsubscribe token has no usable email", {
-            token_prefix: token.slice(0, 8) + "…",
-          });
+          console.error("Unsubscribe token has no usable email");
           return retryableUnavailable("unsubscribe_backend_unavailable");
         }
 
@@ -166,7 +161,7 @@ export const Route = createFileRoute("/email/unsubscribe")({
         }
 
         console.log("Email unsubscribed", { email_redacted: redactEmail(normalizedEmail) });
-        return Response.json({ success: true });
+        return noStoreJson({ success: true });
       },
     },
   },
