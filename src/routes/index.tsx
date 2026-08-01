@@ -1122,7 +1122,14 @@ function KovaGPT() {
           {!sidebarOpen && (
             <div className="flex items-center gap-1 mr-2 shrink-0">
               <button
-                onClick={() => setSidebarOpen(true)}
+                onClick={() => {
+                  setSidebarOpen(true);
+                  window.requestAnimationFrame(() => {
+                    document
+                      .querySelector<HTMLElement>('[aria-label="Collapse sidebar"]')
+                      ?.focus({ preventScroll: true });
+                  });
+                }}
                 className="shrink-0 p-2 rounded-lg hover:bg-accent transition"
                 aria-label="Open sidebar"
                 title="Open sidebar"
