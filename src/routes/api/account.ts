@@ -6,22 +6,13 @@ import { disconnectAllGitHub } from "@/lib/github-oauth.server";
 import { disconnectAllOAuth } from "@/integrations/oauth-lifecycle.server";
 import { disconnectAllFinance } from "@/finances/plaid.server";
 import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
-import {
-  BodyReadError,
-  readUtf8BodyBounded,
-} from "@/lib/endpoint-reliability.mjs";
+import { BodyReadError, readUtf8BodyBounded } from "@/lib/endpoint-reliability.mjs";
 
-const TERMINAL_SUBSCRIPTION_STATES = new Set([
-  "canceled",
-  "incomplete_expired",
-]);
+const TERMINAL_SUBSCRIPTION_STATES = new Set(["canceled", "incomplete_expired"]);
 const MAX_DELETE_BODY_BYTES = 1_024;
 
 function jsonError(error: string, status: number) {
-  return Response.json(
-    { error },
-    { status, headers: { "Cache-Control": "no-store" } },
-  );
+  return Response.json({ error }, { status, headers: { "Cache-Control": "no-store" } });
 }
 
 export const Route = createFileRoute("/api/account")({
@@ -48,9 +39,7 @@ export const Route = createFileRoute("/api/account")({
         } catch (error) {
           if (error instanceof BodyReadError) {
             return jsonError(
-              error.status === 413
-                ? "Request too large."
-                : "Invalid request body.",
+              error.status === 413 ? "Request too large." : "Invalid request body.",
               error.status,
             );
           }
@@ -73,22 +62,17 @@ export const Route = createFileRoute("/api/account")({
         // Stop paid service before deleting the auth user. If billing cannot be
         // verified or canceled, keep the account intact so no one can be billed
         // after losing access to the billing portal.
-        const { data: subscriptions, error: subscriptionError } =
-          await auth.supabaseAdmin
-            .from("subscriptions")
-            .select("stripe_subscription_id, status, environment")
-            .eq("user_id", auth.userId);
+        const { data: subscriptions, error: subscriptionError } = await auth.supabaseAdmin
+          .from("subscriptions")
+          .select("stripe_subscription_id, status, environment")
+          .eq("user_id", auth.userId);
         if (subscriptionError) {
-          return jsonError(
-            "Billing status could not be verified. Please try again.",
-            503,
-          );
+          return jsonError("Billing status could not be verified. Please try again.", 503);
         }
         for (const subscription of subscriptions ?? []) {
           if (TERMINAL_SUBSCRIPTION_STATES.has(subscription.status)) continue;
           if (!subscription.stripe_subscription_id) continue;
-          const environment: StripeEnv =
-            subscription.environment === "live" ? "live" : "sandbox";
+          const environment: StripeEnv = subscription.environment === "live" ? "live" : "sandbox";
           try {
             await createStripeClient(environment).subscriptions.cancel(
               subscription.stripe_subscription_id,
@@ -108,12 +92,9 @@ export const Route = createFileRoute("/api/account")({
         try {
           await disconnectAllFinance(auth);
         } catch (error) {
-          console.error(
-            "[account-delete] financial connection removal failed",
-            {
-              error: error instanceof Error ? error.name : "unknown_error",
-            },
-          );
+          console.error("[account-delete] financial connection removal failed", {
+            error: error instanceof Error ? error.name : "unknown_error",
+          });
           return jsonError(
             "Financial connections could not be removed, so your account was not deleted. Please try again or contact support.",
             502,
@@ -147,28 +128,21 @@ export const Route = createFileRoute("/api/account")({
         try {
           await disconnectAllOAuth(auth.userId);
         } catch (error) {
-          console.error(
-            "[account-delete] linked account disconnection failed",
-            {
-              error: error instanceof Error ? error.name : "unknown_error",
-            },
-          );
+          console.error("[account-delete] linked account disconnection failed", {
+            error: error instanceof Error ? error.name : "unknown_error",
+          });
           return jsonError(
             "Connected accounts could not be disconnected, so your account was not deleted. Please try again.",
             503,
           );
         }
 
-        const { error: deleteError } =
-          await auth.supabaseAdmin.auth.admin.deleteUser(auth.userId);
+        const { error: deleteError } = await auth.supabaseAdmin.auth.admin.deleteUser(auth.userId);
         if (deleteError) {
           console.error("[account-delete] auth deletion failed", {
             code: deleteError.code,
           });
-          return jsonError(
-            "Account deletion failed. Your account remains active.",
-            500,
-          );
+          return jsonError("Account deletion failed. Your account remains active.", 500);
         }
         return new Response(null, {
           status: 204,
