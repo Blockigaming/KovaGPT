@@ -17,7 +17,7 @@ export const AGENT_LIMITS: Record<
 };
 
 export async function getAgentEntitlement(caller: AuthedCaller): Promise<AgentEntitlement | null> {
-  const { data } = await caller.supabaseAdmin
+  const { data, error } = await caller.supabaseAdmin
     .from("subscriptions")
     .select("price_id, status, current_period_end, environment")
     .eq("user_id", caller.userId)
@@ -25,6 +25,10 @@ export async function getAgentEntitlement(caller: AuthedCaller): Promise<AgentEn
     .in("status", ["active", "trialing", "past_due"])
     .order("created_at", { ascending: false })
     .limit(10);
+  if (error) {
+    console.error("[getAgentEntitlement] subscription lookup failed", error);
+    return null;
+  }
   return resolveAgentEntitlement(data, {
     billingEnvironment: BILLING_ENV,
     tierForLookupKey,
