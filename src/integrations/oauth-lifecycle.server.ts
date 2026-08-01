@@ -234,14 +234,6 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     status: providerRevoked ? "provider_revoked" : "pending",
   });
 
-  await db.from("integration_audit_events").insert({
-    owner_id: ownerId,
-    linked_account_id: account.id,
-    provider_id: provider.id,
-    event_type: "disconnect",
-    result: providerRevoked ? "success" : "failure",
-    safe_summary: `Disconnected ${provider.name} account`,
-  });
   await db
     .from("integration_sync_jobs")
     .update({ status: "cancelled" })
@@ -267,4 +259,26 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     safe_summary: `Disconnected ${provider.name} account`,
   });
   return { providerRevoked };
+}
+
+
+export async function disconnectAllOAuth(ownerId: string) {
+  const db = admin();
+  const { data: accounts, error } = await db
+    .from("integration_linked_accounts")
+    .select("id")
+    .eq("owner_id", ownerId)
+    .is("deleted_at", null);
+  if (error) throw new Error("linked_account_enumeration_failed");
+
+  const failures: string[] = [];
+  for (const account of accounts ?? []) {
+    try {
+      await disconnectOAuth(ownerId, account.id);
+    } catch {
+      failures.push(account.id);
+    }
+  }
+  if (failures.length) throw new Error("linked_account_disconnect_failed");
+  return { disconnected: accounts?.length ?? 0 };
 }
