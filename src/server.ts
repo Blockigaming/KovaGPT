@@ -1,4 +1,5 @@
 import "./lib/error-capture";
+import startServerEntry from "@tanstack/react-start/server-entry";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
@@ -6,10 +7,6 @@ import { rejectCrossSiteRequest } from "./lib/http-security.server";
 
 import { withRuntimeBindings } from "./lib/runtime-env.server";
 
-
-type ServerEntry = {
-  fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
-};
 
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
@@ -53,16 +50,10 @@ function hardenResponse(response: Response): Response {
   });
 }
 
-let serverEntryPromise: Promise<ServerEntry> | undefined;
-
-async function getServerEntry(): Promise<ServerEntry> {
-  if (!serverEntryPromise) {
-    serverEntryPromise = import("@tanstack/react-start/server-entry").then(
-      (m) => (m as { default?: ServerEntry }).default ?? (m as unknown as ServerEntry),
-    );
-  }
-  return serverEntryPromise;
-}
+// Keep the framework entry in the Worker bundle. A lazy server-entry chunk can
+// pass Node/Vite preview while failing to resolve after a Workers deployment,
+// which takes every dynamic route (including /api/health) offline.
+const serverEntry = startServerEntry;
 
 function brandedErrorResponse(): Response {
   return new Response(renderErrorPage(), {
@@ -123,7 +114,7 @@ export default {
       if (Number.isFinite(contentLength) && contentLength > 16 * 1024 * 1024) {
         return hardenResponse(Response.json({ error: "Request too large" }, { status: 413 }));
       }
-      const handler = await getServerEntry();
+      const handler = serverEntry;
       const response = await withRuntimeBindings(env, () =>
         handler.fetch(request, env, ctx),
       );
