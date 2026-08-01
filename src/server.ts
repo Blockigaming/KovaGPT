@@ -31,15 +31,13 @@ function hardenResponse(response: Response): Response {
     "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
     "Cross-Origin-Resource-Policy": "same-origin",
     "Origin-Agent-Cluster": "?1",
-    "Permissions-Policy":
-      "camera=(), geolocation=(self), microphone=(), payment=(self), usb=()",
+    "Permissions-Policy": "camera=(), geolocation=(self), microphone=(), payment=(self), usb=()",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "SAMEORIGIN",
   };
-  for (const [name, value] of Object.entries(securityHeaders))
-    headers.set(name, value);
+  for (const [name, value] of Object.entries(securityHeaders)) headers.set(name, value);
   if (!headers.has("Cache-Control") && response.status >= 400) {
     headers.set("Cache-Control", "no-store");
   }
@@ -62,10 +60,7 @@ function brandedErrorResponse(): Response {
   });
 }
 
-function isCatastrophicSsrErrorBody(
-  body: string,
-  responseStatus: number,
-): boolean {
+function isCatastrophicSsrErrorBody(body: string, responseStatus: number): boolean {
   let payload: unknown;
   try {
     payload = JSON.parse(body);
@@ -92,9 +87,7 @@ function isCatastrophicSsrErrorBody(
 
 // h3 swallows in-handler throws into a normal 500 Response with body
 // {"unhandled":true,"message":"HTTPError"}  -  try/catch alone never fires for those.
-async function normalizeCatastrophicSsrResponse(
-  response: Response,
-): Promise<Response> {
+async function normalizeCatastrophicSsrResponse(response: Response): Promise<Response> {
   if (response.status < 500) return response;
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) return response;
@@ -104,9 +97,7 @@ async function normalizeCatastrophicSsrResponse(
     return response;
   }
 
-  console.error(
-    consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`),
-  );
+  console.error(consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`));
   return brandedErrorResponse();
 }
 
@@ -117,18 +108,12 @@ export default {
         const rejected = rejectCrossSiteRequest(request);
         if (rejected) return hardenResponse(rejected);
       }
-      const contentLength = Number(
-        request.headers.get("content-length") ?? "0",
-      );
+      const contentLength = Number(request.headers.get("content-length") ?? "0");
       if (Number.isFinite(contentLength) && contentLength > 16 * 1024 * 1024) {
-        return hardenResponse(
-          Response.json({ error: "Request too large" }, { status: 413 }),
-        );
+        return hardenResponse(Response.json({ error: "Request too large" }, { status: 413 }));
       }
       const handler = serverEntry;
-      const response = await withRuntimeBindings(env, () =>
-        handler.fetch(request, env, ctx),
-      );
+      const response = await withRuntimeBindings(env, () => handler.fetch(request, env, ctx));
       return hardenResponse(await normalizeCatastrophicSsrResponse(response));
     } catch (error) {
       console.error(error);
