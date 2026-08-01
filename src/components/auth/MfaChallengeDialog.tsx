@@ -69,11 +69,14 @@ export function MfaChallengeDialog({
         factorId: factor.id,
         code,
       });
-      if (verifyError || !data.session) {
+      if (verifyError || !data) {
         setError("That code was not accepted. Check your authenticator and try again.");
         return;
       }
-      onVerified(data.session);
+      onVerified({
+        ...data,
+        expires_at: Math.round(Date.now() / 1000) + data.expires_in,
+      });
     } catch {
       setError("Two-factor verification is temporarily unavailable. Please try again.");
     } finally {
