@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   assertDatabaseSuccess,
@@ -72,6 +73,14 @@ test("memory list and delete database errors cannot become empty or ok responses
     () => assertDatabaseSuccess({ data: null, error: new Error("delete failed") }, "memory_delete"),
     (error) => error instanceof DurableBackendError && error.operation === "memory_delete",
   );
+});
+
+test("automatic memory summarization never consumes the foreground chat quota", async () => {
+  const source = await readFile(new URL("../../src/routes/api/memory.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /\benforceQuota\b/);
+  assert.doesNotMatch(source, /DAILY_CHAT_LIMIT_BY_TIER/);
+  assert.match(source, /caller\.tier === "free"/);
+  assert.match(source, /status: 204/);
 });
 
 test("memory persistence surfaces pruning lookup and deletion failures", async () => {
