@@ -1,5 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 
+import { waitForKovaHydration } from "./hydration";
+
 /**
  * Responsive smoke suite. Runs against every viewport project in
  * playwright.config.ts. Verifies core invariants:
@@ -33,9 +35,7 @@ test.describe("KovaGPT responsive shell", () => {
     });
 
     await page.goto("/", { waitUntil: "domcontentloaded" });
-    await page.waitForLoadState("networkidle").catch(() => {
-      /* ok */
-    });
+    await waitForKovaHydration(page);
 
     // Basic content assertion — the app root always renders a textarea or
     // the empty-state landing with the KovaGPT brand.
@@ -58,6 +58,7 @@ test.describe("KovaGPT responsive shell", () => {
 
   test("mobile-only chrome is only visible on phone layouts", async ({ page }, testInfo) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
     const width = page.viewportSize()?.width ?? 0;
     const isPhone = width < 768;
 
