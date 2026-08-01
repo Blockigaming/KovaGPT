@@ -89,6 +89,9 @@ function ProjectChatPage() {
     if (!isSignedIn) return;
     let cancelled = false;
     setLoading(true);
+    setSending(false);
+    setInput("");
+    setComposerAttachments([]);
     abortControllerRef.current?.abort();
 
     void (async () => {
