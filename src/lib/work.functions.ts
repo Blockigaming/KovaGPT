@@ -151,7 +151,7 @@ export const getWorkRun = createServerFn({ method: "GET" })
     if (runResult.error || !runResult.data) throw new Error("Work run not found");
     const [events, deliverables, approvals, tasks, edges, preference] = await Promise.all([
       client
-        .from("agent_run_events")
+        .from("agent_job_events")
         .select("id,event_type,payload,created_at")
         .eq("job_id", data.id)
         .order("created_at", { ascending: true })
@@ -297,7 +297,12 @@ export const saveGraphPreference = createServerFn({ method: "POST" })
 export const controlWorkRun = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((v: unknown) =>
-    z.object({ id: z.string().uuid(), action: z.enum(["pause", "resume", "cancel"]) }).parse(v),
+    z
+      .object({
+        id: z.string().uuid(),
+        action: z.enum(["pause", "resume", "cancel"]),
+      })
+      .parse(v),
   )
   .handler(async ({ data, context }) => {
     const { data: row, error } = await db(context.supabase).rpc("control_agent_job", {
@@ -396,7 +401,12 @@ export const duplicateDeliverable = createServerFn({ method: "POST" })
     } = source.data;
     const result = await client
       .from("agent_deliverables")
-      .insert({ ...copy, title: `${copy.title} copy`, revision: 1, status: "ready" })
+      .insert({
+        ...copy,
+        title: `${copy.title} copy`,
+        revision: 1,
+        status: "ready",
+      })
       .select("id")
       .single();
     if (result.error) throw new Error("Unable to duplicate deliverable");
@@ -556,7 +566,11 @@ export const restoreDeliverableRevision = createServerFn({ method: "POST" })
     const { id, created_at, ...revision } = source.data;
     const inserted = await client
       .from("agent_deliverables")
-      .insert({ ...revision, revision: Number(latest.data?.revision ?? 0) + 1, status: "ready" })
+      .insert({
+        ...revision,
+        revision: Number(latest.data?.revision ?? 0) + 1,
+        status: "ready",
+      })
       .select("id")
       .single();
     if (inserted.error) throw new Error("Unable to restore revision");
