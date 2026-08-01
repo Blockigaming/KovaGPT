@@ -108,6 +108,8 @@ export const Route = createFileRoute("/")({
   }),
 });
 
+const EMPTY_CONVERSATIONS: Conversation[] = [];
+
 function KovaGPT() {
   const { isSignedIn, isLoaded, user } = useUser();
   const { tier } = useTier();
@@ -121,7 +123,7 @@ function KovaGPT() {
     items: Conversation[];
   }>({ principal: null, items: [] });
   const principalReady = isLoaded && conversationState.principal === storagePrincipal;
-  const conversations = principalReady ? conversationState.items : [];
+  const conversations = principalReady ? conversationState.items : EMPTY_CONVERSATIONS;
   const setConversations = useCallback(
     (next: SetStateAction<Conversation[]>) => {
       setConversationState((previous) => {
@@ -632,7 +634,7 @@ function KovaGPT() {
         });
       }
     },
-    [activeId, conversations],
+    [activeId, conversations, setConversations],
   );
 
   const autoTitle = useCallback(
