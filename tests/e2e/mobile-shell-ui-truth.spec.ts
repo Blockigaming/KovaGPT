@@ -1,9 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-function isPhoneOrDesktop(width: number, height: number) {
-  return width < 768 || height < 500 || width >= 1280;
-}
-
 test.describe("mobile shell UI truth", () => {
   test("the phone drawer fills the viewport and restores focus", async ({ page }) => {
     const viewport = page.viewportSize();
@@ -23,7 +19,7 @@ test.describe("mobile shell UI truth", () => {
     expect(box).not.toBeNull();
     expect(box!.x).toBeLessThanOrEqual(1);
     expect(box!.y).toBeLessThanOrEqual(1);
-    expect(box!.height).toBeGreaterThanOrEqual(viewport!.height - 1);
+    expect(box!.height).toBeGreaterThanOrEqual(viewport.height - 1);
 
     const close = page.getByRole("button", { name: "Close navigation", exact: true });
     const closeBox = await close.boundingBox();
@@ -36,14 +32,13 @@ test.describe("mobile shell UI truth", () => {
   test("the command palette is unclipped, motion-safe, and restores its opener", async ({
     page,
   }) => {
-    const viewport = page.viewportSize();
-    test.skip(!viewport || !isPhoneOrDesktop(viewport.width, viewport.height), "phone and desktop contract");
+    const viewport = page.viewportSize()!;
 
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/", { waitUntil: "domcontentloaded" });
 
     const opener =
-      viewport!.width < 768 || viewport!.height < 500
+      viewport.width < 1024
         ? page.getByRole("button", { name: "Open menu" })
         : page.locator('[data-testid="model-selector-trigger"]:visible').first();
     await opener.focus();
@@ -53,8 +48,8 @@ test.describe("mobile shell UI truth", () => {
     await expect(palette).toBeVisible();
     const paletteBox = await palette.boundingBox();
     expect(paletteBox).not.toBeNull();
-    expect(paletteBox!.width).toBeGreaterThanOrEqual(viewport!.width - 1);
-    expect(paletteBox!.height).toBeGreaterThanOrEqual(viewport!.height - 1);
+    expect(paletteBox!.width).toBeGreaterThanOrEqual(viewport.width - 1);
+    expect(paletteBox!.height).toBeGreaterThanOrEqual(viewport.height - 1);
 
     const close = page.getByRole("button", { name: "Close command palette" });
     const closeBox = await close.boundingBox();
@@ -70,5 +65,12 @@ test.describe("mobile shell UI truth", () => {
     await page.keyboard.press("Escape");
     await expect(palette).toBeHidden();
     await expect(opener).toBeFocused();
+
+    await page.keyboard.press("Control+K");
+    await expect(palette).toBeVisible();
+    await page.getByRole("option", { name: "Focus message box" }).click();
+    await expect(palette).toBeHidden();
+    await expect(page.locator("textarea").first()).toBeFocused();
+    await expect(opener).not.toBeFocused();
   });
 });
