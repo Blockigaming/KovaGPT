@@ -49,10 +49,7 @@ export const TOOL_ACTIVITY: Record<string, ActivityLabel> = {
 // Tools the model may call whose *effects* only happen after the user
 // explicitly confirms in the UI. runGoogleTool never runs these - the
 // chat loop intercepts them and stages a pending action instead.
-export const WRITE_TOOL_NAMES = new Set<string>([
-  "gmail_create_draft",
-  "calendar_create_event",
-]);
+export const WRITE_TOOL_NAMES = new Set<string>(["gmail_create_draft", "calendar_create_event"]);
 
 export const READ_ONLY_TOOLS: ToolDef[] = [
   {
@@ -66,8 +63,7 @@ export const READ_ONLY_TOOLS: ToolDef[] = [
         properties: {
           query: {
             type: "string",
-            description:
-              "Gmail search query. Example: 'from:boss@company.com newer_than:14d'.",
+            description: "Gmail search query. Example: 'from:boss@company.com newer_than:14d'.",
           },
           max_results: {
             type: "integer",
@@ -236,33 +232,22 @@ export const WRITE_TOOLS: ToolDef[] = [
   },
 ];
 
-const SUPPORTED_WRITE_TOOLS = new Set([
-  "gmail_create_draft",
-  "calendar_create_event",
-]);
+const SUPPORTED_WRITE_TOOLS = new Set(["gmail_create_draft", "calendar_create_event"]);
 export const ALL_TOOLS: ToolDef[] = [
   ...READ_ONLY_TOOLS,
-  ...WRITE_TOOLS.filter((tool) =>
-    SUPPORTED_WRITE_TOOLS.has(tool.function.name),
-  ),
+  ...WRITE_TOOLS.filter((tool) => SUPPORTED_WRITE_TOOLS.has(tool.function.name)),
 ];
 
-export async function getAvailableGoogleTools(
-  userId: string,
-): Promise<ToolDef[]> {
+export async function getAvailableGoogleTools(userId: string): Promise<ToolDef[]> {
   const health = await getGoogleConnectionHealth(userId);
   if (!health.connected) return [];
   return ALL_TOOLS.filter((tool) => {
     const name = tool.function.name;
     if (name.startsWith("gmail_")) {
-      return name === "gmail_create_draft"
-        ? health.has.gmailWrite
-        : health.has.gmail;
+      return name === "gmail_create_draft" ? health.has.gmailWrite : health.has.gmail;
     }
     if (name.startsWith("calendar_")) {
-      return name === "calendar_create_event"
-        ? health.has.calendarWrite
-        : health.has.calendar;
+      return name === "calendar_create_event" ? health.has.calendarWrite : health.has.calendar;
     }
     if (name.startsWith("drive_")) return health.has.drive;
     return false;
@@ -273,10 +258,7 @@ const GMAIL = "https://gmail.googleapis.com/gmail/v1";
 const CAL = "https://www.googleapis.com/calendar/v3";
 const DRIVE = "https://www.googleapis.com/drive/v3";
 
-function headerValue(
-  headers: Array<{ name: string; value: string }> | undefined,
-  name: string,
-) {
+function headerValue(headers: Array<{ name: string; value: string }> | undefined, name: string) {
   if (!headers) return "";
   const h = headers.find((x) => x.name.toLowerCase() === name.toLowerCase());
   return h?.value ?? "";
@@ -434,10 +416,7 @@ export async function runGoogleTool(
           headers?: Array<{ name: string; value: string }>;
         } & GmailPart;
       };
-      const body = extractPlainText(j.payload as GmailPart | undefined).slice(
-        0,
-        20000,
-      );
+      const body = extractPlainText(j.payload as GmailPart | undefined).slice(0, 20000);
       void logAudit({
         userId,
         provider: "gmail",
@@ -465,8 +444,7 @@ export async function runGoogleTool(
       const now = new Date();
       const timeMin = String(args.time_min ?? now.toISOString());
       const timeMax = String(
-        args.time_max ??
-          new Date(now.getTime() + 7 * 24 * 3600 * 1000).toISOString(),
+        args.time_max ?? new Date(now.getTime() + 7 * 24 * 3600 * 1000).toISOString(),
       );
       const max = Math.min(25, Math.max(1, Number(args.max_results ?? 10)));
       const url = `${CAL}/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=${max}&timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`;
@@ -490,10 +468,7 @@ export async function runGoogleTool(
         start: e.start,
         end: e.end,
         location: fenceUntrusted("event_location", e.location ?? ""),
-        description: fenceUntrusted(
-          "event_description",
-          (e.description ?? "").slice(0, 500),
-        ),
+        description: fenceUntrusted("event_description", (e.description ?? "").slice(0, 500)),
         link: e.htmlLink,
         attendees: (e.attendees ?? []).slice(0, 10).map((a) => a.email),
       }));
@@ -547,12 +522,9 @@ export async function runGoogleTool(
     if (name === "drive_read_file") {
       const id = String(args.id ?? "");
       if (!id) return { error: "missing_id" };
-      const metaRes = await fetch(
-        `${DRIVE}/files/${id}?fields=id,name,mimeType,webViewLink`,
-        {
-          headers: H,
-        },
-      );
+      const metaRes = await fetch(`${DRIVE}/files/${id}?fields=id,name,mimeType,webViewLink`, {
+        headers: H,
+      });
       if (!metaRes.ok) throw new Error(`drive meta ${metaRes.status}`);
       const meta = (await metaRes.json()) as {
         id: string;
@@ -614,17 +586,13 @@ export async function userHasGoogle(userId: string): Promise<boolean> {
 // ---------------------------------------------------------------------------
 
 function admin() {
-  return createClient<Database>(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      auth: {
-        storage: undefined,
-        persistSession: false,
-        autoRefreshToken: false,
-      },
+  return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+    auth: {
+      storage: undefined,
+      persistSession: false,
+      autoRefreshToken: false,
     },
-  );
+  });
 }
 
 type WriteArgs = Record<string, unknown>;
@@ -694,9 +662,7 @@ export function summarizeWriteTool(
         attendees: Array.isArray(args.attendees)
           ? (args.attendees as string[]).slice(0, 10)
           : undefined,
-        description: args.description
-          ? truncate(args.description, 300)
-          : undefined,
+        description: args.description ? truncate(args.description, 300) : undefined,
       },
     };
   }
@@ -763,19 +729,14 @@ export async function executePendingAction(
   if (pendingRow.status === "confirmed") {
     const storedResult = pendingRow.result as { text?: unknown } | null;
     const storedText =
-      storedResult && typeof storedResult.text === "string"
-        ? storedResult.text
-        : "";
+      storedResult && typeof storedResult.text === "string" ? storedResult.text : "";
     return { ok: true, result_text: storedText || "Action already completed." };
   }
   if (pendingRow.status === "processing")
     return { ok: false, error: "Action is already being processed." };
-  if (pendingRow.status === "cancelled")
-    return { ok: false, error: "Action was cancelled." };
+  if (pendingRow.status === "cancelled") return { ok: false, error: "Action was cancelled." };
   if (new Date(pendingRow.expires_at).getTime() < Date.now()) {
-    const { data: expired, error: expirationError } = await (
-      db as unknown as SupabaseQueryLike
-    )
+    const { data: expired, error: expirationError } = await (db as unknown as SupabaseQueryLike)
       .from("pending_tool_actions")
       .update({ status: "expired" })
       .eq("id", actionId)
@@ -792,8 +753,7 @@ export async function executePendingAction(
     if (!expired) {
       return {
         ok: false,
-        error:
-          "Action state changed before it could expire. Refresh before trying again.",
+        error: "Action state changed before it could expire. Refresh before trying again.",
       };
     }
     return { ok: false, error: "Action expired. Ask me to prepare it again." };
@@ -806,9 +766,7 @@ export async function executePendingAction(
   // Without this, a duplicate confirmation request that races the first one
   // would see status still 'pending' and send the same email / create the
   // same event twice. Only the request whose UPDATE affects a row proceeds.
-  const { data: claimed, error: claimError } = await (
-    db as unknown as SupabaseQueryLike
-  )
+  const { data: claimed, error: claimError } = await (db as unknown as SupabaseQueryLike)
     .from("pending_tool_actions")
     .update({ status: "processing" })
     .eq("id", actionId)
@@ -822,12 +780,10 @@ export async function executePendingAction(
       error: "KovaGPT could not safely claim this action. Try again.",
     };
   }
-  if (!claimed)
-    return { ok: false, error: "Action is already being processed." };
+  if (!claimed) return { ok: false, error: "Action is already being processed." };
 
   const claimedAction = claimed as { tool?: unknown; args?: unknown };
-  const claimedTool =
-    typeof claimedAction.tool === "string" ? claimedAction.tool : "";
+  const claimedTool = typeof claimedAction.tool === "string" ? claimedAction.tool : "";
   let a: WriteArgs;
   try {
     a = validateSupportedWrite(claimedTool, claimedAction.args as WriteArgs);
@@ -846,9 +802,7 @@ export async function executePendingAction(
       .select("id")
       .maybeSingle();
     if (invalidationError || !invalidated) {
-      console.error(
-        "[executePendingAction] invalid action could not be closed",
-      );
+      console.error("[executePendingAction] invalid action could not be closed");
     }
     return {
       ok: false,
@@ -860,9 +814,7 @@ export async function executePendingAction(
   try {
     token = await getValidGoogleAccessToken(userId);
   } catch {
-    const { data: released, error: releaseError } = await (
-      db as unknown as SupabaseQueryLike
-    )
+    const { data: released, error: releaseError } = await (db as unknown as SupabaseQueryLike)
       .from("pending_tool_actions")
       .update({ status: "pending" })
       .eq("id", actionId)
@@ -952,15 +904,16 @@ export async function executePendingAction(
     } else {
       throw new Error("unsupported_confirmed_action");
     }
-    const { data: confirmationPersisted, error: confirmationPersistError } =
-      await (db as unknown as SupabaseQueryLike)
-        .from("pending_tool_actions")
-        .update({ status: "confirmed", result: { text: resultText } })
-        .eq("id", actionId)
-        .eq("user_id", userId)
-        .eq("status", "processing")
-        .select("id")
-        .maybeSingle();
+    const { data: confirmationPersisted, error: confirmationPersistError } = await (
+      db as unknown as SupabaseQueryLike
+    )
+      .from("pending_tool_actions")
+      .update({ status: "confirmed", result: { text: resultText } })
+      .eq("id", actionId)
+      .eq("user_id", userId)
+      .eq("status", "processing")
+      .select("id")
+      .maybeSingle();
     if (confirmationPersistError || !confirmationPersisted) {
       console.error("[executePendingAction] completion could not be persisted");
       return {
@@ -983,9 +936,7 @@ export async function executePendingAction(
       .select("id")
       .maybeSingle();
     if (failurePersistError || !failurePersisted) {
-      console.error(
-        "[executePendingAction] failure state could not be persisted",
-      );
+      console.error("[executePendingAction] failure state could not be persisted");
     }
     void logAudit({
       userId,
@@ -1007,10 +958,7 @@ export async function executePendingAction(
 }
 
 /** Mark a pending action cancelled. Idempotent; only touches your own row. */
-export async function cancelPendingAction(
-  userId: string,
-  actionId: string,
-): Promise<boolean> {
+export async function cancelPendingAction(userId: string, actionId: string): Promise<boolean> {
   const db = admin();
   const { data } = await (db as unknown as SupabaseQueryLike)
     .from("pending_tool_actions")
