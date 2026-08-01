@@ -10,6 +10,7 @@ Complete this checklist in GitHub and the Cloudflare account that will own produ
 
 - Create a GitHub environment named `production`.
 - Protect the environment with required reviewers and prevent self-review where the repository plan supports it.
+- Restrict the environment's deployment branches to `main`.
 - Add the environment secret `CLOUDFLARE_API_TOKEN`. Scope it to the target account with only the permissions needed to edit Workers scripts and assets.
 - Add the environment variable `CLOUDFLARE_ACCOUNT_ID` for that same Cloudflare account.
 - Choose the production Worker script name and add it as `KOVA_CLOUDFLARE_WORKER_NAME`. The name identifies the Worker deployment; it does not bind `kovagpt.com`.
@@ -20,7 +21,7 @@ Complete this checklist in GitHub and the Cloudflare account that will own produ
 
 1. Review and merge the desired revision through the normal repository process.
 2. Open **Actions > Deploy KovaGPT to Cloudflare production > Run workflow**.
-3. Select the exact branch or tag to deploy, enter `DEPLOY`, and start the workflow.
+3. Select `main`, enter `DEPLOY`, and start the workflow. The job refuses every other ref.
 4. Approve the protected `production` environment when GitHub requests approval.
 5. The workflow installs locked dependencies, runs the production build, validates `dist/server/index.mjs` and `dist/server/wrangler.json` in local workerd, then runs Wrangler against that generated config.
 6. Record the Git commit and Cloudflare Worker version shown by the completed deployment.
@@ -50,4 +51,4 @@ The exact domain operation depends on the owner's Cloudflare zone, DNS, and acco
 
 ## Rollback
 
-Use Cloudflare's Worker version rollback when available, or manually run the workflow on a previously reviewed good commit. Re-run the health and authenticated smoke checks after rollback. There is no automatic deployment or automatic DNS rollback.
+Use Cloudflare's Worker version rollback when available, or revert to a previously reviewed good commit on `main` and manually run the workflow. Re-run the health and authenticated smoke checks after rollback. There is no automatic deployment or automatic DNS rollback.
