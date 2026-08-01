@@ -62,3 +62,51 @@ test("image generation validates n before quota and supports exactly one image",
     assert.ok(value.length > 0, `documented n case: ${value}`);
   }
 });
+
+test("sitemap excludes private and noindex workflows", () => {
+  const sitemap = read("src/routes/sitemap[.]xml.ts");
+  for (const path of [
+    "/checkout/return",
+    "/summary",
+    "/audit-log",
+    "/projects",
+    "/scheduled-tasks",
+    "/write",
+    "/apps",
+    "/library",
+    "/reset-password",
+    "/unsubscribe",
+  ]) {
+    assert.equal(
+      sitemap.includes('{ path: "' + path + '",'),
+      false,
+      path + " must not be advertised in the public sitemap",
+    );
+  }
+  for (const path of ["/", "/pricing", "/study-assistant", "/privacy"]) {
+    assert.equal(
+      sitemap.includes('{ path: "' + path + '",'),
+      true,
+      path + " should remain in the public sitemap",
+    );
+  }
+});
+
+test("study assistant only promises upload formats supported by the composer", () => {
+  const study = read("src/routes/study-assistant.tsx");
+  const composer = read("src/components/ChatInput.tsx");
+  assert.doesNotMatch(study, /upload PDFs?/i);
+  assert.match(study, /Paste text or upload images of your notes/i);
+  assert.match(composer, /f\.type\.startsWith\("image\/"\)/);
+  assert.match(composer, /f\.type\.startsWith\("text\/"\)/);
+});
+
+test("email previews and From display use KovaGPT production branding", () => {
+  const transactional = read("src/routes/lovable/email/transactional/send.ts");
+  const authPreview = read("src/routes/lovable/email/auth/preview.ts");
+  assert.match(transactional, /const SITE_NAME = "KovaGPT";/);
+  assert.doesNotMatch(transactional, /nova-aigpt/i);
+  assert.match(authPreview, /const SITE_NAME = "KovaGPT";/);
+  assert.match(authPreview, /const SAMPLE_PROJECT_URL = "https:\/\/kovagpt\.com";/);
+  assert.doesNotMatch(authPreview, /kovagpt\.kovagpt\.com/i);
+});
