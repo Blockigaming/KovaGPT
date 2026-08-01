@@ -245,6 +245,24 @@ test("chat payload accepts attachments only on the latest authenticated turn bou
       error.code === "empty_user_message" &&
       error.status === 400,
   );
+  assert.throws(
+    () =>
+      normalizeChatPayload({
+        messages: [
+          {
+            role: "user",
+            content: "Analyze this",
+            attachments: [
+              { kind: "text_file", name: "empty.txt", content: "", fileType: "text/plain" },
+            ],
+          },
+        ],
+      }),
+    (error) =>
+      error instanceof ChatIngressError &&
+      error.code === "invalid_text_attachment" &&
+      error.publicMessage === "Invalid text file attachment.",
+  );
 });
 
 test("chat ingress requires the JSON media type", async () => {
