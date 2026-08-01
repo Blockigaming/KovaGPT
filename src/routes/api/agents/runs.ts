@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
-import { controlAgentRun, createAgentRun } from "@/agents/execution.server";
-import type { BrowserAction } from "@/agents/policy";
+import { controlAgentRun } from "@/agents/execution.server";
 export const Route = createFileRoute("/api/agents/runs")({
   server: {
     handlers: {
@@ -22,45 +21,29 @@ export const Route = createFileRoute("/api/agents/runs")({
         const { data, error } = await query;
         if (error) return Response.json({ error: "agent_history_unavailable" }, { status: 500 });
         const ids = ((data ?? []) as unknown as { id: string }[]).map((run) => run.id);
-        const { data: events } = ids.length
-          ? await auth.supabaseAdmin
-              .from("agent_run_events" as never)
-              .select("run_id,kind,safe_payload,evidence_sha256,created_at" as never)
-              .in("run_id" as never, ids)
-              .order("created_at" as never, { ascending: true })
-          : { data: [] };
+        let events: unknown[] = [];
+        if (ids.length) {
+          const result = await auth.supabaseAdmin
+            .from("agent_run_events" as never)
+            .select("run_id,kind,safe_payload,evidence_sha256,created_at" as never)
+            .in("run_id" as never, ids)
+            .order("created_at" as never, { ascending: true });
+          if (result.error)
+            return Response.json({ error: "agent_history_unavailable" }, { status: 500 });
+          events = result.data ?? [];
+        }
         return Response.json({ runs: data ?? [], events: events ?? [] });
       },
       POST: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
-        const body = (await request.json().catch(() => null)) as {
-          objective?: string;
-          projectId?: string;
-          idempotencyKey?: string;
-          actions?: BrowserAction[];
-          allowedDomains?: string[];
-        } | null;
-        if (!body?.objective || !body.idempotencyKey || !Array.isArray(body.actions))
-          return Response.json({ error: "invalid_agent_run" }, { status: 400 });
-        try {
-          return Response.json(
-            await createAgentRun(auth, {
-              objective: body.objective,
-              projectId: body.projectId,
-              idempotencyKey: body.idempotencyKey,
-              actions: body.actions,
-              allowedDomains: body.allowedDomains ?? [],
-            }),
-            { status: 202 },
-          );
-        } catch (error) {
-          const message = error instanceof Error ? error.message : "agent_run_failed";
-          return Response.json(
-            { error: message },
-            { status: message === "agent_plan_required" ? 403 : 400 },
-          );
-        }
+        return Response.json(
+          { error: "browser_agent_unavailable" },
+          {
+            status: 503,
+            headers: { "Cache-Control": "no-store", "Retry-After": "3600" },
+          },
+        );
       },
       PATCH: async ({ request }) => {
         const auth = await requireUser(request);
@@ -77,9 +60,10 @@ export const Route = createFileRoute("/api/agents/runs")({
             await controlAgentRun(auth, body.runId, body.command, body.approvalId),
           );
         } catch (error) {
+          const message = error instanceof Error ? error.message : "agent_control_failed";
           return Response.json(
-            { error: error instanceof Error ? error.message : "agent_control_failed" },
-            { status: 400 },
+            { error: message },
+            { status: message === "browser_agent_unavailable" ? 503 : 400 },
           );
         }
       },
