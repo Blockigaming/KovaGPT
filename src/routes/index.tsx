@@ -1119,33 +1119,34 @@ function KovaGPT() {
           onTemporaryChatChange={setTemporaryChatEnabled}
         />
         <header className="kova-topbar relative hidden h-[52px] items-center gap-1 px-3 lg:flex">
-          {!sidebarOpen && (
-            <div className="flex items-center gap-1 mr-2 shrink-0">
-              <button
-                onClick={() => {
-                  setSidebarOpen(true);
-                  window.requestAnimationFrame(() => {
-                    document
-                      .querySelector<HTMLElement>('[aria-label="Collapse sidebar"]')
-                      ?.focus({ preventScroll: true });
-                  });
-                }}
-                className="shrink-0 p-2 rounded-lg hover:bg-accent transition"
-                aria-label="Open sidebar"
-                title="Open sidebar"
-              >
-                <PanelLeft className="w-5 h-5" />
-              </button>
-              <button
-                onClick={openCommandPalette}
-                className="shrink-0 p-2 rounded-lg hover:bg-accent transition"
-                aria-label="Search chats"
-                title="Search chats"
-              >
-                <Search className="w-5 h-5" />
-              </button>
-            </div>
-          )}
+          <div
+            hidden={sidebarOpen}
+            className="flex items-center gap-1 mr-2 shrink-0"
+          >
+            <button
+              onClick={() => {
+                setSidebarOpen(true);
+                window.requestAnimationFrame(() => {
+                  document
+                    .querySelector<HTMLElement>('[aria-label="Collapse sidebar"]')
+                    ?.focus({ preventScroll: true });
+                });
+              }}
+              className="shrink-0 p-2 rounded-lg hover:bg-accent transition"
+              aria-label="Open sidebar"
+              title="Open sidebar"
+            >
+              <PanelLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={openCommandPalette}
+              className="shrink-0 p-2 rounded-lg hover:bg-accent transition"
+              aria-label="Search chats"
+              title="Search chats"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+          </div>
 
           <div className="flex items-center min-w-0 flex-1 relative">
             <ResponsiveModelSelector
