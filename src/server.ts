@@ -1,11 +1,15 @@
 import "./lib/error-capture";
-import startServerEntry from "@tanstack/react-start/server-entry";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { rejectCrossSiteRequest } from "./lib/http-security.server";
 
 import { withRuntimeBindings } from "./lib/runtime-env.server";
+
+
+type ServerEntry = {
+  fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
+};
 
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
@@ -31,7 +35,8 @@ function hardenResponse(response: Response): Response {
     "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
     "Cross-Origin-Resource-Policy": "same-origin",
     "Origin-Agent-Cluster": "?1",
-    "Permissions-Policy": "camera=(), geolocation=(self), microphone=(), payment=(self), usb=()",
+    "Permissions-Policy":
+      "camera=(), geolocation=(self), microphone=(), payment=(self), usb=()",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
     "X-Content-Type-Options": "nosniff",
@@ -48,10 +53,16 @@ function hardenResponse(response: Response): Response {
   });
 }
 
-// Keep the framework entry in the Worker bundle. A lazy server-entry chunk can
-// pass Node/Vite preview while failing to resolve after a Workers deployment,
-// which takes every dynamic route (including /api/health) offline.
-const serverEntry = startServerEntry;
+let serverEntryPromise: Promise<ServerEntry> | undefined;
+
+async function getServerEntry(): Promise<ServerEntry> {
+  if (!serverEntryPromise) {
+    serverEntryPromise = import("@tanstack/react-start/server-entry").then(
+      (m) => (m as { default?: ServerEntry }).default ?? (m as unknown as ServerEntry),
+    );
+  }
+  return serverEntryPromise;
+}
 
 function brandedErrorResponse(): Response {
   return new Response(renderErrorPage(), {
@@ -102,7 +113,7 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 }
 
 export default {
-  async fetch(request: Request, env: unknown, _ctx: unknown) {
+  async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
         const rejected = rejectCrossSiteRequest(request);
@@ -112,7 +123,10 @@ export default {
       if (Number.isFinite(contentLength) && contentLength > 16 * 1024 * 1024) {
         return hardenResponse(Response.json({ error: "Request too large" }, { status: 413 }));
       }
-      const response = await withRuntimeBindings(env, () => serverEntry.fetch(request));
+      const handler = await getServerEntry();
+      const response = await withRuntimeBindings(env, () =>
+        handler.fetch(request, env, ctx),
+      );
       return hardenResponse(await normalizeCatastrophicSsrResponse(response));
     } catch (error) {
       console.error(error);
