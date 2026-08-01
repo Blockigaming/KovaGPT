@@ -7,10 +7,7 @@ import { toast } from "sonner";
 import { Loader2, Eye, EyeOff, ArrowLeft, Mail, Sparkles } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { ForgotPasswordDialog } from "@/components/auth/ForgotPasswordDialog";
-import {
-  getOAuthRedirectUri,
-  rememberPostAuthRedirect,
-} from "@/lib/oauth-session";
+import { getOAuthRedirectUri, rememberPostAuthRedirect } from "@/lib/oauth-session";
 import { cn } from "@/lib/utils";
 
 type Mode = "sign-in" | "sign-up";
@@ -100,9 +97,7 @@ export function AuthDialog({
         if (error) throw error;
         // Keep duplicate-account behavior indistinguishable to prevent email
         // enumeration. Supabase decides whether a message should be delivered.
-        toast.success(
-          "If this address can be registered, check your inbox to continue.",
-        );
+        toast.success("If this address can be registered, check your inbox to continue.");
         onOpenChange(false);
       } else {
         const normalizedEmail = email.trim().toLowerCase();
@@ -143,10 +138,7 @@ export function AuthDialog({
       });
       if (result.error) {
         console.error("[KovaAuth] Google authentication could not start", {
-          error:
-            result.error instanceof Error
-              ? result.error.name
-              : "provider_error",
+          error: result.error instanceof Error ? result.error.name : "provider_error",
         });
         toast.error("Google sign in could not start. Please try again.");
         release();
@@ -286,11 +278,7 @@ export function AuthDialog({
                     {loading ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
                     ) : (
-                      <svg
-                        className="h-5 w-5"
-                        viewBox="0 0 24 24"
-                        aria-hidden="true"
-                      >
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
                         <path
                           fill="#4285F4"
                           d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -352,13 +340,9 @@ export function AuthDialog({
                   <div className="relative">
                     <Input
                       type={showPassword ? "text" : "password"}
-                      autoComplete={
-                        isSignUp ? "new-password" : "current-password"
-                      }
+                      autoComplete={isSignUp ? "new-password" : "current-password"}
                       autoFocus
-                      placeholder={
-                        isSignUp ? "Create a password (min 6)" : "Password"
-                      }
+                      placeholder={isSignUp ? "Create a password (min 6)" : "Password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       minLength={6}
@@ -368,16 +352,10 @@ export function AuthDialog({
                     <button
                       type="button"
                       onClick={() => setShowPassword((v) => !v)}
-                      aria-label={
-                        showPassword ? "Hide password" : "Show password"
-                      }
+                      aria-label={showPassword ? "Hide password" : "Show password"}
                       className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition"
                     >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
 
@@ -398,9 +376,7 @@ export function AuthDialog({
                     disabled={loading}
                     className="w-full h-14 rounded-2xl text-[15px] font-medium"
                   >
-                    {loading && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {isSignUp ? "Create account" : "Sign in"}
                   </Button>
 
