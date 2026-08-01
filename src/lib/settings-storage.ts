@@ -3,6 +3,7 @@ export type SettingsStorageUserKey = string | null;
 const SETTINGS_KEY_BASE = "nova-gpt-settings-v1";
 export const WORKSPACE_DEFAULTS_KEY_BASE = "kova-workspace-defaults-v1";
 export const LOCATION_KEY_BASE = "kova-location";
+export const MEMORY_WRITE_BLOCK_KEY_BASE = "kova-memory-write-block-v1";
 
 export function settingsKey(userKey: SettingsStorageUserKey): string {
   return userKey ? `${SETTINGS_KEY_BASE}:${userKey}` : `${SETTINGS_KEY_BASE}:guest`;
@@ -130,4 +131,5 @@ export function clearPrincipalPreferences(userKey: SettingsStorageUserKey): void
   clearStoredSettings(userKey);
   clearPrincipalStoredRecord(WORKSPACE_DEFAULTS_KEY_BASE, userKey);
   clearPrincipalStoredRecord(LOCATION_KEY_BASE, userKey);
+  clearPrincipalStoredRecord(MEMORY_WRITE_BLOCK_KEY_BASE, userKey);
 }
