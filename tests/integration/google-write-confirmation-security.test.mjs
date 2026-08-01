@@ -34,6 +34,12 @@ test("direct Google endpoints remain read-only", () => {
   assert.match(calendar, /if \(action !== "list"\)/);
   assert.match(gmail, /confirmation_required/);
   assert.match(calendar, /confirmation_required/);
+  assert.doesNotMatch(gmail, /action === "(?:draft|send|trash)"/);
+  assert.doesNotMatch(
+    gmail,
+    /buildRawEmail|base64UrlEncode|\/drafts\/send|\/messages\/send/,
+  );
+  assert.doesNotMatch(calendar, /action === "(?:create|update|delete)"/);
 });
 
 test("confirmation reads and claims only the signed-in owner's row", () => {
@@ -75,6 +81,24 @@ test("claimed legacy arguments are revalidated immediately before Google access"
   assert.match(executor, /const SUPPORTED_WRITE_TOOLS = new Set\(\[/);
   assert.match(executor, /"gmail_create_draft",\s*"calendar_create_event"/);
   assert.match(executor, /This action is no longer valid\. Prepare it again\./);
+  assert.doesNotMatch(
+    executor,
+    /gmail_send|calendar_delete_event|drive_upload_text_file|drive_create_doc/,
+  );
+});
+
+test("expiration cannot overwrite a concurrently claimed or completed action", () => {
+  const executor = read("src/lib/google-tools.server.ts");
+  const start = executor.indexOf("new Date(pendingRow.expires_at)");
+  const end = executor.indexOf("SUPPORTED_WRITE_TOOLS", start);
+  const expiration = executor.slice(start, end);
+
+  assert.match(expiration, /\.eq\("id", actionId\)/);
+  assert.match(expiration, /\.eq\("user_id", userId\)/);
+  assert.match(expiration, /\.eq\("status", "pending"\)/);
+  assert.match(expiration, /\.select\("id"\)\s*\.maybeSingle\(\)/);
+  assert.match(expiration, /expirationError/);
+  assert.match(expiration, /if \(!expired\)/);
 });
 
 test("confirmation results fail safely when final persistence is ambiguous", () => {
