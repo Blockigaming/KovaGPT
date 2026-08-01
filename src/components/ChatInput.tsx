@@ -17,7 +17,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
+import { useUser } from "@/components/auth/ClerkSafe";
 import { useLayout } from "@/hooks/use-mobile";
+import { useSharedSendOnEnter } from "@/lib/composer-preferences";
 
 import { useEffect, useRef, useState } from "react";
 import { tryUseUpload } from "@/lib/limits";
@@ -92,7 +94,9 @@ export function ChatInput({
   onSubmit,
   onStop,
   isStreaming,
-  sendOnEnter = true,
+  sendOnEnter,
+  disabled = false,
+  showAddMenu = true,
   attachments,
   onAttachmentsChange,
   mode,
@@ -114,8 +118,12 @@ export function ChatInput({
   onSubmit: () => void;
   onStop: () => void;
   isStreaming: boolean;
-  /** Plain Enter submits on desktop when enabled. Mobile Enter always inserts a newline. */
+  /** Explicit override. When omitted, the current user's shared persisted preference is used. */
   sendOnEnter?: boolean;
+  /** Disables text entry and submission without changing existing callers. */
+  disabled?: boolean;
+  /** Hides and disables attachments, tools, and prompt shortcuts. */
+  showAddMenu?: boolean;
   attachments: PendingAttachment[];
   onAttachmentsChange: (a: PendingAttachment[]) => void;
   mode?: ModeId;
@@ -134,8 +142,12 @@ export function ChatInput({
   recentLibraryError?: string | null;
   onRecentLibraryRetry?: () => void;
 }) {
-  const { isDesktop } = useLayout();
+  const { isDesktop, interaction } = useLayout();
+  const { user } = useUser();
+  const sharedSendOnEnter = useSharedSendOnEnter(user?.id ?? null);
+  const effectiveSendOnEnter = sendOnEnter ?? sharedSendOnEnter;
   const isMobileLayout = !isDesktop;
+  const isCoarsePointer = interaction === "touch";
 
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -227,8 +239,12 @@ export function ChatInput({
     if (!isStreaming) submittingRef.current = false;
   }, [isStreaming, value, attachments.length]);
 
+  useEffect(() => {
+    if (disabled || !showAddMenu) setPlusOpen(false);
+  }, [disabled, showAddMenu]);
+
   const triggerSubmit = () => {
-    if (submittingRef.current || isStreaming) return;
+    if (disabled || submittingRef.current || isStreaming) return;
     if (!value.trim() && attachments.length === 0) return;
     const blocked = attachments.find(
       (attachment) => attachment.status === "uploading" || attachment.status === "failed",
@@ -253,13 +269,18 @@ export function ChatInput({
     const native = e.nativeEvent as KeyboardEvent & { isComposing?: boolean };
     const shouldSubmit = shouldSubmitComposerOnEnter({
       key: e.key,
+      keyCode: native.keyCode,
       shiftKey: e.shiftKey,
       ctrlKey: e.ctrlKey,
       metaKey: e.metaKey,
       altKey: e.altKey,
       isComposing: Boolean(native.isComposing || composingRef.current),
-      sendOnEnter,
+      sendOnEnter: effectiveSendOnEnter,
       isMobileLayout,
+      isCoarsePointer,
+      hasContent: Boolean(value.trim() || attachments.length > 0),
+      disabled,
+      isStreaming,
     });
     if (!shouldSubmit) return;
     e.preventDefault();
@@ -267,7 +288,7 @@ export function ChatInput({
   };
 
   async function addFiles(files: File[]) {
-    if (files.length === 0) return;
+    if (disabled || !showAddMenu || files.length === 0) return;
     const availableSlots = Math.max(0, 2 - attachments.length);
     if (availableSlots === 0) {
       setUploadAnnouncement("Remove an attachment before adding another.");
@@ -433,6 +454,7 @@ export function ChatInput({
     const files = Array.from(e.clipboardData.files || []);
     if (files.length === 0) return;
     e.preventDefault();
+    if (disabled || !showAddMenu) return;
     await addFiles(files);
   };
 
@@ -440,11 +462,12 @@ export function ChatInput({
     const files = Array.from(e.dataTransfer.files || []);
     if (files.length === 0) return;
     e.preventDefault();
+    if (disabled || !showAddMenu) return;
     await addFiles(files);
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    if (e.dataTransfer.types.includes("Files")) e.preventDefault();
+    if (!disabled && showAddMenu && e.dataTransfer.types.includes("Files")) e.preventDefault();
   };
 
   const attachLibraryFile = (item: RecentLibraryFile) => {
@@ -590,7 +613,7 @@ export function ChatInput({
                 key={tool.id}
                 type="button"
                 aria-pressed={active}
-                disabled={isStreaming}
+                disabled={disabled || isStreaming}
                 onClick={() => chooseTool(tool)}
                 className={`kova-tool-button flex w-full items-center gap-3 rounded-xl text-left text-sm transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 ${
                   mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5"
@@ -722,12 +745,12 @@ export function ChatInput({
               ))}
             </div>
           )}
-          {selectedToolOption && ActiveToolIcon && onToolSelect ? (
+          {showAddMenu && selectedToolOption && ActiveToolIcon && onToolSelect ? (
             <div className="flex px-3 pt-2">
               <button
                 ref={plusTriggerRef}
                 type="button"
-                disabled={isStreaming}
+                disabled={disabled || isStreaming}
                 onClick={() => chooseTool(selectedToolOption)}
                 className="kova-tool-button flex h-8 items-center gap-2 rounded-xl bg-accent px-2.5 text-xs font-medium text-foreground transition hover:bg-accent/80 disabled:opacity-60"
                 aria-label={`Remove ${selectedToolOption.label}`}
@@ -742,7 +765,10 @@ export function ChatInput({
             {uploadAnnouncement}
           </div>
           <div className="flex min-h-[58px] items-end">
-            <div className="flex items-center pl-1.5 relative" ref={plusWrapRef}>
+            <div
+              className={`${showAddMenu ? "flex" : "hidden"} items-center pl-1.5 relative`}
+              ref={plusWrapRef}
+            >
               <input
                 ref={fileRef}
                 type="file"
@@ -774,6 +800,7 @@ export function ChatInput({
               <button
                 type="button"
                 onClick={() => setPlusOpen((v) => !v)}
+                disabled={disabled || isStreaming}
                 className={`kova-attach-button w-11 h-11 lg:w-9 lg:h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/60 active:scale-95 transition ${plusOpen && !isMobileLayout ? "rotate-45 text-foreground" : ""}`}
                 aria-label="Add files, tools, or prompts"
                 aria-haspopup="dialog"
@@ -837,7 +864,7 @@ export function ChatInput({
                 </div>
               )}
             </div>
-            {isMobileLayout && (
+            {showAddMenu && isMobileLayout && (
               <MobileBottomSheet
                 open={plusOpen}
                 onOpenChange={setPlusOpen}
@@ -899,6 +926,7 @@ export function ChatInput({
               ref={ref}
               value={value}
               onChange={(e) => onChange(e.target.value)}
+              disabled={disabled}
               onKeyDown={handleKey}
               onCompositionStart={() => {
                 composingRef.current = true;
@@ -912,10 +940,10 @@ export function ChatInput({
               autoComplete="off"
               autoCorrect="on"
               autoCapitalize="sentences"
-              className="min-h-[44px] max-h-[200px] flex-1 resize-none border-0 bg-transparent px-2 py-[.72rem] text-[16px] leading-[1.45] text-foreground outline-none placeholder:text-muted-foreground focus:outline-none focus:ring-0 lg:text-[15px]"
+              className="min-h-[44px] max-h-[200px] flex-1 resize-none border-0 bg-transparent px-2 py-[.72rem] text-[16px] leading-[1.45] text-foreground outline-none placeholder:text-muted-foreground focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-70 lg:text-[15px]"
               aria-label="Message KovaGPT"
               aria-keyshortcuts={
-                sendOnEnter && !isMobileLayout
+                effectiveSendOnEnter && !isMobileLayout && !isCoarsePointer
                   ? "Enter Control+Enter Meta+Enter"
                   : "Control+Enter Meta+Enter"
               }
@@ -935,7 +963,8 @@ export function ChatInput({
                 >
                   <Square className="h-3.5 w-3.5 fill-current" />
                 </button>
-              ) : (value.trim() || attachments.length > 0) &&
+              ) : !disabled &&
+                (value.trim() || attachments.length > 0) &&
                 !attachments.some(
                   (attachment) =>
                     attachment.status === "uploading" || attachment.status === "failed",
@@ -956,7 +985,7 @@ export function ChatInput({
                   disabled
                   className="kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground lg:h-9 lg:w-9"
                   aria-label="Send"
-                  title="Type a message to send"
+                  title={disabled ? "Messaging is unavailable" : "Type a message to send"}
                 >
                   <ArrowUp className="h-5 w-5" />
                 </button>
