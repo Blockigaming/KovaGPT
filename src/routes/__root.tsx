@@ -21,6 +21,7 @@ import { PlatformRuntime } from "@/components/PlatformRuntime";
 type SeoMatch = {
   pathname: string;
   status: string;
+  globalNotFound?: boolean;
 };
 
 const PUBLIC_DESCRIPTION =
@@ -28,7 +29,13 @@ const PUBLIC_DESCRIPTION =
 
 function getActiveSeoState(matches: readonly SeoMatch[]) {
   const pathname = matches.at(-1)?.pathname ?? "";
-  const statuses = matches.map((match) => match.status);
+  // TanStack Start keeps the root match successful for an unmatched URL so
+  // the document shell can render, and marks it with `globalNotFound` instead.
+  // Translate that signal into the shared policy's not-found state before
+  // calculating both HTML metadata and the response header.
+  const statuses = matches.flatMap((match) =>
+    match.globalNotFound ? [match.status, "notFound"] : [match.status],
+  );
   return {
     indexable: isPublicIndexableRoute(pathname, statuses),
     robots: robotsDirectiveForRoute(pathname, statuses),
@@ -104,15 +111,26 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     return {
       meta: [
         { charSet: "utf-8" },
-        { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+        {
+          name: "viewport",
+          content: "width=device-width, initial-scale=1, viewport-fit=cover",
+        },
         {
           httpEquiv: "Accept-CH",
           content:
             "Sec-CH-UA-Mobile, Sec-CH-UA-Platform, Sec-CH-UA-Platform-Version, Sec-CH-UA, Sec-CH-Viewport-Width, Sec-CH-DPR",
         },
         { name: "format-detection", content: "telephone=no" },
-        { name: "theme-color", content: "#ffffff", media: "(prefers-color-scheme: light)" },
-        { name: "theme-color", content: "#0a0a0a", media: "(prefers-color-scheme: dark)" },
+        {
+          name: "theme-color",
+          content: "#ffffff",
+          media: "(prefers-color-scheme: light)",
+        },
+        {
+          name: "theme-color",
+          content: "#0a0a0a",
+          media: "(prefers-color-scheme: dark)",
+        },
         { name: "color-scheme", content: "light dark" },
         { name: "apple-mobile-web-app-capable", content: "yes" },
         { name: "apple-mobile-web-app-status-bar-style", content: "default" },
@@ -143,7 +161,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         { rel: "alternate icon", type: "image/png", href: "/favicon.png" },
         { rel: "apple-touch-icon", href: "/favicon.svg" },
         { rel: "preconnect", href: "https://fonts.googleapis.com" },
-        { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+        {
+          rel: "preconnect",
+          href: "https://fonts.gstatic.com",
+          crossOrigin: "anonymous",
+        },
         {
           rel: "stylesheet",
           href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap",
