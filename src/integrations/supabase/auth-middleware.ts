@@ -3,10 +3,7 @@ import { createMiddleware } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
-import {
-  evaluateAuthenticatedUser,
-  parseBearerToken,
-} from "@/lib/auth-security.mjs";
+import { evaluateAuthenticatedUser, parseBearerToken } from "@/lib/auth-security.mjs";
 
 function failAuthentication(status: number, error: string): never {
   throw Response.json(
@@ -37,36 +34,25 @@ export const requireSupabaseAuth = createMiddleware({
   const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-    console.error(
-      "[Supabase] Server authentication configuration is incomplete.",
-    );
+    console.error("[Supabase] Server authentication configuration is incomplete.");
     failAuthentication(503, "Authentication is temporarily unavailable.");
   }
 
-  const supabase = createClient<Database>(
-    SUPABASE_URL,
-    SUPABASE_PUBLISHABLE_KEY,
-    {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-      auth: {
-        storage: undefined,
-        persistSession: false,
-        autoRefreshToken: false,
+  const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${token}`,
       },
     },
-  );
+    auth: {
+      storage: undefined,
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
 
-  const [
-    { data: userData, error: userError },
-    { data: claimsData, error: claimsError },
-  ] = await Promise.all([
-    supabase.auth.getUser(token),
-    supabase.auth.getClaims(token),
-  ]);
+  const [{ data: userData, error: userError }, { data: claimsData, error: claimsError }] =
+    await Promise.all([supabase.auth.getUser(token), supabase.auth.getClaims(token)]);
   if (userError || claimsError || !userData.user || !claimsData?.claims) {
     failAuthentication(401, "Unauthorized");
   }
