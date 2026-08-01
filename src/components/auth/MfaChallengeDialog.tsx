@@ -41,18 +41,14 @@ export function MfaChallengeDialog({
         if (cancelled) return;
         const first = data?.totp?.[0] as TotpFactor | undefined;
         if (factorError || !first) {
-          setError(
-            "Your authenticator could not be loaded. Try signing in again.",
-          );
+          setError("Your authenticator could not be loaded. Try signing in again.");
           return;
         }
         setFactor(first);
       })
       .catch(() => {
         if (!cancelled) {
-          setError(
-            "Your authenticator could not be loaded. Try signing in again.",
-          );
+          setError("Your authenticator could not be loaded. Try signing in again.");
         }
       })
       .finally(() => {
@@ -69,22 +65,17 @@ export function MfaChallengeDialog({
     setLoading(true);
     setError(null);
     try {
-      const { data, error: verifyError } =
-        await supabase.auth.mfa.challengeAndVerify({
-          factorId: factor.id,
-          code,
-        });
+      const { data, error: verifyError } = await supabase.auth.mfa.challengeAndVerify({
+        factorId: factor.id,
+        code,
+      });
       if (verifyError || !data.session) {
-        setError(
-          "That code was not accepted. Check your authenticator and try again.",
-        );
+        setError("That code was not accepted. Check your authenticator and try again.");
         return;
       }
       onVerified(data.session);
     } catch {
-      setError(
-        "Two-factor verification is temporarily unavailable. Please try again.",
-      );
+      setError("Two-factor verification is temporarily unavailable. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -105,12 +96,9 @@ export function MfaChallengeDialog({
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-foreground text-background">
             <KeyRound className="h-6 w-6" />
           </div>
-          <DialogTitle className="text-center">
-            Two-factor verification
-          </DialogTitle>
+          <DialogTitle className="text-center">Two-factor verification</DialogTitle>
           <DialogDescription className="text-center">
-            Enter the 6-digit code from your authenticator app to finish signing
-            in.
+            Enter the 6-digit code from your authenticator app to finish signing in.
           </DialogDescription>
         </DialogHeader>
         {error && (
@@ -129,9 +117,7 @@ export function MfaChallengeDialog({
             aria-label="Authenticator code"
             placeholder="123456"
             value={code}
-            onChange={(event) =>
-              setCode(event.target.value.replace(/\D/g, "").slice(0, 6))
-            }
+            onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
             disabled={loading || !factor}
             className="text-center font-mono tracking-[0.35em]"
           />
