@@ -32,7 +32,7 @@ test("title validation runs before the provider module is loaded", async () => {
   );
   const invalidMessagesGuard = source.indexOf("if (!messages)");
   const providerImport = source.indexOf(
-    'await import(\n            "@/lib/ai/provider.server"',
+    'await import("@/lib/ai/provider.server")',
   );
 
   assert.ok(invalidMessagesGuard >= 0, "missing invalid-message guard");
