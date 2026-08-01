@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Search,
   SquarePen,
@@ -132,6 +132,21 @@ export function CommandPalette({
   const [activeIndex, setActiveIndex] = useState(0);
   const [recentCommands, setRecentCommands] = useState<string[]>([]);
   const [pinnedCommands, setPinnedCommands] = useState<string[]>([]);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+  const shouldRestoreFocusRef = useRef(true);
+
+  useEffect(() => {
+    if (!open) return;
+    shouldRestoreFocusRef.current = true;
+    returnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    return () => {
+      if (!shouldRestoreFocusRef.current) return;
+      window.requestAnimationFrame(() => returnFocusRef.current?.focus());
+    };
+  }, [open]);
   useEffect(() => {
     try {
       setRecentCommands(JSON.parse(localStorage.getItem("kova-command-history-v1") ?? "[]"));
@@ -174,11 +189,13 @@ export function CommandPalette({
       return;
     }
     if (action === "settings") {
+      shouldRestoreFocusRef.current = false;
       onOpenSettings();
       onClose();
       return;
     }
     if (typeof action === "string" && action.startsWith("/")) {
+      shouldRestoreFocusRef.current = false;
       const next = [action, ...recentCommands.filter((item) => item !== action)].slice(0, 12);
       localStorage.setItem("kova-command-history-v1", JSON.stringify(next));
       platformEvents.publish("platform", "command.executed", { command: action });
@@ -187,6 +204,7 @@ export function CommandPalette({
       return;
     }
     if (action === "focus-input") {
+      shouldRestoreFocusRef.current = false;
       document.querySelector<HTMLTextAreaElement>("textarea")?.focus();
       platformEvents.publish("platform", "command.executed", { command: action });
       onClose();
@@ -217,11 +235,29 @@ export function CommandPalette({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-start justify-center bg-black/35 px-3 pt-[12vh] backdrop-blur-sm"
+      ref={dialogRef}
+      data-kova-shell-overlay=""
+      className="fixed inset-0 z-[70] flex items-start justify-center bg-black/35 px-[max(.75rem,var(--safe-left),var(--safe-right))] pb-[var(--safe-bottom)] pt-[max(12vh,var(--safe-top))] backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label="Search chats and actions"
       onKeyDown={(event) => {
+        if (event.key === "Tab" && dialogRef.current) {
+          const focusable = Array.from(
+            dialogRef.current.querySelectorAll<HTMLElement>(
+              'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+            ),
+          ).filter((element) => element.offsetParent !== null);
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (first && last && event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+          } else if (first && last && !event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          }
+        }
         if (event.key === "Escape") {
           event.preventDefault();
           onClose();
@@ -269,7 +305,7 @@ export function CommandPalette({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full p-2 text-muted-foreground hover:bg-accent hover:text-foreground"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
             aria-label="Close command palette"
           >
             <X className="h-4 w-4" />
@@ -292,7 +328,7 @@ export function CommandPalette({
             id="command-option-0"
             role="option"
             aria-selected={activeIndex === 0}
-            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 0 ? "bg-accent" : ""}`}
+            className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 0 ? "bg-accent" : ""}`}
           >
             <SquarePen className="h-4 w-4 text-muted-foreground" />
             <span>Start a new chat</span>
@@ -309,7 +345,7 @@ export function CommandPalette({
             id="command-option-1"
             role="option"
             aria-selected={activeIndex === 1}
-            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 1 ? "bg-accent" : ""}`}
+            className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 1 ? "bg-accent" : ""}`}
           >
             <Settings className="h-4 w-4 text-muted-foreground" />
             <span>Open settings</span>
@@ -317,7 +353,7 @@ export function CommandPalette({
           {visibleActions.map((action, actionIndex) => {
             const Icon = action.icon;
             const index = actionIndex + 2;
-            const className = `flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === index ? "bg-accent" : ""} ${action.disabledReason ? "text-muted-foreground" : ""}`;
+            const className = `flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === index ? "bg-accent" : ""} ${action.disabledReason ? "text-muted-foreground" : ""}`;
             const content = (
               <>
                 <Icon className="h-4 w-4 text-muted-foreground" />
@@ -417,7 +453,7 @@ export function CommandPalette({
                 id={`command-option-${actionItems.length + chatIndex}`}
                 role="option"
                 aria-selected={activeIndex === actionItems.length + chatIndex}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === actionItems.length + chatIndex ? "bg-accent" : ""}`}
+                className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === actionItems.length + chatIndex ? "bg-accent" : ""}`}
               >
                 <span className="h-2 w-2 rounded-full bg-muted-foreground/50" />
                 <span className="min-w-0 flex-1 truncate">{chat.title}</span>
