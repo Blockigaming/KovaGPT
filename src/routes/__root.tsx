@@ -12,7 +12,7 @@ import appCss from "../styles.css?url";
 import { ClerkProvider } from "@/components/auth/ClerkSafe";
 import { Toaster } from "@/components/ui/sonner";
 import { useUser } from "@/components/auth/ClerkSafe";
-import { applyThemeMode } from "@/lib/theme";
+import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings } from "@/lib/use-nova-settings";
 import { isPublicIndexableRoute, robotsDirectiveForRoute } from "@/lib/seo-policy.mjs";
 import { useEffect, useLayoutEffect } from "react";
@@ -206,12 +206,12 @@ function RootThemeManager() {
   const userKey = user?.id ?? null;
 
   useLayoutEffect(() => {
-    applyThemeMode(loadSettings(null).mode ?? "system");
+    applyThemeMode(loadThemeMode());
   }, []);
 
   useEffect(() => {
     if (!isLoaded) return;
-    const loaded = loadSettings(userKey);
+    const loaded = loadSettings(userKey, { migrateLegacyGuest: userKey === null });
     applyThemeMode(loaded.mode ?? "system");
   }, [isLoaded, userKey]);
 
