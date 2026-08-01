@@ -150,7 +150,7 @@ export const CAPABILITIES = Object.freeze([
   }),
   define({
     id: "automations",
-    label: "Scheduled Tasks",
+    label: "Scheduled Tasks status",
     route: "/scheduled-tasks",
     permission: "authenticated",
     requiredPlan: "plus",
