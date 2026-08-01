@@ -27,6 +27,7 @@ test("root metadata is route-aware and does not expose private infrastructure", 
   assert.match(root, /isPublicIndexableRoute/u);
   assert.match(root, /head:\s*\(\{ matches \}\)/u);
   assert.match(root, /headers:\s*\(\{ matches \}\)/u);
+  assert.match(root, /globalNotFound\s*\?\s*\[match\.status, "notFound"\]/u);
   assert.match(root, /"X-Robots-Tag"/u);
   assert.match(root, /scripts:\s*indexable/u);
   assert.doesNotMatch(root, /\.supabase\.co/u);
