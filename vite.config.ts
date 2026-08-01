@@ -5,6 +5,8 @@ import tailwindcss from "@tailwindcss/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 
+const useNodeBrowserPreview = process.env.KOVA_BROWSER_PREVIEW === "node";
+
 export default defineConfig({
   plugins: [
     tailwindcss(),
@@ -12,17 +14,16 @@ export default defineConfig({
     // TanStack resolves this entry relative to the default src directory.
     // Using "src/server.ts" would incorrectly resolve to "src/src/server.ts".
     tanstackStart({ server: { entry: "server" } }),
-    // Production deploys the generated Nitro Cloudflare module, not the raw
-    // TypeScript Worker entry. Keep the output contract explicit so a manual
-    // Wrangler deployment cannot silently fall back to src/server.ts.
+    // Production deploys the generated Nitro Cloudflare module. Browser CI
+    // uses Nitro's in-process Node preview to avoid Wrangler's dev-only proxy.
     nitro({
-      preset: "cloudflare-module",
+      preset: useNodeBrowserPreview ? "node-server" : "cloudflare-module",
       output: {
         dir: "dist",
         serverDir: "dist/server",
         publicDir: "dist/client",
       },
-      cloudflare: { nodeCompat: true, deployConfig: true },
+      ...(useNodeBrowserPreview ? {} : { cloudflare: { nodeCompat: true, deployConfig: true } }),
     }),
     react(),
   ],
