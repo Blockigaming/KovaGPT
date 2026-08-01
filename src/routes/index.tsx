@@ -1,6 +1,15 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type SetStateAction,
+} from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
 import { PanelLeft, Search, MessageSquareDashed, Check, Share2, Download } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
@@ -49,9 +58,16 @@ import {
   type Message,
   deriveTitle,
   branchConversation,
+  chatStoragePrincipal,
+  clearDraft,
+  clearPendingActive,
+  draftStorageKey,
+  loadDraft,
   loadConversations,
+  loadPendingActive,
   newId,
   saveConversations,
+  saveDraft,
   archiveConversation,
   removeArchivedConversation,
 } from "@/lib/chat-store";
@@ -97,7 +113,28 @@ function KovaGPT() {
   const { tier } = useTier();
   const { openSignUp } = useClerkSafe();
   const userKey = user?.id ?? null;
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const storagePrincipal = chatStoragePrincipal(userKey);
+  const storagePrincipalRef = useRef(storagePrincipal);
+  storagePrincipalRef.current = storagePrincipal;
+  const [conversationState, setConversationState] = useState<{
+    principal: string | null;
+    items: Conversation[];
+  }>({ principal: null, items: [] });
+  const principalReady = isLoaded && conversationState.principal === storagePrincipal;
+  const conversations = principalReady ? conversationState.items : [];
+  const setConversations = useCallback(
+    (next: SetStateAction<Conversation[]>) => {
+      setConversationState((previous) => {
+        // Async work started by a prior account must never write into the
+        // currently active account's browser namespace.
+        if (!isLoaded || storagePrincipalRef.current !== storagePrincipal) return previous;
+        const current = previous.principal === storagePrincipal ? previous.items : [];
+        const items = typeof next === "function" ? next(current) : next;
+        return { principal: storagePrincipal, items };
+      });
+    },
+    [isLoaded, storagePrincipal],
+  );
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
@@ -183,27 +220,27 @@ function KovaGPT() {
       setInput("");
       return;
     }
-    if (lastLoadedDraftRef.current === activeId) return;
-    lastLoadedDraftRef.current = activeId;
+    if (!principalReady) return;
+    const key = draftStorageKey(userKey, activeId);
+    if (lastLoadedDraftRef.current === key) return;
+    lastLoadedDraftRef.current = key;
     try {
-      const saved = localStorage.getItem(`kova-draft:${activeId ?? "__new__"}`);
-      setInput(saved ?? "");
+      setInput(loadDraft(userKey, activeId));
     } catch {
       setInput("");
     }
-  }, [activeId, tempChat]);
+  }, [activeId, principalReady, tempChat, userKey]);
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (tempChat) return;
-    if (lastLoadedDraftRef.current !== activeId) return;
-    const key = `kova-draft:${activeId ?? "__new__"}`;
+    if (tempChat || !principalReady) return;
+    const key = draftStorageKey(userKey, activeId);
+    if (lastLoadedDraftRef.current !== key) return;
     try {
-      if (input) localStorage.setItem(key, input);
-      else localStorage.removeItem(key);
+      saveDraft(userKey, activeId, input);
     } catch {
       /* ignore */
     }
-  }, [input, activeId, tempChat]);
+  }, [input, activeId, principalReady, tempChat, userKey]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
   const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
@@ -254,7 +291,7 @@ function KovaGPT() {
   }, [navigate]);
   const [shareChatId, setShareChatId] = useState<string | null>(null);
 
-  const [settings, setSettings] = useState<Settings>(() => loadSettings(null));
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [signupPromptOpen, setSignupPromptOpen] = useState(false);
   const [signupPromptShown, setSignupPromptShown] = useState(false);
   const [limitDialog, setLimitDialog] = useState<{
@@ -273,25 +310,44 @@ function KovaGPT() {
   // Load (or reload) settings whenever the signed-in user changes so each
   // account gets its own personalization, behavior, appearance, etc.
   useEffect(() => {
-    if (!isLoaded) return;
-    const loaded = loadSettings(userKey);
+    if (!isLoaded) {
+      setConversationState({ principal: null, items: [] });
+      return;
+    }
+    abortRef.current?.abort();
+    abortRef.current = null;
+    inFlightRef.current = false;
+    if (retryTimerRef.current !== null) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+    setIsStreaming(false);
+    setActiveId(null);
+    setInput("");
+    setAttachments([]);
+    setEditingMessage(null);
+    setShareChatId(null);
+    setSettingsOpen(false);
+    lastLoadedDraftRef.current = null;
+
+    const loaded = loadSettings(userKey, { migrateLegacyGuest: userKey === null });
     setSettings(loaded);
     applyThemeMode(loaded.mode ?? "system");
-    // Never wipe conversations on sign-out — memory persists across sessions
-    // and logins. Only a fully signed-out user refreshing a fresh tab starts
-    // clean (handled implicitly by empty localStorage on a fresh device).
-    const loadedConvs = loadConversations();
-    setConversations(loadedConvs);
+    // Keep each signed-in account and the guest workspace in a separate
+    // browser namespace. Switching accounts must render empty until the new
+    // principal's data has loaded.
+    const loadedConvs = loadConversations(userKey);
+    setConversationState({ principal: storagePrincipal, items: loadedConvs });
     try {
-      const pending = localStorage.getItem("nova-gpt-pending-active");
+      const pending = loadPendingActive(userKey);
       if (pending && loadedConvs.some((c) => c.id === pending)) {
         setActiveId(pending);
       }
-      localStorage.removeItem("nova-gpt-pending-active");
+      clearPendingActive(userKey);
     } catch {
       /* ignore */
     }
-  }, [isLoaded, userKey, isSignedIn]);
+  }, [isLoaded, userKey, isSignedIn, storagePrincipal]);
 
   // Re-apply theme mode whenever it changes
   useEffect(() => {
@@ -309,9 +365,17 @@ function KovaGPT() {
   }, [isLoaded, settings, userKey]);
 
   useEffect(() => {
-    const t = setTimeout(() => saveConversations(conversations.filter((c) => !c.temporary)), 400);
+    if (!principalReady) return;
+    const t = setTimeout(
+      () =>
+        saveConversations(
+          userKey,
+          conversations.filter((c) => !c.temporary),
+        ),
+      400,
+    );
     return () => clearTimeout(t);
-  }, [conversations]);
+  }, [conversations, principalReady, userKey]);
 
   useEffect(() => {
     try {
@@ -481,7 +545,7 @@ function KovaGPT() {
     setInput("");
     setAttachments([]);
     setEditingMessage(null);
-  }, []);
+  }, [setConversations]);
 
   const setTemporaryChatEnabled = useCallback(
     (enabled: boolean) => {
@@ -489,7 +553,7 @@ function KovaGPT() {
 
       if (enabled) {
         try {
-          localStorage.removeItem(`kova-draft:${activeId ?? "__new__"}`);
+          clearDraft(userKey, activeId);
         } catch {
           /* Storage may be unavailable; temporary input still stays in memory only. */
         }
@@ -512,7 +576,7 @@ function KovaGPT() {
         });
       }
     },
-    [activeId, newChat, tempChat],
+    [activeId, newChat, tempChat, userKey],
   );
 
   const openCommandPalette = useCallback(() => {
@@ -523,13 +587,13 @@ function KovaGPT() {
 
   useEffect(() => {
     const reloadImportedChats = () => {
-      setConversations(loadConversations());
+      setConversations(loadConversations(userKey));
       setActiveId(null);
       setEditingMessage(null);
     };
     window.addEventListener("kova:conversations-imported", reloadImportedChats);
     return () => window.removeEventListener("kova:conversations-imported", reloadImportedChats);
-  }, []);
+  }, [setConversations, userKey]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -571,23 +635,26 @@ function KovaGPT() {
     [activeId, conversations],
   );
 
-  const autoTitle = useCallback(async (convId: string, msgs: Message[]) => {
-    try {
-      const resp = await authFetch("/api/title", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: msgs.slice(0, 4).map((m) => ({ role: m.role, content: m.content })),
-        }),
-      });
-      const { title } = await resp.json();
-      if (title) {
-        setConversations((prev) => prev.map((c) => (c.id === convId ? { ...c, title } : c)));
+  const autoTitle = useCallback(
+    async (convId: string, msgs: Message[]) => {
+      try {
+        const resp = await authFetch("/api/title", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: msgs.slice(0, 4).map((m) => ({ role: m.role, content: m.content })),
+          }),
+        });
+        const { title } = await resp.json();
+        if (title) {
+          setConversations((prev) => prev.map((c) => (c.id === convId ? { ...c, title } : c)));
+        }
+      } catch {
+        /* ignore */
       }
-    } catch {
-      /* ignore */
-    }
-  }, []);
+    },
+    [setConversations],
+  );
 
   const send = useCallback(
     async (
@@ -599,7 +666,7 @@ function KovaGPT() {
     ) => {
       const MAX_AUTO_RETRIES = 2;
       const trimmed = text.trim();
-      if ((!trimmed && atts.length === 0) || inFlightRef.current) return;
+      if (!principalReady || (!trimmed && atts.length === 0) || inFlightRef.current) return;
 
       if (_retryAttempt === 0 && retryTimerRef.current !== null) {
         window.clearTimeout(retryTimerRef.current);
@@ -990,7 +1057,18 @@ function KovaGPT() {
         inFlightRef.current = false;
       }
     },
-    [activeId, conversations, mode, autoTitle, settings, selectedTool, tempChat, editingMessage],
+    [
+      activeId,
+      conversations,
+      mode,
+      autoTitle,
+      settings,
+      selectedTool,
+      tempChat,
+      editingMessage,
+      principalReady,
+      setConversations,
+    ],
   );
 
   const stop = useCallback(() => {
@@ -1079,7 +1157,7 @@ function KovaGPT() {
         onArchive={(id) => {
           const archived = conversations.find((conversation) => conversation.id === id);
           setConversations((prev) => {
-            if (archived) archiveConversation(archived);
+            if (archived) archiveConversation(userKey, archived);
             return prev.filter((c) => c.id !== id);
           });
           if (activeId === id) setActiveId(null);
@@ -1088,7 +1166,7 @@ function KovaGPT() {
               ? {
                   label: "Undo",
                   onClick: () => {
-                    removeArchivedConversation(archived!.id);
+                    removeArchivedConversation(userKey, archived!.id);
                     setConversations((current) => [
                       archived!,
                       ...current.filter((conversation) => conversation.id !== archived!.id),
@@ -1275,12 +1353,12 @@ function KovaGPT() {
 
               <div className="mx-auto w-full max-w-[48rem]">
                 <ChatInput
-                  value={input}
+                  value={principalReady ? input : ""}
                   onChange={setInput}
                   onSubmit={() => send(input, attachments)}
                   onStop={stop}
                   isStreaming={isStreaming}
-                  attachments={attachments}
+                  attachments={principalReady ? attachments : []}
                   onAttachmentsChange={setAttachments}
                   mode={mode}
                   onModeChange={setMode}
@@ -1517,12 +1595,12 @@ function KovaGPT() {
                 </div>
               )}
               <ChatInput
-                value={input}
+                value={principalReady ? input : ""}
                 onChange={setInput}
                 onSubmit={() => send(input, attachments)}
                 onStop={stop}
                 isStreaming={isStreaming}
-                attachments={attachments}
+                attachments={principalReady ? attachments : []}
                 onAttachmentsChange={setAttachments}
                 mode={mode}
                 onModeChange={setMode}
@@ -1553,7 +1631,13 @@ function KovaGPT() {
             onOpenChange={setSettingsOpen}
             settings={settings}
             onChange={setSettings}
-            onClearAll={() => setConversations([])}
+            onClearAll={() => {
+              setConversations([]);
+              setActiveId(null);
+              setInput("");
+              setAttachments([]);
+              setEditingMessage(null);
+            }}
             onOpenHelp={openHelp}
             initialTab={settingsTab}
             returnFocusTarget={settingsReturnFocusRef.current}
