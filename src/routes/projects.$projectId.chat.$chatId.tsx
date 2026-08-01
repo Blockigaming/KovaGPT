@@ -29,7 +29,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { authFetch } from "@/lib/auth-fetch";
+
 import type { Message } from "@/lib/chat-store";
+
+import { useLayout } from "@/hooks/use-mobile";
+import { useSharedSendOnEnter } from "@/lib/composer-preferences";
+import { shouldSubmitComposerOnEnter } from "@/lib/composer-keyboard.mjs";
+
 import {
   getProjectChat,
   saveProjectChat,
@@ -52,7 +58,9 @@ function isAbortError(error: unknown) {
 
 function ProjectChatPage() {
   const { projectId, chatId } = Route.useParams();
-  const { isSignedIn, isLoaded } = useUser();
+  const { isSignedIn, isLoaded, user } = useUser();
+  const { isDesktop, interaction } = useLayout();
+  const sendOnEnter = useSharedSendOnEnter(user?.id ?? null);
   const navigate = useNavigate();
 
   const [project, setProject] = useState<ProjectDetail | null>(null);
@@ -68,10 +76,14 @@ function ProjectChatPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
   const abortControllerRef = useRef<AbortController | null>(null);
   const activeChatIdRef = useRef(chatId);
   const renameTriggerRef = useRef<HTMLButtonElement>(null);
   const deleteTriggerRef = useRef<HTMLButtonElement>(null);
+
+  const composingRef = useRef(false);
+
 
   const fnGetChat = useServerFn(getProjectChat);
   const fnGetProject = useServerFn(getProject);
@@ -236,6 +248,7 @@ function ProjectChatPage() {
           try {
             const parsed = JSON.parse(data);
             const delta = parsed?.choices?.[0]?.delta?.content ?? "";
+
             if (!delta) continue;
             assistant += delta;
             if (activeChatIdRef.current === requestChatId) {
@@ -246,6 +259,18 @@ function ProjectChatPage() {
                   content: assistant,
                 },
               ]);
+
+            if (delta) {
+              assistant += delta;
+              setMessages((prev) => {
+                const copy = prev.slice();
+                copy[copy.length - 1] = {
+                  role: "assistant",
+                  content: assistant,
+                };
+                return copy;
+              });
+
             }
           } catch {
             // Ignore malformed or non-content SSE frames without losing the stream.
@@ -408,6 +433,7 @@ function ProjectChatPage() {
             <div className="mx-auto max-w-[48rem] px-5 py-12 text-center text-sm text-muted-foreground">
               Start the conversation. Everyone in the project can see it.
             </div>
+
           ) : null}
           {visibleMessages.map((message, index) => {
             const messageId = `project-${chatId}-${index}`;
@@ -441,6 +467,82 @@ function ProjectChatPage() {
             canChangeAgent={false}
             placeholder={canEdit ? "Message the project…" : "You have view-only access"}
           />
+
+          )}
+          {messages
+            .filter((m) => m.role !== "system")
+            .map((m, i) => (
+              <div
+                key={i}
+                className={`max-w-3xl mx-auto flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                <div
+                  className={`rounded-2xl px-4 py-2.5 whitespace-pre-wrap ${m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}
+                >
+                  {m.content ||
+                    (sending && i === messages.length - 1 ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      ""
+                    ))}
+                </div>
+              </div>
+            ))}
+        </div>
+        <div className="border-t p-3">
+          <div className="max-w-3xl mx-auto flex gap-2 items-end">
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                const native = e.nativeEvent as KeyboardEvent & {
+                  isComposing?: boolean;
+                  keyCode?: number;
+                };
+                const shouldSubmit = shouldSubmitComposerOnEnter({
+                  key: e.key,
+                  keyCode: native.keyCode,
+                  shiftKey: e.shiftKey,
+                  ctrlKey: e.ctrlKey,
+                  metaKey: e.metaKey,
+                  altKey: e.altKey,
+                  isComposing: Boolean(native.isComposing || composingRef.current),
+                  sendOnEnter,
+                  isMobileLayout: !isDesktop,
+                  isCoarsePointer: interaction === "touch",
+                  hasContent: Boolean(input.trim()),
+                  disabled: !canEdit,
+                  isStreaming: sending,
+                });
+                if (!shouldSubmit) return;
+                e.preventDefault();
+                handleSend();
+              }}
+              onCompositionStart={() => {
+                composingRef.current = true;
+              }}
+              onCompositionEnd={() => {
+                composingRef.current = false;
+              }}
+              aria-keyshortcuts={
+                sendOnEnter && isDesktop && interaction !== "touch"
+                  ? "Enter Control+Enter Meta+Enter"
+                  : "Control+Enter Meta+Enter"
+              }
+              placeholder={canEdit ? "Message the project…" : "You have view-only access"}
+              disabled={!canEdit || sending}
+              rows={2}
+              className="resize-none"
+            />
+            <Button onClick={handleSend} disabled={!canEdit || sending || !input.trim()}>
+              {sending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+
         </div>
       </div>
 

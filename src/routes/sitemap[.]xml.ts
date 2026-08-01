@@ -1,57 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
+import { PUBLIC_SITEMAP_ENTRIES } from "@/lib/seo-policy.mjs";
 
 const BASE_URL = "https://kovagpt.com";
-
-interface SitemapEntry {
-  path: string;
-  lastmod?: string;
-  changefreq?: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
-  priority?: string;
-}
 
 export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
-        const entries: SitemapEntry[] = [
-          { path: "/", changefreq: "weekly", priority: "1.0" },
-          { path: "/images", changefreq: "weekly", priority: "0.8" },
-          { path: "/pricing", changefreq: "monthly", priority: "0.8" },
-          { path: "/modes", changefreq: "monthly", priority: "0.6" },
-          { path: "/changelog", changefreq: "monthly", priority: "0.4" },
-          { path: "/status", changefreq: "weekly", priority: "0.3" },
-          { path: "/blog/best-ai-assistants", changefreq: "monthly", priority: "0.7" },
-          { path: "/blog/ai-market-research-guide", changefreq: "monthly", priority: "0.7" },
-          { path: "/blog/best-ai-market-research-tools", changefreq: "monthly", priority: "0.7" },
-          { path: "/privacy", changefreq: "yearly", priority: "0.3" },
-          { path: "/terms", changefreq: "yearly", priority: "0.3" },
-          { path: "/refund", changefreq: "yearly", priority: "0.3" },
-          { path: "/ai-safety", changefreq: "yearly", priority: "0.3" },
-          { path: "/contact-support", changefreq: "yearly", priority: "0.4" },
-          { path: "/getting-started", changefreq: "monthly", priority: "0.5" },
-          { path: "/help", changefreq: "monthly", priority: "0.5" },
-          { path: "/ai-image-generator", changefreq: "monthly", priority: "0.7" },
-          { path: "/study-assistant", changefreq: "monthly", priority: "0.7" },
-          { path: "/code-helper", changefreq: "monthly", priority: "0.7" },
-          { path: "/ai-writer", changefreq: "monthly", priority: "0.7" },
-          { path: "/research-assistant", changefreq: "monthly", priority: "0.7" },
-          { path: "/chatgpt-alternative", changefreq: "monthly", priority: "0.7" },
-          { path: "/ai-humanizer", changefreq: "monthly", priority: "0.7" },
-          { path: "/humanize-ai-text", changefreq: "weekly", priority: "0.8" },
-        ];
-
-        const urls = entries.map((e) =>
+        const urls = PUBLIC_SITEMAP_ENTRIES.map((entry) =>
           [
             `  <url>`,
-            `    <loc>${BASE_URL}${e.path}</loc>`,
-            e.lastmod ? `    <lastmod>${e.lastmod}</lastmod>` : null,
-            e.changefreq ? `    <changefreq>${e.changefreq}</changefreq>` : null,
-            e.priority ? `    <priority>${e.priority}</priority>` : null,
+            `    <loc>${BASE_URL}${entry.path}</loc>`,
+            `    <changefreq>${entry.changefreq}</changefreq>`,
+            `    <priority>${entry.priority}</priority>`,
             `  </url>`,
-          ]
-            .filter(Boolean)
-            .join("\n"),
+          ].join("\n"),
         );
 
         const xml = [
@@ -65,6 +29,7 @@ export const Route = createFileRoute("/sitemap.xml")({
           headers: {
             "Content-Type": "application/xml",
             "Cache-Control": "public, max-age=3600",
+            "X-Robots-Tag": "noindex, follow",
           },
         });
       },

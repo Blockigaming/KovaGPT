@@ -17,13 +17,16 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
+import { useUser } from "@/components/auth/ClerkSafe";
 import { useLayout } from "@/hooks/use-mobile";
+import { useSharedSendOnEnter } from "@/lib/composer-preferences";
 
 import { useEffect, useRef, useState } from "react";
 import { tryUseUpload } from "@/lib/limits";
 import { toast } from "sonner";
 import { ResponsiveModelSelector as ModelSelector } from "@/components/ResponsiveModelSelector";
 import { DAILY_UPLOAD_LIMIT_BY_TIER, type ModeId, type Tier } from "@/lib/modes";
+import { shouldSubmitComposerOnEnter } from "@/lib/composer-keyboard.mjs";
 
 export type PendingAttachment = {
   kind: "image" | "text_file" | "library_file";
@@ -91,6 +94,9 @@ export function ChatInput({
   onSubmit,
   onStop,
   isStreaming,
+
+  sendOnEnter,
+
   disabled = false,
   showAddMenu = true,
   attachments,
@@ -114,6 +120,10 @@ export function ChatInput({
   onSubmit: () => void;
   onStop: () => void;
   isStreaming: boolean;
+
+  /** Explicit override. When omitted, the current user's shared persisted preference is used. */
+  sendOnEnter?: boolean;
+
   /** Disables text entry and submission without changing existing callers. */
   disabled?: boolean;
   /** Hides and disables attachments, tools, and prompt shortcuts. */
@@ -136,8 +146,12 @@ export function ChatInput({
   recentLibraryError?: string | null;
   onRecentLibraryRetry?: () => void;
 }) {
-  const { isDesktop } = useLayout();
+  const { isDesktop, interaction } = useLayout();
+  const { user } = useUser();
+  const sharedSendOnEnter = useSharedSendOnEnter(user?.id ?? null);
+  const effectiveSendOnEnter = sendOnEnter ?? sharedSendOnEnter;
   const isMobileLayout = !isDesktop;
+  const isCoarsePointer = interaction === "touch";
 
   const ref = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -229,6 +243,10 @@ export function ChatInput({
     if (!isStreaming) submittingRef.current = false;
   }, [isStreaming, value, attachments.length]);
 
+  useEffect(() => {
+    if (disabled || !showAddMenu) setPlusOpen(false);
+  }, [disabled, showAddMenu]);
+
   const triggerSubmit = () => {
     if (disabled || submittingRef.current || isStreaming) return;
     if (!value.trim() && attachments.length === 0) return;
@@ -253,10 +271,24 @@ export function ChatInput({
 
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const native = e.nativeEvent as KeyboardEvent & { isComposing?: boolean };
-    if (e.key === "Enter" && !e.shiftKey && !native.isComposing && !composingRef.current) {
-      e.preventDefault();
-      triggerSubmit();
-    }
+    const shouldSubmit = shouldSubmitComposerOnEnter({
+      key: e.key,
+      keyCode: native.keyCode,
+      shiftKey: e.shiftKey,
+      ctrlKey: e.ctrlKey,
+      metaKey: e.metaKey,
+      altKey: e.altKey,
+      isComposing: Boolean(native.isComposing || composingRef.current),
+      sendOnEnter: effectiveSendOnEnter,
+      isMobileLayout,
+      isCoarsePointer,
+      hasContent: Boolean(value.trim() || attachments.length > 0),
+      disabled,
+      isStreaming,
+    });
+    if (!shouldSubmit) return;
+    e.preventDefault();
+    triggerSubmit();
   };
 
   async function addFiles(files: File[]) {
@@ -585,7 +617,7 @@ export function ChatInput({
                 key={tool.id}
                 type="button"
                 aria-pressed={active}
-                disabled={isStreaming}
+                disabled={disabled || isStreaming}
                 onClick={() => chooseTool(tool)}
                 className={`kova-tool-button flex w-full items-center gap-3 rounded-xl text-left text-sm transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 ${
                   mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5"
@@ -914,6 +946,11 @@ export function ChatInput({
               autoCapitalize="sentences"
               className="min-h-[44px] max-h-[200px] flex-1 resize-none border-0 bg-transparent px-2 py-[.72rem] text-[16px] leading-[1.45] text-foreground outline-none placeholder:text-muted-foreground focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-70 lg:text-[15px]"
               aria-label="Message KovaGPT"
+              aria-keyshortcuts={
+                effectiveSendOnEnter && !isMobileLayout && !isCoarsePointer
+                  ? "Enter Control+Enter Meta+Enter"
+                  : "Control+Enter Meta+Enter"
+              }
             />
             <div className="flex items-center gap-1.5 pr-1.5">
               {canChangeAgent && mode && onModeChange && (

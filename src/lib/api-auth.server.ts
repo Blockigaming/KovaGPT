@@ -209,11 +209,15 @@ export async function assertFeatureEnabled(
   caller: AuthedCaller,
   feature: "chat" | "images" | "uploads" | "signups",
 ): Promise<Response | null> {
-  const { data } = await caller.supabaseAdmin
+  const { data, error } = await caller.supabaseAdmin
     .from("feature_flags")
     .select("enabled")
     .eq("name", feature)
     .maybeSingle();
+  if (error) {
+    console.error("[assertFeatureEnabled] lookup error", error);
+    return jsonError("Feature availability could not be verified. Please try again shortly.", 503);
+  }
   if (data && data.enabled === false) {
     return jsonError(
       `${feature[0].toUpperCase() + feature.slice(1)} is temporarily unavailable for maintenance. Please try again shortly.`,

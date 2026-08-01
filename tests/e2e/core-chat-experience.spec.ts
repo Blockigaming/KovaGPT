@@ -25,7 +25,7 @@ test.describe("core shell and chat experience", () => {
     }
   });
 
-  test("active chat error and retry surfaces remain reachable", async ({ page }) => {
+  test("active chat error and retry surfaces remain reachable", async ({ page }, testInfo) => {
     await page.route("**/api/chat", async (route) => {
       await route.fulfill({
         status: 503,
@@ -41,7 +41,12 @@ test.describe("core shell and chat experience", () => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     const textbox = page.getByRole("textbox").first();
     await textbox.fill("Hello from the retry test");
-    await textbox.press("Enter");
+    if (testInfo.project.use.hasTouch) {
+      await page.getByRole("button", { name: /^send$/i }).click();
+    } else {
+      // Desktop plain Enter remains covered while touch layouts use the visible send control.
+      await textbox.press("Enter");
+    }
     await expect(
       page.getByText(/Provider unavailable|AI provider had a hiccup|Tap retry/i).first(),
     ).toBeVisible({ timeout: 10_000 });

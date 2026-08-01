@@ -1,6 +1,7 @@
-// Real Google Calendar CRUD on the signed-in user's primary calendar.
+// Read-only Google Calendar access for the signed-in user's primary calendar.
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
+import { BoundedJsonError, readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
 import { getValidGoogleAccessToken, logAudit } from "@/lib/google-oauth.server";
 import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
 
@@ -26,14 +27,14 @@ export const Route = createFileRoute("/api/google/calendar")({
         if (auth instanceof Response) return auth;
         const limited = enforceGoogleRateLimit(auth.userId, "calendar", 60);
         if (limited) return limited;
-        if (Number(request.headers.get("content-length") ?? 0) > 64 * 1024) {
-          return Response.json({ error: "request_too_large" }, { status: 413 });
-        }
         let body: JsonRecord;
         try {
-          body = await request.json();
-        } catch {
-          return Response.json({ error: "invalid_json" }, { status: 400 });
+          body = await readBoundedJsonObject(request, 64 * 1024);
+        } catch (error) {
+          if (error instanceof BoundedJsonError) {
+            return Response.json({ error: error.code }, { status: error.status });
+          }
+          return Response.json({ error: "invalid_request_body" }, { status: 400 });
         }
         const action = body?.action as string;
         if (action !== "list") {
@@ -51,7 +52,10 @@ export const Route = createFileRoute("/api/google/calendar")({
         } catch {
           return Response.json({ error: "google_not_connected" }, { status: 400 });
         }
-        const H = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+        const H = {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        };
 
         try {
           if (action === "list") {
@@ -83,76 +87,6 @@ export const Route = createFileRoute("/api/google/calendar")({
               summary: `Listed ${events.length} calendar events`,
             });
             return Response.json({ events });
-          }
-
-          if (action === "create") {
-            if (!body.summary || !body.start || !body.end) {
-              return Response.json({ error: "missing_fields" }, { status: 400 });
-            }
-            const event: JsonRecord = {
-              summary: String(body.summary).slice(0, 300),
-              description: body.description ? String(body.description).slice(0, 8000) : undefined,
-              location: body.location ? String(body.location).slice(0, 500) : undefined,
-              start: body.start,
-              end: body.end,
-              attendees: Array.isArray(body.attendees)
-                ? body.attendees.slice(0, 25).map((e: string) => ({ email: String(e) }))
-                : undefined,
-            };
-            const r = await fetch(`${CAL}/events`, {
-              method: "POST",
-              headers: H,
-              body: JSON.stringify(event),
-            });
-            if (!r.ok) throw new Error(`calendar create ${r.status} ${await r.text()}`);
-            const j = (await r.json()) as { id?: string; htmlLink?: string };
-            await logAudit({
-              userId: auth.userId,
-              provider: "calendar",
-              action: "create",
-              resourceId: j.id,
-              summary: `Created event: ${event.summary}`,
-            });
-            return Response.json({ id: j.id, link: j.htmlLink });
-          }
-
-          if (action === "update") {
-            const id = String(body.id ?? "");
-            if (!id) return Response.json({ error: "missing_id" }, { status: 400 });
-            const patch: JsonRecord = {};
-            for (const k of ["summary", "description", "location", "start", "end"]) {
-              if (body[k] !== undefined) patch[k] = body[k];
-            }
-            const r = await fetch(`${CAL}/events/${id}`, {
-              method: "PATCH",
-              headers: H,
-              body: JSON.stringify(patch),
-            });
-            if (!r.ok) throw new Error(`calendar update ${r.status}`);
-            const j = (await r.json()) as { id?: string; htmlLink?: string };
-            await logAudit({
-              userId: auth.userId,
-              provider: "calendar",
-              action: "update",
-              resourceId: id,
-              summary: `Updated event ${id}`,
-            });
-            return Response.json({ id: j.id, link: j.htmlLink });
-          }
-
-          if (action === "delete") {
-            const id = String(body.id ?? "");
-            if (!id) return Response.json({ error: "missing_id" }, { status: 400 });
-            const r = await fetch(`${CAL}/events/${id}`, { method: "DELETE", headers: H });
-            if (!r.ok && r.status !== 410) throw new Error(`calendar delete ${r.status}`);
-            await logAudit({
-              userId: auth.userId,
-              provider: "calendar",
-              action: "delete",
-              resourceId: id,
-              summary: `Deleted event ${id}`,
-            });
-            return Response.json({ ok: true });
           }
 
           return Response.json({ error: "unknown_action" }, { status: 400 });
