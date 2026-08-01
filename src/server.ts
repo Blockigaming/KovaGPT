@@ -102,7 +102,7 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 }
 
 export default {
-  async fetch(request: Request, env: unknown, ctx: unknown) {
+  async fetch(request: Request, env: unknown, _ctx: unknown) {
     try {
       if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
         const rejected = rejectCrossSiteRequest(request);
@@ -112,8 +112,7 @@ export default {
       if (Number.isFinite(contentLength) && contentLength > 16 * 1024 * 1024) {
         return hardenResponse(Response.json({ error: "Request too large" }, { status: 413 }));
       }
-      const handler = serverEntry;
-      const response = await withRuntimeBindings(env, () => handler.fetch(request, env, ctx));
+      const response = await withRuntimeBindings(env, () => serverEntry.fetch(request));
       return hardenResponse(await normalizeCatastrophicSsrResponse(response));
     } catch (error) {
       console.error(error);
