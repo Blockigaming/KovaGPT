@@ -19,9 +19,9 @@ async function assertMethodNotAllowed(path, method, allow) {
   assert.deepEqual(await response.json(), { error: "method_not_allowed" });
 }
 
-test("the centralized method inventory contains all 38 audited server-handler routes", () => {
-  assert.equal(API_METHOD_POLICY_ROUTES.length, 38);
-  assert.equal(new Set(API_METHOD_POLICY_ROUTES.map(({ path }) => path)).size, 38);
+test("the centralized method inventory contains all 43 audited server-handler routes", () => {
+  assert.equal(API_METHOD_POLICY_ROUTES.length, 43);
+  assert.equal(new Set(API_METHOD_POLICY_ROUTES.map(({ path }) => path)).size, 43);
 });
 
 test("supported account, chat, health, memory, and agent methods pass through unchanged", () => {
@@ -44,6 +44,16 @@ test("supported account, chat, health, memory, and agent methods pass through un
     ["/email/unsubscribe", "HEAD"],
     ["/email/unsubscribe", "POST"],
     ["/lovable/email/transactional/send", "POST"],
+    ["/.mcp/invoke-tool/research", "POST"],
+    ["/.mcp/list-tools", "GET"],
+    ["/.mcp/list-tools", "HEAD"],
+    ["/.mcp/list-tools", "POST"],
+    ["/.well-known/oauth-protected-resource", "GET"],
+    ["/.well-known/oauth-protected-resource", "HEAD"],
+    ["/mcp", "GET"],
+    ["/mcp", "HEAD"],
+    ["/sitemap.xml", "GET"],
+    ["/sitemap.xml", "HEAD"],
   ]) {
     assert.equal(rejectUnsupportedApiMethod(request(path, method)), null, `${method} ${path}`);
   }
@@ -59,6 +69,8 @@ test("unsupported methods return JSON 405 responses with Allow and no-store", as
   await assertMethodNotAllowed("/email/unsubscribe", "PUT", "GET, HEAD, POST");
   await assertMethodNotAllowed("/lovable/email/transactional/send", "GET", "POST");
   await assertMethodNotAllowed("/lovable/email/suppression", "HEAD", "POST");
+  await assertMethodNotAllowed("/.mcp/invoke-tool/research", "GET", "POST");
+  await assertMethodNotAllowed("/sitemap.xml", "POST", "GET, HEAD");
 });
 
 test("the dynamic OAuth callback matcher accepts exactly one provider segment", async () => {
@@ -88,6 +100,12 @@ test("the dynamic OAuth callback matcher accepts exactly one provider segment", 
     "POST",
     "GET, HEAD",
   );
+});
+
+test("the dynamic MCP tool matcher accepts exactly one tool segment", async () => {
+  assert.deepEqual(getDeclaredApiMethodsForPath("/.mcp/invoke-tool/research"), ["POST"]);
+  assert.equal(getDeclaredApiMethodsForPath("/.mcp/invoke-tool"), null);
+  assert.equal(getDeclaredApiMethodsForPath("/.mcp/invoke-tool/research/extra"), null);
 });
 
 test("non-API and unknown API paths remain owned by TanStack", () => {
