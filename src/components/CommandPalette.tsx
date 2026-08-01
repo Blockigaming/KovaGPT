@@ -111,6 +111,7 @@ export function CommandPalette({
   onNewChat,
   onSelectChat,
   onOpenSettings,
+  returnFocusTarget,
 }: {
   open: boolean;
   query: string;
@@ -120,6 +121,7 @@ export function CommandPalette({
   onNewChat: () => void;
   onSelectChat: (id: string) => void;
   onOpenSettings: () => void;
+  returnFocusTarget?: HTMLElement | null;
 }) {
   const normalized = query.trim().toLowerCase();
   const conversationMatches = normalized
@@ -140,14 +142,15 @@ export function CommandPalette({
     if (!open) return;
     shouldRestoreFocusRef.current = true;
     returnFocusRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      returnFocusTarget ??
+      (document.activeElement instanceof HTMLElement ? document.activeElement : null);
 
     const returnTarget = returnFocusRef.current;
     return () => {
       if (!shouldRestoreFocusRef.current) return;
       window.requestAnimationFrame(() => returnTarget?.focus());
     };
-  }, [open]);
+  }, [open, returnFocusTarget]);
   useEffect(() => {
     try {
       setRecentCommands(JSON.parse(localStorage.getItem("kova-command-history-v1") ?? "[]"));
