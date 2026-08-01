@@ -48,12 +48,12 @@ export type ProviderConfig = {
 };
 
 const OPENAI_MODELS = {
-    chat: "gpt-4o-mini",
-    fast: "gpt-4o-mini",
-    deep: "gpt-4o",
-    image: "gpt-image-1",
-    embedding: "text-embedding-3-small",
-  };
+  chat: "gpt-4o-mini",
+  fast: "gpt-4o-mini",
+  deep: "gpt-4o",
+  image: "gpt-image-1",
+  embedding: "text-embedding-3-small",
+};
 
 const DEFAULT_TIMEOUT_MS = 45_000;
 
