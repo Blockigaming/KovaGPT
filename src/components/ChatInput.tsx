@@ -24,6 +24,7 @@ import { tryUseUpload } from "@/lib/limits";
 import { toast } from "sonner";
 import { ResponsiveModelSelector as ModelSelector } from "@/components/ResponsiveModelSelector";
 import { DAILY_UPLOAD_LIMIT_BY_TIER, type ModeId, type Tier } from "@/lib/modes";
+import { shouldSubmitComposerOnEnter } from "@/lib/composer-keyboard.mjs";
 
 export type PendingAttachment = {
   kind: "image" | "text_file" | "library_file";
@@ -91,6 +92,7 @@ export function ChatInput({
   onSubmit,
   onStop,
   isStreaming,
+  sendOnEnter = true,
   attachments,
   onAttachmentsChange,
   mode,
@@ -112,6 +114,8 @@ export function ChatInput({
   onSubmit: () => void;
   onStop: () => void;
   isStreaming: boolean;
+  /** Plain Enter submits on desktop when enabled. Mobile Enter always inserts a newline. */
+  sendOnEnter?: boolean;
   attachments: PendingAttachment[];
   onAttachmentsChange: (a: PendingAttachment[]) => void;
   mode?: ModeId;
@@ -247,10 +251,19 @@ export function ChatInput({
 
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const native = e.nativeEvent as KeyboardEvent & { isComposing?: boolean };
-    if (e.key === "Enter" && !e.shiftKey && !native.isComposing && !composingRef.current) {
-      e.preventDefault();
-      triggerSubmit();
-    }
+    const shouldSubmit = shouldSubmitComposerOnEnter({
+      key: e.key,
+      shiftKey: e.shiftKey,
+      ctrlKey: e.ctrlKey,
+      metaKey: e.metaKey,
+      altKey: e.altKey,
+      isComposing: Boolean(native.isComposing || composingRef.current),
+      sendOnEnter,
+      isMobileLayout,
+    });
+    if (!shouldSubmit) return;
+    e.preventDefault();
+    triggerSubmit();
   };
 
   async function addFiles(files: File[]) {
@@ -901,6 +914,11 @@ export function ChatInput({
               autoCapitalize="sentences"
               className="min-h-[44px] max-h-[200px] flex-1 resize-none border-0 bg-transparent px-2 py-[.72rem] text-[16px] leading-[1.45] text-foreground outline-none placeholder:text-muted-foreground focus:outline-none focus:ring-0 lg:text-[15px]"
               aria-label="Message KovaGPT"
+              aria-keyshortcuts={
+                sendOnEnter && !isMobileLayout
+                  ? "Enter Control+Enter Meta+Enter"
+                  : "Control+Enter Meta+Enter"
+              }
             />
             <div className="flex items-center gap-1.5 pr-1.5">
               {canChangeAgent && mode && onModeChange && (
