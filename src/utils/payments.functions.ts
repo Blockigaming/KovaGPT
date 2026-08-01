@@ -1,11 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { type StripeEnv, createStripeClient } from "@/lib/stripe.server";
 import { parseAllowedBillingPortalUrl } from "@/lib/billing-portal-url.mjs";
-import {
-  BILLING_ENV,
-  resolveBillingPlan,
-  tierForLookupKey,
-} from "@/lib/billing-plans";
+import { BILLING_ENV, resolveBillingPlan, tierForLookupKey } from "@/lib/billing-plans";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 type CheckoutSessionResult = { clientSecret: string } | { error: string };
@@ -51,15 +47,9 @@ async function resolveOrCreateCustomer(
 export const createCheckoutSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
-    (data: {
-      priceId: string;
-      quantity?: number;
-      returnUrl: string;
-      environment: StripeEnv;
-    }) => {
+    (data: { priceId: string; quantity?: number; returnUrl: string; environment: StripeEnv }) => {
       if (!resolveBillingPlan(data.priceId)) throw new Error("Invalid priceId");
-      if (data.quantity !== undefined && data.quantity !== 1)
-        throw new Error("Invalid quantity");
+      if (data.quantity !== undefined && data.quantity !== 1) throw new Error("Invalid quantity");
       return data;
     },
   )
@@ -69,9 +59,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       if (!plan) throw new Error("Invalid priceId");
       const userId = context.userId;
       const customerEmail =
-        typeof context.claims.email === "string"
-          ? context.claims.email
-          : undefined;
+        typeof context.claims.email === "string" ? context.claims.email : undefined;
       const stripe = createStripeClient(BILLING_ENV);
 
       // Prevent duplicate active subscriptions for the same user in this env.
@@ -197,9 +185,7 @@ export const createPortalSession = createServerFn({ method: "POST" })
       });
       const portalUrl = parseAllowedBillingPortalUrl(portal.url);
       if (!portalUrl) {
-        console.error(
-          "[billing-portal] Stripe returned a URL outside the allowlist",
-        );
+        console.error("[billing-portal] Stripe returned a URL outside the allowlist");
         return {
           error: "The billing portal is unavailable right now. Try again.",
         };
@@ -235,9 +221,7 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
     const { supabase, userId } = context;
     const { data: row, error: subscriptionError } = await supabase
       .from("subscriptions")
-      .select(
-        "stripe_customer_id, price_id, status, current_period_end, cancel_at_period_end",
-      )
+      .select("stripe_customer_id, price_id, status, current_period_end, cancel_at_period_end")
       .eq("user_id", userId)
       .eq("environment", BILLING_ENV)
       .order("created_at", { ascending: false })
@@ -248,9 +232,7 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
     }
     const priceId = row?.price_id ?? null;
     const now = Date.now();
-    const end = row?.current_period_end
-      ? new Date(row.current_period_end).getTime()
-      : 0;
+    const end = row?.current_period_end ? new Date(row.current_period_end).getTime() : 0;
     const active =
       !!row &&
       ((["active", "trialing", "past_due"].includes(row.status) &&
