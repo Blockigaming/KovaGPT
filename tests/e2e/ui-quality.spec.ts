@@ -1,11 +1,14 @@
 import { expect, test } from "@playwright/test";
 
+import { waitForKovaHydration } from "./hydration";
+
 const projects = new Set(["phone-320x700", "phone-390x844", "desktop-1440x900"]);
 
 test.beforeEach(({ page: _page }, testInfo) => test.skip(!projects.has(testInfo.project.name)));
 
 test("empty workspace remains contained and composer focus is deliberate", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
   const composer = page.locator(".kova-composer").first();
   const input = page.getByRole("textbox", { name: "Message KovaGPT" }).first();
   await expect(composer).toBeVisible();
@@ -36,6 +39,7 @@ test("empty workspace remains contained and composer focus is deliberate", async
 test("mobile greeting and composer actions fit the viewport", async ({ page }) => {
   test.skip(page.viewportSize()!.width >= 1024);
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
   await expect(page.getByText("What can I help with?", { exact: true })).toBeVisible();
 
   const composer = page.locator(".kova-composer");
@@ -80,6 +84,7 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
     localStorage.setItem("nova-gpt-pending-active", "workspace-quality");
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
   await expect(page.locator(".kova-user-message")).toBeVisible();
   await expect(page.locator(".kova-assistant-message")).toBeVisible();
 
