@@ -36,6 +36,7 @@ const DialogContent = React.forwardRef<
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
+      data-kova-dialog-surface=""
       ref={ref}
       className={cn(
         // Base + animation shared across viewports
