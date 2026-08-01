@@ -2,7 +2,7 @@
 // callers and enforce per-user daily quotas. NEVER import from client code.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { tierForLookupKey, type BillingTier } from "@/lib/billing-plans";
+import { BILLING_ENV, tierForLookupKey, type BillingTier } from "@/lib/billing-plans";
 
 export const DAILY_IMAGE_LIMIT = 1;
 export const DAILY_CHAT_LIMIT = 50;
@@ -159,6 +159,7 @@ export async function getCallerTier(caller: AuthedCaller): Promise<CallerTier> {
     .from("subscriptions")
     .select("price_id, status, current_period_end")
     .eq("user_id", caller.userId)
+    .eq("environment", BILLING_ENV)
     .order("created_at", { ascending: false })
     .limit(5);
   if (!data || data.length === 0) return "free";
