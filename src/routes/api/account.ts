@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 import { createStripeClient, type StripeEnv } from "@/lib/stripe.server";
 import { disconnectGoogle } from "@/lib/google-oauth.server";
+import { disconnectAllOAuth } from "@/integrations/oauth-lifecycle.server";
 
 const TERMINAL_SUBSCRIPTION_STATES = new Set(["canceled", "incomplete_expired"]);
 
@@ -75,6 +76,21 @@ export const Route = createFileRoute("/api/account")({
           console.error("[account-delete] Google revocation failed", {
             error: error instanceof Error ? error.name : "unknown_error",
           });
+        }
+
+        try {
+          await disconnectAllOAuth(auth.userId);
+        } catch (error) {
+          console.error("[account-delete] linked account disconnection failed", {
+            error: error instanceof Error ? error.message : "unknown_error",
+          });
+          return Response.json(
+            {
+              error:
+                "Connected accounts could not be disconnected, so your account was not deleted. Please try again.",
+            },
+            { status: 503 },
+          );
         }
 
         const { error: deleteError } = await auth.supabaseAdmin.auth.admin.deleteUser(auth.userId);
