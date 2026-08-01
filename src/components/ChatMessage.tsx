@@ -36,11 +36,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { saveToLibrary } from "@/lib/library.functions";
 import { useUser } from "@/components/auth/ClerkSafe";
-import {
-  ArtifactEditor,
-  detectArtifactKind,
-  extractCodeBlocks,
-} from "./ArtifactEditor";
+import { ArtifactEditor, detectArtifactKind, extractCodeBlocks } from "./ArtifactEditor";
 import { ToolConfirmCard } from "./ToolConfirmCard";
 import type { PendingConfirm } from "@/lib/chat-store";
 import { InfoChip, detectInfoChip } from "./InfoChip";
@@ -49,13 +45,9 @@ function MarkdownCode({ className, children }: React.ComponentProps<"code">) {
   const language = /language-([\w-]+)/.exec(className ?? "")?.[1];
   const text = String(children).replace(/\n$/, "");
   const [copied, setCopied] = useState(false);
-  if (!language && !text.includes("\n"))
-    return <code className={className}>{children}</code>;
+  if (!language && !text.includes("\n")) return <code className={className}>{children}</code>;
   return (
-    <div
-      className="kova-code-block group/code"
-      data-language={language ?? "text"}
-    >
+    <div className="kova-code-block group/code" data-language={language ?? "text"}>
       <div className="kova-code-toolbar">
         <span>{language ?? "text"}</span>
         <button
@@ -67,11 +59,7 @@ function MarkdownCode({ className, children }: React.ComponentProps<"code">) {
           }}
           aria-label={copied ? "Code copied" : "Copy code"}
         >
-          {copied ? (
-            <Check className="h-3.5 w-3.5" />
-          ) : (
-            <Copy className="h-3.5 w-3.5" />
-          )}
+          {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
@@ -86,12 +74,7 @@ const markdownComponents = {
   pre: ({ children }: React.ComponentProps<"pre">) => <>{children}</>,
   code: MarkdownCode,
   table: ({ children }: React.ComponentProps<"table">) => (
-    <div
-      className="kova-table-scroll"
-      role="region"
-      aria-label="Scrollable table"
-      tabIndex={0}
-    >
+    <div className="kova-table-scroll" role="region" aria-label="Scrollable table" tabIndex={0}>
       <table>{children}</table>
     </div>
   ),
@@ -115,9 +98,7 @@ function cleanAssistantText(text: string): string {
 // "Send email" button can prefill Gmail / Outlook compose windows. Handles
 // three shapes: an explicit "Subject: ..." line, a fenced block labelled
 // email, or a message that opens with a greeting like Hi/Hello/Dear.
-export function extractEmailFromMessage(
-  raw: string,
-): { subject: string; body: string } | null {
+export function extractEmailFromMessage(raw: string): { subject: string; body: string } | null {
   if (!raw) return null;
   const text = raw.replace(/\r\n/g, "\n").trim();
 
@@ -185,48 +166,25 @@ export async function openEmailCompose(
 // Short status label shown while the assistant is streaming but has no text yet.
 // Derives from the latest running/last activity tool, so users see
 // "Searching", "Reading Files", "Interacting with Gmail", etc.
-function StreamingStatus({
-  activities,
-}: {
-  activities?: import("@/lib/chat-store").Activity[];
-}) {
-  const last =
-    activities && activities.length > 0
-      ? activities[activities.length - 1]
-      : null;
+function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store").Activity[] }) {
+  const last = activities && activities.length > 0 ? activities[activities.length - 1] : null;
   const tool = (last?.tool ?? "").toLowerCase();
   let label = "Thinking";
   if (tool) {
     if (tool.includes("image")) label = "Creating Image";
-    else if (tool.includes("gmail") || tool.includes("mail"))
-      label = "Checking Gmail";
+    else if (tool.includes("gmail") || tool.includes("mail")) label = "Checking Gmail";
     else if (tool.includes("calendar")) label = "Checking Calendar";
-    else if (
-      tool.includes("drive") ||
-      tool.includes("file") ||
-      tool.includes("read")
-    )
+    else if (tool.includes("drive") || tool.includes("file") || tool.includes("read"))
       label = "Reading documents";
-    else if (tool.includes("memory") || tool.includes("recall"))
-      label = "Searching memory";
-    else if (
-      tool.includes("search") ||
-      tool.includes("web") ||
-      tool.includes("browse")
-    )
+    else if (tool.includes("memory") || tool.includes("recall")) label = "Searching memory";
+    else if (tool.includes("search") || tool.includes("web") || tool.includes("browse"))
       label = "Searching the web";
     else if (tool.includes("write")) label = "Writing draft";
     else label = last?.label ?? "Working";
   }
   return (
-    <div
-      className="kova-thinking-indicator flex items-center gap-2 py-1"
-      aria-live="polite"
-    >
-      <span
-        className="h-1.5 w-1.5 rounded-full bg-foreground"
-        aria-hidden="true"
-      />
+    <div className="kova-thinking-indicator flex items-center gap-2 py-1" aria-live="polite">
+      <span className="h-1.5 w-1.5 rounded-full bg-foreground" aria-hidden="true" />
       <span key={label} className="text-sm font-medium text-muted-foreground">
         {label}…
       </span>
@@ -305,6 +263,7 @@ function ChatMessageInner({
 
   const saveFn = useServerFn(saveToLibrary);
 
+
   const artifactKind = useMemo(
     () => (isUser ? null : detectArtifactKind(message.content || "")),
     [isUser, message.content],
@@ -358,18 +317,12 @@ function ChatMessageInner({
         title = "Saved writing draft";
       } else {
         const firstSentence = content.split(/(?<=[.!?])\s+/)[0] ?? content;
-        const words = firstSentence
-          .replace(/\s+/g, " ")
-          .split(" ")
-          .slice(0, 10)
-          .join(" ");
+        const words = firstSentence.replace(/\s+/g, " ").split(" ").slice(0, 10).join(" ");
         title = words ? words.slice(0, 120) : "Saved chat response";
       }
       const payload = {
         title,
-        item_type: (codeRatio ? "code" : "chat_artifact") as
-          | "code"
-          | "chat_artifact",
+        item_type: (codeRatio ? "code" : "chat_artifact") as "code" | "chat_artifact",
         source: "chat" as const,
         content_text: message.content.slice(0, 100_000),
       };
@@ -411,10 +364,7 @@ function ChatMessageInner({
             {message.attachments && message.attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2 justify-end">
                 {message.attachments
-                  .filter(
-                    (a): a is Extract<typeof a, { kind: "image" }> =>
-                      a.kind === "image",
-                  )
+                  .filter((a): a is Extract<typeof a, { kind: "image" }> => a.kind === "image")
                   .map((a, i) => (
                     <img
                       key={i}
@@ -440,13 +390,9 @@ function ChatMessageInner({
                       title={attachment.name}
                     >
                       <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      <span className="max-w-48 truncate">
-                        {attachment.name}
-                      </span>
+                      <span className="max-w-48 truncate">{attachment.name}</span>
                       <span className="shrink-0 text-[10px] uppercase text-muted-foreground">
-                        {attachment.kind === "library_file"
-                          ? "Library"
-                          : "Attached"}
+                        {attachment.kind === "library_file" ? "Library" : "Attached"}
                       </span>
                     </span>
                   ))}
@@ -518,9 +464,7 @@ function ChatMessageInner({
                 <ToolConfirmCard
                   key={pc.actionId}
                   confirm={pc}
-                  onUpdate={(next) =>
-                    onUpdatePendingConfirm?.(message.id, next)
-                  }
+                  onUpdate={(next) => onUpdatePendingConfirm?.(message.id, next)}
                 />
               ))}
               {message.pendingImage && !message.content ? (
@@ -577,10 +521,7 @@ function ChatMessageInner({
                       )}
                     </div>
                   ) : (
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={markdownComponents}
-                    >
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                       {cleaned}
                     </ReactMarkdown>
                   );
@@ -595,9 +536,7 @@ function ChatMessageInner({
                   return md;
                 })()
               )}
-              {streaming && message.content && (
-                <span className="cursor-blink" />
-              )}
+              {streaming && message.content && <span className="cursor-blink" />}
             </div>
           </div>
         </div>
@@ -634,9 +573,7 @@ function ChatMessageInner({
                 aria-label="Good response"
                 aria-pressed={feedback === "up"}
               >
-                <ThumbsUp
-                  className={`w-4 h-4 ${feedback === "up" ? "fill-current" : ""}`}
-                />
+                <ThumbsUp className={`w-4 h-4 ${feedback === "up" ? "fill-current" : ""}`} />
               </button>
               <button
                 onClick={() => {
@@ -653,19 +590,14 @@ function ChatMessageInner({
                 aria-label="Bad response"
                 aria-pressed={feedback === "down"}
               >
-                <ThumbsDown
-                  className={`w-4 h-4 ${feedback === "down" ? "fill-current" : ""}`}
-                />
+                <ThumbsDown className={`w-4 h-4 ${feedback === "down" ? "fill-current" : ""}`} />
               </button>
               <button
                 onClick={async () => {
                   const text = message.content;
                   if (typeof navigator !== "undefined" && navigator.share) {
                     try {
-                      await navigator.share({
-                        text,
-                        title: "KovaGPT response",
-                      });
+                      await navigator.share({ text, title: "KovaGPT response" });
                       return;
                     } catch {
                       /* user cancelled */
@@ -699,17 +631,12 @@ function ChatMessageInner({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-56">
                     <div className="px-2 py-1.5 text-[11px] text-muted-foreground">
-                      Body copied to clipboard. Add recipients in the compose
-                      window.
+                      Body copied to clipboard. Add recipients in the compose window.
                     </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={async () => {
-                        await openEmailCompose(
-                          "gmail",
-                          email.subject,
-                          email.body,
-                        );
+                        await openEmailCompose("gmail", email.subject, email.body);
                         toast.success("Opening Gmail compose");
                       }}
                     >
@@ -717,11 +644,7 @@ function ChatMessageInner({
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={async () => {
-                        await openEmailCompose(
-                          "outlook",
-                          email.subject,
-                          email.body,
-                        );
+                        await openEmailCompose("outlook", email.subject, email.body);
                         toast.success("Opening Outlook compose");
                       }}
                     >
@@ -760,9 +683,7 @@ function ChatMessageInner({
                   ) : null}
                   <DropdownMenuItem
                     onClick={() => {
-                      const q = encodeURIComponent(
-                        message.content.slice(0, 300),
-                      );
+                      const q = encodeURIComponent(message.content.slice(0, 300));
                       window.open(
                         `https://www.google.com/search?q=${q}`,
                         "_blank",
@@ -774,9 +695,7 @@ function ChatMessageInner({
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={saveItem} disabled={saving}>
-                    <Bookmark
-                      className={`w-4 h-4 mr-2 ${saved ? "fill-current" : ""}`}
-                    />
+                    <Bookmark className={`w-4 h-4 mr-2 ${saved ? "fill-current" : ""}`} />
                     {saved ? "Saved" : saving ? "Saving…" : "Save to Library"}
                   </DropdownMenuItem>
                   {artifactKind && (
@@ -812,10 +731,7 @@ function ChatMessageInner({
                     <>
                       <DropdownMenuSeparator />
                       {[
-                        {
-                          label: "Continue",
-                          prompt: "Continue from where you left off.",
-                        },
+                        { label: "Continue", prompt: "Continue from where you left off." },
                         {
                           label: "Shorter",
                           prompt:
@@ -823,19 +739,14 @@ function ChatMessageInner({
                         },
                         {
                           label: "Longer",
-                          prompt:
-                            "Expand your last response with more detail and examples.",
+                          prompt: "Expand your last response with more detail and examples.",
                         },
                         {
                           label: "Improve",
-                          prompt:
-                            "Improve the wording and clarity of your last response.",
+                          prompt: "Improve the wording and clarity of your last response.",
                         },
                       ].map((a) => (
-                        <DropdownMenuItem
-                          key={a.label}
-                          onClick={() => onFollowUp(a.prompt)}
-                        >
+                        <DropdownMenuItem key={a.label} onClick={() => onFollowUp(a.prompt)}>
                           {a.label}
                         </DropdownMenuItem>
                       ))}
@@ -874,8 +785,7 @@ function ChatMessageInner({
                 },
               },
               {
-                label:
-                  feedback === "up" ? "Remove good rating" : "Good response",
+                label: feedback === "up" ? "Remove good rating" : "Good response",
                 icon: ThumbsUp,
                 onClick: () => {
                   persistFeedback(feedback === "up" ? null : "up");
@@ -883,8 +793,7 @@ function ChatMessageInner({
                 },
               },
               {
-                label:
-                  feedback === "down" ? "Remove bad rating" : "Bad response",
+                label: feedback === "down" ? "Remove bad rating" : "Bad response",
                 icon: ThumbsDown,
                 onClick: () => {
                   persistFeedback(feedback === "down" ? null : "down");
@@ -899,10 +808,7 @@ function ChatMessageInner({
                   const text = message.content;
                   if (typeof navigator !== "undefined" && navigator.share) {
                     try {
-                      await navigator.share({
-                        text,
-                        title: "KovaGPT response",
-                      });
+                      await navigator.share({ text, title: "KovaGPT response" });
                       return;
                     } catch {
                       /* cancel */
