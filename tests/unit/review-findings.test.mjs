@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const read = (path) => readFileSync(path, "utf8");
@@ -109,4 +109,43 @@ test("email previews and From display use KovaGPT production branding", () => {
   assert.match(authPreview, /const SITE_NAME = "KovaGPT";/);
   assert.match(authPreview, /const SAMPLE_PROJECT_URL = "https:\/\/kovagpt\.com";/);
   assert.doesNotMatch(authPreview, /kovagpt\.kovagpt\.com/i);
+});
+
+test("model selectors only advertise backed intelligence modes", () => {
+  const desktop = read("src/components/ModelSelector.tsx");
+  const responsive = read("src/components/ResponsiveModelSelector.tsx");
+  const chat = read("src/routes/api/chat.ts");
+  const shell = read("src/routes/index.tsx");
+
+  for (const selector of [desktop, responsive]) {
+    assert.match(selector, /modesForTier\(userTier\)/);
+    assert.doesNotMatch(selector, /KOVA_VERSIONS|kova-version|KovaGPT version|Kova 3\.[345]/);
+  }
+  assert.doesNotMatch(shell, /kovaVersion|kova-version/);
+  assert.doesNotMatch(
+    chat,
+    /kovaVersion|KOVA_VERSION|IS_LEGACY_KOVA|previous-generation model|Math\.random\(\) \* 4000/,
+  );
+  assert.match(chat, /if \(m\.reasoning\)/);
+  assert.equal(existsSync("src/lib/kova-version.ts"), false);
+});
+
+test("upload quotas follow the signed-in tier and reject invalid sizes before charging", () => {
+  const composer = read("src/components/ChatInput.tsx");
+  const limits = read("src/lib/limits.ts");
+  const modes = read("src/lib/modes.ts");
+
+  assert.match(composer, /const uploadLimit = DAILY_UPLOAD_LIMIT_BY_TIER\[userTier\]/);
+  assert.equal((composer.match(/tryUseUpload\(uploadLimit\)/g) ?? []).length, 2);
+  assert.doesNotMatch(composer, /getUsage\(\)|u\.uploads >= DAILY_UPLOAD_LIMIT/);
+  assert.match(limits, /tryUseUpload\(limit = DAILY_UPLOAD_LIMIT\)/);
+  assert.match(limits, /u\.uploads >= normalizedLimit/);
+  assert.match(modes, /free: 3,\s*plus: 50,\s*pro: 200,/);
+
+  const imageSize = composer.indexOf("f.size > MAX_IMAGE_FILE_BYTES");
+  const imageCharge = composer.indexOf("tryUseUpload(uploadLimit)");
+  const textSize = composer.indexOf("f.size > MAX_TEXT_FILE_BYTES");
+  const textCharge = composer.indexOf("tryUseUpload(uploadLimit)", imageCharge + 1);
+  assert.ok(imageSize > -1 && imageSize < imageCharge);
+  assert.ok(textSize > -1 && textSize < textCharge);
 });
