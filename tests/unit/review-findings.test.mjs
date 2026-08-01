@@ -192,6 +192,7 @@ test("billing checkout and entitlements use exact supported plan keys", () => {
 
   assert.match(plans, /plus_monthly:[\s\S]*tier: "plus"[\s\S]*trialPeriodDays: 30/);
   assert.match(plans, /pro_monthly:[\s\S]*tier: "pro"[\s\S]*trialPeriodDays: 0/);
+  assert.match(plans, /export const BILLING_ENV = "live" as const/);
   assert.match(plans, /Object\.prototype\.hasOwnProperty\.call\(BILLING_PLANS, value\)/);
   assert.doesNotMatch(plans, /toLowerCase|includes\(["'](?:plus|pro)/);
 
@@ -209,7 +210,9 @@ test("billing checkout and entitlements use exact supported plan keys", () => {
     assert.doesNotMatch(source, /\.includes\(["'](?:plus|pro)["']\)/);
   }
   assert.match(apiAuth, /tierForLookupKey\(row\.price_id\)/);
+  assert.match(apiAuth, /\.eq\("environment", BILLING_ENV\)/);
   assert.match(clientTier, /tierForLookupKey\(row\.price_id\)/);
+  assert.match(clientTier, /\.eq\("environment", BILLING_ENV\)/);
   assert.match(webhook, /for \(const candidate of candidates\)/);
   assert.match(webhook, /resolveBillingPlan\(candidate\)/);
   assert.doesNotMatch(webhook, /lookup_key \|\|.*lovable_external_id \|\|.*price\?\.id/);
