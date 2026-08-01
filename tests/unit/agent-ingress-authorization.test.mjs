@@ -108,14 +108,12 @@ test("normalizes a valid bounded team request", () => {
 });
 
 test("rejects unknown fields, null tasks, invalid roles, and unbounded task text", () => {
-  expectAgentError(
-    () => parseAgentTeamCreatePayload(validTeam({ unexpected: true })),
-    { code: "invalid_agent_team" },
-  );
-  expectAgentError(
-    () => parseAgentTeamCreatePayload(validTeam({ tasks: [null] })),
-    { code: "invalid_agent_team" },
-  );
+  expectAgentError(() => parseAgentTeamCreatePayload(validTeam({ unexpected: true })), {
+    code: "invalid_agent_team",
+  });
+  expectAgentError(() => parseAgentTeamCreatePayload(validTeam({ tasks: [null] })), {
+    code: "invalid_agent_team",
+  });
   expectAgentError(
     () =>
       parseAgentTeamCreatePayload(
@@ -154,10 +152,9 @@ test("rejects unknown fields, null tasks, invalid roles, and unbounded task text
 
 test("rejects invalid optional identifiers instead of treating them as absent", () => {
   for (const projectId of [null, "", "not-a-uuid"]) {
-    expectAgentError(
-      () => parseAgentTeamCreatePayload(validTeam({ projectId })),
-      { code: "invalid_agent_team" },
-    );
+    expectAgentError(() => parseAgentTeamCreatePayload(validTeam({ projectId })), {
+      code: "invalid_agent_team",
+    });
   }
 });
 
@@ -198,13 +195,10 @@ test("checks collection caps before traversing attacker-controlled entries", () 
 });
 
 test("enforces exact run control commands and approval pairing", () => {
-  assert.deepEqual(
-    parseAgentRunControlPayload({ runId: RUN, command: "pause" }),
-    {
-      runId: RUN,
-      command: "pause",
-    },
-  );
+  assert.deepEqual(parseAgentRunControlPayload({ runId: RUN, command: "pause" }), {
+    runId: RUN,
+    command: "pause",
+  });
   assert.deepEqual(
     parseAgentRunControlPayload({
       runId: RUN.toUpperCase(),
@@ -228,13 +222,10 @@ test("enforces exact run control commands and approval pairing", () => {
 });
 
 test("enforces exact team controls and task pairing", () => {
-  assert.deepEqual(
-    parseAgentTeamControlPayload({ runId: RUN, command: "retry" }),
-    {
-      runId: RUN,
-      command: "retry",
-    },
-  );
+  assert.deepEqual(parseAgentTeamControlPayload({ runId: RUN, command: "retry" }), {
+    runId: RUN,
+    command: "retry",
+  });
   assert.deepEqual(
     parseAgentTeamControlPayload({
       runId: RUN,
@@ -260,12 +251,9 @@ test("allows only one valid runId query parameter", () => {
   assert.deepEqual(parseAgentRunQuery(new URLSearchParams()), {
     runId: undefined,
   });
-  assert.deepEqual(
-    parseAgentRunQuery(new URLSearchParams({ runId: RUN.toUpperCase() })),
-    {
-      runId: RUN,
-    },
-  );
+  assert.deepEqual(parseAgentRunQuery(new URLSearchParams({ runId: RUN.toUpperCase() })), {
+    runId: RUN,
+  });
   for (const query of [
     new URLSearchParams("runId="),
     new URLSearchParams("runId=not-a-uuid"),
@@ -354,11 +342,7 @@ test("rejects declared and streaming body overflow before JSON parsing", async (
   );
 });
 
-function projectClient({
-  visibleProjectIds = [],
-  error = null,
-  throws = false,
-} = {}) {
+function projectClient({ visibleProjectIds = [], error = null, throws = false } = {}) {
   const calls = [];
   return {
     calls,
@@ -380,9 +364,7 @@ function projectClient({
           if (throws) throw new Error("database connection failed");
           if (error) return { data: null, error };
           return {
-            data: visibleProjectIds.includes(requestedId)
-              ? { id: requestedId }
-              : null,
+            data: visibleProjectIds.includes(requestedId) ? { id: requestedId } : null,
             error: null,
           };
         },
@@ -394,28 +376,20 @@ function projectClient({
 
 test("authorizes only projects visible through the caller's RLS client", async () => {
   const client = projectClient({ visibleProjectIds: [PROJECT] });
-  assert.equal(
-    await authorizeAgentProject({ supabaseUser: client, projectId: PROJECT }),
-    PROJECT,
-  );
+  assert.equal(await authorizeAgentProject({ supabaseUser: client, projectId: PROJECT }), PROJECT);
   await expectAgentErrorAsync(
     authorizeAgentProject({ supabaseUser: client, projectId: OTHER_PROJECT }),
     { code: "agent_project_forbidden", status: 403 },
   );
   assert.deepEqual(
-    client.calls
-      .filter((call) => call.operation === "from")
-      .map((call) => call.table),
+    client.calls.filter((call) => call.operation === "from").map((call) => call.table),
     ["projects", "projects"],
   );
 });
 
 test("omitted projects require no database lookup", async () => {
   const client = projectClient();
-  assert.equal(
-    await authorizeAgentProject({ supabaseUser: client }),
-    undefined,
-  );
+  assert.equal(await authorizeAgentProject({ supabaseUser: client }), undefined);
   assert.deepEqual(client.calls, []);
 });
 
@@ -426,11 +400,9 @@ test("project authorization fails closed before downstream service work", async 
   ]) {
     let serviceCalls = 0;
     await expectAgentErrorAsync(
-      authorizeAgentProject({ supabaseUser: client, projectId: PROJECT }).then(
-        () => {
-          serviceCalls += 1;
-        },
-      ),
+      authorizeAgentProject({ supabaseUser: client, projectId: PROJECT }).then(() => {
+        serviceCalls += 1;
+      }),
       { code: "agent_project_authorization_unavailable", status: 503 },
     );
     assert.equal(serviceCalls, 0);
