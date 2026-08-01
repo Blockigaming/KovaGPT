@@ -46,7 +46,9 @@ test.describe("mobile shell UI truth", () => {
 
     const palette = page.getByRole("dialog", { name: "Search chats and actions" });
     await expect(palette).toBeVisible();
-    await expect(palette.getByRole("combobox", { name: "Search commands and chats" })).toBeFocused();
+    await expect(
+      palette.getByRole("combobox", { name: "Search commands and chats" }),
+    ).toBeFocused();
     const paletteBox = await palette.boundingBox();
     expect(paletteBox).not.toBeNull();
     expect(paletteBox!.width).toBeGreaterThanOrEqual(viewport.width - 1);
