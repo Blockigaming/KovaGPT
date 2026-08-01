@@ -8,6 +8,7 @@ import {
   parseMemoryPayload,
   persistMemorySafely,
   suppressThenConsumeToken,
+  unsubscribeLinkState,
 } from "../../src/lib/endpoint-reliability.mjs";
 
 function messages(count = 4) {
@@ -181,6 +182,31 @@ test("unsubscribe reports a token update failure and a retry repeats suppression
     },
   });
   assert.deepEqual(calls, ["suppress", "consume", "suppress", "consume"]);
+});
+
+test("legacy used tokens self-heal unless durable suppression is proven", () => {
+  assert.deepEqual(
+    unsubscribeLinkState({ alreadyUsed: false, suppressionResult: { data: null } }),
+    { valid: true },
+  );
+  assert.deepEqual(unsubscribeLinkState({ alreadyUsed: true, suppressionResult: { data: null } }), {
+    valid: true,
+  });
+  assert.deepEqual(
+    unsubscribeLinkState({
+      alreadyUsed: true,
+      suppressionResult: { data: { email: "stored but never returned" } },
+    }),
+    { valid: false, reason: "already_unsubscribed" },
+  );
+  assert.throws(
+    () =>
+      unsubscribeLinkState({
+        alreadyUsed: true,
+        suppressionResult: { data: null, error: new Error("lookup failed") },
+      }),
+    (error) => error.operation === "unsubscribe_suppression_lookup",
+  );
 });
 
 test("finance webhook cannot acknowledge an event without a durable queue", async () => {
