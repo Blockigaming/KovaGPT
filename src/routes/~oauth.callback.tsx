@@ -32,9 +32,10 @@ function OAuthCallbackPage() {
         window.location.replace(next);
       } catch (err) {
         if (cancelled) return;
-        const message = err instanceof Error ? err.message : String(err);
-        console.error("[KovaAuth] OAuth callback could not create a session.", err);
-        setError(message);
+        console.error("[KovaAuth] OAuth callback could not create a session", {
+          error: err instanceof Error ? err.name : "unknown_error",
+        });
+        setError("Google sign in could not be completed. Please try again.");
       }
     }
 
@@ -50,7 +51,9 @@ function OAuthCallbackPage() {
         <NovaLogo className="h-12 w-12" />
         {error ? (
           <>
-            <h1 className="mt-5 text-lg font-semibold">Sign in could not finish</h1>
+            <h1 className="mt-5 text-lg font-semibold">
+              Sign in could not finish
+            </h1>
             <p className="mt-2 text-sm text-muted-foreground">{error}</p>
             <a
               href="/?sign-in=1"
