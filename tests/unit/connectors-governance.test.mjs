@@ -88,7 +88,6 @@ test("connector OAuth callbacks are browser-bound and keep returns same-origin",
   assert.match(githubOauth, /browserState !== state/);
 });
 
-
 test("account deletion disconnects generalized OAuth accounts before removing auth", () => {
   const account = read("src/routes/api/account.ts");
   const lifecycle = read("src/integrations/oauth-lifecycle.server.ts");
@@ -99,8 +98,14 @@ test("account deletion disconnects generalized OAuth accounts before removing au
   );
   assert.match(account, /Connected accounts could not be disconnected/);
   assert.match(lifecycle, /export async function disconnectAllOAuth\(ownerId: string\)/);
-  assert.match(lifecycle, /\.from\("integration_linked_accounts"\)[\s\S]*\.eq\("owner_id", ownerId\)/);
+  assert.match(
+    lifecycle,
+    /\.from\("integration_linked_accounts"\)[\s\S]*\.eq\("owner_id", ownerId\)/,
+  );
   assert.match(lifecycle, /await disconnectOAuth\(ownerId, account\.id\)/);
-  assert.match(lifecycle, /if \(failures\.length\) throw new Error\("linked_account_disconnect_failed"\)/);
+  assert.match(
+    lifecycle,
+    /if \(failures\.length\) throw new Error\("linked_account_disconnect_failed"\)/,
+  );
   assert.equal((lifecycle.match(/event_type: "disconnect"/g) ?? []).length, 1);
 });
