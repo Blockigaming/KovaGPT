@@ -5,9 +5,7 @@ import test from "node:test";
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 
 test("production deployment is manual, protected, and uses the generated Nitro artifact", () => {
-  const workflow = read(
-    "../../.github/workflows/deploy-cloudflare-production.yml",
-  );
+  const workflow = read("../../.github/workflows/deploy-cloudflare-production.yml");
 
   assert.match(workflow, /^on:\n  workflow_dispatch:/m);
   assert.doesNotMatch(workflow, /^  (?:push|pull_request|schedule):/m);
@@ -28,10 +26,7 @@ test("production deployment is manual, protected, and uses the generated Nitro a
   assert.match(workflow, /actions\/setup-node@[a-f0-9]{40}/);
 
   assert.match(workflow, /npm run build/);
-  assert.match(
-    workflow,
-    /tests\/integration\/production-worker-artifact\.test\.mjs/,
-  );
+  assert.match(workflow, /tests\/integration\/production-worker-artifact\.test\.mjs/);
   assert.match(workflow, /npx --no-install wrangler deploy/);
   assert.match(workflow, /--config dist\/server\/wrangler\.json/);
   assert.match(workflow, /--keep-vars/);
