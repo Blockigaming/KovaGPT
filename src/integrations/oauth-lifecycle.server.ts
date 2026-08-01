@@ -201,6 +201,7 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     .maybeSingle();
   if (!account) throw new Error("linked_account_not_found");
   const provider = OAUTH_PROVIDERS[account.provider_id as OAuthProviderId];
+  if (!provider) throw new Error("unsupported_linked_account_provider");
   const token = account.refresh_token_ciphertext
     ? await decryptCredential(account.refresh_token_ciphertext)
     : await decryptCredential(account.access_token_ciphertext);
@@ -228,19 +229,24 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     });
     providerRevoked = response.ok;
   }
-  await db.from("integration_deletion_requests").insert({
-    owner_id: ownerId,
-    linked_account_id: account.id,
-    status: providerRevoked ? "provider_revoked" : "pending",
-  });
+  const { error: deletionRequestError } = await db
+    .from("integration_deletion_requests")
+    .insert({
+      owner_id: ownerId,
+      linked_account_id: account.id,
+      status: providerRevoked ? "provider_revoked" : "pending",
+    });
+  if (deletionRequestError) throw new Error("linked_account_deletion_request_failed");
 
-  await db
+  const { error: syncCancellationError } = await db
     .from("integration_sync_jobs")
     .update({ status: "cancelled" })
     .eq("owner_id", ownerId)
     .eq("linked_account_id", account.id)
     .in("status", ["queued", "leased", "running", "retry_wait"]);
-  await db
+  if (syncCancellationError) throw new Error("linked_account_sync_cancellation_failed");
+
+  const { error: credentialDeletionError } = await db
     .from("integration_linked_accounts")
     .update({
       status: "revoked",
@@ -250,7 +256,9 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     })
     .eq("id", account.id)
     .eq("owner_id", ownerId);
-  await db.from("integration_audit_events").insert({
+  if (credentialDeletionError) throw new Error("linked_account_credential_deletion_failed");
+
+  const { error: auditError } = await db.from("integration_audit_events").insert({
     owner_id: ownerId,
     linked_account_id: account.id,
     provider_id: provider.id,
@@ -258,6 +266,12 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     result: providerRevoked ? "success" : "failure",
     safe_summary: `Disconnected ${provider.name} account`,
   });
+  if (auditError) {
+    console.error("[oauth-disconnect] audit insert failed", {
+      providerId: provider.id,
+      ownerId,
+    });
+  }
   return { providerRevoked };
 }
 
