@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,7 +46,13 @@ type SortId = "newest" | "oldest" | "name" | "size";
 type ViewId = "grid" | "list";
 
 import { loadGuestLibrary, deleteGuestItem } from "@/lib/guest-library";
-import { loadConversations, saveConversations } from "@/lib/chat-store";
+import {
+  chatStoragePrincipal,
+  clearPendingActive,
+  loadConversations,
+  saveConversations,
+  saveDraft,
+} from "@/lib/chat-store";
 import { loadWorkTasks, saveWorkTasks } from "@/lib/work-store";
 import { safeNavigationUrl } from "@/lib/safe-url";
 import {
@@ -59,6 +65,7 @@ import {
 
 const VIEW_KEY = "kova-library-view";
 const FAVORITES_KEY = "kova-library-favorites";
+const EMPTY_LIBRARY_ITEMS: LibItem[] = [];
 
 function readFavorites(): Set<string> {
   if (typeof window === "undefined") return new Set();
@@ -94,8 +101,31 @@ function humanBytes(n: number | null | undefined): string | null {
 }
 
 function LibraryPage() {
-  const { isSignedIn, isLoaded } = useUser();
-  const [items, setItems] = useState<LibItem[]>([]);
+  const { isSignedIn, isLoaded, user } = useUser();
+  const userKey = user?.id ?? null;
+  const principal = isLoaded ? chatStoragePrincipal(userKey) : null;
+  const principalRef = useRef(principal);
+  principalRef.current = principal;
+  const [itemState, setItemState] = useState<{
+    principal: string | null;
+    items: LibItem[];
+  }>({ principal: null, items: [] });
+  const principalReady = principal !== null && itemState.principal === principal;
+  const items = principalReady ? itemState.items : EMPTY_LIBRARY_ITEMS;
+  const setItems = useCallback(
+    (next: SetStateAction<LibItem[]>) => {
+      setItemState((previous) => {
+        if (principal === null || principalRef.current !== principal) return previous;
+        const current = previous.principal === principal ? previous.items : [];
+        return {
+          principal,
+          items: typeof next === "function" ? next(current) : next,
+        };
+      });
+    },
+    [principal],
+  );
+  const loadGenerationRef = useRef(0);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -107,12 +137,17 @@ function LibraryPage() {
   });
   const [favorites, setFavorites] = useState<Set<string>>(() => readFavorites());
   const [previewItem, setPreviewItem] = useState<LibItem | null>(null);
+  const visiblePreviewItem = principalReady ? previewItem : null;
   const [selected, setSelected] = useState<string[]>([]);
 
-  const load = async () => {
+  const load = useCallback(async () => {
+    const generation = ++loadGenerationRef.current;
+    if (!isLoaded || principal === null) return;
+    const isCurrent = () =>
+      loadGenerationRef.current === generation && principalRef.current === principal;
     setLoadError(null);
     const localItems: LibItem[] = [
-      ...loadConversations().map(
+      ...loadConversations(userKey).map(
         (chat): LibItem => ({
           id: `chat:${chat.id}`,
           title: chat.title,
@@ -149,7 +184,10 @@ function LibraryPage() {
       ),
     ];
     if (!isSignedIn) {
-      setItems([...localItems, ...loadGuestLibrary()]);
+      if (isCurrent()) {
+        setItems([...localItems, ...loadGuestLibrary()]);
+        setLoading(false);
+      }
       return;
     }
     setLoading(true);
@@ -172,41 +210,56 @@ function LibraryPage() {
           file_size: null,
           created_at: item.updatedAt,
         }));
-      setItems([...localItems, ...saved, ...workspaceItems]);
+      if (isCurrent()) setItems([...localItems, ...saved, ...workspaceItems]);
     } catch (e) {
+      if (!isCurrent()) return;
       console.error(e);
       setLoadError(e instanceof Error ? e.message : "Could not load your library.");
       toast.error("Could not load your library.");
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  };
+  }, [isLoaded, isSignedIn, principal, setItems, userKey]);
 
   useEffect(() => {
-    if (!isLoaded) return;
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, isSignedIn]);
+    setPreviewItem(null);
+    setSelected([]);
+    setLoadError(null);
+  }, [principal]);
+
+  useEffect(() => {
+    if (!isLoaded || principal === null) {
+      loadGenerationRef.current += 1;
+      setItemState({ principal: null, items: [] });
+      setLoading(false);
+      setLoadError(null);
+      return;
+    }
+    void load();
+  }, [isLoaded, load, principal]);
 
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem(VIEW_KEY, view);
   }, [view]);
 
   useEffect(() => {
-    if (!previewItem) return;
+    if (!visiblePreviewItem) return;
     const close = (event: KeyboardEvent) => {
       if (event.key === "Escape") setPreviewItem(null);
     };
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);
-  }, [previewItem]);
+  }, [visiblePreviewItem]);
 
   const remove = async (id: string) => {
     const existing = items;
     if (!confirm("Delete this Library item?")) return;
     setItems((prev) => prev.filter((i) => i.id !== id));
     if (id.startsWith("chat:")) {
-      saveConversations(loadConversations().filter((chat) => `chat:${chat.id}` !== id));
+      saveConversations(
+        userKey,
+        loadConversations(userKey).filter((chat) => `chat:${chat.id}` !== id),
+      );
       toast.success("Chat deleted.");
       return;
     }
@@ -263,7 +316,8 @@ function LibraryPage() {
           .forEach(deleteGuestItem);
       }
       saveConversations(
-        loadConversations().filter((chat) => !selected.includes(`chat:${chat.id}`)),
+        userKey,
+        loadConversations(userKey).filter((chat) => !selected.includes(`chat:${chat.id}`)),
       );
       saveWorkTasks(loadWorkTasks().filter((task) => !selected.includes(`work:${task.id}`)));
       setSelected([]);
@@ -279,8 +333,8 @@ function LibraryPage() {
       ? `Use this saved Library item as context:\n\n${item.content_text.slice(0, 20_000)}`
       : `Help me work with this saved Library item: ${item.title}`;
     try {
-      localStorage.setItem("kova-draft:__new__", context);
-      localStorage.removeItem("nova-gpt-pending-active");
+      saveDraft(userKey, null, context);
+      clearPendingActive(userKey);
     } catch {
       toast.error("Could not prepare this item for chat.");
       return;
@@ -676,7 +730,7 @@ function LibraryPage() {
             {filtered.map(renderItem)}
           </ul>
         )}
-        {previewItem ? (
+        {visiblePreviewItem ? (
           <div
             className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-6"
             role="dialog"
@@ -691,14 +745,14 @@ function LibraryPage() {
               <header className="flex items-center gap-3 border-b border-border p-4">
                 <div className="min-w-0 flex-1">
                   <h2 id="library-preview-title" className="truncate font-semibold">
-                    {previewItem.title}
+                    {visiblePreviewItem.title}
                   </h2>
                   <p className="text-xs text-muted-foreground">
-                    {previewItem.item_type.replace(/_/g, " ")} ·{" "}
-                    {new Date(previewItem.created_at).toLocaleDateString()}
+                    {visiblePreviewItem.item_type.replace(/_/g, " ")} ·{" "}
+                    {new Date(visiblePreviewItem.created_at).toLocaleDateString()}
                   </p>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => reuseInChat(previewItem)}>
+                <Button size="sm" variant="outline" onClick={() => reuseInChat(visiblePreviewItem)}>
                   Reuse in chat
                 </Button>
                 <button
@@ -711,16 +765,16 @@ function LibraryPage() {
                 </button>
               </header>
               <div className="max-h-[70dvh] overflow-auto p-4 sm:p-6">
-                {isImageItem(previewItem) ? (
+                {isImageItem(visiblePreviewItem) ? (
                   <img
-                    src={previewItem.file_url!}
-                    alt={previewItem.title}
+                    src={visiblePreviewItem.file_url!}
+                    alt={visiblePreviewItem.title}
                     className="mx-auto max-h-[65dvh] rounded-xl object-contain"
                   />
                 ) : (
                   <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
-                    {previewItem.content_text ||
-                      previewItem.file_name ||
+                    {visiblePreviewItem.content_text ||
+                      visiblePreviewItem.file_name ||
                       "No preview is available for this item."}
                   </pre>
                 )}
