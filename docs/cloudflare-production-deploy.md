@@ -12,8 +12,8 @@ Complete this checklist in GitHub and the Cloudflare account that will own produ
 - Protect the environment with required reviewers and prevent self-review where the repository plan supports it.
 - Restrict the environment's deployment branches to `main`.
 - Add the environment secret `CLOUDFLARE_API_TOKEN`. Scope it to the target account with only the permissions needed to edit Workers scripts and assets.
-- Add the environment variable `CLOUDFLARE_ACCOUNT_ID` for that same Cloudflare account.
-- Choose the production Worker script name and add it as `KOVA_CLOUDFLARE_WORKER_NAME`. The name identifies the Worker deployment; it does not bind `kovagpt.com`.
+- Add the 32-character hexadecimal Cloudflare account ID as the environment variable `CLOUDFLARE_ACCOUNT_ID` for that same account.
+- Choose the production Worker script name and add it as `KOVA_CLOUDFLARE_WORKER_NAME`. Use a 1-63 character DNS label containing only letters, numbers, and internal dashes so the pre-cutover `workers.dev` health check is available. The name identifies the Worker deployment; it does not bind `kovagpt.com`.
 - Configure the application's runtime secrets and variables on that Worker in Cloudflare before traffic cutover. Do not put their values in the repository or workflow logs. The deploy command uses Wrangler's [`--keep-vars`](https://developers.cloudflare.com/workers/wrangler/commands/workers/) option so dashboard-managed variables are preserved; Cloudflare documents that Worker secrets are not deleted by deployment.
 - Confirm the Cloudflare account owns or can manage the DNS zone intended for the custom domain.
 
@@ -26,7 +26,7 @@ Complete this checklist in GitHub and the Cloudflare account that will own produ
 5. The workflow installs locked dependencies, runs the production build, validates `dist/server/index.mjs` and `dist/server/wrangler.json` in local workerd, then runs Wrangler against that generated config.
 6. Record the Git commit and Cloudflare Worker version shown by the completed deployment.
 
-The workflow fails before deployment if the API token, account ID, or Worker name is missing. It never falls back to the root `wrangler.jsonc` or raw `src/server.ts` entry.
+The workflow fails before deployment if the API token is missing or if the account ID or Worker name is missing or malformed. It never falls back to the root `wrangler.jsonc` or raw `src/server.ts` entry.
 
 ## Health verification before DNS cutover
 
