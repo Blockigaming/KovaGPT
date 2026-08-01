@@ -21,11 +21,7 @@ const RUN_CONTROL_ERRORS = new Set([
   "agent_state_changed",
 ]);
 
-function agentRequestError(
-  error: unknown,
-  fallback: string,
-  fallbackStatus = 400,
-) {
+function agentRequestError(error: unknown, fallback: string, fallbackStatus = 400) {
   if (error instanceof AgentRequestError) {
     return Response.json(
       { error: error.publicMessage },
@@ -61,22 +57,16 @@ export const Route = createFileRoute("/api/agents/runs")({
           .limit(runId ? 1 : 50);
         if (runId) query = query.eq("id" as never, runId);
         const { data, error } = await query;
-        if (error)
-          return agentRequestError(null, "agent_history_unavailable", 500);
-        const ids = ((data ?? []) as unknown as { id: string }[]).map(
-          (run) => run.id,
-        );
+        if (error) return agentRequestError(null, "agent_history_unavailable", 500);
+        const ids = ((data ?? []) as unknown as { id: string }[]).map((run) => run.id);
         let events: unknown[] = [];
         if (ids.length) {
           const result = await auth.supabaseAdmin
             .from("agent_run_events" as never)
-            .select(
-              "run_id,kind,safe_payload,evidence_sha256,created_at" as never,
-            )
+            .select("run_id,kind,safe_payload,evidence_sha256,created_at" as never)
             .in("run_id" as never, ids)
             .order("created_at" as never, { ascending: true });
-          if (result.error)
-            return agentRequestError(null, "agent_history_unavailable", 500);
+          if (result.error) return agentRequestError(null, "agent_history_unavailable", 500);
           events = result.data ?? [];
         }
         return Response.json(
@@ -102,30 +92,19 @@ export const Route = createFileRoute("/api/agents/runs")({
         let body: ReturnType<typeof parseAgentRunControlPayload>;
         try {
           body = parseAgentRunControlPayload(
-            await readAgentJsonRequest(
-              request,
-              AGENT_RUN_CONTROL_BODY_LIMIT_BYTES,
-            ),
+            await readAgentJsonRequest(request, AGENT_RUN_CONTROL_BODY_LIMIT_BYTES),
           );
         } catch (error) {
           return agentRequestError(error, "invalid_control_request");
         }
         try {
           return Response.json(
-            await controlAgentRun(
-              auth,
-              body.runId,
-              body.command,
-              body.approvalId,
-            ),
+            await controlAgentRun(auth, body.runId, body.command, body.approvalId),
             { headers: { "Cache-Control": "no-store" } },
           );
         } catch (error) {
-          const message =
-            error instanceof Error ? error.message : "agent_control_failed";
-          const safeMessage = RUN_CONTROL_ERRORS.has(message)
-            ? message
-            : "agent_control_failed";
+          const message = error instanceof Error ? error.message : "agent_control_failed";
+          const safeMessage = RUN_CONTROL_ERRORS.has(message) ? message : "agent_control_failed";
           const status =
             safeMessage === "browser_agent_unavailable" ||
             safeMessage === "agent_control_unavailable"
