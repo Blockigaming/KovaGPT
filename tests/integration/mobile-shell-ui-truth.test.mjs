@@ -19,6 +19,8 @@ test("Temporary Chat is reachable and truthfully selected from the mobile top ba
   assert.match(route, /onTemporaryChatChange=\{setTemporaryChatEnabled\}/);
   assert.match(route, /onClick=\{\(\) => setTemporaryChatEnabled\(!tempChat\)\}/);
   assert.match(route, /onClick=\{\(\) => setTemporaryChatEnabled\(false\)\}/);
+  assert.match(route, /This chat won't appear in history or be used for cross-chat memory/);
+  assert.doesNotMatch(route, /It's private/);
 });
 
 test("header progress never invents activity", async () => {
@@ -54,8 +56,14 @@ test("command palette traps and restores focus with safe-area and reduced-motion
   ]);
 
   assert.match(palette, /returnFocusRef/);
-  assert.match(palette, /requestAnimationFrame\(\(\) => returnFocusRef\.current\?\.focus\(\)\)/);
+  assert.match(palette, /const returnTarget = returnFocusRef\.current/);
+  assert.match(palette, /requestAnimationFrame\(\(\) => returnTarget\?\.focus\(\)\)/);
   assert.match(palette, /event\.key === "Tab"/);
+  assert.match(palette, /onClick=\{\(\) => \{[\s\S]*suppressFocusRestore\(\);[\s\S]*onOpenSettings\(\)/);
+  assert.match(
+    palette,
+    /action\.action === "focus-input"[\s\S]*suppressFocusRestore\(\);[\s\S]*textarea/,
+  );
   assert.match(palette, /data-kova-shell-overlay=""/);
   assert.match(palette, /var\(--safe-top\)/);
   assert.match(palette, /var\(--safe-bottom\)/);
