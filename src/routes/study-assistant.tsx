@@ -12,7 +12,7 @@ const faq = [
   },
   {
     q: "Can I upload my textbook or lecture notes?",
-    a: "Yes. Upload PDFs and images of notes, and KovaGPT will summarize, quiz you, or answer questions grounded in that material.",
+    a: "Yes. Paste text or upload images of your notes, and KovaGPT will summarize, quiz you, or answer questions grounded in that material.",
   },
   {
     q: "Does it work for language learning?",
