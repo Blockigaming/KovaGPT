@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { fetchWithTimeout } from "@/lib/fetch-with-timeout";
+import { CAPABILITY_REGISTRY } from "@/lib/capability-registry";
 
 export const Route = createFileRoute("/help")({
   head: () => ({
@@ -18,7 +19,10 @@ export const Route = createFileRoute("/help")({
           "Search KovaGPT FAQs on accounts, billing, apps, images, projects, and more. Contact support if you need a hand.",
       },
       { property: "og:title", content: "Help Center - KovaGPT" },
-      { property: "og:description", content: "Search KovaGPT FAQs and contact support." },
+      {
+        property: "og:description",
+        content: "Search KovaGPT FAQs and contact support.",
+      },
       { name: "robots", content: "index,follow" },
     ],
     links: [{ rel: "canonical", href: "https://kovagpt.com/help" }],
@@ -47,6 +51,12 @@ type Faq = {
   answer: string;
   keywords: string[];
 };
+
+const FEATURES = CAPABILITY_REGISTRY.features;
+const FREE_MODES = CAPABILITY_REGISTRY.modesByTier.free.map((mode) => mode.label).join(", ");
+const PLUS_MODES = CAPABILITY_REGISTRY.modesByTier.plus.map((mode) => mode.label).join(", ");
+const PRO_MODES = CAPABILITY_REGISTRY.modesByTier.pro.map((mode) => mode.label).join(", ");
+const WORKING_APPS = CAPABILITY_REGISTRY.workingApps.join(", ");
 
 const CATEGORIES = [
   "Accounts",
@@ -86,64 +96,63 @@ const FAQS: Faq[] = [
     id: "start-1",
     category: "Getting started",
     question: "What should I try first in KovaGPT?",
-    answer:
-      "Start with a normal chat, create a Project for ongoing work, save reusable files to Library, and use Search or Deep Research when you need current sources.",
+    answer: `Start with Medium chat, create a Project for ongoing work, and explicitly save reusable items to Library. ${FEATURES.webSearch.summary} ${FEATURES.deepResearch.summary}`,
     keywords: ["getting started", "first run", "onboarding"],
   },
   {
     id: "chat-1",
     category: "Chat basics",
     question: "How do I choose the right chat mode?",
-    answer:
-      "Use Normal for quick help, Search for current sources, Deep Research for cited reports, Images for generation, and Temporary Chat when you do not want history or memory used.",
+    answer: `Free includes ${FREE_MODES}. Plus includes ${PLUS_MODES}. Pro includes ${PRO_MODES}. Search, Deep Research, Images, and Temporary Chat are separate composer tools with their own availability rules.`,
     keywords: ["chat", "mode", "temporary"],
+  },
+  {
+    id: "voice-1",
+    category: "Chat basics",
+    question: "Does KovaGPT support voice or audio conversations?",
+    answer: FEATURES.voice.summary,
+    keywords: ["voice", "audio", "microphone", "speech"],
   },
   {
     id: "search-1",
     category: "Search",
     question: "When should I enable Search?",
-    answer:
-      "Enable Search when you need recent or source-backed information. KovaGPT shows retrieved sources instead of fabricating citations.",
+    answer: `${FEATURES.webSearch.summary} ${FEATURES.webSearch.limitation}`,
     keywords: ["web", "sources", "citations"],
   },
   {
     id: "research-1",
     category: "Deep Research",
     question: "What does Deep Research do?",
-    answer:
-      "Deep Research plans, searches, reads sources, tracks evidence, and writes a cited report with progress updates.",
+    answer: `${FEATURES.deepResearch.summary} ${FEATURES.deepResearch.limitation}`,
     keywords: ["research", "report", "sources"],
   },
   {
     id: "files-1",
     category: "Files",
     question: "What files can KovaGPT understand?",
-    answer:
-      "KovaGPT can process supported text, PDF, CSV, spreadsheet, code, JSON, and image files when extraction succeeds and you are authorized to use the file.",
+    answer: `${FEATURES.attachments.summary} ${FEATURES.attachments.limitation}`,
     keywords: ["upload", "pdf", "csv", "documents"],
   },
   {
     id: "analysis-1",
     category: "Data analysis",
     question: "Can KovaGPT analyze spreadsheets?",
-    answer:
-      "Yes. It can profile CSV or supported spreadsheets, summarize columns, detect missing values, aggregate rows, and generate tables or charts without executing untrusted code.",
+    answer: `${FEATURES.dataAnalysis.summary} ${FEATURES.dataAnalysis.limitation}`,
     keywords: ["spreadsheet", "csv", "chart", "analysis"],
   },
   {
     id: "canvas-1",
     category: "Canvas",
     question: "When should I use Canvas?",
-    answer:
-      "Use Canvas for long-form documents, reports, tables, and artifacts that benefit from editing, versions, suggestions, and downloads.",
+    answer: `${FEATURES.canvas.summary} ${FEATURES.canvas.limitation}`,
     keywords: ["document", "artifact", "version"],
   },
   {
     id: "memory-1",
     category: "Memory",
     question: "How does Memory work?",
-    answer:
-      "Memory is controlled in Settings. It is not read or written when disabled, and Temporary Chat never uses memory.",
+    answer: FEATURES.memory.summary,
     keywords: ["preferences", "remember", "forget"],
   },
   {
@@ -167,7 +176,7 @@ const FAQS: Faq[] = [
     category: "Accounts",
     question: "How do I delete my account?",
     answer:
-      "Open Settings → Account → Delete account. This permanently removes your chats, projects, files, and subscription data.",
+      "Use Delete account in Settings and wait for the success confirmation. Some billing, security, legal, backup, or external-provider records may remain as described in the Privacy Policy.",
     keywords: ["delete", "remove", "close account"],
   },
   {
@@ -183,7 +192,7 @@ const FAQS: Faq[] = [
     category: "Sign-in",
     question: "I didn't receive the magic link email.",
     answer:
-      "Check spam and Promotions. Links expire after 60 minutes. Request a new one from the sign-in screen.",
+      "Check spam and Promotions. If the link is expired or missing, request a new one from the sign-in screen.",
     keywords: ["magic link", "email link", "no email"],
   },
   {
@@ -198,7 +207,7 @@ const FAQS: Faq[] = [
     category: "Google",
     question: "How do I connect my Google account?",
     answer:
-      "Go to Settings → Connected apps → Google and click Connect. You'll be redirected to Google to approve access.",
+      "Open Apps, choose Google, and review the provider's consent screen before approving access.",
     keywords: ["oauth", "connect google", "link google"],
   },
   {
@@ -206,7 +215,7 @@ const FAQS: Faq[] = [
     category: "Google",
     question: "What Google permissions does KovaGPT request?",
     answer:
-      "Only the scopes needed for the features you enable - Gmail read/send for email actions and Calendar read/write for scheduling. You can revoke access anytime in your Google account.",
+      "The Google consent screen lists the exact scopes requested for the services you connect. Approve only scopes you understand; you can disconnect from Apps or your Google account.",
     keywords: ["permissions", "scopes", "privacy"],
   },
   {
@@ -214,7 +223,7 @@ const FAQS: Faq[] = [
     category: "Gmail",
     question: "How does Gmail integration work?",
     answer:
-      "Once Gmail is connected, KovaGPT can summarize threads, draft replies, and search your inbox on request. Nothing is sent without your confirmation.",
+      "Open Apps to see whether Gmail is connected and which access is enabled. Available operations depend on granted scopes, configured credentials, and service availability.",
     keywords: ["email", "inbox", "draft"],
   },
   {
@@ -222,15 +231,14 @@ const FAQS: Faq[] = [
     category: "Calendar",
     question: "Can KovaGPT create calendar events?",
     answer:
-      "Yes - connect Google Calendar in Settings → Connected apps. Ask KovaGPT to schedule, move, or find events in natural language.",
+      "Open Apps to connect Google Calendar and review the granted scopes. Calendar operations are available only when the connection and requested action are supported.",
     keywords: ["schedule", "meeting", "event"],
   },
   {
     id: "apps-1",
     category: "Apps",
     question: "Which apps can I connect?",
-    answer:
-      "Google (Gmail, Calendar, Drive), Notion, Slack, GitHub, Linear, and more. See Settings → Connected apps for the full list.",
+    answer: `The working Apps page currently lists ${WORKING_APPS}. ${FEATURES.apps.limitation}`,
     keywords: ["integrations", "connectors", "connect"],
   },
   {
@@ -238,7 +246,7 @@ const FAQS: Faq[] = [
     category: "Apps",
     question: "How do I disconnect an app?",
     answer:
-      "Settings → Connected apps → click the app → Disconnect. This revokes tokens immediately.",
+      "Open Apps, choose the connected service, and use its disconnect control. The page reports whether the operation succeeded.",
     keywords: ["revoke", "remove", "disconnect"],
   },
   {
@@ -253,30 +261,30 @@ const FAQS: Faq[] = [
     id: "bill-2",
     category: "Billing",
     question: "What payment methods do you accept?",
-    answer: "All major cards, Apple Pay, Google Pay, and Link, processed securely by Stripe.",
+    answer:
+      "Stripe hosts checkout and shows the payment methods available for your account, device, and region before purchase.",
     keywords: ["card", "apple pay", "google pay"],
   },
   {
     id: "trial-1",
     category: "Trials",
     question: "How does the free trial work?",
-    answer:
-      "Start Plus with a 1-month free trial. You won't be charged until the trial ends and you can cancel any time from Settings → Billing.",
+    answer: `Eligible first-time Plus subscribers may receive a ${CAPABILITY_REGISTRY.plans.plus.trialPeriodDays}-day trial. Checkout confirms eligibility, price, and renewal timing before purchase.`,
     keywords: ["free", "1 month", "trial"],
   },
   {
     id: "sub-1",
     category: "Subscriptions",
     question: "What's included in KovaGPT Plus?",
-    answer:
-      "Higher message limits, priority models, image generation, and full project workspaces. Scheduled task execution is not available in this deployment.",
+    answer: `${CAPABILITY_REGISTRY.plans.plus.features.join(". ")}. ${FEATURES.scheduledTasks.summary}`,
     keywords: ["plus", "pro", "features", "premium"],
   },
   {
     id: "sub-2",
     category: "Subscriptions",
     question: "Can I upgrade or downgrade any time?",
-    answer: "Yes. Changes prorate automatically and take effect immediately.",
+    answer:
+      "Available plan changes appear in Billing. Review the portal or checkout confirmation for timing and price before accepting.",
     keywords: ["upgrade", "downgrade", "plan change"],
   },
   {
@@ -292,7 +300,7 @@ const FAQS: Faq[] = [
     category: "Refunds",
     question: "Do you offer refunds?",
     answer:
-      "Yes, within 14 days of purchase if you haven't used more than a small amount of Plus features. Email help@kovagpt.com to request one.",
+      "Review the current Refund Policy for eligibility and contact help@kovagpt.com with the account email and purchase details.",
     keywords: ["money back", "refund policy"],
   },
   {
@@ -300,14 +308,15 @@ const FAQS: Faq[] = [
     category: "Privacy",
     question: "Do you train on my chats?",
     answer:
-      "No. Your conversations are never used to train models. See our Privacy Policy for details.",
+      "Review the Privacy Policy for KovaGPT's handling and the terms of any configured AI provider. Do not rely on a Help Center summary for a legal data-use promise.",
     keywords: ["training", "data", "gdpr"],
   },
   {
     id: "priv-2",
     category: "Privacy",
     question: "How do I export my data?",
-    answer: "Settings → Privacy → Export data. You'll receive a downloadable archive by email.",
+    answer:
+      "Use an available export control in Settings, or contact support if it is unavailable. Wait for a completed export before assuming all data was included.",
     keywords: ["export", "download", "gdpr"],
   },
   {
@@ -315,15 +324,14 @@ const FAQS: Faq[] = [
     category: "Security",
     question: "Is my data encrypted?",
     answer:
-      "Yes - TLS in transit and AES-256 at rest. Auth tokens are stored securely and never exposed to the browser.",
+      "KovaGPT uses configured hosting, authentication, storage, and integration providers. Review the Security and Privacy pages for the current controls and avoid assuming a specific cipher covers every provider.",
     keywords: ["encryption", "tls", "aes"],
   },
   {
     id: "sec-2",
     category: "Security",
     question: "Do you support two-factor authentication?",
-    answer:
-      "2FA is available via your Google account when you use Continue with Google. Native 2FA for email accounts is on our roadmap.",
+    answer: FEATURES.mfa.summary,
     keywords: ["2fa", "mfa", "two factor"],
   },
   {
@@ -338,8 +346,7 @@ const FAQS: Faq[] = [
     id: "img-2",
     category: "Images",
     question: "Can I edit an image I generated?",
-    answer:
-      "Yes - click an image in your gallery and describe the edit. KovaGPT will produce a new variant.",
+    answer: FEATURES.imageEditing.summary,
     keywords: ["edit image", "variant", "inpaint"],
   },
   {
@@ -361,16 +368,14 @@ const FAQS: Faq[] = [
     id: "lib-1",
     category: "Library",
     question: "Where do my saved chats go?",
-    answer:
-      "The Library holds every conversation you've had. Use the search bar to find any past chat instantly.",
+    answer: `${FEATURES.library.summary} ${FEATURES.cloudHistory.summary}`,
     keywords: ["history", "saved chats", "search"],
   },
   {
     id: "task-1",
     category: "Scheduled tasks",
     question: "Why can't I create a scheduled task?",
-    answer:
-      "Scheduled execution is not available in this deployment because no background task runner is deployed. The Scheduled Tasks page can only show, pause, or delete previously saved tasks.",
+    answer: FEATURES.scheduledTasks.summary,
     keywords: ["reminder", "cron", "recurring"],
   },
   {
@@ -386,7 +391,7 @@ const FAQS: Faq[] = [
     category: "Troubleshooting",
     question: "Messages fail to send.",
     answer:
-      "Check your internet connection. If you're over your daily limit, upgrading to Plus removes it.",
+      "Check your connection and current daily allowance. Every published plan has finite limits; wait for reset or compare the higher allowances on Pricing.",
     keywords: ["error", "failed", "not sending"],
   },
 ];
@@ -504,7 +509,7 @@ function HelpPage() {
           </div>
           <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">How can we help?</h1>
           <p className="text-muted-foreground text-sm sm:text-base">
-            Search hundreds of answers or send us a message.
+            Search these answers or send us a message.
           </p>
         </div>
 
@@ -569,9 +574,10 @@ function HelpPage() {
                             setOpenId(s.id);
                             setTimeout(
                               () =>
-                                document
-                                  .getElementById(`faq-${s.id}`)
-                                  ?.scrollIntoView({ behavior: "smooth", block: "center" }),
+                                document.getElementById(`faq-${s.id}`)?.scrollIntoView({
+                                  behavior: "smooth",
+                                  block: "center",
+                                }),
                               30,
                             );
                           }}
@@ -705,9 +711,7 @@ function SupportForm() {
         </div>
         <div>
           <h2 className="text-lg font-semibold">Still need help?</h2>
-          <p className="text-sm text-muted-foreground">
-            Send us a note - we usually reply within one business day.
-          </p>
+          <p className="text-sm text-muted-foreground">Send us a note and we'll reply by email.</p>
         </div>
       </div>
 
@@ -787,11 +791,18 @@ function SupportForm() {
             autoComplete="off"
             value={website}
             onChange={(e) => setWebsite(e.target.value)}
-            style={{ position: "absolute", left: "-9999px", width: 1, height: 1 }}
+            style={{
+              position: "absolute",
+              left: "-9999px",
+              width: 1,
+              height: 1,
+            }}
             aria-hidden="true"
           />
           <div className="flex items-center justify-between pt-1">
-            <p className="text-[11px] text-muted-foreground">We reply by email - no spam, ever.</p>
+            <p className="text-[11px] text-muted-foreground">
+              Your email is used to respond to this request.
+            </p>
             <Button type="submit" disabled={!canSubmit}>
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Send message
