@@ -64,7 +64,7 @@ test("image generation validates n before quota and supports exactly one image",
 });
 
 test("sitemap excludes private and noindex workflows", () => {
-  const sitemap = read("src/routes/sitemap[.]xml.ts");
+  const sitemapPolicy = read("src/lib/seo-policy.mjs");
   for (const path of [
     "/checkout/return",
     "/summary",
@@ -78,14 +78,14 @@ test("sitemap excludes private and noindex workflows", () => {
     "/unsubscribe",
   ]) {
     assert.equal(
-      sitemap.includes('{ path: "' + path + '",'),
+      sitemapPolicy.includes('{ path: "' + path + '",'),
       false,
       path + " must not be advertised in the public sitemap",
     );
   }
   for (const path of ["/", "/pricing", "/study-assistant", "/privacy"]) {
     assert.equal(
-      sitemap.includes('{ path: "' + path + '",'),
+      sitemapPolicy.includes('{ path: "' + path + '",'),
       true,
       path + " should remain in the public sitemap",
     );
