@@ -15,6 +15,10 @@ async function readRouteSource(routeId) {
   }
 }
 
+function routeIdToPath(routeId) {
+  return `/${routeId.replaceAll("[.]", ".")}`;
+}
+
 test("the centralized inventory exactly covers every generated server route handler", async () => {
   const routeTree = await readFile("src/routeTree.gen.ts", "utf8");
   const routeIds = [...routeTree.matchAll(/from ["']\.\/routes\/([^"']+)["']/gu)].map(
@@ -29,11 +33,11 @@ test("the centralized inventory exactly covers every generated server route hand
         if (!/server:\s*\{\s*handlers:\s*\{/u.test(source)) return null;
         const methods = [...source.matchAll(HTTP_METHOD_PATTERN)].map((match) => match[1]);
         assert.ok(methods.length > 0, `${routeId} must expose at least one HTTP method`);
-        return { path: `/${routeId}`, methods };
+        return { path: routeIdToPath(routeId), methods };
       }),
     )
   ).filter(Boolean);
-  assert.equal(auditedRoutes.length, 38);
+  assert.equal(auditedRoutes.length, 43);
 
   const sortByPath = (left, right) => left.path.localeCompare(right.path);
   const actual = API_METHOD_POLICY_ROUTES.map(({ path, methods }) => ({
