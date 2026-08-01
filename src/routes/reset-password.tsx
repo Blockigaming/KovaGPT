@@ -1,9 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import {
-  getSupabaseClientConfigStatus,
-  supabase,
-} from "@/integrations/supabase/client";
+import { getSupabaseClientConfigStatus, supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -41,9 +38,7 @@ function ResetPassword() {
   useEffect(() => {
     if (!getSupabaseClientConfigStatus().configured) {
       setReady(true);
-      setError(
-        "Account recovery is temporarily unavailable. Please try again later.",
-      );
+      setError("Account recovery is temporarily unavailable. Please try again later.");
       return;
     }
     // Supabase may need a network round-trip to exchange a recovery code. Listen
@@ -126,9 +121,7 @@ function ResetPassword() {
       console.error("[KovaAuth] Password update failed", {
         error: err instanceof Error ? err.name : "unknown_error",
       });
-      toast.error(
-        "Your password could not be updated. Request a new reset link and try again.",
-      );
+      toast.error("Your password could not be updated. Request a new reset link and try again.");
     } finally {
       setLoading(false);
     }
@@ -141,9 +134,7 @@ function ResetPassword() {
           <div className="w-12 h-12 rounded-2xl bg-foreground text-background flex items-center justify-center mb-3">
             <KeyRound className="w-6 h-6" />
           </div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight">
-            Set a new password
-          </h1>
+          <h1 className="font-display text-2xl font-semibold tracking-tight">Set a new password</h1>
           <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
             <NovaLogo className="w-4 h-4" /> KovaGPT account recovery
           </p>
