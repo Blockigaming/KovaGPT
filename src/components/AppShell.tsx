@@ -179,7 +179,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         <MobileTopBar onOpenSidebar={() => setSidebarOpen(true)} onNewChat={handleNew} />
         {!sidebarOpen && (
           <button
-            onClick={() => setSidebarOpen(true)}
+            onClick={() => {
+              setSidebarOpen(true);
+              window.requestAnimationFrame(() => {
+                document
+                  .querySelector<HTMLElement>('[aria-label="Collapse sidebar"]')
+                  ?.focus({ preventScroll: true });
+              });
+            }}
             className="hidden lg:flex fixed top-3 left-3 z-30 p-2 rounded-md bg-background/90 border border-border hover:bg-accent transition shadow-sm items-center justify-center"
             aria-label="Open sidebar"
           >

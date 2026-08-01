@@ -86,7 +86,7 @@ export function AuthDialog({
         const normalizedEmail = email.trim().toLowerCase();
         const metadata: Record<string, string> = {};
         if (fullName.trim()) metadata.full_name = fullName.trim();
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           email: normalizedEmail,
           password,
           options: {
@@ -95,18 +95,9 @@ export function AuthDialog({
           },
         });
         if (error) throw error;
-        const isRepeat = !!data.user && (data.user.identities?.length ?? 0) === 0;
-        if (isRepeat) {
-          const { error: resendError } = await supabase.auth.resend({
-            type: "signup",
-            email: normalizedEmail,
-            options: { emailRedirectTo: `${window.location.origin}/` },
-          });
-          if (resendError) throw resendError;
-          toast.success("Already registered - we resent the verification link.");
-        } else {
-          toast.success("Verification email sent. Check your inbox.");
-        }
+        // Keep duplicate-account behavior indistinguishable to prevent email
+        // enumeration. Supabase decides whether a message should be delivered.
+        toast.success("If this address can be registered, check your inbox to continue.");
         onOpenChange(false);
       } else {
         const normalizedEmail = email.trim().toLowerCase();
@@ -115,28 +106,23 @@ export function AuthDialog({
           password,
         });
         if (error) {
-          if (/confirm|not confirmed|email.*verif/i.test(error.message)) {
-            const { error: resendError } = await supabase.auth.resend({
-              type: "signup",
-              email: normalizedEmail,
-              options: { emailRedirectTo: `${window.location.origin}/` },
-            });
-            if (resendError) throw resendError;
-            toast.error("Please verify your email - we just resent the link.");
-            return;
-          }
-          if (/invalid.*credentials|invalid_grant/i.test(error.message)) {
-            toast.error("That email and password don't match.");
-            return;
-          }
-          throw error;
+          // Do not distinguish unknown, unverified, or incorrect-password
+          // accounts. Different responses turn this form into an email
+          // enumeration oracle.
+          console.error("[KovaAuth] Password authentication was rejected", {
+            error: error.name || "auth_error",
+          });
+          toast.error("That email and password could not be verified.");
+          return;
         }
         toast.success("Welcome back.");
         onOpenChange(false);
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      toast.error(msg);
+      console.error("[KovaAuth] Email authentication failed", {
+        error: err instanceof Error ? err.name : "unknown_error",
+      });
+      toast.error("Authentication could not be completed. Please try again.");
     } finally {
       release();
     }
@@ -151,14 +137,20 @@ export function AuthDialog({
         redirect_uri: getOAuthRedirectUri(),
       });
       if (result.error) {
-        toast.error(result.error instanceof Error ? result.error.message : String(result.error));
+        console.error("[KovaAuth] Google authentication could not start", {
+          error: result.error instanceof Error ? result.error.name : "provider_error",
+        });
+        toast.error("Google sign in could not start. Please try again.");
         release();
         return;
       }
       if (result.redirected) return;
       onOpenChange(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err));
+      console.error("[KovaAuth] Google authentication failed", {
+        error: err instanceof Error ? err.name : "unknown_error",
+      });
+      toast.error("Google sign in could not start. Please try again.");
     } finally {
       release();
     }
@@ -180,7 +172,10 @@ export function AuthDialog({
       if (error) throw error;
       setStep("magic-sent");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err));
+      console.error("[KovaAuth] Magic-link request failed", {
+        error: err instanceof Error ? err.name : "unknown_error",
+      });
+      toast.error("The sign-in link could not be requested. Please try again.");
     } finally {
       release();
     }
@@ -238,6 +233,7 @@ export function AuthDialog({
                         placeholder="Email address"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        maxLength={320}
                         onBlur={() => setEmailTouched(true)}
                         aria-invalid={emailTouched && !emailValid}
                         className={cn(
@@ -350,6 +346,7 @@ export function AuthDialog({
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       minLength={6}
+                      maxLength={1024}
                       className="h-14 rounded-2xl text-[15px] px-4 pr-12"
                     />
                     <button

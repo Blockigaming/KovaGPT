@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { newRequestId, buildErrorEnvelope, categorizeError } from "@/lib/request-id";
 import {
   getMode,
-  type ModeId,
   STORAGE_LIMITS_BYTES,
   DAILY_IMAGE_LIMIT_BY_TIER,
   DAILY_CHAT_LIMIT_BY_TIER,
@@ -26,7 +25,6 @@ import {
 } from "@/lib/google-tools.server";
 import {
   chatCompletions,
-  chatModel,
   imageGenerations,
   imageModel,
   missingAiProviderResponse,
@@ -37,6 +35,15 @@ import { runDeepResearch, type ResearchProgressEvent } from "@/lib/ai/deep-resea
 import { activityToSseDelta, createToolActivityEvent } from "@/lib/ai/activity.server";
 import { selectModelForMode, mapProviderError } from "@/lib/ai/registry.server";
 import { formatMemoryBlock, selectRelevantMemories, type KovaMemory } from "@/lib/ai/memory.server";
+import {
+  CHAT_BODY_LIMIT_BYTES,
+  ChatIngressError,
+  chatAnonymousRateLimiter,
+  readChatRequest,
+  resolveAnonymousClientKey,
+  toChatIngressErrorEnvelope,
+  type ChatUserContext,
+} from "@/lib/chat-ingress.server.mjs";
 
 type ChatContentPart =
   | { type: "text"; text: string }
@@ -62,10 +69,27 @@ const UNRESTRICTED_INSTRUCTION = "";
 const ACCURACY_INSTRUCTION = "";
 const CHART_INSTRUCTION = "";
 const CREATOR_INSTRUCTION = "";
-function sanitizeLong(value: unknown, max: number): string {
-  return typeof value === "string" ? value.trim().slice(0, max) : "";
+type SafeLogContext = { requestId: string; startedAt: number };
+type SafeLogCategory = "provider" | "optional_context" | "policy" | "server";
+
+function logSafeFailure(
+  level: "warn" | "error",
+  event: string,
+  context: SafeLogContext,
+  details: { status: number; category: SafeLogCategory; code: string },
+): void {
+  const payload = {
+    requestId: context.requestId,
+    status: details.status,
+    category: details.category,
+    durationMs: Date.now() - context.startedAt,
+    code: details.code,
+  };
+  if (level === "error") console.error(event, payload);
+  else console.warn(event, payload);
 }
-function buildUserContextBlock(user: UserContext): string {
+
+function buildUserContextBlock(user: ChatUserContext): string {
   const entries = Object.entries(user).filter(([, value]) => value != null && value !== "");
   if (!entries.length) return "";
   return `\n\n--- User context ---\n${entries.map(([key, value]) => `${key}: ${String(value)}`).join("\n")}\n--- End user context ---`;
@@ -73,56 +97,6 @@ function buildUserContextBlock(user: UserContext): string {
 function buildCurrentDateInstruction(timezone?: string, locale?: string): string {
   return `\nCurrent date: ${new Date().toISOString().slice(0, 10)}${timezone ? `; timezone: ${timezone}` : ""}${locale ? `; locale: ${locale}` : ""}.`;
 }
-
-type IncomingMessage = {
-  role: "user" | "assistant" | "system";
-  content: string;
-  attachments?: Array<
-    | { kind: "image"; dataUrl: string }
-    | {
-        kind: "text_file";
-        name: string;
-        content: string;
-        fileType?: string | null;
-        size?: number | null;
-      }
-    | {
-        kind: "library_file";
-        libraryItemId: string;
-        name: string;
-        fileType?: string | null;
-        size?: number | null;
-        sourceProject?: string | null;
-      }
-  >;
-};
-
-type UserContext = {
-  name?: string;
-  pronouns?: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  extraFacts?: string;
-  customInstructions?: string;
-  mood?: string;
-  responseLength?: "short" | "medium" | "long";
-  language?: string;
-  rememberAcross?: boolean;
-  webSearch?: boolean;
-};
-
-type WebSearchResult = {
-  title?: string;
-  url?: string;
-  description?: string;
-  snippet?: string;
-  markdown?: string;
-  metadata?: {
-    title?: string;
-    sourceURL?: string;
-  };
-};
 
 const IMAGE_INTENT =
   /\b(generate|make|create|draw|design|render|paint|produce|give\s+me)\b[^.?!]{0,40}\b(image|picture|photo|photograph|illustration|logo|drawing|artwork|painting|render|wallpaper|icon)\b/i;
@@ -162,7 +136,8 @@ async function handleDeepResearchRequest(
   options: {
     signal?: AbortSignal;
     persistence?: NonNullable<Parameters<typeof runDeepResearch>[1]>["persistence"];
-  } = {},
+    logContext: SafeLogContext;
+  },
 ): Promise<Response> {
   const enc = new TextEncoder();
   const stream = new ReadableStream({
@@ -202,11 +177,15 @@ async function handleDeepResearchRequest(
           );
         }
         controller.enqueue(enc.encode(sseChunk(result.report)));
-      } catch (error) {
+      } catch {
         if (options.signal?.aborted) {
           controller.enqueue(enc.encode(sseChunk("_Deep Research was cancelled._")));
         } else {
-          console.error("[deep-research] failed", error);
+          logSafeFailure("error", "[chat] deep research failed", options.logContext, {
+            status: 502,
+            category: "provider",
+            code: "deep_research_failed",
+          });
           controller.enqueue(
             enc.encode(
               sseChunk(
@@ -221,11 +200,14 @@ async function handleDeepResearchRequest(
     },
   });
   return new Response(stream, {
-    headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+    },
   });
 }
 
-async function handleImageRequest(prompt: string): Promise<Response> {
+async function handleImageRequest(prompt: string, logContext: SafeLogContext): Promise<Response> {
   const stream = new ReadableStream({
     async start(controller) {
       const enc = new TextEncoder();
@@ -243,8 +225,12 @@ async function handleImageRequest(prompt: string): Promise<Response> {
 
         if (!upstream.ok) {
           const status = upstream.status;
-          const rawErr = await upstream.text().catch(() => "");
-          console.error("[handleImageRequest] upstream error", status, rawErr);
+          void upstream.body?.cancel().catch(() => undefined);
+          logSafeFailure("error", "[chat] image provider rejected request", logContext, {
+            status,
+            category: "provider",
+            code: "image_provider_http_error",
+          });
           const err =
             status === 429
               ? "Rate limit exceeded. Please wait a moment."
@@ -276,8 +262,12 @@ async function handleImageRequest(prompt: string): Promise<Response> {
             ),
           );
         }
-      } catch (e) {
-        console.error("[handleImageRequest] fetch error", e);
+      } catch {
+        logSafeFailure("error", "[chat] image provider request failed", logContext, {
+          status: 502,
+          category: "provider",
+          code: "image_provider_network_error",
+        });
         controller.enqueue(
           enc.encode(sseChunk("Sorry  -  image generation failed. Please try again.")),
         );
@@ -288,26 +278,11 @@ async function handleImageRequest(prompt: string): Promise<Response> {
   });
 
   return new Response(stream, {
-    headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+    },
   });
-}
-
-// In-memory per-IP rate limiter for anonymous /api/chat callers to prevent
-// scripted denial-of-wallet abuse against the paid LLM/search gateways.
-// Signed-in callers are gated by daily quota (enforceQuota) further below.
-const ANON_RATE_MAX = 60;
-const ANON_RATE_WINDOW_MS = 60 * 60 * 1000; // 60 requests / hour / IP
-const anonRateBuckets = new Map<string, { count: number; resetAt: number }>();
-function anonRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const b = anonRateBuckets.get(ip);
-  if (!b || b.resetAt < now) {
-    anonRateBuckets.set(ip, { count: 1, resetAt: now + ANON_RATE_WINDOW_MS });
-    return false;
-  }
-  if (b.count >= ANON_RATE_MAX) return true;
-  b.count += 1;
-  return false;
 }
 
 export const Route = createFileRoute("/api/chat")({
@@ -316,10 +291,13 @@ export const Route = createFileRoute("/api/chat")({
       POST: async ({ request }) => {
         const requestId = newRequestId();
         const startedAt = Date.now();
+        const logContext: SafeLogContext = { requestId, startedAt };
         const withRequestId = (res: Response): Response => {
           try {
             const h = new Headers(res.headers);
             if (!h.has("X-Request-Id")) h.set("X-Request-Id", requestId);
+            h.set("Cache-Control", "no-store");
+            h.delete("Content-Length");
             const ct = h.get("Content-Type") ?? "";
             // Enrich JSON error bodies with requestId + category envelope.
             if (res.status >= 400 && ct.includes("application/json") && res.body) {
@@ -355,38 +333,34 @@ export const Route = createFileRoute("/api/chat")({
         };
         const run = async (): Promise<Response> => {
           try {
+            let ingress;
+            try {
+              ingress = await readChatRequest(request, CHAT_BODY_LIMIT_BYTES);
+            } catch (error) {
+              if (error instanceof ChatIngressError) {
+                return Response.json(toChatIngressErrorEnvelope(error, requestId), {
+                  status: error.status,
+                });
+              }
+              throw error;
+            }
+
             const auth = await optionalUser(request);
             if (auth instanceof Response) return auth;
 
             if (!auth) {
-              const ip =
-                request.headers.get("cf-connecting-ip") ??
-                request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-                "unknown";
-              if (anonRateLimited(ip)) {
+              const clientKey = resolveAnonymousClientKey(request.headers);
+              if (chatAnonymousRateLimiter.isLimited(clientKey)) {
                 return new Response(
-                  JSON.stringify({ error: "Too many requests. Sign in to continue." }),
-                  { status: 429, headers: { "Content-Type": "application/json" } },
+                  JSON.stringify({
+                    error: "Too many requests. Sign in to continue.",
+                  }),
+                  {
+                    status: 429,
+                    headers: { "Content-Type": "application/json" },
+                  },
                 );
               }
-            }
-
-            // Reject oversized request bodies before parsing JSON to avoid
-            // memory/cost amplification attacks against the AI gateway.
-            const MAX_BODY_BYTES = 8 * 1024 * 1024; // 8 MB total request body
-            const contentLength = Number(request.headers.get("content-length") ?? "0");
-            if (contentLength && contentLength > MAX_BODY_BYTES) {
-              return new Response(JSON.stringify({ error: "Request too large." }), {
-                status: 413,
-                headers: { "Content-Type": "application/json" },
-              });
-            }
-            const rawBody = await request.text();
-            if (rawBody.length > MAX_BODY_BYTES) {
-              return new Response(JSON.stringify({ error: "Request too large." }), {
-                status: 413,
-                headers: { "Content-Type": "application/json" },
-              });
             }
             const {
               messages,
@@ -399,145 +373,11 @@ export const Route = createFileRoute("/api/chat")({
               projectId,
               temporary,
               clientTool,
-            } = JSON.parse(rawBody) as {
-              messages: IncomingMessage[];
-              mode?: ModeId;
-              user?: UserContext;
-              timezone?: string;
-              locale?: string;
-              chatId?: string;
-              personality?: string;
-              projectId?: string;
-              temporary?: boolean;
-              clientTool?:
-                | "web_search"
-                | "deep_research"
-                | "image"
-                | "study"
-                | "data_analysis"
-                | "file_analysis"
-                | null;
-            };
-            const personalityBlock = (() => {
-              const p = sanitizeLong(personality, 500);
-              return p
-                ? `\n\n--- User personality preferences ---\n${p}\n--- End personality ---`
-                : "";
-            })();
-
-            // Hard caps on message volume and per-message size. Anonymous
-            // callers and signed-in callers both run through this; signed-in
-            // callers also have a daily quota enforced below.
-            const MAX_MESSAGES = 100;
-            const MAX_MESSAGE_CHARS = 32 * 1024; // 32 KB per text message
-            const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024;
+            } = ingress;
+            const personalityBlock = personality
+              ? `\n\n--- User personality preferences ---\n${personality}\n--- End personality ---`
+              : "";
             const MAX_TEXT_ATTACHMENT_CHARS = 256 * 1024;
-            if (!Array.isArray(messages) || messages.length === 0) {
-              return new Response(
-                JSON.stringify({ error: "messages must be a non-empty array." }),
-                { status: 400, headers: { "Content-Type": "application/json" } },
-              );
-            }
-            if (messages.length > MAX_MESSAGES) {
-              return new Response(
-                JSON.stringify({ error: `Too many messages (max ${MAX_MESSAGES}).` }),
-                { status: 413, headers: { "Content-Type": "application/json" } },
-              );
-            }
-            for (const m of messages) {
-              if (!m || typeof m !== "object" || !["user", "assistant"].includes(m.role)) {
-                return Response.json(
-                  { error: "Each message must have a valid user or assistant role." },
-                  { status: 400 },
-                );
-              }
-              if (typeof m.content !== "string") {
-                return Response.json(
-                  { error: "Each message must contain text content." },
-                  { status: 400 },
-                );
-              }
-              if (m.content.length > MAX_MESSAGE_CHARS) {
-                return new Response(
-                  JSON.stringify({ error: "A message exceeds the maximum allowed length." }),
-                  { status: 413, headers: { "Content-Type": "application/json" } },
-                );
-              }
-              if (m.attachments !== undefined && !Array.isArray(m.attachments)) {
-                return Response.json({ error: "attachments must be an array." }, { status: 400 });
-              }
-              if (m.attachments && m.attachments.length > 2) {
-                return Response.json(
-                  { error: "A message can include at most 2 attachments." },
-                  { status: 400 },
-                );
-              }
-              if (m.attachments) {
-                for (const a of m.attachments) {
-                  if (
-                    !a ||
-                    typeof a !== "object" ||
-                    !["image", "text_file", "library_file"].includes(a.kind)
-                  ) {
-                    return Response.json({ error: "Invalid attachment." }, { status: 400 });
-                  }
-                  if (a.kind === "library_file") {
-                    if (
-                      typeof a.libraryItemId !== "string" ||
-                      !/^[0-9a-f-]{36}$/i.test(a.libraryItemId) ||
-                      typeof a.name !== "string" ||
-                      a.name.length > 255
-                    ) {
-                      return Response.json(
-                        { error: "Invalid Library attachment metadata." },
-                        { status: 400 },
-                      );
-                    }
-                    continue;
-                  }
-                  if (a.kind === "text_file") {
-                    if (
-                      typeof a.name !== "string" ||
-                      a.name.length === 0 ||
-                      a.name.length > 255 ||
-                      typeof a.content !== "string" ||
-                      a.content.length === 0 ||
-                      a.content.length > MAX_TEXT_ATTACHMENT_CHARS ||
-                      (a.fileType != null &&
-                        (typeof a.fileType !== "string" ||
-                          a.fileType.length > 100 ||
-                          (!a.fileType.startsWith("text/") &&
-                            a.fileType !== "application/json"))) ||
-                      (a.size != null &&
-                        (typeof a.size !== "number" || a.size < 0 || a.size > 256 * 1024))
-                    ) {
-                      return Response.json(
-                        { error: "Invalid text file attachment." },
-                        { status: 400 },
-                      );
-                    }
-                    continue;
-                  }
-                  if (
-                    typeof a.dataUrl !== "string" ||
-                    !/^data:image\/(?:png|jpe?g|webp|gif);base64,/i.test(a.dataUrl)
-                  ) {
-                    return Response.json(
-                      { error: "Image attachments must use a supported image data URL." },
-                      { status: 400 },
-                    );
-                  }
-                  const encodedImage = a.dataUrl.slice(a.dataUrl.indexOf(",") + 1);
-                  const imageBytes = Math.floor((encodedImage.length * 3) / 4);
-                  if (imageBytes > MAX_ATTACHMENT_BYTES) {
-                    return new Response(
-                      JSON.stringify({ error: "An image attachment exceeds the 3 MB limit." }),
-                      { status: 413, headers: { "Content-Type": "application/json" } },
-                    );
-                  }
-                }
-              }
-            }
 
             const lastUser = [...messages].reverse().find((m) => m.role === "user");
             const currentAttachments = lastUser?.attachments ?? [];
@@ -600,7 +440,10 @@ export const Route = createFileRoute("/api/chat")({
                       error:
                         "Please verify your email address before generating images. Check your inbox for the confirmation link.",
                     }),
-                    { status: 403, headers: { "Content-Type": "application/json" } },
+                    {
+                      status: 403,
+                      headers: { "Content-Type": "application/json" },
+                    },
                   );
                 }
                 const maint = await assertFeatureEnabled(auth, "images");
@@ -609,7 +452,7 @@ export const Route = createFileRoute("/api/chat")({
                 const quota = await enforceQuota(auth, "images", imgLimit);
                 if (quota) return quota;
               }
-              return handleImageRequest(lastText);
+              return handleImageRequest(lastText, logContext);
             }
 
             // Anonymous chat is allowed; signed-in users get per-user daily quotas + maintenance check.
@@ -623,7 +466,11 @@ export const Route = createFileRoute("/api/chat")({
             // SECURITY: Server-side tier enforcement. Client-supplied `mode` is
             // only honored if the user's resolved tier permits it; anything
             // above their tier is silently downgraded to "auto". Owner bypasses.
-            const TIER_RANK: Record<"free" | "plus" | "pro", number> = { free: 0, plus: 1, pro: 2 };
+            const TIER_RANK: Record<"free" | "plus" | "pro", number> = {
+              free: 0,
+              plus: 1,
+              pro: 2,
+            };
             const requested = getMode(mode ?? "auto");
             const allowed = isOwner || TIER_RANK[requested.tier] <= TIER_RANK[callerTier];
             // Guests always receive the basic instant agent, even if a custom
@@ -643,7 +490,10 @@ export const Route = createFileRoute("/api/chat")({
                 JSON.stringify({
                   error: `Too many image attachments in this request (max ${MAX_ATTACHMENTS_PER_REQUEST}).`,
                 }),
-                { status: 429, headers: { "Content-Type": "application/json" } },
+                {
+                  status: 429,
+                  headers: { "Content-Type": "application/json" },
+                },
               );
             }
             // Server-side daily upload quota + maintenance flag. The
@@ -655,7 +505,10 @@ export const Route = createFileRoute("/api/chat")({
                     error:
                       "Please verify your email address before uploading files or photos. Check your inbox for the confirmation link.",
                   }),
-                  { status: 403, headers: { "Content-Type": "application/json" } },
+                  {
+                    status: 403,
+                    headers: { "Content-Type": "application/json" },
+                  },
                 );
               }
               const maint = await assertFeatureEnabled(auth, "uploads");
@@ -694,6 +547,7 @@ export const Route = createFileRoute("/api/chat")({
             if (clientTool === "deep_research" && lastText && !hasAttachments) {
               return handleDeepResearchRequest(lastText, {
                 signal: request.signal,
+                logContext,
                 persistence: auth
                   ? {
                       supabase:
@@ -733,7 +587,10 @@ export const Route = createFileRoute("/api/chat")({
                   if (msg.content) parts.push({ type: "text", text: msg.content });
                   for (const att of msg.attachments) {
                     if (att.kind === "image") {
-                      parts.push({ type: "image_url", image_url: { url: att.dataUrl } });
+                      parts.push({
+                        type: "image_url",
+                        image_url: { url: att.dataUrl },
+                      });
                     } else if (att.kind === "text_file") {
                       parts.push({
                         type: "text",
@@ -845,8 +702,12 @@ export const Route = createFileRoute("/api/chat")({
                     }),
                   );
                 }
-              } catch (e) {
-                console.warn("[chat] memory fetch failed", e);
+              } catch {
+                logSafeFailure("warn", "[chat] optional memory context unavailable", logContext, {
+                  status: 200,
+                  category: "optional_context",
+                  code: "memory_context_unavailable",
+                });
               }
             }
 
@@ -933,8 +794,12 @@ export const Route = createFileRoute("/api/chat")({
                       "\n--- END PROJECT CONTEXT ---";
                   }
                 }
-              } catch (e) {
-                console.warn("[chat] project context failed", (e as Error)?.message);
+              } catch {
+                logSafeFailure("warn", "[chat] optional project context unavailable", logContext, {
+                  status: 200,
+                  category: "optional_context",
+                  code: "project_context_unavailable",
+                });
               }
             }
 
@@ -1012,14 +877,22 @@ export const Route = createFileRoute("/api/chat")({
               content: string | null;
               tool_calls?: ToolCall[];
             };
-            type ToolResultMsg = { role: "tool"; tool_call_id: string; content: string };
+            type ToolResultMsg = {
+              role: "tool";
+              tool_call_id: string;
+              content: string;
+            };
             type ChatMsg =
               | { role: string; content: unknown; [k: string]: unknown }
               | AssistantMsg
               | ToolResultMsg;
 
             const workingMessages: ChatMsg[] = [...(body.messages as unknown as ChatMsg[])];
-            const activityEvents: Array<{ tool: string; label: string; args?: unknown }> = [];
+            const activityEvents: Array<{
+              tool: string;
+              label: string;
+              args?: unknown;
+            }> = [];
 
             if (enableTools) {
               const MAX_TOOL_HOPS = 8;
@@ -1051,7 +924,9 @@ export const Route = createFileRoute("/api/chat")({
                 const hopCtl = new AbortController();
                 const hopTimer = setTimeout(() => hopCtl.abort(), PER_HOP_TIMEOUT_MS);
                 const onReqAbort = () => hopCtl.abort();
-                request.signal?.addEventListener("abort", onReqAbort, { once: true });
+                request.signal?.addEventListener("abort", onReqAbort, {
+                  once: true,
+                });
                 let hopRes: Response;
                 try {
                   hopRes = await chatCompletions(
@@ -1064,12 +939,16 @@ export const Route = createFileRoute("/api/chat")({
                     },
                     { signal: hopCtl.signal },
                   );
-                } catch (e) {
+                } catch {
                   clearTimeout(hopTimer);
                   request.signal?.removeEventListener("abort", onReqAbort);
                   if (request.signal?.aborted) return new Response(null, { status: 499 });
                   hopFailed = true;
-                  console.warn("[chat] tool hop aborted/failed", (e as Error).message);
+                  logSafeFailure("warn", "[chat] tool hop failed", logContext, {
+                    status: 502,
+                    category: "provider",
+                    code: "tool_hop_failed",
+                  });
                   break;
                 }
                 clearTimeout(hopTimer);
@@ -1077,7 +956,12 @@ export const Route = createFileRoute("/api/chat")({
 
                 if (!hopRes.ok) {
                   hopFailed = true;
-                  console.warn("[chat] tool hop http", hopRes.status);
+                  void hopRes.body?.cancel().catch(() => undefined);
+                  logSafeFailure("warn", "[chat] tool hop rejected", logContext, {
+                    status: hopRes.status,
+                    category: "provider",
+                    code: "tool_hop_http_error",
+                  });
                   break;
                 }
                 const hopJson = (await hopRes.json()) as {
@@ -1142,7 +1026,11 @@ export const Route = createFileRoute("/api/chat")({
                 }
                 // Enforce total tool-call cap before executing this batch.
                 if (totalToolCalls + msg.tool_calls.length > MAX_TOOL_CALLS_TOTAL) {
-                  console.warn("[chat] max tool calls exceeded, breaking loop");
+                  logSafeFailure("warn", "[chat] tool budget reached", logContext, {
+                    status: 200,
+                    category: "policy",
+                    code: "tool_budget_reached",
+                  });
                   workingMessages.push({
                     role: "assistant",
                     content: msg.content ?? null,
@@ -1188,7 +1076,11 @@ export const Route = createFileRoute("/api/chat")({
                     const key = dedupKey(tc.function.name, parsedArgs);
                     const cached = dedupCache.get(key);
                     if (cached) {
-                      return { role: "tool", tool_call_id: tc.id, content: cached };
+                      return {
+                        role: "tool",
+                        tool_call_id: tc.id,
+                        content: cached,
+                      };
                     }
                     if (WRITE_TOOL_NAMES.has(tc.function.name)) {
                       try {
@@ -1211,13 +1103,13 @@ export const Route = createFileRoute("/api/chat")({
                         });
                         dedupCache.set(key, content);
                         return { role: "tool", tool_call_id: tc.id, content };
-                      } catch (e) {
+                      } catch {
                         return {
                           role: "tool",
                           tool_call_id: tc.id,
                           content: JSON.stringify({
                             error: "stage_failed",
-                            message: (e as Error).message,
+                            message: "Unable to prepare the requested action.",
                           }),
                         };
                       }
@@ -1227,13 +1119,13 @@ export const Route = createFileRoute("/api/chat")({
                       const content = JSON.stringify(out).slice(0, 24000);
                       dedupCache.set(key, content);
                       return { role: "tool", tool_call_id: tc.id, content };
-                    } catch (e) {
+                    } catch {
                       return {
                         role: "tool",
                         tool_call_id: tc.id,
                         content: JSON.stringify({
                           error: "tool_failed",
-                          message: (e as Error).message,
+                          message: "The connected service request failed.",
                         }),
                       };
                     }
@@ -1249,27 +1141,43 @@ export const Route = createFileRoute("/api/chat")({
               }
               // Stash pending confirms on the outer scope so the final
               // streaming branch can prepend them too.
-              (activityEvents as unknown as { __pending?: typeof pendingConfirms }).__pending =
-                pendingConfirms;
+              (
+                activityEvents as unknown as {
+                  __pending?: typeof pendingConfirms;
+                }
+              ).__pending = pendingConfirms;
             }
 
             // === FINAL STREAMING CALL =============================================
-            const finalBody = { ...body, messages: workingMessages, stream: true };
+            const finalBody = {
+              ...body,
+              messages: workingMessages,
+              stream: true,
+            };
             const activityCount = activityEvents.length;
             const pendingCount =
               (activityEvents as unknown as { __pending?: unknown[] }).__pending?.length ?? 0;
             const hasStreamedActivity = activityCount > 0 || pendingCount > 0;
             let upstream: Response;
             try {
-              upstream = await chatCompletions(finalBody, { signal: request.signal });
-            } catch (e) {
+              upstream = await chatCompletions(finalBody, {
+                signal: request.signal,
+              });
+            } catch {
               if (request.signal?.aborted) return new Response(null, { status: 499 });
-              console.error("[chat] final call network error", e);
+              logSafeFailure("error", "[chat] final provider request failed", logContext, {
+                status: 502,
+                category: "provider",
+                code: "final_provider_network_error",
+              });
               return new Response(
                 JSON.stringify({
                   error: "AI service is temporarily unavailable. Please try again.",
                 }),
-                { status: 502, headers: { "Content-Type": "application/json" } },
+                {
+                  status: 502,
+                  headers: { "Content-Type": "application/json" },
+                },
               );
             }
 
@@ -1281,8 +1189,12 @@ export const Route = createFileRoute("/api/chat")({
                     ? "Image provider quota exhausted."
                     : "AI service is temporarily unavailable. Please try again.";
               const status = upstream.status === 429 ? 429 : upstream.status === 402 ? 402 : 502;
-              const txt = upstream.ok ? "" : await upstream.text().catch(() => "");
-              if (!upstream.ok) console.error("[chat] upstream error", upstream.status, txt);
+              void upstream.body?.cancel().catch(() => undefined);
+              logSafeFailure("error", "[chat] final provider rejected request", logContext, {
+                status: upstream.status,
+                category: "provider",
+                code: "final_provider_http_error",
+              });
               // If we already committed to SSE (activities/confirms staged),
               // deliver the error inside the stream so the client renders it
               // instead of hanging.
@@ -1332,7 +1244,10 @@ export const Route = createFileRoute("/api/chat")({
                   },
                 });
                 return new Response(stream, {
-                  headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
+                  headers: {
+                    "Content-Type": "text/event-stream",
+                    "Cache-Control": "no-cache",
+                  },
                 });
               }
               return new Response(JSON.stringify({ error: errMsg }), {
@@ -1371,7 +1286,9 @@ export const Route = createFileRoute("/api/chat")({
                       /* noop */
                     }
                   };
-                  request.signal?.addEventListener("abort", onAbort, { once: true });
+                  request.signal?.addEventListener("abort", onAbort, {
+                    once: true,
+                  });
                   for (const a of activityEvents) {
                     controller.enqueue(
                       enc.encode(
@@ -1416,22 +1333,27 @@ export const Route = createFileRoute("/api/chat")({
               });
 
               return new Response(stream, {
-                headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
+                headers: {
+                  "Content-Type": "text/event-stream",
+                  "Cache-Control": "no-cache",
+                },
               });
             }
 
             return new Response(upstream.body, {
-              headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
+              headers: {
+                "Content-Type": "text/event-stream",
+                "Cache-Control": "no-cache",
+              },
             });
           } catch (e) {
             const providerError = mapProviderError(e);
             const status = providerError.status;
             const envelope = buildErrorEnvelope(providerError, requestId, status);
-            console.error("[chat] handler error", {
-              requestId,
-              category: envelope.category,
-              durationMs: Date.now() - startedAt,
-              error: e instanceof Error ? { name: e.name, message: e.message, stack: e.stack } : e,
+            logSafeFailure("error", "[chat] handler failed", logContext, {
+              status,
+              category: "server",
+              code: "unhandled_chat_error",
             });
             return new Response(JSON.stringify(envelope), {
               status,

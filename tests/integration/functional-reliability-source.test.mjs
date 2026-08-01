@@ -9,12 +9,15 @@ const home = await readFile("src/routes/index.tsx", "utf8");
 const shares = await readFile("src/lib/shared-chats.functions.ts", "utf8");
 const settings = await readFile("src/components/SettingsDialog.tsx", "utf8");
 const apiAuth = await readFile("src/lib/api-auth.server.ts", "utf8");
+const authSecurity = await readFile("src/lib/auth-security.mjs", "utf8");
 
 test("anonymous protected requests fail as unauthorized before auth configuration is consulted", () => {
   const headerCheck = apiAuth.indexOf('request.headers.get("authorization")');
   const envCheck = apiAuth.indexOf("process.env.SUPABASE_URL");
   assert.ok(headerCheck > -1 && envCheck > -1 && headerCheck < envCheck);
-  assert.match(apiAuth, /if \(!header\.toLowerCase\(\)\.startsWith\("bearer "\)\) return null/);
+  assert.match(apiAuth, /parseBearerToken\(header\)/);
+  assert.match(authSecurity, /export function parseBearerToken/);
+  assert.match(authSecurity, /const match = \/\^Bearer/);
 });
 
 test("title generation rejects malformed and unbounded message payloads", () => {

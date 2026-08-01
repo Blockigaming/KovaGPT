@@ -38,7 +38,12 @@ test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
   assert.match(route, /<ResponsiveModelSelector[\s\S]{0,240}placement="topbar"/);
   assert.match(mobileTopBar, /<ResponsiveModelSelector[\s\S]{0,240}placement="topbar"/);
   assert.match(modelSelector, /placement\?: "composer" \| "topbar"/);
-  assert.match(responsiveSelector, /placement=\{placement\}/);
+  assert.match(responsiveSelector, /placement\?: "composer" \| "topbar"/);
+  assert.equal((responsiveSelector.match(/data-testid="model-selector-trigger"/g) ?? []).length, 1);
+  assert.match(responsiveSelector, /const useSheet = !isDesktop \|\| interaction === "touch"/);
+  assert.match(responsiveSelector, /<MobileBottomSheet/);
+  assert.match(responsiveSelector, /role="dialog"\s+aria-label="Choose model"/);
+  assert.doesNotMatch(responsiveSelector, /return\s*\(\s*<ModelSelector/);
 });
 
 test("composer actions, message editing, and markdown stay reachable and lossless", () => {
@@ -65,7 +70,9 @@ test("sending snapshots history and serializes automatic retries", () => {
   const optimisticUpdate = route.indexOf("setConversations((prev) => {", snapshot);
   assert.ok(snapshot >= 0 && optimisticUpdate > snapshot);
   assert.match(route, /\|\| inFlightRef\.current\) return;/);
-  assert.match(route, /const payloadMessages = \[\.\.\.priorMessages, userMsg\]/);
+  assert.match(route, /const payloadMessages = \[\s*\.\.\.priorMessages\.map/);
+  assert.match(route, /attachments: userMsg\.attachments/);
+  assert.doesNotMatch(route, /\[\.\.\.priorMessages, userMsg\]\.map/);
   assert.match(route, /inFlightRef\.current = true;/);
   assert.match(route, /inFlightRef\.current = false;/);
   assert.match(route, /retryTimerRef\.current = window\.setTimeout/);

@@ -221,7 +221,7 @@ export function selectModelForCapabilities(
   if (!cfg.configured) {
     throw new KovaProviderError(
       "PROVIDER_NOT_CONFIGURED",
-      "AI provider is not configured for this feature.",
+      "KovaGPT is temporarily unavailable. Please try again later.",
       { status: 503 },
     );
   }
@@ -240,7 +240,7 @@ export function selectModelForCapabilities(
   if (!fallback) {
     throw new KovaProviderError(
       "CAPABILITY_UNSUPPORTED",
-      `No configured model supports ${requiredCapabilities.join(", ")}.`,
+      "This KovaGPT capability is unavailable.",
       {
         status: 501,
         capability: requiredCapabilities[0],
@@ -287,22 +287,51 @@ export function selectModelForMode(
 
 export function mapProviderError(error: unknown): KovaProviderError {
   if (error instanceof KovaProviderError) return error;
-  if (error instanceof DOMException && error.name === "AbortError") {
-    return new KovaProviderError("PROVIDER_TIMEOUT", "The provider timed out. Please retry.", {
-      status: 504,
-      retryable: true,
+  if (
+    error instanceof Error &&
+    error.name === "AiProviderError" &&
+    "code" in error &&
+    "status" in error &&
+    "retryable" in error
+  ) {
+    const source = error as Error & {
+      code: string;
+      status: number;
+      retryable: boolean;
+    };
+    const code: ProviderErrorCode =
+      source.code === "provider_timeout"
+        ? "PROVIDER_TIMEOUT"
+        : source.code === "provider_rate_limited"
+          ? "PROVIDER_RATE_LIMIT"
+          : source.code === "provider_bad_response"
+            ? "INVALID_PROVIDER_RESPONSE"
+            : "PROVIDER_UNAVAILABLE";
+    return new KovaProviderError(code, source.message, {
+      status: source.status,
+      retryable: source.retryable,
     });
+  }
+  if (error instanceof DOMException && error.name === "AbortError") {
+    return new KovaProviderError(
+      "PROVIDER_TIMEOUT",
+      "KovaGPT took too long to respond. Please try again.",
+      {
+        status: 504,
+        retryable: true,
+      },
+    );
   }
   if (error instanceof Error && /rate/i.test(error.message)) {
     return new KovaProviderError(
       "PROVIDER_RATE_LIMIT",
-      "The provider is rate limited. Please retry shortly.",
+      "KovaGPT is busy right now. Please try again shortly.",
       { status: 429, retryable: true },
     );
   }
   return new KovaProviderError(
     "PROVIDER_UNAVAILABLE",
-    "The provider is temporarily unavailable. Please retry.",
+    "KovaGPT is temporarily unavailable. Please try again later.",
     { status: 502, retryable: true },
   );
 }

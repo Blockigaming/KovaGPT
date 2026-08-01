@@ -102,6 +102,20 @@ function fuzzyScore(candidate: string, query: string) {
   return 10;
 }
 
+function resolveReturnFocusTarget(target: HTMLElement | null): HTMLElement | null {
+  if (target?.isConnected) return target;
+  const candidates = document.querySelectorAll<HTMLElement>(
+    '[data-testid="model-selector-trigger"], button[aria-label="Open menu"], button[aria-label="Search chats"]',
+  );
+  return (
+    Array.from(candidates).find((candidate) => {
+      const rect = candidate.getBoundingClientRect();
+      const style = window.getComputedStyle(candidate);
+      return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden";
+    }) ?? null
+  );
+}
+
 export function CommandPalette({
   open,
   query,
@@ -150,9 +164,12 @@ export function CommandPalette({
     window.requestAnimationFrame(() => searchInputRef.current?.focus());
 
     return () => {
-      if (!shouldRestoreFocusRef.current || !returnTarget?.isConnected) return;
+      if (!shouldRestoreFocusRef.current) return;
       const restoreFocus = () => {
-        if (returnTarget.isConnected) returnTarget.focus({ preventScroll: true });
+        const target = resolveReturnFocusTarget(returnTarget);
+        if (target && document.activeElement !== target) {
+          target.focus({ preventScroll: true });
+        }
       };
       restoreFocus();
       window.requestAnimationFrame(restoreFocus);
@@ -200,11 +217,12 @@ export function CommandPalette({
     const returnTarget = returnFocusRef.current;
     const shouldRestore = shouldRestoreFocusRef.current;
     onClose();
-    if (!shouldRestore || !returnTarget?.isConnected) return;
+    if (!shouldRestore) return;
 
     const restoreFocus = () => {
-      if (returnTarget.isConnected && document.activeElement !== returnTarget) {
-        returnTarget.focus({ preventScroll: true });
+      const target = resolveReturnFocusTarget(returnTarget);
+      if (target && document.activeElement !== target) {
+        target.focus({ preventScroll: true });
       }
     };
     queueMicrotask(restoreFocus);
