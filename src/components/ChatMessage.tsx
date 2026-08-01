@@ -263,7 +263,6 @@ function ChatMessageInner({
 
   const saveFn = useServerFn(saveToLibrary);
 
-
   const artifactKind = useMemo(
     () => (isUser ? null : detectArtifactKind(message.content || "")),
     [isUser, message.content],
