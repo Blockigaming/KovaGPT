@@ -94,8 +94,11 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
     const action = page.getByRole("button", { name: "Copy", exact: true });
     const box = await action.boundingBox();
     expect(box).not.toBeNull();
-    expect(box!.width).toBeGreaterThanOrEqual(44);
-    expect(box!.height).toBeGreaterThanOrEqual(44);
+    // Chromium can report an exact 44 CSS-pixel target a few millionths below 44
+    // after device-scale rounding. Keep the WCAG target while tolerating only that noise.
+    const subpixelTolerance = 0.01;
+    expect(box!.width + subpixelTolerance).toBeGreaterThanOrEqual(44);
+    expect(box!.height + subpixelTolerance).toBeGreaterThanOrEqual(44);
     await page.getByRole("button", { name: "Open menu" }).click();
   }
   await expect(page.locator(".kova-chat-row")).toBeVisible();
