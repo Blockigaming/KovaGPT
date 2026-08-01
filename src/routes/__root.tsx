@@ -15,8 +15,47 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings } from "@/lib/use-nova-settings";
 import { isPublicIndexableRoute, robotsDirectiveForRoute } from "@/lib/seo-policy.mjs";
-import { useEffect, useLayoutEffect } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { PlatformRuntime } from "@/components/PlatformRuntime";
+
+const HYDRATION_READY_EVENT = "kova:hydrated";
+const EARLY_SHORTCUT_BOOTSTRAP = `(() => {
+  const pendingShortcuts = [];
+  const captureShortcut = (event) => {
+    const key = event.key.toLowerCase();
+    if (
+      event.defaultPrevented ||
+      event.repeat ||
+      event.isComposing ||
+      event.altKey ||
+      (!event.metaKey && !event.ctrlKey) ||
+      (key !== "k" && !(event.shiftKey && key === "o"))
+    ) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    pendingShortcuts.push({
+      key: event.key,
+      code: event.code,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      shiftKey: event.shiftKey,
+    });
+    if (pendingShortcuts.length > 4) pendingShortcuts.shift();
+  };
+  const replayShortcuts = () => {
+    window.removeEventListener("keydown", captureShortcut, true);
+    for (const shortcut of pendingShortcuts) {
+      window.dispatchEvent(new KeyboardEvent("keydown", {
+        ...shortcut,
+        bubbles: true,
+        cancelable: true,
+      }));
+    }
+    pendingShortcuts.length = 0;
+  };
+  window.addEventListener("keydown", captureShortcut, true);
+  window.addEventListener("${HYDRATION_READY_EVENT}", replayShortcuts, { once: true });
+})();`;
 
 type SeoMatch = {
   pathname: string;
@@ -189,15 +228,41 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning data-kova-hydration="pending" aria-busy="true">
       <head>
         <HeadContent />
       </head>
       <body>
-        {children}
+        <script dangerouslySetInnerHTML={{ __html: EARLY_SHORTCUT_BOOTSTRAP }} />
+        <HydrationInteractionGuard>{children}</HydrationInteractionGuard>
         <Scripts />
       </body>
     </html>
+  );
+}
+
+function HydrationInteractionGuard({ children }: { children: React.ReactNode }) {
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    document.documentElement.dataset.kovaHydration = "ready";
+    document.documentElement.removeAttribute("aria-busy");
+    window.dispatchEvent(new Event(HYDRATION_READY_EVENT));
+  }, [hydrated]);
+
+  return (
+    <fieldset
+      disabled={!hydrated}
+      data-kova-interaction-guard={hydrated ? "ready" : "pending"}
+      style={{ display: "contents" }}
+    >
+      {children}
+    </fieldset>
   );
 }
 
