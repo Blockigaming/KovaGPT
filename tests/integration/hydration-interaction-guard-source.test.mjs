@@ -3,7 +3,8 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
-const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
+const read = (path) =>
+  readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
 test("the server shell keeps native controls disabled until hydration is complete", async () => {
   const source = await read("src/routes/__root.tsx");
@@ -11,14 +12,26 @@ test("the server shell keeps native controls disabled until hydration is complet
   assert.match(source, /data-kova-hydration="pending"/);
   assert.match(source, /aria-busy="true"/);
   assert.match(source, /<fieldset\s+[\s\S]*?disabled=\{!hydrated\}/);
-  assert.match(source, /data-kova-interaction-guard=\{hydrated \? "ready" : "pending"\}/);
-  assert.match(source, /style=\{\{ display: "contents" \}\}/);
-  assert.match(source, /document\.documentElement\.dataset\.kovaHydration = "ready"/);
-  assert.match(source, /document\.documentElement\.removeAttribute\("aria-busy"\)/);
-  assert.match(source, /window\.dispatchEvent\(new Event\(HYDRATION_READY_EVENT\)\)/);
+  assert.match(
+    source,
+    /data-kova-interaction-guard=\{hydrated \? "ready" : "pending"\}/,
+  );
+  assert.match(source, /className="contents"/);
+  assert.match(
+    source,
+    /document\.documentElement\.dataset\.kovaHydration = "ready"/,
+  );
+  assert.match(
+    source,
+    /document\.documentElement\.removeAttribute\("aria-busy"\)/,
+  );
+  assert.match(
+    source,
+    /window\.dispatchEvent\(new Event\(HYDRATION_READY_EVENT\)\)/,
+  );
 
   const bootstrapIndex = source.indexOf(
-    "<script dangerouslySetInnerHTML={{ __html: EARLY_SHORTCUT_BOOTSTRAP }} />",
+    "<ScriptOnce>{EARLY_SHORTCUT_BOOTSTRAP}</ScriptOnce>",
   );
   const guardIndex = source.indexOf("<HydrationInteractionGuard>{children}");
   const clientScriptsIndex = source.indexOf("<Scripts />", guardIndex);
@@ -30,7 +43,10 @@ test("the early bootstrap replays both global shortcuts after hydration", async 
   const source = await read("src/routes/__root.tsx");
   const match = source.match(/const EARLY_SHORTCUT_BOOTSTRAP = `([\s\S]*?)`;/);
   assert.ok(match?.[1], "expected the inline hydration bootstrap");
-  const bootstrap = match[1].replace("${HYDRATION_READY_EVENT}", "kova:hydrated");
+  const bootstrap = match[1].replace(
+    "${HYDRATION_READY_EVENT}",
+    "kova:hydrated",
+  );
   const listeners = new Map();
   const addEventListener = (type, listener, options) => {
     const registered = listeners.get(type) ?? [];
@@ -40,7 +56,9 @@ test("the early bootstrap replays both global shortcuts after hydration", async 
   const removeEventListener = (type, listener) => {
     listeners.set(
       type,
-      (listeners.get(type) ?? []).filter((registered) => registered.listener !== listener),
+      (listeners.get(type) ?? []).filter(
+        (registered) => registered.listener !== listener,
+      ),
     );
   };
   const dispatchEvent = (event) => {
@@ -125,20 +143,37 @@ test("the affected browser specs wait for readiness and assert principal-scoped 
     "tests/e2e/desktop-polish.spec.ts",
     "tests/e2e/high-impact-chat.spec.ts",
   ];
-  const [helper, ...specs] = await Promise.all([
+  const [helper, guardSpec, ...specs] = await Promise.all([
     read("tests/e2e/hydration.ts"),
+    read("tests/e2e/hydration-interaction-guard.spec.ts"),
     ...paths.map(read),
   ]);
 
-  assert.match(helper, /toHaveAttribute\("data-kova-hydration", "ready"\)/);
+  assert.match(
+    helper,
+    /toHaveAttribute\(\s*"data-kova-hydration"\s*,\s*"ready"\s*,\s*\{/s,
+  );
+  assert.match(helper, /timeout: 30_000/);
+  assert.match(guardSpec, /resourceType\(\) === "script"/);
+  assert.match(guardSpec, /"data-kova-hydration"\s*,\s*"pending"/s);
+  assert.match(guardSpec, /toBeDisabled\(\)/);
+  assert.match(guardSpec, /toBeEnabled\(\)/);
+  assert.match(guardSpec, /toEqual\(\["k", "o"\]\)/);
   for (let index = 0; index < specs.length; index += 1) {
     const gotoCount = specs[index].match(/await page\.goto\(/g)?.length ?? 0;
-    const waitCount = specs[index].match(/await waitForKovaHydration\(page\)/g)?.length ?? 0;
+    const waitCount =
+      specs[index].match(/await waitForKovaHydration\(page\)/g)?.length ?? 0;
     assert.equal(waitCount, gotoCount, paths[index]);
   }
 
   const highImpact = specs.at(-1);
-  assert.match(highImpact, /legacy: localStorage\.getItem\("kovagpt:archived"\)/);
-  assert.match(highImpact, /guest: localStorage\.getItem\("kovagpt:archived:v2:guest"\)/);
+  assert.match(
+    highImpact,
+    /legacy: localStorage\.getItem\("kovagpt:archived"\)/,
+  );
+  assert.match(
+    highImpact,
+    /guest: localStorage\.getItem\("kovagpt:archived:v2:guest"\)/,
+  );
   assert.match(highImpact, /toEqual\(\{ legacy: null, guest: "\[\]" \}\)/);
 });
