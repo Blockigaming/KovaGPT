@@ -66,7 +66,7 @@ function ErrorComponent({ reset }: { error: Error; reset: () => void }) {
         aria-labelledby="route-error-title"
       >
         <h1 id="route-error-title" className="text-xl font-semibold text-foreground">
-          This page didn't load
+          KovaGPT couldn't load this page
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Something went wrong while loading this page. Retry or return home. If the problem keeps
