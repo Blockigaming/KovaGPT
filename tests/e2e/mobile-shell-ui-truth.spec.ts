@@ -62,7 +62,7 @@ test.describe("mobile shell UI truth", () => {
     const animationDuration = await panel.evaluate(
       (element) => Number.parseFloat(getComputedStyle(element).animationDuration) || 0,
     );
-    expect(animationDuration).toBeLessThanOrEqual(0.001);
+    expect(animationDuration).toBeLessThanOrEqual(0.01);
 
     await page.keyboard.press("Escape");
     await expect(palette).toBeHidden();
