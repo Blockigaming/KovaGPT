@@ -10,9 +10,11 @@ import {
 import { chatCompletions, chatModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
 import {
   assertDatabaseSuccess,
+  BodyReadError,
   MEMORY_LIMITS as REQUEST_LIMITS,
   parseMemoryPayload,
   persistMemorySafely,
+  readUtf8BodyBounded,
 } from "@/lib/endpoint-reliability.mjs";
 
 const MEMORY_LIMITS = {
@@ -125,11 +127,18 @@ export const Route = createFileRoute("/api/memory")({
         const authorized = await authorizePaidMemory(caller);
         if (authorized instanceof Response) return authorized;
 
-        const contentLength = Number(request.headers.get("content-length") ?? "0");
-        if (!Number.isFinite(contentLength) || contentLength > REQUEST_LIMITS.maxBodyBytes) {
-          return jsonError("Request too large.", 413);
+        let raw: string;
+        try {
+          raw = await readUtf8BodyBounded(request, REQUEST_LIMITS.maxBodyBytes);
+        } catch (error) {
+          if (error instanceof BodyReadError) {
+            const message = error.status === 413 ? "Request too large." : "Invalid request body.";
+            return jsonError(message, error.status);
+          }
+          console.error("[memory] body read failed", error);
+          return jsonError("Invalid request body.", 400);
         }
-        const parsed = parseMemoryPayload(await request.text());
+        const parsed = parseMemoryPayload(raw);
         if (!parsed.ok) return jsonError(parsed.error, parsed.status);
 
         const missingProvider = missingAiProviderResponse();
