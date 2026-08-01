@@ -253,13 +253,11 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     });
     providerRevoked = response.ok;
   }
-  const { error: deletionRequestError } = await db
-    .from("integration_deletion_requests")
-    .insert({
-      owner_id: ownerId,
-      linked_account_id: account.id,
-      status: providerRevoked ? "provider_revoked" : "pending",
-    });
+  const { error: deletionRequestError } = await db.from("integration_deletion_requests").insert({
+    owner_id: ownerId,
+    linked_account_id: account.id,
+    status: providerRevoked ? "provider_revoked" : "pending",
+  });
   if (deletionRequestError) throw new Error("linked_account_deletion_request_failed");
 
   const { error: syncCancellationError } = await db
