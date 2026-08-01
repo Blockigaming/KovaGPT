@@ -246,7 +246,7 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     .in("status", ["queued", "leased", "running", "retry_wait"]);
   if (syncCancellationError) throw new Error("linked_account_sync_cancellation_failed");
 
-  const { error: credentialDeletionError } = await db
+  const { data: purgedAccount, error: credentialDeletionError } = await db
     .from("integration_linked_accounts")
     .update({
       status: "revoked",
@@ -255,8 +255,10 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
       deleted_at: new Date().toISOString(),
     })
     .eq("id", account.id)
-    .eq("owner_id", ownerId);
-  if (credentialDeletionError) throw new Error("linked_account_credential_deletion_failed");
+    .eq("owner_id", ownerId)
+    .select("id")
+    .maybeSingle();
+  if (credentialDeletionError || !purgedAccount) throw new Error("linked_account_purge_failed");
 
   const { error: auditError } = await db.from("integration_audit_events").insert({
     owner_id: ownerId,
