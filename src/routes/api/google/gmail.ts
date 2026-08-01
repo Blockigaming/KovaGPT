@@ -1,10 +1,7 @@
 // Read-only Gmail access for the signed-in user.
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
-import {
-  BoundedJsonError,
-  readBoundedJsonObject,
-} from "@/lib/bounded-json.server.mjs";
+import { BoundedJsonError, readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
 import { getValidGoogleAccessToken, logAudit } from "@/lib/google-oauth.server";
 import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
 
@@ -28,9 +25,7 @@ type GmailMessage = {
 function decodeBody(data: string | undefined): string {
   if (!data) return "";
   try {
-    return decodeURIComponent(
-      escape(atob(data.replace(/-/g, "+").replace(/_/g, "/"))),
-    );
+    return decodeURIComponent(escape(atob(data.replace(/-/g, "+").replace(/_/g, "/"))));
   } catch {
     return "";
   }
@@ -63,23 +58,16 @@ export const Route = createFileRoute("/api/google/gmail")({
           body = await readBoundedJsonObject(request, 64 * 1024);
         } catch (error) {
           if (error instanceof BoundedJsonError) {
-            return Response.json(
-              { error: error.code },
-              { status: error.status },
-            );
+            return Response.json({ error: error.code }, { status: error.status });
           }
-          return Response.json(
-            { error: "invalid_request_body" },
-            { status: 400 },
-          );
+          return Response.json({ error: "invalid_request_body" }, { status: 400 });
         }
         const action = body?.action as string;
         if (!new Set(["search", "read"]).has(action)) {
           return Response.json(
             {
               error: "confirmation_required",
-              message:
-                "Prepare Gmail drafts from chat and confirm the action there.",
+              message: "Prepare Gmail drafts from chat and confirm the action there.",
             },
             { status: 409 },
           );
@@ -88,10 +76,7 @@ export const Route = createFileRoute("/api/google/gmail")({
         try {
           token = await getValidGoogleAccessToken(auth.userId);
         } catch {
-          return Response.json(
-            { error: "google_not_connected" },
-            { status: 400 },
-          );
+          return Response.json({ error: "google_not_connected" }, { status: 400 });
         }
         const H = { Authorization: `Bearer ${token}` };
 
@@ -107,9 +92,7 @@ export const Route = createFileRoute("/api/google/gmail")({
             const list = (await listRes.json()) as {
               messages?: { id?: string }[];
             };
-            const ids: string[] = (list.messages ?? []).map((m) =>
-              String(m.id ?? ""),
-            );
+            const ids: string[] = (list.messages ?? []).map((m) => String(m.id ?? ""));
             const messages = await Promise.all(
               ids.map(async (id) => {
                 const r = await fetch(
@@ -142,8 +125,7 @@ export const Route = createFileRoute("/api/google/gmail")({
 
           if (action === "read") {
             const id = String(body.id ?? "");
-            if (!id)
-              return Response.json({ error: "missing_id" }, { status: 400 });
+            if (!id) return Response.json({ error: "missing_id" }, { status: 400 });
             const r = await fetch(`${GMAIL}/messages/${id}?format=full`, {
               headers: H,
             });
