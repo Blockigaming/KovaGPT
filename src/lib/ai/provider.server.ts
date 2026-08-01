@@ -35,7 +35,7 @@ export type ProviderErrorEnvelope = {
 export type ProviderModelKind = "fast" | "balanced" | "deep";
 
 export type ProviderConfig = {
-  provider: "lovable" | "openai";
+  provider: "openai";
   baseUrl: string;
   chatModel: string;
   fastModel: string;
@@ -47,14 +47,7 @@ export type ProviderConfig = {
   configured: boolean;
 };
 
-const LOVABLE_MODELS = {
-    chat: "google/gemini-3.1-flash-lite",
-    fast: "google/gemini-3.1-flash-lite",
-    deep: "google/gemini-3.6-flash",
-    image: "google/gemini-3.1-flash-lite-image",
-    embedding: "openai/text-embedding-3-small",
-  },
-  OPENAI_MODELS = {
+const OPENAI_MODELS = {
     chat: "gpt-4o-mini",
     fast: "gpt-4o-mini",
     deep: "gpt-4o",
@@ -119,24 +112,15 @@ function parseCapabilities(value: string | undefined): ProviderCapability[] {
   return configured.length ? Array.from(new Set(configured)) : DEFAULT_CAPABILITIES;
 }
 
-function shouldUseLovableGateway() {
-  return Boolean(env("LOVABLE_API_KEY"));
-}
-
-function baseUrl(lovable: boolean) {
-  return (
-    lovable
-      ? (env("LOVABLE_AI_BASE_URL") ?? "https://ai.gateway.lovable.dev/v1")
-      : (env("OPENAI_BASE_URL") ?? "https://api.openai.com/v1")
-  ).replace(/\/$/, "");
+function baseUrl() {
+  return (env("OPENAI_BASE_URL") ?? "https://api.openai.com/v1").replace(/\/$/, "");
 }
 
 export function getAiProviderConfig(): ProviderConfig {
-  const lovable = shouldUseLovableGateway(),
-    defaults = lovable ? LOVABLE_MODELS : OPENAI_MODELS;
+  const defaults = OPENAI_MODELS;
   return {
-    provider: lovable ? "lovable" : "openai",
-    baseUrl: baseUrl(lovable),
+    provider: "openai",
+    baseUrl: baseUrl(),
     chatModel: env("KOVA_CHAT_MODEL") ?? defaults.chat,
     fastModel: env("KOVA_FAST_MODEL") ?? defaults.fast,
     deepModel: env("KOVA_DEEP_MODEL") ?? defaults.deep,
@@ -144,14 +128,14 @@ export function getAiProviderConfig(): ProviderConfig {
     embeddingModel: env("KOVA_EMBEDDING_MODEL") ?? defaults.embedding,
     timeoutMs: parseTimeout(env("KOVA_AI_TIMEOUT_MS")),
     capabilities: parseCapabilities(env("KOVA_AI_CAPABILITIES")),
-    configured: Boolean(env("LOVABLE_API_KEY") || env("OPENAI_API_KEY")),
+    configured: Boolean(env("OPENAI_API_KEY")),
   };
 }
 
 export function validateAiProviderConfig(): ProviderErrorEnvelope | null {
-  if (env("LOVABLE_API_KEY") || env("OPENAI_API_KEY")) return null;
+  if (env("OPENAI_API_KEY")) return null;
   return {
-    error: "AI provider is not configured. Set LOVABLE_API_KEY or OPENAI_API_KEY on the server.",
+    error: "AI provider is not configured. Set OPENAI_API_KEY on the server.",
     code: "missing_openai_api_key",
     retryable: false,
     // A missing deployment dependency is a temporary service-availability
@@ -197,8 +181,6 @@ export function missingAiProviderResponse(fallback?: JsonObject): Response | nul
 }
 
 function headers(): Record<string, string> {
-  const lovableKey = env("LOVABLE_API_KEY");
-  if (lovableKey) return { "Lovable-API-Key": lovableKey, "Content-Type": "application/json" };
   const openAiKey = env("OPENAI_API_KEY");
   if (!openAiKey) throw new AiProviderError(validateAiProviderConfig()!);
   return { Authorization: `Bearer ${openAiKey}`, "Content-Type": "application/json" };
