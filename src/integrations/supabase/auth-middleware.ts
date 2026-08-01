@@ -3,6 +3,10 @@ import { createMiddleware } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
+import {
+  evaluateAuthenticatedUser,
+  parseBearerToken,
+} from "@/lib/auth-security.mjs";
 
 function failAuthentication(status: number, error: string): never {
   throw Response.json(
@@ -14,29 +18,35 @@ function failAuthentication(status: number, error: string): never {
   );
 }
 
-export const requireSupabaseAuth = createMiddleware({ type: "function" }).server(
-  async ({ next }) => {
-    // Reject anonymous and malformed credentials before reading deployment
-    // configuration. Public signed-out pages must not disclose configuration
-    // state or turn an ordinary 401 into a noisy 500 when auth is unavailable.
-    const request = getRequest();
-    if (!request?.headers) failAuthentication(401, "Unauthorized");
+export const requireSupabaseAuth = createMiddleware({
+  type: "function",
+}).server(async ({ next }) => {
+  // Reject anonymous and malformed credentials before reading deployment
+  // configuration. Public signed-out pages must not disclose configuration
+  // state or turn an ordinary 401 into a noisy 500 when auth is unavailable.
+  const request = getRequest();
+  if (!request?.headers) failAuthentication(401, "Unauthorized");
 
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) failAuthentication(401, "Unauthorized");
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader) failAuthentication(401, "Unauthorized");
 
-    const token = authHeader.slice(7).trim();
-    if (!token) failAuthentication(401, "Unauthorized");
+  const token = parseBearerToken(authHeader);
+  if (!token) failAuthentication(401, "Unauthorized");
 
-    const SUPABASE_URL = process.env.SUPABASE_URL;
-    const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
 
-    if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-      console.error("[Supabase] Server authentication configuration is incomplete.");
-      failAuthentication(503, "Authentication is temporarily unavailable.");
-    }
+  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+    console.error(
+      "[Supabase] Server authentication configuration is incomplete.",
+    );
+    failAuthentication(503, "Authentication is temporarily unavailable.");
+  }
 
-    const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  const supabase = createClient<Database>(
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY,
+    {
       global: {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -47,17 +57,36 @@ export const requireSupabaseAuth = createMiddleware({ type: "function" }).server
         persistSession: false,
         autoRefreshToken: false,
       },
-    });
+    },
+  );
 
-    const { data, error } = await supabase.auth.getClaims(token);
-    if (error || !data?.claims?.sub) failAuthentication(401, "Unauthorized");
+  const [
+    { data: userData, error: userError },
+    { data: claimsData, error: claimsError },
+  ] = await Promise.all([
+    supabase.auth.getUser(token),
+    supabase.auth.getClaims(token),
+  ]);
+  if (userError || claimsError || !userData.user || !claimsData?.claims) {
+    failAuthentication(401, "Unauthorized");
+  }
 
-    return next({
-      context: {
-        supabase,
-        userId: data.claims.sub,
-        claims: data.claims,
-      },
-    });
-  },
-);
+  const access = evaluateAuthenticatedUser(userData.user, claimsData.claims);
+  if (!access.ok) {
+    if (access.code === "account_suspended") {
+      failAuthentication(403, "Account suspended");
+    }
+    if (access.code === "mfa_required") {
+      failAuthentication(403, "Two-factor authentication required");
+    }
+    failAuthentication(401, "Unauthorized");
+  }
+
+  return next({
+    context: {
+      supabase,
+      userId: access.userId,
+      claims: claimsData.claims,
+    },
+  });
+});
