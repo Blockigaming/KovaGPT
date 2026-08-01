@@ -116,14 +116,30 @@ test("the early bootstrap replays both global shortcuts after hydration", async 
   assert.equal(replayed[1].shiftKey, true);
 });
 
-test("the affected browser specs wait for readiness and assert principal-scoped archives", async () => {
-  const paths = [
-    "tests/e2e/ai-core-parity.spec.ts",
-    "tests/e2e/core-chat-experience.spec.ts",
-    "tests/e2e/desktop-polish.spec.ts",
-    "tests/e2e/high-impact-chat.spec.ts",
-    "tests/e2e/mobile-shell-ui-truth.spec.ts",
+test("hydrated UI specs wait after navigation and assert principal-scoped archives", async () => {
+  const contracts = [
+    ["tests/e2e/ai-core-parity.spec.ts", 2, 2],
+    ["tests/e2e/connected-reliability.spec.ts", 2, 2],
+    ["tests/e2e/connectors-tasks-settings.spec.ts", 3, 3],
+    ["tests/e2e/core-chat-experience.spec.ts", 2, 2],
+    ["tests/e2e/depth.spec.ts", 5, 5],
+    ["tests/e2e/desktop-polish.spec.ts", 2, 2],
+    ["tests/e2e/final-readiness.spec.ts", 2, 2],
+    ["tests/e2e/functional-reliability.spec.ts", 1, 1],
+    ["tests/e2e/high-impact-chat.spec.ts", 5, 5],
+    ["tests/e2e/mobile-quality.spec.ts", 5, 5],
+    ["tests/e2e/mobile-shell-ui-truth.spec.ts", 2, 2],
+    ["tests/e2e/model-selector.spec.ts", 1, 1],
+    ["tests/e2e/multimodal-canvas.spec.ts", 2, 2],
+    ["tests/e2e/product-completeness.spec.ts", 4, 4],
+    ["tests/e2e/production-audit.spec.ts", 2, 1],
+    ["tests/e2e/projects-library-workspaces.spec.ts", 3, 3],
+    ["tests/e2e/responsive.spec.ts", 2, 2],
+    ["tests/e2e/secondary-screens.spec.ts", 3, 3],
+    ["tests/e2e/seo-indexing.spec.ts", 3, 2],
+    ["tests/e2e/ui-quality.spec.ts", 3, 3],
   ];
+  const paths = contracts.map(([path]) => path);
   const [helper, guardSpec, ...specs] = await Promise.all([
     read("tests/e2e/hydration.ts"),
     read("tests/e2e/hydration-interaction-guard.spec.ts"),
@@ -137,13 +153,22 @@ test("the affected browser specs wait for readiness and assert principal-scoped 
   assert.match(guardSpec, /toBeDisabled\(\)/);
   assert.match(guardSpec, /toBeEnabled\(\)/);
   assert.match(guardSpec, /toEqual\(\["k", "o"\]\)/);
+  const specsByPath = new Map();
   for (let index = 0; index < specs.length; index += 1) {
+    const [path, expectedGotos, expectedWaits] = contracts[index];
     const gotoCount = specs[index].match(/await page\.goto\(/g)?.length ?? 0;
     const waitCount = specs[index].match(/await waitForKovaHydration\(page\)/g)?.length ?? 0;
-    assert.equal(waitCount, gotoCount, paths[index]);
+    const adjacentWaitCount =
+      specs[index].match(/await page\.goto\([^;]+;\s*await waitForKovaHydration\(page\);/g)
+        ?.length ?? 0;
+    assert.match(specs[index], /from "\.\/hydration"/);
+    assert.equal(gotoCount, expectedGotos, `${path} navigation count`);
+    assert.equal(waitCount, expectedWaits, `${path} hydration wait count`);
+    assert.equal(adjacentWaitCount, expectedWaits, `${path} wait placement`);
+    specsByPath.set(path, specs[index]);
   }
 
-  const highImpact = specs.at(-2);
+  const highImpact = specsByPath.get("tests/e2e/high-impact-chat.spec.ts");
   assert.match(highImpact, /legacy: localStorage\.getItem\("kovagpt:archived"\)/);
   assert.match(highImpact, /guest: localStorage\.getItem\("kovagpt:archived:v2:guest"\)/);
   assert.match(highImpact, /toEqual\(\{ legacy: null, guest: "\[\]" \}\)/);
