@@ -8,18 +8,21 @@ on:
       - work
       - "codex/**"
 
+permissions:
+  contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: npm
@@ -55,16 +58,6 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Browser tests
-        env:
-          PLAYWRIGHT_PREBUILT: "1"
-        run: |
-          npm run test:e2e -- --project=phone-320x700 --project=phone-375x812 --project=phone-390x844 --project=phone-412x915 --project=phone-430x932
-          npm run test:e2e -- --project=tablet-768x1024 --project=phone-landscape-844x390 --project=tablet-1024x768
-          npm run test:e2e -- --project=desktop-1280x800
-          npm run test:e2e -- --project=desktop-1440x900
-          npm run test:e2e -- --project=desktop-1728x1117
-
       - name: Accessibility checks
         run: npm run test:a11y
 
@@ -73,9 +66,64 @@ jobs:
 
       - name: Upload Playwright report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: playwright-artifacts
+          name: playwright-artifacts-verify
+          path: |
+            test-results
+            playwright-report
+          if-no-files-found: ignore
+
+  browser:
+    name: Browser (${{ matrix.id }})
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: phone
+            projects: >-
+              --project=phone-320x700 --project=phone-375x812 --project=phone-390x844 --project=phone-412x915 --project=phone-430x932
+          - id: tablet
+            projects: >-
+              --project=tablet-768x1024 --project=phone-landscape-844x390 --project=tablet-1024x768
+          - id: desktop-1280
+            projects: --project=desktop-1280x800
+          - id: desktop-1440
+            projects: --project=desktop-1440x900
+          - id: desktop-1728
+            projects: --project=desktop-1728x1117
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Production build
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser tests
+        env:
+          PLAYWRIGHT_PREBUILT: "1"
+        run: npm run test:e2e -- ${{ matrix.projects }}
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: playwright-artifacts-${{ matrix.id }}
           path: |
             test-results
             playwright-report
