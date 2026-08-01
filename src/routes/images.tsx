@@ -17,12 +17,7 @@ import {
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 import { LoginPromptDialog } from "@/components/LoginPromptDialog";
 import { LimitReachedDialog } from "@/components/LimitReachedDialog";
@@ -807,9 +802,7 @@ function ImagesPage() {
               event.preventDefault();
               const prior = lightboxReturnFocusRef.current;
               const target =
-                lightboxReturnToPromptRef.current || !prior?.isConnected
-                  ? inputRef.current
-                  : prior;
+                lightboxReturnToPromptRef.current || !prior?.isConnected ? inputRef.current : prior;
               lightboxReturnToPromptRef.current = false;
               lightboxReturnFocusRef.current = null;
               target?.focus();
