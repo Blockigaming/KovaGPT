@@ -632,65 +632,61 @@ function ImagesPage() {
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                   {history.map((h) => (
-                    <button
+                    <article
                       key={h.id}
-                      type="button"
-                      onClick={(event) => {
-                        lightboxReturnFocusRef.current = event.currentTarget;
-                        setLightbox(h);
-                      }}
-                      className="group relative aspect-square rounded-2xl overflow-hidden bg-muted ring-1 ring-border focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/60 text-left"
-                      aria-label={`Open image: ${h.prompt}`}
+                      className="group relative aspect-square overflow-hidden rounded-2xl bg-muted ring-1 ring-border"
                     >
-                      <img
-                        src={h.imageUrl}
-                        alt={h.prompt}
-                        loading="lazy"
-                        decoding="async"
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                      />
-                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-gradient-to-t from-black/85 via-black/25 to-transparent flex flex-col justify-end p-2 gap-1.5">
-                        <p className="text-[11px] text-white line-clamp-2" title={h.prompt}>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          lightboxReturnFocusRef.current = event.currentTarget;
+                          setLightbox(h);
+                        }}
+                        className="absolute inset-0 w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-foreground/60"
+                        aria-label={`Open image: ${h.prompt}`}
+                      >
+                        <img
+                          src={h.imageUrl}
+                          alt={h.prompt}
+                          loading="lazy"
+                          decoding="async"
+                          className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                        />
+                      </button>
+                      <div className="pointer-events-none absolute inset-0 flex flex-col justify-end gap-1.5 bg-gradient-to-t from-black/85 via-black/25 to-transparent p-2 opacity-100 transition md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+                        <p className="line-clamp-2 text-[11px] text-white" title={h.prompt}>
                           {h.prompt}
                         </p>
-                        <div
-                          className="flex items-center gap-1"
-                          onClick={(e) => e.stopPropagation()}
-                        >
+                        <div className="pointer-events-auto relative z-10 flex items-center gap-1">
                           <button
                             type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
+                            onClick={() => {
                               setPrompt(h.prompt);
                               inputRef.current?.focus();
                             }}
-                            className="flex-1 text-[11px] px-2 py-1 rounded-full bg-white text-black font-medium hover:opacity-90"
+                            className="min-h-11 flex-1 rounded-full bg-white px-2 text-[11px] font-medium text-black hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                           >
                             Reuse
                           </button>
                           <a
-                            onClick={(e) => e.stopPropagation()}
                             href={h.imageUrl}
                             download={`kovagpt-${h.id}.png`}
-                            className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white"
+                            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                             aria-label="Download"
                           >
-                            <Download className="w-3.5 h-3.5" />
+                            <Download className="h-3.5 w-3.5" />
                           </a>
                           <button
                             type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeFromHistory(h.id);
-                            }}
-                            className="w-7 h-7 rounded-full bg-white/15 hover:bg-destructive flex items-center justify-center text-white"
+                            onClick={() => removeFromHistory(h.id)}
+                            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white hover:bg-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                             aria-label="Remove"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       </div>
-                    </button>
+                    </article>
                   ))}
                 </div>
               )}
