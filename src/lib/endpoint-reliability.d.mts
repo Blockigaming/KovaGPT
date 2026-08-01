@@ -11,6 +11,14 @@ export class DurableBackendError extends Error {
   constructor(operation: string);
 }
 
+export class BodyReadError extends Error {
+  status: number;
+  code: string;
+  constructor(status: number, code: string);
+}
+
+export function readUtf8BodyBounded(request: Request, maxBytes: number): Promise<string>;
+
 export function assertDatabaseSuccess<T>(
   result: { data: T; error?: unknown } | null | undefined,
   operation: string,
@@ -44,4 +52,5 @@ export function unsubscribeLinkState(options: {
 }): { valid: boolean; reason?: "already_unsubscribed" };
 
 export function retryableUnavailable(error: string): Response;
+export function noStoreJson(body: unknown, init?: ResponseInit): Response;
 export function financeQueueUnavailableResponse(): Response;
