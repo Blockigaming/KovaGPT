@@ -45,22 +45,22 @@ test("finance and health records are isolated and finance is read-only", async (
   assert.doesNotMatch(plaid, /payment_initiation|transfer\/create|orders\/create/);
 });
 
-test("agent gating, queue, cancellation, denial and browser isolation are real", async () => {
-  const [execution, worker, policy] = await Promise.all([
+test("browser agents fail closed while legacy controls remain owner scoped", async () => {
+  const [execution, worker, api, policy] = await Promise.all([
     read("src/agents/execution.server.ts"),
     read("workers/browser-agent.mjs"),
+    read("src/routes/api/agents/runs.ts"),
     read("src/agents/policy.ts"),
   ]);
   for (const tier of ["plus", "pro", "business", "enterprise"])
     assert.match(execution, new RegExp(`${tier}:`));
-  assert.match(execution, /agent_plan_required/);
   assert.match(execution, /command === "cancel"/);
   assert.match(execution, /status: "denied"/);
-  assert.match(worker, /chromium\.launch/);
-  assert.match(worker, /browser\.newContext/);
-  assert.match(worker, /serviceWorkers: "block"/);
-  assert.match(worker, /approval_needed/);
-  assert.match(worker, /createHash\("sha256"\)/);
+  assert.match(execution, /command === "resume"[\s\S]+browser_agent_unavailable/);
+  assert.match(api, /browser_agent_unavailable/);
+  assert.match(api, /status: 503/);
+  assert.match(worker, /legacy agent_runs browser worker is disabled/);
+  assert.doesNotMatch(worker, /chromium|createClient|while \(true\)/);
   assert.match(policy, /raw_secret_entry_prohibited/);
 });
 
