@@ -94,7 +94,9 @@ export function ChatInput({
   onSubmit,
   onStop,
   isStreaming,
+
   sendOnEnter,
+
   disabled = false,
   showAddMenu = true,
   attachments,
@@ -118,8 +120,10 @@ export function ChatInput({
   onSubmit: () => void;
   onStop: () => void;
   isStreaming: boolean;
+
   /** Explicit override. When omitted, the current user's shared persisted preference is used. */
   sendOnEnter?: boolean;
+
   /** Disables text entry and submission without changing existing callers. */
   disabled?: boolean;
   /** Hides and disables attachments, tools, and prompt shortcuts. */
