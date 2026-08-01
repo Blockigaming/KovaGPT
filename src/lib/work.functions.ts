@@ -300,7 +300,7 @@ export const controlWorkRun = createServerFn({ method: "POST" })
     z
       .object({
         id: z.string().uuid(),
-        action: z.enum(["pause", "resume", "cancel"]),
+        action: z.literal("cancel"),
       })
       .parse(v),
   )
@@ -582,7 +582,7 @@ export const decideApproval = createServerFn({ method: "POST" })
     z
       .object({
         id: z.string().uuid(),
-        decision: z.enum(["approved", "denied"]),
+        decision: z.literal("denied"),
         editedRequest: z.record(z.string(), z.unknown()).optional(),
       })
       .parse(v),
