@@ -13,11 +13,7 @@ test("package metadata does not depend on private Lovable packages", () => {
     ...(pkg.devDependencies ?? {}),
   };
   for (const name of Object.keys(allDeps)) {
-    assert.equal(
-      name.startsWith("@lovable.dev/"),
-      false,
-      `${name} should not be installed`,
-    );
+    assert.equal(name.startsWith("@lovable.dev/"), false, `${name} should not be installed`);
   }
 });
 
@@ -70,14 +66,8 @@ test("direct provider env example contains no secret values or duplicate setting
     "example env should not contain publishable third-party sample secrets",
   );
 
-  const names = [...env.matchAll(/^([A-Z][A-Z0-9_]*)=/gm)].map(
-    (match) => match[1],
-  );
-  assert.deepEqual(
-    names,
-    [...new Set(names)],
-    "example env should define each setting once",
-  );
+  const names = [...env.matchAll(/^([A-Z][A-Z0-9_]*)=/gm)].map((match) => match[1]);
+  assert.deepEqual(names, [...new Set(names)], "example env should define each setting once");
 });
 
 test("stale Bun lockfile is absent after npm lockfile was selected", () => {
