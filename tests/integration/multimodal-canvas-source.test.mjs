@@ -141,8 +141,14 @@ test("image lightbox delegates modal lifecycle and restores intentional focus", 
   }
   assert.doesNotMatch(images, /window\.addEventListener\("keydown", onKey\)/);
   assert.doesNotMatch(images, /aria-modal="true"/);
+  assert.match(images, /<article\s+key=\{h\.id\}/);
+  assert.doesNotMatch(images, /<button\s+key=\{h\.id\}/);
+  assert.match(images, /group-focus-within:opacity-100/);
+  assert.match(images, /min-h-11/);
+  assert.match(images, /h-11 w-11/);
 
   const styles = read("src/styles.css");
   assert.match(styles, /:not\(\[data-image-lightbox\]\)/);
   assert.match(styles, /\.image-lightbox > button:last-child/);
+  assert.match(styles, /width: 2\.75rem;\s+height: 2\.75rem;/);
 });
