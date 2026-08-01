@@ -41,10 +41,7 @@ test("narrow-phone constraints are scoped to real modal surfaces", async () => {
     read("src/components/CommandPalette.tsx"),
   ]);
 
-  assert.match(
-    dialog,
-    /data-kova-dialog-surface=\{constrainToViewport \? "" : undefined\}/,
-  );
+  assert.match(dialog, /data-kova-dialog-surface=\{constrainToViewport \? "" : undefined\}/);
   assert.match(alertDialog, /data-kova-dialog-surface=""/);
   assert.doesNotMatch(sheet, /data-kova-dialog-surface/);
   assert.doesNotMatch(drawer, /data-kova-dialog-surface/);
