@@ -22,8 +22,14 @@ test("Vite preview uses the same Workers runtime as production", () => {
   const source = read("../../vite.config.ts");
   const workerConfig = read("../../wrangler.jsonc");
 
-  assert.match(source, /import \{ cloudflare \} from ["']@cloudflare\/vite-plugin["']/);
-  assert.match(source, /cloudflare\(\{ viteEnvironment: \{ name: ["']ssr["'] \} \}\)/);
+  assert.match(
+    source,
+    /import \{ cloudflare \} from ["']@cloudflare\/vite-plugin["']/,
+  );
+  assert.match(
+    source,
+    /cloudflare\(\{ viteEnvironment: \{ name: ["']ssr["'] \} \}\)/,
+  );
   assert.match(workerConfig, /"main":\s*"src\/server\.ts"/);
   assert.match(workerConfig, /"nodejs_compat"/);
 });
