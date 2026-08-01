@@ -183,7 +183,7 @@ export function CommandPalette({
   }, [query, open]);
 
   const suppressFocusRestore = () => {
-    suppressFocusRestore();
+    shouldRestoreFocusRef.current = false;
   };
 
   const chooseActive = () => {
