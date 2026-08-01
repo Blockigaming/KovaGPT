@@ -78,6 +78,7 @@ export function ResponsiveModelSelector({
               <button
                 key={availableMode.id}
                 type="button"
+                aria-pressed={selected}
                 onClick={() => {
                   onChange(availableMode.id);
                   setOpen(false);
