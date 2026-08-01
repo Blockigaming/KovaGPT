@@ -2,8 +2,8 @@
 // Every tool executes as the signed-in user via their stored per-user
 // OAuth token (see google-oauth.server.ts).
 //
-// Read tools execute immediately. Write tools (send email, create/delete
-// calendar event) are gated behind an explicit user confirmation card;
+// Read tools execute immediately. Supported writes (save a Gmail draft and
+// create a calendar event) are gated behind an explicit user confirmation card;
 // the chat loop persists the args to `pending_tool_actions` and streams
 // a `tool_confirm` SSE event to the browser, and the actual execution
 // happens later via /api/chat/confirm.
