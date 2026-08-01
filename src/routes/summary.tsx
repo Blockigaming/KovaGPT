@@ -22,7 +22,12 @@ import {
   Pin,
   ArrowRight,
 } from "lucide-react";
-import { loadConversations, type Conversation } from "@/lib/chat-store";
+import {
+  chatStoragePrincipal,
+  loadConversations,
+  savePendingActive,
+  type Conversation,
+} from "@/lib/chat-store";
 import { safeNavigationUrl } from "@/lib/safe-url";
 import {
   getSummaryProjects,
@@ -48,6 +53,8 @@ export const Route = createFileRoute("/summary")({
   }),
   component: SummaryPage,
 });
+
+const EMPTY_CONVERSATIONS: Conversation[] = [];
 
 // -------- Dismissible sections --------
 const DISMISS_KEY = "kova-summary-dismissed-v1";
@@ -209,6 +216,8 @@ function fmtDate(iso: string | null) {
 
 function SummaryPage() {
   const { user, isSignedIn, isLoaded } = useUser();
+  const userKey = user?.id ?? null;
+  const principal = isLoaded ? chatStoragePrincipal(userKey) : null;
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -231,10 +240,21 @@ function SummaryPage() {
   const greeting = useGreeting(firstName);
 
   // Local chats
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversationState, setConversationState] = useState<{
+    principal: string | null;
+    items: Conversation[];
+  }>({ principal: null, items: [] });
+  const conversations =
+    principal !== null && conversationState.principal === principal
+      ? conversationState.items
+      : EMPTY_CONVERSATIONS;
   useEffect(() => {
-    setConversations(loadConversations());
-  }, []);
+    if (!isLoaded || !isSignedIn || principal === null) {
+      setConversationState({ principal: null, items: [] });
+      return;
+    }
+    setConversationState({ principal, items: loadConversations(userKey) });
+  }, [isLoaded, isSignedIn, principal, userKey]);
   const pinned = conversations.filter((c) => c.pinned).slice(0, 4);
   const continueChats = conversations
     .filter((c) => !c.pinned)
@@ -242,33 +262,33 @@ function SummaryPage() {
     .slice(0, 4);
 
   // Server data (independent queries)
-  const enabled = !!isSignedIn;
+  const enabled = isLoaded && !!isSignedIn && !!userKey;
   const qProjects = useQuery({
-    queryKey: ["summary", "projects"],
+    queryKey: ["summary", "projects", userKey],
     queryFn: () => getSummaryProjects(),
     enabled,
     staleTime: 30_000,
   });
   const qImages = useQuery({
-    queryKey: ["summary", "images"],
+    queryKey: ["summary", "images", userKey],
     queryFn: () => getSummaryImages(),
     enabled,
     staleTime: 30_000,
   });
   const qFiles = useQuery({
-    queryKey: ["summary", "files"],
+    queryKey: ["summary", "files", userKey],
     queryFn: () => getSummaryFiles(),
     enabled,
     staleTime: 30_000,
   });
   const qTasks = useQuery({
-    queryKey: ["summary", "tasks"],
+    queryKey: ["summary", "tasks", userKey],
     queryFn: () => getSummaryTasks(),
     enabled,
     staleTime: 30_000,
   });
   const qGoogle = useQuery({
-    queryKey: ["summary", "google"],
+    queryKey: ["summary", "google", userKey],
     queryFn: () => getGoogleStatus(),
     enabled,
     staleTime: 60_000,
@@ -280,13 +300,13 @@ function SummaryPage() {
     !!qGoogle.data?.connected && qGoogle.data.scopes.some((s) => s.includes("calendar"));
 
   const qGmail = useQuery({
-    queryKey: ["summary", "gmail"],
+    queryKey: ["summary", "gmail", userKey],
     queryFn: () => getGmailSummary(),
     enabled: enabled && hasGmail,
     staleTime: 60_000,
   });
   const qCal = useQuery({
-    queryKey: ["summary", "cal"],
+    queryKey: ["summary", "cal", userKey],
     queryFn: () => getCalendarSummary(),
     enabled: enabled && hasCal,
     staleTime: 60_000,
@@ -401,7 +421,7 @@ function SummaryPage() {
                       <button
                         onClick={() => {
                           try {
-                            localStorage.setItem("nova-gpt-pending-active", c.id);
+                            savePendingActive(userKey, c.id);
                           } catch {
                             /* ignore */
                           }
@@ -430,7 +450,7 @@ function SummaryPage() {
                     <button
                       onClick={() => {
                         try {
-                          localStorage.setItem("nova-gpt-pending-active", c.id);
+                          savePendingActive(userKey, c.id);
                         } catch {
                           /* ignore */
                         }
