@@ -83,11 +83,7 @@ test("Ctrl/Command+Enter is an explicit submit shortcut", () => {
 });
 
 test("empty, disabled, and streaming composers never submit from the keyboard", () => {
-  for (const state of [
-    { hasContent: false },
-    { disabled: true },
-    { isStreaming: true },
-  ]) {
+  for (const state of [{ hasContent: false }, { disabled: true }, { isStreaming: true }]) {
     assert.equal(
       shouldSubmitComposerOnEnter({
         key: "Enter",
