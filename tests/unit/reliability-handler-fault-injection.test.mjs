@@ -3,10 +3,13 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   assertDatabaseSuccess,
+  BodyReadError,
   DurableBackendError,
   financeQueueUnavailableResponse,
+  noStoreJson,
   parseMemoryPayload,
   persistMemorySafely,
+  readUtf8BodyBounded,
   suppressThenConsumeToken,
   unsubscribeLinkState,
 } from "../../src/lib/endpoint-reliability.mjs";
@@ -17,6 +20,75 @@ function messages(count = 4) {
     content: `message ${index}`,
   }));
 }
+
+function streamRequest(chunks, headers = {}) {
+  let cancelReason;
+  const body = new ReadableStream({
+    start(controller) {
+      for (const chunk of chunks) controller.enqueue(chunk);
+      controller.close();
+    },
+    cancel(reason) {
+      cancelReason = reason;
+    },
+  });
+  const request = new Request("https://kovagpt.com/test", {
+    method: "POST",
+    headers,
+    body,
+    duplex: "half",
+  });
+  return { request, getCancelReason: () => cancelReason };
+}
+
+test("bounded UTF-8 reader rejects declared and streamed byte overflows", async () => {
+  const declared = streamRequest([new TextEncoder().encode("small")], { "content-length": "7" });
+  await assert.rejects(
+    readUtf8BodyBounded(declared.request, 6),
+    (error) => error instanceof BodyReadError && error.status === 413,
+  );
+
+  let cancelReason;
+  const values = [new Uint8Array(4), new Uint8Array(4)];
+  const streamed = {
+    headers: new Headers(),
+    body: {
+      getReader: () => ({
+        read: async () =>
+          values.length > 0 ? { done: false, value: values.shift() } : { done: true },
+        cancel: async (reason) => {
+          cancelReason = reason;
+        },
+        releaseLock: () => undefined,
+      }),
+    },
+  };
+  await assert.rejects(
+    readUtf8BodyBounded(streamed, 6),
+    (error) => error instanceof BodyReadError && error.status === 413,
+  );
+  assert.equal(cancelReason, "request_too_large");
+});
+
+test("bounded UTF-8 reader counts bytes, validates length, and decodes valid text", async () => {
+  const multibyte = streamRequest([new TextEncoder().encode("éé")]);
+  await assert.rejects(
+    readUtf8BodyBounded(multibyte.request, 3),
+    (error) => error instanceof BodyReadError && error.status === 413,
+  );
+
+  const invalidLength = streamRequest([new Uint8Array([1])], { "content-length": "1.5" });
+  await assert.rejects(
+    readUtf8BodyBounded(invalidLength.request, 10),
+    (error) => error instanceof BodyReadError && error.code === "invalid_content_length",
+  );
+
+  const valid = streamRequest([
+    new TextEncoder().encode("hello "),
+    new TextEncoder().encode("世界"),
+  ]);
+  assert.equal(await readUtf8BodyBounded(valid.request, 12), "hello 世界");
+});
 
 test("memory payload validation accepts only bounded user and assistant messages", () => {
   const valid = parseMemoryPayload(
@@ -207,6 +279,30 @@ test("legacy used tokens self-heal unless durable suppression is proven", () => 
       }),
     (error) => error.operation === "unsubscribe_suppression_lookup",
   );
+});
+
+test("unsubscribe responses are never cacheable and source logs no token material", async () => {
+  const response = noStoreJson({ valid: true });
+  assert.equal(response.headers.get("cache-control"), "no-store");
+
+  const source = await readFile(
+    new URL("../../src/routes/email/unsubscribe.ts", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(source, /token_prefix|token\.slice\s*\(/);
+  assert.doesNotMatch(source, /Response\.json\s*\(/);
+});
+
+test("changed request handlers use the bounded reader instead of request.text", async () => {
+  for (const path of [
+    "../../src/routes/api/memory.ts",
+    "../../src/routes/api/finances/webhook.ts",
+    "../../src/routes/email/unsubscribe.ts",
+  ]) {
+    const source = await readFile(new URL(path, import.meta.url), "utf8");
+    assert.match(source, /readUtf8BodyBounded/);
+    assert.doesNotMatch(source, /request\.text\s*\(/);
+  }
 });
 
 test("finance webhook cannot acknowledge an event without a durable queue", async () => {
