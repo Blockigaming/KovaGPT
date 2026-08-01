@@ -93,7 +93,10 @@ test("temporary chat changes create a clean privacy boundary", () => {
   assert.match(index, /onTemporaryChatChange=\{setTemporaryChatEnabled\}/);
   assert.match(index, /aria-pressed=\{tempChat\}/);
   assert.match(index, /temporary: tempChat/);
-  assert.match(index, /saveConversations\(conversations\.filter\(\(c\) => !c\.temporary\)\)/);
+  assert.match(
+    index,
+    /saveConversations\(\s*userKey,\s*conversations\.filter\(\(c\) => !c\.temporary\)/,
+  );
 });
 
 test("local-only message ratings make a local-only claim", () => {
