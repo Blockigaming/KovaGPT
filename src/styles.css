@@ -535,58 +535,6 @@ input {
   animation: pulse-slow 2.4s ease-in-out infinite;
 }
 
-/* AI status indicator: label enter animation + animated ellipsis */
-@keyframes ai-status-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.ai-status-label {
-  animation: ai-status-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: opacity, transform;
-}
-@keyframes ai-status-dot {
-  0%,
-  80%,
-  100% {
-    opacity: 0.2;
-    transform: translateY(0);
-  }
-  40% {
-    opacity: 1;
-    transform: translateY(-1px);
-  }
-}
-.ai-status-dots {
-  display: inline-flex;
-  gap: 1px;
-  line-height: 1;
-}
-.ai-status-dots > span {
-  display: inline-block;
-  animation: ai-status-dot 1.3s infinite ease-in-out both;
-}
-.ai-status-dots > span:nth-child(1) {
-  animation-delay: 0s;
-}
-.ai-status-dots > span:nth-child(2) {
-  animation-delay: 0.16s;
-}
-.ai-status-dots > span:nth-child(3) {
-  animation-delay: 0.32s;
-}
-@media (prefers-reduced-motion: reduce) {
-  .ai-status-label,
-  .ai-status-dots > span {
-    animation: none;
-  }
-}
-
 /* Core chat workspace primitives. Component classes keep the highest-traffic
    interactions consistent across desktop, narrow phones, and mobile sheets. */
 @layer components {
@@ -866,7 +814,7 @@ body {
   .kova-table-scroll {
     max-width: calc(100vw - 2rem);
   }
-  :where([role="dialog"]):not([data-side]):not([data-image-lightbox]) {
+  [data-kova-dialog-surface] {
     max-width: calc(100vw - 1rem) !important;
     max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 1rem) !important;
   }
@@ -963,7 +911,7 @@ img {
   .kova-table-scroll table {
     min-width: 28rem;
   }
-  :where([role="dialog"]) {
+  [data-kova-dialog-surface] {
     max-width: 100vw;
   }
 }
@@ -1643,7 +1591,7 @@ body {
     box-shadow: var(--shadow-floating);
   }
 
-  [role="dialog"] {
+  [data-kova-dialog-surface] {
     border-radius: 0.75rem;
   }
 
@@ -1703,6 +1651,19 @@ body {
   aside[aria-label="Primary navigation"] nav {
     scrollbar-gutter: stable;
     overscroll-behavior: contain;
+  }
+
+  .kova-sidebar .kova-nav-row,
+  .kova-sidebar .kova-chat-row > button,
+  .kova-sidebar [aria-label="Chat options"] {
+    min-height: var(--kova-touch);
+  }
+
+  .kova-sidebar [aria-label="Chat options"] {
+    min-width: var(--kova-touch);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .prose-chat,
