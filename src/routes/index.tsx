@@ -106,6 +106,7 @@ function KovaGPT() {
   const [tempChat, setTempChat] = useState(false);
   const [tempChatConfirmed, setTempChatConfirmed] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
+  const commandReturnFocusRef = useRef<HTMLElement | null>(null);
   const [commandQuery, setCommandQuery] = useState("");
   const [selectedTool, setSelectedTool] = useState<ComposerToolId | null>(null);
   const [recentLibraryFiles, setRecentLibraryFiles] = useState<RecentLibraryFile[]>([]);
@@ -511,6 +512,12 @@ function KovaGPT() {
     [activeId, newChat, tempChat],
   );
 
+  const openCommandPalette = useCallback(() => {
+    commandReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setCommandOpen(true);
+  }, []);
+
   useEffect(() => {
     const reloadImportedChats = () => {
       setConversations(loadConversations());
@@ -526,7 +533,8 @@ function KovaGPT() {
       const key = event.key.toLowerCase();
       if ((event.metaKey || event.ctrlKey) && key === "k") {
         event.preventDefault();
-        setCommandOpen((value) => !value);
+        if (commandOpen) setCommandOpen(false);
+        else openCommandPalette();
       }
       if ((event.metaKey || event.ctrlKey) && event.shiftKey && key === "o") {
         event.preventDefault();
@@ -535,7 +543,7 @@ function KovaGPT() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [newChat]);
+  }, [commandOpen, newChat, openCommandPalette]);
 
   const deleteChat = useCallback(
     (id: string) => {
@@ -1119,7 +1127,7 @@ function KovaGPT() {
                 <PanelLeft className="w-5 h-5" />
               </button>
               <button
-                onClick={() => setCommandOpen(true)}
+                onClick={openCommandPalette}
                 className="shrink-0 p-2 rounded-lg hover:bg-accent transition"
                 aria-label="Search chats"
                 title="Search chats"
@@ -1570,6 +1578,7 @@ function KovaGPT() {
         onNewChat={newChat}
         onSelectChat={setActiveId}
         onOpenSettings={() => openSettings("general")}
+        returnFocusTarget={commandReturnFocusRef.current}
       />
     </div>
   );
