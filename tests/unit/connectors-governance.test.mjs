@@ -58,3 +58,32 @@ test("voice stays disabled without adding provider secrets or billing claims", (
   assert.match(start, /microphone=\(\)/);
   assert.doesNotMatch(pricing, /voice generations|voice, and advanced/i);
 });
+
+test("connector OAuth callbacks are browser-bound and keep returns same-origin", () => {
+  const helper = read("src/lib/oauth-security.server.ts");
+  const start = read("src/routes/api/integrations/oauth/start.ts");
+  const callback = read("src/routes/api/integrations/oauth/callback/$provider.ts");
+  const lifecycle = read("src/integrations/oauth-lifecycle.server.ts");
+  const githubStart = read("src/routes/api/github/auth.ts");
+  const githubCallback = read("src/routes/api/github/callback.ts");
+  const githubOauth = read("src/lib/github-oauth.server.ts");
+
+  assert.match(helper, /value\.startsWith\("\/\/"\)/);
+  assert.match(helper, /value\.includes\("\\\\"\)/);
+  assert.match(helper, /parsed\.origin !== SAFE_RETURN_ORIGIN/);
+  assert.match(helper, /Path=\/; HttpOnly; Secure; SameSite=Lax; Max-Age=/);
+  assert.match(start, /browserNonce = crypto\.randomUUID\(\)/);
+  assert.match(start, /Set-Cookie/);
+  assert.match(lifecycle, /nonce_hash: await sha256\(input\.browserNonce\)/);
+  assert.match(lifecycle, /invalid_oauth_browser_binding/);
+  assert.match(lifecycle, /normalizeOAuthReturnPath\(input\.returnPath\)/);
+  assert.match(callback, /readOauthCookie\(request, INTEGRATION_OAUTH_COOKIE\)/);
+  assert.match(callback, /normalizeOAuthReturnPath\(result\.returnPath\)/);
+  assert.match(callback, /redirectClearingOauthCookie/);
+  assert.match(githubStart, /GITHUB_OAUTH_COOKIE/);
+  assert.match(githubStart, /Set-Cookie/);
+  assert.match(githubCallback, /browserState !== state/);
+  assert.match(githubCallback, /new URL\("\/apps", url\.origin\)/);
+  assert.doesNotMatch(githubCallback, /returnPath|return_path/);
+  assert.match(githubOauth, /browserState !== state/);
+});
