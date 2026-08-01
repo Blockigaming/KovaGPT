@@ -24,10 +24,7 @@ import {
   useState,
 } from "react";
 import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
-import {
-  getSupabaseClientConfigStatus,
-  supabase,
-} from "@/integrations/supabase/client";
+import { getSupabaseClientConfigStatus, supabase } from "@/integrations/supabase/client";
 import { AuthDialog } from "@/components/auth/AuthDialog";
 import { MfaChallengeDialog } from "@/components/auth/MfaChallengeDialog";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
@@ -71,9 +68,7 @@ function clearPrivateBrowserState() {
       if (
         key &&
         !keep.has(key) &&
-        (key.startsWith("nova-") ||
-          key.startsWith("kova") ||
-          key.startsWith("sb-"))
+        (key.startsWith("nova-") || key.startsWith("kova") || key.startsWith("sb-"))
       ) {
         toRemove.push(key);
       }
@@ -92,9 +87,7 @@ function isActiveBan(bannedUntil: string | undefined) {
 
 export function ClerkProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [pendingMfaSession, setPendingMfaSession] = useState<Session | null>(
-    null,
-  );
+  const [pendingMfaSession, setPendingMfaSession] = useState<Session | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [dialog, setDialog] = useState<AuthDialogState>({
     open: false,
@@ -113,15 +106,11 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const [
-        { data: userData, error: userError },
-        { data: assurance, error: assuranceError },
-      ] = await Promise.all([
-        supabase.auth.getUser(candidate.access_token),
-        supabase.auth.mfa.getAuthenticatorAssuranceLevel(
-          candidate.access_token,
-        ),
-      ]);
+      const [{ data: userData, error: userError }, { data: assurance, error: assuranceError }] =
+        await Promise.all([
+          supabase.auth.getUser(candidate.access_token),
+          supabase.auth.mfa.getAuthenticatorAssuranceLevel(candidate.access_token),
+        ]);
       if (validation !== sessionValidationRef.current) return;
 
       const invalidUser =
@@ -131,11 +120,7 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
         isActiveBan(userData.user.banned_until);
       if (invalidUser || assuranceError) {
         console.error("[KovaAuth] Session validation failed", {
-          userStatus: userError
-            ? "invalid"
-            : invalidUser
-              ? "unavailable"
-              : "valid",
+          userStatus: userError ? "invalid" : invalidUser ? "unavailable" : "valid",
           assuranceStatus: assuranceError ? "unavailable" : "valid",
         });
         await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
@@ -176,9 +161,7 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     const config = getSupabaseClientConfigStatus();
     if (!config.configured) {
-      console.warn(
-        `[KovaAuth] Supabase auth unavailable. Missing: ${config.missing.join(", ")}`,
-      );
+      console.warn(`[KovaAuth] Supabase auth unavailable. Missing: ${config.missing.join(", ")}`);
       setSession(null);
       setIsLoaded(true);
       return () => {
@@ -186,32 +169,26 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
       };
     }
 
-    const { data: sub } = supabase.auth.onAuthStateChange(
-      (event, newSession) => {
-        if (cancelled) return;
-        if (!newSession && hasOAuthResponseInUrl()) return;
-        if (event === "PASSWORD_RECOVERY" && newSession) {
-          markPasswordRecoveryFlow(newSession.user.id);
-        }
-        // Supabase warns against awaiting auth methods while its auth-state lock
-        // is held. Schedule the authoritative user/MFA validation after this
-        // callback returns.
-        window.setTimeout(() => {
-          if (!cancelled) void acceptSession(newSession);
-        }, 0);
-      },
-    );
+    const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (cancelled) return;
+      if (!newSession && hasOAuthResponseInUrl()) return;
+      if (event === "PASSWORD_RECOVERY" && newSession) {
+        markPasswordRecoveryFlow(newSession.user.id);
+      }
+      // Supabase warns against awaiting auth methods while its auth-state lock
+      // is held. Schedule the authoritative user/MFA validation after this
+      // callback returns.
+      window.setTimeout(() => {
+        if (!cancelled) void acceptSession(newSession);
+      }, 0);
+    });
 
     async function hydrateSession() {
       try {
-        if (
-          hasOAuthResponseInUrl() &&
-          window.location.pathname !== OAUTH_CALLBACK_PATH
-        ) {
+        if (hasOAuthResponseInUrl() && window.location.pathname !== OAUTH_CALLBACK_PATH) {
           // Clear the OAuth params from the URL up-front so a StrictMode
           // double-invoke / reload can't re-trigger exchange.
-          const oauthSession =
-            await completeOAuthSessionFromUrl("app bootstrap");
+          const oauthSession = await completeOAuthSessionFromUrl("app bootstrap");
           clearOAuthResponseFromUrl();
           if (cancelled) return;
           if (oauthSession) {
@@ -265,9 +242,7 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
 
   const openAuth = useCallback((mode: "sign-in" | "sign-up") => {
     authReturnFocusRef.current =
-      document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setDialog({ open: true, mode });
   }, []);
 
@@ -343,14 +318,10 @@ function adaptUser(u: SupabaseUser | null): UserShape {
   const email = u.email ?? undefined;
   const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
   const fullName =
-    (meta.full_name as string | undefined) ??
-    (meta.name as string | undefined) ??
-    null;
+    (meta.full_name as string | undefined) ?? (meta.name as string | undefined) ?? null;
   const firstName = fullName ? fullName.split(" ")[0] : null;
   const imageUrl =
-    (meta.avatar_url as string | undefined) ??
-    (meta.picture as string | undefined) ??
-    null;
+    (meta.avatar_url as string | undefined) ?? (meta.picture as string | undefined) ?? null;
   return {
     id: u.id,
     email,
@@ -433,21 +404,11 @@ function AuthTrigger({
   );
 }
 
-export function SignInButton({
-  children,
-}: {
-  children?: ReactNode;
-  mode?: "modal" | "redirect";
-}) {
+export function SignInButton({ children }: { children?: ReactNode; mode?: "modal" | "redirect" }) {
   return <AuthTrigger variant="sign-in">{children}</AuthTrigger>;
 }
 
-export function SignUpButton({
-  children,
-}: {
-  children?: ReactNode;
-  mode?: "modal" | "redirect";
-}) {
+export function SignUpButton({ children }: { children?: ReactNode; mode?: "modal" | "redirect" }) {
   return <AuthTrigger variant="sign-up">{children}</AuthTrigger>;
 }
 
@@ -461,10 +422,7 @@ export function UserButton(_props?: {
   const adapted = adaptUser(user);
   const avatar = adapted?.imageUrl;
   const label = adapted?.fullName || adapted?.email || "Account";
-  const initial = (adapted?.fullName || adapted?.email || "?")
-    .trim()
-    .charAt(0)
-    .toUpperCase();
+  const initial = (adapted?.fullName || adapted?.email || "?").trim().charAt(0).toUpperCase();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   if (!user) return null;
@@ -477,11 +435,7 @@ export function UserButton(_props?: {
           aria-label="Account menu"
         >
           {avatar ? (
-            <img
-              src={avatar}
-              alt={label}
-              className="h-full w-full object-cover"
-            />
+            <img src={avatar} alt={label} className="h-full w-full object-cover" />
           ) : (
             <span>{initial}</span>
           )}
