@@ -19,10 +19,10 @@ function requireResult(result, code, { requireData = false } = {}) {
   return result?.data ?? null;
 }
 
-function requireRows(result, code) {
+function affectedRows(result, code) {
   const data = requireResult(result, code);
   if (!Array.isArray(data)) fail(`${code}_missing_affected_rows`, 500);
-  return data;
+  return data.length;
 }
 
 function stringId(value) {
@@ -179,7 +179,9 @@ export async function processGitHubDelivery({
         .delete()
         .eq("id", installationId)
         .select("id");
-      requireRows(revoked, "github_installation_revoke_failed");
+      // Zero rows is an idempotent success: a prior attempt may have revoked it before
+      // its final delivery-status write failed.
+      affectedRows(revoked, "github_installation_revoke_failed");
     }
 
     if (
@@ -192,7 +194,8 @@ export async function processGitHubDelivery({
         .update({ explicitly_granted: false, revoked_at: now() })
         .eq("id", repositoryId);
       if (installationId) revoke = revoke.eq("installation_id", installationId);
-      requireRows(await revoke.select("id"), "github_repository_revoke_failed");
+      // GitHub can deliver before repository discovery finishes, so an untracked row is a safe no-op.
+      affectedRows(await revoke.select("id"), "github_repository_revoke_failed");
     }
 
     if (repositoryId) {
@@ -201,7 +204,7 @@ export async function processGitHubDelivery({
         .update({ last_webhook_at: now() })
         .eq("id", repositoryId);
       if (installationId) touch = touch.eq("installation_id", installationId);
-      requireRows(await touch.select("id"), "github_repository_touch_failed");
+      affectedRows(await touch.select("id"), "github_repository_touch_failed");
     }
 
     await markGitHubDelivery(
