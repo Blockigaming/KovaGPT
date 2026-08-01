@@ -295,6 +295,17 @@ test("requires JSON and maps malformed bodies to stable public errors", async ()
     readAgentJsonRequest(
       new Request("https://example.test/api/agents/teams", {
         method: "POST",
+        body: "{}",
+      }),
+      AGENT_TEAM_CREATE_BODY_LIMIT_BYTES,
+    ),
+    { code: "unsupported_media_type", status: 415 },
+  );
+
+  await expectAgentErrorAsync(
+    readAgentJsonRequest(
+      new Request("https://example.test/api/agents/teams", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: "{",
       }),
