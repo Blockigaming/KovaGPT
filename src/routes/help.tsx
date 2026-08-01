@@ -269,7 +269,7 @@ const FAQS: Faq[] = [
     category: "Subscriptions",
     question: "What's included in KovaGPT Plus?",
     answer:
-      "Higher message limits, priority models, image generation, scheduled tasks, and full project workspaces.",
+      "Higher message limits, priority models, image generation, and full project workspaces. Scheduled task execution is not available in this deployment.",
     keywords: ["plus", "pro", "features", "premium"],
   },
   {
@@ -368,9 +368,9 @@ const FAQS: Faq[] = [
   {
     id: "task-1",
     category: "Scheduled tasks",
-    question: "Can KovaGPT run tasks on a schedule?",
+    question: "Why can't I create a scheduled task?",
     answer:
-      "Yes - ask KovaGPT to remind you or run a task at a specific time. Manage them in the Scheduled tab.",
+      "Scheduled execution is not available in this deployment because no background task runner is deployed. The Scheduled Tasks page can only show, pause, or delete previously saved tasks.",
     keywords: ["reminder", "cron", "recurring"],
   },
   {
