@@ -561,7 +561,7 @@ function ChatMessageInner({
                 onClick={() => {
                   const next = feedback === "up" ? null : "up";
                   persistFeedback(next);
-                  if (next) toast.success("Thanks for the feedback");
+                  if (next) toast.success("Rating saved on this device");
                 }}
                 className={`inline-flex items-center justify-center p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95 ${
                   feedback === "up"
@@ -578,7 +578,7 @@ function ChatMessageInner({
                 onClick={() => {
                   const next = feedback === "down" ? null : "down";
                   persistFeedback(next);
-                  if (next) toast.success("Thanks, we'll improve");
+                  if (next) toast.success("Rating saved on this device");
                 }}
                 className={`inline-flex items-center justify-center p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95 ${
                   feedback === "down"
