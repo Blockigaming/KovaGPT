@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { cp, mkdtemp, rm } from "node:fs/promises";
 import { createServer } from "node:net";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import test from "node:test";
 
@@ -71,15 +74,20 @@ test(
   "generated production Worker boots in workerd and serves dynamic routes",
   { timeout: 50_000 },
   async () => {
+    const fixtureRoot = await mkdtemp(join(tmpdir(), "kovagpt-worker-"));
+    await cp("dist", join(fixtureRoot, "dist"), { recursive: true });
+
     const port = await getAvailablePort();
     const origin = `http://127.0.0.1:${port}`;
+    const wranglerBinary = resolve(
+      "node_modules/.bin",
+      isWindows ? "wrangler.cmd" : "wrangler",
+    );
     let output = "";
     let spawnError;
     const worker = spawn(
-      isWindows ? "npx.cmd" : "npx",
+      wranglerBinary,
       [
-        "--no-install",
-        "wrangler",
         "--cwd",
         "dist/server",
         "dev",
@@ -90,6 +98,7 @@ test(
         String(port),
       ],
       {
+        cwd: fixtureRoot,
         detached: !isWindows,
         env: {
           ...process.env,
@@ -150,6 +159,7 @@ test(
       assert.doesNotMatch(rootBody, /This page didn't load/);
     } finally {
       await stopWorker(worker);
+      await rm(fixtureRoot, { recursive: true, force: true });
     }
   },
 );
