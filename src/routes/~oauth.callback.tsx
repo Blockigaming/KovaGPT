@@ -51,9 +51,7 @@ function OAuthCallbackPage() {
         <NovaLogo className="h-12 w-12" />
         {error ? (
           <>
-            <h1 className="mt-5 text-lg font-semibold">
-              Sign in could not finish
-            </h1>
+            <h1 className="mt-5 text-lg font-semibold">Sign in could not finish</h1>
             <p className="mt-2 text-sm text-muted-foreground">{error}</p>
             <a
               href="/?sign-in=1"
