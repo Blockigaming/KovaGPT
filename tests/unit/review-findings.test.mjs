@@ -149,3 +149,36 @@ test("upload quotas follow the signed-in tier and reject invalid sizes before ch
   assert.ok(imageSize > -1 && imageSize < imageCharge);
   assert.ok(textSize > -1 && textSize < textCharge);
 });
+
+test("scheduled task surfaces stay truthful while the runner is disabled", () => {
+  const server = read("src/lib/scheduled-tasks.functions.ts");
+  const route = read("src/routes/scheduled-tasks.tsx");
+  const sidebar = read("src/components/Sidebar.tsx");
+  const palette = read("src/components/CommandPalette.tsx");
+  const capabilities = read("src/platform/capabilities.ts");
+  const help = read("src/routes/help.tsx");
+  const study = read("src/routes/study-assistant.tsx");
+  const product = read("src/lib/product-completeness.server.ts");
+  const notifications = read("src/routes/notifications.tsx");
+  const parity = read("docs/chatgpt-feature-parity.md");
+
+  assert.match(server, /scheduledExecutionAvailable = false/);
+  assert.match(route, /Scheduled Tasks Status/);
+  assert.match(route, /Upgrading will not enable scheduled/);
+  assert.doesNotMatch(route, /Schedule KovaGPT to do something for you later/);
+  assert.match(sidebar, /Scheduled tasks status/);
+  assert.match(palette, /Scheduled Tasks status/);
+  assert.match(capabilities, /label: "Scheduled Tasks status"/);
+  assert.match(help, /Scheduled task execution is not available in this deployment/);
+  assert.match(help, /no background task runner is deployed/);
+  assert.doesNotMatch(help, /image generation, scheduled tasks/);
+  assert.doesNotMatch(study, /scheduled reminders/i);
+  assert.match(product, /title: "Scheduled execution unavailable"/);
+  assert.doesNotMatch(
+    product,
+    /Schedule recurring work|Create reminders, summaries, or recurring searches|label: "Create Scheduled Task"/,
+  );
+  assert.match(notifications, /historical task notifications/);
+  assert.match(parity, /Scheduled Tasks\s+\| Intentionally unavailable/);
+  assert.doesNotMatch(parity, /scheduled task route and server runner/);
+});
