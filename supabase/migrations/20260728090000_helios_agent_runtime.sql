@@ -1,4 +1,4 @@
--- Project Helios: durable worker queue, evidence, deliverables, and agent notifications.
+-- Project Helios: durable team-worker queue, evidence, deliverables, and agent notifications.
 create table public.agent_workers (
   id text primary key, version text not null, state text not null check (state in ('ready','degraded','draining','stopped')),
   concurrency integer not null check (concurrency between 1 and 64), active_jobs integer not null default 0,
@@ -6,7 +6,8 @@ create table public.agent_workers (
 );
 create table public.agent_jobs (
   id uuid primary key default gen_random_uuid(), owner_id uuid not null references auth.users(id) on delete cascade,
-  project_id uuid references public.projects(id) on delete set null, kind text not null check (kind in ('browser','team')),
+  project_id uuid references public.projects(id) on delete set null,
+  kind text not null constraint agent_jobs_team_only check (kind = 'team'),
   status text not null default 'queued' check (status in ('queued','leased','running','approval_required','paused','retrying','completed','failed','cancelling','cancelled')),
   input jsonb not null default '{}', result jsonb, error text, priority integer not null default 0,
   attempts integer not null default 0, max_attempts integer not null default 3 check (max_attempts between 1 and 10),
@@ -15,10 +16,11 @@ create table public.agent_jobs (
   created_at timestamptz not null default now(), updated_at timestamptz not null default now()
 );
 create index agent_jobs_queue_idx on public.agent_jobs (status, available_at, priority desc, created_at);
-create table public.agent_run_events (
+create table public.agent_job_events (
   id bigint generated always as identity primary key, job_id uuid not null references public.agent_jobs(id) on delete cascade,
   event_type text not null, payload jsonb not null default '{}', created_at timestamptz not null default now()
 );
+create index agent_job_events_job_idx on public.agent_job_events (job_id, created_at);
 create table public.agent_deliverables (
   id uuid primary key default gen_random_uuid(), owner_id uuid not null references auth.users(id) on delete cascade,
   run_id uuid not null references public.agent_jobs(id) on delete cascade, specialist_task_id text,
@@ -47,13 +49,13 @@ create table public.agent_approvals (
 
 alter table public.agent_workers enable row level security;
 alter table public.agent_jobs enable row level security;
-alter table public.agent_run_events enable row level security;
+alter table public.agent_job_events enable row level security;
 alter table public.agent_deliverables enable row level security;
 alter table public.agent_notifications enable row level security;
 alter table public.agent_approvals enable row level security;
 create policy "Owners read agent jobs" on public.agent_jobs for select using (auth.uid() = owner_id);
 create policy "Owners create agent jobs" on public.agent_jobs for insert with check (auth.uid() = owner_id and (project_id is null or exists (select 1 from public.projects p where p.id = project_id and (p.owner_id = auth.uid() or exists (select 1 from public.project_members pm where pm.project_id=p.id and pm.user_id=auth.uid())))));
-create policy "Owners read job events" on public.agent_run_events for select using (exists (select 1 from public.agent_jobs j where j.id = job_id and j.owner_id = auth.uid()));
+create policy "Owners read job events" on public.agent_job_events for select using (exists (select 1 from public.agent_jobs j where j.id = job_id and j.owner_id = auth.uid()));
 create policy "Owners manage deliverables" on public.agent_deliverables for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id and exists (select 1 from public.agent_jobs j where j.id = run_id and j.owner_id = auth.uid()) and (project_id is null or exists (select 1 from public.projects p where p.id = project_id and (p.owner_id=auth.uid() or exists (select 1 from public.project_members pm where pm.project_id=p.id and pm.user_id=auth.uid() and pm.role in ('owner','editor'))))));
 create policy "Owners read notifications" on public.agent_notifications for select using (auth.uid() = owner_id);
 create policy "Owners update notifications" on public.agent_notifications for update using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
@@ -88,7 +90,7 @@ create or replace function public.lease_agent_job(p_worker_id text, p_lease_seco
 returns setof public.agent_jobs language plpgsql security definer set search_path = public as $$
 declare selected_id uuid;
 begin
-  select id into selected_id from agent_jobs where status in ('queued','retrying') and available_at <= now()
+  select id into selected_id from agent_jobs where kind='team' and status in ('queued','retrying') and available_at <= now()
     order by priority desc, created_at for update skip locked limit 1;
   if selected_id is null then return; end if;
   return query update agent_jobs set status='leased', worker_id=p_worker_id, lease_expires_at=now()+make_interval(secs => least(greatest(p_lease_seconds,15),900)), attempts=attempts+1, started_at=coalesce(started_at,now()), updated_at=now() where id=selected_id returning *;
