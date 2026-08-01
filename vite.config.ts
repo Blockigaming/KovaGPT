@@ -12,9 +12,9 @@ export default defineConfig({
     // TanStack resolves this entry relative to the default src directory.
     // Using "src/server.ts" would incorrectly resolve to "src/src/server.ts".
     tanstackStart({ server: { entry: "server" } }),
-    // Lovable deploys the generated Cloudflare module, not the raw TypeScript
-    // Worker entry. Keep the output contract explicit so production cannot
-    // silently fall back to src/server.ts.
+    // Production deploys the generated Nitro Cloudflare module, not the raw
+    // TypeScript Worker entry. Keep the output contract explicit so a manual
+    // Wrangler deployment cannot silently fall back to src/server.ts.
     nitro({
       preset: "cloudflare-module",
       output: {
