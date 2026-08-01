@@ -4,6 +4,7 @@ import { createStripeClient, type StripeEnv } from "@/lib/stripe.server";
 import { disconnectGoogle } from "@/lib/google-oauth.server";
 import { disconnectAllGitHub } from "@/lib/github-oauth.server";
 import { disconnectAllOAuth } from "@/integrations/oauth-lifecycle.server";
+import { disconnectAllFinance } from "@/finances/plaid.server";
 
 const TERMINAL_SUBSCRIPTION_STATES = new Set(["canceled", "incomplete_expired"]);
 
@@ -69,6 +70,21 @@ export const Route = createFileRoute("/api/account")({
               { status: 502 },
             );
           }
+        }
+
+        try {
+          await disconnectAllFinance(auth);
+        } catch (error) {
+          console.error("[account-delete] financial connection removal failed", {
+            error: error instanceof Error ? error.message : "unknown_error",
+          });
+          return Response.json(
+            {
+              error:
+                "Financial connections could not be removed, so your account was not deleted. Please try again or contact support.",
+            },
+            { status: 502 },
+          );
         }
 
         try {
