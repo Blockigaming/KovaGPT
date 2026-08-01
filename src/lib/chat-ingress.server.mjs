@@ -202,9 +202,9 @@ function normalizeAttachment(value) {
 
   if (value.kind === "text_file") {
     const name = optionalTrimmedString(value.name, "attachment_name", 255);
-    if (!name) invalid("invalid_text_attachment");
+    if (!name) invalid("invalid_text_attachment", "Invalid text file attachment.");
     if (typeof value.content !== "string" || value.content.length === 0) {
-      invalid("invalid_text_attachment");
+      invalid("invalid_text_attachment", "Invalid text file attachment.");
     }
     if (value.content.length > CHAT_MAX_TEXT_ATTACHMENT_CHARS) {
       tooLarge("text_attachment_too_large", "A text attachment is too large.");
