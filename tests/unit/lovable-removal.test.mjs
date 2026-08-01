@@ -17,7 +17,7 @@ test("package metadata does not depend on private Lovable packages", () => {
   }
 });
 
-test("Lovable integration uses no private package and exposes no client-side gateway secret", () => {
+test("direct AI integration has no Lovable gateway or client-side provider secret", () => {
   const files = [
     "package.json",
     "vite.config.ts",
@@ -41,8 +41,11 @@ test("Lovable integration uses no private package and exposes no client-side gat
     }
   }
   const provider = read("src/lib/ai/provider.server.ts");
-  assert.match(provider, /LOVABLE_API_KEY/);
+  const env = read(".env.example");
   assert.match(provider, /OPENAI_API_KEY/);
+  assert.match(provider, /provider: "openai"/);
+  assert.doesNotMatch(provider, /LOVABLE_API_KEY|LOVABLE_AI_BASE_URL|Lovable-API-Key/i);
+  assert.doesNotMatch(env, /LOVABLE_API_KEY|LOVABLE_AI_BASE_URL|ai\.gateway\.lovable\.dev/i);
   assert.doesNotMatch(provider, /VITE_.*(?:LOVABLE|OPENAI).*API_KEY/);
 });
 
