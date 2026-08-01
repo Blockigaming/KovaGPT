@@ -33,12 +33,9 @@ export function ForgotPasswordDialog({
     }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(
-        normalizedEmail,
-        {
-          redirectTo: `${window.location.origin}/reset-password`,
-        },
-      );
+      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
       if (error) throw error;
       setSent(true);
       toast.success("Reset link sent. Check your inbox & spam folder.");
@@ -70,9 +67,7 @@ export function ForgotPasswordDialog({
               <KeyRound className="w-6 h-6" />
             </div>
           </div>
-          <DialogTitle className="text-center text-xl">
-            Reset your password
-          </DialogTitle>
+          <DialogTitle className="text-center text-xl">Reset your password</DialogTitle>
           <DialogDescription className="text-center">
             {sent
               ? "We sent a secure reset link to your email. Open it on this device to set a new password."
@@ -87,8 +82,7 @@ export function ForgotPasswordDialog({
               <div>
                 <p className="font-medium">{email}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Reset links expire. If you requested more than one, use the
-                  newest link.
+                  Reset links expire. If you requested more than one, use the newest link.
                 </p>
               </div>
             </div>
@@ -123,8 +117,7 @@ export function ForgotPasswordDialog({
               Send reset link
             </Button>
             <p className="text-[11px] text-center text-muted-foreground">
-              If an account exists for that email, you'll get the link in a
-              minute.
+              If an account exists for that email, you'll get the link in a minute.
             </p>
           </form>
         )}
