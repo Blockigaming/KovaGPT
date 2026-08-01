@@ -22,9 +22,7 @@ const authSource = readFileSync(
 function handlerSlice(source, method, nextMethod) {
   const start = source.indexOf(`${method}: async ({ request }) => {`);
   assert.ok(start > 0, `${method} handler must exist`);
-  const end = nextMethod
-    ? source.indexOf(`${nextMethod}: async ({ request }) => {`, start)
-    : -1;
+  const end = nextMethod ? source.indexOf(`${nextMethod}: async ({ request }) => {`, start) : -1;
   return source.slice(start, end > start ? end : undefined);
 }
 
@@ -51,34 +49,20 @@ test("team validation and RLS project authorization precede service-role creatio
   const post = handlerSlice(teamsSource, "POST", "PATCH");
   const parseAt = post.indexOf("body = parseAgentTeamCreatePayload(");
   const graphAt = post.indexOf("validateTaskGraph(body.tasks)");
-  const authorizeAt = post.indexOf(
-    "body.projectId = await authorizeAgentProject({",
-  );
+  const authorizeAt = post.indexOf("body.projectId = await authorizeAgentProject({");
   const createAt = post.indexOf("await createAgentTeamRun(auth, {");
 
   assert.ok(parseAt > 0, "strict payload parsing must exist");
   assert.ok(graphAt > parseAt, "graph validation must follow bounded parsing");
-  assert.ok(
-    authorizeAt > graphAt,
-    "project authorization must follow graph validation",
-  );
-  assert.ok(
-    createAt > authorizeAt,
-    "authorization must precede service-role creation",
-  );
+  assert.ok(authorizeAt > graphAt, "project authorization must follow graph validation");
+  assert.ok(createAt > authorizeAt, "authorization must precede service-role creation");
   assert.match(post, /supabaseUser:\s*auth\.supabaseUser/);
   assert.match(post, /projectId: body\.projectId/);
-  assert.doesNotMatch(
-    post.slice(createAt),
-    /projectId:\s*[^\n]*(request|url|searchParams)/,
-  );
+  assert.doesNotMatch(post.slice(createAt), /projectId:\s*[^\n]*(request|url|searchParams)/);
 });
 
 test("authorization uses the verified bearer-scoped client added to the auth boundary", () => {
-  assert.match(
-    authSource,
-    /global:\s*\{ headers:\s*\{ Authorization: `Bearer \$\{token\}` \} \}/,
-  );
+  assert.match(authSource, /global:\s*\{ headers:\s*\{ Authorization: `Bearer \$\{token\}` \} \}/);
   assert.match(authSource, /supabaseUser:\s*verifier/);
   assert.match(authSource, /supabaseAdmin,/);
   assert.match(ingressSource, /supabaseUser\s*\.from\("projects"\)/);
@@ -90,14 +74,8 @@ test("single-agent creation remains hard-disabled and drains the request body", 
   const cancelAt = post.indexOf("await request.body?.cancel()");
   const unavailableAt = post.indexOf('error: "browser_agent_unavailable"');
 
-  assert.ok(
-    cancelAt > 0,
-    "disabled creation must cancel unread request bodies",
-  );
-  assert.ok(
-    unavailableAt > cancelAt,
-    "the disabled response must follow body cancellation",
-  );
+  assert.ok(cancelAt > 0, "disabled creation must cancel unread request bodies");
+  assert.ok(unavailableAt > cancelAt, "the disabled response must follow body cancellation");
   assert.match(post, /status: 503/);
   assert.match(post, /"Retry-After": "3600"/);
   assert.doesNotMatch(runsSource, /\bcreateAgentRun\b/);
@@ -107,28 +85,16 @@ test("strict control parsing precedes every agent control action", () => {
   const runPatch = handlerSlice(runsSource, "PATCH");
   const teamPatch = handlerSlice(teamsSource, "PATCH");
 
-  assert.ok(
-    runPatch.indexOf("readAgentJsonRequest(") <
-      runPatch.indexOf("controlAgentRun("),
-  );
-  assert.ok(
-    teamPatch.indexOf("readAgentJsonRequest(") <
-      teamPatch.indexOf("controlAgentTeamRun("),
-  );
+  assert.ok(runPatch.indexOf("readAgentJsonRequest(") < runPatch.indexOf("controlAgentRun("));
+  assert.ok(teamPatch.indexOf("readAgentJsonRequest(") < teamPatch.indexOf("controlAgentTeamRun("));
 });
 
 test("strict GET query parsing precedes all history reads", () => {
   const runGet = handlerSlice(runsSource, "GET", "POST");
   const teamGet = handlerSlice(teamsSource, "GET", "POST");
 
-  assert.ok(
-    runGet.indexOf("parseAgentRunQuery(") <
-      runGet.indexOf('.from("agent_runs"'),
-  );
-  assert.ok(
-    teamGet.indexOf("parseAgentRunQuery(") <
-      teamGet.indexOf("getAgentTeamRuns(auth"),
-  );
+  assert.ok(runGet.indexOf("parseAgentRunQuery(") < runGet.indexOf('.from("agent_runs"'));
+  assert.ok(teamGet.indexOf("parseAgentRunQuery(") < teamGet.indexOf("getAgentTeamRuns(auth"));
 });
 
 test("agent responses do not cache authenticated run data or errors", () => {
