@@ -1,52 +1,57 @@
-# Agent worker operations
+# Agent runtime status
 
-The supported Helios worker processes `agent_jobs` with `kind = 'team'`. Queue leasing is atomic,
-bounded, retryable, and recovered after lease expiry. Its service-role credential must be injected
-only into the worker.
+KovaGPT does not currently provide browser or agent-team execution. The historical schemas and
+records remain available for owner-scoped viewing, cancellation, denial, and cleanup, but new jobs
+are rejected and no job can be leased.
 
-Browser automation is not currently available. The browser-run API returns
-`browser_agent_unavailable` with HTTP 503, the user interface does not offer a working start
-control, and the legacy `workers/browser-agent.mjs` entry point exits immediately. Existing
-browser rows are preserved for operator review but are never leased by Helios.
+This is deliberate fail-closed behavior. The previous entry points used incompatible queues and
+did not provide one end-to-end contract from user request through plan execution, approvals,
+evidence, polling, and results.
 
-The legacy `workers/agent-team-worker.mjs` entry point also exits immediately. Team execution is
-supported only through `worker/src/index.mjs` and the `agent_jobs` lease RPC contract.
+## Event schema compatibility
 
-Constellation `agent_runs` events and Helios `agent_jobs` events intentionally use separate
-tables:
+Constellation and Helios use separate event tables:
 
 - `agent_run_events(run_id, kind, safe_payload)` remains unchanged.
-- `agent_job_events(job_id, event_type, payload)` is used by Helios.
+- `agent_job_events(job_id, event_type, payload)` stores historical Helios job events.
 
-## Local development
+The compatibility migration creates the second table without renaming, copying, updating,
+truncating, or deleting existing event rows.
+
+## Fail-closed controls
+
+- The browser-run API returns `browser_agent_unavailable` with HTTP 503.
+- The Work and Agent workspace interfaces show execution as unavailable.
+- New `agent_jobs` inserts are rejected for authenticated and service-role callers.
+- `lease_agent_job` returns no rows.
+- Historical active jobs can be cancelled; paused jobs cannot be resumed.
+- Pending approvals can be denied but cannot be approved into an unavailable runtime.
+- `workers/browser-agent.mjs` and `workers/agent-team-worker.mjs` exit immediately.
+
+## Diagnostic process
+
+`worker/src/index.mjs` is a diagnostic process, not an execution worker. It exposes:
+
+- `/healthz`: HTTP 200 while the process is alive.
+- `/readyz`: HTTP 503 with `execution_enabled: false`.
+
+No Supabase service-role or AI-provider credential should be injected into this process.
 
 ```bash
-npm ci --no-audit --no-fund
-npx supabase start
-npm run db:migrate
-npm run dev
 npm run worker:dev
-curl --fail http://localhost:8788/readyz
+curl --fail http://localhost:8788/healthz
+curl --fail-with-body http://localhost:8788/readyz # expected HTTP 503
 ```
 
-Set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `AI_PROVIDER_URL`, and
-`AI_PROVIDER_API_KEY`. The worker refuses to start without its Supabase credentials, and team
-jobs fail truthfully when the AI provider is not configured or returns an error.
+The Compose health check intentionally uses `/readyz`, so the disabled runtime cannot be mistaken
+for an execution-ready deployment.
 
-## Container deployment
-
-```bash
-docker compose -f docker-compose.agent.yml build agent-worker
-docker compose -f docker-compose.agent.yml up -d agent-worker
-docker compose -f docker-compose.agent.yml exec agent-worker node worker/scripts/health-check.mjs
-```
-
-Configure concurrency, polling, lease duration, and identity with environment variables.
-Schedulers should probe `/healthz` for liveness and `/readyz` for readiness and send
-`SIGTERM` during shutdown.
-
-## Smoke test
+## Read-only smoke check
 
 Set `AGENT_WORKER_URL`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY`, then run
-`npm run worker:smoke`. This is a read-only readiness and schema-contract check. It does not
-enqueue a job, call an AI provider, create a user, or modify production data.
+`npm run worker:smoke`. It verifies the fail-closed readiness response and both event schemas. It
+does not enqueue a job, call an AI provider, create a user, or modify data.
+
+Browser or team execution must remain unavailable until one runtime has executable tests proving
+queue creation, ownership, bounded inputs and outputs, redirect/network policy, approval
+consumption, evidence storage, cancellation, retry semantics, and truthful client polling.
