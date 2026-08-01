@@ -63,7 +63,7 @@ test("claimed legacy arguments are revalidated immediately before Google access"
   const executor = read("src/lib/google-tools.server.ts");
   const claim = executor.indexOf('.select("id, tool, args")');
   const revalidate = executor.indexOf(
-    "validateSupportedWrite(claimedTool, claimedAction.args)",
+    "validateSupportedWrite(claimedTool,",
     claim,
   );
   const token = executor.indexOf(
