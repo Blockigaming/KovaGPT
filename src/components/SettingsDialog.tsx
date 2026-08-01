@@ -364,16 +364,22 @@ export function SettingsDialog({
         const result = (await response.json().catch(() => null)) as {
           error?: string;
         } | null;
-        throw new Error(result?.error || "Account deletion failed. Your account remains active.");
+        toast.error(result?.error || "Account deletion failed. Your account remains active.");
+        return;
       }
       clearConversations();
       onClearAll();
-      await clerk?.signOut();
       setDeleteAccountOpen(false);
       onOpenChange(false);
-      toast.success("Your account and subscription were deleted.");
+      toast.success("Account deletion completed. Active subscriptions were canceled.");
+      // The auth user no longer exists, so remote sign-out can legitimately
+      // fail. The shared sign-out helper always clears this device locally.
+      await clerk?.signOut();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Account deletion failed.");
+      console.error("[account-delete] request failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      toast.error("Account deletion could not be completed. Your account remains active.");
     } finally {
       setDeleteAccountBusy(false);
     }
@@ -802,12 +808,9 @@ export function SettingsDialog({
                     {user?.primaryEmailAddress?.emailAddress ?? "No email on file"}
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => clerk?.openUserProfile()}>
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Manage email addresses
-                </Button>
                 <p className="text-xs text-muted-foreground">
-                  Verification emails are sent here when you sign in or create an account.
+                  Verification and security emails are sent here. Email-address changes are not
+                  currently available in the app; contact support@kovagpt.com if you need help.
                 </p>
               </TabsContent>
 
@@ -974,17 +977,18 @@ export function SettingsDialog({
                 <div className="rounded-lg border border-border p-4 space-y-2">
                   <div className="text-sm font-medium">Account and data deletion</div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    If you want to delete your KovaGPT account or request deletion of your data,
-                    contact{" "}
+                    Use Data controls to request self-service account deletion. KovaGPT verifies
+                    billing first, cancels active subscriptions, disconnects stored credentials, and
+                    then deletes the sign-in account and associated database records. For help or a
+                    specific privacy request, contact{" "}
                     <a
                       href="mailto:support@kovagpt.com"
                       className="underline hover:text-foreground"
                     >
                       support@kovagpt.com
                     </a>{" "}
-                    from the email connected to your account. Please include "Account Deletion
-                    Request" in the subject line. After receiving your request, we may ask for
-                    confirmation to make sure the request is coming from the correct account owner.
+                    from the email connected to your account. Some billing, security, and backup
+                    records may be retained when required by law or operational policy.
                   </p>
                 </div>
 
@@ -1296,7 +1300,7 @@ export function SettingsDialog({
                 />
                 <SecurityRow
                   title="Delete account"
-                  body="Permanently delete your account and all data."
+                  body="Cancel active subscriptions, disconnect stored credentials, and delete your sign-in account and associated cloud records. Legally required billing, security, and backup records may be retained."
                   actionLabel="Delete account"
                   danger
                   onAction={() => {
@@ -1424,8 +1428,9 @@ export function SettingsDialog({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete your account permanently?</AlertDialogTitle>
             <AlertDialogDescription>
-              This cancels active subscriptions and deletes your KovaGPT account and cloud data.
-              This action cannot be undone. Type DELETE to continue.
+              This cancels active subscriptions, disconnects stored credentials, and deletes your
+              sign-in account and associated cloud records. Legally required billing, security, and
+              backup records may be retained. This action cannot be undone. Type DELETE to continue.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <Input

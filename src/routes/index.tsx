@@ -718,11 +718,17 @@ function KovaGPT() {
       let assembledReply = "";
 
       try {
-        const payloadMessages = [...priorMessages, userMsg].map((m) => ({
-          role: m.role,
-          content: m.content,
-          attachments: m.attachments,
-        }));
+        const payloadMessages = [
+          ...priorMessages.map((message) => ({
+            role: message.role,
+            content: message.content,
+          })),
+          {
+            role: userMsg.role,
+            content: userMsg.content,
+            attachments: userMsg.attachments,
+          },
+        ];
 
         const resp = await authFetch("/api/chat", {
           method: "POST",

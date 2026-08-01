@@ -50,7 +50,9 @@ export function MfaPanel() {
   async function startEnroll() {
     setBusy(true);
     try {
-      const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp" });
+      const { data, error } = await supabase.auth.mfa.enroll({
+        factorType: "totp",
+      });
       if (error) throw error;
       setEnrolling({
         factorId: data.id,
@@ -58,8 +60,11 @@ export function MfaPanel() {
         secret: data.totp.secret,
         uri: data.totp.uri,
       });
-    } catch (e: unknown) {
-      toast.error((e as Error).message || "Couldn't start enrollment");
+    } catch (error) {
+      console.error("[mfa] enrollment failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      toast.error("Authenticator setup could not start. Please try again.");
     }
     setBusy(false);
   }
@@ -82,8 +87,11 @@ export function MfaPanel() {
       setCode("");
       toast.success("Two-factor authentication enabled");
       load();
-    } catch (e: unknown) {
-      toast.error((e as Error).message || "Verification failed");
+    } catch (error) {
+      console.error("[mfa] enrollment verification failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      toast.error("That code was not accepted. Check your authenticator and try again.");
     }
     setBusy(false);
   }
@@ -95,8 +103,11 @@ export function MfaPanel() {
       if (error) throw error;
       toast.success("Two-factor removed");
       load();
-    } catch (e: unknown) {
-      toast.error((e as Error).message || "Couldn't remove factor");
+    } catch (error) {
+      console.error("[mfa] factor removal failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      toast.error("The authenticator could not be removed. Please try again.");
     }
     setBusy(false);
   }
@@ -107,8 +118,11 @@ export function MfaPanel() {
       const { error } = await supabase.auth.signOut({ scope: "others" });
       if (error) throw error;
       toast.success("Signed out on other devices");
-    } catch (e: unknown) {
-      toast.error((e as Error).message || "Couldn't sign out other sessions");
+    } catch (error) {
+      console.error("[mfa] remote session sign-out failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      toast.error("Other sessions could not be signed out. Please try again.");
     }
     setBusy(false);
   }
@@ -186,12 +200,14 @@ export function MfaPanel() {
             <Input
               placeholder="123 456"
               value={code}
-              onChange={(e) => setCode(e.target.value)}
-              maxLength={8}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
               className="tracking-widest text-center"
             />
             <div className="flex gap-2">
-              <Button onClick={verify} disabled={busy || code.length < 6} className="flex-1">
+              <Button onClick={verify} disabled={busy || code.length !== 6} className="flex-1">
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify & enable"}
               </Button>
               <Button
