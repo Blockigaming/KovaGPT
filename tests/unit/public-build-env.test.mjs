@@ -8,8 +8,7 @@ const URL = "https://project.supabase.co";
 const PUBLISHABLE_KEY = `sb_publishable_${"a".repeat(32)}`;
 
 function jwt(role) {
-  const encode = (value) =>
-    Buffer.from(JSON.stringify(value)).toString("base64url");
+  const encode = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
   return `${encode({ alg: "HS256", typ: "JWT" })}.${encode({ role })}.signature`;
 }
 
@@ -34,10 +33,7 @@ test("accepts a legacy anon JWT", () => {
 });
 
 test("requires both browser build settings", () => {
-  assert.throws(
-    () => validatePublicBuildEnv({}),
-    /VITE_SUPABASE_URL is required/,
-  );
+  assert.throws(() => validatePublicBuildEnv({}), /VITE_SUPABASE_URL is required/);
   assert.throws(
     () => validatePublicBuildEnv({ VITE_SUPABASE_URL: URL }),
     /VITE_SUPABASE_PUBLISHABLE_KEY is required/,
@@ -65,11 +61,7 @@ test("rejects unsafe Supabase URLs", () => {
 });
 
 test("rejects secret, service-role, and unknown key forms", () => {
-  for (const unsafeKey of [
-    "sb_secret_do-not-publish",
-    jwt("service_role"),
-    "plain-text-key",
-  ]) {
+  for (const unsafeKey of ["sb_secret_do-not-publish", jwt("service_role"), "plain-text-key"]) {
     assert.throws(
       () =>
         validatePublicBuildEnv({
