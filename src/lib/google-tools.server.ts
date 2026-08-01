@@ -16,6 +16,7 @@ import {
   getGoogleConnectionHealth,
   logAudit,
 } from "@/lib/google-oauth.server";
+import { validateSupportedGoogleWrite } from "@/lib/google-write-validation.server.mjs";
 
 // OpenAI-compatible function tool schema.
 export type ToolDef = {
@@ -32,21 +33,42 @@ export type ActivityLabel = { running: string; done: string };
 export const TOOL_ACTIVITY: Record<string, ActivityLabel> = {
   gmail_search: { running: "Searching Gmail…", done: "Searched Gmail" },
   gmail_read_message: { running: "Reading email…", done: "Read email" },
-  calendar_list_events: { running: "Checking your calendar…", done: "Checked calendar" },
+  calendar_list_events: {
+    running: "Checking your calendar…",
+    done: "Checked calendar",
+  },
   drive_search: { running: "Searching Google Drive…", done: "Searched Drive" },
   drive_read_file: { running: "Reading file…", done: "Read file" },
   gmail_create_draft: { running: "Drafting email…", done: "Drafted email" },
-  gmail_send: { running: "Preparing to send email…", done: "Prepared email to send" },
-  calendar_create_event: { running: "Preparing calendar event…", done: "Prepared calendar event" },
-  calendar_delete_event: { running: "Preparing to delete event…", done: "Prepared event deletion" },
-  drive_upload_text_file: { running: "Preparing file upload…", done: "Prepared file for Drive" },
-  drive_create_doc: { running: "Preparing Google Doc…", done: "Prepared Google Doc" },
+  gmail_send: {
+    running: "Preparing to send email…",
+    done: "Prepared email to send",
+  },
+  calendar_create_event: {
+    running: "Preparing calendar event…",
+    done: "Prepared calendar event",
+  },
+  calendar_delete_event: {
+    running: "Preparing to delete event…",
+    done: "Prepared event deletion",
+  },
+  drive_upload_text_file: {
+    running: "Preparing file upload…",
+    done: "Prepared file for Drive",
+  },
+  drive_create_doc: {
+    running: "Preparing Google Doc…",
+    done: "Prepared Google Doc",
+  },
 };
 
 // Tools the model may call whose *effects* only happen after the user
 // explicitly confirms in the UI. runGoogleTool never runs these - the
 // chat loop intercepts them and stages a pending action instead.
-export const WRITE_TOOL_NAMES = new Set<string>(["gmail_create_draft", "calendar_create_event"]);
+export const WRITE_TOOL_NAMES = new Set<string>([
+  "gmail_create_draft",
+  "calendar_create_event",
+]);
 
 export const READ_ONLY_TOOLS: ToolDef[] = [
   {
@@ -60,7 +82,8 @@ export const READ_ONLY_TOOLS: ToolDef[] = [
         properties: {
           query: {
             type: "string",
-            description: "Gmail search query. Example: 'from:boss@company.com newer_than:14d'.",
+            description:
+              "Gmail search query. Example: 'from:boss@company.com newer_than:14d'.",
           },
           max_results: {
             type: "integer",
@@ -80,7 +103,10 @@ export const READ_ONLY_TOOLS: ToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          id: { type: "string", description: "Gmail message id returned from gmail_search." },
+          id: {
+            type: "string",
+            description: "Gmail message id returned from gmail_search.",
+          },
         },
         required: ["id"],
       },
@@ -95,12 +121,18 @@ export const READ_ONLY_TOOLS: ToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          time_min: { type: "string", description: "ISO 8601 lower bound. Default = now." },
+          time_min: {
+            type: "string",
+            description: "ISO 8601 lower bound. Default = now.",
+          },
           time_max: {
             type: "string",
             description: "ISO 8601 upper bound. Default = 7 days from now.",
           },
-          max_results: { type: "integer", description: "Max events to return (1-25). Default 10." },
+          max_results: {
+            type: "integer",
+            description: "Max events to return (1-25). Default 10.",
+          },
         },
       },
     },
@@ -114,8 +146,14 @@ export const READ_ONLY_TOOLS: ToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          query: { type: "string", description: "Substring to match in file names." },
-          max_results: { type: "integer", description: "Max files (1-25). Default 10." },
+          query: {
+            type: "string",
+            description: "Substring to match in file names.",
+          },
+          max_results: {
+            type: "integer",
+            description: "Max files (1-25). Default 10.",
+          },
         },
         required: ["query"],
       },
@@ -129,7 +167,12 @@ export const READ_ONLY_TOOLS: ToolDef[] = [
         "Read the text contents of a Drive file by id. Works for text/plain, JSON, and Google Docs/Sheets/Slides (exported). Returns up to ~40k chars of content.",
       parameters: {
         type: "object",
-        properties: { id: { type: "string", description: "Drive file id from drive_search." } },
+        properties: {
+          id: {
+            type: "string",
+            description: "Drive file id from drive_search.",
+          },
+        },
         required: ["id"],
       },
     },
@@ -146,9 +189,18 @@ export const WRITE_TOOLS: ToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          to: { type: "string", description: "Comma-separated recipient email addresses." },
-          cc: { type: "string", description: "Optional. Comma-separated CC addresses." },
-          bcc: { type: "string", description: "Optional. Comma-separated BCC addresses." },
+          to: {
+            type: "string",
+            description: "Comma-separated recipient email addresses.",
+          },
+          cc: {
+            type: "string",
+            description: "Optional. Comma-separated CC addresses.",
+          },
+          bcc: {
+            type: "string",
+            description: "Optional. Comma-separated BCC addresses.",
+          },
           subject: { type: "string", description: "Email subject line." },
           body: { type: "string", description: "Plain-text email body." },
         },
@@ -165,9 +217,18 @@ export const WRITE_TOOLS: ToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          to: { type: "string", description: "Comma-separated recipient email addresses." },
-          cc: { type: "string", description: "Optional. Comma-separated CC addresses." },
-          bcc: { type: "string", description: "Optional. Comma-separated BCC addresses." },
+          to: {
+            type: "string",
+            description: "Comma-separated recipient email addresses.",
+          },
+          cc: {
+            type: "string",
+            description: "Optional. Comma-separated CC addresses.",
+          },
+          bcc: {
+            type: "string",
+            description: "Optional. Comma-separated BCC addresses.",
+          },
           subject: { type: "string", description: "Email subject line." },
           body: { type: "string", description: "Plain-text email body." },
         },
@@ -185,15 +246,22 @@ export const WRITE_TOOLS: ToolDef[] = [
         type: "object",
         properties: {
           summary: { type: "string", description: "Event title." },
-          description: { type: "string", description: "Optional event description." },
-          location: { type: "string", description: "Optional location or meeting link." },
+          description: {
+            type: "string",
+            description: "Optional event description.",
+          },
+          location: {
+            type: "string",
+            description: "Optional location or meeting link.",
+          },
           start: {
             type: "string",
             description: "ISO 8601 start time, e.g. 2026-07-08T14:00:00-07:00.",
           },
           end: {
             type: "string",
-            description: "ISO 8601 end time. If omitted, defaults to start + 30 minutes.",
+            description:
+              "ISO 8601 end time. If omitted, defaults to start + 30 minutes.",
           },
           attendees: {
             type: "array",
@@ -218,8 +286,14 @@ export const WRITE_TOOLS: ToolDef[] = [
       parameters: {
         type: "object",
         properties: {
-          id: { type: "string", description: "Calendar event id from calendar_list_events." },
-          summary: { type: "string", description: "Event title (for the confirmation card only)." },
+          id: {
+            type: "string",
+            description: "Calendar event id from calendar_list_events.",
+          },
+          summary: {
+            type: "string",
+            description: "Event title (for the confirmation card only).",
+          },
         },
         required: ["id"],
       },
@@ -236,12 +310,17 @@ export const WRITE_TOOLS: ToolDef[] = [
         properties: {
           name: {
             type: "string",
-            description: "File name including extension, e.g. 'meeting-notes.txt' or 'summary.md'.",
+            description:
+              "File name including extension, e.g. 'meeting-notes.txt' or 'summary.md'.",
           },
-          content: { type: "string", description: "Full text contents of the file." },
+          content: {
+            type: "string",
+            description: "Full text contents of the file.",
+          },
           mime_type: {
             type: "string",
-            description: "Optional MIME type. Defaults to text/plain. Use text/markdown for .md.",
+            description:
+              "Optional MIME type. Defaults to text/plain. Use text/markdown for .md.",
           },
         },
         required: ["name", "content"],
@@ -269,22 +348,33 @@ export const WRITE_TOOLS: ToolDef[] = [
   },
 ];
 
-const SUPPORTED_WRITE_TOOLS = new Set(["gmail_create_draft", "calendar_create_event"]);
+const SUPPORTED_WRITE_TOOLS = new Set([
+  "gmail_create_draft",
+  "calendar_create_event",
+]);
 export const ALL_TOOLS: ToolDef[] = [
   ...READ_ONLY_TOOLS,
-  ...WRITE_TOOLS.filter((tool) => SUPPORTED_WRITE_TOOLS.has(tool.function.name)),
+  ...WRITE_TOOLS.filter((tool) =>
+    SUPPORTED_WRITE_TOOLS.has(tool.function.name),
+  ),
 ];
 
-export async function getAvailableGoogleTools(userId: string): Promise<ToolDef[]> {
+export async function getAvailableGoogleTools(
+  userId: string,
+): Promise<ToolDef[]> {
   const health = await getGoogleConnectionHealth(userId);
   if (!health.connected) return [];
   return ALL_TOOLS.filter((tool) => {
     const name = tool.function.name;
     if (name.startsWith("gmail_")) {
-      return name === "gmail_create_draft" ? health.has.gmailWrite : health.has.gmail;
+      return name === "gmail_create_draft"
+        ? health.has.gmailWrite
+        : health.has.gmail;
     }
     if (name.startsWith("calendar_")) {
-      return name === "calendar_create_event" ? health.has.calendarWrite : health.has.calendar;
+      return name === "calendar_create_event"
+        ? health.has.calendarWrite
+        : health.has.calendar;
     }
     if (name.startsWith("drive_")) return health.has.drive;
     return false;
@@ -295,7 +385,10 @@ const GMAIL = "https://gmail.googleapis.com/gmail/v1";
 const CAL = "https://www.googleapis.com/calendar/v3";
 const DRIVE = "https://www.googleapis.com/drive/v3";
 
-function headerValue(headers: Array<{ name: string; value: string }> | undefined, name: string) {
+function headerValue(
+  headers: Array<{ name: string; value: string }> | undefined,
+  name: string,
+) {
   if (!headers) return "";
   const h = headers.find((x) => x.name.toLowerCase() === name.toLowerCase());
   return h?.value ?? "";
@@ -391,7 +484,9 @@ export async function runGoogleTool(
         { headers: H },
       );
       if (!listRes.ok) throw new Error(`gmail list ${listRes.status}`);
-      const list = (await listRes.json()) as { messages?: Array<{ id: string }> };
+      const list = (await listRes.json()) as {
+        messages?: Array<{ id: string }>;
+      };
       if (!list.messages || list.messages.length === 0) {
         void logAudit({
           userId,
@@ -440,14 +535,21 @@ export async function runGoogleTool(
     if (name === "gmail_read_message") {
       const id = String(args.id ?? "");
       if (!id) return { error: "missing_id" };
-      const r = await fetch(`${GMAIL}/users/me/messages/${id}?format=full`, { headers: H });
+      const r = await fetch(`${GMAIL}/users/me/messages/${id}?format=full`, {
+        headers: H,
+      });
       if (!r.ok) throw new Error(`gmail get ${r.status}`);
       const j = (await r.json()) as {
         id: string;
         snippet?: string;
-        payload?: { headers?: Array<{ name: string; value: string }> } & GmailPart;
+        payload?: {
+          headers?: Array<{ name: string; value: string }>;
+        } & GmailPart;
       };
-      const body = extractPlainText(j.payload as GmailPart | undefined).slice(0, 20000);
+      const body = extractPlainText(j.payload as GmailPart | undefined).slice(
+        0,
+        20000,
+      );
       void logAudit({
         userId,
         provider: "gmail",
@@ -475,7 +577,8 @@ export async function runGoogleTool(
       const now = new Date();
       const timeMin = String(args.time_min ?? now.toISOString());
       const timeMax = String(
-        args.time_max ?? new Date(now.getTime() + 7 * 24 * 3600 * 1000).toISOString(),
+        args.time_max ??
+          new Date(now.getTime() + 7 * 24 * 3600 * 1000).toISOString(),
       );
       const max = Math.min(25, Math.max(1, Number(args.max_results ?? 10)));
       const url = `${CAL}/calendars/primary/events?singleEvents=true&orderBy=startTime&maxResults=${max}&timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`;
@@ -499,7 +602,10 @@ export async function runGoogleTool(
         start: e.start,
         end: e.end,
         location: fenceUntrusted("event_location", e.location ?? ""),
-        description: fenceUntrusted("event_description", (e.description ?? "").slice(0, 500)),
+        description: fenceUntrusted(
+          "event_description",
+          (e.description ?? "").slice(0, 500),
+        ),
         link: e.htmlLink,
         attendees: (e.attendees ?? []).slice(0, 10).map((a) => a.email),
       }));
@@ -553,9 +659,12 @@ export async function runGoogleTool(
     if (name === "drive_read_file") {
       const id = String(args.id ?? "");
       if (!id) return { error: "missing_id" };
-      const metaRes = await fetch(`${DRIVE}/files/${id}?fields=id,name,mimeType,webViewLink`, {
-        headers: H,
-      });
+      const metaRes = await fetch(
+        `${DRIVE}/files/${id}?fields=id,name,mimeType,webViewLink`,
+        {
+          headers: H,
+        },
+      );
       if (!metaRes.ok) throw new Error(`drive meta ${metaRes.status}`);
       const meta = (await metaRes.json()) as {
         id: string;
@@ -617,9 +726,17 @@ export async function userHasGoogle(userId: string): Promise<boolean> {
 // ---------------------------------------------------------------------------
 
 function admin() {
-  return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
-  });
+  return createClient<Database>(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        storage: undefined,
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    },
+  );
 }
 
 type WriteArgs = Record<string, unknown>;
@@ -630,7 +747,10 @@ export type SupabaseQueryLike = {
   insert: (values: unknown) => SupabaseQueryLike;
   update: (values: unknown) => SupabaseQueryLike;
   eq: (column: string, value: unknown) => SupabaseQueryLike;
-  maybeSingle: () => Promise<{ data: unknown; error: { message?: string } | null }>;
+  maybeSingle: () => Promise<{
+    data: unknown;
+    error: { message?: string } | null;
+  }>;
 };
 
 type PendingAction = {
@@ -646,38 +766,7 @@ function truncate(s: unknown, n: number): string {
 }
 
 function validateSupportedWrite(tool: string, args: WriteArgs): WriteArgs {
-  if (!SUPPORTED_WRITE_TOOLS.has(tool)) throw new Error("This Google action is not supported.");
-  const email = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (tool === "gmail_create_draft") {
-    const recipients = String(args.to ?? "")
-      .split(",")
-      .map((value) => value.trim())
-      .filter(Boolean);
-    const subject = String(args.subject ?? "").trim();
-    const body = String(args.body ?? "");
-    if (
-      !recipients.length ||
-      recipients.length > 25 ||
-      recipients.some((value) => !email.test(value))
-    )
-      throw new Error("Enter 1–25 valid draft recipients.");
-    if (!subject || subject.length > 300)
-      throw new Error("Draft subject is required and must be under 300 characters.");
-    if (!body.trim() || body.length > 50_000)
-      throw new Error("Draft body is required and must be under 50,000 characters.");
-    return { ...args, to: recipients.join(", "), subject, body };
-  }
-  const summary = String(args.summary ?? "").trim();
-  const start = new Date(String(args.start ?? ""));
-  const end = args.end ? new Date(String(args.end)) : new Date(start.getTime() + 30 * 60_000);
-  const attendees = Array.isArray(args.attendees) ? args.attendees.map(String) : [];
-  if (!summary || summary.length > 300)
-    throw new Error("Event title is required and must be under 300 characters.");
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start)
-    throw new Error("Event start and end times are invalid.");
-  if (attendees.length > 25 || attendees.some((value) => !email.test(value)))
-    throw new Error("Use no more than 25 valid attendee email addresses.");
-  return { ...args, summary, start: start.toISOString(), end: end.toISOString(), attendees };
+  return validateSupportedGoogleWrite(tool, args) as WriteArgs;
 }
 
 /**
@@ -719,7 +808,9 @@ export function summarizeWriteTool(
         attendees: Array.isArray(args.attendees)
           ? (args.attendees as string[]).slice(0, 10)
           : undefined,
-        description: args.description ? truncate(args.description, 300) : undefined,
+        description: args.description
+          ? truncate(args.description, 300)
+          : undefined,
       },
     };
   }
@@ -764,14 +855,24 @@ export async function stagePendingAction(
   const { summary, preview } = summarizeWriteTool(tool, validated);
   const { data, error } = await admin()
     .from("pending_tool_actions" as never)
-    .insert({ user_id: userId, tool, args: validated as never, summary } as never)
+    .insert({
+      user_id: userId,
+      tool,
+      args: validated as never,
+      summary,
+    } as never)
     .select("id")
     .single();
   if (error || !data) {
     console.error("[stagePendingAction] insert failed", error);
     throw new Error("Could not stage pending action");
   }
-  return { id: (data as { id: string }).id, tool, summary, args_preview: preview };
+  return {
+    id: (data as { id: string }).id,
+    tool,
+    summary,
+    args_preview: preview,
+  };
 }
 
 /**
@@ -785,8 +886,9 @@ export async function executePendingAction(
   const db = admin();
   const { data: row, error } = await (db as unknown as SupabaseQueryLike)
     .from("pending_tool_actions")
-    .select("id, user_id, tool, args, status, expires_at")
+    .select("id, user_id, tool, args, status, expires_at, result")
     .eq("id", actionId)
+    .eq("user_id", userId)
     .maybeSingle();
   if (error || !row) return { ok: false, error: "Pending action not found." };
   const pendingRow = row as {
@@ -795,12 +897,23 @@ export async function executePendingAction(
     expires_at: string;
     args?: unknown;
     tool: string;
+    result?: unknown;
   };
-  if (pendingRow.user_id !== userId) return { ok: false, error: "Not your action." };
-  if (pendingRow.status === "confirmed") return { ok: true, result_text: "Already sent." };
+  if (pendingRow.user_id !== userId) {
+    return { ok: false, error: "Pending action not found." };
+  }
+  if (pendingRow.status === "confirmed") {
+    const storedResult = pendingRow.result as { text?: unknown } | null;
+    const storedText =
+      storedResult && typeof storedResult.text === "string"
+        ? storedResult.text
+        : "";
+    return { ok: true, result_text: storedText || "Action already completed." };
+  }
   if (pendingRow.status === "processing")
     return { ok: false, error: "Action is already being processed." };
-  if (pendingRow.status === "cancelled") return { ok: false, error: "Action was cancelled." };
+  if (pendingRow.status === "cancelled")
+    return { ok: false, error: "Action was cancelled." };
   if (new Date(pendingRow.expires_at).getTime() < Date.now()) {
     await (db as unknown as SupabaseQueryLike)
       .from("pending_tool_actions")
@@ -816,14 +929,55 @@ export async function executePendingAction(
   // Without this, a duplicate confirmation request that races the first one
   // would see status still 'pending' and send the same email / create the
   // same event twice. Only the request whose UPDATE affects a row proceeds.
-  const { data: claimed } = await (db as unknown as SupabaseQueryLike)
+  const { data: claimed, error: claimError } = await (
+    db as unknown as SupabaseQueryLike
+  )
     .from("pending_tool_actions")
     .update({ status: "processing" })
     .eq("id", actionId)
+    .eq("user_id", userId)
     .eq("status", "pending")
-    .select("id")
+    .select("id, tool, args")
     .maybeSingle();
-  if (!claimed) return { ok: false, error: "Action is already being processed." };
+  if (claimError) {
+    return {
+      ok: false,
+      error: "KovaGPT could not safely claim this action. Try again.",
+    };
+  }
+  if (!claimed)
+    return { ok: false, error: "Action is already being processed." };
+
+  const claimedAction = claimed as { tool?: unknown; args?: unknown };
+  const claimedTool =
+    typeof claimedAction.tool === "string" ? claimedAction.tool : "";
+  let a: WriteArgs;
+  try {
+    a = validateSupportedWrite(claimedTool, claimedAction.args as WriteArgs);
+  } catch {
+    const { data: invalidated, error: invalidationError } = await (
+      db as unknown as SupabaseQueryLike
+    )
+      .from("pending_tool_actions")
+      .update({
+        status: "cancelled",
+        result: { error: "invalid_stored_arguments" },
+      })
+      .eq("id", actionId)
+      .eq("user_id", userId)
+      .eq("status", "processing")
+      .select("id")
+      .maybeSingle();
+    if (invalidationError || !invalidated) {
+      console.error(
+        "[executePendingAction] invalid action could not be closed",
+      );
+    }
+    return {
+      ok: false,
+      error: "This action is no longer valid. Prepare it again.",
+    };
+  }
 
   let token: string;
   try {
@@ -833,15 +987,21 @@ export async function executePendingAction(
       .from("pending_tool_actions")
       .update({ status: "pending" })
       .eq("id", actionId)
+      .eq("user_id", userId)
       .eq("status", "processing");
-    return { ok: false, error: "Google needs to be reconnected before this action can run." };
+    return {
+      ok: false,
+      error: "Google needs to be reconnected before this action can run.",
+    };
   }
-  const H: HeadersInit = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
-  const a = (pendingRow.args ?? {}) as WriteArgs;
+  const H: HeadersInit = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
 
   try {
     let resultText = "";
-    if (pendingRow.tool === "gmail_send" || pendingRow.tool === "gmail_create_draft") {
+    if (claimedTool === "gmail_send" || claimedTool === "gmail_create_draft") {
       const to = String(a.to ?? "");
       const subject = String(a.subject ?? "");
       const body = String(a.body ?? "");
@@ -858,13 +1018,16 @@ export async function executePendingAction(
         .filter(Boolean)
         .join("\r\n");
       const raw = encodeBase64Url(`${headers}\r\n\r\n${body}`);
-      if (pendingRow.tool === "gmail_send") {
+      if (claimedTool === "gmail_send") {
         const r = await fetch(`${GMAIL}/users/me/messages/send`, {
           method: "POST",
           headers: H,
           body: JSON.stringify({ raw }),
         });
-        if (!r.ok) throw new Error(`gmail send ${r.status} ${await r.text().catch(() => "")}`);
+        if (!r.ok)
+          throw new Error(
+            `gmail send ${r.status} ${await r.text().catch(() => "")}`,
+          );
         resultText = `Sent to ${to}.`;
         await logAudit({
           userId,
@@ -878,7 +1041,8 @@ export async function executePendingAction(
           headers: H,
           body: JSON.stringify({ message: { raw } }),
         });
-        if (!r.ok) throw new Error(`Gmail could not save the draft (${r.status}).`);
+        if (!r.ok)
+          throw new Error(`Gmail could not save the draft (${r.status}).`);
         resultText = `Draft saved to Gmail for ${to}.`;
         await logAudit({
           userId,
@@ -887,7 +1051,7 @@ export async function executePendingAction(
           summary: `Drafted email to ${to}: ${subject}`,
         });
       }
-    } else if (pendingRow.tool === "calendar_create_event") {
+    } else if (claimedTool === "calendar_create_event") {
       const startISO = String(a.start ?? "");
       const endISO = a.end
         ? String(a.end)
@@ -908,7 +1072,10 @@ export async function executePendingAction(
         headers: H,
         body: JSON.stringify(eventBody),
       });
-      if (!r.ok) throw new Error(`Google Calendar could not create the event (${r.status}).`);
+      if (!r.ok)
+        throw new Error(
+          `Google Calendar could not create the event (${r.status}).`,
+        );
       const created = (await r.json()) as { id: string; htmlLink?: string };
       resultText = `Event created${created.htmlLink ? ` - [open in Google Calendar](${created.htmlLink})` : "."}`;
       await logAudit({
@@ -918,14 +1085,18 @@ export async function executePendingAction(
         resourceId: created.id,
         summary: `Created event: ${a.summary ?? ""}`,
       });
-    } else if (pendingRow.tool === "calendar_delete_event") {
+    } else if (claimedTool === "calendar_delete_event") {
       const id = String(a.id ?? "");
       if (!id) throw new Error("missing event id");
-      const r = await fetch(`${CAL}/calendars/primary/events/${encodeURIComponent(id)}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!r.ok && r.status !== 410) throw new Error(`calendar delete ${r.status}`);
+      const r = await fetch(
+        `${CAL}/calendars/primary/events/${encodeURIComponent(id)}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      if (!r.ok && r.status !== 410)
+        throw new Error(`calendar delete ${r.status}`);
       resultText = "Event deleted.";
       await logAudit({
         userId,
@@ -934,7 +1105,7 @@ export async function executePendingAction(
         resourceId: id,
         summary: `Deleted event: ${a.summary ?? id}`,
       });
-    } else if (pendingRow.tool === "drive_upload_text_file") {
+    } else if (claimedTool === "drive_upload_text_file") {
       const name = String(a.name ?? "untitled.txt");
       const content = String(a.content ?? "");
       const mimeType = a.mime_type ? String(a.mime_type) : "text/plain";
@@ -959,8 +1130,15 @@ export async function executePendingAction(
           body: multipartBody,
         },
       );
-      if (!r.ok) throw new Error(`drive upload ${r.status} ${await r.text().catch(() => "")}`);
-      const created = (await r.json()) as { id: string; name: string; webViewLink?: string };
+      if (!r.ok)
+        throw new Error(
+          `drive upload ${r.status} ${await r.text().catch(() => "")}`,
+        );
+      const created = (await r.json()) as {
+        id: string;
+        name: string;
+        webViewLink?: string;
+      };
       resultText = `Uploaded "${created.name}"${created.webViewLink ? ` - [open in Drive](${created.webViewLink})` : "."}`;
       await logAudit({
         userId,
@@ -969,31 +1147,48 @@ export async function executePendingAction(
         resourceId: created.id,
         summary: `Uploaded to Drive: ${created.name}`,
       });
-    } else if (pendingRow.tool === "drive_create_doc") {
+    } else if (claimedTool === "drive_create_doc") {
       const title = String(a.title ?? "Untitled");
       const content = String(a.content ?? "");
       // 1. Create empty Google Doc via Drive
-      const createRes = await fetch(`${DRIVE}/files?fields=id,name,webViewLink`, {
-        method: "POST",
-        headers: H,
-        body: JSON.stringify({ name: title, mimeType: "application/vnd.google-apps.document" }),
-      });
+      const createRes = await fetch(
+        `${DRIVE}/files?fields=id,name,webViewLink`,
+        {
+          method: "POST",
+          headers: H,
+          body: JSON.stringify({
+            name: title,
+            mimeType: "application/vnd.google-apps.document",
+          }),
+        },
+      );
       if (!createRes.ok)
         throw new Error(
           `docs create ${createRes.status} ${await createRes.text().catch(() => "")}`,
         );
-      const doc = (await createRes.json()) as { id: string; name: string; webViewLink?: string };
+      const doc = (await createRes.json()) as {
+        id: string;
+        name: string;
+        webViewLink?: string;
+      };
       // 2. Insert body text via Docs API batchUpdate
       if (content) {
-        const upd = await fetch(`https://docs.googleapis.com/v1/documents/${doc.id}:batchUpdate`, {
-          method: "POST",
-          headers: H,
-          body: JSON.stringify({
-            requests: [{ insertText: { location: { index: 1 }, text: content } }],
-          }),
-        });
+        const upd = await fetch(
+          `https://docs.googleapis.com/v1/documents/${doc.id}:batchUpdate`,
+          {
+            method: "POST",
+            headers: H,
+            body: JSON.stringify({
+              requests: [
+                { insertText: { location: { index: 1 }, text: content } },
+              ],
+            }),
+          },
+        );
         if (!upd.ok)
-          throw new Error(`docs write ${upd.status} ${await upd.text().catch(() => "")}`);
+          throw new Error(
+            `docs write ${upd.status} ${await upd.text().catch(() => "")}`,
+          );
       }
       resultText = `Created "${doc.name}"${doc.webViewLink ? ` - [open in Google Docs](${doc.webViewLink})` : "."}`;
       await logAudit({
@@ -1004,37 +1199,67 @@ export async function executePendingAction(
         summary: `Created Google Doc: ${doc.name}`,
       });
     } else {
-      return { ok: false, error: `Unknown tool: ${pendingRow.tool}` };
+      return { ok: false, error: `Unknown tool: ${claimedTool}` };
     }
-    await (db as unknown as SupabaseQueryLike)
-      .from("pending_tool_actions")
-      .update({ status: "confirmed", result: { text: resultText } })
-      .eq("id", actionId);
+    const { data: confirmationPersisted, error: confirmationPersistError } =
+      await (db as unknown as SupabaseQueryLike)
+        .from("pending_tool_actions")
+        .update({ status: "confirmed", result: { text: resultText } })
+        .eq("id", actionId)
+        .eq("user_id", userId)
+        .eq("status", "processing")
+        .select("id")
+        .maybeSingle();
+    if (confirmationPersistError || !confirmationPersisted) {
+      console.error("[executePendingAction] completion could not be persisted");
+      return {
+        ok: false,
+        error:
+          "Google completed the action, but KovaGPT could not verify completion. Check Google before retrying.",
+      };
+    }
     return { ok: true, result_text: resultText };
-  } catch (e) {
-    const msg = (e as Error).message || "Action failed";
-    console.error("[executePendingAction] failed", msg);
-    await (db as unknown as SupabaseQueryLike)
+  } catch {
+    console.error("[executePendingAction] provider action failed");
+    const { data: failurePersisted, error: failurePersistError } = await (
+      db as unknown as SupabaseQueryLike
+    )
       .from("pending_tool_actions")
-      .update({ status: "failed", result: { error: msg } })
-      .eq("id", actionId);
-    await logAudit({
+      .update({ status: "failed", result: { error: "google_action_failed" } })
+      .eq("id", actionId)
+      .eq("user_id", userId)
+      .eq("status", "processing")
+      .select("id")
+      .maybeSingle();
+    if (failurePersistError || !failurePersisted) {
+      console.error(
+        "[executePendingAction] failure state could not be persisted",
+      );
+    }
+    void logAudit({
       userId,
-      provider: pendingRow.tool.startsWith("gmail")
+      provider: claimedTool.startsWith("gmail")
         ? "gmail"
-        : pendingRow.tool.startsWith("drive")
+        : claimedTool.startsWith("drive")
           ? "drive"
           : "calendar",
-      action: pendingRow.tool,
+      action: claimedTool,
       status: "failure",
-      summary: msg.slice(0, 400),
-    });
-    return { ok: false, error: msg };
+      summary: "Google action failed during confirmed execution.",
+    }).catch(() => undefined);
+    return {
+      ok: false,
+      error:
+        "Google could not confirm whether the action completed. Check Google before trying again.",
+    };
   }
 }
 
 /** Mark a pending action cancelled. Idempotent; only touches your own row. */
-export async function cancelPendingAction(userId: string, actionId: string): Promise<boolean> {
+export async function cancelPendingAction(
+  userId: string,
+  actionId: string,
+): Promise<boolean> {
   const db = admin();
   const { data } = await (db as unknown as SupabaseQueryLike)
     .from("pending_tool_actions")
