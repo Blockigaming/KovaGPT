@@ -1,5 +1,7 @@
 import type { AuthedCaller } from "@/lib/api-auth.server";
+import { BILLING_ENV, tierForLookupKey } from "@/lib/billing-plans";
 import { createClient } from "@supabase/supabase-js";
+import { resolveAgentEntitlement } from "./entitlement-policy.mjs";
 import type { BrowserAction, BrowserPolicy } from "./policy";
 import { validateBrowserAction } from "./policy";
 
@@ -15,22 +17,22 @@ export const AGENT_LIMITS: Record<
 };
 
 export async function getAgentEntitlement(caller: AuthedCaller): Promise<AgentEntitlement | null> {
-  const { data } = await caller.supabaseAdmin
+  const { data, error } = await caller.supabaseAdmin
     .from("subscriptions")
-    .select("price_id, status, current_period_end")
+    .select("price_id, status, current_period_end, environment")
     .eq("user_id", caller.userId)
+    .eq("environment", BILLING_ENV)
     .in("status", ["active", "trialing", "past_due"])
     .order("created_at", { ascending: false })
     .limit(10);
-  const active = (data ?? []).find(
-    (row) => !row.current_period_end || new Date(row.current_period_end).getTime() > Date.now(),
-  );
-  const price = active?.price_id?.toLowerCase() ?? "";
-  if (price.includes("enterprise")) return "enterprise";
-  if (price.includes("business")) return "business";
-  if (price.includes("pro")) return "pro";
-  if (price.includes("plus")) return "plus";
-  return null;
+  if (error) {
+    console.error("[getAgentEntitlement] subscription lookup failed", error);
+    return null;
+  }
+  return resolveAgentEntitlement(data, {
+    billingEnvironment: BILLING_ENV,
+    tierForLookupKey,
+  });
 }
 
 export async function createAgentRun(
