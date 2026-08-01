@@ -96,12 +96,15 @@ export function parseMemoryPayload(raw) {
 
   const chatId = typeof body.chatId === "string" ? body.chatId.trim() : "";
   const title =
-    body.title == null ? null : typeof body.title === "string" ? body.title.trim() : null;
+    body.title == null
+      ? null
+      : typeof body.title === "string"
+        ? body.title.trim().slice(0, MEMORY_LIMITS.maxTitleChars)
+        : null;
   if (
     !chatId ||
     chatId.length > MEMORY_LIMITS.maxChatIdChars ||
     (body.title != null && title === null) ||
-    (title?.length ?? 0) > MEMORY_LIMITS.maxTitleChars ||
     !Array.isArray(body.messages) ||
     body.messages.length < 4 ||
     body.messages.length > MEMORY_LIMITS.maxMessages
@@ -117,14 +120,13 @@ export function parseMemoryPayload(raw) {
     if (item.role !== "user" && item.role !== "assistant") {
       return { ok: false, status: 400, error: "Invalid message role" };
     }
-    if (
-      typeof item.content !== "string" ||
-      !item.content.trim() ||
-      item.content.length > MEMORY_LIMITS.maxContentChars
-    ) {
+    if (typeof item.content !== "string" || !item.content.trim()) {
       return { ok: false, status: 400, error: "Invalid message content" };
     }
-    messages.push({ role: item.role, content: item.content });
+    messages.push({
+      role: item.role,
+      content: item.content.slice(0, MEMORY_LIMITS.maxContentChars),
+    });
   }
 
   return { ok: true, value: { chatId, title: title || null, messages } };
