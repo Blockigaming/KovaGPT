@@ -1,6 +1,7 @@
 // Real Google Calendar CRUD on the signed-in user's primary calendar.
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
+import { BoundedJsonError, readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
 import { getValidGoogleAccessToken, logAudit } from "@/lib/google-oauth.server";
 import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
 
@@ -26,14 +27,14 @@ export const Route = createFileRoute("/api/google/calendar")({
         if (auth instanceof Response) return auth;
         const limited = enforceGoogleRateLimit(auth.userId, "calendar", 60);
         if (limited) return limited;
-        if (Number(request.headers.get("content-length") ?? 0) > 64 * 1024) {
-          return Response.json({ error: "request_too_large" }, { status: 413 });
-        }
         let body: JsonRecord;
         try {
-          body = await request.json();
-        } catch {
-          return Response.json({ error: "invalid_json" }, { status: 400 });
+          body = await readBoundedJsonObject(request, 64 * 1024);
+        } catch (error) {
+          if (error instanceof BoundedJsonError) {
+            return Response.json({ error: error.code }, { status: error.status });
+          }
+          return Response.json({ error: "invalid_request_body" }, { status: 400 });
         }
         const action = body?.action as string;
         if (action !== "list") {
