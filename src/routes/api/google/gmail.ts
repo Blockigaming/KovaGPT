@@ -2,7 +2,10 @@
 // Actions: search, read, draft, send, trash.
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
-import { BoundedJsonError, readBoundedJsonObject } from "@/lib/bounded-json.server.mjs";
+import {
+  BoundedJsonError,
+  readBoundedJsonObject,
+} from "@/lib/bounded-json.server.mjs";
 import { getValidGoogleAccessToken, logAudit } from "@/lib/google-oauth.server";
 import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
 
@@ -16,7 +19,12 @@ type GmailPayload = {
   parts?: GmailPayload[];
   headers?: GmailHeader[];
 };
-type GmailMessage = { id?: string; threadId?: string; snippet?: string; payload?: GmailPayload };
+type GmailMessage = {
+  id?: string;
+  threadId?: string;
+  snippet?: string;
+  payload?: GmailPayload;
+};
 
 function base64UrlEncode(s: string): string {
   return btoa(unescape(encodeURIComponent(s)))
@@ -28,7 +36,9 @@ function base64UrlEncode(s: string): string {
 function decodeBody(data: string | undefined): string {
   if (!data) return "";
   try {
-    return decodeURIComponent(escape(atob(data.replace(/-/g, "+").replace(/_/g, "/"))));
+    return decodeURIComponent(
+      escape(atob(data.replace(/-/g, "+").replace(/_/g, "/"))),
+    );
   } catch {
     return "";
   }
@@ -57,7 +67,10 @@ function buildRawEmail(opts: {
 }): string {
   const headers = [`To: ${opts.to}`, `Subject: ${opts.subject}`];
   if (opts.cc) headers.push(`Cc: ${opts.cc}`);
-  headers.push('Content-Type: text/plain; charset="UTF-8"', "MIME-Version: 1.0");
+  headers.push(
+    'Content-Type: text/plain; charset="UTF-8"',
+    "MIME-Version: 1.0",
+  );
   const raw = `${headers.join("\r\n")}\r\n\r\n${opts.body}`;
   return base64UrlEncode(raw);
 }
@@ -75,16 +88,23 @@ export const Route = createFileRoute("/api/google/gmail")({
           body = await readBoundedJsonObject(request, 64 * 1024);
         } catch (error) {
           if (error instanceof BoundedJsonError) {
-            return Response.json({ error: error.code }, { status: error.status });
+            return Response.json(
+              { error: error.code },
+              { status: error.status },
+            );
           }
-          return Response.json({ error: "invalid_request_body" }, { status: 400 });
+          return Response.json(
+            { error: "invalid_request_body" },
+            { status: 400 },
+          );
         }
         const action = body?.action as string;
         if (!new Set(["search", "read"]).has(action)) {
           return Response.json(
             {
               error: "confirmation_required",
-              message: "Prepare Gmail drafts from chat and confirm the action there.",
+              message:
+                "Prepare Gmail drafts from chat and confirm the action there.",
             },
             { status: 409 },
           );
@@ -93,7 +113,10 @@ export const Route = createFileRoute("/api/google/gmail")({
         try {
           token = await getValidGoogleAccessToken(auth.userId);
         } catch {
-          return Response.json({ error: "google_not_connected" }, { status: 400 });
+          return Response.json(
+            { error: "google_not_connected" },
+            { status: 400 },
+          );
         }
         const H = { Authorization: `Bearer ${token}` };
 
@@ -106,8 +129,12 @@ export const Route = createFileRoute("/api/google/gmail")({
               { headers: H },
             );
             if (!listRes.ok) throw new Error(`gmail list ${listRes.status}`);
-            const list = (await listRes.json()) as { messages?: { id?: string }[] };
-            const ids: string[] = (list.messages ?? []).map((m) => String(m.id ?? ""));
+            const list = (await listRes.json()) as {
+              messages?: { id?: string }[];
+            };
+            const ids: string[] = (list.messages ?? []).map((m) =>
+              String(m.id ?? ""),
+            );
             const messages = await Promise.all(
               ids.map(async (id) => {
                 const r = await fetch(
@@ -140,8 +167,11 @@ export const Route = createFileRoute("/api/google/gmail")({
 
           if (action === "read") {
             const id = String(body.id ?? "");
-            if (!id) return Response.json({ error: "missing_id" }, { status: 400 });
-            const r = await fetch(`${GMAIL}/messages/${id}?format=full`, { headers: H });
+            if (!id)
+              return Response.json({ error: "missing_id" }, { status: 400 });
+            const r = await fetch(`${GMAIL}/messages/${id}?format=full`, {
+              headers: H,
+            });
             if (!r.ok) throw new Error(`gmail get ${r.status}`);
             const m = (await r.json()) as GmailMessage;
             const h = (name: string) =>
@@ -171,23 +201,31 @@ export const Route = createFileRoute("/api/google/gmail")({
             const subject = String(body.subject ?? "").slice(0, 300);
             const messageBody = String(body.body ?? "").slice(0, 50000);
             if (!to || !subject) {
-              return Response.json({ error: "missing_fields" }, { status: 400 });
+              return Response.json(
+                { error: "missing_fields" },
+                { status: 400 },
+              );
             }
             const raw = buildRawEmail({
               to,
               subject,
               body: messageBody,
               cc: typeof body.cc === "string" ? body.cc : undefined,
-              threadId: typeof body.threadId === "string" ? body.threadId : undefined,
+              threadId:
+                typeof body.threadId === "string" ? body.threadId : undefined,
             });
-            const draftBody: { message: { raw: string; threadId?: string } } = { message: { raw } };
-            if (typeof body.threadId === "string") draftBody.message.threadId = body.threadId;
+            const draftBody: { message: { raw: string; threadId?: string } } = {
+              message: { raw },
+            };
+            if (typeof body.threadId === "string")
+              draftBody.message.threadId = body.threadId;
             const r = await fetch(`${GMAIL}/drafts`, {
               method: "POST",
               headers: { ...H, "Content-Type": "application/json" },
               body: JSON.stringify(draftBody),
             });
-            if (!r.ok) throw new Error(`gmail draft ${r.status} ${await r.text()}`);
+            if (!r.ok)
+              throw new Error(`gmail draft ${r.status} ${await r.text()}`);
             const d = await r.json();
             await logAudit({
               userId: auth.userId,
@@ -212,7 +250,10 @@ export const Route = createFileRoute("/api/google/gmail")({
                 headers: { ...H, "Content-Type": "application/json" },
                 body: JSON.stringify({ id: String(body.draftId) }),
               });
-              if (!r.ok) throw new Error(`gmail send draft ${r.status} ${await r.text()}`);
+              if (!r.ok)
+                throw new Error(
+                  `gmail send draft ${r.status} ${await r.text()}`,
+                );
               const m = await r.json();
               await logAudit({
                 userId: auth.userId,
@@ -230,7 +271,10 @@ export const Route = createFileRoute("/api/google/gmail")({
             const subject = String(body.subject ?? "").slice(0, 300);
             const messageBody = String(body.body ?? "").slice(0, 50000);
             if (!to || !subject) {
-              return Response.json({ error: "missing_fields" }, { status: 400 });
+              return Response.json(
+                { error: "missing_fields" },
+                { status: 400 },
+              );
             }
             const raw = buildRawEmail({
               to,
@@ -243,7 +287,8 @@ export const Route = createFileRoute("/api/google/gmail")({
               headers: { ...H, "Content-Type": "application/json" },
               body: JSON.stringify({ raw }),
             });
-            if (!r.ok) throw new Error(`gmail send ${r.status} ${await r.text()}`);
+            if (!r.ok)
+              throw new Error(`gmail send ${r.status} ${await r.text()}`);
             const m = await r.json();
             await logAudit({
               userId: auth.userId,
@@ -260,7 +305,8 @@ export const Route = createFileRoute("/api/google/gmail")({
 
           if (action === "trash") {
             const id = String(body.id ?? "");
-            if (!id) return Response.json({ error: "missing_id" }, { status: 400 });
+            if (!id)
+              return Response.json({ error: "missing_id" }, { status: 400 });
             const r = await fetch(`${GMAIL}/messages/${id}/trash`, {
               method: "POST",
               headers: H,
