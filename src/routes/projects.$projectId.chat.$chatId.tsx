@@ -178,9 +178,6 @@ function ProjectChatPage() {
     const controller = new AbortController();
     abortControllerRef.current = controller;
     const userMessage: ProjectChatMessage = { role: "user", content: text };
-    const priorSystem: ProjectChatMessage[] = project?.system_prompt
-      ? [{ role: "system", content: project.system_prompt }]
-      : [];
     const nextHistory = [...messages, userMessage];
     setInput("");
     setComposerAttachments([]);
@@ -194,10 +191,12 @@ function ProjectChatPage() {
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
         body: JSON.stringify({
-          messages: [...priorSystem, ...nextHistory].map((message) => ({
-            role: message.role,
-            content: message.content,
-          })),
+          messages: nextHistory
+            .filter((message) => message.role === "user" || message.role === "assistant")
+            .map((message) => ({
+              role: message.role,
+              content: message.content,
+            })),
           mode: "default",
           user: {},
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,

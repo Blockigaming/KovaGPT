@@ -37,8 +37,9 @@ test("deep research persistence skips temporary chats and stores run state", () 
 
 test("chat sends temporary semantics to server and passes persistence options to research", () => {
   const route = read("src/routes/api/chat.ts");
+  const ingressTypes = read("src/lib/chat-ingress.server.d.mts");
   const index = read("src/routes/index.tsx");
-  assert.match(route, /temporary\?: boolean/);
+  assert.match(ingressTypes, /temporary\?: boolean/);
   assert.match(route, /temporary: Boolean\(temporary\)/);
   assert.match(index, /temporary: tempChat/);
   assert.match(index, /chatId: nextConvId/);

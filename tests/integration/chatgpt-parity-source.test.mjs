@@ -70,7 +70,9 @@ test("sending snapshots history and serializes automatic retries", () => {
   const optimisticUpdate = route.indexOf("setConversations((prev) => {", snapshot);
   assert.ok(snapshot >= 0 && optimisticUpdate > snapshot);
   assert.match(route, /\|\| inFlightRef\.current\) return;/);
-  assert.match(route, /const payloadMessages = \[\.\.\.priorMessages, userMsg\]/);
+  assert.match(route, /const payloadMessages = \[\s*\.\.\.priorMessages\.map/);
+  assert.match(route, /attachments: userMsg\.attachments/);
+  assert.doesNotMatch(route, /\[\.\.\.priorMessages, userMsg\]\.map/);
   assert.match(route, /inFlightRef\.current = true;/);
   assert.match(route, /inFlightRef\.current = false;/);
   assert.match(route, /retryTimerRef\.current = window\.setTimeout/);
