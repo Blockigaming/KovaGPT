@@ -19,9 +19,9 @@ async function assertMethodNotAllowed(path, method, allow) {
   assert.deepEqual(await response.json(), { error: "method_not_allowed" });
 }
 
-test("the centralized method inventory contains all 31 audited API routes", () => {
-  assert.equal(API_METHOD_POLICY_ROUTES.length, 31);
-  assert.equal(new Set(API_METHOD_POLICY_ROUTES.map(({ path }) => path)).size, 31);
+test("the centralized method inventory contains all 38 audited server-handler routes", () => {
+  assert.equal(API_METHOD_POLICY_ROUTES.length, 38);
+  assert.equal(new Set(API_METHOD_POLICY_ROUTES.map(({ path }) => path)).size, 38);
 });
 
 test("supported account, chat, health, memory, and agent methods pass through unchanged", () => {
@@ -40,6 +40,10 @@ test("supported account, chat, health, memory, and agent methods pass through un
     ["/api/agents/teams", "GET"],
     ["/api/agents/teams", "POST"],
     ["/api/agents/teams", "PATCH"],
+    ["/email/unsubscribe", "GET"],
+    ["/email/unsubscribe", "HEAD"],
+    ["/email/unsubscribe", "POST"],
+    ["/lovable/email/transactional/send", "POST"],
   ]) {
     assert.equal(rejectUnsupportedApiMethod(request(path, method)), null, `${method} ${path}`);
   }
@@ -52,6 +56,9 @@ test("unsupported methods return JSON 405 responses with Allow and no-store", as
   await assertMethodNotAllowed("/api/memory", "PUT", "GET, HEAD, POST, DELETE");
   await assertMethodNotAllowed("/api/agents/runs", "DELETE", "GET, HEAD, POST, PATCH");
   await assertMethodNotAllowed("/api/agents/teams", "DELETE", "GET, HEAD, POST, PATCH");
+  await assertMethodNotAllowed("/email/unsubscribe", "PUT", "GET, HEAD, POST");
+  await assertMethodNotAllowed("/lovable/email/transactional/send", "GET", "POST");
+  await assertMethodNotAllowed("/lovable/email/suppression", "HEAD", "POST");
 });
 
 test("the dynamic OAuth callback matcher accepts exactly one provider segment", async () => {
@@ -87,4 +94,5 @@ test("non-API and unknown API paths remain owned by TanStack", () => {
   assert.equal(rejectUnsupportedApiMethod(request("/", "POST")), null);
   assert.equal(rejectUnsupportedApiMethod(request("/api", "POST")), null);
   assert.equal(rejectUnsupportedApiMethod(request("/api/not-a-route", "POST")), null);
+  assert.equal(rejectUnsupportedApiMethod(request("/lovable/email/not-a-route", "POST")), null);
 });
