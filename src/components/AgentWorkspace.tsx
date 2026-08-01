@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Bot, CheckCircle2, Globe2, LockKeyhole, Play, RotateCcw } from "lucide-react";
 import { useTier } from "@/hooks/useTier";
-import { authFetch } from "@/lib/auth-fetch";
 import { loadAgentRuns, saveAgentRuns, type AgentRun, type AgentRunStatus } from "@/lib/work-store";
 
 const DEFAULT_STEPS = [
@@ -26,8 +25,6 @@ export function AgentWorkspace() {
   const [approvalSteps, setApprovalSteps] = useState([2]);
   const [tools, setTools] = useState<AgentRun["tools"]>(["web", "files"]);
   const [validation, setValidation] = useState<string[]>([]);
-  const [website, setWebsite] = useState("");
-  const [queueState, setQueueState] = useState<"idle" | "queueing" | "queued" | "error">("idle");
 
   useEffect(() => setRuns(loadAgentRuns()), []);
   const persist = (next: AgentRun[]) => {
@@ -69,7 +66,12 @@ export function AgentWorkspace() {
       status: "ready",
       createdAt: now,
       updatedAt: now,
-      log: [{ at: now, message: "Plan saved locally and ready for an explicit handoff." }],
+      log: [
+        {
+          at: now,
+          message: "Plan saved locally and ready for an explicit handoff.",
+        },
+      ],
     };
     persist([run, ...runs].slice(0, 100));
     setObjective("");
@@ -79,7 +81,12 @@ export function AgentWorkspace() {
     persist(
       runs.map((run) =>
         run.id === id
-          ? { ...run, status, updatedAt: now, log: [...run.log, { at: now, message }] }
+          ? {
+              ...run,
+              status,
+              updatedAt: now,
+              log: [...run.log, { at: now, message }],
+            }
           : run,
       ),
     );
@@ -102,41 +109,6 @@ export function AgentWorkspace() {
     update(run.id, "handed_off", "Opened in Chat for user-supervised execution.");
     navigate({ to: "/" });
   };
-  const queueBrowserRun = async () => {
-    let url: URL;
-    try {
-      url = new URL(website);
-      if (url.protocol !== "https:") throw new Error();
-    } catch {
-      setValidation(["Enter a valid HTTPS website before starting secure browser work."]);
-      return;
-    }
-    setQueueState("queueing");
-    const response = await authFetch("/api/agents/runs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        objective: objective.trim(),
-        idempotencyKey: crypto.randomUUID(),
-        allowedDomains: [url.hostname],
-        actions: [
-          { type: "goto", url: url.toString() },
-          { type: "screenshot", label: "Initial page" },
-          { type: "extract", selector: "body" },
-        ],
-      }),
-    });
-    setQueueState(response.ok ? "queued" : "error");
-    if (!response.ok) {
-      const result = (await response.json().catch(() => null)) as { error?: string } | null;
-      setValidation([
-        result?.error === "agent_plan_required"
-          ? "Plus or above is required for secure browser runs."
-          : "The secure browser worker could not accept this run. Try again later.",
-      ]);
-    }
-  };
-
   return (
     <section className="my-6 rounded-2xl border p-4" aria-labelledby="agent-workspace-title">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -195,13 +167,6 @@ export function AgentWorkspace() {
               onChange={(e) => setObjective(e.target.value)}
               className="min-h-24 rounded-lg border bg-background p-3 sm:col-span-2"
               placeholder="What should this agent accomplish?"
-            />
-            <input
-              aria-label="Agent starting website"
-              value={website}
-              onChange={(event) => setWebsite(event.target.value)}
-              className="h-10 rounded-lg border bg-background px-3 sm:col-span-2"
-              placeholder="https://example.com — optional secure browser starting page"
             />
             <textarea
               aria-label="Agent instructions"
@@ -283,18 +248,18 @@ export function AgentWorkspace() {
               Save run
             </button>
             <button
-              disabled={!canSave || !website || queueState === "queueing"}
-              onClick={queueBrowserRun}
+              type="button"
+              disabled
+              aria-describedby="browser-run-unavailable"
               className="min-h-10 rounded-lg border px-3 text-sm disabled:opacity-50"
             >
-              {queueState === "queueing" ? "Queueing…" : "Start secure browser run"}
+              Secure browser runs unavailable
             </button>
           </div>
-          {queueState === "queued" && (
-            <p className="mt-3 text-sm" role="status">
-              Secure browser run queued. It will start only when an isolated worker leases it.
-            </p>
-          )}
+          <p id="browser-run-unavailable" className="mt-3 text-sm text-muted-foreground">
+            Browser automation is unavailable while its isolated execution service is being rebuilt.
+            Saved plans and user-supervised Chat handoff remain available.
+          </p>
           {validation.length > 0 && (
             <ul className="mt-3 rounded-lg bg-muted/50 p-3 text-sm" role="status">
               {validation.map((item) => (
