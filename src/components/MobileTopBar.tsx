@@ -35,7 +35,7 @@ export function MobileTopBar({
   const showAuth = isLoaded && clerkEnabled && !isSignedIn;
   return (
     <header className="kova-topbar sticky top-0 z-30 lg:hidden">
-      <div className="kova-topbar-inner grid min-h-14 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1">
+      <div className="kova-topbar-inner grid min-h-14 grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] items-center gap-1">
         <button
           type="button"
           onClick={onOpenSidebar}
@@ -64,12 +64,12 @@ export function MobileTopBar({
         </div>
         {showAuth ? (
           <SignInButton mode="modal">
-            <button className="mr-1 min-h-11 whitespace-nowrap rounded-md px-3 text-[13px] font-medium text-foreground transition hover:bg-accent/60 active:bg-accent">
+            <button className="mr-1 min-h-11 justify-self-end whitespace-nowrap rounded-md px-3 text-[13px] font-medium text-foreground transition hover:bg-accent/60 active:bg-accent">
               Log in
             </button>
           </SignInButton>
         ) : (
-          <div className="flex items-center">
+          <div className="flex items-center justify-end">
             {isSignedIn && onTemporaryChatChange ? (
               <button
                 type="button"
