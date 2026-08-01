@@ -42,6 +42,8 @@ test.describe("mobile shell UI truth", () => {
         ? page.getByRole("button", { name: "Open menu" })
         : page.locator('[data-testid="model-selector-trigger"]:visible').first();
     await opener.focus();
+    const openerHandle = await opener.elementHandle();
+    expect(openerHandle).not.toBeNull();
     await page.keyboard.press("Control+K");
 
     const palette = page.getByRole("dialog", { name: "Search chats and actions" });
@@ -67,13 +69,17 @@ test.describe("mobile shell UI truth", () => {
 
     await page.keyboard.press("Escape");
     await expect(palette).toBeHidden();
-    await expect(opener).toBeFocused();
+    await expect
+      .poll(() => openerHandle!.evaluate((element) => element === document.activeElement))
+      .toBe(true);
 
     await page.keyboard.press("Control+K");
     await expect(palette).toBeVisible();
     await page.getByRole("option", { name: "Focus message box" }).click();
     await expect(palette).toBeHidden();
     await expect(page.locator("textarea").first()).toBeFocused();
-    await expect(opener).not.toBeFocused();
+    await expect
+      .poll(() => openerHandle!.evaluate((element) => element === document.activeElement))
+      .toBe(false);
   });
 });
