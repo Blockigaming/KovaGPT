@@ -5,6 +5,7 @@ import {
   createRootRouteWithContext,
   useRouter,
   HeadContent,
+  ScriptOnce,
   Scripts,
 } from "@tanstack/react-router";
 
@@ -14,7 +15,10 @@ import { Toaster } from "@/components/ui/sonner";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings } from "@/lib/use-nova-settings";
-import { isPublicIndexableRoute, robotsDirectiveForRoute } from "@/lib/seo-policy.mjs";
+import {
+  isPublicIndexableRoute,
+  robotsDirectiveForRoute,
+} from "@/lib/seo-policy.mjs";
 import { useEffect, useLayoutEffect, useState } from "react";
 import { PlatformRuntime } from "@/components/PlatformRuntime";
 
@@ -82,7 +86,9 @@ function NotFoundComponent() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
+        <h2 className="mt-4 text-xl font-semibold text-foreground">
+          Page not found
+        </h2>
         <p className="mt-2 text-sm text-muted-foreground">
           The page you're looking for doesn't exist or has been moved.
         </p>
@@ -102,17 +108,24 @@ function NotFoundComponent() {
 function ErrorComponent({ reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4" role="main">
+    <main
+      className="flex min-h-screen items-center justify-center bg-background px-4"
+      role="main"
+    >
       <section
         className="max-w-md rounded-[var(--kova-radius-panel)] border border-border bg-card p-6 text-center shadow-sm"
         aria-labelledby="route-error-title"
       >
-        <h1 id="route-error-title" className="text-xl font-semibold text-foreground">
+        <h1
+          id="route-error-title"
+          className="text-xl font-semibold text-foreground"
+        >
           KovaGPT couldn't load this page
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong while loading this page. Retry or return home. If the problem keeps
-          happening, contact support and describe what you were doing.
+          Something went wrong while loading this page. Retry or return home. If
+          the problem keeps happening, contact support and describe what you
+          were doing.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
@@ -140,100 +153,122 @@ function ErrorComponent({ reset }: { error: Error; reset: () => void }) {
   );
 }
 
-export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: ({ matches }) => {
-    const { indexable, robots } = getActiveSeoState(matches);
-    return {
-      meta: [
-        { charSet: "utf-8" },
-        { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-        {
-          httpEquiv: "Accept-CH",
-          content:
-            "Sec-CH-UA-Mobile, Sec-CH-UA-Platform, Sec-CH-UA-Platform-Version, Sec-CH-UA, Sec-CH-Viewport-Width, Sec-CH-DPR",
-        },
-        { name: "format-detection", content: "telephone=no" },
-        { name: "theme-color", content: "#ffffff", media: "(prefers-color-scheme: light)" },
-        { name: "theme-color", content: "#0a0a0a", media: "(prefers-color-scheme: dark)" },
-        { name: "color-scheme", content: "light dark" },
-        { name: "apple-mobile-web-app-capable", content: "yes" },
-        { name: "apple-mobile-web-app-status-bar-style", content: "default" },
-        { name: "application-name", content: "KovaGPT" },
-        { name: "robots", content: robots },
-        { title: "KovaGPT" },
-        ...(indexable
+export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
+  {
+    head: ({ matches }) => {
+      const { indexable, robots } = getActiveSeoState(matches);
+      return {
+        meta: [
+          { charSet: "utf-8" },
+          {
+            name: "viewport",
+            content: "width=device-width, initial-scale=1, viewport-fit=cover",
+          },
+          {
+            httpEquiv: "Accept-CH",
+            content:
+              "Sec-CH-UA-Mobile, Sec-CH-UA-Platform, Sec-CH-UA-Platform-Version, Sec-CH-UA, Sec-CH-Viewport-Width, Sec-CH-DPR",
+          },
+          { name: "format-detection", content: "telephone=no" },
+          {
+            name: "theme-color",
+            content: "#ffffff",
+            media: "(prefers-color-scheme: light)",
+          },
+          {
+            name: "theme-color",
+            content: "#0a0a0a",
+            media: "(prefers-color-scheme: dark)",
+          },
+          { name: "color-scheme", content: "light dark" },
+          { name: "apple-mobile-web-app-capable", content: "yes" },
+          { name: "apple-mobile-web-app-status-bar-style", content: "default" },
+          { name: "application-name", content: "KovaGPT" },
+          { name: "robots", content: robots },
+          { title: "KovaGPT" },
+          ...(indexable
+            ? [
+                { name: "author", content: "KovaGPT" },
+                { property: "og:site_name", content: "KovaGPT" },
+                { property: "og:type", content: "website" },
+                { name: "twitter:card", content: "summary_large_image" },
+                {
+                  name: "google-site-verification",
+                  content: "VTjXtk11HpoepIygAjJgPmMXb6NZ8iCBzFyJE0IP1zM",
+                },
+                { property: "og:title", content: "KovaGPT" },
+                { name: "twitter:title", content: "KovaGPT" },
+                { name: "description", content: PUBLIC_DESCRIPTION },
+                { property: "og:description", content: PUBLIC_DESCRIPTION },
+                { name: "twitter:description", content: PUBLIC_DESCRIPTION },
+              ]
+            : []),
+        ],
+        links: [
+          { rel: "stylesheet", href: appCss },
+          { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+          { rel: "alternate icon", type: "image/png", href: "/favicon.png" },
+          { rel: "apple-touch-icon", href: "/favicon.svg" },
+          { rel: "preconnect", href: "https://fonts.googleapis.com" },
+          {
+            rel: "preconnect",
+            href: "https://fonts.gstatic.com",
+            crossOrigin: "anonymous",
+          },
+          {
+            rel: "stylesheet",
+            href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap",
+          },
+        ],
+        scripts: indexable
           ? [
-              { name: "author", content: "KovaGPT" },
-              { property: "og:site_name", content: "KovaGPT" },
-              { property: "og:type", content: "website" },
-              { name: "twitter:card", content: "summary_large_image" },
               {
-                name: "google-site-verification",
-                content: "VTjXtk11HpoepIygAjJgPmMXb6NZ8iCBzFyJE0IP1zM",
+                type: "application/ld+json",
+                children: JSON.stringify({
+                  "@context": "https://schema.org",
+                  "@graph": [
+                    {
+                      "@type": "Organization",
+                      name: "KovaGPT",
+                      url: "https://kovagpt.com",
+                      logo: "https://kovagpt.com/favicon.png",
+                    },
+                    {
+                      "@type": "WebSite",
+                      name: "KovaGPT",
+                      url: "https://kovagpt.com",
+                    },
+                  ],
+                }),
               },
-              { property: "og:title", content: "KovaGPT" },
-              { name: "twitter:title", content: "KovaGPT" },
-              { name: "description", content: PUBLIC_DESCRIPTION },
-              { property: "og:description", content: PUBLIC_DESCRIPTION },
-              { name: "twitter:description", content: PUBLIC_DESCRIPTION },
             ]
-          : []),
-      ],
-      links: [
-        { rel: "stylesheet", href: appCss },
-        { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
-        { rel: "alternate icon", type: "image/png", href: "/favicon.png" },
-        { rel: "apple-touch-icon", href: "/favicon.svg" },
-        { rel: "preconnect", href: "https://fonts.googleapis.com" },
-        { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-        {
-          rel: "stylesheet",
-          href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap",
-        },
-      ],
-      scripts: indexable
-        ? [
-            {
-              type: "application/ld+json",
-              children: JSON.stringify({
-                "@context": "https://schema.org",
-                "@graph": [
-                  {
-                    "@type": "Organization",
-                    name: "KovaGPT",
-                    url: "https://kovagpt.com",
-                    logo: "https://kovagpt.com/favicon.png",
-                  },
-                  {
-                    "@type": "WebSite",
-                    name: "KovaGPT",
-                    url: "https://kovagpt.com",
-                  },
-                ],
-              }),
-            },
-          ]
-        : [],
-    };
-  },
-  headers: ({ matches }) => ({
-    "X-Robots-Tag": getActiveSeoState(matches).robots,
-  }),
+          : [],
+      };
+    },
+    headers: ({ matches }) => ({
+      "X-Robots-Tag": getActiveSeoState(matches).robots,
+    }),
 
-  shellComponent: RootShell,
-  component: RootComponent,
-  notFoundComponent: NotFoundComponent,
-  errorComponent: ErrorComponent,
-});
+    shellComponent: RootShell,
+    component: RootComponent,
+    notFoundComponent: NotFoundComponent,
+    errorComponent: ErrorComponent,
+  },
+);
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning data-kova-hydration="pending" aria-busy="true">
+    <html
+      lang="en"
+      suppressHydrationWarning
+      data-kova-hydration="pending"
+      aria-busy="true"
+    >
       <head>
         <HeadContent />
       </head>
       <body>
-        <script dangerouslySetInnerHTML={{ __html: EARLY_SHORTCUT_BOOTSTRAP }} />
+        <ScriptOnce>{EARLY_SHORTCUT_BOOTSTRAP}</ScriptOnce>
         <HydrationInteractionGuard>{children}</HydrationInteractionGuard>
         <Scripts />
       </body>
@@ -241,7 +276,11 @@ function RootShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function HydrationInteractionGuard({ children }: { children: React.ReactNode }) {
+function HydrationInteractionGuard({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -259,7 +298,7 @@ function HydrationInteractionGuard({ children }: { children: React.ReactNode }) 
     <fieldset
       disabled={!hydrated}
       data-kova-interaction-guard={hydrated ? "ready" : "pending"}
-      style={{ display: "contents" }}
+      className="contents"
     >
       {children}
     </fieldset>
@@ -276,7 +315,9 @@ function RootThemeManager() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    const loaded = loadSettings(userKey, { migrateLegacyGuest: userKey === null });
+    const loaded = loadSettings(userKey, {
+      migrateLegacyGuest: userKey === null,
+    });
     applyThemeMode(loaded.mode ?? "system");
   }, [isLoaded, userKey]);
 
