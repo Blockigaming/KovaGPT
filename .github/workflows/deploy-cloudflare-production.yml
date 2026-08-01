@@ -23,18 +23,19 @@ jobs:
     environment:
       name: production
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-      KOVA_CLOUDFLARE_WORKER_NAME: ${{ vars.KOVA_CLOUDFLARE_WORKER_NAME }}
       WRANGLER_SEND_METRICS: "false"
     steps:
       - name: Checkout the selected revision
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
 
       - name: Validate protected environment configuration
         shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          KOVA_CLOUDFLARE_WORKER_NAME: ${{ vars.KOVA_CLOUDFLARE_WORKER_NAME }}
         run: |
           set -euo pipefail
           missing=0
@@ -47,7 +48,7 @@ jobs:
           exit "$missing"
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: npm
@@ -63,6 +64,10 @@ jobs:
 
       - name: Deploy the generated Worker with Wrangler
         shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          KOVA_CLOUDFLARE_WORKER_NAME: ${{ vars.KOVA_CLOUDFLARE_WORKER_NAME }}
         run: |
           set -euo pipefail
           npx --no-install wrangler deploy \
