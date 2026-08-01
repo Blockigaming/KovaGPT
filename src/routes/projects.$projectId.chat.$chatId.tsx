@@ -42,10 +42,7 @@ import {
 export const Route = createFileRoute("/projects/$projectId/chat/$chatId")({
   component: ProjectChatPage,
   head: () => ({
-    meta: [
-      { title: "Project chat | KovaGPT" },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: [{ title: "Project chat | KovaGPT" }, { name: "robots", content: "noindex" }],
   }),
 });
 
@@ -62,9 +59,7 @@ function ProjectChatPage() {
   const [title, setTitle] = useState("");
   const [messages, setMessages] = useState<ProjectChatMessage[]>([]);
   const [input, setInput] = useState("");
-  const [composerAttachments, setComposerAttachments] = useState<
-    PendingAttachment[]
-  >([]);
+  const [composerAttachments, setComposerAttachments] = useState<PendingAttachment[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
@@ -201,15 +196,12 @@ function ProjectChatPage() {
           mode: "default",
           user: {},
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          locale:
-            typeof navigator !== "undefined" ? navigator.language : "en-US",
+          locale: typeof navigator !== "undefined" ? navigator.language : "en-US",
           projectId,
         }),
       });
       if (!response.ok || !response.body) {
-        const errorBody = await response
-          .json()
-          .catch(() => ({ error: `HTTP ${response.status}` }));
+        const errorBody = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
         throw new Error(errorBody.error || "Chat failed");
       }
 
@@ -228,8 +220,7 @@ function ProjectChatPage() {
           let line = buffer.slice(0, lineEnd);
           buffer = buffer.slice(lineEnd + 1);
           if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (!line || line.startsWith(":") || !line.startsWith("data: "))
-            continue;
+          if (!line || line.startsWith(":") || !line.startsWith("data: ")) continue;
 
           const data = line.slice(6).trim();
           if (data === "[DONE]") {
@@ -258,11 +249,7 @@ function ProjectChatPage() {
       }
     } catch (error) {
       if (!isAbortError(error)) {
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Failed to generate a response",
-        );
+        toast.error(error instanceof Error ? error.message : "Failed to generate a response");
       }
     } finally {
       const finalMessages: ProjectChatMessage[] = assistant.trim()
@@ -357,9 +344,7 @@ function ProjectChatPage() {
               {title}
             </button>
           ) : (
-            <div className="min-w-0 flex-1 truncate px-2 font-medium">
-              {title}
-            </div>
+            <div className="min-w-0 flex-1 truncate px-2 font-medium">{title}</div>
           )}
           {canEdit && (
             <AlertDialog
@@ -373,6 +358,7 @@ function ProjectChatPage() {
                   ref={deleteTriggerRef}
                   variant="ghost"
                   size="icon"
+                  className="h-11 w-11"
                   disabled={sending}
                   aria-label="Delete chat"
                 >
@@ -388,14 +374,12 @@ function ProjectChatPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete this chat?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This removes the conversation for everyone in the project.
-                    This action cannot be undone.
+                    This removes the conversation for everyone in the project. This action cannot be
+                    undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel disabled={deleting}>
-                    Cancel
-                  </AlertDialogCancel>
+                  <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
                   <AlertDialogAction
                     disabled={deleting}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -412,10 +396,7 @@ function ProjectChatPage() {
           )}
         </header>
 
-        <div
-          ref={scrollRef}
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-2"
-        >
+        <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-2">
           {visibleMessages.length === 0 ? (
             <div className="mx-auto max-w-[48rem] px-5 py-12 text-center text-sm text-muted-foreground">
               Start the conversation. Everyone in the project can see it.
@@ -432,9 +413,7 @@ function ProjectChatPage() {
                   content: message.content,
                 }}
                 streaming={
-                  sending &&
-                  index === visibleMessages.length - 1 &&
-                  message.role === "assistant"
+                  sending && index === visibleMessages.length - 1 && message.role === "assistant"
                 }
               />
             );
@@ -453,9 +432,7 @@ function ProjectChatPage() {
             attachments={composerAttachments}
             onAttachmentsChange={setComposerAttachments}
             canChangeAgent={false}
-            placeholder={
-              canEdit ? "Message the project…" : "You have view-only access"
-            }
+            placeholder={canEdit ? "Message the project…" : "You have view-only access"}
           />
         </div>
       </div>
