@@ -1,9 +1,6 @@
 import http from "node:http";
 import os from "node:os";
-import { rm, mkdir } from "node:fs/promises";
 import { createClient } from "@supabase/supabase-js";
-import { chromium } from "playwright";
-import { assertPublicUrl } from "./network-safety.mjs";
 
 const version = process.env.WORKER_VERSION || "1.0.0";
 const identity = process.env.WORKER_ID || `${os.hostname()}-${process.pid}`;
@@ -11,12 +8,10 @@ const pollMs = bounded("WORKER_POLL_MS", 1000, 100, 60000);
 const concurrency = bounded("WORKER_CONCURRENCY", 2, 1, 16);
 const leaseSeconds = bounded("WORKER_LEASE_SECONDS", 60, 15, 900);
 const port = bounded("WORKER_PORT", 8788, 1, 65535);
-const tempRoot = process.env.WORKER_TEMP_DIR || "/tmp/kova-agent";
 const secretPattern = /(token|secret|password|authorization|cookie|api[-_]?key)/i;
 const active = new Map();
 let stopping = false;
 let polling = false;
-let browser;
 let lastPollAt = null;
 let lastPollError = null;
 
@@ -42,7 +37,9 @@ function log(level, event, fields = {}) {
 const url = process.env.SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!url || !key) throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required");
-const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+const db = createClient(url, key, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
 
 async function heartbeat(state = "ready") {
   const { error } = await db.from("agent_workers").upsert({
@@ -69,43 +66,9 @@ async function lease() {
 }
 async function emit(jobId, type, payload) {
   const { error } = await db
-    .from("agent_run_events")
+    .from("agent_job_events")
     .insert({ job_id: jobId, event_type: type, payload });
   if (error) throw error;
-}
-async function browserJob(job, signal) {
-  browser ||= await chromium.launch({ headless: true });
-  const context = await browser.newContext({ acceptDownloads: false, serviceWorkers: "block" });
-  const page = await context.newPage();
-  await page.route("**/*", async (route) => {
-    try {
-      await assertPublicUrl(route.request().url());
-      await route.continue();
-    } catch {
-      await route.abort("blockedbyclient");
-    }
-  });
-  try {
-    const target = await assertPublicUrl(job.input.url);
-    await page.goto(target, { waitUntil: "domcontentloaded", timeout: 30000 });
-    if (signal.aborted) throw new Error("Cancelled");
-    const screenshot = await page.screenshot({ fullPage: false });
-    const { createHash } = await import("node:crypto");
-    const hash = createHash("sha256").update(screenshot).digest("hex");
-    const path = `${job.owner_id}/${job.id}/${hash}.png`;
-    const { error } = await db.storage
-      .from("agent-evidence")
-      .upload(path, screenshot, { contentType: "image/png", upsert: false });
-    if (error) throw error;
-    await emit(job.id, "screenshot", { storage_path: path, sha256: hash });
-    return {
-      title: await page.title(),
-      text: (await page.locator("body").innerText()).slice(0, 20000),
-      url: page.url(),
-    };
-  } finally {
-    await context.close();
-  }
 }
 async function teamJob(job, signal) {
   const endpoint = process.env.AI_PROVIDER_URL;
@@ -121,7 +84,10 @@ async function teamJob(job, signal) {
   const response = await fetch(endpoint, {
     method: "POST",
     signal,
-    headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${apiKey}`,
+    },
     body: JSON.stringify({ ...job.input, ready_specialist_tasks: readyTasks }),
   });
   if (!response.ok) throw new Error(`AI provider returned ${response.status}`);
@@ -143,14 +109,13 @@ async function run(job) {
     Math.max(5000, Math.floor((leaseSeconds * 1000) / 3)),
   );
   leaseHeartbeat.unref();
-  const dir = `${tempRoot}/${job.id}`;
   try {
-    await mkdir(dir, { recursive: true });
-    await emit(job.id, "started", { worker_id: identity, attempt: job.attempts });
-    const result =
-      job.kind === "browser"
-        ? await browserJob(job, controller.signal)
-        : await teamJob(job, controller.signal);
+    if (job.kind !== "team") throw new Error("Unsupported agent job kind");
+    await emit(job.id, "started", {
+      worker_id: identity,
+      attempt: job.attempts,
+    });
+    const result = await teamJob(job, controller.signal);
     const { error } = await db.rpc("complete_agent_job", {
       p_job_id: job.id,
       p_worker_id: identity,
@@ -193,7 +158,6 @@ async function run(job) {
   } finally {
     clearInterval(leaseHeartbeat);
     active.delete(job.id);
-    await rm(dir, { recursive: true, force: true });
   }
 }
 async function poll() {
@@ -250,9 +214,7 @@ async function shutdown(signal) {
       db.rpc("release_agent_lease", { p_job_id: id, p_worker_id: identity }),
     ),
   );
-  await browser?.close();
   await heartbeat("stopped").catch(() => {});
-  await rm(tempRoot, { recursive: true, force: true });
   log("info", "shutdown_complete");
   process.exit(0);
 }
@@ -262,7 +224,6 @@ process.on("uncaughtException", (error) => {
   log("fatal", "uncaught_exception", { error: error.message });
   void shutdown("uncaughtException");
 });
-await mkdir(tempRoot, { recursive: true });
 await heartbeat();
 await recover();
 server.listen(port, "0.0.0.0");
