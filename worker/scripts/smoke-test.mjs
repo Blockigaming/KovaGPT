@@ -7,11 +7,16 @@ const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!workerUrl || !supabaseUrl || !serviceKey)
   throw new Error("AGENT_WORKER_URL, SUPABASE_URL, and SUPABASE_SERVICE_ROLE_KEY are required");
 
-const readinessUrl = new URL("/readyz", workerUrl);
-const readiness = await fetch(readinessUrl, {
+const readiness = await fetch(new URL("/readyz", workerUrl), {
   signal: AbortSignal.timeout(10_000),
 });
-if (!readiness.ok) throw new Error(`Agent worker is not ready (HTTP ${readiness.status})`);
+const readinessBody = await readiness.json().catch(() => null);
+if (
+  readiness.status !== 503 ||
+  readinessBody?.execution_enabled !== false ||
+  readinessBody?.reason !== "agent_runtime_unavailable"
+)
+  throw new Error("Agent worker did not fail closed");
 
 const db = createClient(supabaseUrl, serviceKey, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -27,7 +32,8 @@ if (jobEvents.error) throw new Error("Helios job-event schema is unavailable");
 console.log(
   JSON.stringify({
     status: "ok",
-    worker_ready: true,
+    execution_enabled: false,
+    fail_closed: true,
     run_event_schema: true,
     job_event_schema: true,
     writes_performed: false,
