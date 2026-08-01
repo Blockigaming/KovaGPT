@@ -79,24 +79,12 @@ test(
 
     const port = await getAvailablePort();
     const origin = `http://127.0.0.1:${port}`;
-    const wranglerBinary = resolve(
-      "node_modules/.bin",
-      isWindows ? "wrangler.cmd" : "wrangler",
-    );
+    const wranglerBinary = resolve("node_modules/.bin", isWindows ? "wrangler.cmd" : "wrangler");
     let output = "";
     let spawnError;
     const worker = spawn(
       wranglerBinary,
-      [
-        "--cwd",
-        "dist/server",
-        "dev",
-        "--local",
-        "--ip",
-        "127.0.0.1",
-        "--port",
-        String(port),
-      ],
+      ["--cwd", "dist/server", "dev", "--local", "--ip", "127.0.0.1", "--port", String(port)],
       {
         cwd: fixtureRoot,
         detached: !isWindows,
