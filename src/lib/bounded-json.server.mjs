@@ -31,10 +31,7 @@ function validateContentLength(request, maxBytes) {
   }
 }
 
-export async function readBoundedUtf8(
-  request,
-  maxBytes = DEFAULT_JSON_BODY_LIMIT,
-) {
+export async function readBoundedUtf8(request, maxBytes = DEFAULT_JSON_BODY_LIMIT) {
   validateLimit(maxBytes);
   validateContentLength(request, maxBytes);
 
@@ -59,18 +56,14 @@ export async function readBoundedUtf8(
     return text;
   } catch (error) {
     if (error instanceof BoundedJsonError) throw error;
-    if (error instanceof TypeError)
-      throw new BoundedJsonError("invalid_utf8", 400);
+    if (error instanceof TypeError) throw new BoundedJsonError("invalid_utf8", 400);
     throw new BoundedJsonError("invalid_request_body", 400);
   } finally {
     reader.releaseLock();
   }
 }
 
-export async function readBoundedJsonObject(
-  request,
-  maxBytes = DEFAULT_JSON_BODY_LIMIT,
-) {
+export async function readBoundedJsonObject(request, maxBytes = DEFAULT_JSON_BODY_LIMIT) {
   const text = await readBoundedUtf8(request, maxBytes);
   let value;
   try {
