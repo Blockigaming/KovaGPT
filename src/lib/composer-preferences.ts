@@ -41,12 +41,18 @@ function subscribe(scope: string, listener: Listener): () => void {
   };
 }
 
-export function setSharedSendOnEnter(userKey: string | null, value: boolean): void {
+export function setSharedSendOnEnter(
+  userKey: string | null,
+  value: boolean,
+): void {
   const scope = scopeForComposerPreference(userKey);
   publish(scope, value);
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(composerPreferenceKey(scope), value ? "1" : "0");
+    window.localStorage.setItem(
+      composerPreferenceKey(scope),
+      value ? "1" : "0",
+    );
   } catch {
     // Keep the reactive in-memory preference when persistence is unavailable.
   }
