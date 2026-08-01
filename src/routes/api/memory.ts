@@ -99,7 +99,8 @@ export const Route = createFileRoute("/api/memory")({
         if (authorized instanceof Response) return authorized;
 
         try {
-          const returned = MEMORY_LIMITS[authorized.tier].returned;
+          const returned =
+            authorized.tier === "pro" ? MEMORY_LIMITS.pro.returned : MEMORY_LIMITS.plus.returned;
           const result = await tbl(authorized.auth)
             .select("chat_id, title, summary, updated_at")
             .eq("user_id", authorized.auth.userId)
