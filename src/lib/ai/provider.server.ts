@@ -105,18 +105,12 @@ function parseTimeout(value: string | undefined): number {
 
 function parseCapabilities(value: string | undefined): ProviderCapability[] {
   if (!value) return DEFAULT_CAPABILITIES;
-  const allowed = new Set<ProviderCapability>(
-    DEFAULT_CAPABILITIES.concat("web_search"),
-  );
+  const allowed = new Set<ProviderCapability>(DEFAULT_CAPABILITIES.concat("web_search"));
   const configured = value
     .split(",")
     .map((item) => item.trim())
-    .filter((item): item is ProviderCapability =>
-      allowed.has(item as ProviderCapability),
-    );
-  return configured.length
-    ? Array.from(new Set(configured))
-    : DEFAULT_CAPABILITIES;
+    .filter((item): item is ProviderCapability => allowed.has(item as ProviderCapability));
+  return configured.length ? Array.from(new Set(configured)) : DEFAULT_CAPABILITIES;
 }
 
 export function getAiProviderConfig(): ProviderConfig {
@@ -149,9 +143,7 @@ export function providerCapabilities(): ProviderCapability[] {
   return getAiProviderConfig().capabilities;
 }
 
-export function supportsProviderCapability(
-  capability: ProviderCapability,
-): boolean {
+export function supportsProviderCapability(capability: ProviderCapability): boolean {
   return providerCapabilities().includes(capability);
 }
 
@@ -171,9 +163,7 @@ export function providerUnavailableEnvelope(
   return null;
 }
 
-export function missingAiProviderResponse(
-  fallback?: JsonObject,
-): Response | null {
+export function missingAiProviderResponse(fallback?: JsonObject): Response | null {
   const missing = validateAiProviderConfig();
   if (!missing) return null;
   if (fallback) {
@@ -235,16 +225,10 @@ function normalizeProviderError(error: unknown): AiProviderError {
   });
 }
 
-export async function providerErrorFromResponse(
-  response: Response,
-): Promise<AiProviderError> {
+export async function providerErrorFromResponse(response: Response): Promise<AiProviderError> {
   await response.body?.cancel().catch(() => undefined);
 
-  if (
-    response.status === 401 ||
-    response.status === 402 ||
-    response.status === 403
-  ) {
+  if (response.status === 401 || response.status === 402 || response.status === 403) {
     return new AiProviderError({
       error: "KovaGPT is temporarily unavailable. Please try again later.",
       code: "provider_unavailable",
@@ -304,10 +288,7 @@ async function providerFetch(
   if (unavailable) throw new AiProviderError(unavailable);
 
   const config = getAiProviderConfig();
-  const { signal, cleanup } = mergeSignals(
-    init?.signal ?? undefined,
-    config.timeoutMs,
-  );
+  const { signal, cleanup } = mergeSignals(init?.signal ?? undefined, config.timeoutMs);
   try {
     return await fetch(`${OPENAI_API_BASE_URL}${path}`, {
       ...init,
@@ -327,10 +308,7 @@ async function providerFetch(
   }
 }
 
-export function providerErrorResponse(
-  error: unknown,
-  fallbackStatus = 502,
-): Response {
+export function providerErrorResponse(error: unknown, fallbackStatus = 502): Response {
   const normalized = normalizeProviderError(error);
   const envelope = normalized.toEnvelope();
   return Response.json(
@@ -344,10 +322,7 @@ export function providerErrorResponse(
   );
 }
 
-export async function chatCompletions(
-  body: JsonObject,
-  init?: RequestInit,
-): Promise<Response> {
+export async function chatCompletions(body: JsonObject, init?: RequestInit): Promise<Response> {
   return providerFetch("/chat/completions", "chat", body, init);
 }
 
@@ -355,24 +330,13 @@ export async function streamingChatCompletions(
   body: JsonObject,
   init?: RequestInit,
 ): Promise<Response> {
-  return providerFetch(
-    "/chat/completions",
-    "streaming",
-    { ...body, stream: true },
-    init,
-  );
+  return providerFetch("/chat/completions", "streaming", { ...body, stream: true }, init);
 }
 
-export async function imageGenerations(
-  body: JsonObject,
-  init?: RequestInit,
-): Promise<Response> {
+export async function imageGenerations(body: JsonObject, init?: RequestInit): Promise<Response> {
   return providerFetch("/images/generations", "image_generation", body, init);
 }
 
-export async function embeddings(
-  body: JsonObject,
-  init?: RequestInit,
-): Promise<Response> {
+export async function embeddings(body: JsonObject, init?: RequestInit): Promise<Response> {
   return providerFetch("/embeddings", "embeddings", body, init);
 }
