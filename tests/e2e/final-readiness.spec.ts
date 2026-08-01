@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { waitForKovaHydration } from "./hydration";
+
 const projects = new Set(["phone-390x844", "desktop-1440x900"]);
 
 test.beforeEach(({ page: _page }, testInfo) => test.skip(!projects.has(testInfo.project.name)));
@@ -16,6 +18,7 @@ test("production responses include compatible security headers", async ({ reques
 
 test("keyboard users can dismiss menus and dialogs with focus restoration", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
   const width = page.viewportSize()!.width;
 
   if (width < 1024) {
@@ -44,6 +47,7 @@ test("keyboard users can dismiss menus and dialogs with focus restoration", asyn
 
 test("keyboard focus is visibly distinguishable on primary controls", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
   const target =
     page.viewportSize()!.width < 1024
       ? page.getByRole("button", { name: "Open menu" })
