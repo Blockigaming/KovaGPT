@@ -78,16 +78,22 @@ export async function exchangeFinanceToken(
   return data;
 }
 
+type FinanceConnectionRow = {
+  id: string;
+  item_reference_ciphertext: string;
+};
+
 export async function disconnectAllFinance(caller: AuthedCaller) {
   const db = caller.supabaseAdmin as unknown as ReturnType<typeof createClient>;
-  const { data: connections, error } = await db
+  const { data: rawConnections, error } = await db
     .from("financial_connections")
     .select("id,item_reference_ciphertext")
     .eq("owner_id", caller.userId)
     .eq("provider", "plaid");
   if (error) throw new Error("finance_connection_enumeration_failed");
+  const connections = (rawConnections ?? []) as unknown as FinanceConnectionRow[];
 
-  for (const connection of connections ?? []) {
+  for (const connection of connections) {
     let accessToken: string;
     try {
       const credential = JSON.parse(
@@ -116,5 +122,5 @@ export async function disconnectAllFinance(caller: AuthedCaller) {
     if (purgeError || !purgedConnection) throw new Error("finance_connection_purge_failed");
   }
 
-  return { disconnected: connections?.length ?? 0 };
+  return { disconnected: connections.length };
 }
