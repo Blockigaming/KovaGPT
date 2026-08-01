@@ -68,7 +68,8 @@ test("command palette traps and restores focus with safe-area and reduced-motion
 
   assert.match(palette, /returnFocusRef/);
   assert.match(palette, /const returnTarget = returnFocusRef\.current/);
-  assert.match(palette, /requestAnimationFrame\(\(\) => returnTarget\?\.focus\(\)\)/);
+  assert.match(palette, /returnTarget\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(palette, /requestAnimationFrame\(restoreFocus\)/);
   assert.match(palette, /searchInputRef\.current\?\.focus\(\)/);
   assert.doesNotMatch(palette, /<input\s+autoFocus/);
   assert.match(palette, /event\.key === "Tab"/);
@@ -83,6 +84,6 @@ test("command palette traps and restores focus with safe-area and reduced-motion
   assert.match(palette, /data-kova-shell-overlay=""/);
   assert.match(palette, /var\(--safe-top\)/);
   assert.match(palette, /var\(--safe-bottom\)/);
-  assert.match(palette, /h-11 w-11/);
+  assert.match(palette, /h-11 w-11 shrink-0/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
 });
