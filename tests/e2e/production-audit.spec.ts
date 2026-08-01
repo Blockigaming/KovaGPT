@@ -47,7 +47,9 @@ test("implemented routes render without server errors or horizontal overflow", a
   test.skip(testInfo.project.name !== "desktop-1440x900");
   test.setTimeout(90_000);
   for (const route of routes) {
-    const response = await page.goto(route, { waitUntil: "domcontentloaded" });
+    // Finish each document load before navigating again. Rapidly aborting
+    // subresource requests can terminate the Cloudflare-backed preview proxy.
+    const response = await page.goto(route, { waitUntil: "load" });
     expect(response?.status(), `${route} should be implemented`).toBeLessThan(400);
     await expect(page.locator("body")).toBeVisible();
     const overflow = await page.evaluate(() => ({
