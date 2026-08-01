@@ -14,7 +14,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useUser } from "@/components/auth/ClerkSafe";
-import { loadConversations } from "@/lib/chat-store";
+import { chatStoragePrincipal, loadConversations, savePendingActive } from "@/lib/chat-store";
 import { loadWorkTasks } from "@/lib/work-store";
 import { listWorkspaceIntelligence, type WorkspaceSignal } from "@/lib/workspace.functions";
 import { TitanWorkspaceSystems } from "@/components/TitanWorkspaceSystems";
@@ -46,13 +46,21 @@ type DashboardItem =
       status?: string;
     };
 
-function IntelligenceRow({ item }: { item: DashboardItem }) {
+const EMPTY_WORKSPACE_SIGNALS: WorkspaceSignal[] = [];
+
+function IntelligenceRow({ item, userKey }: { item: DashboardItem; userKey: string | null }) {
   const Icon = iconByKind[item.kind];
   return (
     <Link
       to={item.href}
       onClick={() => {
-        if (item.kind === "chat") localStorage.setItem("nova-gpt-pending-active", item.id);
+        if (item.kind === "chat") {
+          try {
+            savePendingActive(userKey, item.id);
+          } catch {
+            // Navigation still works when browser storage is unavailable.
+          }
+        }
       }}
       className="flex min-h-14 items-center gap-3 rounded-xl px-3 py-2 hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
@@ -197,27 +205,55 @@ function WorkspaceTimeline({ items }: { items: DashboardItem[] }) {
 }
 
 export function WorkspaceIntelligence() {
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const userKey = user?.id ?? null;
+  const principal = isLoaded ? chatStoragePrincipal(userKey) : null;
   const list = useServerFn(listWorkspaceIntelligence);
-  const [remote, setRemote] = useState<WorkspaceSignal[]>([]);
+  const [remoteState, setRemoteState] = useState<{
+    principal: string | null;
+    items: WorkspaceSignal[];
+  }>({ principal: null, items: [] });
+  const remote =
+    principal !== null && remoteState.principal === principal
+      ? remoteState.items
+      : EMPTY_WORKSPACE_SIGNALS;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    if (!isLoaded) return;
-    if (!isSignedIn) {
-      setLoading(false);
+    if (!isLoaded || principal === null) {
+      setRemoteState({ principal: null, items: [] });
+      setLoading(true);
+      setError(null);
       return;
     }
+    if (!isSignedIn) {
+      setRemoteState({ principal, items: [] });
+      setLoading(false);
+      setError(null);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
     list({})
-      .then(setRemote)
-      .catch((reason) =>
-        setError(
-          reason instanceof Error ? reason.message : "Workspace activity could not be loaded",
-        ),
-      )
-      .finally(() => setLoading(false));
-  }, [isLoaded, isSignedIn, list]);
+      .then((items) => {
+        if (!cancelled) setRemoteState({ principal, items });
+      })
+      .catch((reason) => {
+        if (!cancelled)
+          setError(
+            reason instanceof Error ? reason.message : "Workspace activity could not be loaded",
+          );
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, isSignedIn, list, principal]);
   const local = useMemo<DashboardItem[]>(() => {
+    if (!isLoaded || !isSignedIn) return [];
     const work = loadWorkTasks()
       .filter((task) => task.status === "planning" || task.status === "paused")
       .map((task) => ({
@@ -229,7 +265,7 @@ export function WorkspaceIntelligence() {
         updatedAt: new Date(task.updatedAt).toISOString(),
         status: task.status,
       }));
-    const chats = loadConversations()
+    const chats = loadConversations(userKey)
       .slice(0, 4)
       .map((chat) => ({
         id: chat.id,
@@ -240,7 +276,7 @@ export function WorkspaceIntelligence() {
         updatedAt: new Date(chat.updatedAt).toISOString(),
       }));
     return [...work, ...chats];
-  }, []);
+  }, [isLoaded, isSignedIn, userKey]);
   const combined = useMemo(
     () => [...local, ...remote].sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt)),
     [local, remote],
@@ -261,7 +297,7 @@ export function WorkspaceIntelligence() {
         !active.some((activeItem) => activeItem.id === item.id && activeItem.kind === item.kind),
     )
     .slice(0, 8);
-  if (!isSignedIn) return null;
+  if (!isLoaded || !isSignedIn) return null;
   return (
     <section
       className="mx-auto mt-7 w-full max-w-[56rem] px-1 pb-6"
@@ -309,7 +345,7 @@ export function WorkspaceIntelligence() {
                   Continue working
                 </h3>
                 {active.map((item) => (
-                  <IntelligenceRow key={`${item.kind}:${item.id}`} item={item} />
+                  <IntelligenceRow key={`${item.kind}:${item.id}`} item={item} userKey={userKey} />
                 ))}
               </section>
             ) : null}
@@ -318,7 +354,7 @@ export function WorkspaceIntelligence() {
                 Recent and important
               </h3>
               {recent.slice(0, active.length ? 5 : 8).map((item) => (
-                <IntelligenceRow key={`${item.kind}:${item.id}`} item={item} />
+                <IntelligenceRow key={`${item.kind}:${item.id}`} item={item} userKey={userKey} />
               ))}
             </section>
           </div>
@@ -337,40 +373,60 @@ export function RelatedWorkspaceItems({
   kinds?: WorkspaceSignal["kind"][];
   title?: string;
 }) {
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const userKey = user?.id ?? null;
+  const principal = isLoaded ? chatStoragePrincipal(userKey) : null;
   const list = useServerFn(listWorkspaceIntelligence);
-  const [items, setItems] = useState<WorkspaceSignal[]>([]);
+  const [itemState, setItemState] = useState<{
+    principal: string | null;
+    items: WorkspaceSignal[];
+  }>({ principal: null, items: [] });
+  const items = principal !== null && itemState.principal === principal ? itemState.items : [];
   const [loading, setLoading] = useState(true);
   const kindsKey = kinds?.join(",") ?? "";
   useEffect(() => {
-    if (!isLoaded || !isSignedIn) {
+    if (!isLoaded || principal === null || !isSignedIn) {
+      setItemState({ principal: null, items: [] });
       setLoading(false);
       return;
     }
+    let cancelled = false;
+    setLoading(true);
     const allowedKinds = kindsKey ? kindsKey.split(",") : null;
     list({})
-      .then((signals) =>
-        setItems(
-          signals
+      .then((signals) => {
+        if (cancelled) return;
+        setItemState({
+          principal,
+          items: signals
             .filter(
               (item) =>
                 (!projectId || item.projectId === projectId) &&
                 (!allowedKinds || allowedKinds.includes(item.kind)),
             )
             .slice(0, 6),
-        ),
-      )
-      .catch(() => setItems([]))
-      .finally(() => setLoading(false));
-  }, [isLoaded, isSignedIn, list, projectId, kindsKey]);
-  if (!isSignedIn) return null;
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setItemState({ principal, items: [] });
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, isSignedIn, kindsKey, list, principal, projectId]);
+  if (!isLoaded || !isSignedIn) return null;
   return (
     <aside className="mt-6 rounded-2xl border bg-card/30 p-2" aria-label={title}>
       <h2 className="px-3 pb-1 pt-2 text-sm font-semibold">{title}</h2>
       {loading ? (
         <div className="m-3 h-14 animate-pulse rounded-xl bg-muted" />
       ) : items.length ? (
-        items.map((item) => <IntelligenceRow key={`${item.kind}:${item.id}`} item={item} />)
+        items.map((item) => (
+          <IntelligenceRow key={`${item.kind}:${item.id}`} item={item} userKey={userKey} />
+        ))
       ) : (
         <p className="px-3 py-4 text-sm text-muted-foreground">No explicit related items yet.</p>
       )}
