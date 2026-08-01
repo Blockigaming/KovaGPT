@@ -56,7 +56,12 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Browser tests
-        run: npm run test:e2e
+        env:
+          PLAYWRIGHT_PREBUILT: "1"
+        run: |
+          npm run test:e2e -- --project=phone-320x700 --project=phone-375x812 --project=phone-390x844 --project=phone-412x915 --project=phone-430x932
+          npm run test:e2e -- --project=tablet-768x1024 --project=phone-landscape-844x390 --project=tablet-1024x768
+          npm run test:e2e -- --project=desktop-1280x800 --project=desktop-1440x900 --project=desktop-1728x1117
 
       - name: Accessibility checks
         run: npm run test:a11y
