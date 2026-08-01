@@ -4,10 +4,7 @@ import test from "node:test";
 
 test("AI provider configuration has no Lovable credit path", async () => {
   const [providerSource, envExample] = await Promise.all([
-    readFile(
-      new URL("../../src/lib/ai/provider.server.ts", import.meta.url),
-      "utf8",
-    ),
+    readFile(new URL("../../src/lib/ai/provider.server.ts", import.meta.url), "utf8"),
     readFile(new URL("../../.env.example", import.meta.url), "utf8"),
   ]);
 
@@ -19,21 +16,13 @@ test("AI provider configuration has no Lovable credit path", async () => {
   }
 
   assert.match(providerSource, /provider:\s*"openai"/);
-  assert.match(
-    providerSource,
-    /configured:\s*Boolean\(env\("OPENAI_API_KEY"\)\)/,
-  );
+  assert.match(providerSource, /configured:\s*Boolean\(env\("OPENAI_API_KEY"\)\)/);
 });
 
 test("title validation runs before the provider module is loaded", async () => {
-  const source = await readFile(
-    new URL("../../src/routes/api/title.ts", import.meta.url),
-    "utf8",
-  );
+  const source = await readFile(new URL("../../src/routes/api/title.ts", import.meta.url), "utf8");
   const invalidMessagesGuard = source.indexOf("if (!messages)");
-  const providerImport = source.indexOf(
-    'await import("@/lib/ai/provider.server")',
-  );
+  const providerImport = source.indexOf('await import("@/lib/ai/provider.server")');
 
   assert.ok(invalidMessagesGuard >= 0, "missing invalid-message guard");
   assert.ok(
