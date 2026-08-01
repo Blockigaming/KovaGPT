@@ -150,8 +150,12 @@ export function CommandPalette({
     window.requestAnimationFrame(() => searchInputRef.current?.focus());
 
     return () => {
-      if (!shouldRestoreFocusRef.current) return;
-      window.requestAnimationFrame(() => returnTarget?.focus());
+      if (!shouldRestoreFocusRef.current || !returnTarget?.isConnected) return;
+      const restoreFocus = () => {
+        if (returnTarget.isConnected) returnTarget.focus({ preventScroll: true });
+      };
+      restoreFocus();
+      window.requestAnimationFrame(restoreFocus);
     };
   }, [open, returnFocusTarget]);
   useEffect(() => {
@@ -317,7 +321,7 @@ export function CommandPalette({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
             aria-label="Close command palette"
           >
             <X className="h-4 w-4" />
