@@ -334,9 +334,7 @@ export function SettingsDialog({
     if (portalLoading || !subSummary?.hasBillingAccount) return;
     setPortalLoading(true);
     try {
-      const res = await createPortalSession({
-        data: { environment: getStripeEnvironment() },
-      });
+      const res = await createPortalSession({ data: {} });
       if ("error" in res) throw new Error("billing_portal_unavailable");
       const portalUrl = parseAllowedBillingPortalUrl(res.url);
       if (!portalUrl) throw new Error("billing_portal_url_rejected");
