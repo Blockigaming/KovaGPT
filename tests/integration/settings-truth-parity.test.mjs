@@ -80,7 +80,7 @@ test("data controls describe only the removed local-only switches", () => {
   assert.doesNotMatch(settings, /Improve the model for everyone|Help improve Kova/);
   assert.doesNotMatch(settings, /GuestToggleRow/);
   assert.match(settings, /removed model-improvement switch changed only a\s+browser-local value/);
-  assert.match(settings, /was not wired to an account-level or\s+AI-provider training control/);
+  assert.match(settings, /was\s+not wired to an account-level or\s+AI-provider training control/);
   assert.match(
     settings,
     /removed guest training and marketing switches changed only\s+browser-local values/,
