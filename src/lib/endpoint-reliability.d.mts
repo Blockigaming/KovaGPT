@@ -38,5 +38,10 @@ export function suppressThenConsumeToken(options: {
   consume: () => Promise<{ data: unknown; error?: unknown }>;
 }): Promise<void>;
 
+export function unsubscribeLinkState(options: {
+  alreadyUsed: boolean;
+  suppressionResult: { data: unknown; error?: unknown };
+}): { valid: boolean; reason?: "already_unsubscribed" };
+
 export function retryableUnavailable(error: string): Response;
 export function financeQueueUnavailableResponse(): Response;
