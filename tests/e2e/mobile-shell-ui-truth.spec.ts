@@ -1,13 +1,16 @@
 import { expect, test } from "@playwright/test";
 
-function isPhoneOrDesktop(width: number) {
-  return width < 768 || width >= 1280;
+function isPhoneOrDesktop(width: number, height: number) {
+  return width < 768 || height < 500 || width >= 1280;
 }
 
 test.describe("mobile shell UI truth", () => {
   test("the phone drawer fills the viewport and restores focus", async ({ page }) => {
     const viewport = page.viewportSize();
-    test.skip(!viewport || viewport.width >= 768, "phone-only drawer contract");
+    test.skip(
+      !viewport || (viewport.width >= 768 && viewport.height >= 500),
+      "phone portrait and landscape drawer contract",
+    );
 
     await page.goto("/", { waitUntil: "domcontentloaded" });
     const opener = page.getByRole("button", { name: "Open menu" });
@@ -34,13 +37,13 @@ test.describe("mobile shell UI truth", () => {
     page,
   }) => {
     const viewport = page.viewportSize();
-    test.skip(!viewport || !isPhoneOrDesktop(viewport.width), "phone and desktop contract");
+    test.skip(!viewport || !isPhoneOrDesktop(viewport.width, viewport.height), "phone and desktop contract");
 
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/", { waitUntil: "domcontentloaded" });
 
     const opener =
-      viewport!.width < 768
+      viewport!.width < 768 || viewport!.height < 500
         ? page.getByRole("button", { name: "Open menu" })
         : page.locator('[data-testid="model-selector-trigger"]:visible').first();
     await opener.focus();
