@@ -12,7 +12,7 @@ const faq = [
   },
   {
     q: "Can I upload my textbook or lecture notes?",
-    a: "Yes. Upload PDFs and images of notes, and KovaGPT will summarize, quiz you, or answer questions grounded in that material.",
+    a: "Yes. Paste text or upload images of your notes, and KovaGPT will summarize, quiz you, or answer questions grounded in that material.",
   },
   {
     q: "Does it work for language learning?",
@@ -44,7 +44,7 @@ function Page() {
         "Turn lecture notes and textbooks into summaries and flashcards",
         "Worked examples for math, physics, chemistry, and CS",
         "Language practice: conversation, grammar, vocabulary drills",
-        "Build a study plan and stick to it with scheduled reminders",
+        "Build a focused study plan and work through it step by step",
       ]}
       details={[
         "The best tutors don't lecture - they check your understanding, catch misconceptions early, and adjust. KovaGPT does the same: ask it to explain something and it will follow up with a question to check if it landed. Ask for practice and it generates problems tuned to what you just studied.",

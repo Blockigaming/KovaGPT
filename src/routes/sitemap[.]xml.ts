@@ -24,7 +24,6 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/blog/best-ai-assistants", changefreq: "monthly", priority: "0.7" },
           { path: "/blog/ai-market-research-guide", changefreq: "monthly", priority: "0.7" },
           { path: "/blog/best-ai-market-research-tools", changefreq: "monthly", priority: "0.7" },
-          { path: "/checkout/return", changefreq: "yearly", priority: "0.2" },
           { path: "/privacy", changefreq: "yearly", priority: "0.3" },
           { path: "/terms", changefreq: "yearly", priority: "0.3" },
           { path: "/refund", changefreq: "yearly", priority: "0.3" },
@@ -32,7 +31,6 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/contact-support", changefreq: "yearly", priority: "0.4" },
           { path: "/getting-started", changefreq: "monthly", priority: "0.5" },
           { path: "/help", changefreq: "monthly", priority: "0.5" },
-          { path: "/summary", changefreq: "monthly", priority: "0.5" },
           { path: "/ai-image-generator", changefreq: "monthly", priority: "0.7" },
           { path: "/study-assistant", changefreq: "monthly", priority: "0.7" },
           { path: "/code-helper", changefreq: "monthly", priority: "0.7" },
@@ -41,14 +39,6 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/chatgpt-alternative", changefreq: "monthly", priority: "0.7" },
           { path: "/ai-humanizer", changefreq: "monthly", priority: "0.7" },
           { path: "/humanize-ai-text", changefreq: "weekly", priority: "0.8" },
-          { path: "/audit-log", changefreq: "monthly", priority: "0.3" },
-          { path: "/projects", changefreq: "weekly", priority: "0.5" },
-          { path: "/scheduled-tasks", changefreq: "monthly", priority: "0.4" },
-          { path: "/write", changefreq: "monthly", priority: "0.5" },
-          { path: "/apps", changefreq: "monthly", priority: "0.5" },
-          { path: "/library", changefreq: "monthly", priority: "0.4" },
-          { path: "/reset-password", changefreq: "yearly", priority: "0.1" },
-          { path: "/unsubscribe", changefreq: "yearly", priority: "0.1" },
         ];
 
         const urls = entries.map((e) =>

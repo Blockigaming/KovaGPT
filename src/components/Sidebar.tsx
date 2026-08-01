@@ -366,7 +366,7 @@ export function Sidebar({
             {showSignedIn && (tier === "plus" || tier === "pro")
               ? renderNavLink(
                   "/scheduled-tasks",
-                  "Scheduled tasks",
+                  "Scheduled tasks status",
                   Calendar,
                   isOn("/scheduled-tasks"),
                 )

@@ -866,10 +866,28 @@ body {
   .kova-table-scroll {
     max-width: calc(100vw - 2rem);
   }
-  :where([role="dialog"]):not([data-side]) {
+  :where([role="dialog"]):not([data-side]):not([data-image-lightbox]) {
     max-width: calc(100vw - 1rem) !important;
     max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 1rem) !important;
   }
+}
+
+.image-lightbox > [aria-hidden] {
+  display: none;
+}
+.image-lightbox > button:last-child {
+  top: 1rem;
+  right: 1rem;
+  z-index: 1;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.1);
+  color: white;
+  opacity: 1;
+}
+.image-lightbox > button:last-child:hover {
+  background: rgb(255 255 255 / 0.2);
 }
 
 /* Product-wide interaction finishing: Radix primitives share one calm motion

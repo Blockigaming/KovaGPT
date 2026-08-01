@@ -136,7 +136,7 @@ function NotificationsRoute() {
               <option value="unread">Unread</option>
               <option value="agent">Agents</option>
               <option value="connector">Connectors</option>
-              <option value="scheduled">Scheduled tasks</option>
+              <option value="scheduled">Task history</option>
             </select>
           </div>
         </header>
@@ -164,7 +164,7 @@ function NotificationsRoute() {
             description={
               items.length
                 ? "Try another search or filter."
-                : "Agent runs, connectors, and scheduled tasks will appear here."
+                : "Agent runs, connectors, and historical task notifications will appear here."
             }
           />
         ) : (

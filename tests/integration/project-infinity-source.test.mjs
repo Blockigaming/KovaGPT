@@ -27,5 +27,5 @@ test("Command Palette executes search, theme, and direct KovaGPT workflows", asy
   assert.match(palette, /applyThemeMode/);
   assert.match(palette, /Start Deep Research/);
   assert.match(palette, /Generate image/);
-  assert.match(palette, /Create Scheduled Task/);
+  assert.match(palette, /Scheduled Tasks status/);
 });

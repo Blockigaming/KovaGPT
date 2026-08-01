@@ -385,6 +385,15 @@ function KovaGPT() {
     () => conversations.find((c) => c.id === activeId) ?? null,
     [conversations, activeId],
   );
+  const activeTemporary = active ? Boolean(active.temporary) : null;
+  const historyConversations = useMemo(
+    () => conversations.filter((conversation) => !conversation.temporary),
+    [conversations],
+  );
+
+  useEffect(() => {
+    if (activeTemporary !== null) setTempChat(activeTemporary);
+  }, [activeTemporary]);
 
   useEffect(() => {
     activeIdRef.current = activeId;
@@ -464,6 +473,7 @@ function KovaGPT() {
   }, [conversations, isLoaded, isSignedIn, isStreaming, signupPromptShown]);
 
   const newChat = useCallback(() => {
+    setConversations((previous) => previous.filter((conversation) => !conversation.temporary));
     setActiveId(null);
     setInput("");
     setAttachments([]);
@@ -707,9 +717,6 @@ function KovaGPT() {
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             locale: typeof navigator !== "undefined" ? navigator.language : "en-US",
             personality: personalityToInstruction(loadPersonality()) || undefined,
-            kovaVersion:
-              (typeof window !== "undefined" && (localStorage.getItem("kova-version") ?? "3.5")) ||
-              "3.5",
           }),
           signal: controller.signal,
         });
@@ -988,7 +995,7 @@ function KovaGPT() {
       )}
 
       <Sidebar
-        conversations={conversations}
+        conversations={historyConversations}
         activeId={activeId}
         onSelect={setActiveId}
         onNew={newChat}
@@ -1156,13 +1163,19 @@ function KovaGPT() {
               <button
                 onClick={() => {
                   const next = !tempChat;
-                  setTempChat(next);
                   if (next) {
                     try {
                       localStorage.removeItem(`kova-draft:${activeId ?? "__new__"}`);
                     } catch {
                       /* Storage may be unavailable; temporary input still stays in memory only. */
                     }
+                  }
+
+                  // Persisted and temporary turns must never share one conversation.
+                  newChat();
+                  setTempChat(next);
+
+                  if (next) {
                     setTempChatConfirmed(true);
                     setTimeout(() => setTempChatConfirmed(false), 1400);
                     toast.success("Temporary chat enabled", {
@@ -1555,7 +1568,7 @@ function KovaGPT() {
         open={commandOpen}
         query={commandQuery}
         onQueryChange={setCommandQuery}
-        conversations={conversations}
+        conversations={historyConversations}
         onClose={() => setCommandOpen(false)}
         onNewChat={newChat}
         onSelectChat={setActiveId}

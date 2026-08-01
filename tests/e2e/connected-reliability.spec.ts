@@ -15,7 +15,10 @@ test("connected apps and scheduled tasks expose truthful signed-out states", asy
 
   await page.goto("/scheduled-tasks", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Scheduled Tasks" })).toBeVisible();
-  await expect(page.getByText("Sign in to use scheduled tasks")).toBeVisible();
+  await expect(page.getByText("Sign in to review task history")).toBeVisible();
+  await expect(
+    page.getByText("Background execution is unavailable in this deployment."),
+  ).toBeVisible();
   await expect(page.getByText(/will run once|runner is fully enabled/i)).toHaveCount(0);
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);

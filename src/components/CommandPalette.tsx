@@ -58,7 +58,7 @@ const fixedActions: PaletteAction[] = [
     icon: ShieldCheck,
     disabledReason: "Start from the composer privacy menu.",
   },
-  { label: "Create Scheduled Task", href: "/scheduled-tasks", icon: Calendar },
+  { label: "Scheduled Tasks status", href: "/scheduled-tasks", icon: Calendar },
   { label: "Open Apps", href: "/apps", icon: Plug },
   { label: "Open Help", href: "/help", icon: FlaskConical },
   { label: "Toggle appearance", action: "theme", icon: SunMoon },
