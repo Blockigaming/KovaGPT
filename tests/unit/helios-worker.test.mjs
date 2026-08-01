@@ -19,19 +19,21 @@ const constellationMigration = await readFile(
 const workFunctions = await readFile("src/lib/work.functions.ts", "utf8");
 const smokeTest = await readFile("worker/scripts/smoke-test.mjs", "utf8");
 const dockerfile = await readFile("worker/Dockerfile", "utf8");
-test("worker exposes health, readiness, shutdown, recovery, and team-only execution", () => {
+test("worker exposes liveness while readiness and execution fail closed", () => {
   for (const control of [
     "/healthz",
     "/readyz",
     "SIGTERM",
-    "recover_expired_agent_leases",
-    "heartbeat_agent_job",
-    "release_agent_lease",
-    'job.kind !== "team"',
+    "execution_enabled: false",
+    "agent_runtime_unavailable",
+    "worker_execution_disabled",
   ])
     assert.match(worker, new RegExp(control.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
-  assert.match(worker, /\.from\("agent_job_events"\)/);
-  assert.doesNotMatch(worker, /browserJob|chromium|page\.goto|agent_run_events/);
+  assert.match(worker, /request\.url === "\/readyz"[\s\S]+writeHead\(503/);
+  assert.doesNotMatch(
+    worker,
+    /createClient|lease_agent_job|fail_agent_job|AI_PROVIDER|browserJob|chromium|page\.goto/,
+  );
 });
 test("SSRF protection rejects private IPv4, IPv6, mapped IPv4, and private DNS answers", async () => {
   for (const address of [
@@ -56,18 +58,25 @@ test("SSRF protection rejects private IPv4, IPv6, mapped IPv4, and private DNS a
     "https://example.test/path",
   );
 });
-test("pause and cancellation transitions cannot be converted into retries", () => {
-  assert.match(migration, /status='cancelling' then 'cancelled'/);
-  assert.match(migration, /status='paused' then 'paused'/);
-  assert.match(migration, /current_status='paused' and current_worker is null/);
-  assert.match(migration, /current_status='paused' and current_worker is not null/);
-  assert.match(migration, /settle_interrupted_agent_job/);
-  assert.match(migration, /fail_agent_job[\s\S]+status in \('leased','running'\)/);
-  assert.match(worker, /controller\.signal\.aborted[\s\S]+heartbeat_agent_job/);
+test("historical cancellation settles immediately without resume or approval", () => {
   assert.match(
-    worker,
-    /\["cancelling", "cancelled", "paused"\][\s\S]+settle_interrupted_agent_job/,
+    migration,
+    /recover_expired_agent_leases[\s\S]+set status='cancelled',error='Agent runtime unavailable'/,
   );
+  assert.match(
+    migration,
+    /settle_interrupted_agent_job[\s\S]+set status='cancelled',error='Agent runtime unavailable'/,
+  );
+  assert.match(migration, /complete_agent_job[\s\S]+raise exception 'Agent runtime unavailable'/);
+  assert.match(migration, /fail_agent_job[\s\S]+perform public\.settle_interrupted_agent_job/);
+  assert.match(migration, /p_action <> 'cancel'/);
+  assert.match(
+    migration,
+    /set status='cancelled',worker_id=null,lease_expires_at=null,completed_at=now\(\)/,
+  );
+  assert.doesNotMatch(migration, /p_action='resume'|p_action='pause'/);
+  assert.match(migration, /p_decision <> 'denied'/);
+  assert.doesNotMatch(migration, /request_metadata=coalesce/);
 });
 test("duplicated deliverables get a new identity while revisions retain their lineage", () => {
   assert.match(migration, /deliverable_key uuid not null default gen_random_uuid\(\)/);
@@ -81,11 +90,16 @@ test("duplicated deliverables get a new identity while revisions retain their li
   assert.match(workFunctions, /listDeliverableVersions[\s\S]+select\("deliverable_key"\)/);
 });
 test("worker queue RPCs are not callable by browser roles", () => {
-  for (const role of ["public, anon, authenticated", "security definer", "skip locked"])
+  for (const role of ["public, anon, authenticated", "security definer"])
     assert.ok(migration.toLowerCase().includes(role));
   assert.match(migration, /grant execute on function public\.lease_agent_job[\s\S]+service_role/);
   assert.match(migration, /grant execute on function public\.settle_interrupted_agent_job/);
-  assert.match(migration, /where kind='team'/);
+  assert.match(migration, /returns setof public\.agent_jobs[\s\S]+begin\s+return;/);
+  assert.match(migration, /revoke all on function public\.control_agent_job[\s\S]+public, anon/);
+  assert.match(
+    migration,
+    /revoke all on function public\.decide_agent_approval[\s\S]+public, anon/,
+  );
 });
 test("fresh and existing schemas keep run events separate from job events", () => {
   assert.match(constellationMigration, /create table if not exists public\.agent_run_events/);
@@ -93,8 +107,18 @@ test("fresh and existing schemas keep run events separate from job events", () =
   assert.doesNotMatch(migration, /create table public\.agent_run_events/);
   assert.match(compatibilityMigration, /create table if not exists public\.agent_job_events/);
   assert.match(compatibilityMigration, /before insert or update of kind on public\.agent_jobs/);
-  assert.match(compatibilityMigration, /if new\.kind <> 'team'/);
-  assert.match(compatibilityMigration, /where kind = 'team'/);
+  assert.match(compatibilityMigration, /raise exception 'Agent runtime unavailable'/);
+  assert.match(compatibilityMigration, /with check \(false\)/);
+  assert.match(compatibilityMigration, /returns setof public\.agent_jobs[\s\S]+begin\s+return;/);
+  assert.match(
+    compatibilityMigration,
+    /complete_agent_job[\s\S]+raise exception 'Agent runtime unavailable'/,
+  );
+  assert.match(compatibilityMigration, /heartbeat_agent_job[\s\S]+set status = 'cancelled'/);
+  assert.match(
+    compatibilityMigration,
+    /fail_agent_job[\s\S]+perform public\.settle_interrupted_agent_job/,
+  );
   assert.doesNotMatch(
     compatibilityMigration,
     /(?:drop|truncate|rename|alter\s+table)\s+(?:table\s+)?public\.agent_run_events/i,
@@ -104,9 +128,11 @@ test("fresh and existing schemas keep run events separate from job events", () =
 test("worker smoke validation is read-only and the image has no browser runtime", () => {
   assert.match(smokeTest, /\.from\("agent_run_events"\)/);
   assert.match(smokeTest, /\.from\("agent_job_events"\)/);
+  assert.match(smokeTest, /readiness\.status !== 503/);
+  assert.match(smokeTest, /execution_enabled !== false/);
   assert.doesNotMatch(smokeTest, /\.insert\(|\.update\(|\.delete\(|createUser|AI_PROVIDER/);
   assert.match(dockerfile, /FROM node:22-bookworm-slim/);
-  assert.doesNotMatch(dockerfile, /playwright|chromium|pwuser/i);
+  assert.doesNotMatch(dockerfile, /playwright|chromium|pwuser|npm ci/i);
 });
 test("deliverables and notifications are owner scoped", () => {
   assert.match(migration, /agent_deliverables[\s\S]+Owners manage deliverables/);
