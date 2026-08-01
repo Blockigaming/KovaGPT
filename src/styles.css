@@ -848,7 +848,12 @@ body {
   cursor: not-allowed;
   opacity: 0.48;
 }
-:where([data-kova-dialog-surface], [role="menu"], [role="listbox"], [data-radix-popper-content-wrapper]) {
+:where(
+  [data-kova-dialog-surface],
+  [role="menu"],
+  [role="listbox"],
+  [data-radix-popper-content-wrapper]
+) {
   transform-origin: var(--radix-popover-content-transform-origin, center);
 }
 :where([data-kova-dialog-surface], [role="menu"], [role="listbox"])[data-state="open"] {
