@@ -111,6 +111,10 @@ test("server routes wire entitlement checks ahead of costly research/provider ca
   assert.ok(accessGate < chat.indexOf("return handleDeepResearchRequest("));
 
   assert.match(execution, /\.eq\("environment", BILLING_ENV\)/);
+  const lookupErrorGate = execution.indexOf("if (error) {");
+  const entitlementResolver = execution.indexOf("return resolveAgentEntitlement(data");
+  assert.notEqual(lookupErrorGate, -1);
+  assert.ok(lookupErrorGate < entitlementResolver);
   assert.match(execution, /resolveAgentEntitlement\(data/);
   assert.doesNotMatch(execution, /price\.includes\(/);
 });
