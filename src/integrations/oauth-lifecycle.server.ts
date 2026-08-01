@@ -261,7 +261,6 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
   return { providerRevoked };
 }
 
-
 export async function disconnectAllOAuth(ownerId: string) {
   const db = admin();
   const { data: accounts, error } = await db
