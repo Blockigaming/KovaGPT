@@ -443,7 +443,10 @@ function KovaGPT() {
       const payload = {
         chatId: active.id,
         title: active.title,
-        messages: active.messages.map((m) => ({ role: m.role, content: m.content })),
+        // The memory endpoint intentionally accepts only the latest bounded window.
+        messages: active.messages
+          .slice(-30)
+          .map((message) => ({ role: message.role, content: message.content })),
       };
       authFetch("/api/memory", {
         method: "POST",
