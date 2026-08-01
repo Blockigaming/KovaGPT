@@ -103,6 +103,10 @@ test("account deletion disconnects generalized OAuth accounts before removing au
     /\.from\("integration_linked_accounts"\)[\s\S]*\.eq\("owner_id", ownerId\)/,
   );
   assert.match(lifecycle, /await disconnectOAuth\(ownerId, account\.id\)/);
+  assert.match(lifecycle, /data: purgedAccount, error: credentialDeletionError/);
+  assert.match(lifecycle, /\.select\("id"\)\s*\.maybeSingle\(\)/);
+  assert.match(lifecycle, /credentialDeletionError \|\| !purgedAccount/);
+  assert.match(lifecycle, /linked_account_purge_failed/);
   assert.match(
     lifecycle,
     /if \(failures\.length\) throw new Error\("linked_account_disconnect_failed"\)/,
