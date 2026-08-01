@@ -17,20 +17,14 @@ function requiredValue(environment, name, maximumLength) {
     throw configurationError(name, "is unreasonably long");
   }
   if (CONTROL_OR_SPACE.test(value)) {
-    throw configurationError(
-      name,
-      "must not contain whitespace or control characters",
-    );
+    throw configurationError(name, "must not contain whitespace or control characters");
   }
   return value;
 }
 
 function decodeJwtPayload(value) {
   const parts = value.split(".");
-  if (
-    parts.length !== 3 ||
-    parts.some((part) => !/^[A-Za-z0-9_-]+$/.test(part))
-  ) {
+  if (parts.length !== 3 || parts.some((part) => !/^[A-Za-z0-9_-]+$/.test(part))) {
     return null;
   }
   try {
@@ -74,19 +68,13 @@ export function validatePublicBuildEnv(environment = process.env) {
     throw configurationError(KEY_NAME, "must never be a service-role JWT");
   }
   if (payload?.role !== "anon") {
-    throw configurationError(
-      KEY_NAME,
-      "must be a publishable key or legacy anon JWT",
-    );
+    throw configurationError(KEY_NAME, "must be a publishable key or legacy anon JWT");
   }
   return { supabaseUrl: url.origin, keyType: "legacy-anon" };
 }
 
 function isDirectExecution() {
-  return (
-    Boolean(process.argv[1]) &&
-    import.meta.url === pathToFileURL(process.argv[1]).href
-  );
+  return Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]).href;
 }
 
 if (isDirectExecution()) {
@@ -94,10 +82,7 @@ if (isDirectExecution()) {
     validatePublicBuildEnv();
     process.stdout.write("Public browser build configuration is valid.\n");
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Invalid public build configuration.";
+    const message = error instanceof Error ? error.message : "Invalid public build configuration.";
     process.stderr.write(`Configuration error: ${message}\n`);
     process.exitCode = 1;
   }
