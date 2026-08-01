@@ -21,30 +21,17 @@ test("AI provider adapter exposes typed capabilities and safe errors", () => {
     "providerErrorResponse",
     "streamingChatCompletions",
   ]) {
-    assert.match(
-      source,
-      new RegExp(`\\b${token}\\b`),
-      `provider adapter should include ${token}`,
-    );
+    assert.match(source, new RegExp(`\\b${token}\\b`), `provider adapter should include ${token}`);
   }
 });
 
 test("AI requests are locked to the official OpenAI endpoint", () => {
   const source = read("src/lib/ai/provider.server.ts");
-  assert.match(
-    source,
-    /const OPENAI_API_BASE_URL = "https:\/\/api\.openai\.com\/v1"/,
-  );
+  assert.match(source, /const OPENAI_API_BASE_URL = "https:\/\/api\.openai\.com\/v1"/);
   assert.match(source, /provider: "openai"/);
   assert.match(source, /redirect: "error"/);
-  assert.doesNotMatch(
-    source,
-    /OPENAI_BASE_URL|AI_PROVIDER_URL|AI_PROVIDER_API_KEY/,
-  );
-  assert.doesNotMatch(
-    source,
-    /LOVABLE_API_KEY|LOVABLE_AI_BASE_URL|Lovable-API-Key/i,
-  );
+  assert.doesNotMatch(source, /OPENAI_BASE_URL|AI_PROVIDER_URL|AI_PROVIDER_API_KEY/);
+  assert.doesNotMatch(source, /LOVABLE_API_KEY|LOVABLE_AI_BASE_URL|Lovable-API-Key/i);
   assert.doesNotMatch(source, /VITE_.*API_KEY/);
 });
 
@@ -62,10 +49,7 @@ test("provider failures expose only KovaGPT-generic non-cacheable envelopes", ()
     assert.match(source, new RegExp(token));
   }
   assert.match(source, /KovaGPT is temporarily unavailable/);
-  assert.doesNotMatch(
-    source,
-    /missing_openai_api_key|provider_auth_failed|provider_network_error/,
-  );
+  assert.doesNotMatch(source, /missing_openai_api_key|provider_auth_failed|provider_network_error/);
   assert.doesNotMatch(source, /response\.text\(|providerMessage/);
   assert.match(source, /response\.body\?\.cancel\(\)/);
   assert.match(source, /response\.status === 402/);
