@@ -3,7 +3,6 @@ import { rejectCrossSiteRequest } from "./lib/http-security.server";
 
 import { withRuntimeBindings } from "./lib/runtime-env.server";
 
-
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
 };
@@ -32,8 +31,7 @@ function hardenResponse(response: Response): Response {
     "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
     "Cross-Origin-Resource-Policy": "same-origin",
     "Origin-Agent-Cluster": "?1",
-    "Permissions-Policy":
-      "camera=(), geolocation=(self), microphone=(), payment=(self), usb=()",
+    "Permissions-Policy": "camera=(), geolocation=(self), microphone=(), payment=(self), usb=()",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
     "X-Content-Type-Options": "nosniff",
@@ -125,9 +123,7 @@ export default {
         return hardenResponse(Response.json({ error: "Request too large" }, { status: 413 }));
       }
       const handler = await getServerEntry();
-      const response = await withRuntimeBindings(env, () =>
-        handler.fetch(request, env, ctx),
-      );
+      const response = await withRuntimeBindings(env, () => handler.fetch(request, env, ctx));
       return hardenResponse(await normalizeCatastrophicSsrResponse(response));
     } catch (error) {
       console.error("[server] request failed", {
