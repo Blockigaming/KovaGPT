@@ -1,4 +1,9 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -75,7 +80,10 @@ import {
 } from "@/utils/payments.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { parseAllowedBillingPortalUrl } from "@/lib/billing-portal-url.mjs";
-import { setSharedSendOnEnter, useSharedSendOnEnter } from "@/lib/composer-preferences";
+import {
+  setSharedSendOnEnter,
+  useSharedSendOnEnter,
+} from "@/lib/composer-preferences";
 import { PersonalitySliders } from "@/components/PersonalitySliders";
 import { StorageDashboard } from "@/components/StorageDashboard";
 import { FamilySharingPanel } from "@/components/FamilySharingPanel";
@@ -95,7 +103,12 @@ import {
 import { getUsage } from "@/lib/limits";
 import { useUser, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
-import { applyThemeMode, DEFAULT_THEME, type ThemeColors, type ThemeMode } from "@/lib/theme";
+import {
+  applyThemeMode,
+  DEFAULT_THEME,
+  type ThemeColors,
+  type ThemeMode,
+} from "@/lib/theme";
 import { authFetch } from "@/lib/auth-fetch";
 
 export type Mood = "neutral" | "friendly" | "professional" | "concise";
@@ -238,7 +251,8 @@ export function SettingsDialog({
 }) {
   const returnFocusRef = useRef<HTMLElement | null>(
     returnFocusTarget ??
-      (typeof document !== "undefined" && document.activeElement instanceof HTMLElement
+      (typeof document !== "undefined" &&
+      document.activeElement instanceof HTMLElement
         ? document.activeElement
         : null),
   );
@@ -259,9 +273,13 @@ export function SettingsDialog({
   const [tab, setTab] = useState<string>(initialTab ?? "general");
   const [usage, setUsage] = useState<DailyUsageDto | null>(null);
   const [usageLoading, setUsageLoading] = useState(false);
-  const [subSummary, setSubSummary] = useState<SubscriptionSummary | null>(null);
+  const [subSummary, setSubSummary] = useState<SubscriptionSummary | null>(
+    null,
+  );
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
-  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(
+    null,
+  );
   const [portalLoading, setPortalLoading] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
@@ -364,16 +382,29 @@ export function SettingsDialog({
         const result = (await response.json().catch(() => null)) as {
           error?: string;
         } | null;
-        throw new Error(result?.error || "Account deletion failed. Your account remains active.");
+        toast.error(
+          result?.error ||
+            "Account deletion failed. Your account remains active.",
+        );
+        return;
       }
       clearConversations();
       onClearAll();
-      await clerk?.signOut();
       setDeleteAccountOpen(false);
       onOpenChange(false);
-      toast.success("Your account and subscription were deleted.");
+      toast.success(
+        "Account deletion completed. Active subscriptions were canceled.",
+      );
+      // The auth user no longer exists, so remote sign-out can legitimately
+      // fail. The shared sign-out helper always clears this device locally.
+      await clerk?.signOut();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Account deletion failed.");
+      console.error("[account-delete] request failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      toast.error(
+        "Account deletion could not be completed. Your account remains active.",
+      );
     } finally {
       setDeleteAccountBusy(false);
     }
@@ -391,7 +422,9 @@ export function SettingsDialog({
       if (summary.tier === "free") {
         toast.message("No active subscription found on this account.");
       } else {
-        toast.success(`${summary.tier === "pro" ? "Pro" : "Plus"} plan refreshed.`);
+        toast.success(
+          `${summary.tier === "pro" ? "Pro" : "Plus"} plan refreshed.`,
+        );
       }
     } catch {
       setSubSummary(null);
@@ -404,8 +437,11 @@ export function SettingsDialog({
     }
   };
 
-  const inheritedSubscription = !!subSummary && tierRank(tier) > tierRank(subSummary.tier);
-  const displayedSubscriptionTier = inheritedSubscription ? tier : subSummary?.tier;
+  const inheritedSubscription =
+    !!subSummary && tierRank(tier) > tierRank(subSummary.tier);
+  const displayedSubscriptionTier = inheritedSubscription
+    ? tier
+    : subSummary?.tier;
 
   // "Saved" indicator: whenever settings change while the dialog is open, show
   // a subtle pill for ~1.5s. Skips the very first render so it doesn't fire on
@@ -434,7 +470,9 @@ export function SettingsDialog({
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           if (window.innerWidth < 1024) {
-            document.querySelector<HTMLElement>('[aria-label="Open menu"]')?.focus();
+            document
+              .querySelector<HTMLElement>('[aria-label="Open menu"]')
+              ?.focus();
             return;
           }
           const previous = returnFocusRef.current;
@@ -442,7 +480,9 @@ export function SettingsDialog({
             previous.focus();
             return;
           }
-          document.querySelector<HTMLElement>('[aria-label="Open menu"]')?.focus();
+          document
+            .querySelector<HTMLElement>('[aria-label="Open menu"]')
+            ?.focus();
         }}
       >
         <DialogHeader className="px-5 sm:px-7 pt-5 pb-4 border-b border-border">
@@ -490,16 +530,18 @@ export function SettingsDialog({
           >
             {/* Mobile: horizontal scrolling section nav */}
             <TabsList className="md:hidden flex w-full overflow-x-auto scrollbar-none justify-start gap-1 p-2 bg-muted/40 border-b border-border rounded-none h-auto shrink-0">
-              {TAB_GROUPS.flatMap((g) => g.tabs).map(({ v, icon: Icon, label }) => (
-                <TabsTrigger
-                  key={v}
-                  value={v}
-                  className="shrink-0 gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-                >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{label}</span>
-                </TabsTrigger>
-              ))}
+              {TAB_GROUPS.flatMap((g) => g.tabs).map(
+                ({ v, icon: Icon, label }) => (
+                  <TabsTrigger
+                    key={v}
+                    value={v}
+                    className="shrink-0 gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{label}</span>
+                  </TabsTrigger>
+                ),
+              )}
             </TabsList>
 
             {/* Desktop: grouped sidebar */}
@@ -532,14 +574,19 @@ export function SettingsDialog({
 
             <div className="flex-1 overflow-hidden flex flex-col">
               {/* GENERAL */}
-              <TabsContent value="general" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
+              <TabsContent
+                value="general"
+                className="overflow-y-auto px-7 pb-8 space-y-6 py-5"
+              >
                 <section className="space-y-4">
                   <h3 className="text-sm font-semibold">Behavior</h3>
                   <ToggleRow
                     title="Live web search"
                     hint="Fetch fresh results for time-sensitive questions."
                     checked={settings.webSearch}
-                    onCheckedChange={(v) => onChange({ ...settings, webSearch: v })}
+                    onCheckedChange={(v) =>
+                      onChange({ ...settings, webSearch: v })
+                    }
                   />
                   <ToggleRow
                     title="Send on Enter"
@@ -567,8 +614,12 @@ export function SettingsDialog({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="short">Short - get to the point</SelectItem>
-                        <SelectItem value="medium">Medium - balanced</SelectItem>
+                        <SelectItem value="short">
+                          Short - get to the point
+                        </SelectItem>
+                        <SelectItem value="medium">
+                          Medium - balanced
+                        </SelectItem>
                         <SelectItem value="long">Long - detailed</SelectItem>
                       </SelectContent>
                     </Select>
@@ -579,11 +630,15 @@ export function SettingsDialog({
                   <h3 className="text-sm font-semibold">Today's usage</h3>
                   <div className="space-y-1.5 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Images generated</span>
+                      <span className="text-muted-foreground">
+                        Images generated
+                      </span>
                       <span>{localUsage.images}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Images uploaded</span>
+                      <span className="text-muted-foreground">
+                        Images uploaded
+                      </span>
                       <span>{localUsage.uploads}</span>
                     </div>
                   </div>
@@ -605,7 +660,9 @@ export function SettingsDialog({
                     <Input
                       placeholder={user?.firstName || "Your name"}
                       value={settings.displayName}
-                      onChange={(e) => onChange({ ...settings, displayName: e.target.value })}
+                      onChange={(e) =>
+                        onChange({ ...settings, displayName: e.target.value })
+                      }
                     />
                   </div>
                   <div>
@@ -616,19 +673,27 @@ export function SettingsDialog({
                       rows={4}
                       placeholder="e.g. I'm a student in Chicago. I prefer metric. I'm learning Python."
                       value={settings.extraFacts}
-                      onChange={(e) => onChange({ ...settings, extraFacts: e.target.value })}
+                      onChange={(e) =>
+                        onChange({ ...settings, extraFacts: e.target.value })
+                      }
                       className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm resize-y min-h-[90px]"
                     />
                   </div>
                 </section>
 
                 <section className="space-y-3">
-                  <h3 className="text-sm font-semibold">How KovaGPT should respond</h3>
+                  <h3 className="text-sm font-semibold">
+                    How KovaGPT should respond
+                  </h3>
                   <div>
-                    <label className="text-xs text-muted-foreground mb-1 block">Tone</label>
+                    <label className="text-xs text-muted-foreground mb-1 block">
+                      Tone
+                    </label>
                     <Select
                       value={settings.mood}
-                      onValueChange={(v) => onChange({ ...settings, mood: v as Mood })}
+                      onValueChange={(v) =>
+                        onChange({ ...settings, mood: v as Mood })
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -638,7 +703,9 @@ export function SettingsDialog({
                           <SelectItem key={m.value} value={m.value}>
                             <div className="flex flex-col">
                               <span>{m.label}</span>
-                              <span className="text-xs text-muted-foreground">{m.hint}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {m.hint}
+                              </span>
                             </div>
                           </SelectItem>
                         ))}
@@ -670,7 +737,10 @@ export function SettingsDialog({
               </TabsContent>
 
               {/* MEMORY */}
-              <TabsContent value="memory" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
+              <TabsContent
+                value="memory"
+                className="overflow-y-auto px-7 pb-8 space-y-6 py-5"
+              >
                 <section className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Brain className="w-4 h-4" />
@@ -680,7 +750,9 @@ export function SettingsDialog({
                     title="Remember across conversations"
                     hint="Carry your profile and instructions into every new chat."
                     checked={settings.rememberAcross}
-                    onCheckedChange={(v) => onChange({ ...settings, rememberAcross: v })}
+                    onCheckedChange={(v) =>
+                      onChange({ ...settings, rememberAcross: v })
+                    }
                   />
                 </section>
 
@@ -694,16 +766,19 @@ export function SettingsDialog({
                   </div>
                   {adaptiveMemoryUnlocked ? (
                     <p className="text-xs text-muted-foreground">
-                      Adaptive Memory is active. KovaGPT continually learns your preferences and
-                      adapts replies.
+                      Adaptive Memory is active. KovaGPT continually learns your
+                      preferences and adapts replies.
                     </p>
                   ) : (
                     <div className="rounded-lg border border-border p-4 flex items-start gap-3">
                       <Lock className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
                       <div className="flex-1 text-sm">
-                        <div className="font-medium">Available on Kova Plus and Pro</div>
+                        <div className="font-medium">
+                          Available on Kova Plus and Pro
+                        </div>
                         <div className="text-xs text-muted-foreground mt-1">
-                          Adaptive Memory remembers what matters to you across conversations.
+                          Adaptive Memory remembers what matters to you across
+                          conversations.
                         </div>
                         <Link
                           to="/pricing"
@@ -733,7 +808,10 @@ export function SettingsDialog({
                 </section>
               </TabsContent>
 
-              <TabsContent value="linked" className="overflow-y-auto px-7 pb-8 space-y-5 py-5">
+              <TabsContent
+                value="linked"
+                className="overflow-y-auto px-7 pb-8 space-y-5 py-5"
+              >
                 {!loggedIn ? (
                   <SignInGate label="Apps" />
                 ) : (
@@ -741,16 +819,20 @@ export function SettingsDialog({
                     <section className="space-y-1">
                       <h3 className="text-sm font-semibold">Apps</h3>
                       <p className="text-xs text-muted-foreground">
-                        Connect external accounts so KovaGPT can use them in your chats. Live
-                        integrations work today; others are on the roadmap.
+                        Connect external accounts so KovaGPT can use them in
+                        your chats. Live integrations work today; others are on
+                        the roadmap.
                       </p>
                       <p className="text-xs text-muted-foreground pt-1">
-                        Linking apps is free for everyone. Disconnect at any time.
+                        Linking apps is free for everyone. Disconnect at any
+                        time.
                       </p>
                     </section>
 
                     {CONNECTOR_CATEGORIES.map((cat) => {
-                      const items = CONNECTOR_CATALOG.filter((c) => c.category === cat);
+                      const items = CONNECTOR_CATALOG.filter(
+                        (c) => c.category === cat,
+                      );
                       if (items.length === 0) return null;
                       return (
                         <section key={cat} className="space-y-2">
@@ -772,7 +854,8 @@ export function SettingsDialog({
                                     return;
                                   }
                                   setLinked(getLinkedAccounts(user.id));
-                                  if (!res.redirected) toast.success(`Connected.`);
+                                  if (!res.redirected)
+                                    toast.success(`Connected.`);
                                 }}
                                 onDisconnect={(p) => {
                                   if (!user?.id) return;
@@ -794,20 +877,22 @@ export function SettingsDialog({
               {/* Library and Finances tabs intentionally removed from Settings. */}
 
               {/* EMAIL */}
-              <TabsContent value="email" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
+              <TabsContent
+                value="email"
+                className="overflow-y-auto px-7 pb-8 space-y-4 py-5"
+              >
                 <h3 className="text-sm font-semibold">Email address</h3>
                 <div className="rounded-lg border border-border p-4">
                   <div className="text-sm font-medium">Primary email</div>
                   <div className="text-sm text-muted-foreground mt-1">
-                    {user?.primaryEmailAddress?.emailAddress ?? "No email on file"}
+                    {user?.primaryEmailAddress?.emailAddress ??
+                      "No email on file"}
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => clerk?.openUserProfile()}>
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Manage email addresses
-                </Button>
                 <p className="text-xs text-muted-foreground">
-                  Verification emails are sent here when you sign in or create an account.
+                  Verification and security emails are sent here. Email-address
+                  changes are not currently available in the app; contact
+                  support@kovagpt.com if you need help.
                 </p>
               </TabsContent>
 
@@ -838,9 +923,16 @@ export function SettingsDialog({
                         plan
                         {inheritedSubscription ? " through Family Sharing" : ""}
                         {subSummary?.trialing ? " (free trial)" : ""}
-                        {subSummary?.status === "past_due" ? " - payment past due" : ""}
-                        {subSummary?.status === "unpaid" ? " - payment failed" : ""}
-                        {subSummary?.status === "incomplete" ? " - awaiting first payment" : ""}.
+                        {subSummary?.status === "past_due"
+                          ? " - payment past due"
+                          : ""}
+                        {subSummary?.status === "unpaid"
+                          ? " - payment failed"
+                          : ""}
+                        {subSummary?.status === "incomplete"
+                          ? " - awaiting first payment"
+                          : ""}
+                        .
                       </div>
                     ) : null}
                     {subSummary?.currentPeriodEnd && !inheritedSubscription && (
@@ -881,28 +973,38 @@ export function SettingsDialog({
                     )}
                   </div>
                   {!loggedIn ? (
-                    <p className="text-xs text-muted-foreground">Sign in to see your usage.</p>
+                    <p className="text-xs text-muted-foreground">
+                      Sign in to see your usage.
+                    </p>
                   ) : usageLoading && !usage ? (
-                    <p className="text-xs text-muted-foreground">Loading usage…</p>
+                    <p className="text-xs text-muted-foreground">
+                      Loading usage…
+                    </p>
                   ) : usage ? (
                     <div className="space-y-1.5 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Messages used</span>
+                        <span className="text-muted-foreground">
+                          Messages used
+                        </span>
                         <span>{usage.chats}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Images used</span>
+                        <span className="text-muted-foreground">
+                          Images used
+                        </span>
                         <span>{usage.images}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">File uploads used</span>
+                        <span className="text-muted-foreground">
+                          File uploads used
+                        </span>
                         <span>{usage.uploads}</span>
                       </div>
                     </div>
                   ) : (
                     <p className="text-xs text-muted-foreground">
-                      Usage data isn't available right now. If you need help understanding your
-                      limits, contact{" "}
+                      Usage data isn't available right now. If you need help
+                      understanding your limits, contact{" "}
                       <a
                         href="mailto:support@kovagpt.com"
                         className="underline hover:text-foreground"
@@ -939,7 +1041,9 @@ export function SettingsDialog({
                       disabled={subscriptionLoading || portalLoading}
                     >
                       <RefreshCw className="w-4 h-4 mr-2" />
-                      {subscriptionLoading ? "Checking…" : "Refresh billing status"}
+                      {subscriptionLoading
+                        ? "Checking…"
+                        : "Refresh billing status"}
                     </Button>
                   </div>
                   <p
@@ -963,28 +1067,36 @@ export function SettingsDialog({
                   !inheritedSubscription &&
                   displayedSubscriptionTier !== "free" && (
                     <div className="rounded-lg border border-border p-4 space-y-2">
-                      <div className="text-sm font-medium">Cancel subscription</div>
+                      <div className="text-sm font-medium">
+                        Cancel subscription
+                      </div>
                       <p className="text-xs text-muted-foreground">
-                        You can cancel from the Stripe billing portal above. After canceling, you'll
-                        keep access to your current plan until the end of the billing period.
+                        You can cancel from the Stripe billing portal above.
+                        After canceling, you'll keep access to your current plan
+                        until the end of the billing period.
                       </p>
                     </div>
                   )}
 
                 <div className="rounded-lg border border-border p-4 space-y-2">
-                  <div className="text-sm font-medium">Account and data deletion</div>
+                  <div className="text-sm font-medium">
+                    Account and data deletion
+                  </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    If you want to delete your KovaGPT account or request deletion of your data,
-                    contact{" "}
+                    Use Data controls to request self-service account deletion.
+                    KovaGPT verifies billing first, cancels active
+                    subscriptions, disconnects stored credentials, and then
+                    deletes the sign-in account and associated database records.
+                    For help or a specific privacy request, contact{" "}
                     <a
                       href="mailto:support@kovagpt.com"
                       className="underline hover:text-foreground"
                     >
                       support@kovagpt.com
                     </a>{" "}
-                    from the email connected to your account. Please include "Account Deletion
-                    Request" in the subject line. After receiving your request, we may ask for
-                    confirmation to make sure the request is coming from the correct account owner.
+                    from the email connected to your account. Some billing,
+                    security, and backup records may be retained when required
+                    by law or operational policy.
                   </p>
                 </div>
 
@@ -1027,12 +1139,16 @@ export function SettingsDialog({
                 </div>
 
                 <p className="text-xs text-muted-foreground">
-                  Payments are securely handled by Stripe. We never see or store your card number.
+                  Payments are securely handled by Stripe. We never see or store
+                  your card number.
                 </p>
               </TabsContent>
 
               {/* APPEARANCE */}
-              <TabsContent value="appearance" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
+              <TabsContent
+                value="appearance"
+                className="overflow-y-auto px-7 pb-8 space-y-6 py-5"
+              >
                 <section className="space-y-3">
                   <h3 className="text-sm font-semibold">Appearance</h3>
                   <p className="text-xs text-muted-foreground">
@@ -1067,7 +1183,8 @@ export function SettingsDialog({
                 <section className="space-y-3">
                   <h3 className="text-sm font-semibold">Action button color</h3>
                   <p className="text-xs text-muted-foreground">
-                    Color for the send and other primary action buttons. Default is KovaGPT blue.
+                    Color for the send and other primary action buttons. Default
+                    is KovaGPT blue.
                   </p>
                   <div className="flex items-center gap-3">
                     <input
@@ -1078,7 +1195,9 @@ export function SettingsDialog({
                         onChange({ ...settings, buttonColor: v });
                         try {
                           localStorage.setItem("kova-action-color", v);
-                          window.dispatchEvent(new CustomEvent("kova-action-color", { detail: v }));
+                          window.dispatchEvent(
+                            new CustomEvent("kova-action-color", { detail: v }),
+                          );
                         } catch {
                           /* ignore */
                         }
@@ -1087,30 +1206,35 @@ export function SettingsDialog({
                       aria-label="Pick action button color"
                     />
                     <div className="flex flex-wrap gap-2">
-                      {["#2563eb", "#10a37f", "#7c3aed", "#ef4444", "#f59e0b", "#0a0a0a"].map(
-                        (c) => (
-                          <button
-                            key={c}
-                            type="button"
-                            onClick={() => {
-                              onChange({ ...settings, buttonColor: c });
-                              try {
-                                localStorage.setItem("kova-action-color", c);
-                                window.dispatchEvent(
-                                  new CustomEvent("kova-action-color", {
-                                    detail: c,
-                                  }),
-                                );
-                              } catch {
-                                /* ignore */
-                              }
-                            }}
-                            className="w-8 h-8 rounded-full border border-border ring-offset-2 ring-offset-background hover:ring-2 hover:ring-foreground/30 transition"
-                            style={{ backgroundColor: c }}
-                            aria-label={`Use ${c}`}
-                          />
-                        ),
-                      )}
+                      {[
+                        "#2563eb",
+                        "#10a37f",
+                        "#7c3aed",
+                        "#ef4444",
+                        "#f59e0b",
+                        "#0a0a0a",
+                      ].map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => {
+                            onChange({ ...settings, buttonColor: c });
+                            try {
+                              localStorage.setItem("kova-action-color", c);
+                              window.dispatchEvent(
+                                new CustomEvent("kova-action-color", {
+                                  detail: c,
+                                }),
+                              );
+                            } catch {
+                              /* ignore */
+                            }
+                          }}
+                          className="w-8 h-8 rounded-full border border-border ring-offset-2 ring-offset-background hover:ring-2 hover:ring-foreground/30 transition"
+                          style={{ backgroundColor: c }}
+                          aria-label={`Use ${c}`}
+                        />
+                      ))}
                     </div>
                   </div>
                 </section>
@@ -1126,82 +1250,109 @@ export function SettingsDialog({
                   title="Account & security emails"
                   hint="Sign-in alerts, verification, and important account changes. Cannot be turned off for security."
                   checked={true}
-                  onCheckedChange={() => toast.message("Security emails are always on.")}
+                  onCheckedChange={() =>
+                    toast.message("Security emails are always on.")
+                  }
                 />
                 <ToggleRow
                   title="Product updates"
                   hint="Occasional emails about new features and improvements."
                   checked={settings.notifyProduct ?? true}
-                  onCheckedChange={(v) => onChange({ ...settings, notifyProduct: v })}
+                  onCheckedChange={(v) =>
+                    onChange({ ...settings, notifyProduct: v })
+                  }
                 />
                 <ToggleRow
                   title="Tips & guides"
                   hint="Helpful tips on getting more out of KovaGPT."
                   checked={settings.notifyEmail ?? true}
-                  onCheckedChange={(v) => onChange({ ...settings, notifyEmail: v })}
+                  onCheckedChange={(v) =>
+                    onChange({ ...settings, notifyEmail: v })
+                  }
                 />
               </TabsContent>
 
               {/* PARENTAL */}
-              <TabsContent value="parental" className="overflow-y-auto px-7 pb-8 space-y-5 py-5">
+              <TabsContent
+                value="parental"
+                className="overflow-y-auto px-7 pb-8 space-y-5 py-5"
+              >
                 <h3 className="text-sm font-semibold">Parental controls</h3>
                 <ToggleRow
                   title="Family-safe mode"
                   hint="Filters mature content and enforces stricter safety guidelines."
                   checked={settings.parentalMode ?? false}
-                  onCheckedChange={(v) => onChange({ ...settings, parentalMode: v })}
+                  onCheckedChange={(v) =>
+                    onChange({ ...settings, parentalMode: v })
+                  }
                 />
                 <FamilySafeAudience />
                 <FamilyPinPanel />
                 <p className="text-xs text-muted-foreground">
-                  For full device-level parental controls (screen time, app restrictions), use your
-                  device's built-in settings.
+                  For full device-level parental controls (screen time, app
+                  restrictions), use your device's built-in settings.
                 </p>
               </TabsContent>
 
               {/* KEYBOARD SHORTCUTS */}
-              <TabsContent value="shortcuts" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
+              <TabsContent
+                value="shortcuts"
+                className="overflow-y-auto px-7 pb-8 space-y-4 py-5"
+              >
                 <div>
                   <h3 className="text-sm font-semibold">Keyboard shortcuts</h3>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Customize shortcuts for common actions. Click a combo to record a new one.
+                    Customize shortcuts for common actions. Click a combo to
+                    record a new one.
                   </p>
                 </div>
                 <ShortcutsEditor />
               </TabsContent>
 
               {/* LOCATION */}
-              <TabsContent value="location" className="overflow-y-auto px-7 pb-8 space-y-5 py-5">
+              <TabsContent
+                value="location"
+                className="overflow-y-auto px-7 pb-8 space-y-5 py-5"
+              >
                 <div>
                   <h3 className="text-sm font-semibold">Location</h3>
                   <p className="text-xs text-muted-foreground mt-1">
-                    KovaGPT can use your approximate location to answer questions about local time,
-                    weather, nearby places, and recommendations. Location is optional and never
-                    required.
+                    KovaGPT can use your approximate location to answer
+                    questions about local time, weather, nearby places, and
+                    recommendations. Location is optional and never required.
                   </p>
                 </div>
                 <LocationPanel />
               </TabsContent>
 
               {/* SAFETY & SECURITY */}
-              <TabsContent value="security" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
+              <TabsContent
+                value="security"
+                className="overflow-y-auto px-7 pb-8 space-y-6 py-5"
+              >
                 <div className="rounded-lg border border-border p-4">
                   <div className="text-sm font-medium">Signed in as</div>
                   <div className="text-sm text-muted-foreground mt-1">
-                    {user?.primaryEmailAddress?.emailAddress ?? user?.firstName ?? "your account"}
+                    {user?.primaryEmailAddress?.emailAddress ??
+                      user?.firstName ??
+                      "your account"}
                   </div>
                 </div>
                 {loggedIn ? (
                   <MfaPanel />
                 ) : (
                   <div className="text-sm text-muted-foreground">
-                    Sign in to manage two-factor authentication and active sessions.
+                    Sign in to manage two-factor authentication and active
+                    sessions.
                   </div>
                 )}
               </TabsContent>
 
               {/* DATA CONTROL */}
-              <TabsContent value="data" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
+              <TabsContent
+                value="data"
+                className="overflow-y-auto px-7 pb-8 space-y-4 py-5"
+              >
                 <h3 className="text-sm font-semibold">Data controls</h3>
                 <ArchivedChatsPanel />
                 <div
@@ -1210,9 +1361,10 @@ export function SettingsDialog({
                 >
                   <div className="text-sm font-medium">Model training</div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    The removed model-improvement switch changed only a browser-local value; it was
-                    not wired to an account-level or AI-provider training control. No toggle is
-                    shown until a real remote control exists. See the{" "}
+                    The removed model-improvement switch changed only a
+                    browser-local value; it was not wired to an account-level or
+                    AI-provider training control. No toggle is shown until a
+                    real remote control exists. See the{" "}
                     <Link
                       to="/privacy"
                       onClick={() => onOpenChange(false)}
@@ -1238,9 +1390,12 @@ export function SettingsDialog({
                         conversations: loadConversations(),
                         archivedConversations: loadArchivedConversations(),
                       };
-                      const blob = new Blob([JSON.stringify(payload, null, 2)], {
-                        type: "application/json",
-                      });
+                      const blob = new Blob(
+                        [JSON.stringify(payload, null, 2)],
+                        {
+                          type: "application/json",
+                        },
+                      );
                       const url = URL.createObjectURL(blob);
                       const a = document.createElement("a");
                       a.href = url;
@@ -1277,13 +1432,17 @@ export function SettingsDialog({
                       );
                       saveConversations(conversations);
                       saveArchivedConversations(archived);
-                      window.dispatchEvent(new Event("kova:conversations-imported"));
+                      window.dispatchEvent(
+                        new Event("kova:conversations-imported"),
+                      );
                       toast.success(
                         `Imported ${imported.conversations.length + imported.archivedConversations.length} chats.`,
                       );
                     } catch (error) {
                       toast.error(
-                        error instanceof Error ? error.message : "Could not import data.",
+                        error instanceof Error
+                          ? error.message
+                          : "Could not import data.",
                       );
                     }
                   }}
@@ -1296,7 +1455,7 @@ export function SettingsDialog({
                 />
                 <SecurityRow
                   title="Delete account"
-                  body="Permanently delete your account and all data."
+                  body="Cancel active subscriptions, disconnect stored credentials, and delete your sign-in account and associated cloud records. Legally required billing, security, and backup records may be retained."
                   actionLabel="Delete account"
                   danger
                   onAction={() => {
@@ -1307,13 +1466,16 @@ export function SettingsDialog({
               </TabsContent>
 
               {/* STORAGE */}
-              <TabsContent value="storage" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
+              <TabsContent
+                value="storage"
+                className="overflow-y-auto px-7 pb-8 space-y-4 py-5"
+              >
                 <StorageDashboard signedIn={loggedIn} />
                 <div className="rounded-2xl border border-border bg-card/60 backdrop-blur-sm p-5 space-y-3">
                   <h3 className="text-sm font-semibold">Local device data</h3>
                   <p className="text-xs text-muted-foreground">
-                    Clears cached chats, drafts, and preferences stored on this device. Cloud data
-                    is not affected.
+                    Clears cached chats, drafts, and preferences stored on this
+                    device. Cloud data is not affected.
                   </p>
                   <Button
                     variant="destructive"
@@ -1331,15 +1493,26 @@ export function SettingsDialog({
               </TabsContent>
 
               {/* FAMILY CENTER */}
-              <TabsContent value="family" className="overflow-y-auto px-7 pb-8 space-y-5 py-5">
-                {!loggedIn ? <SignInGate label="Family Sharing" /> : <FamilySharingPanel />}
+              <TabsContent
+                value="family"
+                className="overflow-y-auto px-7 pb-8 space-y-5 py-5"
+              >
+                {!loggedIn ? (
+                  <SignInGate label="Family Sharing" />
+                ) : (
+                  <FamilySharingPanel />
+                )}
               </TabsContent>
 
               {/* REPORT ISSUE */}
-              <TabsContent value="report" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
+              <TabsContent
+                value="report"
+                className="overflow-y-auto px-7 pb-8 space-y-4 py-5"
+              >
                 <h3 className="text-sm font-semibold">Report an issue</h3>
                 <p className="text-xs text-muted-foreground">
-                  Found a bug or something off? Send it to our team and we'll take a look.
+                  Found a bug or something off? Send it to our team and we'll
+                  take a look.
                 </p>
                 <Button
                   size="sm"
@@ -1354,7 +1527,10 @@ export function SettingsDialog({
               </TabsContent>
 
               {/* HELP CENTER */}
-              <TabsContent value="help" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
+              <TabsContent
+                value="help"
+                className="overflow-y-auto px-7 pb-8 space-y-4 py-5"
+              >
                 <h3 className="text-sm font-semibold">Help center</h3>
                 <p className="text-xs text-muted-foreground">
                   Get help, contact support, or browse common questions.
@@ -1372,20 +1548,31 @@ export function SettingsDialog({
               </TabsContent>
 
               {/* ABOUT */}
-              <TabsContent value="about" className="overflow-y-auto px-7 pb-8 space-y-3 py-5">
+              <TabsContent
+                value="about"
+                className="overflow-y-auto px-7 pb-8 space-y-3 py-5"
+              >
                 <h3 className="text-sm font-semibold">About KovaGPT</h3>
                 <p className="text-sm text-muted-foreground">
-                  KovaGPT is built by Zachary Block. Our mission is to make a helpful, kind, and
-                  trustworthy AI available to everyone.
+                  KovaGPT is built by Zachary Block. Our mission is to make a
+                  helpful, kind, and trustworthy AI available to everyone.
                 </p>
                 <div className="text-xs text-muted-foreground space-y-1 pt-2">
                   <div>Version 1.0</div>
                   <div>
-                    <Link to="/privacy" onClick={() => onOpenChange(false)} className="underline">
+                    <Link
+                      to="/privacy"
+                      onClick={() => onOpenChange(false)}
+                      className="underline"
+                    >
                       Privacy policy
                     </Link>
                     {" • "}
-                    <Link to="/terms" onClick={() => onOpenChange(false)} className="underline">
+                    <Link
+                      to="/terms"
+                      onClick={() => onOpenChange(false)}
+                      className="underline"
+                    >
                       Terms of service
                     </Link>
                   </div>
@@ -1393,12 +1580,19 @@ export function SettingsDialog({
               </TabsContent>
 
               {/* LOG OUT */}
-              <TabsContent value="logout" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
+              <TabsContent
+                value="logout"
+                className="overflow-y-auto px-7 pb-8 space-y-4 py-5"
+              >
                 <h3 className="text-sm font-semibold">Log out</h3>
                 <p className="text-sm text-muted-foreground">
                   You'll be signed out of KovaGPT on this device.
                 </p>
-                <Button variant="destructive" size="sm" onClick={() => setLogoutConfirmOpen(true)}>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setLogoutConfirmOpen(true)}
+                >
                   <LogOut className="w-4 h-4 mr-2" />
                   Log out
                 </Button>
@@ -1422,10 +1616,14 @@ export function SettingsDialog({
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete your account permanently?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Delete your account permanently?
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              This cancels active subscriptions and deletes your KovaGPT account and cloud data.
-              This action cannot be undone. Type DELETE to continue.
+              This cancels active subscriptions, disconnects stored credentials,
+              and deletes your sign-in account and associated cloud records.
+              Legally required billing, security, and backup records may be
+              retained. This action cannot be undone. Type DELETE to continue.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <Input
@@ -1437,7 +1635,9 @@ export function SettingsDialog({
             disabled={deleteAccountBusy}
           />
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteAccountBusy}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteAccountBusy}>
+              Cancel
+            </AlertDialogCancel>
             <Button
               variant="destructive"
               onClick={handleDeleteAccount}
@@ -1475,7 +1675,8 @@ function ConnectorRow({
   onDisconnect: (p: LinkedProvider) => void;
 }) {
   const isLive = item.status === "live" && !!item.legacyProvider;
-  const connected = isLive && linked.includes(item.legacyProvider as LinkedProvider);
+  const connected =
+    isLive && linked.includes(item.legacyProvider as LinkedProvider);
   return (
     <div className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
       <div className="flex items-center gap-3 min-w-0">
@@ -1483,8 +1684,12 @@ function ConnectorRow({
           {item.label.slice(0, 2).toUpperCase()}
         </div>
         <div className="min-w-0">
-          <div className="text-sm font-medium truncate flex items-center gap-2">{item.label}</div>
-          <div className="text-xs text-muted-foreground truncate">{item.description}</div>
+          <div className="text-sm font-medium truncate flex items-center gap-2">
+            {item.label}
+          </div>
+          <div className="text-xs text-muted-foreground truncate">
+            {item.description}
+          </div>
         </div>
       </div>
       {!isLive ? (
@@ -1525,7 +1730,12 @@ function ProviderIcon({ provider }: { provider: LinkedProvider }) {
   if (provider === "apple") {
     return (
       <div className={base + " bg-foreground text-background"}>
-        <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          className="w-5 h-5"
+          fill="currentColor"
+          aria-hidden="true"
+        >
           <path d="M16.365 1.43c0 1.14-.456 2.227-1.197 3.02-.79.85-2.07 1.51-3.12 1.43-.13-1.1.43-2.26 1.16-3.04.82-.88 2.2-1.54 3.16-1.4zM20.5 17.27c-.55 1.27-.82 1.84-1.53 2.97-.99 1.57-2.39 3.53-4.12 3.55-1.54.01-1.94-1-4.04-1-2.1.01-2.54 1.02-4.08 1-1.73-.02-3.06-1.78-4.05-3.35C-.06 16.66-.34 11.5 2.27 8.84c1.42-1.44 3.44-2.27 5.36-2.27 1.94 0 3.16 1.07 4.76 1.07 1.55 0 2.5-1.07 4.74-1.07 1.71 0 3.52.93 4.81 2.54-4.23 2.32-3.54 8.37 1.06 9.18z" />
         </svg>
       </div>
@@ -1534,7 +1744,12 @@ function ProviderIcon({ provider }: { provider: LinkedProvider }) {
   if (provider === "youtube") {
     return (
       <div className={base + " bg-[#FF0000] text-white"}>
-        <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          className="w-5 h-5"
+          fill="currentColor"
+          aria-hidden="true"
+        >
           <path d="M23.5 6.2a3.02 3.02 0 0 0-2.13-2.14C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.37.56A3.02 3.02 0 0 0 .5 6.2C0 8.07 0 12 0 12s0 3.93.5 5.8a3.02 3.02 0 0 0 2.13 2.14C4.5 20.5 12 20.5 12 20.5s7.5 0 9.37-.56a3.02 3.02 0 0 0 2.13-2.14C24 15.93 24 12 24 12s0-3.93-.5-5.8zM9.6 15.6V8.4l6.4 3.6-6.4 3.6z" />
         </svg>
       </div>
@@ -1548,9 +1763,18 @@ function ProviderIcon({ provider }: { provider: LinkedProvider }) {
             fill="#EA4335"
             d="M12 13.065L1.5 5.4V18a1.5 1.5 0 0 0 1.5 1.5h3V11l6 4.5 6-4.5v8.5h3a1.5 1.5 0 0 0 1.5-1.5V5.4L12 13.065z"
           />
-          <path fill="#4285F4" d="M22.5 5.4V18a1.5 1.5 0 0 1-1.5 1.5h-3V11l-6 4.5V13l10.5-7.6z" />
-          <path fill="#34A853" d="M1.5 5.4V18a1.5 1.5 0 0 0 1.5 1.5h3V11L1.5 5.4z" />
-          <path fill="#FBBC05" d="M22.5 5.4L12 13.065 1.5 5.4l10.5 7.6 10.5-7.6z" />
+          <path
+            fill="#4285F4"
+            d="M22.5 5.4V18a1.5 1.5 0 0 1-1.5 1.5h-3V11l-6 4.5V13l10.5-7.6z"
+          />
+          <path
+            fill="#34A853"
+            d="M1.5 5.4V18a1.5 1.5 0 0 0 1.5 1.5h3V11L1.5 5.4z"
+          />
+          <path
+            fill="#FBBC05"
+            d="M22.5 5.4L12 13.065 1.5 5.4l10.5 7.6 10.5-7.6z"
+          />
         </svg>
       </div>
     );
@@ -1559,7 +1783,10 @@ function ProviderIcon({ provider }: { provider: LinkedProvider }) {
     return (
       <div className={base + " bg-white border border-border"}>
         <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden="true">
-          <path fill="#0F9D58" d="M7.71 21l4.29-7.43L7.7 6.14h8.6L20.6 13.57 16.29 21H7.71z" />
+          <path
+            fill="#0F9D58"
+            d="M7.71 21l4.29-7.43L7.7 6.14h8.6L20.6 13.57 16.29 21H7.71z"
+          />
           <path
             fill="#F4B400"
             d="M2 13.57L7.71 21h8.58L10.57 11l-4.28-7.43L2 13.57z"
@@ -1614,7 +1841,11 @@ function LockedTab({
       </div>
       <h3 className="text-base font-semibold mb-1.5">{title}</h3>
       <p className="text-sm text-muted-foreground max-w-sm mb-5">{body}</p>
-      <Button size="sm" onClick={() => onSignIn?.()} className="rounded-full px-5">
+      <Button
+        size="sm"
+        onClick={() => onSignIn?.()}
+        className="rounded-full px-5"
+      >
         Log in or sign up
       </Button>
     </div>
@@ -1641,7 +1872,11 @@ function SecurityRow({
       }`}
     >
       <div className="min-w-0">
-        <div className={`text-sm font-medium ${danger ? "text-destructive" : ""}`}>{title}</div>
+        <div
+          className={`text-sm font-medium ${danger ? "text-destructive" : ""}`}
+        >
+          {title}
+        </div>
         <div className="text-xs text-muted-foreground mt-1">{body}</div>
       </div>
       <Button
@@ -1671,7 +1906,9 @@ function ToggleRow({
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
         <div className="text-sm font-medium">{title}</div>
-        {hint && <div className="text-xs text-muted-foreground mt-0.5">{hint}</div>}
+        {hint && (
+          <div className="text-xs text-muted-foreground mt-0.5">{hint}</div>
+        )}
       </div>
       <Switch checked={checked} onCheckedChange={onCheckedChange} />
     </div>
@@ -1692,7 +1929,9 @@ function WorkspaceDefaults() {
       };
     try {
       return (
-        JSON.parse(localStorage.getItem("kova-workspace-defaults-v1") ?? "null") ?? {
+        JSON.parse(
+          localStorage.getItem("kova-workspace-defaults-v1") ?? "null",
+        ) ?? {
           project: "Balanced",
           work: "Review before completion",
           prompt: "General",
@@ -1716,13 +1955,30 @@ function WorkspaceDefaults() {
     localStorage.setItem("kova-workspace-defaults-v1", JSON.stringify(next));
   };
   const fields = [
-    ["project", "Project defaults", ["Balanced", "Concise instructions", "Detailed instructions"]],
-    ["work", "Work defaults", ["Review before completion", "Approval gates", "Manual steps"]],
-    ["prompt", "Prompt defaults", ["General", "Writing", "Research", "Analysis", "Coding"]],
+    [
+      "project",
+      "Project defaults",
+      ["Balanced", "Concise instructions", "Detailed instructions"],
+    ],
+    [
+      "work",
+      "Work defaults",
+      ["Review before completion", "Approval gates", "Manual steps"],
+    ],
+    [
+      "prompt",
+      "Prompt defaults",
+      ["General", "Writing", "Research", "Analysis", "Coding"],
+    ],
     [
       "research",
       "Research defaults",
-      ["Balanced sources", "Primary sources", "Academic sources", "Recent sources"],
+      [
+        "Balanced sources",
+        "Primary sources",
+        "Academic sources",
+        "Recent sources",
+      ],
     ],
     ["artifact", "Artifact defaults", ["Edit", "Preview", "Split view"]],
   ] as const;
@@ -1772,11 +2028,13 @@ function LibraryItemViewer({
     if (!itemId || itemType !== "image") return;
     (async () => {
       try {
-        const { getLibraryImageUrl } = await import("@/lib/library-images.functions");
+        const { getLibraryImageUrl } =
+          await import("@/lib/library-images.functions");
         const { url } = await getLibraryImageUrl({ data: { id: itemId } });
         if (!cancelled) setImgUrl(url);
       } catch (e) {
-        if (!cancelled) setImgErr(e instanceof Error ? e.message : "Could not load image");
+        if (!cancelled)
+          setImgErr(e instanceof Error ? e.message : "Could not load image");
       }
     })();
     return () => {
@@ -1789,9 +2047,13 @@ function LibraryItemViewer({
     <Dialog open={!!item} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-2xl p-0 overflow-hidden">
         <DialogHeader className="px-6 pt-5 pb-3 border-b border-border">
-          <DialogTitle className="text-base truncate">{item?.title ?? ""}</DialogTitle>
+          <DialogTitle className="text-base truncate">
+            {item?.title ?? ""}
+          </DialogTitle>
           <div className="text-[11px] text-muted-foreground">
-            {item ? `${item.item_type} · ${new Date(item.created_at).toLocaleString()}` : ""}
+            {item
+              ? `${item.item_type} · ${new Date(item.created_at).toLocaleString()}`
+              : ""}
           </div>
         </DialogHeader>
         <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
@@ -1805,12 +2067,18 @@ function LibraryItemViewer({
                 className="max-h-[55vh] mx-auto rounded-lg"
               />
             ) : (
-              <div className="text-sm text-muted-foreground">Loading image…</div>
+              <div className="text-sm text-muted-foreground">
+                Loading image…
+              </div>
             )
           ) : item?.content_text ? (
-            <pre className="whitespace-pre-wrap text-sm font-sans">{item.content_text}</pre>
+            <pre className="whitespace-pre-wrap text-sm font-sans">
+              {item.content_text}
+            </pre>
           ) : (
-            <div className="text-sm text-muted-foreground">No text content for this item.</div>
+            <div className="text-sm text-muted-foreground">
+              No text content for this item.
+            </div>
           )}
         </div>
         <div className="px-6 py-3 border-t border-border flex items-center justify-end gap-2">
@@ -1851,10 +2119,12 @@ function LibraryItemViewer({
 
 function LibraryPanel() {
   const [items, setItems] = useState<LibItem[]>([]);
-  const [shared, setShared] = useState<import("@/lib/shared-chats.functions").SharedChatInbox[]>(
-    [],
-  );
-  const [mine, setMine] = useState<import("@/lib/shared-chats.functions").SharedChatSummary[]>([]);
+  const [shared, setShared] = useState<
+    import("@/lib/shared-chats.functions").SharedChatInbox[]
+  >([]);
+  const [mine, setMine] = useState<
+    import("@/lib/shared-chats.functions").SharedChatSummary[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -1875,7 +2145,9 @@ function LibraryPanel() {
       setMine(mineShares);
     } catch (e) {
       console.error(e);
-      setLoadError(e instanceof Error ? e.message : "Library data could not be loaded.");
+      setLoadError(
+        e instanceof Error ? e.message : "Library data could not be loaded.",
+      );
     } finally {
       setLoading(false);
     }
@@ -1900,7 +2172,9 @@ function LibraryPanel() {
     try {
       const { revokeSharedChat } = await import("@/lib/shared-chats.functions");
       await revokeSharedChat({ data: { id } });
-      setMine((prev) => prev.map((m) => (m.id === id ? { ...m, status: "revoked" } : m)));
+      setMine((prev) =>
+        prev.map((m) => (m.id === id ? { ...m, status: "revoked" } : m)),
+      );
       toast.success("Share revoked.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not revoke.");
@@ -1909,8 +2183,10 @@ function LibraryPanel() {
 
   const filtered = items.filter((it) => {
     if (typeFilter !== "all") {
-      if (typeFilter === "chat" && !(it.item_type === "chat_artifact")) return false;
-      if (typeFilter === "document" && it.item_type !== "document") return false;
+      if (typeFilter === "chat" && !(it.item_type === "chat_artifact"))
+        return false;
+      if (typeFilter === "document" && it.item_type !== "document")
+        return false;
       if (typeFilter === "code" && it.item_type !== "code") return false;
       if (typeFilter === "image" && it.item_type !== "image") return false;
       if (
@@ -1921,7 +2197,10 @@ function LibraryPanel() {
     }
     if (!query.trim()) return true;
     const q = query.toLowerCase();
-    return it.title.toLowerCase().includes(q) || (it.content_text ?? "").toLowerCase().includes(q);
+    return (
+      it.title.toLowerCase().includes(q) ||
+      (it.content_text ?? "").toLowerCase().includes(q)
+    );
   });
 
   return (
@@ -1930,7 +2209,9 @@ function LibraryPanel() {
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-semibold">My library</h3>
           <Button size="sm" variant="ghost" onClick={load} disabled={loading}>
-            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`w-3.5 h-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
         </div>
@@ -1965,7 +2246,9 @@ function LibraryPanel() {
             role="alert"
             className="rounded-lg border border-destructive/30 bg-destructive/5 p-4"
           >
-            <p className="text-sm font-medium text-destructive">Library data is unavailable</p>
+            <p className="text-sm font-medium text-destructive">
+              Library data is unavailable
+            </p>
             <p className="mt-1 text-xs text-muted-foreground">{loadError}</p>
             <Button size="sm" variant="outline" onClick={load} className="mt-3">
               <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Retry
@@ -1986,7 +2269,8 @@ function LibraryPanel() {
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">{it.title}</div>
                   <div className="text-[11px] text-muted-foreground mt-0.5">
-                    {it.item_type} · {new Date(it.created_at).toLocaleDateString()}
+                    {it.item_type} ·{" "}
+                    {new Date(it.created_at).toLocaleDateString()}
                   </div>
                   {it.content_text && (
                     <div className="text-xs text-muted-foreground mt-1 line-clamp-2 whitespace-pre-wrap">
@@ -2006,7 +2290,9 @@ function LibraryPanel() {
                   {it.content_text && (
                     <button
                       onClick={async () => {
-                        await navigator.clipboard.writeText(it.content_text ?? "");
+                        await navigator.clipboard.writeText(
+                          it.content_text ?? "",
+                        );
                         toast.success("Copied.");
                       }}
                       className="p-1.5 rounded hover:bg-accent transition active:scale-95"
@@ -2028,7 +2314,11 @@ function LibraryPanel() {
           </ul>
         )}
 
-        <LibraryItemViewer item={viewing} onClose={() => setViewing(null)} onDelete={remove} />
+        <LibraryItemViewer
+          item={viewing}
+          onClose={() => setViewing(null)}
+          onDelete={remove}
+        />
       </div>
 
       <div>
@@ -2056,7 +2346,8 @@ function LibraryPanel() {
         <h3 className="text-sm font-semibold mb-2">Chats I've shared</h3>
         {mine.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-            You haven't shared any chats yet. Use the Share button next to any chat in the sidebar.
+            You haven't shared any chats yet. Use the Share button next to any
+            chat in the sidebar.
           </div>
         ) : (
           <ul className="divide-y divide-border rounded-lg border border-border">
@@ -2070,7 +2361,11 @@ function LibraryPanel() {
                   </div>
                 </div>
                 {s.status !== "revoked" && (
-                  <Button size="sm" variant="ghost" onClick={() => revoke(s.id)}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => revoke(s.id)}
+                  >
                     Revoke
                   </Button>
                 )}
@@ -2139,7 +2434,8 @@ function SignedOutSettings({
             <div className="grid grid-cols-3 gap-1">
               {(["system", "light", "dark"] as ThemeMode[]).map((m) => {
                 const active = settings.mode === m;
-                const Icon = m === "system" ? Monitor : m === "light" ? Sun : Moon;
+                const Icon =
+                  m === "system" ? Monitor : m === "light" ? Sun : Moon;
                 return (
                   <button
                     key={m}
@@ -2178,11 +2474,14 @@ function SignedOutSettings({
             Privacy
           </h3>
           <div className="rounded-2xl border border-border/60 bg-card/40 p-4 space-y-2">
-            <div className="text-sm font-medium">No browser-only provider controls</div>
+            <div className="text-sm font-medium">
+              No browser-only provider controls
+            </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              The removed guest training and marketing switches changed only browser-local values;
-              they were not wired to account-level or AI-provider controls. They are not shown as
-              functional controls. Read the{" "}
+              The removed guest training and marketing switches changed only
+              browser-local values; they were not wired to account-level or
+              AI-provider controls. They are not shown as functional controls.
+              Read the{" "}
               <Link
                 to="/privacy"
                 onClick={onClose}
@@ -2228,18 +2527,26 @@ function ArchivedChatsPanel() {
               key={chat.id}
               className="flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-accent/60"
             >
-              <span className="min-w-0 flex-1 truncate text-sm">{chat.title}</span>
+              <span className="min-w-0 flex-1 truncate text-sm">
+                {chat.title}
+              </span>
               <Button
                 size="sm"
                 variant="ghost"
                 className="rounded-full"
                 onClick={() => {
-                  saveConversations(mergeConversations(loadConversations(), [chat]));
+                  saveConversations(
+                    mergeConversations(loadConversations(), [chat]),
+                  );
                   saveArchivedConversations(
-                    loadArchivedConversations().filter((item) => item.id !== chat.id),
+                    loadArchivedConversations().filter(
+                      (item) => item.id !== chat.id,
+                    ),
                   );
                   setRevision((value) => value + 1);
-                  window.dispatchEvent(new Event("kova:conversations-imported"));
+                  window.dispatchEvent(
+                    new Event("kova:conversations-imported"),
+                  );
                   toast.success("Chat restored");
                 }}
               >
@@ -2251,9 +2558,12 @@ function ArchivedChatsPanel() {
                 className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive"
                 aria-label={`Delete archived chat ${chat.title}`}
                 onClick={() => {
-                  if (!window.confirm(`Permanently delete "${chat.title}"?`)) return;
+                  if (!window.confirm(`Permanently delete "${chat.title}"?`))
+                    return;
                   saveArchivedConversations(
-                    loadArchivedConversations().filter((item) => item.id !== chat.id),
+                    loadArchivedConversations().filter(
+                      (item) => item.id !== chat.id,
+                    ),
                   );
                   setRevision((value) => value + 1);
                   toast.success("Archived chat deleted");
@@ -2264,7 +2574,9 @@ function ArchivedChatsPanel() {
             </div>
           ))
         ) : (
-          <p className="px-3 py-2 text-sm text-muted-foreground">No archived chats</p>
+          <p className="px-3 py-2 text-sm text-muted-foreground">
+            No archived chats
+          </p>
         )}
       </div>
     </section>
@@ -2359,7 +2671,9 @@ type SafeAudience = "myself" | "child" | "none";
 function FamilySafeAudience() {
   const [aud, setAud] = useState<SafeAudience>(() => {
     if (typeof window === "undefined") return "none";
-    return (localStorage.getItem("kova-safe-audience") as SafeAudience) || "none";
+    return (
+      (localStorage.getItem("kova-safe-audience") as SafeAudience) || "none"
+    );
   });
   const set = (v: SafeAudience) => {
     setAud(v);
@@ -2396,7 +2710,9 @@ function FamilySafeAudience() {
             type="button"
             onClick={() => set(o.v)}
             className={`text-left rounded-lg border p-3 transition ${
-              aud === o.v ? "border-foreground bg-accent" : "border-border hover:bg-accent/50"
+              aud === o.v
+                ? "border-foreground bg-accent"
+                : "border-border hover:bg-accent/50"
             }`}
           >
             <div className="text-sm font-medium">{o.label}</div>
@@ -2411,7 +2727,9 @@ function FamilySafeAudience() {
 function FamilyPinPanel() {
   const [aud, setAud] = useState<SafeAudience>(() => {
     if (typeof window === "undefined") return "none";
-    return (localStorage.getItem("kova-safe-audience") as SafeAudience) || "none";
+    return (
+      (localStorage.getItem("kova-safe-audience") as SafeAudience) || "none"
+    );
   });
   const [hasPin, setHasPin] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -2423,7 +2741,9 @@ function FamilyPinPanel() {
 
   useEffect(() => {
     const sync = () => {
-      setAud((localStorage.getItem("kova-safe-audience") as SafeAudience) || "none");
+      setAud(
+        (localStorage.getItem("kova-safe-audience") as SafeAudience) || "none",
+      );
       setHasPin(!!localStorage.getItem("kova-family-pin"));
     };
     window.addEventListener("storage", sync);
@@ -2537,7 +2857,8 @@ function FamilyPinPanel() {
       <div>
         <div className="text-sm font-medium">Family Center PIN</div>
         <div className="text-xs text-muted-foreground mt-0.5">
-          A PIN prevents changes to Family-safe mode and parental controls without your permission.
+          A PIN prevents changes to Family-safe mode and parental controls
+          without your permission.
         </div>
       </div>
       {!hasPin ? (
@@ -2642,7 +2963,9 @@ function ShortcutsEditor() {
       parts.push(key);
       const combo = parts.join("+");
       const mod = await import("@/lib/shortcuts");
-      const next = list.map((s) => (s.id === recordingId ? { ...s, combo } : s));
+      const next = list.map((s) =>
+        s.id === recordingId ? { ...s, combo } : s,
+      );
       setList(next);
       mod.saveShortcuts(next);
       setRecordingId(null);
@@ -2683,7 +3006,8 @@ function ShortcutsEditor() {
         </Button>
       </div>
       <p className="text-[11px] text-muted-foreground">
-        Shortcuts are saved to this browser. "Mod" is ⌘ on macOS, Ctrl elsewhere.
+        Shortcuts are saved to this browser. "Mod" is ⌘ on macOS, Ctrl
+        elsewhere.
       </p>
     </div>
   );
@@ -2788,7 +3112,9 @@ function LocationPanel() {
       (err) => {
         setBusy(false);
         toast.error(
-          err.code === err.PERMISSION_DENIED ? "Permission denied" : "Couldn't get location",
+          err.code === err.PERMISSION_DENIED
+            ? "Permission denied"
+            : "Couldn't get location",
         );
       },
       { enableHighAccuracy: false, timeout: 10_000, maximumAge: 60_000 },
@@ -2810,17 +3136,24 @@ function LocationPanel() {
           <div>
             Saved: {loc.lat.toFixed(2)}, {loc.lon.toFixed(2)}
           </div>
-          {loc.savedAt && <div>Updated {new Date(loc.savedAt).toLocaleString()}</div>}
+          {loc.savedAt && (
+            <div>Updated {new Date(loc.savedAt).toLocaleString()}</div>
+          )}
           <div className="pt-1">
-            <Button size="sm" variant="outline" onClick={enable} disabled={busy}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={enable}
+              disabled={busy}
+            >
               Refresh
             </Button>
           </div>
         </div>
       )}
       <p className="text-[11px] text-muted-foreground">
-        Location is never required. When enabled, it improves answers about local time, weather,
-        nearby places, and recommendations.
+        Location is never required. When enabled, it improves answers about
+        local time, weather, nearby places, and recommendations.
       </p>
     </div>
   );
