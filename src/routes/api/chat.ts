@@ -395,7 +395,6 @@ export const Route = createFileRoute("/api/chat")({
               locale,
               chatId,
               personality,
-              kovaVersion,
               projectId,
               temporary,
               clientTool,
@@ -407,7 +406,6 @@ export const Route = createFileRoute("/api/chat")({
               locale?: string;
               chatId?: string;
               personality?: string;
-              kovaVersion?: string;
               projectId?: string;
               temporary?: boolean;
               clientTool?:
@@ -419,8 +417,6 @@ export const Route = createFileRoute("/api/chat")({
                 | "file_analysis"
                 | null;
             };
-            const KOVA_VERSION = typeof kovaVersion === "string" ? kovaVersion : "3.5";
-            const IS_LEGACY_KOVA = KOVA_VERSION !== "3.5";
             const personalityBlock = (() => {
               const p = sanitizeLong(personality, 500);
               return p
@@ -943,7 +939,6 @@ export const Route = createFileRoute("/api/chat")({
                 {
                   role: "system",
                   content:
-                    `\n\nKOVA_VERSION: The user is currently talking to Kova ${KOVA_VERSION}. If they ask what version/model you are, answer with "Kova ${KOVA_VERSION}".` +
                     m.systemPrompt +
                     TONE_INSTRUCTION +
                     ADAPTIVE_INSTRUCTION +
@@ -966,28 +961,10 @@ export const Route = createFileRoute("/api/chat")({
                 ...transformed,
               ],
             };
-            // Only enable reasoning when the user explicitly chose the
-            // reason mode  -  reasoning adds significant latency.
-            // Legacy Kova versions (<3.5) never use extended reasoning:
-            // they are intentionally "slightly less smart" than 3.5.
-            if (m.reasoning && !IS_LEGACY_KOVA) {
+            // Only enable reasoning when the user explicitly chose a backed
+            // reasoning mode. Every visible selector option maps to this real behavior.
+            if (m.reasoning) {
               body.reasoning = { effort: m.reasoning };
-            }
-            if (IS_LEGACY_KOVA) {
-              // Slightly nerf legacy versions and add an authentic-feeling
-              // 3-7s "thinking" delay before we start streaming.
-              const sys = body.messages as { role: string; content: string }[];
-              const rank: Record<string, number> = {
-                "3.4": 1,
-                "3.3": 2,
-                "3.2": 3,
-                "3.1": 4,
-                "3.0": 5,
-              };
-              const gap = rank[KOVA_VERSION] ?? 1;
-              sys[0].content += `\n\nYou are running as Kova ${KOVA_VERSION}, a previous-generation model. You are slightly less capable than Kova 3.5 (about ${gap * 6}% less accurate on complex reasoning). Keep answers correct and helpful, but avoid extended chain-of-thought, deep multi-step reasoning, or long structured breakdowns unless explicitly asked. Prefer shorter, more direct responses than Kova 3.5 would give.`;
-              const delayMs = 3000 + Math.floor(Math.random() * 4000); // 3-7s
-              await new Promise((r) => setTimeout(r, delayMs));
             }
 
             // === TOOL-CALLING PRE-LOOP ============================================
