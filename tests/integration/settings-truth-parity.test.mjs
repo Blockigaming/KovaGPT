@@ -25,10 +25,7 @@ test("Send on Enter is shared, reactive, and applied across main and project cha
   );
 
   assert.match(preferences, /useSyncExternalStore/);
-  assert.match(
-    preferences,
-    /listeners\.get\(scope\)\?\.forEach\(\(listener\) => listener\(\)\)/,
-  );
+  assert.match(preferences, /listeners\.get\(scope\)\?\.forEach\(\(listener\) => listener\(\)\)/);
   assert.match(preferences, /window\.addEventListener\("storage"/);
   assert.match(preferences, /event\.key === composerPreferenceKey\(scope\)/);
   assert.match(storage, /readPersistedSendOnEnter/);
