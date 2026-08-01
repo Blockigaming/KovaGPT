@@ -23,10 +23,7 @@ import {
 export const Route = createFileRoute("/projects/$projectId/chat/$chatId")({
   component: ProjectChatPage,
   head: () => ({
-    meta: [
-      { title: "Project chat | KovaGPT" },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: [{ title: "Project chat | KovaGPT" }, { name: "robots", content: "noindex" }],
   }),
 });
 
@@ -136,15 +133,12 @@ function ProjectChatPage() {
           mode: "default",
           user: {},
           timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          locale:
-            typeof navigator !== "undefined" ? navigator.language : "en-US",
+          locale: typeof navigator !== "undefined" ? navigator.language : "en-US",
           projectId,
         }),
       });
       if (!resp.ok || !resp.body) {
-        const err = await resp
-          .json()
-          .catch(() => ({ error: `HTTP ${resp.status}` }));
+        const err = await resp.json().catch(() => ({ error: `HTTP ${resp.status}` }));
         throw new Error(err.error || "Chat failed");
       }
       const reader = resp.body.getReader();
@@ -161,8 +155,7 @@ function ProjectChatPage() {
           let line = buffer.slice(0, idx);
           buffer = buffer.slice(idx + 1);
           if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (!line || line.startsWith(":") || !line.startsWith("data: "))
-            continue;
+          if (!line || line.startsWith(":") || !line.startsWith("data: ")) continue;
           const data = line.slice(6).trim();
           if (data === "[DONE]") break;
           try {
@@ -227,20 +220,12 @@ function ProjectChatPage() {
             {title}
           </button>
           {canEdit && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleDelete}
-              aria-label="Delete"
-            >
+            <Button variant="ghost" size="icon" onClick={handleDelete} aria-label="Delete">
               <Trash2 className="w-4 h-4" />
             </Button>
           )}
         </div>
-        <div
-          ref={scrollRef}
-          className="flex-1 overflow-y-auto px-4 py-6 space-y-4"
-        >
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
           {messages.filter((m) => m.role !== "system").length === 0 && (
             <div className="text-center text-muted-foreground text-sm">
               Start the conversation. Everyone in the project can see it.
@@ -283,9 +268,7 @@ function ProjectChatPage() {
                   ctrlKey: e.ctrlKey,
                   metaKey: e.metaKey,
                   altKey: e.altKey,
-                  isComposing: Boolean(
-                    native.isComposing || composingRef.current,
-                  ),
+                  isComposing: Boolean(native.isComposing || composingRef.current),
                   sendOnEnter,
                   isMobileLayout: !isDesktop,
                   isCoarsePointer: interaction === "touch",
@@ -308,17 +291,12 @@ function ProjectChatPage() {
                   ? "Enter Control+Enter Meta+Enter"
                   : "Control+Enter Meta+Enter"
               }
-              placeholder={
-                canEdit ? "Message the project…" : "You have view-only access"
-              }
+              placeholder={canEdit ? "Message the project…" : "You have view-only access"}
               disabled={!canEdit || sending}
               rows={2}
               className="resize-none"
             />
-            <Button
-              onClick={handleSend}
-              disabled={!canEdit || sending || !input.trim()}
-            >
+            <Button onClick={handleSend} disabled={!canEdit || sending || !input.trim()}>
               {sending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
