@@ -2,7 +2,15 @@
 // callers and enforce per-user daily quotas. NEVER import from client code.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
-import { BILLING_ENV, tierForLookupKey, type BillingTier } from "@/lib/billing-plans";
+import {
+  BILLING_ENV,
+  tierForLookupKey,
+  type BillingTier,
+} from "@/lib/billing-plans";
+import {
+  evaluateAuthenticatedUser,
+  parseBearerToken,
+} from "@/lib/auth-security.mjs";
 
 export const DAILY_IMAGE_LIMIT = 1;
 export const DAILY_CHAT_LIMIT = 50;
@@ -16,7 +24,10 @@ export type AuthedCaller = {
 function jsonError(message: string, status: number) {
   return new Response(JSON.stringify({ error: message }), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Cache-Control": "no-store",
+      "Content-Type": "application/json",
+    },
   });
 }
 
@@ -28,7 +39,9 @@ export function tooMany(message = "Daily limit reached") {
   return jsonError(message, 429);
 }
 
-export async function requireUser(request: Request): Promise<AuthedCaller | Response> {
+export async function requireUser(
+  request: Request,
+): Promise<AuthedCaller | Response> {
   const result = await optionalUser(request);
   if (!result) return unauthorized();
   if (result instanceof Response) return result;
@@ -40,42 +53,106 @@ export async function requireUser(request: Request): Promise<AuthedCaller | Resp
  * `null` if the request is anonymous (no token at all), or a Response when
  * the token is present but invalid/expired.
  */
-export async function optionalUser(request: Request): Promise<AuthedCaller | null | Response> {
+export async function optionalUser(
+  request: Request,
+): Promise<AuthedCaller | null | Response> {
   // Anonymous requests do not need an auth client. Check the credential first
   // so protected routes return a truthful 401 even when a deployment is
   // missing auth configuration, rather than exposing configuration state as a
   // 500 response to unauthenticated callers.
-  const header = request.headers.get("authorization") ?? "";
-  if (!header.toLowerCase().startsWith("bearer ")) return null;
-  const token = header.slice(7).trim();
-  if (!token) return null;
+  const header = request.headers.get("authorization");
+  if (!header) return null;
+  const token = parseBearerToken(header);
+  if (!token) return unauthorized("Invalid or expired session");
 
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
   const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
-    return jsonError("Auth backend not configured", 500);
+  if (
+    !SUPABASE_URL ||
+    !SUPABASE_PUBLISHABLE_KEY ||
+    !SUPABASE_SERVICE_ROLE_KEY
+  ) {
+    console.error(
+      "[auth] Supabase server authentication configuration is incomplete",
+      {
+        missing: [
+          !SUPABASE_URL ? "SUPABASE_URL" : null,
+          !SUPABASE_PUBLISHABLE_KEY ? "SUPABASE_PUBLISHABLE_KEY" : null,
+          !SUPABASE_SERVICE_ROLE_KEY ? "SUPABASE_SERVICE_ROLE_KEY" : null,
+        ].filter(Boolean),
+      },
+    );
+    return jsonError("Authentication is temporarily unavailable.", 503);
   }
-  const verifier = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
-  });
-  const { data, error } = await verifier.auth.getClaims(token);
-  const userId = data?.claims?.sub;
-  if (error || !userId) return unauthorized("Invalid or expired session");
+  const verifier = createClient<Database>(
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY,
+    {
+      auth: {
+        storage: undefined,
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    },
+  );
+  // getClaims verifies the JWT signature, but a correctly signed access token
+  // can outlive user deletion, a ban, or a server-side session revocation.
+  // getUser performs the authoritative Auth server check before any service-role
+  // client is created or user-controlled work is performed.
+  const [
+    { data: userData, error: userError },
+    { data: claimsData, error: claimsError },
+  ] = await Promise.all([
+    verifier.auth.getUser(token),
+    verifier.auth.getClaims(token),
+  ]);
+  if (userError || claimsError || !userData.user || !claimsData?.claims) {
+    return unauthorized("Invalid or expired session");
+  }
 
-  const supabaseAdmin = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
-  });
-  const emailVerified =
-    (data?.claims as { email_verified?: boolean } | undefined)?.email_verified === true;
-  return { userId, supabaseAdmin, emailVerified };
+  const access = evaluateAuthenticatedUser(userData.user, claimsData.claims);
+  if (!access.ok) {
+    if (access.code === "account_suspended") {
+      return jsonError(
+        "Your account has been suspended. Contact support@kovagpt.com if you believe this is a mistake.",
+        403,
+      );
+    }
+    if (access.code === "mfa_required") {
+      return jsonError(
+        "Two-factor authentication is required to continue.",
+        403,
+      );
+    }
+    return unauthorized("Invalid or expired session");
+  }
+
+  const supabaseAdmin = createClient<Database>(
+    SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY,
+    {
+      auth: {
+        storage: undefined,
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    },
+  );
+  return {
+    userId: access.userId,
+    supabaseAdmin,
+    emailVerified: access.emailVerified,
+  };
 }
 
 /**
  * Like requireUser, but additionally requires a verified email address.
  * Use for high-cost / abuse-prone actions (image generation and uploads).
  */
-export async function requireVerifiedUser(request: Request): Promise<AuthedCaller | Response> {
+export async function requireVerifiedUser(
+  request: Request,
+): Promise<AuthedCaller | Response> {
   const auth = await requireUser(request);
   if (auth instanceof Response) return auth;
   if (!auth.emailVerified) {
@@ -96,18 +173,26 @@ export async function enforceQuota(
   // Atomic check-and-increment via SECURITY DEFINER RPC. Row-level locking
   // inside the function prevents TOCTOU races where concurrent requests all
   // pass the limit check before any increment lands.
-  const { data, error } = await caller.supabaseAdmin.rpc("try_increment_daily_usage", {
-    _user_id: caller.userId,
-    _kind: kind,
-    _increment: increment,
-    _limit: limit,
-  });
+  const { data, error } = await caller.supabaseAdmin.rpc(
+    "try_increment_daily_usage",
+    {
+      _user_id: caller.userId,
+      _kind: kind,
+      _increment: increment,
+      _limit: limit,
+    },
+  );
   if (error) {
     console.error("[enforceQuota] rpc error", error);
     return jsonError("Quota check failed", 500);
   }
   if (data === false) {
-    const label = kind === "images" ? "image" : kind === "uploads" ? "file upload" : "message";
+    const label =
+      kind === "images"
+        ? "image"
+        : kind === "uploads"
+          ? "file upload"
+          : "message";
     return tooMany(
       `Daily ${label} limit reached (${limit}/day). Resets in 24 hours or upgrade for more.`,
     );
@@ -165,7 +250,9 @@ export async function getCallerTier(caller: AuthedCaller): Promise<CallerTier> {
   if (!data || data.length === 0) return "free";
   const now = Date.now();
   for (const row of data) {
-    const end = row.current_period_end ? new Date(row.current_period_end).getTime() : 0;
+    const end = row.current_period_end
+      ? new Date(row.current_period_end).getTime()
+      : 0;
     const active =
       (["active", "trialing", "past_due"].includes(row.status) &&
         (!row.current_period_end || end > now)) ||
@@ -180,7 +267,9 @@ export async function getCallerTier(caller: AuthedCaller): Promise<CallerTier> {
 /**
  * Returns 403 if the caller is banned. Banned rows are written by ops/admin only.
  */
-export async function assertNotBanned(caller: AuthedCaller): Promise<Response | null> {
+export async function assertNotBanned(
+  caller: AuthedCaller,
+): Promise<Response | null> {
   const { data, error } = await caller.supabaseAdmin
     .from("banned_users")
     .select("user_id")
@@ -190,7 +279,10 @@ export async function assertNotBanned(caller: AuthedCaller): Promise<Response | 
     console.error("[assertNotBanned] lookup error", error);
     // A failed moderation lookup must never silently grant access to costly or
     // consequential routes. The caller can retry once the backend recovers.
-    return jsonError("Account status could not be verified. Please try again shortly.", 503);
+    return jsonError(
+      "Account status could not be verified. Please try again shortly.",
+      503,
+    );
   }
   if (data) {
     return jsonError(
@@ -216,7 +308,10 @@ export async function assertFeatureEnabled(
     .maybeSingle();
   if (error) {
     console.error("[assertFeatureEnabled] lookup error", error);
-    return jsonError("Feature availability could not be verified. Please try again shortly.", 503);
+    return jsonError(
+      "Feature availability could not be verified. Please try again shortly.",
+      503,
+    );
   }
   if (data && data.enabled === false) {
     return jsonError(
