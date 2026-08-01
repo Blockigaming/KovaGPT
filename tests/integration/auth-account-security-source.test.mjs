@@ -2,8 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const read = (path) =>
-  readFile(new URL(`../../${path}`, import.meta.url), "utf8");
+const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
 async function readOptional(path, context) {
   try {
@@ -28,18 +27,11 @@ test("both server auth boundaries revalidate the user and enforce MFA before pri
     assert.match(source, /evaluateAuthenticatedUser/);
     assert.match(source, /mfa_required/);
   }
-  const authoritativeUserCheck = apiAuth.indexOf(
-    "verifier.auth.getUser(token)",
-  );
-  const privilegedClient = apiAuth.indexOf(
-    "const supabaseAdmin = createClient<Database>",
-  );
+  const authoritativeUserCheck = apiAuth.indexOf("verifier.auth.getUser(token)");
+  const privilegedClient = apiAuth.indexOf("const supabaseAdmin = createClient<Database>");
   assert.ok(authoritativeUserCheck >= 0);
   assert.ok(privilegedClient > authoritativeUserCheck);
-  assert.doesNotMatch(
-    middleware,
-    /Missing Supabase environment variable\(s\).*throw new Error/s,
-  );
+  assert.doesNotMatch(middleware, /Missing Supabase environment variable\(s\).*throw new Error/s);
   assert.ok(
     middleware.indexOf("parseBearerToken(authHeader)") <
       middleware.indexOf("process.env.SUPABASE_URL"),
@@ -52,10 +44,7 @@ test("browser auth gates aal1 sessions and keeps normal sign-out device-local", 
     read("src/components/auth/MfaChallengeDialog.tsx"),
     read("src/components/MfaPanel.tsx"),
   ]);
-  assert.match(
-    provider,
-    /getAuthenticatorAssuranceLevel\(\s*candidate\.access_token/,
-  );
+  assert.match(provider, /getAuthenticatorAssuranceLevel\(\s*candidate\.access_token/);
   assert.match(provider, /nextLevel === "aal2"/);
   assert.match(provider, /setPendingMfaSession\(candidate\)/);
   assert.match(provider, /signOut\(\{ scope: "local" \}\)/);
@@ -74,10 +63,7 @@ test("recovery and OAuth flows avoid open redirects, query-token consumption, an
   assert.match(oauth, /const accessToken = hash\.get\("access_token"\)/);
   assert.doesNotMatch(oauth, /const accessToken = getOAuthParam/);
   assert.match(reset, /event === "PASSWORD_RECOVERY" && session/);
-  assert.match(
-    reset,
-    /hasRecentPasswordRecoveryFlow\(data\.session\.user\.id\)/,
-  );
+  assert.match(reset, /hasRecentPasswordRecoveryFlow\(data\.session\.user\.id\)/);
   assert.doesNotMatch(reset, /recoveryExpected\s*=\s*hasOAuthResponseInUrl/);
   assert.match(reset, /signOut\(\{\s*scope: "others"/);
   assert.doesNotMatch(callback, /setError\(message\)/);
@@ -88,10 +74,7 @@ test("account and memory mutations are bounded, no-store, and cross-site guarded
     read("src/routes/api/account.ts"),
     read("src/routes/api/memory.ts"),
   ]);
-  assert.match(
-    account,
-    /readUtf8BodyBounded\(request, MAX_DELETE_BODY_BYTES\)/,
-  );
+  assert.match(account, /readUtf8BodyBounded\(request, MAX_DELETE_BODY_BYTES\)/);
   assert.match(account, /mediaType !== "application\/json"/);
   assert.match(account, /isCrossSiteMutation\(request\)/);
   assert.match(account, /\.eq\("user_id", auth\.userId\)/);
@@ -115,14 +98,8 @@ test("auth UI does not enumerate duplicate signups or expose raw provider errors
   assert.doesNotMatch(dialog, /toast\.error\([^\n]*\.message/);
   assert.doesNotMatch(forgot, /toast\.error\(msg\)/);
   assert.doesNotMatch(mfa, /toast\.error\(\(e as Error\)\.message/);
-  assert.doesNotMatch(
-    settings,
-    /onClick=\{\(\) => clerk\?\.openUserProfile\(\)\}/,
-  );
-  assert.match(
-    settings,
-    /Email-address\s+changes are not currently available in the app/,
-  );
+  assert.doesNotMatch(settings, /onClick=\{\(\) => clerk\?\.openUserProfile\(\)\}/);
+  assert.match(settings, /Email-address\s+changes are not\s+currently available in the app/);
   assert.match(
     settings,
     /Legally required billing, security,\s+and backup records may be retained/,
@@ -136,9 +113,7 @@ test("RLS-facing library and project functions retain explicit ownership boundar
     "src/lib/project-workspace.functions.ts",
     "supabase/migrations/20260713010018_ae3321a8-3e87-46f9-9e37-867848dd48b6.sql",
   ];
-  const sources = await Promise.all(
-    paths.map((path) => readOptional(path, context)),
-  );
+  const sources = await Promise.all(paths.map((path) => readOptional(path, context)));
   if (sources.some((source) => source === null)) return;
   const [library, projects, workspace, migration] = sources;
 
