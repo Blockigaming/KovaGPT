@@ -58,11 +58,7 @@ export function getSafePostAuthRedirect(): string {
   try {
     const stored = sessionStorage.getItem(POST_AUTH_REDIRECT_KEY);
     sessionStorage.removeItem(POST_AUTH_REDIRECT_KEY);
-    return safeRelativeRedirect(
-      stored,
-      window.location.origin,
-      OAUTH_CALLBACK_PATH,
-    );
+    return safeRelativeRedirect(stored, window.location.origin, OAUTH_CALLBACK_PATH);
   } catch (error) {
     console.error("[KovaAuth] Could not read post sign in destination.", {
       error: authErrorKind(error),
@@ -143,16 +139,10 @@ export function clearOAuthResponseFromUrl() {
   url.searchParams.delete("type");
   url.hash = "";
 
-  window.history.replaceState(
-    {},
-    document.title,
-    `${url.pathname}${url.search}${url.hash}`,
-  );
+  window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
 }
 
-async function waitForStoredSession(
-  candidate: Session | null,
-): Promise<Session | null> {
+async function waitForStoredSession(candidate: Session | null): Promise<Session | null> {
   if (candidate?.access_token && candidate.refresh_token) {
     const { error } = await supabase.auth.setSession({
       access_token: candidate.access_token,
@@ -175,16 +165,12 @@ async function waitForStoredSession(
       throw error;
     }
     if (data.session?.access_token) {
-      const { data: userData, error: userError } =
-        await supabase.auth.getUser();
+      const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData.user) {
         console.error("[KovaAuth] Current user check failed after OAuth.", {
           error: authErrorKind(userError),
         });
-        throw (
-          userError ??
-          new Error("No current user was found after Google sign in.")
-        );
+        throw userError ?? new Error("No current user was found after Google sign in.");
       }
       return data.session;
     }
@@ -194,18 +180,14 @@ async function waitForStoredSession(
   return null;
 }
 
-export async function completeOAuthSessionFromUrl(
-  source: string,
-): Promise<Session | null> {
+export async function completeOAuthSessionFromUrl(source: string): Promise<Session | null> {
   const url = getCurrentUrl();
   if (!url) return null;
 
   const oauthError = getOAuthParam(url, "error");
   if (oauthError) {
     console.error(`[KovaAuth] OAuth callback error from ${source}.`, {
-      error:
-        oauthError.replace(/[^a-z0-9_-]/gi, "").slice(0, 64) ||
-        "provider_error",
+      error: oauthError.replace(/[^a-z0-9_-]/gi, "").slice(0, 64) || "provider_error",
     });
     throw new Error("Google sign in failed.");
   }
@@ -222,12 +204,9 @@ export async function completeOAuthSessionFromUrl(
       refresh_token: refreshToken,
     });
     if (error) {
-      console.error(
-        `[KovaAuth] OAuth token session save failed from ${source}.`,
-        {
-          error: authErrorKind(error),
-        },
-      );
+      console.error(`[KovaAuth] OAuth token session save failed from ${source}.`, {
+        error: authErrorKind(error),
+      });
       throw error;
     }
     return waitForStoredSession(data.session ?? null);
