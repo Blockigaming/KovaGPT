@@ -1,43 +1,70 @@
 // Cross-chat memory store + summarizer for Plus+ users.
 import { createFileRoute } from "@tanstack/react-router";
-import { getCallerTier, requireUser, type AuthedCaller } from "@/lib/api-auth.server";
+import {
+  assertFeatureEnabled,
+  assertNotBanned,
+  enforceQuota,
+  getCallerTier,
+  requireUser,
+  type AuthedCaller,
+} from "@/lib/api-auth.server";
 import { chatCompletions, chatModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
+import {
+  assertDatabaseSuccess,
+  MEMORY_LIMITS as REQUEST_LIMITS,
+  parseMemoryPayload,
+  persistMemorySafely,
+} from "@/lib/endpoint-reliability.mjs";
+import { DAILY_CHAT_LIMIT_BY_TIER } from "@/lib/modes";
 
 const MEMORY_LIMITS = {
   plus: { returned: 12, stored: 250 },
-  // Pro memories are not automatically pruned. Retrieval is bounded per turn
-  // to protect the model context window, while the durable store keeps growing.
   pro: { returned: 500, stored: null },
 } as const;
 
-// `chat_memories` was added in a recent migration; the generated Database
-// types haven't been refreshed yet, so we go through a permissive client
-// to keep the build green. RLS still enforces row ownership.
-type MemoryTableQuery = {
+type DatabaseResult<T = unknown> = { data: T | null; error?: unknown };
+type MemoryTableQuery = PromiseLike<DatabaseResult> & {
   select: (cols: string) => MemoryTableQuery;
   upsert: (row: unknown, opts?: unknown) => MemoryTableQuery;
   delete: () => MemoryTableQuery;
   eq: (column: string, value: unknown) => MemoryTableQuery;
   order: (column: string, options?: unknown) => MemoryTableQuery;
-  limit: (count: number) => Promise<{ data: unknown[] | null; error?: unknown }>;
-  range: (from: number, to: number) => Promise<{ data: unknown[] | null; error?: unknown }>;
+  limit: (count: number) => Promise<DatabaseResult<unknown[]>>;
+  range: (from: number, to: number) => Promise<DatabaseResult<unknown[]>>;
   in: (column: string, values: unknown[]) => MemoryTableQuery;
 };
 
 function tbl(auth: AuthedCaller): MemoryTableQuery {
   return (
     auth.supabaseAdmin as unknown as {
-      from: (t: string) => MemoryTableQuery;
+      from: (table: string) => MemoryTableQuery;
     }
   ).from("chat_memories");
 }
 
-async function summarize(messages: { role: string; content: string }[]) {
+function jsonError(error: string, status: number) {
+  return Response.json({ error }, { status, headers: { "Cache-Control": "no-store" } });
+}
+
+async function authorizeMemory(request: Request) {
+  const auth = await requireUser(request);
+  if (auth instanceof Response) return auth;
+
+  const tier = await getCallerTier(auth);
+  if (tier === "free") return jsonError("Memory requires a Plus or Pro plan.", 403);
+
+  const banned = await assertNotBanned(auth);
+  if (banned) return banned;
+  const feature = await assertFeatureEnabled(auth, "chat");
+  if (feature) return feature;
+  return { auth, tier } as const;
+}
+
+async function summarize(messages: Array<{ role: "user" | "assistant"; content: string }>) {
   const transcript = messages
-    .slice(-30)
-    .map((m) => `${m.role === "user" ? "User" : "KovaGPT"}: ${String(m.content).slice(0, 2000)}`)
+    .map((message) => `${message.role === "user" ? "User" : "KovaGPT"}: ${message.content}`)
     .join("\n");
-  const resp = await chatCompletions({
+  const response = await chatCompletions({
     model: chatModel("fast"),
     messages: [
       {
@@ -48,8 +75,8 @@ async function summarize(messages: { role: string; content: string }[]) {
       { role: "user", content: transcript },
     ],
   });
-  if (!resp.ok) return null;
-  const data = await resp.json();
+  if (!response.ok) return null;
+  const data = await response.json();
   const text = data?.choices?.[0]?.message?.content;
   if (typeof text !== "string" || !text.trim()) return null;
   return text.trim().slice(0, 1500);
@@ -59,115 +86,114 @@ export const Route = createFileRoute("/api/memory")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        const auth = await requireUser(request);
-        if (auth instanceof Response) return auth;
-        const tier = await getCallerTier(auth);
-        const returned =
-          tier === "pro"
-            ? MEMORY_LIMITS.pro.returned
-            : tier === "plus"
-              ? MEMORY_LIMITS.plus.returned
-              : 0;
-        const { data } = await tbl(auth)
-          .select("chat_id, title, summary, updated_at")
-          .eq("user_id", auth.userId)
-          .order("updated_at", { ascending: false })
-          .limit(returned);
-        return new Response(JSON.stringify({ memories: data ?? [] }), {
-          headers: { "Content-Type": "application/json" },
-        });
-      },
-      POST: async ({ request }) => {
-        const auth = await requireUser(request);
-        if (auth instanceof Response) return auth;
+        const authorized = await authorizeMemory(request);
+        if (authorized instanceof Response) return authorized;
 
-        const tier = await getCallerTier(auth);
-        if (tier === "free") return new Response(null, { status: 204 });
-
-        const MAX_BODY = 4 * 1024 * 1024; // 4 MB
-        const contentLength = Number(request.headers.get("content-length") ?? "0");
-        if (contentLength > MAX_BODY) {
-          return new Response(JSON.stringify({ error: "Request too large." }), {
-            status: 413,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-        const raw = await request.text();
-        if (raw.length > MAX_BODY) {
-          return new Response(JSON.stringify({ error: "Request too large." }), {
-            status: 413,
-            headers: { "Content-Type": "application/json" },
-          });
-        }
-        let body: {
-          chatId?: string;
-          title?: string;
-          messages?: { role: string; content: string }[];
-        } | null;
         try {
-          body = JSON.parse(raw);
-        } catch {
-          body = null;
+          const returned = MEMORY_LIMITS[authorized.tier].returned;
+          const result = await tbl(authorized.auth)
+            .select("chat_id, title, summary, updated_at")
+            .eq("user_id", authorized.auth.userId)
+            .order("updated_at", { ascending: false })
+            .limit(returned);
+          const memories = assertDatabaseSuccess(result, "memory_list");
+          return Response.json(
+            { memories: Array.isArray(memories) ? memories : [] },
+            { headers: { "Cache-Control": "no-store" } },
+          );
+        } catch (error) {
+          console.error("[memory] list failed", error);
+          return jsonError("Memory storage is temporarily unavailable.", 503);
         }
-        if (!body || typeof body.chatId !== "string" || !Array.isArray(body.messages)) {
-          return new Response(JSON.stringify({ error: "Invalid payload" }), {
-            status: 400,
-            headers: { "Content-Type": "application/json" },
-          });
+      },
+
+      POST: async ({ request }) => {
+        const authorized = await authorizeMemory(request);
+        if (authorized instanceof Response) return authorized;
+
+        const contentLength = Number(request.headers.get("content-length") ?? "0");
+        if (!Number.isFinite(contentLength) || contentLength > REQUEST_LIMITS.maxBodyBytes) {
+          return jsonError("Request too large.", 413);
         }
-        if (body.messages.length < 4) return new Response(null, { status: 204 });
-        const chatId = body.chatId.slice(0, 100);
-        const title = typeof body.title === "string" ? body.title.slice(0, 120) : null;
+        const parsed = parseMemoryPayload(await request.text());
+        if (!parsed.ok) return jsonError(parsed.error, parsed.status);
+
+        const quota = await enforceQuota(
+          authorized.auth,
+          "chats",
+          DAILY_CHAT_LIMIT_BY_TIER[authorized.tier],
+        );
+        if (quota) return quota;
 
         const missingProvider = missingAiProviderResponse();
         if (missingProvider) return missingProvider;
-        const summary = await summarize(body.messages);
-        if (!summary) return new Response(null, { status: 204 });
 
-        await tbl(auth).upsert(
-          {
-            user_id: auth.userId,
-            chat_id: chatId,
-            title,
-            summary,
-            message_count: body.messages.length,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id,chat_id" },
-        );
-
-        // Prune oldest beyond cap (best-effort).
-        if (tier === "plus") {
-          const memoryCap = MEMORY_LIMITS.plus.stored;
-          const { data: extra } = await tbl(auth)
-            .select("id")
-            .eq("user_id", auth.userId)
-            .order("updated_at", { ascending: false })
-            .range(memoryCap, memoryCap + 50);
-          if (Array.isArray(extra) && extra.length > 0) {
-            await tbl(auth)
-              .delete()
-              .in(
-                "id",
-                (extra as { id: string }[]).map((r) => r.id),
-              );
-          }
+        let summary: string | null;
+        try {
+          summary = await summarize(parsed.value.messages);
+        } catch (error) {
+          console.error("[memory] summarizer failed", error);
+          summary = null;
         }
-        return new Response(JSON.stringify({ ok: true }), {
-          headers: { "Content-Type": "application/json" },
-        });
+        if (!summary) return jsonError("Memory summarization failed. Please retry.", 502);
+
+        const row = {
+          user_id: authorized.auth.userId,
+          chat_id: parsed.value.chatId,
+          title: parsed.value.title,
+          summary,
+          message_count: parsed.value.messages.length,
+          updated_at: new Date().toISOString(),
+        };
+
+        try {
+          const memoryCap = MEMORY_LIMITS.plus.stored;
+          await persistMemorySafely({
+            upsert: async () =>
+              await tbl(authorized.auth).upsert(row, { onConflict: "user_id,chat_id" }),
+            listOverflow:
+              authorized.tier === "plus"
+                ? async () =>
+                    await tbl(authorized.auth)
+                      .select("id")
+                      .eq("user_id", authorized.auth.userId)
+                      .order("updated_at", { ascending: false })
+                      .range(memoryCap, memoryCap + 50)
+                : null,
+            deleteOverflow: async (overflow) =>
+              await tbl(authorized.auth)
+                .delete()
+                .eq("user_id", authorized.auth.userId)
+                .in(
+                  "id",
+                  (overflow as Array<{ id: string }>).map((record) => record.id),
+                ),
+          });
+        } catch (error) {
+          console.error("[memory] durable write failed", error);
+          return jsonError("Memory storage is temporarily unavailable. Please retry.", 503);
+        }
+
+        return Response.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
       },
+
       DELETE: async ({ request }) => {
-        const auth = await requireUser(request);
-        if (auth instanceof Response) return auth;
-        const url = new URL(request.url);
-        const chatId = url.searchParams.get("chatId");
-        let q = tbl(auth).delete().eq("user_id", auth.userId);
-        if (chatId) q = q.eq("chat_id", chatId);
-        await q;
-        return new Response(JSON.stringify({ ok: true }), {
-          headers: { "Content-Type": "application/json" },
-        });
+        const authorized = await authorizeMemory(request);
+        if (authorized instanceof Response) return authorized;
+        const chatId = new URL(request.url).searchParams.get("chatId")?.trim() || null;
+        if (chatId && chatId.length > REQUEST_LIMITS.maxChatIdChars) {
+          return jsonError("Invalid chat ID.", 400);
+        }
+
+        try {
+          let query = tbl(authorized.auth).delete().eq("user_id", authorized.auth.userId);
+          if (chatId) query = query.eq("chat_id", chatId);
+          assertDatabaseSuccess(await query, "memory_delete");
+          return Response.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
+        } catch (error) {
+          console.error("[memory] delete failed", error);
+          return jsonError("Memory storage is temporarily unavailable. Please retry.", 503);
+        }
       },
     },
   },
