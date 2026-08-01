@@ -154,6 +154,12 @@ test("automatic memory summarization never consumes the foreground chat quota", 
   assert.doesNotMatch(source, /DAILY_CHAT_LIMIT_BY_TIER/);
   assert.match(source, /caller\.tier === "free"/);
   assert.match(source, /status: 204/);
+
+  const clientSource = await readFile(
+    new URL("../../src/routes/index.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(clientSource, /active\.messages\s*\.slice\(-30\)/);
 });
 
 test("memory persistence surfaces pruning lookup and deletion failures", async () => {
