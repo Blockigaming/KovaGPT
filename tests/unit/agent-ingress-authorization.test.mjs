@@ -267,6 +267,18 @@ test("allows only one valid runId query parameter", () => {
 });
 
 test("requires JSON and maps malformed bodies to stable public errors", async () => {
+  assert.deepEqual(
+    await readAgentJsonRequest(
+      new Request("https://example.test/api/agents/teams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json; charset=utf-8" },
+        body: '{"objective":"test"}',
+      }),
+      AGENT_TEAM_CREATE_BODY_LIMIT_BYTES,
+    ),
+    { objective: "test" },
+  );
+
   await expectAgentErrorAsync(
     readAgentJsonRequest(
       new Request("https://example.test/api/agents/teams", {
