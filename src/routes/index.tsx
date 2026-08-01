@@ -634,7 +634,7 @@ function KovaGPT() {
         window.setTimeout(() => setTempChatConfirmed(false), 1400);
         toast.success("Temporary chat enabled", {
           description:
-            "This chat stays out of history and will not use saved memory or personal settings.",
+            "This chat won't appear in history or be used for cross-chat memory. It also will not use saved profile details, custom instructions, or personality settings.",
         });
       } else {
         toast.message("Temporary chat disabled", {
