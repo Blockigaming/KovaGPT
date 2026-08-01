@@ -11,13 +11,18 @@ import {
   Trash2,
   Paperclip,
   Sparkles,
-  X as XIcon,
   Bookmark,
   RefreshCw,
   Copy,
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 import { LoginPromptDialog } from "@/components/LoginPromptDialog";
 import { LimitReachedDialog } from "@/components/LimitReachedDialog";
@@ -316,15 +321,9 @@ function ImagesPage() {
   const saveImage = useServerFn(saveToLibrary);
   const submittingRef = useRef(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (!lightbox) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setLightbox(null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [lightbox]);
+  const lightboxInitialFocusRef = useRef<HTMLButtonElement>(null);
+  const lightboxReturnFocusRef = useRef<HTMLElement | null>(null);
+  const lightboxReturnToPromptRef = useRef(false);
 
   useEffect(() => {
     if (isSignedIn && userKey) setHistory(loadHistory(userKey));
@@ -641,7 +640,10 @@ function ImagesPage() {
                     <button
                       key={h.id}
                       type="button"
-                      onClick={() => setLightbox(h)}
+                      onClick={(event) => {
+                        lightboxReturnFocusRef.current = event.currentTarget;
+                        setLightbox(h);
+                      }}
                       className="group relative aspect-square rounded-2xl overflow-hidden bg-muted ring-1 ring-border focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/60 text-left"
                       aria-label={`Open image: ${h.prompt}`}
                     >
@@ -787,82 +789,93 @@ function ImagesPage() {
         resetsAt={getUsage().resetsAt}
       />
 
-      {lightbox && (
-        <div
-          className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-8 animate-in fade-in duration-150"
-          onClick={() => setLightbox(null)}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Image preview"
-        >
-          <button
-            onClick={() => setLightbox(null)}
-            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"
-            aria-label="Close"
+      <Dialog
+        open={Boolean(lightbox)}
+        onOpenChange={(open) => {
+          if (!open) setLightbox(null);
+        }}
+      >
+        {lightbox && (
+          <DialogContent
+            data-image-lightbox
+            className="image-lightbox left-0 right-0 top-0 bottom-0 h-dvh w-screen max-h-none max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-none border-0 bg-black/85 p-4 pb-4 text-white shadow-none backdrop-blur-md sm:inset-0 sm:h-dvh sm:w-screen sm:max-h-none sm:max-w-none sm:translate-x-0 sm:translate-y-0 sm:rounded-none sm:border-0 sm:p-8 sm:pb-8"
+            onOpenAutoFocus={(event) => {
+              event.preventDefault();
+              lightboxInitialFocusRef.current?.focus();
+            }}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              const prior = lightboxReturnFocusRef.current;
+              const target =
+                lightboxReturnToPromptRef.current || !prior?.isConnected
+                  ? inputRef.current
+                  : prior;
+              lightboxReturnToPromptRef.current = false;
+              lightboxReturnFocusRef.current = null;
+              target?.focus();
+            }}
           >
-            <XIcon className="w-5 h-5" />
-          </button>
-          <div
-            className="relative max-w-4xl w-full flex flex-col items-center gap-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <img
-              src={lightbox.imageUrl}
-              alt={lightbox.prompt}
-              decoding="async"
-              className="max-h-[75dvh] w-auto max-w-full rounded-2xl shadow-2xl object-contain"
-            />
-            <p className="text-sm text-white/85 text-center max-w-2xl px-4 line-clamp-3">
-              {lightbox.prompt}
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <button
-                onClick={() => {
-                  setPrompt(lightbox.prompt);
-                  setLightbox(null);
-                  inputRef.current?.focus();
-                }}
-                className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white text-black font-medium hover:opacity-90 transition"
-              >
-                <Sparkles className="w-4 h-4" /> Reuse prompt
-              </button>
-              <button
-                onClick={() => {
-                  const item = lightbox;
-                  setLightbox(null);
-                  void generate(item.prompt);
-                }}
-                className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
-              >
-                <RefreshCw className="h-4 w-4" /> Create variation
-              </button>
-              <button
-                onClick={() => saveGeneratedImage(lightbox)}
-                disabled={savingImage}
-                className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition disabled:opacity-50"
-              >
-                <Bookmark className="h-4 w-4" /> Save
-              </button>
-              <a
-                href={lightbox.imageUrl}
-                download={`kovagpt-${lightbox.id}.png`}
-                className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
-              >
-                <Download className="w-4 h-4" /> Download
-              </a>
-              <button
-                onClick={() => {
-                  removeFromHistory(lightbox.id);
-                  setLightbox(null);
-                }}
-                className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-destructive text-white transition"
-              >
-                <Trash2 className="w-4 h-4" /> Remove
-              </button>
+            <DialogTitle className="sr-only">Image preview</DialogTitle>
+            <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col items-center justify-center gap-4">
+              <img
+                src={lightbox.imageUrl}
+                alt={lightbox.prompt}
+                decoding="async"
+                className="max-h-[75dvh] w-auto max-w-full rounded-2xl shadow-2xl object-contain"
+              />
+              <DialogDescription className="max-w-2xl px-4 text-center text-sm text-white/85 line-clamp-3">
+                {lightbox.prompt}
+              </DialogDescription>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <button
+                  ref={lightboxInitialFocusRef}
+                  onClick={() => {
+                    lightboxReturnToPromptRef.current = true;
+                    setPrompt(lightbox.prompt);
+                    setLightbox(null);
+                  }}
+                  className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white text-black font-medium hover:opacity-90 transition"
+                >
+                  <Sparkles className="w-4 h-4" /> Reuse prompt
+                </button>
+                <button
+                  onClick={() => {
+                    const item = lightbox;
+                    setLightbox(null);
+                    void generate(item.prompt);
+                  }}
+                  className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
+                >
+                  <RefreshCw className="h-4 w-4" /> Create variation
+                </button>
+                <button
+                  onClick={() => saveGeneratedImage(lightbox)}
+                  disabled={savingImage}
+                  className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition disabled:opacity-50"
+                >
+                  <Bookmark className="h-4 w-4" /> Save
+                </button>
+                <a
+                  href={lightbox.imageUrl}
+                  download={`kovagpt-${lightbox.id}.png`}
+                  className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
+                >
+                  <Download className="w-4 h-4" /> Download
+                </a>
+                <button
+                  onClick={() => {
+                    removeFromHistory(lightbox.id);
+                    setLightbox(null);
+                  }}
+                  className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-destructive text-white transition"
+                >
+                  <Trash2 className="w-4 h-4" /> Remove
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </DialogContent>
+        )}
+      </Dialog>
     </div>
   );
 }
