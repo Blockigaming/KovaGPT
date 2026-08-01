@@ -1,6 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 import { createFileRoute } from "@tanstack/react-router";
-import { retryableUnavailable, suppressThenConsumeToken } from "@/lib/endpoint-reliability.mjs";
+import {
+  retryableUnavailable,
+  suppressThenConsumeToken,
+  unsubscribeLinkState,
+} from "@/lib/endpoint-reliability.mjs";
 
 const MAX_UNSUBSCRIBE_BODY_BYTES = 8 * 1024;
 const MAX_TOKEN_CHARS = 1024;
@@ -39,7 +43,7 @@ export const Route = createFileRoute("/email/unsubscribe")({
 
         const { data: tokenRecord, error: lookupError } = await supabase
           .from("email_unsubscribe_tokens")
-          .select("used_at")
+          .select("email, used_at")
           .eq("token", token)
           .maybeSingle();
         if (lookupError) {
@@ -51,10 +55,27 @@ export const Route = createFileRoute("/email/unsubscribe")({
         if (!tokenRecord) {
           return Response.json({ error: "Invalid or expired token" }, { status: 404 });
         }
-        if (tokenRecord.used_at) {
-          return Response.json({ valid: false, reason: "already_unsubscribed" });
+        if (!tokenRecord.used_at) return Response.json({ valid: true });
+
+        const normalizedEmail = tokenRecord.email?.trim().toLowerCase();
+        if (!normalizedEmail) return retryableUnavailable("unsubscribe_backend_unavailable");
+        const suppressionResult = await supabase
+          .from("suppressed_emails")
+          .select("email")
+          .eq("email", normalizedEmail)
+          .maybeSingle();
+        try {
+          // A legacy token may have been marked used before its suppression write
+          // failed. Only report "already" after proving durable suppression;
+          // otherwise let the page POST again so it can self-heal.
+          return Response.json(unsubscribeLinkState({ alreadyUsed: true, suppressionResult }));
+        } catch (error) {
+          console.error("Failed to verify durable unsubscribe suppression", {
+            error,
+            email_redacted: redactEmail(normalizedEmail),
+          });
+          return retryableUnavailable("unsubscribe_backend_unavailable");
         }
-        return Response.json({ valid: true });
       },
 
       POST: async ({ request }) => {
