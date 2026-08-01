@@ -73,3 +73,29 @@ test("message component keeps reachable assistant actions and safe streaming sta
   assert.match(message, /MobileBottomSheet/);
   assert.match(message, /cleanAssistantText/);
 });
+
+test("temporary chat changes create a clean privacy boundary", () => {
+  assert.match(index, /const activeTemporary = active \? Boolean\(active\.temporary\) : null/);
+  assert.match(index, /if \(activeTemporary !== null\) setTempChat\(activeTemporary\)/);
+  assert.match(index, /historyConversations = useMemo\([\s\S]*!conversation\.temporary/);
+  assert.match(index, /setConversations\(\(previous\) =>[\s\S]*!conversation\.temporary/);
+
+  const marker = index.indexOf('aria-label="Toggle temporary chat"');
+  assert.notEqual(marker, -1);
+  const toggle = index.slice(Math.max(0, marker - 1800), marker);
+  assert.match(toggle, /const next = !tempChat/);
+  assert.match(toggle, /newChat\(\)/);
+  assert.match(toggle, /setTempChat\(next\)/);
+  assert.ok(
+    toggle.lastIndexOf("newChat()") < toggle.lastIndexOf("setTempChat(next)"),
+    "the clean conversation boundary should be created before the privacy mode changes",
+  );
+  assert.match(index, /temporary: tempChat/);
+  assert.match(index, /saveConversations\(conversations\.filter\(\(c\) => !c\.temporary\)\)/);
+});
+
+test("local-only message ratings make a local-only claim", () => {
+  assert.match(message, /localStorage\.setItem\(feedbackKey, next\)/);
+  assert.equal((message.match(/Rating saved on this device/g) ?? []).length, 2);
+  assert.doesNotMatch(message, /Thanks for the feedback|Thanks, we'll improve/);
+});
