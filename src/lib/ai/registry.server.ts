@@ -15,6 +15,7 @@ export type ProviderCapability =
   | "text_to_speech";
 
 export type ProviderErrorCode =
+  | "PROVIDER_NOT_CONFIGURED"
   | "CAPABILITY_UNSUPPORTED"
   | "PROVIDER_TIMEOUT"
   | "PROVIDER_RATE_LIMIT"
@@ -219,7 +220,7 @@ export function selectModelForCapabilities(
   const cfg = getAiProviderConfig();
   if (!cfg.configured) {
     throw new KovaProviderError(
-      "PROVIDER_UNAVAILABLE",
+      "PROVIDER_NOT_CONFIGURED",
       "KovaGPT is temporarily unavailable. Please try again later.",
       { status: 503 },
     );
