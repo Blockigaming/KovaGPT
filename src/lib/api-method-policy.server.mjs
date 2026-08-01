@@ -18,6 +18,9 @@ function apiRoute(path, methods) {
  * complete coverage and exact method parity.
  */
 export const API_METHOD_POLICY_ROUTES = Object.freeze([
+  apiRoute("/.mcp/invoke-tool/$tool", ["POST"]),
+  apiRoute("/.mcp/list-tools", ["GET", "POST"]),
+  apiRoute("/.well-known/oauth-protected-resource", ["GET"]),
   apiRoute("/api/account", ["DELETE"]),
   apiRoute("/api/agents/runs", ["GET", "POST", "PATCH"]),
   apiRoute("/api/agents/teams", ["GET", "POST", "PATCH"]),
@@ -56,23 +59,31 @@ export const API_METHOD_POLICY_ROUTES = Object.freeze([
   apiRoute("/lovable/email/suppression", ["POST"]),
   apiRoute("/lovable/email/transactional/preview", ["POST"]),
   apiRoute("/lovable/email/transactional/send", ["POST"]),
+  apiRoute("/mcp", ["GET"]),
+  apiRoute("/sitemap.xml", ["GET"]),
 ]);
 
 const DYNAMIC_OAUTH_CALLBACK_PATH = "/api/integrations/oauth/callback/$provider";
 const DYNAMIC_OAUTH_CALLBACK_PATTERN = /^\/api\/integrations\/oauth\/callback\/[^/]+$/u;
+const DYNAMIC_MCP_TOOL_PATH = "/.mcp/invoke-tool/$tool";
+const DYNAMIC_MCP_TOOL_PATTERN = /^\/\.mcp\/invoke-tool\/[^/]+$/u;
 const dynamicOAuthCallbackRoute = API_METHOD_POLICY_ROUTES.find(
   ({ path }) => path === DYNAMIC_OAUTH_CALLBACK_PATH,
 );
+const dynamicMcpToolRoute = API_METHOD_POLICY_ROUTES.find(
+  ({ path }) => path === DYNAMIC_MCP_TOOL_PATH,
+);
 
-if (!dynamicOAuthCallbackRoute) {
-  throw new Error("Dynamic OAuth callback method policy is missing");
+if (!dynamicOAuthCallbackRoute || !dynamicMcpToolRoute) {
+  throw new Error("Dynamic server method policy is missing");
 }
 const dynamicOAuthCallbackMethods = dynamicOAuthCallbackRoute.methods;
+const dynamicMcpToolMethods = dynamicMcpToolRoute.methods;
 
 const staticApiMethods = new Map(
-  API_METHOD_POLICY_ROUTES.filter(({ path }) => path !== DYNAMIC_OAUTH_CALLBACK_PATH).map(
-    ({ path, methods }) => [path, methods],
-  ),
+  API_METHOD_POLICY_ROUTES.filter(
+    ({ path }) => path !== DYNAMIC_OAUTH_CALLBACK_PATH && path !== DYNAMIC_MCP_TOOL_PATH,
+  ).map(({ path, methods }) => [path, methods]),
 );
 
 /**
@@ -87,6 +98,9 @@ export function getDeclaredApiMethodsForPath(pathname) {
   if (exact) return exact;
   if (DYNAMIC_OAUTH_CALLBACK_PATTERN.test(pathname)) {
     return dynamicOAuthCallbackMethods;
+  }
+  if (DYNAMIC_MCP_TOOL_PATTERN.test(pathname)) {
+    return dynamicMcpToolMethods;
   }
   return null;
 }
