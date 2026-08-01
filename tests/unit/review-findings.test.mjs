@@ -182,3 +182,36 @@ test("scheduled task surfaces stay truthful while the runner is disabled", () =>
   assert.match(parity, /Scheduled Tasks\s+\| Intentionally unavailable/);
   assert.doesNotMatch(parity, /scheduled task route and server runner/);
 });
+
+test("billing checkout and entitlements use exact supported plan keys", () => {
+  const plans = read("src/lib/billing-plans.ts");
+  const checkout = read("src/utils/payments.functions.ts");
+  const apiAuth = read("src/lib/api-auth.server.ts");
+  const clientTier = read("src/hooks/useTier.ts");
+  const webhook = read("src/routes/api/public/payments/webhook.ts");
+
+  assert.match(plans, /plus_monthly:[\s\S]*tier: "plus"[\s\S]*trialPeriodDays: 30/);
+  assert.match(plans, /pro_monthly:[\s\S]*tier: "pro"[\s\S]*trialPeriodDays: 0/);
+  assert.match(plans, /Object\.prototype\.hasOwnProperty\.call\(BILLING_PLANS, value\)/);
+  assert.doesNotMatch(plans, /toLowerCase|includes\(["'](?:plus|pro)/);
+
+  assert.ok(
+    checkout.indexOf("resolveBillingPlan(data.priceId)") <
+      checkout.indexOf("stripe.prices.list"),
+  );
+  assert.match(checkout, /data\.quantity !== undefined && data\.quantity !== 1/);
+  assert.match(checkout, /lookup_keys: \[plan\.lookupKey\]/);
+  assert.match(checkout, /active: true/);
+  assert.match(checkout, /stripePrice\.lookup_key !== plan\.lookupKey/);
+  assert.match(checkout, /stripePrice\.type !== "recurring"/);
+  assert.match(checkout, /trial_period_days: plan\.trialPeriodDays/);
+
+  for (const source of [checkout, apiAuth, clientTier]) {
+    assert.doesNotMatch(source, /\.includes\(["'](?:plus|pro)["']\)/);
+  }
+  assert.match(apiAuth, /tierForLookupKey\(row\.price_id\)/);
+  assert.match(clientTier, /tierForLookupKey\(row\.price_id\)/);
+  assert.match(webhook, /for \(const candidate of candidates\)/);
+  assert.match(webhook, /resolveBillingPlan\(candidate\)/);
+  assert.doesNotMatch(webhook, /lookup_key \|\|.*lovable_external_id \|\|.*price\?\.id/);
+});
