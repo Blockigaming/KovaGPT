@@ -175,7 +175,8 @@ export const createPortalSession = createServerFn({ method: "POST" })
       const stripe = createStripeClient(BILLING_ENV);
       const portal = await stripe.billingPortal.sessions.create({
         customer: sub.stripe_customer_id,
-        ...(data.returnUrl && { return_url: data.returnUrl }),
+        // The browser cannot choose an arbitrary post-portal redirect.
+        return_url: "https://kovagpt.com/",
       });
       const portalUrl = parseAllowedBillingPortalUrl(portal.url);
       if (!portalUrl) {
