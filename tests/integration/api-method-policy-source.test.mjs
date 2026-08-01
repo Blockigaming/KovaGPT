@@ -6,22 +6,25 @@ import { API_METHOD_POLICY_ROUTES } from "../../src/lib/api-method-policy.server
 
 const HTTP_METHOD_PATTERN = /^\s+(GET|HEAD|POST|PUT|PATCH|DELETE|OPTIONS):\s*(?:async\s*)?\(/gmu;
 
-test("the centralized inventory exactly covers every generated API route handler", async () => {
+test("the centralized inventory exactly covers every generated server route handler", async () => {
   const routeTree = await readFile("src/routeTree.gen.ts", "utf8");
-  const routeIds = [...routeTree.matchAll(/from ["']\.\/routes\/(api\/[^"']+)["']/gu)].map(
+  const routeIds = [...routeTree.matchAll(/from ["']\.\/routes\/([^"']+)["']/gu)].map(
     (match) => match[1],
   );
   const uniqueRouteIds = [...new Set(routeIds)];
-  assert.equal(uniqueRouteIds.length, 31);
 
-  const auditedRoutes = await Promise.all(
-    uniqueRouteIds.map(async (routeId) => {
-      const source = await readFile(`src/routes/${routeId}.ts`, "utf8");
-      const methods = [...source.matchAll(HTTP_METHOD_PATTERN)].map((match) => match[1]);
-      assert.ok(methods.length > 0, `${routeId} must expose at least one HTTP method`);
-      return { path: `/${routeId}`, methods };
-    }),
-  );
+  const auditedRoutes = (
+    await Promise.all(
+      uniqueRouteIds.map(async (routeId) => {
+        const source = await readFile(`src/routes/${routeId}.ts`, "utf8");
+        if (!/server:\s*\{\s*handlers:\s*\{/u.test(source)) return null;
+        const methods = [...source.matchAll(HTTP_METHOD_PATTERN)].map((match) => match[1]);
+        assert.ok(methods.length > 0, `${routeId} must expose at least one HTTP method`);
+        return { path: `/${routeId}`, methods };
+      }),
+    )
+  ).filter(Boolean);
+  assert.equal(auditedRoutes.length, 38);
 
   const sortByPath = (left, right) => left.path.localeCompare(right.path);
   const actual = API_METHOD_POLICY_ROUTES.map(({ path, methods }) => ({
