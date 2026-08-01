@@ -21,8 +21,7 @@ export function shouldSubmitComposerOnEnter({
   isStreaming = false,
 }) {
   if (key !== "Enter" || keyCode === 229 || isComposing) return false;
-  if (disabled || isStreaming || !hasContent || shiftKey || altKey)
-    return false;
+  if (disabled || isStreaming || !hasContent || shiftKey || altKey) return false;
   if (ctrlKey || metaKey) return true;
   return sendOnEnter && !isMobileLayout && !isCoarsePointer;
 }
