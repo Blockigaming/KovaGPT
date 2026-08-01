@@ -298,6 +298,49 @@ test("GitHub revocation errors fail the delivery and return a retryable failure"
   database.done();
 });
 
+test("GitHub treats already-revoked or not-yet-discovered repository rows as idempotent no-ops", async () => {
+  const database = new FakeSupabase([
+    {
+      table: "github_webhook_deliveries",
+      operation: "insert",
+      result: { data: { delivery_id: "delivery_zero", status: "received" }, error: null },
+    },
+    {
+      table: "github_repositories",
+      operation: "update",
+      result: { data: [], error: null },
+    },
+    {
+      table: "github_repositories",
+      operation: "update",
+      result: { data: [], error: null },
+    },
+    {
+      table: "github_webhook_deliveries",
+      operation: "update",
+      result: { data: { delivery_id: "delivery_zero" }, error: null },
+    },
+  ]);
+
+  assert.deepEqual(
+    await processGitHubDelivery({
+      supabase: database,
+      delivery: "delivery_zero",
+      event: "repository",
+      payload: {
+        action: "deleted",
+        installation: { id: 17 },
+        repository: { id: 42 },
+      },
+      supported: new Set(["repository"]),
+      now: () => "2026-08-01T00:00:00.000Z",
+    }),
+    { duplicate: false },
+  );
+  assert.equal(database.calls.at(-1).value.status, "processed");
+  database.done();
+});
+
 test("GitHub final-status errors are not acknowledged as success", async () => {
   const database = new FakeSupabase([
     {
