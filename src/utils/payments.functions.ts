@@ -154,7 +154,7 @@ type PortalResult = { url: string } | { error: string };
 // recent subscription row for this user + env (RLS-scoped via `context.supabase`).
 export const createPortalSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { returnUrl?: string; environment: StripeEnv }) => data)
+  .inputValidator((data: Record<string, never>) => data)
   .handler(async ({ context }): Promise<PortalResult> => {
     const { supabase, userId } = context;
     const { data: sub, error: subscriptionError } = await supabase
