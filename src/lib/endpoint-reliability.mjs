@@ -14,6 +14,65 @@ export class DurableBackendError extends Error {
   }
 }
 
+export class BodyReadError extends Error {
+  constructor(status, code) {
+    super(code);
+    this.name = "BodyReadError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
+export async function readUtf8BodyBounded(request, maxBytes) {
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) {
+    throw new TypeError("maxBytes must be a nonnegative safe integer");
+  }
+
+  const contentLength = request.headers.get("content-length");
+  if (contentLength !== null) {
+    if (!/^(0|[1-9]\d*)$/.test(contentLength)) {
+      throw new BodyReadError(400, "invalid_content_length");
+    }
+    const declaredBytes = Number(contentLength);
+    if (!Number.isSafeInteger(declaredBytes)) {
+      throw new BodyReadError(400, "invalid_content_length");
+    }
+    if (declaredBytes > maxBytes) throw new BodyReadError(413, "request_too_large");
+  }
+
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const chunks = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!(value instanceof Uint8Array)) throw new BodyReadError(400, "invalid_request_body");
+      if (value.byteLength > maxBytes - totalBytes) {
+        await reader.cancel("request_too_large").catch(() => undefined);
+        throw new BodyReadError(413, "request_too_large");
+      }
+      totalBytes += value.byteLength;
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    throw new BodyReadError(400, "invalid_utf8_body");
+  }
+}
+
 export function assertDatabaseSuccess(result, operation) {
   if (!result || result.error) throw new DurableBackendError(operation);
   return result.data;
@@ -99,6 +158,12 @@ export function retryableUnavailable(error) {
       headers: { "Cache-Control": "no-store", "Retry-After": "60" },
     },
   );
+}
+
+export function noStoreJson(body, init = {}) {
+  const headers = new Headers(init.headers);
+  headers.set("Cache-Control", "no-store");
+  return Response.json(body, { ...init, headers });
 }
 
 export function financeQueueUnavailableResponse() {
