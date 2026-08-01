@@ -1,19 +1,30 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  getSupabaseClientConfigStatus,
+  supabase,
+} from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { NovaLogo } from "@/components/NovaLogo";
 import { Loader2, KeyRound } from "lucide-react";
 import { toast } from "sonner";
+import {
+  clearPasswordRecoveryFlow,
+  hasRecentPasswordRecoveryFlow,
+  markPasswordRecoveryFlow,
+} from "@/lib/oauth-session";
 
 export const Route = createFileRoute("/reset-password")({
   component: ResetPassword,
   head: () => ({
     meta: [
       { title: "Reset password - KovaGPT" },
-      { name: "description", content: "Set a new password for your KovaGPT account." },
+      {
+        name: "description",
+        content: "Set a new password for your KovaGPT account.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -28,6 +39,13 @@ function ResetPassword() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!getSupabaseClientConfigStatus().configured) {
+      setReady(true);
+      setError(
+        "Account recovery is temporarily unavailable. Please try again later.",
+      );
+      return;
+    }
     // Supabase may need a network round-trip to exchange a recovery code. Listen
     // before checking the current session so a slow exchange is not mislabeled
     // as an expired link.
@@ -46,24 +64,31 @@ function ResetPassword() {
     const params = new URLSearchParams(window.location.search);
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
     if (params.get("error") || hash.get("error")) {
+      clearPasswordRecoveryFlow();
       finish(false);
     }
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session)) {
+      if (event === "PASSWORD_RECOVERY" && session) {
+        markPasswordRecoveryFlow(session.user.id);
+        finish(true);
+        return;
+      }
+      if (session && hasRecentPasswordRecoveryFlow(session.user.id)) {
         finish(true);
       }
     });
     const check = async () => {
       const { data, error: sessionError } = await supabase.auth.getSession();
       if (cancelled) return;
-      if (data.session) {
+      if (data.session && hasRecentPasswordRecoveryFlow(data.session.user.id)) {
         finish(true);
       } else if (sessionError) {
+        clearPasswordRecoveryFlow();
         finish(false);
       }
     };
     void check();
-    const t = window.setTimeout(() => finish(false), 8_000);
+    const t = window.setTimeout(() => finish(false), 15_000);
     return () => {
       cancelled = true;
       window.clearTimeout(t);
@@ -85,11 +110,25 @@ function ResetPassword() {
     try {
       const { error: updateErr } = await supabase.auth.updateUser({ password });
       if (updateErr) throw updateErr;
-      toast.success("Password updated. You're signed in.");
+      const { error: signOutError } = await supabase.auth.signOut({
+        scope: "others",
+      });
+      clearPasswordRecoveryFlow();
+      if (signOutError) {
+        toast.warning(
+          "Password updated, but other sessions could not be signed out. Retry from Security settings.",
+        );
+      } else {
+        toast.success("Password updated and other sessions signed out.");
+      }
       navigate({ to: "/" });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      toast.error(msg);
+      console.error("[KovaAuth] Password update failed", {
+        error: err instanceof Error ? err.name : "unknown_error",
+      });
+      toast.error(
+        "Your password could not be updated. Request a new reset link and try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -102,7 +141,9 @@ function ResetPassword() {
           <div className="w-12 h-12 rounded-2xl bg-foreground text-background flex items-center justify-center mb-3">
             <KeyRound className="w-6 h-6" />
           </div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight">Set a new password</h1>
+          <h1 className="font-display text-2xl font-semibold tracking-tight">
+            Set a new password
+          </h1>
           <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
             <NovaLogo className="w-4 h-4" /> KovaGPT account recovery
           </p>
@@ -132,6 +173,7 @@ function ResetPassword() {
                 minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                maxLength={1024}
                 required
               />
             </div>
@@ -144,6 +186,7 @@ function ResetPassword() {
                 minLength={6}
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
+                maxLength={1024}
                 required
               />
             </div>
