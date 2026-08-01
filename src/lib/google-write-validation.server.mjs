@@ -133,6 +133,51 @@ function timezone(value) {
   return value;
 }
 
+function rfc3339Date(value, label) {
+  if (typeof value !== "string" || value.length > 40) {
+    throw new GoogleWriteValidationError(
+      `${label} must be an RFC 3339 date-time.`,
+    );
+  }
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)(?:\.\d{1,9})?(Z|[+-](\d{2}):(\d{2}))$/.exec(
+      value,
+    );
+  if (!match) {
+    throw new GoogleWriteValidationError(
+      `${label} must include an explicit timezone.`,
+    );
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const offsetHours = Number(match[8] ?? 0);
+  const offsetMinutes = Number(match[9] ?? 0);
+  const daysInMonth =
+    month >= 1 && month <= 12
+      ? new Date(Date.UTC(year, month, 0)).getUTCDate()
+      : 0;
+  if (
+    year === 0 ||
+    day < 1 ||
+    day > daysInMonth ||
+    offsetHours > 14 ||
+    offsetMinutes > 59 ||
+    (offsetHours === 14 && offsetMinutes !== 0)
+  ) {
+    throw new GoogleWriteValidationError(
+      `${label} is not a valid RFC 3339 date-time.`,
+    );
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw new GoogleWriteValidationError(
+      `${label} is not a valid RFC 3339 date-time.`,
+    );
+  }
+  return date;
+}
+
 function validateDraft(args) {
   const to = recipientList(args.to, "To", true);
   const cc = recipientList(args.cc, "Cc");
@@ -160,22 +205,18 @@ function validateCalendarEvent(args) {
   const summary = requiredString(args, "summary", "Event title", 300, {
     trim: true,
   });
-  const startValue = requiredString(args, "start", "Event start", 100, {
+  const startValue = requiredString(args, "start", "Event start", 40, {
     trim: true,
   });
   const endValue =
     args.end === undefined || args.end === null || args.end === ""
       ? undefined
-      : requiredString(args, "end", "Event end", 100, { trim: true });
-  const start = new Date(startValue);
+      : requiredString(args, "end", "Event end", 40, { trim: true });
+  const start = rfc3339Date(startValue, "Event start");
   const end = endValue
-    ? new Date(endValue)
+    ? rfc3339Date(endValue, "Event end")
     : new Date(start.getTime() + 30 * 60_000);
-  if (
-    Number.isNaN(start.getTime()) ||
-    Number.isNaN(end.getTime()) ||
-    end <= start
-  ) {
+  if (end <= start) {
     throw new GoogleWriteValidationError(
       "Event start and end times are invalid.",
     );
