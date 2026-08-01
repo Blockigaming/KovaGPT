@@ -75,7 +75,6 @@ export function Sidebar({
   const { tier } = useTier();
   const drawerRef = useRef<HTMLElement | null>(null);
   const lastFocusedRef = useRef<HTMLElement | null>(null);
-  const previousOpenRef = useRef(open);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -99,17 +98,6 @@ export function Sidebar({
     window.addEventListener("kova-open-search", openSearch);
     return () => window.removeEventListener("kova-open-search", openSearch);
   }, [open, onToggle]);
-
-  useEffect(() => {
-    const wasOpen = previousOpenRef.current;
-    previousOpenRef.current = open;
-    if (wasOpen === open || isMobileViewport()) return;
-
-    window.requestAnimationFrame(() => {
-      const label = open ? "Collapse sidebar" : "Open sidebar";
-      document.querySelector<HTMLElement>(`[aria-label="${label}"]`)?.focus();
-    });
-  }, [open]);
 
   useEffect(() => {
     if (!open || !isMobileViewport()) return;
@@ -306,7 +294,14 @@ export function Sidebar({
               <X className="h-[18px] w-[18px]" />
             </button>
             <button
-              onClick={onToggle}
+              onClick={() => {
+                onToggle();
+                window.requestAnimationFrame(() => {
+                  document
+                    .querySelector<HTMLElement>('[aria-label="Open sidebar"]')
+                    ?.focus({ preventScroll: true });
+                });
+              }}
               className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:flex"
               aria-label="Collapse sidebar"
               title="Collapse sidebar"
