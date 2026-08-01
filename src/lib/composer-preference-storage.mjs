@@ -15,6 +15,17 @@ export function legacyComposerSettingsKey(scope) {
   return `${LEGACY_SETTINGS_KEY_BASE}:${scope}`;
 }
 
+export function unscopedLegacyComposerSettingsKey() {
+  return LEGACY_SETTINGS_KEY_BASE;
+}
+
+function readLegacyValue(storage, key) {
+  const raw = storage.getItem(key);
+  if (!raw) return undefined;
+  const value = JSON.parse(raw)?.sendOnEnter;
+  return typeof value === "boolean" ? value : undefined;
+}
+
 export function readPersistedSendOnEnter(storage, scope) {
   try {
     const stored = storage.getItem(composerPreferenceKey(scope));
@@ -23,18 +34,26 @@ export function readPersistedSendOnEnter(storage, scope) {
     return DEFAULT_SEND_ON_ENTER;
   }
 
+  let sendOnEnter;
   try {
-    const legacy = storage.getItem(legacyComposerSettingsKey(scope));
-    if (!legacy) return DEFAULT_SEND_ON_ENTER;
-    const sendOnEnter = JSON.parse(legacy)?.sendOnEnter;
-    if (typeof sendOnEnter !== "boolean") return DEFAULT_SEND_ON_ENTER;
-    try {
-      storage.setItem(composerPreferenceKey(scope), sendOnEnter ? "1" : "0");
-    } catch {
-      // Migration still applies in memory when persistence is unavailable.
+    const scopedLegacy = storage.getItem(legacyComposerSettingsKey(scope));
+    if (scopedLegacy) {
+      // A scoped record belongs to this user. Never replace it with the old
+      // unscoped value, even when the scoped record omits this preference.
+      sendOnEnter = readLegacyValue(storage, legacyComposerSettingsKey(scope));
+      if (sendOnEnter === undefined) return DEFAULT_SEND_ON_ENTER;
+    } else {
+      sendOnEnter = readLegacyValue(storage, unscopedLegacyComposerSettingsKey());
     }
-    return sendOnEnter;
   } catch {
     return DEFAULT_SEND_ON_ENTER;
   }
+
+  if (sendOnEnter === undefined) return DEFAULT_SEND_ON_ENTER;
+  try {
+    storage.setItem(composerPreferenceKey(scope), sendOnEnter ? "1" : "0");
+  } catch {
+    // Migration still applies in memory when persistence is unavailable.
+  }
+  return sendOnEnter;
 }
