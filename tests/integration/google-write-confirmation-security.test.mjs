@@ -73,7 +73,7 @@ test("claimed legacy arguments are revalidated immediately before Google access"
 
   assert.ok(claim > -1 && revalidate > claim && token > revalidate);
   assert.match(executor, /const SUPPORTED_WRITE_TOOLS = new Set\(\[/);
-  assert.match(executor, /"gmail_create_draft", "calendar_create_event"/);
+  assert.match(executor, /"gmail_create_draft",\s*"calendar_create_event"/);
   assert.match(executor, /This action is no longer valid\. Prepare it again\./);
 });
 
