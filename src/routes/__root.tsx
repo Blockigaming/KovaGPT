@@ -21,6 +21,7 @@ import { PlatformRuntime } from "@/components/PlatformRuntime";
 type SeoMatch = {
   pathname: string;
   status: string;
+  globalNotFound?: boolean;
 };
 
 const PUBLIC_DESCRIPTION =
@@ -28,7 +29,9 @@ const PUBLIC_DESCRIPTION =
 
 function getActiveSeoState(matches: readonly SeoMatch[]) {
   const pathname = matches.at(-1)?.pathname ?? "";
-  const statuses = matches.map((match) => match.status);
+  const statuses = matches.flatMap((match) =>
+    match.globalNotFound ? [match.status, "notFound"] : [match.status],
+  );
   return {
     indexable: isPublicIndexableRoute(pathname, statuses),
     robots: robotsDirectiveForRoute(pathname, statuses),
