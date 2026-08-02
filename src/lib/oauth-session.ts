@@ -30,14 +30,14 @@ function authErrorKind(error: unknown): string {
 }
 
 export function getOAuthRedirectUri(): string {
-  if (typeof window === "undefined") return "https://kovagpt.com/";
+  if (typeof window === "undefined") return `https://kovagpt.com${OAUTH_CALLBACK_PATH}`;
 
   const host = window.location.hostname.toLowerCase();
   if (host === "kovagpt.com" || host === "www.kovagpt.com") {
-    return "https://kovagpt.com/";
+    return `https://kovagpt.com${OAUTH_CALLBACK_PATH}`;
   }
 
-  return `${window.location.origin}/`;
+  return `${window.location.origin}${OAUTH_CALLBACK_PATH}`;
 }
 
 export function rememberPostAuthRedirect() {

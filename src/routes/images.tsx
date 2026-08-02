@@ -9,7 +9,6 @@ import {
   Loader2,
   Download,
   Trash2,
-  Paperclip,
   Sparkles,
   Bookmark,
   RefreshCw,
@@ -254,13 +253,22 @@ const PRESETS: Preset[] = [
 ];
 
 type HistoryItem = { id: string; prompt: string; imageUrl: string; createdAt: number };
-const HISTORY_KEY_PREFIX = "novagpt-image-history-";
+const HISTORY_KEY_PREFIX = "kovagpt:v2:image-history:";
+const LEGACY_HISTORY_KEY_PREFIX = "novagpt-image-history-";
 const HISTORY_LIMIT = 60;
 
 function loadHistory(userKey: string | null): HistoryItem[] {
   if (!userKey || typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(HISTORY_KEY_PREFIX + userKey);
+    let raw = localStorage.getItem(HISTORY_KEY_PREFIX + userKey);
+    if (!raw) {
+      const legacyKey = LEGACY_HISTORY_KEY_PREFIX + userKey;
+      raw = localStorage.getItem(legacyKey);
+      if (raw) {
+        localStorage.setItem(HISTORY_KEY_PREFIX + userKey, raw);
+        localStorage.removeItem(legacyKey);
+      }
+    }
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -285,7 +293,7 @@ function ImagesPage() {
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = (user as { id?: string } | null)?.id ?? null;
   const [settings, setSettings] = useNovaSettings(userKey, isLoaded);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
   const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
@@ -315,15 +323,31 @@ function ImagesPage() {
   const [savingImage, setSavingImage] = useState(false);
   const saveImage = useServerFn(saveToLibrary);
   const submittingRef = useRef(false);
+  const generationRef = useRef(0);
+  const generationControllerRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const lightboxInitialFocusRef = useRef<HTMLButtonElement>(null);
   const lightboxReturnFocusRef = useRef<HTMLElement | null>(null);
   const lightboxReturnToPromptRef = useRef(false);
 
   useEffect(() => {
-    if (isSignedIn && userKey) setHistory(loadHistory(userKey));
-    else setHistory([]);
-  }, [isSignedIn, userKey]);
+    generationRef.current += 1;
+    generationControllerRef.current?.abort();
+    generationControllerRef.current = null;
+    submittingRef.current = false;
+    setLoading(false);
+    setPrompt("");
+    setError(null);
+    setResult(null);
+    setResultPrompt("");
+    setLightbox(null);
+    setSavingImage(false);
+    setLoginOpen(false);
+    setLimitOpen(false);
+    setLimitMessage(undefined);
+    setHistory(isLoaded && isSignedIn && userKey ? loadHistory(userKey) : []);
+    return () => generationControllerRef.current?.abort();
+  }, [isLoaded, isSignedIn, userKey]);
 
   function addToHistory(p: string, imageUrl: string) {
     if (!isSignedIn || !userKey) return;
@@ -418,33 +442,49 @@ function ImagesPage() {
       return;
     }
     submittingRef.current = true;
+    const generation = ++generationRef.current;
+    const controller = new AbortController();
+    generationControllerRef.current?.abort();
+    generationControllerRef.current = controller;
     setError(null);
-    setResult(null);
     setLoading(true);
     try {
       const res = await authFetch("/api/generate-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: trimmed }),
+        signal: controller.signal,
       });
-      const data = await res.json();
+      const contentType = res.headers.get("content-type")?.toLowerCase() ?? "";
+      if (!contentType.includes("application/json")) {
+        throw new Error("Image service returned an invalid response");
+      }
+      const data = (await res.json()) as { error?: unknown; imageUrl?: unknown };
+      if (generation !== generationRef.current || controller.signal.aborted) return;
       if (!res.ok) {
-        const msg = data?.error || "Failed to generate image";
+        const msg = typeof data.error === "string" ? data.error : "Failed to generate image";
         if (res.status === 429 && /limit/i.test(msg)) {
           setLimitMessage(msg);
           setLimitOpen(true);
         }
         throw new Error(msg);
       }
+      if (typeof data.imageUrl !== "string" || !/^https?:\/\//i.test(data.imageUrl)) {
+        throw new Error("Image service returned an invalid image");
+      }
       setResult(data.imageUrl);
       setResultPrompt(trimmed);
       addToHistory(trimmed, data.imageUrl);
       setPrompt("");
     } catch (e) {
+      if (controller.signal.aborted || generation !== generationRef.current) return;
       setError(e instanceof Error ? e.message : "Failed to generate image");
     } finally {
-      setLoading(false);
-      submittingRef.current = false;
+      if (generation === generationRef.current) {
+        setLoading(false);
+        submittingRef.current = false;
+        generationControllerRef.current = null;
+      }
     }
   }
 
@@ -594,7 +634,7 @@ function ImagesPage() {
                         disabled={loading}
                         className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full border border-border hover:bg-accent transition disabled:opacity-50"
                       >
-                        <RefreshCw className="h-4 w-4" /> Create variation
+                        <RefreshCw className="h-4 w-4" /> Generate again
                       </button>
                       <button
                         type="button"
@@ -704,19 +744,14 @@ function ImagesPage() {
             className="max-w-3xl mx-auto px-4 sm:px-6 py-3"
           >
             <div className="flex items-end gap-2 rounded-3xl border border-border bg-card shadow-sm px-3 py-2.5">
-              <button
-                type="button"
-                aria-label="Attach"
-                className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent transition shrink-0"
-              >
-                <Paperclip className="w-5 h-5" />
-              </button>
               <textarea
                 ref={inputRef}
                 value={prompt}
+                aria-label="Describe the image to generate"
+                maxLength={2000}
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
+                  if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                     e.preventDefault();
                     generate(prompt);
                   }
@@ -732,7 +767,7 @@ function ImagesPage() {
               <button
                 type="submit"
                 disabled={!prompt.trim() || loading}
-                className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center disabled:opacity-30 hover:opacity-90 transition shrink-0"
+                className="w-11 h-11 rounded-full bg-foreground text-background flex items-center justify-center disabled:opacity-30 hover:opacity-90 transition shrink-0"
                 aria-label="Generate"
               >
                 {loading ? (
@@ -833,7 +868,7 @@ function ImagesPage() {
                   }}
                   className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
                 >
-                  <RefreshCw className="h-4 w-4" /> Create variation
+                  <RefreshCw className="h-4 w-4" /> Generate again
                 </button>
                 <button
                   onClick={() => saveGeneratedImage(lightbox)}
