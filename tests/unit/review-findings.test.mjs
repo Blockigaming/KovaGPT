@@ -156,6 +156,7 @@ test("scheduled task surfaces stay truthful while the runner is disabled", () =>
   const sidebar = read("src/components/Sidebar.tsx");
   const palette = read("src/components/CommandPalette.tsx");
   const capabilities = read("src/platform/capabilities.ts");
+  const capabilityRegistry = read("src/lib/capability-registry.ts");
   const help = read("src/routes/help.tsx");
   const study = read("src/routes/study-assistant.tsx");
   const product = read("src/lib/product-completeness.server.ts");
@@ -169,8 +170,11 @@ test("scheduled task surfaces stay truthful while the runner is disabled", () =>
   assert.match(sidebar, /Scheduled tasks status/);
   assert.match(palette, /Scheduled Tasks status/);
   assert.match(capabilities, /label: "Scheduled Tasks status"/);
-  assert.match(help, /Scheduled task execution is not available in this deployment/);
-  assert.match(help, /no background task runner is deployed/);
+  assert.match(
+    capabilityRegistry,
+    /Background scheduled execution is unavailable in this deployment/,
+  );
+  assert.match(capabilityRegistry, /Previously saved task records can still be managed/);
   assert.doesNotMatch(help, /image generation, scheduled tasks/);
   assert.doesNotMatch(study, /scheduled reminders/i);
   assert.match(product, /title: "Scheduled execution unavailable"/);
