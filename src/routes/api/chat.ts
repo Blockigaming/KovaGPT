@@ -44,10 +44,35 @@ import {
   toChatIngressErrorEnvelope,
   type ChatUserContext,
 } from "@/lib/chat-ingress.server.mjs";
+import {
+  createBoundedProviderSseStream,
+  readProviderJsonObject,
+  readProviderText,
+} from "@/lib/provider-response.server.mjs";
 
 type ChatContentPart =
   | { type: "text"; text: string }
   | { type: "image_url"; image_url: { url: string } };
+
+type ToolCall = {
+  id: string;
+  type: "function";
+  function: { name: string; arguments: string };
+};
+type AssistantMsg = {
+  role: "assistant";
+  content: string | null;
+  tool_calls?: ToolCall[];
+};
+type ToolResultMsg = {
+  role: "tool";
+  tool_call_id: string;
+  content: string;
+};
+type ChatMsg =
+  | { role: string; content: unknown; [key: string]: unknown }
+  | AssistantMsg
+  | ToolResultMsg;
 
 type ChainableQueryLike = {
   select: (columns: string) => ChainableQueryLike;
@@ -69,6 +94,10 @@ const UNRESTRICTED_INSTRUCTION = "";
 const ACCURACY_INSTRUCTION = "";
 const CHART_INSTRUCTION = "";
 const CREATOR_INSTRUCTION = "";
+const MAX_IMAGE_PROVIDER_RESPONSE_BYTES = 16 * 1024 * 1024;
+const MAX_TOOL_HOP_RESPONSE_BYTES = 2 * 1024 * 1024;
+const MAX_ERROR_RESPONSE_BYTES = 64 * 1024;
+const MAX_CHAT_STREAM_BYTES = 8 * 1024 * 1024;
 type SafeLogContext = { requestId: string; startedAt: number };
 type SafeLogCategory = "provider" | "optional_context" | "policy" | "server";
 
@@ -129,6 +158,73 @@ function sseEvent(obj: Record<string, unknown>) {
 
 function sseDone() {
   return `data: [DONE]\n\n`;
+}
+
+function parseToolHopResponse(
+  raw: Record<string, unknown>,
+): { message: AssistantMsg; finishReason?: string } | null {
+  if (!Array.isArray(raw.choices) || raw.choices.length < 1 || raw.choices.length > 4) {
+    return null;
+  }
+  const choice = raw.choices[0];
+  if (!choice || typeof choice !== "object" || Array.isArray(choice)) return null;
+  const fields = choice as Record<string, unknown>;
+  const candidate = fields.message;
+  if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) return null;
+  const message = candidate as Record<string, unknown>;
+  if (message.role !== "assistant") return null;
+  if (message.content !== null && typeof message.content !== "string") return null;
+  if (typeof message.content === "string" && message.content.length > 1_000_000) return null;
+
+  let toolCalls: ToolCall[] | undefined;
+  if (message.tool_calls !== undefined) {
+    if (!Array.isArray(message.tool_calls) || message.tool_calls.length > 16) return null;
+    toolCalls = [];
+    for (const item of message.tool_calls) {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+      const toolCall = item as Record<string, unknown>;
+      const fn = toolCall.function;
+      if (
+        typeof toolCall.id !== "string" ||
+        !/^[A-Za-z0-9_-]{1,200}$/u.test(toolCall.id) ||
+        toolCall.type !== "function" ||
+        !fn ||
+        typeof fn !== "object" ||
+        Array.isArray(fn)
+      ) {
+        return null;
+      }
+      const functionFields = fn as Record<string, unknown>;
+      if (
+        typeof functionFields.name !== "string" ||
+        !/^[A-Za-z0-9_-]{1,100}$/u.test(functionFields.name) ||
+        typeof functionFields.arguments !== "string" ||
+        functionFields.arguments.length > 64 * 1024
+      ) {
+        return null;
+      }
+      toolCalls.push({
+        id: toolCall.id,
+        type: "function",
+        function: {
+          name: functionFields.name,
+          arguments: functionFields.arguments,
+        },
+      });
+    }
+  }
+  const finishReason =
+    typeof fields.finish_reason === "string" && fields.finish_reason.length <= 50
+      ? fields.finish_reason
+      : undefined;
+  return {
+    message: {
+      role: "assistant",
+      content: message.content as string | null,
+      ...(toolCalls ? { tool_calls: toolCalls } : {}),
+    },
+    finishReason,
+  };
 }
 
 async function handleDeepResearchRequest(
@@ -247,7 +343,7 @@ async function handleImageRequest(prompt: string, logContext: SafeLogContext): P
         // delete flow must also remove the stored object via supabaseAdmin.storage
         // .from(<bucket>).remove([path]) with a server-side ownership check.
 
-        const data = await upstream.json();
+        const data = await readProviderJsonObject(upstream, MAX_IMAGE_PROVIDER_RESPONSE_BYTES);
         const item = (data as { data?: Array<{ b64_json?: string; url?: string }> }).data?.[0];
         const imageUrl = item?.b64_json
           ? `data:image/png;base64,${item.b64_json}`
@@ -292,7 +388,7 @@ export const Route = createFileRoute("/api/chat")({
         const requestId = newRequestId();
         const startedAt = Date.now();
         const logContext: SafeLogContext = { requestId, startedAt };
-        const withRequestId = (res: Response): Response => {
+        const withRequestId = async (res: Response): Promise<Response> => {
           try {
             const h = new Headers(res.headers);
             if (!h.has("X-Request-Id")) h.set("X-Request-Id", requestId);
@@ -301,26 +397,26 @@ export const Route = createFileRoute("/api/chat")({
             const ct = h.get("Content-Type") ?? "";
             // Enrich JSON error bodies with requestId + category envelope.
             if (res.status >= 400 && ct.includes("application/json") && res.body) {
-              return new Response(
-                new ReadableStream({
-                  async start(controller) {
-                    const text = await res.clone().text();
-                    let parsed: Record<string, unknown>;
-                    try {
-                      parsed = JSON.parse(text);
-                    } catch {
-                      parsed = { error: text || "Request failed" };
-                    }
-                    if (!parsed.requestId) parsed.requestId = requestId;
-                    if (!parsed.category)
-                      parsed.category = categorizeError(parsed.error, res.status);
-                    if (!parsed.timestamp) parsed.timestamp = new Date().toISOString();
-                    controller.enqueue(new TextEncoder().encode(JSON.stringify(parsed)));
-                    controller.close();
-                  },
-                }),
-                { status: res.status, headers: h },
-              );
+              let parsed: Record<string, unknown>;
+              try {
+                const text = await readProviderText(res, MAX_ERROR_RESPONSE_BYTES);
+                const value = JSON.parse(text) as unknown;
+                parsed =
+                  value && typeof value === "object" && !Array.isArray(value)
+                    ? (value as Record<string, unknown>)
+                    : { error: "Request failed" };
+              } catch {
+                parsed = { error: "Request failed" };
+              }
+              if (!parsed.requestId) parsed.requestId = requestId;
+              if (!parsed.category) parsed.category = categorizeError(parsed.error, res.status);
+              if (!parsed.timestamp) parsed.timestamp = new Date().toISOString();
+              h.delete("Content-Length");
+              h.delete("Content-Encoding");
+              return new Response(JSON.stringify(parsed), {
+                status: res.status,
+                headers: h,
+              });
             }
             return new Response(res.body, {
               status: res.status,
@@ -878,26 +974,6 @@ export const Route = createFileRoute("/api/chat")({
                 : [];
             const enableTools = availableTools.length > 0;
 
-            type ToolCall = {
-              id: string;
-              type: "function";
-              function: { name: string; arguments: string };
-            };
-            type AssistantMsg = {
-              role: "assistant";
-              content: string | null;
-              tool_calls?: ToolCall[];
-            };
-            type ToolResultMsg = {
-              role: "tool";
-              tool_call_id: string;
-              content: string;
-            };
-            type ChatMsg =
-              | { role: string; content: unknown; [k: string]: unknown }
-              | AssistantMsg
-              | ToolResultMsg;
-
             const workingMessages: ChatMsg[] = [...(body.messages as unknown as ChatMsg[])];
             const activityEvents: Array<{
               tool: string;
@@ -975,18 +1051,25 @@ export const Route = createFileRoute("/api/chat")({
                   });
                   break;
                 }
-                const hopJson = (await hopRes.json()) as {
-                  choices?: Array<{
-                    finish_reason?: string;
-                    message?: AssistantMsg;
-                  }>;
-                };
-                const msg = hopJson.choices?.[0]?.message;
-                const finish = hopJson.choices?.[0]?.finish_reason;
-                if (!msg) {
+                let parsedHop: ReturnType<typeof parseToolHopResponse>;
+                try {
+                  parsedHop = parseToolHopResponse(
+                    await readProviderJsonObject(hopRes, MAX_TOOL_HOP_RESPONSE_BYTES),
+                  );
+                } catch {
+                  parsedHop = null;
+                }
+                if (!parsedHop) {
                   hopFailed = true;
+                  logSafeFailure("warn", "[chat] invalid tool-hop response", logContext, {
+                    status: 502,
+                    category: "provider",
+                    code: "tool_hop_invalid_response",
+                  });
                   break;
                 }
+                const msg = parsedHop.message;
+                const finish = parsedHop.finishReason;
                 if (!msg.tool_calls || msg.tool_calls.length === 0) {
                   if (toolsWereUsed && typeof msg.content === "string" && msg.content) {
                     const enc = new TextEncoder();
@@ -1267,8 +1350,34 @@ export const Route = createFileRoute("/api/chat")({
               });
             }
 
-            // If any tools ran, prepend their activity events to the stream
-            // so the client renders them inline as the assistant speaks.
+            let boundedUpstreamBody: ReadableStream<Uint8Array>;
+            try {
+              boundedUpstreamBody = await createBoundedProviderSseStream(
+                upstream,
+                MAX_CHAT_STREAM_BYTES,
+                request.signal,
+              );
+            } catch {
+              if (request.signal?.aborted) return new Response(null, { status: 499 });
+              logSafeFailure("error", "[chat] final provider response rejected", logContext, {
+                status: 502,
+                category: "provider",
+                code: "final_provider_invalid_response",
+              });
+              return new Response(
+                JSON.stringify({
+                  error: "AI service returned an invalid response. Please try again.",
+                }),
+                {
+                  status: 502,
+                  headers: { "Content-Type": "application/json" },
+                },
+              );
+            }
+
+            // Prepend tool activity, then proxy every provider byte through the
+            // bounded stream so a successful-but-runaway response cannot grow
+            // memory or bandwidth without limit.
             const pendingForStream =
               (
                 activityEvents as unknown as {
@@ -1280,81 +1389,74 @@ export const Route = createFileRoute("/api/chat")({
                   }>;
                 }
               ).__pending ?? [];
-            if ((activityEvents.length > 0 || pendingForStream.length > 0) && upstream.body) {
-              const enc = new TextEncoder();
-              const upstreamReader = upstream.body.getReader();
-              const stream = new ReadableStream({
-                async start(controller) {
-                  const onAbort = () => {
-                    try {
-                      upstreamReader.cancel();
-                    } catch {
-                      /* noop */
-                    }
-                    try {
-                      controller.close();
-                    } catch {
-                      /* noop */
-                    }
-                  };
-                  request.signal?.addEventListener("abort", onAbort, {
-                    once: true,
-                  });
-                  for (const a of activityEvents) {
+            const enc = new TextEncoder();
+            const upstreamReader = boundedUpstreamBody.getReader();
+            const stream = new ReadableStream({
+              async start(controller) {
+                for (const a of activityEvents) {
+                  controller.enqueue(
+                    enc.encode(
+                      sseEvent({
+                        kind: "activity",
+                        tool: a.tool,
+                        label: a.label,
+                        status: "done",
+                      }),
+                    ),
+                  );
+                }
+                for (const p of pendingForStream) {
+                  controller.enqueue(
+                    enc.encode(
+                      sseEvent({
+                        kind: "tool_confirm",
+                        action_id: p.id,
+                        tool: p.tool,
+                        summary: p.summary,
+                        args_preview: p.args_preview,
+                      }),
+                    ),
+                  );
+                }
+                try {
+                  while (true) {
+                    const { done, value } = await upstreamReader.read();
+                    if (done) break;
+                    controller.enqueue(value);
+                  }
+                } catch {
+                  if (!request.signal?.aborted) {
+                    logSafeFailure("error", "[chat] final provider stream stopped", logContext, {
+                      status: 502,
+                      category: "provider",
+                      code: "final_provider_stream_limit",
+                    });
                     controller.enqueue(
                       enc.encode(
-                        sseEvent({
-                          kind: "activity",
-                          tool: a.tool,
-                          label: a.label,
-                          status: "done",
-                        }),
+                        sseChunk(
+                          "\n\n_The response stopped because the AI provider exceeded KovaGPT's safe response limit. Please retry with a narrower request._",
+                        ),
                       ),
                     );
+                    controller.enqueue(enc.encode(sseDone()));
                   }
-                  for (const p of pendingForStream) {
-                    controller.enqueue(
-                      enc.encode(
-                        sseEvent({
-                          kind: "tool_confirm",
-                          action_id: p.id,
-                          tool: p.tool,
-                          summary: p.summary,
-                          args_preview: p.args_preview,
-                        }),
-                      ),
-                    );
-                  }
-                  try {
-                    while (true) {
-                      const { done, value } = await upstreamReader.read();
-                      if (done) break;
-                      controller.enqueue(value);
-                    }
-                  } catch {
-                    // client disconnect or upstream tore down - end gracefully
-                  }
-                  request.signal?.removeEventListener("abort", onAbort);
-                  try {
-                    controller.close();
-                  } catch {
-                    /* already closed */
-                  }
-                },
-              });
+                }
+                try {
+                  controller.close();
+                } catch {
+                  /* already closed */
+                }
+              },
+              async cancel(reason) {
+                await upstreamReader.cancel(reason).catch(() => undefined);
+              },
+            });
 
-              return new Response(stream, {
-                headers: {
-                  "Content-Type": "text/event-stream",
-                  "Cache-Control": "no-cache",
-                },
-              });
-            }
-
-            return new Response(upstream.body, {
+            return new Response(stream, {
               headers: {
                 "Content-Type": "text/event-stream",
                 "Cache-Control": "no-cache",
+                "X-Kova-Stream-Limit-Bytes": String(MAX_CHAT_STREAM_BYTES),
               },
             });
           } catch (e) {
@@ -1372,7 +1474,7 @@ export const Route = createFileRoute("/api/chat")({
             });
           }
         };
-        return withRequestId(await run());
+        return await withRequestId(await run());
       },
     },
   },
