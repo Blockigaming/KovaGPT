@@ -1,4 +1,5 @@
 import { renderErrorPage } from "./lib/error-page";
+import { rejectUnsupportedApiMethod } from "./lib/api-method-policy.server.mjs";
 import { rejectCrossSiteRequest } from "./lib/http-security.server";
 
 import { withRuntimeBindings } from "./lib/runtime-env.server";
@@ -114,6 +115,8 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const methodRejected = rejectUnsupportedApiMethod(request);
+      if (methodRejected) return hardenResponse(methodRejected);
       if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
         const rejected = rejectCrossSiteRequest(request);
         if (rejected) return hardenResponse(rejected);
