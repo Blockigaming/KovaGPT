@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { waitForKovaHydration } from "./hydration";
+
 const routes = [
   "/",
   "/ai-humanizer",
@@ -65,6 +67,7 @@ test("guest chat, authentication, command palette, and mobile navigation stay op
 }, testInfo) => {
   test.skip(testInfo.project.name !== "phone-390x844");
   await page.goto("/");
+  await waitForKovaHydration(page);
   await expect(page.getByRole("textbox", { name: /message kovagpt/i })).toBeVisible();
   await page.getByRole("button", { name: /open menu/i }).click();
   await expect(page.getByRole("dialog", { name: /primary navigation/i })).toBeVisible();

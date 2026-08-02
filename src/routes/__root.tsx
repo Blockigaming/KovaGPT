@@ -5,6 +5,7 @@ import {
   createRootRouteWithContext,
   useRouter,
   HeadContent,
+  ScriptOnce,
   Scripts,
 } from "@tanstack/react-router";
 
@@ -15,8 +16,47 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings } from "@/lib/use-nova-settings";
 import { isPublicIndexableRoute, robotsDirectiveForRoute } from "@/lib/seo-policy.mjs";
-import { useEffect, useLayoutEffect } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { PlatformRuntime } from "@/components/PlatformRuntime";
+
+const HYDRATION_READY_EVENT = "kova:hydrated";
+const EARLY_SHORTCUT_BOOTSTRAP = `(() => {
+  const pendingShortcuts = [];
+  const captureShortcut = (event) => {
+    const key = event.key.toLowerCase();
+    if (
+      event.defaultPrevented ||
+      event.repeat ||
+      event.isComposing ||
+      event.altKey ||
+      (!event.metaKey && !event.ctrlKey) ||
+      (key !== "k" && !(event.shiftKey && key === "o"))
+    ) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    pendingShortcuts.push({
+      key: event.key,
+      code: event.code,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      shiftKey: event.shiftKey,
+    });
+    if (pendingShortcuts.length > 4) pendingShortcuts.shift();
+  };
+  const replayShortcuts = () => {
+    window.removeEventListener("keydown", captureShortcut, true);
+    for (const shortcut of pendingShortcuts) {
+      window.dispatchEvent(new KeyboardEvent("keydown", {
+        ...shortcut,
+        bubbles: true,
+        cancelable: true,
+      }));
+    }
+    pendingShortcuts.length = 0;
+  };
+  window.addEventListener("keydown", captureShortcut, true);
+  window.addEventListener("${HYDRATION_READY_EVENT}", replayShortcuts, { once: true });
+})();`;
 
 type SeoMatch = {
   pathname: string;
@@ -107,15 +147,26 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     return {
       meta: [
         { charSet: "utf-8" },
-        { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+        {
+          name: "viewport",
+          content: "width=device-width, initial-scale=1, viewport-fit=cover",
+        },
         {
           httpEquiv: "Accept-CH",
           content:
             "Sec-CH-UA-Mobile, Sec-CH-UA-Platform, Sec-CH-UA-Platform-Version, Sec-CH-UA, Sec-CH-Viewport-Width, Sec-CH-DPR",
         },
         { name: "format-detection", content: "telephone=no" },
-        { name: "theme-color", content: "#ffffff", media: "(prefers-color-scheme: light)" },
-        { name: "theme-color", content: "#0a0a0a", media: "(prefers-color-scheme: dark)" },
+        {
+          name: "theme-color",
+          content: "#ffffff",
+          media: "(prefers-color-scheme: light)",
+        },
+        {
+          name: "theme-color",
+          content: "#0a0a0a",
+          media: "(prefers-color-scheme: dark)",
+        },
         { name: "color-scheme", content: "light dark" },
         { name: "apple-mobile-web-app-capable", content: "yes" },
         { name: "apple-mobile-web-app-status-bar-style", content: "default" },
@@ -146,7 +197,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         { rel: "alternate icon", type: "image/png", href: "/favicon.png" },
         { rel: "apple-touch-icon", href: "/favicon.svg" },
         { rel: "preconnect", href: "https://fonts.googleapis.com" },
-        { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+        {
+          rel: "preconnect",
+          href: "https://fonts.gstatic.com",
+          crossOrigin: "anonymous",
+        },
         {
           rel: "stylesheet",
           href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap",
@@ -189,15 +244,41 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning data-kova-hydration="pending" aria-busy="true">
       <head>
         <HeadContent />
       </head>
       <body>
-        {children}
+        <ScriptOnce>{EARLY_SHORTCUT_BOOTSTRAP}</ScriptOnce>
+        <HydrationInteractionGuard>{children}</HydrationInteractionGuard>
         <Scripts />
       </body>
     </html>
+  );
+}
+
+function HydrationInteractionGuard({ children }: { children: React.ReactNode }) {
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    document.documentElement.dataset.kovaHydration = "ready";
+    document.documentElement.removeAttribute("aria-busy");
+    window.dispatchEvent(new Event(HYDRATION_READY_EVENT));
+  }, [hydrated]);
+
+  return (
+    <fieldset
+      disabled={!hydrated}
+      data-kova-interaction-guard={hydrated ? "ready" : "pending"}
+      className="contents"
+    >
+      {children}
+    </fieldset>
   );
 }
 
@@ -211,7 +292,9 @@ function RootThemeManager() {
 
   useEffect(() => {
     if (!isLoaded) return;
-    const loaded = loadSettings(userKey, { migrateLegacyGuest: userKey === null });
+    const loaded = loadSettings(userKey, {
+      migrateLegacyGuest: userKey === null,
+    });
     applyThemeMode(loaded.mode ?? "system");
   }, [isLoaded, userKey]);
 

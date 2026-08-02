@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { waitForKovaHydration } from "./hydration";
+
 const mobileProjects = new Set([
   "phone-320x700",
   "phone-375x812",
@@ -24,6 +26,7 @@ test.beforeEach(({ page }, testInfo) => {
 
 test("navigation opens, contains its controls, and dismisses predictably", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
   await page.getByRole("button", { name: "Open menu" }).click();
   const navigation = page.getByRole("dialog", { name: "Primary navigation" });
   await expect(navigation).toBeVisible();
@@ -38,6 +41,7 @@ test("navigation opens, contains its controls, and dismisses predictably", async
 
 test("composer and attachment sheet stay reachable on narrow screens", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
   const composer = page.locator(".kova-composer");
   await expect(composer).toBeVisible();
   const box = await composer.boundingBox();
@@ -55,11 +59,13 @@ test("composer and attachment sheet stay reachable on narrow screens", async ({ 
 test("mobile workspaces and settings never overflow", async ({ page }) => {
   for (const route of ["/projects", "/library", "/apps", "/scheduled-tasks", "/reset-password"]) {
     await page.goto(route, { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
     await expect(page.locator("body")).toBeVisible();
     await expectNoPageOverflow(page);
   }
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
   await page.getByRole("button", { name: "Open menu" }).click();
   await page.getByRole("button", { name: "Settings" }).click({ force: true });
   const settings = page.locator(".kova-settings-dialog");
@@ -101,6 +107,7 @@ test("long rich assistant output scrolls locally instead of widening the page", 
     );
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
   await page.getByRole("button", { name: "Open menu" }).click();
   await page.getByRole("button", { name: /Open chat A very long conversation/ }).click();
   await expect(page.getByRole("heading", { name: "Mobile report" })).toBeVisible();
