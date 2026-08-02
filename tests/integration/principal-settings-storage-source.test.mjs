@@ -57,7 +57,7 @@ test("the legacy settings fallback is gated to an explicit guest migration", asy
   );
 });
 
-test("account deletion and local-device clear remove only bounded current-principal browser data", async () => {
+test("account, memory, and local-device deletion keep their storage scopes distinct", async () => {
   const [settings, home, images] = await Promise.all([
     read("src/components/SettingsDialog.tsx"),
     read("src/routes/index.tsx"),
@@ -70,8 +70,9 @@ test("account deletion and local-device clear remove only bounded current-princi
   );
   assert.match(
     settings,
-    /clearConversations\(userKey\);\s*onClearAll\(\);\s*toast\.success\("All conversation memory cleared\."\)/,
+    /deleteSavedMemoryAfterDraining\(\{[\s\S]{0,500}authFetch\("\/api\/memory", \{ method: "DELETE" \}\)/,
   );
+  assert.doesNotMatch(settings, /All conversation memory cleared/);
   assert.match(
     settings,
     /clearPrincipalChatStorage\(userKey\);\s*clearPrincipalPreferences\(userKey\);\s*onChange\(DEFAULT_SETTINGS\);\s*onClearAll\(\);\s*toast\.success\("Local storage cleared\."\)/,

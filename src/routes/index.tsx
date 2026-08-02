@@ -41,6 +41,13 @@ const ShareChatDialog = lazy(() =>
 );
 import { applyThemeMode } from "@/lib/theme";
 import { loadSettings, settingsKey } from "@/lib/use-nova-settings";
+import {
+  blockMemoryWrites,
+  configureMemoryWrites,
+  enqueueMemoryWrite,
+  isMemoryWriteBlocked,
+  memoryWriteBlockStorageKey,
+} from "@/lib/memory-write-coordinator.mjs";
 
 import { getUsage } from "@/lib/limits";
 
@@ -294,6 +301,8 @@ function KovaGPT() {
   const [shareChatId, setShareChatId] = useState<string | null>(null);
 
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [settingsPrincipal, setSettingsPrincipal] = useState<string | null>(null);
+  const settingsReady = isLoaded && settingsPrincipal === storagePrincipal;
   const [signupPromptOpen, setSignupPromptOpen] = useState(false);
   const [signupPromptShown, setSignupPromptShown] = useState(false);
   const [limitDialog, setLimitDialog] = useState<{
@@ -314,6 +323,7 @@ function KovaGPT() {
   useEffect(() => {
     if (!isLoaded) {
       setConversationState({ principal: null, items: [] });
+      setSettingsPrincipal(null);
       return;
     }
     abortRef.current?.abort();
@@ -334,6 +344,7 @@ function KovaGPT() {
 
     const loaded = loadSettings(userKey, { migrateLegacyGuest: userKey === null });
     setSettings(loaded);
+    setSettingsPrincipal(storagePrincipal);
     applyThemeMode(loaded.mode ?? "system");
     // Keep each signed-in account and the guest workspace in a separate
     // browser namespace. Switching accounts must render empty until the new
@@ -359,12 +370,12 @@ function KovaGPT() {
   // Debounced persistence - avoid JSON.stringify on every keystroke / stream token,
   // which was the main source of typing/streaming lag.
   useEffect(() => {
-    if (!isLoaded || typeof window === "undefined") return;
+    if (!settingsReady || typeof window === "undefined") return;
     const t = setTimeout(() => {
       localStorage.setItem(settingsKey(userKey), JSON.stringify(settings));
     }, 400);
     return () => clearTimeout(t);
-  }, [isLoaded, settings, userKey]);
+  }, [settings, settingsReady, userKey]);
 
   useEffect(() => {
     if (!principalReady) return;
@@ -499,32 +510,85 @@ function KovaGPT() {
     }
   }, [activeMessageCount, latestMessageContent, isStreaming]);
 
-  // Cross-chat memory: when an active conversation has been updated and
-  // we're not mid-stream, debounce a summary save server-side. The
-  // endpoint silently no-ops for free users.
   useEffect(() => {
-    if (!isSignedIn || isStreaming) return;
+    if (!settingsReady) return;
+    if (userKey && !settings.rememberAcross) blockMemoryWrites(userKey);
+    configureMemoryWrites({
+      principal: userKey,
+      enabled: Boolean(isSignedIn && settings.rememberAcross && tier !== "free"),
+    });
+  }, [isSignedIn, settings.rememberAcross, settingsReady, tier, userKey]);
+
+  useEffect(() => {
+    if (!settingsReady || !userKey) return;
+    const blockKey = memoryWriteBlockStorageKey(userKey);
+    const applySharedBlock = () => {
+      if (!isMemoryWriteBlocked(userKey)) return;
+      setSettings((previous) =>
+        previous.rememberAcross ? { ...previous, rememberAcross: false } : previous,
+      );
+    };
+    applySharedBlock();
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === blockKey && event.newValue === "1") applySharedBlock();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [settingsReady, userKey]);
+
+  // Cross-chat memory is opt-in in each browser. Only eligible paid accounts
+  // may enqueue bounded, non-temporary conversation windows for summarization.
+  useEffect(() => {
+    if (
+      !settingsReady ||
+      !isSignedIn ||
+      !userKey ||
+      isStreaming ||
+      !settings.rememberAcross ||
+      tier === "free"
+    )
+      return;
     if (!active || active.temporary || active.messages.length < 4) return;
     const handle = setTimeout(() => {
       const payload = {
         chatId: active.id,
         title: active.title.slice(0, 120),
+        memoryEnabled: true,
+        temporary: false,
         // The memory endpoint intentionally accepts only the latest bounded window.
         messages: active.messages
           .slice(-30)
           .map((message) => ({ role: message.role, content: message.content.slice(0, 2000) })),
       };
-      authFetch("/api/memory", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      void enqueueMemoryWrite({
+        principal: userKey,
+        run: async () => {
+          const response = await authFetch("/api/memory", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (!response.ok) {
+            void response.body?.cancel().catch(() => undefined);
+            throw new Error("memory_write_failed");
+          }
+        },
       }).catch(() => {
-        /* best-effort */
+        /* Saved memory is best-effort; foreground chat must remain usable. */
       });
     }, 4000);
     return () => clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active?.id, active?.messages.length, isStreaming, isSignedIn]);
+  }, [
+    active?.id,
+    active?.messages.length,
+    isStreaming,
+    isSignedIn,
+    settings.rememberAcross,
+    settingsReady,
+    tier,
+    userKey,
+  ]);
 
   // After 4 user messages in this session while signed out, prompt to sign up.
   useEffect(() => {
@@ -570,15 +634,17 @@ function KovaGPT() {
         window.setTimeout(() => setTempChatConfirmed(false), 1400);
         toast.success("Temporary chat enabled", {
           description:
-            "Memory is off. This chat won't appear in history or be used for cross-chat memory.",
+            "This chat won't appear in history or be used for cross-chat memory. It also will not use saved profile details, custom instructions, or personality settings.",
         });
       } else {
         toast.message("Temporary chat disabled", {
-          description: "New chats will be saved and use memory again.",
+          description: settings.rememberAcross
+            ? "New chats will be saved on this device and may use saved memory."
+            : "New chats will be saved on this device. Saved memory remains off.",
         });
       }
     },
-    [activeId, newChat, tempChat, userKey],
+    [activeId, newChat, settings.rememberAcross, tempChat, userKey],
   );
 
   const openCommandPalette = useCallback(() => {
@@ -808,32 +874,36 @@ function KovaGPT() {
             clientTool: activeTool,
             chatId: nextConvId,
             temporary: tempChat,
-            user: {
-              name: settings.displayName,
-              pronouns: settings.preferredPronouns,
-              email: settings.email,
-              phone: settings.phone,
-              address: [
-                settings.addressLine1,
-                settings.addressLine2,
-                settings.city,
-                settings.region,
-                settings.postalCode,
-                settings.country,
-              ]
-                .filter(Boolean)
-                .join(", "),
-              extraFacts: settings.extraFacts,
-              customInstructions: settings.customInstructions,
-              mood: settings.mood,
-              responseLength: settings.responseLength,
-              language: settings.language,
-              rememberAcross: settings.rememberAcross,
-              webSearch: settings.webSearch,
-            },
+            user: tempChat
+              ? undefined
+              : {
+                  name: settings.displayName,
+                  pronouns: settings.preferredPronouns,
+                  email: settings.email,
+                  phone: settings.phone,
+                  address: [
+                    settings.addressLine1,
+                    settings.addressLine2,
+                    settings.city,
+                    settings.region,
+                    settings.postalCode,
+                    settings.country,
+                  ]
+                    .filter(Boolean)
+                    .join(", "),
+                  extraFacts: settings.extraFacts,
+                  customInstructions: settings.customInstructions,
+                  mood: settings.mood,
+                  responseLength: settings.responseLength,
+                  language: settings.language,
+                  rememberAcross: settings.rememberAcross,
+                  webSearch: settings.webSearch,
+                },
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             locale: typeof navigator !== "undefined" ? navigator.language : "en-US",
-            personality: personalityToInstruction(loadPersonality()) || undefined,
+            personality: tempChat
+              ? undefined
+              : personalityToInstruction(loadPersonality()) || undefined,
           }),
           signal: controller.signal,
         });
@@ -1324,8 +1394,9 @@ function KovaGPT() {
           <div className="mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-3xl items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm shadow-sm">
             <div className="flex min-w-0 items-center gap-2">
               <MessageSquareDashed className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="truncate">
-                Temporary chat is on. This chat will not use or update memory.
+              <span>
+                Temporary chat is on. It is not saved to history and does not use or update saved
+                memory, profile details, custom instructions, or personality settings.
               </span>
             </div>
             <button

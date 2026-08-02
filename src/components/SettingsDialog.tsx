@@ -81,7 +81,6 @@ import { StorageDashboard } from "@/components/StorageDashboard";
 import { FamilySharingPanel } from "@/components/FamilySharingPanel";
 import { MfaPanel } from "@/components/MfaPanel";
 import {
-  clearConversations,
   clearPrincipalChatStorage,
   loadArchivedConversations,
   loadConversations,
@@ -95,6 +94,12 @@ import {
   LOCATION_KEY_BASE,
   WORKSPACE_DEFAULTS_KEY_BASE,
 } from "@/lib/settings-storage";
+import {
+  allowMemoryWrites,
+  blockMemoryWrites,
+  configureMemoryWrites,
+  deleteSavedMemoryAfterDraining,
+} from "@/lib/memory-write-coordinator.mjs";
 import {
   DEVICE_EXPORT_VERSION,
   mergeConversations,
@@ -149,7 +154,7 @@ export const DEFAULT_SETTINGS: Settings = {
   customInstructions: "",
   mood: "neutral",
   responseLength: "medium",
-  rememberAcross: true,
+  rememberAcross: false,
   webSearch: true,
   sendOnEnter: true,
   mode: "system",
@@ -275,6 +280,8 @@ export function SettingsDialog({
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [deleteAccountBusy, setDeleteAccountBusy] = useState(false);
+  const [clearMemoryConfirmOpen, setClearMemoryConfirmOpen] = useState(false);
+  const [clearMemoryBusy, setClearMemoryBusy] = useState(false);
 
   useEffect(() => {
     if (!open || tab !== "subscription" || !loggedIn) return;
@@ -398,6 +405,46 @@ export function SettingsDialog({
       toast.error("Account deletion could not be completed. Your account remains active.");
     } finally {
       setDeleteAccountBusy(false);
+    }
+  };
+
+  const handleClearSavedMemory = async () => {
+    if (clearMemoryBusy) return;
+    if (!isSignedIn || !userKey) {
+      toast.error("Sign in to delete saved cross-chat memory.");
+      return;
+    }
+
+    setClearMemoryBusy(true);
+    // Block queued writes synchronously and persist the opt-out before waiting
+    // for an already-started summary. The serialized delete then runs last, so
+    // an in-flight POST cannot recreate memory after deletion succeeds.
+    blockMemoryWrites(userKey);
+    configureMemoryWrites({ principal: userKey, enabled: false });
+    onChange({ ...settings, rememberAcross: false });
+
+    try {
+      const result = await deleteSavedMemoryAfterDraining({
+        principal: userKey,
+        run: async () => {
+          const response = await authFetch("/api/memory", { method: "DELETE" });
+          if (!response.ok) {
+            const body = (await response.json().catch(() => null)) as { error?: string } | null;
+            throw new Error(body?.error || "Saved memory could not be deleted. Please try again.");
+          }
+        },
+      });
+      if (result !== "deleted") {
+        throw new Error("Your account changed before saved memory could be deleted. Please retry.");
+      }
+      setClearMemoryConfirmOpen(false);
+      toast.success("Saved cross-chat memory deleted. Memory remains off in this browser.");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Saved memory could not be deleted. Please retry.";
+      toast.error(`${message} Memory remains off in this browser.`);
+    } finally {
+      setClearMemoryBusy(false);
     }
   };
 
@@ -697,35 +744,41 @@ export function SettingsDialog({
                   <div className="flex items-center gap-2">
                     <Brain className="w-4 h-4" />
                     <h3 className="text-sm font-semibold">Memory</h3>
-                  </div>
-                  <ToggleRow
-                    title="Remember across conversations"
-                    hint="Carry your profile and instructions into every new chat."
-                    checked={settings.rememberAcross}
-                    onCheckedChange={(v) => onChange({ ...settings, rememberAcross: v })}
-                  />
-                </section>
-
-                <section className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4" />
-                    <h3 className="text-sm font-semibold">Adaptive Memory</h3>
                     <span className="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-full bg-foreground/10 text-foreground">
                       Plus
                     </span>
                   </div>
                   {adaptiveMemoryUnlocked ? (
-                    <p className="text-xs text-muted-foreground">
-                      Adaptive Memory is active. KovaGPT continually learns your preferences and
-                      adapts replies.
-                    </p>
+                    <>
+                      <ToggleRow
+                        title="Use saved memory"
+                        hint="When enabled, eligible non-temporary chats sent from this browser can save bounded summaries and use relevant summaries in later chats. Other browsers keep their own setting."
+                        checked={settings.rememberAcross}
+                        onCheckedChange={(value) => {
+                          if (value) allowMemoryWrites(userKey);
+                          else blockMemoryWrites(userKey);
+                          configureMemoryWrites({
+                            principal: userKey,
+                            enabled: value && isSignedIn,
+                          });
+                          onChange({ ...settings, rememberAcross: value });
+                        }}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Turning this off stops saved-memory reads and new summary POSTs from chats
+                        sent in this browser. It does not delete summaries already saved to your
+                        account. Temporary Chat never sends profile, custom-instruction, or
+                        personality settings and never reads or writes saved memory.
+                      </p>
+                    </>
                   ) : (
                     <div className="rounded-lg border border-border p-4 flex items-start gap-3">
                       <Lock className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
                       <div className="flex-1 text-sm">
                         <div className="font-medium">Available on Kova Plus and Pro</div>
                         <div className="text-xs text-muted-foreground mt-1">
-                          Adaptive Memory remembers what matters to you across conversations.
+                          Paid plans can save bounded conversation summaries and use relevant ones
+                          in later non-temporary chats.
                         </div>
                         <Link
                           to="/pricing"
@@ -739,18 +792,24 @@ export function SettingsDialog({
                   )}
                 </section>
 
-                <section>
+                <section className="rounded-lg border border-border p-4 space-y-3">
+                  <div>
+                    <div className="text-sm font-medium">Saved cross-chat memory</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Permanently delete every conversation summary stored for your account. Chats,
+                      drafts, and preferences saved in this browser are not deleted. Memory is
+                      turned off in this browser before deletion so a pending summary cannot
+                      recreate the deleted data.
+                    </p>
+                  </div>
                   <Button
-                    variant="outline"
+                    variant="destructive"
                     size="sm"
-                    onClick={() => {
-                      clearConversations(userKey);
-                      onClearAll();
-                      toast.success("All conversation memory cleared.");
-                    }}
+                    onClick={() => setClearMemoryConfirmOpen(true)}
+                    disabled={clearMemoryBusy || !isSignedIn}
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
-                    Clear all conversations
+                    {clearMemoryBusy ? "Deleting…" : "Delete saved memory"}
                   </Button>
                 </section>
               </TabsContent>
@@ -1434,6 +1493,34 @@ export function SettingsDialog({
         onOpenChange={setLogoutConfirmOpen}
         onConfirm={handleLogout}
       />
+      <AlertDialog
+        open={clearMemoryConfirmOpen}
+        onOpenChange={(next) => {
+          if (!clearMemoryBusy) setClearMemoryConfirmOpen(next);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete saved cross-chat memory?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Memory will first be turned off in this browser and any summary already in progress
+              will finish before deletion runs. This permanently deletes every conversation summary
+              stored for your account. Browser-saved chats are not deleted. This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={clearMemoryBusy}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={handleClearSavedMemory}
+              disabled={clearMemoryBusy}
+            >
+              {clearMemoryBusy ? "Deleting…" : "Delete saved memory"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog
         open={deleteAccountOpen}
         onOpenChange={(next) => {
