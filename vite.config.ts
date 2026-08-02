@@ -6,8 +6,16 @@ import tsconfigPaths from "vite-tsconfig-paths";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 
 const useNodeBrowserPreview = process.env.KOVA_BROWSER_PREVIEW === "node";
+const buildSha = process.env.KOVA_BUILD_SHA || process.env.GITHUB_SHA || "unknown";
+const buildTime = process.env.KOVA_BUILD_TIME || new Date().toISOString();
+const appVersion = process.env.npm_package_version || "0.0.0";
 
 export default defineConfig({
+  define: {
+    "import.meta.env.VITE_KOVA_BUILD_SHA": JSON.stringify(buildSha),
+    "import.meta.env.VITE_KOVA_BUILD_TIME": JSON.stringify(buildTime),
+    "import.meta.env.VITE_KOVA_APP_VERSION": JSON.stringify(appVersion),
+  },
   plugins: [
     tailwindcss(),
     tsconfigPaths({ projects: ["./tsconfig.json"] }),

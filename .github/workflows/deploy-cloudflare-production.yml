@@ -70,6 +70,8 @@ jobs:
 
       - name: Build the Nitro Cloudflare module
         env:
+          KOVA_BUILD_SHA: ${{ github.sha }}
+          KOVA_BUILD_TIME: ${{ github.event.repository.updated_at }}
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
         run: |
@@ -91,3 +93,9 @@ jobs:
             --config dist/server/wrangler.json \
             --name "$KOVA_CLOUDFLARE_WORKER_NAME" \
             --keep-vars
+
+      - name: Verify the exact deployed revision
+        env:
+          KOVA_SMOKE_BASE_URL: https://kovagpt.com
+          KOVA_EXPECTED_SHA: ${{ github.sha }}
+        run: npm run smoke:deployment

@@ -1,0 +1,36 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+
+const read = (path) => readFileSync(path, "utf8");
+
+test("OAuth uses one canonical callback URI", () => {
+  const source = read("src/lib/oauth-session.ts");
+  assert.match(source, /https:\/\/kovagpt\.com\$\{OAUTH_CALLBACK_PATH\}/);
+  assert.match(source, /window\.location\.origin\}\$\{OAUTH_CALLBACK_PATH\}/);
+  assert.doesNotMatch(source, /return "https:\/\/kovagpt\.com\/"/);
+});
+
+test("deployment identity is non-secret, no-store, and verified after deploy", () => {
+  const route = read("src/routes/api/version.ts");
+  const workflow = read(".github/workflows/deploy-cloudflare-production.yml");
+  const smoke = read("scripts/post-deploy-smoke.mjs");
+  assert.match(route, /"X-Kova-Build"/);
+  assert.match(route, /"Cache-Control": "no-store, max-age=0"/);
+  assert.doesNotMatch(route, /process\.env|SUPABASE|SECRET|TOKEN/);
+  assert.match(workflow, /KOVA_BUILD_SHA: \$\{\{ github\.sha \}\}/);
+  assert.match(workflow, /npm run smoke:deployment/);
+  assert.match(smoke, /identity\.sha !== expectedSha/);
+});
+
+test("Images starts closed, has no dead attachment control, and isolates generations", () => {
+  const source = read("src/routes/images.tsx");
+  assert.match(source, /useState\(false\);[\s\S]*generationControllerRef/);
+  assert.match(source, /generationControllerRef\.current\?\.abort\(\)/);
+  assert.match(source, /generation !== generationRef\.current/);
+  assert.match(source, /kovagpt:v2:image-history:/);
+  assert.doesNotMatch(source, /aria-label="Attach"|<Paperclip/);
+  assert.doesNotMatch(source, /Create variation/);
+  assert.match(source, /aria-label="Describe the image to generate"/);
+  assert.match(source, /nativeEvent\.isComposing/);
+});
