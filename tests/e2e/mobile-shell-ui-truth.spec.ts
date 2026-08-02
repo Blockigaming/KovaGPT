@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { waitForKovaHydration } from "./hydration";
 
 test.describe("mobile shell UI truth", () => {
   test("the phone drawer fills the viewport and restores focus", async ({ page }) => {
@@ -9,6 +10,7 @@ test.describe("mobile shell UI truth", () => {
     );
 
     await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
     const opener = page.getByRole("button", { name: "Open menu" });
     await opener.focus();
     await opener.click();
@@ -36,6 +38,7 @@ test.describe("mobile shell UI truth", () => {
 
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
 
     const opener =
       viewport.width < 1024

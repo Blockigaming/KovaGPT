@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { waitForKovaHydration } from "./hydration";
+
 const routes = [
   "/",
   "/ai-humanizer",
@@ -47,9 +49,7 @@ test("implemented routes render without server errors or horizontal overflow", a
   test.skip(testInfo.project.name !== "desktop-1440x900");
   test.setTimeout(90_000);
   for (const route of routes) {
-    // Finish each document load before navigating again. Rapidly aborting
-    // subresource requests can terminate the Cloudflare-backed preview proxy.
-    const response = await page.goto(route, { waitUntil: "load" });
+    const response = await page.goto(route, { waitUntil: "domcontentloaded" });
     expect(response?.status(), `${route} should be implemented`).toBeLessThan(400);
     await expect(page.locator("body")).toBeVisible();
     const overflow = await page.evaluate(() => ({
@@ -60,9 +60,6 @@ test("implemented routes render without server errors or horizontal overflow", a
       overflow.width + 1,
     );
   }
-  // Detach from the local preview origin while this test still owns the page,
-  // so Playwright teardown cannot abort a proxy request after the test returns.
-  await page.goto("about:blank");
 });
 
 test("guest chat, authentication, command palette, and mobile navigation stay operable", async ({
@@ -70,6 +67,7 @@ test("guest chat, authentication, command palette, and mobile navigation stay op
 }, testInfo) => {
   test.skip(testInfo.project.name !== "phone-390x844");
   await page.goto("/");
+  await waitForKovaHydration(page);
   await expect(page.getByRole("textbox", { name: /message kovagpt/i })).toBeVisible();
   await page.getByRole("button", { name: /open menu/i }).click();
   await expect(page.getByRole("dialog", { name: /primary navigation/i })).toBeVisible();
@@ -86,20 +84,24 @@ test("guest chat, authentication, command palette, and mobile navigation stay op
   await page.keyboard.press("Escape");
 });
 
-test("sensitive and AI endpoints reject unauthenticated requests", async ({
+test("sensitive and AI endpoints reject unauthenticated or malformed requests", async ({
   request,
 }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-1440x900");
-  // These handlers intentionally authenticate before reading their bodies.
-  // Keep unauthorized smoke probes bodyless; malformed body contracts belong
-  // to focused parser/API tests and an unread request body can reset the local
-  // Cloudflare preview proxy after the response has already completed.
-  const account = await request.delete("/api/account");
+  const account = await request.delete("/api/account", {
+    data: { confirmation: "DELETE" },
+  });
   expect(account.status()).toBeGreaterThanOrEqual(400);
 
-  const write = await request.post("/api/write");
+  const write = await request.post("/api/write", {
+    headers: { "Content-Type": "application/json" },
+    data: "not-json",
+  });
   expect(write.status()).toBeGreaterThanOrEqual(400);
 
-  const image = await request.post("/api/generate-image");
+  const image = await request.post("/api/generate-image", {
+    headers: { "Content-Type": "application/json" },
+    data: "not-json",
+  });
   expect(image.status()).toBeGreaterThanOrEqual(400);
 });

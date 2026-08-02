@@ -282,9 +282,9 @@ function saveHistory(userKey: string | null, items: HistoryItem[]) {
 
 function ImagesPage() {
   const navigate = useNavigate();
-  const { isSignedIn, user } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
   const userKey = (user as { id?: string } | null)?.id ?? null;
-  const [settings, setSettings] = useNovaSettings(userKey);
+  const [settings, setSettings] = useNovaSettings(userKey, isLoaded);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
@@ -755,10 +755,7 @@ function ImagesPage() {
         returnFocusTarget={settingsReturnFocusRef.current}
         onClearAll={() => {
           try {
-            for (const k of Object.keys(localStorage)) {
-              if (k.startsWith("novagpt-image-history-") || k.startsWith("nova-gpt-conversations"))
-                localStorage.removeItem(k);
-            }
+            if (userKey) localStorage.removeItem(HISTORY_KEY_PREFIX + userKey);
           } catch {
             /* ignore */
           }

@@ -28,7 +28,7 @@ test("externally merged production and security slices coexist on the current ma
   assert.match(deployment, /--config dist\/server\/wrangler\.json/);
   assert.doesNotMatch(deployment, /^  (push|pull_request):/m);
 
-  assert.match(vite, /preset: "cloudflare-module"/);
+  assert.match(vite, /preset:\s*useNodeBrowserPreview \? "node-server" : "cloudflare-module"/);
   assert.match(vite, /output:\s*{\s*dir: "dist"/s);
   assert.match(vite, /serverDir: "dist\/server"/);
   assert.match(vite, /publicDir: "dist\/client"/);

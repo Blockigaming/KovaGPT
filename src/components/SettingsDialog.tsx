@@ -82,11 +82,19 @@ import { FamilySharingPanel } from "@/components/FamilySharingPanel";
 import { MfaPanel } from "@/components/MfaPanel";
 import {
   clearConversations,
+  clearPrincipalChatStorage,
   loadArchivedConversations,
   loadConversations,
   saveArchivedConversations,
   saveConversations,
 } from "@/lib/chat-store";
+import {
+  clearPrincipalPreferences,
+  loadPrincipalStoredRecord,
+  savePrincipalStoredRecord,
+  LOCATION_KEY_BASE,
+  WORKSPACE_DEFAULTS_KEY_BASE,
+} from "@/lib/settings-storage";
 import {
   DEVICE_EXPORT_VERSION,
   mergeConversations,
@@ -247,7 +255,8 @@ export function SettingsDialog({
   }, [open, returnFocusTarget]);
   const localUsage = open ? getUsage() : { images: 0, uploads: 0, date: "" };
 
-  const { isSignedIn, user } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const userKey = user?.id ?? null;
   const sharedSendOnEnter = useSharedSendOnEnter(user?.id ?? null);
   const clerk = useClerk();
   const loggedIn = !clerkEnabled || isSignedIn;
@@ -367,14 +376,21 @@ export function SettingsDialog({
         toast.error(result?.error || "Account deletion failed. Your account remains active.");
         return;
       }
-      clearConversations();
+      clearPrincipalChatStorage(userKey);
+      clearPrincipalPreferences(userKey);
       onClearAll();
       setDeleteAccountOpen(false);
       onOpenChange(false);
       toast.success("Account deletion completed. Active subscriptions were canceled.");
-      // The auth user no longer exists, so remote sign-out can legitimately
-      // fail. The shared sign-out helper always clears this device locally.
-      await clerk?.signOut();
+      // The auth user no longer exists, so a post-delete sign-out failure must
+      // not reclassify the already-completed server deletion as a failure.
+      try {
+        await clerk?.signOut();
+      } catch (error) {
+        console.error("[account-delete] post-delete sign-out failed", {
+          error: error instanceof Error ? error.name : "unknown_error",
+        });
+      }
     } catch (error) {
       console.error("[account-delete] request failed", {
         error: error instanceof Error ? error.name : "unknown_error",
@@ -594,7 +610,7 @@ export function SettingsDialog({
                     </div>
                   </div>
                 </section>
-                <WorkspaceDefaults />
+                <WorkspaceDefaults userKey={userKey} principalResolved={isLoaded} />
               </TabsContent>
 
               {/* PERSONALIZATION */}
@@ -728,7 +744,7 @@ export function SettingsDialog({
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      clearConversations();
+                      clearConversations(userKey);
                       onClearAll();
                       toast.success("All conversation memory cleared.");
                     }}
@@ -1184,7 +1200,7 @@ export function SettingsDialog({
                     required.
                   </p>
                 </div>
-                <LocationPanel />
+                <LocationPanel userKey={userKey} principalResolved={isLoaded} />
               </TabsContent>
 
               {/* SAFETY & SECURITY */}
@@ -1207,7 +1223,7 @@ export function SettingsDialog({
               {/* DATA CONTROL */}
               <TabsContent value="data" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
                 <h3 className="text-sm font-semibold">Data controls</h3>
-                <ArchivedChatsPanel />
+                <ArchivedChatsPanel userKey={userKey} />
                 <div
                   role="note"
                   className="rounded-lg border border-border bg-muted/30 p-4 space-y-2"
@@ -1239,8 +1255,8 @@ export function SettingsDialog({
                         exportedAt: new Date().toISOString(),
                         scope: "this-device",
                         settings,
-                        conversations: loadConversations(),
-                        archivedConversations: loadArchivedConversations(),
+                        conversations: loadConversations(userKey),
+                        archivedConversations: loadArchivedConversations(userKey),
                       };
                       const blob = new Blob([JSON.stringify(payload, null, 2)], {
                         type: "application/json",
@@ -1272,15 +1288,15 @@ export function SettingsDialog({
                     try {
                       const imported = parseDeviceDataExport(await file.text());
                       const conversations = mergeConversations(
-                        loadConversations(),
+                        loadConversations(userKey),
                         imported.conversations,
                       );
                       const archived = mergeConversations(
-                        loadArchivedConversations(),
+                        loadArchivedConversations(userKey),
                         imported.archivedConversations,
                       );
-                      saveConversations(conversations);
-                      saveArchivedConversations(archived);
+                      saveConversations(userKey, conversations);
+                      saveArchivedConversations(userKey, archived);
                       window.dispatchEvent(new Event("kova:conversations-imported"));
                       toast.success(
                         `Imported ${imported.conversations.length + imported.archivedConversations.length} chats.`,
@@ -1323,7 +1339,9 @@ export function SettingsDialog({
                     variant="destructive"
                     size="sm"
                     onClick={() => {
-                      clearConversations();
+                      clearPrincipalChatStorage(userKey);
+                      clearPrincipalPreferences(userKey);
+                      onChange(DEFAULT_SETTINGS);
                       onClearAll();
                       toast.success("Local storage cleared.");
                     }}
@@ -1685,40 +1703,55 @@ function ToggleRow({
 
 type LibItem = import("@/lib/library.functions").LibraryItem;
 
-function WorkspaceDefaults() {
-  const [defaults, setDefaults] = useState(() => {
-    if (typeof window === "undefined")
-      return {
-        project: "Balanced",
-        work: "Review before completion",
-        prompt: "General",
-        research: "Balanced sources",
-        artifact: "Edit",
-      };
-    try {
-      return (
-        JSON.parse(localStorage.getItem("kova-workspace-defaults-v1") ?? "null") ?? {
-          project: "Balanced",
-          work: "Review before completion",
-          prompt: "General",
-          research: "Balanced sources",
-          artifact: "Edit",
-        }
-      );
-    } catch {
-      return {
-        project: "Balanced",
-        work: "Review before completion",
-        prompt: "General",
-        research: "Balanced sources",
-        artifact: "Edit",
-      };
+type WorkspaceDefaultValues = {
+  project: string;
+  work: string;
+  prompt: string;
+  research: string;
+  artifact: string;
+};
+
+const DEFAULT_WORKSPACE_DEFAULTS: WorkspaceDefaultValues = {
+  project: "Balanced",
+  work: "Review before completion",
+  prompt: "General",
+  research: "Balanced sources",
+  artifact: "Edit",
+};
+
+function WorkspaceDefaults({
+  userKey,
+  principalResolved,
+}: {
+  userKey: string | null;
+  principalResolved: boolean;
+}) {
+  const [defaults, setDefaults] = useState<WorkspaceDefaultValues>(DEFAULT_WORKSPACE_DEFAULTS);
+
+  useEffect(() => {
+    if (!principalResolved) {
+      setDefaults(DEFAULT_WORKSPACE_DEFAULTS);
+      return;
     }
-  });
+    const stored = loadPrincipalStoredRecord(WORKSPACE_DEFAULTS_KEY_BASE, userKey, {
+      migrateLegacyGuest: userKey === null,
+    });
+    setDefaults(
+      stored
+        ? ({ ...DEFAULT_WORKSPACE_DEFAULTS, ...stored } as WorkspaceDefaultValues)
+        : DEFAULT_WORKSPACE_DEFAULTS,
+    );
+  }, [principalResolved, userKey]);
+
   const update = (key: string, value: string) => {
     const next = { ...defaults, [key]: value };
     setDefaults(next);
-    localStorage.setItem("kova-workspace-defaults-v1", JSON.stringify(next));
+    if (!principalResolved) return;
+    try {
+      savePrincipalStoredRecord(WORKSPACE_DEFAULTS_KEY_BASE, userKey, next);
+    } catch {
+      /* ignore */
+    }
   };
   const fields = [
     ["project", "Project defaults", ["Balanced", "Concise instructions", "Detailed instructions"]],
@@ -2204,16 +2237,16 @@ function SignedOutSettings({
           <h3 className="mb-2.5 px-1 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
             Data controls
           </h3>
-          <ArchivedChatsPanel />
+          <ArchivedChatsPanel userKey={null} />
         </section>
       </div>
     </div>
   );
 }
 
-function ArchivedChatsPanel() {
+function ArchivedChatsPanel({ userKey }: { userKey: string | null }) {
   const [revision, setRevision] = useState(0);
-  const archived = loadArchivedConversations();
+  const archived = loadArchivedConversations(userKey);
 
   return (
     <section
@@ -2239,9 +2272,13 @@ function ArchivedChatsPanel() {
                 variant="ghost"
                 className="rounded-full"
                 onClick={() => {
-                  saveConversations(mergeConversations(loadConversations(), [chat]));
+                  saveConversations(
+                    userKey,
+                    mergeConversations(loadConversations(userKey), [chat]),
+                  );
                   saveArchivedConversations(
-                    loadArchivedConversations().filter((item) => item.id !== chat.id),
+                    userKey,
+                    loadArchivedConversations(userKey).filter((item) => item.id !== chat.id),
                   );
                   setRevision((value) => value + 1);
                   window.dispatchEvent(new Event("kova:conversations-imported"));
@@ -2258,7 +2295,8 @@ function ArchivedChatsPanel() {
                 onClick={() => {
                   if (!window.confirm(`Permanently delete "${chat.title}"?`)) return;
                   saveArchivedConversations(
-                    loadArchivedConversations().filter((item) => item.id !== chat.id),
+                    userKey,
+                    loadArchivedConversations(userKey).filter((item) => item.id !== chat.id),
                   );
                   setRevision((value) => value + 1);
                   toast.success("Archived chat deleted");
@@ -2751,23 +2789,42 @@ type StoredLocation = {
   savedAt?: number;
 };
 
-function LocationPanel() {
+function LocationPanel({
+  userKey,
+  principalResolved,
+}: {
+  userKey: string | null;
+  principalResolved: boolean;
+}) {
   const [loc, setLoc] = useState<StoredLocation>({ enabled: false });
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("kova-location");
-      if (raw) setLoc(JSON.parse(raw));
-    } catch {
-      /* ignore */
+    if (!principalResolved) {
+      setLoc({ enabled: false });
+      return;
     }
-  }, []);
+    const stored = loadPrincipalStoredRecord(LOCATION_KEY_BASE, userKey, {
+      migrateLegacyGuest: userKey === null,
+    });
+    setLoc(
+      stored && typeof stored.enabled === "boolean"
+        ? {
+            enabled: stored.enabled,
+            lat: typeof stored.lat === "number" ? stored.lat : undefined,
+            lon: typeof stored.lon === "number" ? stored.lon : undefined,
+            label: typeof stored.label === "string" ? stored.label : undefined,
+            savedAt: typeof stored.savedAt === "number" ? stored.savedAt : undefined,
+          }
+        : { enabled: false },
+    );
+  }, [principalResolved, userKey]);
 
   const persist = (next: StoredLocation) => {
     setLoc(next);
+    if (!principalResolved) return;
     try {
-      localStorage.setItem("kova-location", JSON.stringify(next));
+      savePrincipalStoredRecord(LOCATION_KEY_BASE, userKey, next);
     } catch {
       /* ignore */
     }

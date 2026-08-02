@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Boxes, Plus, Search, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useUser } from "@/components/auth/ClerkSafe";
-import { loadConversations } from "@/lib/chat-store";
+import { chatStoragePrincipal, loadConversations } from "@/lib/chat-store";
 import { listMyLibrary, type LibraryItem } from "@/lib/library.functions";
 import { listProjects, type ProjectSummary } from "@/lib/projects.functions";
 import {
@@ -38,7 +38,9 @@ type Candidate = {
   content: string;
 };
 function ContextPacksPage() {
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const userKey = user?.id ?? null;
+  const principal = isLoaded ? chatStoragePrincipal(userKey) : null;
   const navigate = useNavigate();
   const listPacks = useServerFn(listContextPacks),
     create = useServerFn(createContextPack),
@@ -62,12 +64,31 @@ function ContextPacksPage() {
     [description, setDescription] = useState(""),
     [query, setQuery] = useState(""),
     [selected, setSelected] = useState<string[]>([]);
+  const [dataPrincipal, setDataPrincipal] = useState<string | null>(null);
+  const dataReady = principal !== null && dataPrincipal === principal;
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded || principal === null) {
+      setDataPrincipal(null);
+      setLoading(true);
+      return;
+    }
+    setDataPrincipal(null);
+    setPacks([]);
+    setLibrary([]);
+    setProjects([]);
+    setMemories([]);
+    setPrompts([]);
+    setResearch([]);
+    setPending([]);
+    setSelected([]);
+    setError(null);
     if (!isSignedIn) {
+      setDataPrincipal(principal);
       setLoading(false);
       return;
     }
+    let cancelled = false;
+    setLoading(true);
     try {
       const raw =
         sessionStorage.getItem("kova-context-candidates") ??
@@ -96,15 +117,26 @@ function ContextPacksPage() {
       getResearch({}),
     ])
       .then(([p, l, pr, memory, promptItems, researchItems]) => {
+        if (cancelled) return;
         setPacks(p);
         setLibrary(l);
         setProjects(pr);
         setMemories(memory);
         setPrompts(promptItems);
         setResearch(researchItems);
+        setDataPrincipal(principal);
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Context could not be loaded"))
-      .finally(() => setLoading(false));
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e instanceof Error ? e.message : "Context could not be loaded");
+        setDataPrincipal(principal);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [
     isLoaded,
     isSignedIn,
@@ -114,85 +146,80 @@ function ContextPacksPage() {
     getMemories,
     getPrompts,
     getResearch,
+    principal,
   ]);
-  const candidates = useMemo<Candidate[]>(
-    () =>
-      [
-        ...loadConversations().map((c) => ({
-          key: `chat:${c.id}`,
-          type: "chat" as const,
-          id: c.id,
-          title: c.title,
-          content: c.messages
-            .map((m) => `${m.role}: ${m.content}`)
-            .join("\n")
-            .slice(0, 12000),
-        })),
-        ...pending.map((candidate) => ({
-          key: `${candidate.type}:${candidate.id}`,
-          ...candidate,
-          content: candidate.content.slice(0, 12000),
-        })),
-        ...library.map((item) => ({
-          key: `library:${item.id}`,
-          type: (item.item_type === "image"
-            ? "image"
-            : ["document", "code", "website_draft", "chat_artifact"].includes(item.item_type)
-              ? "artifact"
-              : item.item_type === "upload"
-                ? "file"
-                : "library") as Candidate["type"],
-          id: item.id,
-          title: item.title,
-          content: (item.content_text ?? item.file_name ?? item.title).slice(0, 12000),
-        })),
-        ...memories.map((memory) => ({
-          key: `memory:${memory.id}`,
-          type: "memory" as const,
-          id: memory.id,
-          title: memory.title,
-          content: memory.content.slice(0, 12000),
-        })),
-        ...projects.map((p) => ({
-          key: `project:${p.id}`,
-          type: "project" as const,
-          id: p.id,
-          title: p.name,
-          content: [p.description, p.instructions_preview]
-            .filter(Boolean)
-            .join("\n")
-            .slice(0, 12000),
-        })),
-        ...prompts.map((prompt) => ({
-          key: `prompt:${prompt.id}`,
-          type: "prompt" as const,
-          id: prompt.id,
-          title: prompt.name,
-          content: prompt.body.slice(0, 12000),
-        })),
-        ...research.map((template) => ({
-          key: `research:${template.id}`,
-          type: "research" as const,
-          id: template.id,
-          title: template.name,
-          content: template.steps.map((step, index) => `${index + 1}. ${step}`).join("\n"),
-        })),
-        ...loadWorkTasks().map((task) => ({
-          key: `work:${task.id}`,
-          type: "work" as const,
-          id: task.id,
-          title: task.objective,
-          content:
-            `${task.context}\n${task.steps.map((step) => `- [${step.done ? "x" : " "}] ${step.text}`).join("\n")}`.slice(
-              0,
-              12000,
-            ),
-        })),
-      ].filter((item) =>
-        `${item.title} ${item.content}`.toLowerCase().includes(query.toLowerCase()),
-      ),
-    [library, memories, pending, projects, prompts, query, research],
-  );
+  const candidates = useMemo<Candidate[]>(() => {
+    if (!dataReady) return [];
+    return [
+      ...loadConversations(userKey).map((c) => ({
+        key: `chat:${c.id}`,
+        type: "chat" as const,
+        id: c.id,
+        title: c.title,
+        content: c.messages
+          .map((m) => `${m.role}: ${m.content}`)
+          .join("\n")
+          .slice(0, 12000),
+      })),
+      ...pending.map((candidate) => ({
+        key: `${candidate.type}:${candidate.id}`,
+        ...candidate,
+        content: candidate.content.slice(0, 12000),
+      })),
+      ...library.map((item) => ({
+        key: `library:${item.id}`,
+        type: (item.item_type === "image"
+          ? "image"
+          : ["document", "code", "website_draft", "chat_artifact"].includes(item.item_type)
+            ? "artifact"
+            : item.item_type === "upload"
+              ? "file"
+              : "library") as Candidate["type"],
+        id: item.id,
+        title: item.title,
+        content: (item.content_text ?? item.file_name ?? item.title).slice(0, 12000),
+      })),
+      ...memories.map((memory) => ({
+        key: `memory:${memory.id}`,
+        type: "memory" as const,
+        id: memory.id,
+        title: memory.title,
+        content: memory.content.slice(0, 12000),
+      })),
+      ...projects.map((p) => ({
+        key: `project:${p.id}`,
+        type: "project" as const,
+        id: p.id,
+        title: p.name,
+        content: [p.description, p.instructions_preview].filter(Boolean).join("\n").slice(0, 12000),
+      })),
+      ...prompts.map((prompt) => ({
+        key: `prompt:${prompt.id}`,
+        type: "prompt" as const,
+        id: prompt.id,
+        title: prompt.name,
+        content: prompt.body.slice(0, 12000),
+      })),
+      ...research.map((template) => ({
+        key: `research:${template.id}`,
+        type: "research" as const,
+        id: template.id,
+        title: template.name,
+        content: template.steps.map((step, index) => `${index + 1}. ${step}`).join("\n"),
+      })),
+      ...loadWorkTasks().map((task) => ({
+        key: `work:${task.id}`,
+        type: "work" as const,
+        id: task.id,
+        title: task.objective,
+        content:
+          `${task.context}\n${task.steps.map((step) => `- [${step.done ? "x" : " "}] ${step.text}`).join("\n")}`.slice(
+            0,
+            12000,
+          ),
+      })),
+    ].filter((item) => `${item.title} ${item.content}`.toLowerCase().includes(query.toLowerCase()));
+  }, [dataReady, library, memories, pending, projects, prompts, query, research, userKey]);
   const submit = async () => {
     const items = candidates
       .filter((item) => selected.includes(item.key))
@@ -233,7 +260,7 @@ function ContextPacksPage() {
           <div className="mt-6 rounded-2xl border p-8 text-center">
             Sign in to create reusable context packs.
           </div>
-        ) : loading ? (
+        ) : !dataReady || loading ? (
           <div className="mt-6 h-40 animate-pulse rounded-2xl bg-muted" />
         ) : error ? (
           <div role="alert" className="mt-6 rounded-xl border border-destructive/40 p-4">
