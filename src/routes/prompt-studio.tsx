@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BarChart3, FlaskConical, Heart, History, Play, Plus, Search, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useUser } from "@/components/auth/ClerkSafe";
@@ -18,6 +18,15 @@ import {
   type PromptVersion,
 } from "@/lib/professional.functions";
 import { toast } from "sonner";
+import {
+  browserStoragePrincipal,
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+  principalScopedStorageKey,
+  safeBrowserStorage,
+  writePrincipalHandoff,
+} from "@/lib/principal-browser-storage.mjs";
+import { loadPrincipalStoredRecord, WORKSPACE_DEFAULTS_KEY_BASE } from "@/lib/settings-storage";
 export const Route = createFileRoute("/prompt-studio")({
   component: PromptStudio,
   head: () => ({
@@ -27,9 +36,19 @@ export const Route = createFileRoute("/prompt-studio")({
 const variables = (body: string) => [
   ...new Set([...body.matchAll(/{{\s*([\w -]{1,60})\s*}}/g)].map((match) => match[1].trim())),
 ];
-const PROMPT_DRAFT_KEY = "kova-prompt-studio-draft-v1";
+const PROMPT_DRAFT_KEY_BASE = "kova-prompt-studio-draft";
 function PromptStudio() {
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const userKey = user?.id ?? null;
+  const principal = isLoaded ? browserStoragePrincipal(userKey) : null;
+  const draftKey = isLoaded ? principalScopedStorageKey(PROMPT_DRAFT_KEY_BASE, userKey) : null;
+  const principalRef = useRef(principal);
+  principalRef.current = principal;
+  const generationRef = useRef(0);
+  const [dataPrincipal, setDataPrincipal] = useState<string | null>(null);
+  const [dataGeneration, setDataGeneration] = useState(0);
+  const dataReady =
+    principal !== null && dataPrincipal === principal && dataGeneration === generationRef.current;
   const navigate = useNavigate();
   const list = useServerFn(listPromptTemplates),
     save = useServerFn(savePromptTemplate),
@@ -48,15 +67,7 @@ function PromptStudio() {
     [favorites, setFavorites] = useState(false),
     [folderFilter, setFolderFilter] = useState("all"),
     [name, setName] = useState(""),
-    [category, setCategory] = useState(() => {
-      try {
-        return (
-          JSON.parse(localStorage.getItem("kova-workspace-defaults-v1") ?? "{}").prompt ?? "General"
-        );
-      } catch {
-        return "General";
-      }
-    }),
+    [category, setCategory] = useState("General"),
     [folder, setFolder] = useState("Unfiled"),
     [body, setBody] = useState(""),
     [projectId, setProjectId] = useState(""),
@@ -72,23 +83,39 @@ function PromptStudio() {
     [rating, setRating] = useState(5),
     [notes, setNotes] = useState("");
   useEffect(() => {
-    if (!isLoaded) return;
-    if (!isSignedIn) {
-      setLoading(false);
-      return;
-    }
-    Promise.all([list({}), getProjects({}), getPacks({})])
-      .then(([prompts, p, context]) => {
-        setItems(prompts);
-        setProjects(p);
-        setPacks(context);
-      })
-      .catch((e) => setError(e instanceof Error ? e.message : "Prompt Studio could not be loaded"))
-      .finally(() => setLoading(false));
-  }, [isLoaded, isSignedIn, list, getProjects, getPacks]);
-  useEffect(() => {
+    const generation = generationRef.current + 1;
+    generationRef.current = generation;
+    setDataPrincipal(null);
+    setDataGeneration(generation);
+    setItems([]);
+    setProjects([]);
+    setPacks([]);
+    setLoading(true);
+    setError(null);
+    setQuery("");
+    setFavorites(false);
+    setFolderFilter("all");
+    setName("");
+    setCategory("General");
+    setFolder("Unfiled");
+    setBody("");
+    setProjectId("");
+    setPackId("");
+    setTesting(null);
+    setValues({});
+    setInspecting(null);
+    setVersions([]);
+    setEvaluations([]);
+    setHistoryLoading(false);
+    setEditBody("");
+    if (!principal || !draftKey) return;
+
+    const defaults = loadPrincipalStoredRecord(WORKSPACE_DEFAULTS_KEY_BASE, userKey, {
+      migrateLegacyGuest: userKey === null,
+    });
+    if (typeof defaults?.prompt === "string") setCategory(defaults.prompt);
     try {
-      const saved = JSON.parse(localStorage.getItem(PROMPT_DRAFT_KEY) ?? "null") as {
+      const saved = JSON.parse(safeBrowserStorage("localStorage")?.getItem(draftKey) ?? "null") as {
         name?: string;
         folder?: string;
         category?: string;
@@ -104,20 +131,84 @@ function PromptStudio() {
       setProjectId(saved.projectId ?? "");
       setPackId(saved.packId ?? "");
     } catch {
-      localStorage.removeItem(PROMPT_DRAFT_KEY);
+      safeBrowserStorage("localStorage")?.removeItem(draftKey);
     }
-  }, []);
+    if (generationRef.current !== generation || principalRef.current !== principal) return;
+    setDataPrincipal(principal);
+    setDataGeneration(generation);
+
+    if (!isSignedIn) {
+      setLoading(false);
+      return;
+    }
+    Promise.all([list({}), getProjects({}), getPacks({})])
+      .then(([prompts, p, context]) => {
+        if (generationRef.current !== generation || principalRef.current !== principal) return;
+        setItems(prompts);
+        setProjects(p);
+        setPacks(context);
+      })
+      .catch((e) => {
+        if (generationRef.current !== generation || principalRef.current !== principal) return;
+        setError(e instanceof Error ? e.message : "Prompt Studio could not be loaded");
+      })
+      .finally(() => {
+        if (generationRef.current === generation && principalRef.current === principal) {
+          setLoading(false);
+        }
+      });
+  }, [draftKey, getPacks, getProjects, isSignedIn, list, principal, userKey]);
+
   useEffect(() => {
+    if (!isLoaded || !principal) return;
+    const reset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      const generation = generationRef.current + 1;
+      generationRef.current = generation;
+      setDataPrincipal(principal);
+      setDataGeneration(generation);
+      setItems([]);
+      setProjects([]);
+      setPacks([]);
+      setLoading(false);
+      setError(null);
+      setQuery("");
+      setFavorites(false);
+      setFolderFilter("all");
+      setName("");
+      setCategory("General");
+      setFolder("Unfiled");
+      setBody("");
+      setProjectId("");
+      setPackId("");
+      setCreating(false);
+      setTesting(null);
+      setValues({});
+      setInspecting(null);
+      setVersions([]);
+      setEvaluations([]);
+      setHistoryLoading(false);
+      setEditBody("");
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+    return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+  }, [isLoaded, principal, userKey]);
+
+  useEffect(() => {
+    if (!dataReady || !draftKey) return;
+    const generation = generationRef.current;
     const handle = window.setTimeout(() => {
+      if (generation !== generationRef.current || principalRef.current !== principal) return;
+      const storage = safeBrowserStorage("localStorage");
       if (name || body)
-        localStorage.setItem(
-          PROMPT_DRAFT_KEY,
+        storage?.setItem(
+          draftKey,
           JSON.stringify({ name, folder, category, body, projectId, packId }),
         );
-      else localStorage.removeItem(PROMPT_DRAFT_KEY);
+      else storage?.removeItem(draftKey);
     }, 250);
     return () => window.clearTimeout(handle);
-  }, [name, folder, category, body, projectId, packId]);
+  }, [body, category, dataReady, draftKey, folder, name, packId, principal, projectId]);
   const visible = useMemo(
     () =>
       items
@@ -137,7 +228,9 @@ function PromptStudio() {
     [items, favorites, folderFilter, query],
   );
   const create = async () => {
-    if (!name.trim() || !body.trim()) return;
+    if (!dataReady || dataGeneration !== generationRef.current || !name.trim() || !body.trim())
+      return;
+    const generation = generationRef.current;
     setCreating(true);
     try {
       const item = await save({
@@ -152,18 +245,25 @@ function PromptStudio() {
           folder,
         },
       });
+      if (generation !== generationRef.current || principalRef.current !== principal) return;
       setItems((all) => [item, ...all]);
       setName("");
       setBody("");
-      localStorage.removeItem(PROMPT_DRAFT_KEY);
+      safeBrowserStorage("localStorage")?.removeItem(draftKey!);
       toast.success("Prompt saved");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Prompt could not be saved");
+      if (generation === generationRef.current && principalRef.current === principal) {
+        toast.error(e instanceof Error ? e.message : "Prompt could not be saved");
+      }
     } finally {
-      setCreating(false);
+      if (generation === generationRef.current && principalRef.current === principal) {
+        setCreating(false);
+      }
     }
   };
   const launch = async (item: PromptTemplate) => {
+    if (!dataReady || dataGeneration !== generationRef.current) return;
+    const generation = generationRef.current;
     let prompt = item.body;
     for (const variable of item.variables)
       prompt = prompt.replaceAll(
@@ -171,14 +271,26 @@ function PromptStudio() {
         values[variable] ?? "",
       );
     const pack = packs.find((value) => value.id === item.context_pack_id);
-    sessionStorage.setItem("kova-prompt-launch", JSON.stringify({ prompt, pack }));
+    const handoff = writePrincipalHandoff(
+      safeBrowserStorage("sessionStorage"),
+      "kova-prompt-launch",
+      isLoaded ? userKey : undefined,
+      { prompt, pack },
+    );
+    if (!handoff.ok) {
+      toast.error("Prompt could not be prepared. Reload and try again.");
+      return;
+    }
     try {
       await update({
         data: { id: item.id, last_used_at: new Date().toISOString(), increment_use: true },
       });
     } catch {
-      toast.warning("Prompt prepared, but usage analytics could not be updated.");
+      if (generation === generationRef.current && principalRef.current === principal) {
+        toast.warning("Prompt prepared, but usage analytics could not be updated.");
+      }
     }
+    if (generation !== generationRef.current || principalRef.current !== principal) return;
     navigate({ to: "/" });
   };
   return (
@@ -198,7 +310,7 @@ function PromptStudio() {
           <div className="mt-6 rounded-2xl border p-8 text-center">
             Sign in to save reusable prompts.
           </div>
-        ) : loading ? (
+        ) : loading || !dataReady ? (
           <div className="mt-6 h-48 animate-pulse rounded-2xl bg-muted" />
         ) : error ? (
           <div role="alert" className="mt-6 rounded-xl border border-destructive/40 p-4">
@@ -370,8 +482,14 @@ function PromptStudio() {
                           <button
                             aria-label={`${item.favorite ? "Unfavorite" : "Favorite"} ${item.name}`}
                             onClick={async () => {
+                              const generation = generationRef.current;
                               try {
                                 await update({ data: { id: item.id, favorite: !item.favorite } });
+                                if (
+                                  generation !== generationRef.current ||
+                                  principalRef.current !== principal
+                                )
+                                  return;
                                 setItems((all) =>
                                   all.map((value) =>
                                     value.id === item.id
@@ -380,6 +498,11 @@ function PromptStudio() {
                                   ),
                                 );
                               } catch (reason) {
+                                if (
+                                  generation !== generationRef.current ||
+                                  principalRef.current !== principal
+                                )
+                                  return;
                                 toast.error(
                                   reason instanceof Error
                                     ? reason.message
@@ -395,10 +518,21 @@ function PromptStudio() {
                             aria-label={`Delete ${item.name}`}
                             onClick={async () => {
                               if (!confirm("Delete this prompt?")) return;
+                              const generation = generationRef.current;
                               try {
                                 await remove({ data: { id: item.id } });
+                                if (
+                                  generation !== generationRef.current ||
+                                  principalRef.current !== principal
+                                )
+                                  return;
                                 setItems((all) => all.filter((value) => value.id !== item.id));
                               } catch (reason) {
+                                if (
+                                  generation !== generationRef.current ||
+                                  principalRef.current !== principal
+                                )
+                                  return;
                                 toast.error(
                                   reason instanceof Error
                                     ? reason.message
@@ -423,21 +557,37 @@ function PromptStudio() {
                         </button>
                         <button
                           onClick={async () => {
+                            const generation = generationRef.current;
                             setInspecting(item);
                             setEditBody(item.body);
                             setHistoryLoading(true);
                             try {
                               const history = await getHistory({ data: { prompt_id: item.id } });
+                              if (
+                                generation !== generationRef.current ||
+                                principalRef.current !== principal
+                              )
+                                return;
                               setVersions(history.versions);
                               setEvaluations(history.evaluations);
                             } catch (reason) {
+                              if (
+                                generation !== generationRef.current ||
+                                principalRef.current !== principal
+                              )
+                                return;
                               toast.error(
                                 reason instanceof Error
                                   ? reason.message
                                   : "History could not be loaded",
                               );
                             } finally {
-                              setHistoryLoading(false);
+                              if (
+                                generation === generationRef.current &&
+                                principalRef.current === principal
+                              ) {
+                                setHistoryLoading(false);
+                              }
                             }
                           }}
                           className="mt-3 ml-2 inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 text-sm hover:bg-accent"
@@ -532,6 +682,7 @@ function PromptStudio() {
                     <button
                       disabled={!editBody.trim() || editBody === inspecting.body}
                       onClick={async () => {
+                        const generation = generationRef.current;
                         try {
                           await update({
                             data: {
@@ -540,6 +691,11 @@ function PromptStudio() {
                               variables: variables(editBody),
                             },
                           });
+                          if (
+                            generation !== generationRef.current ||
+                            principalRef.current !== principal
+                          )
+                            return;
                           setItems((all) =>
                             all.map((item) =>
                               item.id === inspecting.id
@@ -555,6 +711,11 @@ function PromptStudio() {
                           toast.success("Prompt revision saved");
                           setInspecting(null);
                         } catch (reason) {
+                          if (
+                            generation !== generationRef.current ||
+                            principalRef.current !== principal
+                          )
+                            return;
                           toast.error(
                             reason instanceof Error
                               ? reason.message
@@ -617,14 +778,25 @@ function PromptStudio() {
                     />
                     <button
                       onClick={async () => {
+                        const generation = generationRef.current;
                         try {
                           const result = await evaluate({
                             data: { prompt_id: inspecting.id, rating, notes },
                           });
+                          if (
+                            generation !== generationRef.current ||
+                            principalRef.current !== principal
+                          )
+                            return;
                           setEvaluations((all) => [result, ...all]);
                           setNotes("");
                           toast.success("Evaluation saved");
                         } catch (reason) {
+                          if (
+                            generation !== generationRef.current ||
+                            principalRef.current !== principal
+                          )
+                            return;
                           toast.error(
                             reason instanceof Error
                               ? reason.message

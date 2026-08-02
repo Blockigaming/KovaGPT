@@ -40,6 +40,13 @@ import { ArtifactEditor, detectArtifactKind, extractCodeBlocks } from "./Artifac
 import { ToolConfirmCard } from "./ToolConfirmCard";
 import type { PendingConfirm } from "@/lib/chat-store";
 import { InfoChip, detectInfoChip } from "./InfoChip";
+import {
+  browserStoragePrincipal,
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+  principalScopedStorageKey,
+  safeBrowserStorage,
+} from "@/lib/principal-browser-storage.mjs";
 
 function MarkdownCode({ className, children }: React.ComponentProps<"code">) {
   const language = /language-([\w-]+)/.exec(className ?? "")?.[1];
@@ -200,6 +207,8 @@ function ChatMessageInner({
   onBranch,
   onEdit,
   onUpdatePendingConfirm,
+  userKey,
+  principalResolved,
 }: {
   message: Message;
   streaming?: boolean;
@@ -208,22 +217,49 @@ function ChatMessageInner({
   onBranch?: () => void;
   onEdit?: () => void;
   onUpdatePendingConfirm?: (messageId: string, next: PendingConfirm) => void;
+  userKey: string | null;
+  principalResolved: boolean;
 }) {
-  const feedbackKey = `kova-feedback:${message.id}`;
-  const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
+  const principal = principalResolved ? browserStoragePrincipal(userKey) : null;
+  const principalRef = useRef(principal);
+  principalRef.current = principal;
+  const lifecycleGenerationRef = useRef(0);
+  const feedbackKey = principalResolved
+    ? principalScopedStorageKey("kova-message-feedback", userKey)
+    : null;
+  const messageFeedbackKey = feedbackKey
+    ? `${feedbackKey}:${encodeURIComponent(message.id)}`
+    : null;
+  const [feedbackState, setFeedbackState] = useState<{
+    principal: string | null;
+    value: "up" | "down" | null;
+  }>({ principal: null, value: null });
+  const feedback = feedbackState.principal === principal ? feedbackState.value : null;
   useEffect(() => {
-    try {
-      const v = localStorage.getItem(feedbackKey);
-      if (v === "up" || v === "down") setFeedback(v);
-    } catch {
-      /* ignore */
+    lifecycleGenerationRef.current += 1;
+  }, [principal]);
+  useEffect(() => {
+    if (!principal || !messageFeedbackKey) {
+      setFeedbackState({ principal: null, value: null });
+      return;
     }
-  }, [feedbackKey]);
-  const persistFeedback = (next: "up" | "down" | null) => {
-    setFeedback(next);
     try {
-      if (next) localStorage.setItem(feedbackKey, next);
-      else localStorage.removeItem(feedbackKey);
+      const v = safeBrowserStorage("localStorage")?.getItem(messageFeedbackKey);
+      setFeedbackState({
+        principal,
+        value: v === "up" || v === "down" ? v : null,
+      });
+    } catch {
+      setFeedbackState({ principal, value: null });
+    }
+  }, [messageFeedbackKey, principal]);
+  const persistFeedback = (next: "up" | "down" | null) => {
+    if (!principal || !messageFeedbackKey || feedbackState.principal !== principal) return;
+    setFeedbackState({ principal, value: next });
+    try {
+      const storage = safeBrowserStorage("localStorage");
+      if (next) storage?.setItem(messageFeedbackKey, next);
+      else storage?.removeItem(messageFeedbackKey);
     } catch {
       /* ignore */
     }
@@ -263,6 +299,23 @@ function ChatMessageInner({
 
   const saveFn = useServerFn(saveToLibrary);
 
+  useEffect(() => {
+    if (!principalResolved || !principal) return;
+    const reset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      lifecycleGenerationRef.current += 1;
+      setFeedbackState({ principal: null, value: null });
+      setSaving(false);
+      setSaved(false);
+      setCopied(false);
+      setEditorOpen(false);
+      setMobileSheetOpen(false);
+      cancelLongPress();
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+    return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+  }, [cancelLongPress, principal, principalResolved, userKey]);
+
   const artifactKind = useMemo(
     () => (isUser ? null : detectArtifactKind(message.content || "")),
     [isUser, message.content],
@@ -292,10 +345,21 @@ function ChatMessageInner({
     // ClerkSafe sign-in prompt is no longer shown here.
 
     // Duplicate-safe: stable per-message id stored in localStorage avoids re-saves.
-    const dedupKey = "kovagpt:savedMessageIds";
+    const dedupKey = principalResolved
+      ? principalScopedStorageKey("kovagpt-saved-message-ids", userKey)
+      : null;
+    if (!principal || !dedupKey) {
+      toast.error("Your account is still loading. Try again.");
+      return;
+    }
+    const requestGeneration = lifecycleGenerationRef.current;
+    const requestPrincipal = principal;
+    const isCurrent = () =>
+      requestGeneration === lifecycleGenerationRef.current &&
+      requestPrincipal === principalRef.current;
     let savedIds: string[];
     try {
-      savedIds = JSON.parse(localStorage.getItem(dedupKey) || "[]");
+      savedIds = JSON.parse(safeBrowserStorage("localStorage")?.getItem(dedupKey) || "[]");
     } catch {
       savedIds = [];
     }
@@ -329,24 +393,32 @@ function ChatMessageInner({
         await saveFn({ data: payload });
       } else {
         const { saveGuestItem } = await import("@/lib/guest-library");
+        if (!isCurrent()) return;
         saveGuestItem(payload);
       }
+
+      if (!isCurrent()) return;
 
       if (message.id) {
         try {
           savedIds.push(message.id);
-          localStorage.setItem(dedupKey, JSON.stringify(savedIds.slice(-500)));
+          safeBrowserStorage("localStorage")?.setItem(
+            dedupKey,
+            JSON.stringify(savedIds.slice(-500)),
+          );
         } catch {
           /* ignore */
         }
       }
       setSaved(true);
       toast.success("Saved to Library");
-      setTimeout(() => setSaved(false), 2000);
+      setTimeout(() => {
+        if (isCurrent()) setSaved(false);
+      }, 2000);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not save");
+      if (isCurrent()) toast.error(e instanceof Error ? e.message : "Could not save");
     } finally {
-      setSaving(false);
+      if (isCurrent()) setSaving(false);
     }
   };
 

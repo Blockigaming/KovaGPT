@@ -14,6 +14,11 @@ import {
   type ResearchTemplate,
 } from "@/lib/professional.functions";
 import { loadWorkTasks } from "@/lib/work-store";
+import {
+  consumePrincipalHandoff,
+  safeBrowserStorage,
+  writePrincipalHandoff,
+} from "@/lib/principal-browser-storage.mjs";
 import type { WorkspaceHandoff } from "@/lib/workspace-handoffs";
 import {
   createContextPack,
@@ -89,24 +94,17 @@ function ContextPacksPage() {
     }
     let cancelled = false;
     setLoading(true);
-    try {
-      const raw =
-        sessionStorage.getItem("kova-context-candidates") ??
-        localStorage.getItem("kova-context-candidates") ??
-        localStorage.getItem("kova-context-candidate");
-      if (raw) {
-        const parsed = JSON.parse(raw) as WorkspaceHandoff | WorkspaceHandoff[];
-        const candidates = Array.isArray(parsed) ? parsed : [parsed];
-        setPending(candidates);
-        setSelected(candidates.map((candidate) => `${candidate.type}:${candidate.id}`));
-        sessionStorage.removeItem("kova-context-candidates");
-        localStorage.removeItem("kova-context-candidates");
-        localStorage.removeItem("kova-context-candidate");
-      }
-    } catch {
-      sessionStorage.removeItem("kova-context-candidates");
-      localStorage.removeItem("kova-context-candidates");
-      localStorage.removeItem("kova-context-candidate");
+    const handoff = consumePrincipalHandoff<WorkspaceHandoff | WorkspaceHandoff[]>(
+      safeBrowserStorage("sessionStorage"),
+      "kova-context-candidates",
+      userKey,
+    );
+    if (handoff.ok) {
+      const candidates = Array.isArray(handoff.value) ? handoff.value : [handoff.value];
+      setPending(candidates);
+      setSelected(candidates.map((candidate) => `${candidate.type}:${candidate.id}`));
+    } else if (handoff.reason !== "missing") {
+      toast.error("Saved context candidates could not be attached.");
     }
     Promise.all([
       listPacks({}),
@@ -240,7 +238,16 @@ function ContextPacksPage() {
     }
   };
   const attachPack = (pack: ContextPack) => {
-    sessionStorage.setItem("kova-active-context-pack", JSON.stringify(pack));
+    const handoff = writePrincipalHandoff(
+      safeBrowserStorage("sessionStorage"),
+      "kova-active-context-pack",
+      isLoaded ? userKey : undefined,
+      pack,
+    );
+    if (!handoff.ok) {
+      toast.error("Context pack could not be prepared. Reload and try again.");
+      return;
+    }
     toast.success("Context pack attached to a new chat");
     navigate({ to: "/" });
   };
@@ -363,9 +370,11 @@ function ContextPacksPage() {
                         </button>
                         <button
                           onClick={() => {
-                            localStorage.setItem(
+                            const handoff = writePrincipalHandoff(
+                              safeBrowserStorage("sessionStorage"),
                               "kova-work-draft",
-                              JSON.stringify({
+                              isLoaded ? userKey : undefined,
+                              {
                                 objective: `Work with ${pack.name}`,
                                 context: pack.items
                                   .map((item) => `${item.title}: ${item.content}`)
@@ -375,8 +384,14 @@ function ContextPacksPage() {
                                   "Complete the objective",
                                   "Review and record deliverables",
                                 ],
-                              }),
+                              },
                             );
+                            if (!handoff.ok) {
+                              toast.error(
+                                "Work context could not be prepared. Reload and try again.",
+                              );
+                              return;
+                            }
                             navigate({ to: "/work" });
                           }}
                           className="min-h-10 rounded-lg border px-3 text-sm hover:bg-accent"
@@ -385,15 +400,23 @@ function ContextPacksPage() {
                         </button>
                         <button
                           onClick={() => {
-                            localStorage.setItem(
+                            const handoff = writePrincipalHandoff(
+                              safeBrowserStorage("sessionStorage"),
                               "kova-research-draft",
-                              JSON.stringify({
+                              isLoaded ? userKey : undefined,
+                              {
                                 question: `Research with ${pack.name}`,
                                 context: pack.items
                                   .map((item) => `${item.title}: ${item.content}`)
                                   .join("\n\n"),
-                              }),
+                              },
                             );
+                            if (!handoff.ok) {
+                              toast.error(
+                                "Research context could not be prepared. Reload and try again.",
+                              );
+                              return;
+                            }
                             navigate({ to: "/research-planner" });
                           }}
                           className="min-h-10 rounded-lg border px-3 text-sm hover:bg-accent"

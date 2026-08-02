@@ -34,6 +34,10 @@ test("Temporary Chat omits and server-discards cross-chat personal context", () 
   const page = read("src/routes/index.tsx");
   const chatApi = read("src/routes/api/chat.ts");
 
+  assert.match(
+    page,
+    /This chat won't appear in history or be used for cross-chat memory\. It also will not use saved profile details, custom instructions, or personality settings\./,
+  );
   assert.match(page, /user: tempChat[\s\S]{0,40}\? undefined/);
   assert.match(page, /personality: tempChat[\s\S]{0,40}\? undefined/);
   assert.match(chatApi, /const personalContext = temporary \? undefined : user/);

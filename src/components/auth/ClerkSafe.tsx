@@ -36,6 +36,18 @@ import {
   OAUTH_CALLBACK_PATH,
 } from "@/lib/oauth-session";
 import {
+  clearPrincipalBrowserStorage,
+  dispatchPrincipalBrowserStorageCleared,
+  purgeUnscopedPrivateBrowserStorage,
+} from "@/lib/principal-browser-storage.mjs";
+import {
+  classifyAuthValidationResult,
+  classifySessionRestoreError,
+  classifyThrownAuthValidationError,
+  isCurrentAuthValidation,
+  retryableAuthPrincipalState,
+} from "@/lib/auth-validation-policy.mjs";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -48,36 +60,18 @@ import { LogOut, User as UserIcon } from "lucide-react";
 export const clerkEnabled = true;
 
 type AuthDialogState = { open: boolean; mode: "sign-in" | "sign-up" };
+type AuthIssue = "temporarily_unavailable" | "configuration_unavailable" | null;
 
 type AuthCtx = {
   session: Session | null;
   user: SupabaseUser | null;
   isLoaded: boolean;
+  authIssue: AuthIssue;
   openAuth: (mode: "sign-in" | "sign-up") => void;
   signOut: () => Promise<void>;
 };
 
 const Ctx = createContext<AuthCtx | null>(null);
-
-function clearPrivateBrowserState() {
-  try {
-    const keep = new Set(["nova-gpt-theme"]);
-    const toRemove: string[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (
-        key &&
-        !keep.has(key) &&
-        (key.startsWith("nova-") || key.startsWith("kova") || key.startsWith("sb-"))
-      ) {
-        toRemove.push(key);
-      }
-    }
-    toRemove.forEach((key) => localStorage.removeItem(key));
-  } catch {
-    // A storage failure must not keep private in-memory state signed in.
-  }
-}
 
 function isActiveBan(bannedUntil: string | undefined) {
   if (!bannedUntil) return false;
@@ -89,69 +83,220 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [pendingMfaSession, setPendingMfaSession] = useState<Session | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [authIssue, setAuthIssue] = useState<AuthIssue>(null);
   const [dialog, setDialog] = useState<AuthDialogState>({
     open: false,
     mode: "sign-in",
   });
   const authReturnFocusRef = useRef<HTMLElement | null>(null);
   const sessionValidationRef = useRef(0);
+  // `undefined` is unresolved, `null` is a confirmed guest, and a string is a
+  // validated account.
+  const browserStorageUserIdRef = useRef<string | null | undefined>(undefined);
+  const pendingValidationUserIdRef = useRef<string | null>(null);
+  const validatedSessionRef = useRef<Session | null>(null);
 
-  const acceptSession = useCallback(async (candidate: Session | null) => {
-    const validation = ++sessionValidationRef.current;
-    if (!candidate) {
-      setSession(null);
-      setPendingMfaSession(null);
-      setIsLoaded(true);
-      return;
-    }
-
-    try {
-      const [{ data: userData, error: userError }, { data: assurance, error: assuranceError }] =
-        await Promise.all([
-          supabase.auth.getUser(candidate.access_token),
-          supabase.auth.mfa.getAuthenticatorAssuranceLevel(candidate.access_token),
-        ]);
-      if (validation !== sessionValidationRef.current) return;
-
-      const invalidUser =
-        userError ||
-        !userData.user ||
-        Boolean(userData.user.deleted_at) ||
-        isActiveBan(userData.user.banned_until);
-      if (invalidUser || assuranceError) {
-        console.error("[KovaAuth] Session validation failed", {
-          userStatus: userError ? "invalid" : invalidUser ? "unavailable" : "valid",
-          assuranceStatus: assuranceError ? "unavailable" : "valid",
+  const clearBrowserStateFor = useCallback((...userIds: (string | null | undefined)[]) => {
+    const seen = new Set<string>();
+    for (const userId of userIds) {
+      if (userId === undefined) continue;
+      const identityKey = userId === null ? "guest" : `user:${userId}`;
+      if (seen.has(identityKey)) continue;
+      seen.add(identityKey);
+      const result = clearPrincipalBrowserStorage(userId);
+      const failureCount = result.local.failures.length + result.session.failures.length;
+      if (failureCount > 0) {
+        console.warn("[KovaAuth] Account-local browser cleanup was incomplete", {
+          failureCount,
         });
-        await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
-        if (validation !== sessionValidationRef.current) return;
-        setSession(null);
-        setPendingMfaSession(null);
-        setIsLoaded(true);
-        return;
       }
-
-      if (assurance.nextLevel === "aal2" && assurance.currentLevel !== "aal2") {
-        setSession(null);
-        setPendingMfaSession(candidate);
-        setDialog((current) => ({ ...current, open: false }));
-        setIsLoaded(true);
-        return;
-      }
-
-      setPendingMfaSession(null);
-      setSession({ ...candidate, user: userData.user });
-      setIsLoaded(true);
-    } catch (error) {
-      if (validation !== sessionValidationRef.current) return;
-      console.error("[KovaAuth] Session validation could not complete", {
-        error: error instanceof Error ? error.name : "unknown_error",
-      });
-      setSession(null);
-      setPendingMfaSession(null);
-      setIsLoaded(true);
+      dispatchPrincipalBrowserStorageCleared(userId);
     }
   }, []);
+
+  const purgeOwnerlessStateFor = useCallback((userId: string | null) => {
+    const result = purgeUnscopedPrivateBrowserStorage(userId);
+    const failureCount = result.local.failures.length + result.session.failures.length;
+    if (failureCount > 0) {
+      console.warn("[KovaAuth] Transitional browser cleanup was incomplete", {
+        failureCount,
+      });
+    }
+    dispatchPrincipalBrowserStorageCleared(userId);
+  }, []);
+
+  const markRetryableAuthFailure = useCallback(
+    (candidate: Session | null, error: unknown, source: "returned" | "thrown" | "restore") => {
+      const candidateUserId = candidate?.user.id ?? null;
+      if (candidateUserId) pendingValidationUserIdRef.current = candidateUserId;
+      const principalState = retryableAuthPrincipalState(
+        candidateUserId,
+        browserStorageUserIdRef.current,
+      );
+      const retainedSession =
+        principalState.principalResolution === "authenticated" &&
+        validatedSessionRef.current?.user.id === principalState.userId
+          ? validatedSessionRef.current
+          : null;
+      const errorName =
+        error && typeof error === "object" && "name" in error
+          ? String((error as { name?: unknown }).name ?? "unknown_error")
+          : "unknown_error";
+
+      console.error("[KovaAuth] Session validation is temporarily unavailable", {
+        source,
+        error: errorName,
+      });
+      // Retryable auth is never a confirmed guest and never destructive. A
+      // previously validated same-user session may remain available offline;
+      // initial and account-switch failures stay principal-unresolved.
+      setPendingMfaSession(null);
+      setAuthIssue("temporarily_unavailable");
+      setSession(retainedSession);
+      setIsLoaded(Boolean(retainedSession));
+    },
+    [],
+  );
+
+  const acceptSession = useCallback(
+    async (candidate: Session | null) => {
+      const validation = ++sessionValidationRef.current;
+      if (!candidate) {
+        const previousUserId = browserStorageUserIdRef.current;
+        const pendingUserId = pendingValidationUserIdRef.current;
+        if (typeof previousUserId === "string" || pendingUserId) {
+          // Gate mounted account stores before durable cleanup.
+          setSession(null);
+          setPendingMfaSession(null);
+          setIsLoaded(false);
+        }
+        clearBrowserStateFor(
+          typeof previousUserId === "string" ? previousUserId : undefined,
+          pendingUserId,
+        );
+        // First resolution and authenticated-to-guest transitions remove only
+        // ownerless transitional data, never separately scoped guest data.
+        if (previousUserId !== null || pendingUserId) purgeOwnerlessStateFor(null);
+        browserStorageUserIdRef.current = null;
+        pendingValidationUserIdRef.current = null;
+        validatedSessionRef.current = null;
+        setSession(null);
+        setPendingMfaSession(null);
+        setAuthIssue(null);
+        setIsLoaded(true);
+        return;
+      }
+
+      pendingValidationUserIdRef.current = candidate.user.id;
+      if (
+        browserStorageUserIdRef.current &&
+        browserStorageUserIdRef.current !== candidate.user.id
+      ) {
+        // Hide the previous account while a different principal is validated.
+        setSession(null);
+        setIsLoaded(false);
+      }
+
+      try {
+        const [{ data: userData, error: userError }, { data: assurance, error: assuranceError }] =
+          await Promise.all([
+            supabase.auth.getUser(candidate.access_token),
+            supabase.auth.mfa.getAuthenticatorAssuranceLevel(candidate.access_token),
+          ]);
+        if (validation !== sessionValidationRef.current) return;
+
+        const validatedUser = userData.user;
+        const disposition = classifyAuthValidationResult({
+          userError,
+          assuranceError,
+          userPresent: Boolean(validatedUser),
+          userIdMatches: !validatedUser || validatedUser.id === candidate.user.id,
+          userDeleted: Boolean(validatedUser?.deleted_at),
+          userBanned: isActiveBan(validatedUser?.banned_until),
+        });
+        if (disposition.kind === "retryable") {
+          markRetryableAuthFailure(candidate, userError ?? assuranceError, "returned");
+          return;
+        }
+        if (disposition.kind === "terminal") {
+          console.error("[KovaAuth] Session validation failed", {
+            userStatus: userError ? "invalid" : validatedUser ? "invalid" : "missing",
+            assuranceStatus: assuranceError ? "unavailable" : "valid",
+          });
+          setSession(null);
+          setPendingMfaSession(null);
+          setIsLoaded(false);
+          const cleanupIds = [
+            browserStorageUserIdRef.current,
+            pendingValidationUserIdRef.current,
+            candidate.user.id,
+          ] as const;
+          clearBrowserStateFor(...cleanupIds);
+          await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+          if (validation !== sessionValidationRef.current) return;
+          clearBrowserStateFor(...cleanupIds);
+          purgeOwnerlessStateFor(null);
+          browserStorageUserIdRef.current = null;
+          pendingValidationUserIdRef.current = null;
+          validatedSessionRef.current = null;
+          setSession(null);
+          setPendingMfaSession(null);
+          setAuthIssue(null);
+          setIsLoaded(true);
+          return;
+        }
+        if (!validatedUser) return;
+
+        if (assurance.nextLevel === "aal2" && assurance.currentLevel !== "aal2") {
+          if (
+            browserStorageUserIdRef.current &&
+            browserStorageUserIdRef.current !== candidate.user.id
+          ) {
+            clearBrowserStateFor(browserStorageUserIdRef.current);
+          }
+          if (browserStorageUserIdRef.current !== validatedUser.id) {
+            purgeOwnerlessStateFor(validatedUser.id);
+          }
+          browserStorageUserIdRef.current = validatedUser.id;
+          pendingValidationUserIdRef.current = null;
+          validatedSessionRef.current = null;
+          setSession(null);
+          setPendingMfaSession(candidate);
+          setDialog((current) => ({ ...current, open: false }));
+          setAuthIssue(null);
+          // MFA identity is known, but storage stays unresolved until the
+          // challenge succeeds so no caller can fall back to guest.
+          setIsLoaded(false);
+          return;
+        }
+
+        if (
+          browserStorageUserIdRef.current &&
+          browserStorageUserIdRef.current !== validatedUser.id
+        ) {
+          clearBrowserStateFor(browserStorageUserIdRef.current);
+        }
+        if (browserStorageUserIdRef.current !== validatedUser.id) {
+          purgeOwnerlessStateFor(validatedUser.id);
+        }
+        const validatedSession = { ...candidate, user: validatedUser };
+        browserStorageUserIdRef.current = validatedUser.id;
+        pendingValidationUserIdRef.current = null;
+        validatedSessionRef.current = validatedSession;
+        setPendingMfaSession(null);
+        setSession(validatedSession);
+        setAuthIssue(null);
+        setIsLoaded(true);
+      } catch (error) {
+        if (validation !== sessionValidationRef.current) return;
+        const disposition = classifyThrownAuthValidationError(error);
+        if (disposition.kind === "retryable") {
+          markRetryableAuthFailure(candidate, error, "thrown");
+        }
+      }
+    },
+    [clearBrowserStateFor, markRetryableAuthFailure, purgeOwnerlessStateFor],
+  );
 
   useEffect(() => {
     // Register listener first so we capture the SIGNED_IN that fires when
@@ -163,7 +308,9 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
     if (!config.configured) {
       console.warn(`[KovaAuth] Supabase auth unavailable. Missing: ${config.missing.join(", ")}`);
       setSession(null);
-      setIsLoaded(true);
+      setAuthIssue("configuration_unavailable");
+      // Missing deployment config cannot prove that this browser is a guest.
+      setIsLoaded(false);
       return () => {
         cancelled = true;
       };
@@ -175,22 +322,32 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
       if (event === "PASSWORD_RECOVERY" && newSession) {
         markPasswordRecoveryFlow(newSession.user.id);
       }
+      // Invalidate hydration and older queued events synchronously. Deferring
+      // the validation itself must not leave a window where stale getSession()
+      // success can commit first (especially a destructive null session).
+      const eventValidation = ++sessionValidationRef.current;
       // Supabase warns against awaiting auth methods while its auth-state lock
       // is held. Schedule the authoritative user/MFA validation after this
       // callback returns.
       window.setTimeout(() => {
-        if (!cancelled) void acceptSession(newSession);
+        if (isCurrentAuthValidation(eventValidation, sessionValidationRef.current, cancelled)) {
+          void acceptSession(newSession);
+        }
       }, 0);
     });
 
     async function hydrateSession() {
+      const hydrationValidation = sessionValidationRef.current;
       try {
         if (hasOAuthResponseInUrl() && window.location.pathname !== OAUTH_CALLBACK_PATH) {
           // Clear the OAuth params from the URL up-front so a StrictMode
           // double-invoke / reload can't re-trigger exchange.
           const oauthSession = await completeOAuthSessionFromUrl("app bootstrap");
           clearOAuthResponseFromUrl();
-          if (cancelled) return;
+          if (
+            !isCurrentAuthValidation(hydrationValidation, sessionValidationRef.current, cancelled)
+          )
+            return;
           if (oauthSession) {
             await acceptSession(oauthSession);
             return;
@@ -199,17 +356,49 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
 
         const { data, error } = await supabase.auth.getSession();
         if (error) {
-          console.error("[KovaAuth] Initial session restore failed.", {
-            error: error.name || "unknown_error",
-          });
+          if (
+            isCurrentAuthValidation(hydrationValidation, sessionValidationRef.current, cancelled)
+          ) {
+            const disposition = classifySessionRestoreError(error);
+            if (disposition.kind === "terminal") {
+              const cleanupIds = [
+                browserStorageUserIdRef.current,
+                pendingValidationUserIdRef.current,
+                data.session?.user.id ?? undefined,
+              ] as const;
+              setSession(null);
+              setPendingMfaSession(null);
+              setIsLoaded(false);
+              clearBrowserStateFor(...cleanupIds);
+              await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+              if (
+                !isCurrentAuthValidation(
+                  hydrationValidation,
+                  sessionValidationRef.current,
+                  cancelled,
+                )
+              )
+                return;
+              clearBrowserStateFor(...cleanupIds);
+              purgeOwnerlessStateFor(null);
+              browserStorageUserIdRef.current = null;
+              pendingValidationUserIdRef.current = null;
+              validatedSessionRef.current = null;
+              setAuthIssue(null);
+              setIsLoaded(true);
+            } else {
+              markRetryableAuthFailure(data.session, error, "restore");
+            }
+          }
+          return;
         }
-        if (cancelled) return;
+        if (!isCurrentAuthValidation(hydrationValidation, sessionValidationRef.current, cancelled))
+          return;
         await acceptSession(data.session);
       } catch (error) {
-        console.error("[KovaAuth] Auth initialization failed", {
-          error: error instanceof Error ? error.name : "unknown_error",
-        });
-        if (!cancelled) await acceptSession(null);
+        if (isCurrentAuthValidation(hydrationValidation, sessionValidationRef.current, cancelled)) {
+          markRetryableAuthFailure(null, error, "restore");
+        }
       }
     }
 
@@ -219,7 +408,7 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       sub.subscription.unsubscribe();
     };
-  }, [acceptSession]);
+  }, [acceptSession, clearBrowserStateFor, markRetryableAuthFailure, purgeOwnerlessStateFor]);
 
   // Support ?sign-in=1 / ?sign-up=1 deep links (legacy behavior).
   useEffect(() => {
@@ -249,29 +438,61 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     // Normal sign-out is intentionally device-local. "Sign out other
     // sessions" remains a separate, explicit security action.
-    await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+    const browserStorageUserId = browserStorageUserIdRef.current;
+    const pendingValidationUserId = pendingValidationUserIdRef.current;
     sessionValidationRef.current += 1;
     setSession(null);
     setPendingMfaSession(null);
-    clearPrivateBrowserState();
+    setIsLoaded(false);
+    clearBrowserStateFor(browserStorageUserId, pendingValidationUserId);
+    await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
+    clearBrowserStateFor(browserStorageUserId, pendingValidationUserId);
+    purgeOwnerlessStateFor(null);
+    browserStorageUserIdRef.current = null;
+    pendingValidationUserIdRef.current = null;
+    validatedSessionRef.current = null;
+    setSession(null);
+    setPendingMfaSession(null);
+    setAuthIssue(null);
+    setIsLoaded(true);
     // Hard reload drops any in-memory React-Query / router caches too.
     if (typeof window !== "undefined") window.location.assign("/");
-  }, []);
+  }, [clearBrowserStateFor, purgeOwnerlessStateFor]);
 
   const value = useMemo<AuthCtx>(
     () => ({
       session,
       user: session?.user ?? null,
       isLoaded,
+      authIssue,
       openAuth,
       signOut,
     }),
-    [session, isLoaded, openAuth, signOut],
+    [session, isLoaded, authIssue, openAuth, signOut],
   );
 
   return (
     <Ctx.Provider value={value}>
       {children}
+      {authIssue ? (
+        <div
+          role="alert"
+          className="fixed left-1/2 top-4 z-[120] flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-3 rounded-xl border border-border bg-popover px-4 py-3 text-sm text-popover-foreground shadow-lg"
+        >
+          <span>
+            {authIssue === "configuration_unavailable"
+              ? "Sign-in is temporarily unavailable because authentication is not configured."
+              : "KovaGPT could not verify your session. Your browser data was not changed."}
+          </span>
+          <button
+            type="button"
+            className="shrink-0 rounded-md border border-border px-2.5 py-1 font-medium hover:bg-accent"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </button>
+        </div>
+      ) : null}
       <AuthDialog
         open={dialog.open}
         mode={dialog.mode}
@@ -295,6 +516,7 @@ function useAuthCtx(): AuthCtx {
     session: null,
     user: null,
     isLoaded: false,
+    authIssue: null,
     openAuth: () => {},
     signOut: async () => {},
   };
@@ -338,9 +560,9 @@ function adaptUser(u: SupabaseUser | null): UserShape {
 }
 
 export function useUser() {
-  const { user, isLoaded } = useAuthCtx();
+  const { user, isLoaded, authIssue } = useAuthCtx();
   const adapted = adaptUser(user);
-  return { user: adapted, isSignedIn: !!user, isLoaded };
+  return { user: adapted, isSignedIn: !!user, isLoaded, authError: authIssue };
 }
 
 // Compat with previous `useClerkSafe()?.openUserProfile()` / openSignIn /

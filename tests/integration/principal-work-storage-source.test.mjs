@@ -64,14 +64,21 @@ test("every direct work-store caller supplies the resolved user key", async () =
 
   assert.match(agent, /const principal = isLoaded \? workStoragePrincipal\(userKey\) : null/);
   assert.match(agent, /runState\.principal === principal/);
+  assert.match(agent, /runState\.generation === storageGenerationRef\.current/);
   assert.match(agent, /const runs = principalReady \? runState\.items : EMPTY_AGENT_RUNS/);
   assert.match(
     agent,
-    /useEffect\(\(\) => \{\s*setName\("Research and deliver"\);\s*setObjective\(""\);\s*setInstructions\(""\);\s*setProject\(""\);\s*setContext\(""\);\s*setSteps\(DEFAULT_STEPS\);\s*setApprovalSteps\(\[2\]\);\s*setTools\(\["web", "files"\]\);\s*setValidation\(\[\]\)/,
+    /useEffect\(\(\) => \{[\s\S]{0,220}setName\("Research and deliver"\);\s*setObjective\(""\);\s*setInstructions\(""\);\s*setProject\(""\);\s*setContext\(""\);\s*setSteps\(DEFAULT_STEPS\);\s*setApprovalSteps\(\[2\]\);\s*setTools\(\["web", "files"\]\);\s*setValidation\(\[\]\)/,
   );
-  assert.match(agent, /setRunState\(\{ principal, items: loadAgentRuns\(userKey\) \}\)/);
+  assert.match(
+    agent,
+    /setRunState\(\{ principal, generation, items: loadAgentRuns\(userKey\) \}\)/,
+  );
   assert.match(agent, /if \(!principalReady \|\| principal === null\) return/);
+  assert.match(agent, /if \(generation !== storageGenerationRef\.current\) return/);
   assert.match(agent, /saveAgentRuns\(userKey, next\)/);
+  assert.match(agent, /PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT/);
+  assert.match(agent, /setRunState\(\{ principal, generation, items: \[\] \}\)/);
   assert.match(agent, /\) : !principalReady \? \(\s*<p[^>]+role="status">/);
   assert.match(agent, /\{available && principalReady && \(/);
 
