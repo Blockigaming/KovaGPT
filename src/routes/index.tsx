@@ -81,6 +81,12 @@ import {
 import { toast } from "sonner";
 import { loadPersonality, personalityToInstruction } from "@/components/PersonalitySliders";
 import { useTier } from "@/hooks/useTier";
+import {
+  consumePrincipalHandoff,
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+  safeBrowserStorage,
+} from "@/lib/principal-browser-storage.mjs";
 
 export const Route = createFileRoute("/")({
   component: KovaGPT,
@@ -125,6 +131,7 @@ function KovaGPT() {
   const storagePrincipal = chatStoragePrincipal(userKey);
   const storagePrincipalRef = useRef(storagePrincipal);
   storagePrincipalRef.current = storagePrincipal;
+  const storageGenerationRef = useRef(0);
   const [conversationState, setConversationState] = useState<{
     principal: string | null;
     items: Conversation[];
@@ -188,11 +195,17 @@ function KovaGPT() {
 
   const loadRecentLibraryFiles = useCallback(async () => {
     if (!isLoaded) return;
+    const generation = storageGenerationRef.current;
+    const requestPrincipal = storagePrincipal;
+    const isCurrent = () =>
+      generation === storageGenerationRef.current &&
+      requestPrincipal === storagePrincipalRef.current;
     setRecentLibraryLoading(true);
     setRecentLibraryError(null);
     try {
       const { listMyLibrary } = await import("@/lib/library.functions");
       const rows = isSignedIn ? await listMyLibrary() : [];
+      if (!isCurrent()) return;
       setRecentLibraryFiles(
         rows
           .filter((item) => item.file_name || item.content_text || item.file_type)
@@ -208,12 +221,13 @@ function KovaGPT() {
           })),
       );
     } catch (error) {
+      if (!isCurrent()) return;
       console.warn("[recentLibraryFiles]", error);
       setRecentLibraryError("Recent Library files are unavailable.");
     } finally {
-      setRecentLibraryLoading(false);
+      if (isCurrent()) setRecentLibraryLoading(false);
     }
-  }, [isLoaded, isSignedIn]);
+  }, [isLoaded, isSignedIn, storagePrincipal]);
 
   useEffect(() => {
     void loadRecentLibraryFiles();
@@ -322,10 +336,12 @@ function KovaGPT() {
   // account gets its own personalization, behavior, appearance, etc.
   useEffect(() => {
     if (!isLoaded) {
+      storageGenerationRef.current += 1;
       setConversationState({ principal: null, items: [] });
       setSettingsPrincipal(null);
       return;
     }
+    storageGenerationRef.current += 1;
     abortRef.current?.abort();
     abortRef.current = null;
     inFlightRef.current = false;
@@ -337,9 +353,15 @@ function KovaGPT() {
     setActiveId(null);
     setInput("");
     setAttachments([]);
+    setSelectedTool(null);
+    setCommandOpen(false);
+    setCommandQuery("");
     setEditingMessage(null);
     setShareChatId(null);
     setSettingsOpen(false);
+    setRecentLibraryFiles([]);
+    setRecentLibraryLoading(false);
+    setRecentLibraryError(null);
     lastLoadedDraftRef.current = null;
 
     const loaded = loadSettings(userKey, { migrateLegacyGuest: userKey === null });
@@ -371,90 +393,160 @@ function KovaGPT() {
   // which was the main source of typing/streaming lag.
   useEffect(() => {
     if (!settingsReady || typeof window === "undefined") return;
+    const generation = storageGenerationRef.current;
     const t = setTimeout(() => {
-      localStorage.setItem(settingsKey(userKey), JSON.stringify(settings));
+      if (generation !== storageGenerationRef.current) return;
+      safeBrowserStorage("localStorage")?.setItem(settingsKey(userKey), JSON.stringify(settings));
     }, 400);
     return () => clearTimeout(t);
   }, [settings, settingsReady, userKey]);
 
   useEffect(() => {
     if (!principalReady) return;
-    const t = setTimeout(
-      () =>
-        saveConversations(
-          userKey,
-          conversations.filter((c) => !c.temporary),
-        ),
-      400,
-    );
+    const generation = storageGenerationRef.current;
+    const t = setTimeout(() => {
+      if (generation !== storageGenerationRef.current) return;
+      saveConversations(
+        userKey,
+        conversations.filter((c) => !c.temporary),
+      );
+    }, 400);
     return () => clearTimeout(t);
   }, [conversations, principalReady, userKey]);
 
   useEffect(() => {
-    try {
-      const rawPack =
-        sessionStorage.getItem("kova-active-context-pack") ??
-        localStorage.getItem("kova-active-context-pack");
-      const rawWork = localStorage.getItem("kova-work-context");
-      const rawApp =
-        sessionStorage.getItem("kova-app-chat-context") ??
-        localStorage.getItem("kova-app-chat-context");
-      const rawPrompt =
-        sessionStorage.getItem("kova-prompt-launch") ?? localStorage.getItem("kova-prompt-launch");
-      const rawResearch = localStorage.getItem("kova-research-launch");
-      if (rawPack) {
-        const pack = JSON.parse(rawPack) as {
-          name: string;
-          items: { title: string; content: string }[];
-        };
-        const context = pack.items.map((item) => `## ${item.title}\n${item.content}`).join("\n\n");
+    if (!isLoaded) return;
+    const handlePrincipalReset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      storageGenerationRef.current += 1;
+      abortRef.current?.abort();
+      abortRef.current = null;
+      inFlightRef.current = false;
+      if (retryTimerRef.current !== null) {
+        window.clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+      lastLoadedDraftRef.current = null;
+      setConversationState({ principal: null, items: [] });
+      setSettings(DEFAULT_SETTINGS);
+      setSettingsPrincipal(null);
+      setActiveId(null);
+      setInput("");
+      setAttachments([]);
+      setSelectedTool(null);
+      setEditingMessage(null);
+      setShareChatId(null);
+      setCommandOpen(false);
+      setCommandQuery("");
+      setIsStreaming(false);
+      setRecentLibraryFiles([]);
+      setRecentLibraryLoading(false);
+      setRecentLibraryError(null);
+      configureMemoryWrites({ principal: null, enabled: false });
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, handlePrincipalReset);
+    return () =>
+      window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, handlePrincipalReset);
+  }, [isLoaded, userKey]);
+
+  useEffect(() => {
+    if (!principalReady) return;
+    let rejectedHandoff = false;
+    const storage = safeBrowserStorage("sessionStorage");
+    const candidates: Array<{ createdAt: number; apply: () => void }> = [];
+    const consume = <T,>(baseKey: string, prepare: (value: T) => () => void) => {
+      const result = consumePrincipalHandoff<T>(storage, baseKey, userKey);
+      if (!result.ok) {
+        if (result.reason !== "missing") rejectedHandoff = true;
+        return;
+      }
+      try {
+        candidates.push({ createdAt: result.createdAt, apply: prepare(result.value) });
+      } catch {
+        rejectedHandoff = true;
+      }
+    };
+
+    // Consume every registered home handoff before choosing one. This makes
+    // the newest valid handoff deterministic and prevents lower-priority
+    // leftovers from replaying on the next render.
+    consume<{
+      name: string;
+      items: { title: string; content: string }[];
+    }>("kova-active-context-pack", (pack) => {
+      if (
+        typeof pack?.name !== "string" ||
+        !Array.isArray(pack.items) ||
+        !pack.items.every(
+          (item) => typeof item?.title === "string" && typeof item?.content === "string",
+        )
+      ) {
+        throw new Error("invalid_context_pack_handoff");
+      }
+      const context = pack.items.map((item) => `## ${item.title}\n${item.content}`).join("\n\n");
+      return () =>
         setInput(
           `Use this saved context pack, “${pack.name}”, to help with my request:\n\n${context}\n\nMy request: `,
         );
-        sessionStorage.removeItem("kova-active-context-pack");
-        localStorage.removeItem("kova-active-context-pack");
-      } else if (rawWork) {
-        const task = JSON.parse(rawWork) as {
-          objective: string;
-          context: string;
-          steps: { text: string; done: boolean }[];
-        };
+    });
+
+    consume<{
+      objective: string;
+      context: string;
+      steps: { text: string; done?: boolean; approval?: boolean }[];
+    }>("kova-work-context", (task) => {
+      if (
+        typeof task?.objective !== "string" ||
+        typeof task.context !== "string" ||
+        !Array.isArray(task.steps) ||
+        !task.steps.every((step) => typeof step?.text === "string")
+      ) {
+        throw new Error("invalid_work_handoff");
+      }
+      return () =>
         setInput(
           `Continue this work task without claiming background execution.\n\nObjective: ${task.objective}\nContext: ${task.context || "None provided"}\nPlan:\n${task.steps.map((step) => `- [${step.done ? "x" : " "}] ${step.text}`).join("\n")}\n\nNext, help me with: `,
         );
-        localStorage.removeItem("kova-work-context");
-      } else if (rawApp) {
-        setInput(rawApp);
-        sessionStorage.removeItem("kova-app-chat-context");
-        localStorage.removeItem("kova-app-chat-context");
-      } else if (rawPrompt) {
-        const launch = JSON.parse(rawPrompt) as {
-          prompt: string;
-          pack?: { name: string; items: { title: string; content: string }[] } | null;
-        };
-        const context = launch.pack
-          ? `\n\nContext pack “${launch.pack.name}”:\n${launch.pack.items.map((item) => `## ${item.title}\n${item.content}`).join("\n\n")}`
-          : "";
-        setInput(`${launch.prompt}${context}`);
-        sessionStorage.removeItem("kova-prompt-launch");
-        localStorage.removeItem("kova-prompt-launch");
-      } else if (rawResearch) {
-        setInput(rawResearch);
-        setSelectedTool("deep_research");
-        localStorage.removeItem("kova-research-launch");
+    });
+
+    consume<string>("kova-app-chat-context", (appContext) => {
+      if (typeof appContext !== "string") throw new Error("invalid_app_handoff");
+      return () => setInput(appContext);
+    });
+
+    consume<{
+      prompt: string;
+      pack?: { name: string; items: { title: string; content: string }[] } | null;
+    }>("kova-prompt-launch", (launch) => {
+      if (
+        typeof launch?.prompt !== "string" ||
+        (launch.pack != null &&
+          (typeof launch.pack.name !== "string" ||
+            !Array.isArray(launch.pack.items) ||
+            !launch.pack.items.every(
+              (item) => typeof item?.title === "string" && typeof item?.content === "string",
+            )))
+      ) {
+        throw new Error("invalid_prompt_handoff");
       }
-    } catch {
-      sessionStorage.removeItem("kova-active-context-pack");
-      localStorage.removeItem("kova-active-context-pack");
-      localStorage.removeItem("kova-work-context");
-      sessionStorage.removeItem("kova-app-chat-context");
-      localStorage.removeItem("kova-app-chat-context");
-      sessionStorage.removeItem("kova-prompt-launch");
-      localStorage.removeItem("kova-prompt-launch");
-      localStorage.removeItem("kova-research-launch");
-      toast.error("Saved workspace context could not be attached");
-    }
-  }, []);
+      const context = launch.pack
+        ? `\n\nContext pack “${launch.pack.name}”:\n${launch.pack.items.map((item) => `## ${item.title}\n${item.content}`).join("\n\n")}`
+        : "";
+      return () => setInput(`${launch.prompt}${context}`);
+    });
+
+    consume<string>("kova-research-launch", (research) => {
+      if (typeof research !== "string") throw new Error("invalid_research_handoff");
+      return () => {
+        setInput(research);
+        setSelectedTool("deep_research");
+      };
+    });
+
+    const newest = candidates.sort((left, right) => right.createdAt - left.createdAt)[0];
+    if (newest) newest.apply();
+    if (rejectedHandoff) toast.error("Saved workspace context could not be attached");
+  }, [principalReady, userKey]);
 
   // Memory is retained across sign-in/sign-out transitions per user request.
 
@@ -735,6 +827,11 @@ function KovaGPT() {
       const MAX_AUTO_RETRIES = 2;
       const trimmed = text.trim();
       if (!principalReady || (!trimmed && atts.length === 0) || inFlightRef.current) return;
+      const requestGeneration = storageGenerationRef.current;
+      const requestPrincipal = storagePrincipal;
+      const isCurrentRequest = () =>
+        requestGeneration === storageGenerationRef.current &&
+        requestPrincipal === storagePrincipalRef.current;
 
       if (_retryAttempt === 0 && retryTimerRef.current !== null) {
         window.clearTimeout(retryTimerRef.current);
@@ -825,6 +922,7 @@ function KovaGPT() {
       abortRef.current = controller;
 
       const updateAssistant = (chunk: string) => {
+        if (!isCurrentRequest()) return;
         setConversations((prev) =>
           prev.map((c) => {
             if (c.id !== nextConvId) return c;
@@ -839,6 +937,7 @@ function KovaGPT() {
       };
 
       const markPendingImage = () => {
+        if (!isCurrentRequest()) return;
         setConversations((prev) =>
           prev.map((c) => {
             if (c.id !== nextConvId) return c;
@@ -903,10 +1002,17 @@ function KovaGPT() {
             locale: typeof navigator !== "undefined" ? navigator.language : "en-US",
             personality: tempChat
               ? undefined
-              : personalityToInstruction(loadPersonality()) || undefined,
+              : personalityToInstruction(
+                  loadPersonality(isLoaded ? userKey : undefined),
+                  isLoaded ? userKey : undefined,
+                ) || undefined,
           }),
           signal: controller.signal,
         });
+        if (!isCurrentRequest()) {
+          void resp.body?.cancel().catch(() => undefined);
+          return;
+        }
 
         if (!resp.ok || !resp.body) {
           const errJson = await resp.json().catch(() => ({ error: "Request failed" }));
@@ -934,6 +1040,10 @@ function KovaGPT() {
         let done = false;
         while (!done) {
           const { done: d, value } = await reader.read();
+          if (!isCurrentRequest()) {
+            void reader.cancel().catch(() => undefined);
+            return;
+          }
           if (d) break;
           buffer += decoder.decode(value, { stream: true });
           let idx: number;
@@ -1014,9 +1124,10 @@ function KovaGPT() {
             userMsg,
             { ...assistantMsg, content: assembledReply },
           ];
-          autoTitle(nextConvId, fullMsgs);
+          if (isCurrentRequest()) autoTitle(nextConvId, fullMsgs);
         }
       } catch (e: unknown) {
+        if (!isCurrentRequest()) return;
         if ((e as Error).name === "AbortError") {
           if (!assembledReply.trim()) {
             setConversations((prev) =>
@@ -1071,7 +1182,7 @@ function KovaGPT() {
             inFlightRef.current = false;
             retryTimerRef.current = window.setTimeout(() => {
               retryTimerRef.current = null;
-              if (activeIdRef.current !== nextConvId) return;
+              if (!isCurrentRequest() || activeIdRef.current !== nextConvId) return;
               void send(text, atts, _retryAttempt + 1, nextConvId, priorMessages);
             }, backoffMs);
             return;
@@ -1114,7 +1225,7 @@ function KovaGPT() {
                 );
                 retryTimerRef.current = window.setTimeout(() => {
                   retryTimerRef.current = null;
-                  if (activeIdRef.current !== nextConvId) return;
+                  if (!isCurrentRequest() || activeIdRef.current !== nextConvId) return;
                   void send(text, atts, 0, nextConvId, priorMessages);
                 }, 100);
               },
@@ -1123,10 +1234,12 @@ function KovaGPT() {
           updateAssistant(`\n\n_${detail}_`);
         }
       } finally {
-        setIsStreaming(false);
-        setSelectedTool(null);
-        abortRef.current = null;
-        inFlightRef.current = false;
+        if (isCurrentRequest()) {
+          setIsStreaming(false);
+          setSelectedTool(null);
+          if (abortRef.current === controller) abortRef.current = null;
+          inFlightRef.current = false;
+        }
       }
     },
     [
@@ -1140,6 +1253,9 @@ function KovaGPT() {
       editingMessage,
       principalReady,
       setConversations,
+      storagePrincipal,
+      isLoaded,
+      userKey,
     ],
   );
 
@@ -1494,6 +1610,8 @@ function KovaGPT() {
                   <ChatMessage
                     key={m.id}
                     message={m}
+                    userKey={userKey}
+                    principalResolved={isLoaded}
                     streaming={isStreaming && isLastAssistant}
                     onUpdatePendingConfirm={(messageId, next) => {
                       setConversations((prev) =>
@@ -1705,11 +1823,28 @@ function KovaGPT() {
             settings={settings}
             onChange={setSettings}
             onClearAll={() => {
-              setConversations([]);
+              storageGenerationRef.current += 1;
+              abortRef.current?.abort();
+              abortRef.current = null;
+              inFlightRef.current = false;
+              if (retryTimerRef.current !== null) {
+                window.clearTimeout(retryTimerRef.current);
+                retryTimerRef.current = null;
+              }
+              // A same-principal local reset should remain usable with a clean,
+              // empty workspace. The incremented generation rejects every
+              // closure created before cleanup.
+              setConversationState({ principal: storagePrincipal, items: [] });
+              setSettings(DEFAULT_SETTINGS);
+              setSettingsPrincipal(storagePrincipal);
               setActiveId(null);
               setInput("");
               setAttachments([]);
+              setSelectedTool(null);
+              setCommandOpen(false);
+              setCommandQuery("");
               setEditingMessage(null);
+              setIsStreaming(false);
             }}
             onOpenHelp={openHelp}
             initialTab={settingsTab}

@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Download, FlaskConical, Plus, Save, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { RelatedWorkspaceItems } from "@/components/WorkspaceIntelligence";
@@ -12,6 +12,15 @@ import {
   type ResearchTemplate,
 } from "@/lib/professional.functions";
 import { toast } from "sonner";
+import {
+  browserStoragePrincipal,
+  consumePrincipalHandoff,
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+  safeBrowserStorage,
+  writePrincipalHandoff,
+} from "@/lib/principal-browser-storage.mjs";
+import { loadPrincipalStoredRecord, WORKSPACE_DEFAULTS_KEY_BASE } from "@/lib/settings-storage";
 export const Route = createFileRoute("/research-planner")({
   component: ResearchPlanner,
   head: () => ({
@@ -25,7 +34,16 @@ const starter = [
   "Synthesize findings with citations",
 ];
 function ResearchPlanner() {
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const userKey = user?.id ?? null;
+  const principal = isLoaded ? browserStoragePrincipal(userKey) : null;
+  const principalRef = useRef(principal);
+  principalRef.current = principal;
+  const generationRef = useRef(0);
+  const [dataPrincipal, setDataPrincipal] = useState<string | null>(null);
+  const [dataGeneration, setDataGeneration] = useState(0);
+  const dataReady =
+    principal !== null && dataPrincipal === principal && dataGeneration === generationRef.current;
   const navigate = useNavigate();
   const list = useServerFn(listResearchTemplates),
     save = useServerFn(saveResearchTemplate),
@@ -40,49 +58,108 @@ function ResearchPlanner() {
     [sourceContext, setSourceContext] = useState(""),
     [steps, setSteps] = useState(starter),
     [sites, setSites] = useState(""),
-    [source, setSource] = useState<"balanced" | "primary" | "academic" | "recent">(() => {
-      try {
-        const label = JSON.parse(
-          localStorage.getItem("kova-workspace-defaults-v1") ?? "{}",
-        ).research;
-        return label === "Primary sources"
-          ? "primary"
-          : label === "Academic sources"
-            ? "academic"
-            : label === "Recent sources"
-              ? "recent"
-              : "balanced";
-      } catch {
-        return "balanced";
-      }
-    }),
+    [source, setSource] = useState<"balanced" | "primary" | "academic" | "recent">("balanced"),
     [projectId, setProjectId] = useState(""),
     [saving, setSaving] = useState(false);
   useEffect(() => {
-    if (!isLoaded) return;
+    const generation = generationRef.current + 1;
+    generationRef.current = generation;
+    setDataPrincipal(null);
+    setDataGeneration(generation);
+    setTemplates([]);
+    setProjects([]);
+    setLoading(true);
+    setError(null);
+    setName("Research plan");
+    setQuestion("");
+    setSourceContext("");
+    setSteps(starter);
+    setSites("");
+    setSource("balanced");
+    setProjectId("");
+    setSaving(false);
+    if (!principal) return;
+
+    const defaults = loadPrincipalStoredRecord(WORKSPACE_DEFAULTS_KEY_BASE, userKey, {
+      migrateLegacyGuest: userKey === null,
+    });
+    const label = defaults?.research;
+    setSource(
+      label === "Primary sources"
+        ? "primary"
+        : label === "Academic sources"
+          ? "academic"
+          : label === "Recent sources"
+            ? "recent"
+            : "balanced",
+    );
+
     if (!isSignedIn) {
+      setDataPrincipal(principal);
+      setDataGeneration(generation);
       setLoading(false);
       return;
     }
-    try {
-      const raw = localStorage.getItem("kova-research-draft");
-      if (raw) {
-        const draft = JSON.parse(raw) as { question: string; context: string };
+    const handoff = consumePrincipalHandoff<{ question: string; context: string }>(
+      safeBrowserStorage("sessionStorage"),
+      "kova-research-draft",
+      userKey,
+    );
+    if (handoff.ok) {
+      const draft = handoff.value;
+      if (typeof draft.question === "string" && typeof draft.context === "string") {
         setQuestion(draft.question);
         setSourceContext(draft.context);
-        localStorage.removeItem("kova-research-draft");
+      } else {
+        toast.error("The saved research context could not be loaded.");
       }
-    } catch {
-      localStorage.removeItem("kova-research-draft");
+    } else if (handoff.reason !== "missing") {
+      toast.error("The saved research context could not be loaded.");
     }
+    if (generationRef.current !== generation || principalRef.current !== principal) return;
+    setDataPrincipal(principal);
+    setDataGeneration(generation);
     Promise.all([list({}), getProjects({})])
       .then(([t, p]) => {
+        if (generationRef.current !== generation || principalRef.current !== principal) return;
         setTemplates(t);
         setProjects(p);
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Research plans could not be loaded"))
-      .finally(() => setLoading(false));
-  }, [isLoaded, isSignedIn, list, getProjects]);
+      .catch((e) => {
+        if (generationRef.current !== generation || principalRef.current !== principal) return;
+        setError(e instanceof Error ? e.message : "Research plans could not be loaded");
+      })
+      .finally(() => {
+        if (generationRef.current === generation && principalRef.current === principal) {
+          setLoading(false);
+        }
+      });
+  }, [getProjects, isSignedIn, list, principal, userKey]);
+
+  useEffect(() => {
+    if (!isLoaded || !principal) return;
+    const reset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      const generation = generationRef.current + 1;
+      generationRef.current = generation;
+      setDataPrincipal(principal);
+      setDataGeneration(generation);
+      setTemplates([]);
+      setProjects([]);
+      setLoading(false);
+      setError(null);
+      setName("Research plan");
+      setQuestion("");
+      setSourceContext("");
+      setSteps(starter);
+      setSites("");
+      setSource("balanced");
+      setProjectId("");
+      setSaving(false);
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+    return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+  }, [isLoaded, principal, userKey]);
   const allowed = sites
     .split(/[\n,]/)
     .map((value) => value.trim())
@@ -90,22 +167,38 @@ function ResearchPlanner() {
   const planText = () =>
     `Research question: ${question}${sourceContext ? `\nExisting authorized context:\n${sourceContext}` : ""}\nSource preference: ${source}\nAllowed websites: ${allowed.length ? allowed.join(", ") : "No allow list"}\nPlan:\n${steps.map((step, index) => `${index + 1}. ${step}`).join("\n")}`;
   const savePlan = async () => {
+    if (!dataReady || dataGeneration !== generationRef.current) return;
+    const generation = generationRef.current;
     setSaving(true);
     try {
       const row = await save({
         data: { name, steps, allowed_sites: allowed, source_preference: source },
       });
+      if (generation !== generationRef.current || principalRef.current !== principal) return;
       setTemplates((all) => [row, ...all]);
       toast.success("Research template saved");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Template could not be saved");
+      if (generation === generationRef.current && principalRef.current === principal) {
+        toast.error(e instanceof Error ? e.message : "Template could not be saved");
+      }
     } finally {
-      setSaving(false);
+      if (generation === generationRef.current && principalRef.current === principal) {
+        setSaving(false);
+      }
     }
   };
   const launch = () => {
-    if (!question.trim()) return;
-    localStorage.setItem("kova-research-launch", planText());
+    if (!dataReady || dataGeneration !== generationRef.current || !question.trim()) return;
+    const handoff = writePrincipalHandoff(
+      safeBrowserStorage("sessionStorage"),
+      "kova-research-launch",
+      isLoaded ? userKey : undefined,
+      planText(),
+    );
+    if (!handoff.ok) {
+      toast.error("Research context could not be prepared. Reload and try again.");
+      return;
+    }
     navigate({ to: "/" });
   };
   const download = () => {
@@ -135,7 +228,7 @@ function ResearchPlanner() {
           <div className="mt-6 rounded-2xl border p-8 text-center">
             Sign in to save and reuse research plans.
           </div>
-        ) : loading ? (
+        ) : loading || !dataReady ? (
           <div className="mt-6 h-48 animate-pulse rounded-2xl bg-muted" />
         ) : error ? (
           <div role="alert" className="mt-6 rounded-xl border border-destructive/40 p-4">
@@ -279,14 +372,21 @@ function ResearchPlanner() {
                   <button
                     disabled={!question.trim()}
                     onClick={() => {
-                      localStorage.setItem(
+                      if (!dataReady || dataGeneration !== generationRef.current) return;
+                      const handoff = writePrincipalHandoff(
+                        safeBrowserStorage("sessionStorage"),
                         "kova-work-draft",
-                        JSON.stringify({
+                        isLoaded ? userKey : undefined,
+                        {
                           objective: question,
                           plan: steps,
                           context: `Research sources: ${source}; allow list: ${allowed.join(", ") || "none"}`,
-                        }),
+                        },
                       );
+                      if (!handoff.ok) {
+                        toast.error("Work context could not be prepared. Reload and try again.");
+                        return;
+                      }
                       navigate({ to: "/work" });
                     }}
                     className="min-h-11 rounded-xl border px-4"
@@ -312,6 +412,8 @@ function ResearchPlanner() {
                     <button
                       disabled={!projectId || !question.trim()}
                       onClick={async () => {
+                        if (!dataReady || dataGeneration !== generationRef.current) return;
+                        const generation = generationRef.current;
                         try {
                           const row = await createChat({
                             data: {
@@ -320,11 +422,21 @@ function ResearchPlanner() {
                               messages: [{ role: "user", content: planText() }],
                             },
                           });
+                          if (
+                            generation !== generationRef.current ||
+                            principalRef.current !== principal
+                          )
+                            return;
                           navigate({
                             to: "/projects/$projectId/chat/$chatId",
                             params: { projectId, chatId: row.id },
                           });
                         } catch (e) {
+                          if (
+                            generation !== generationRef.current ||
+                            principalRef.current !== principal
+                          )
+                            return;
                           toast.error(
                             e instanceof Error
                               ? e.message

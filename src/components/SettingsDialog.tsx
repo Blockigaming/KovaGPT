@@ -81,19 +81,24 @@ import { StorageDashboard } from "@/components/StorageDashboard";
 import { FamilySharingPanel } from "@/components/FamilySharingPanel";
 import { MfaPanel } from "@/components/MfaPanel";
 import {
-  clearPrincipalChatStorage,
   loadArchivedConversations,
   loadConversations,
   saveArchivedConversations,
   saveConversations,
 } from "@/lib/chat-store";
 import {
-  clearPrincipalPreferences,
   loadPrincipalStoredRecord,
   savePrincipalStoredRecord,
   LOCATION_KEY_BASE,
   WORKSPACE_DEFAULTS_KEY_BASE,
 } from "@/lib/settings-storage";
+import {
+  browserStoragePrincipal,
+  clearPrincipalBrowserStorage,
+  dispatchPrincipalBrowserStorageCleared,
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+} from "@/lib/principal-browser-storage.mjs";
 import {
   allowMemoryWrites,
   blockMemoryWrites,
@@ -262,6 +267,8 @@ export function SettingsDialog({
 
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
+  const currentAuthUserKeyRef = useRef<string | null | undefined>(undefined);
+  currentAuthUserKeyRef.current = isLoaded ? userKey : undefined;
   const sharedSendOnEnter = useSharedSendOnEnter(user?.id ?? null);
   const clerk = useClerk();
   const loggedIn = !clerkEnabled || isSignedIn;
@@ -367,42 +374,89 @@ export function SettingsDialog({
     }
   };
 
+  const clearLocalBrowserData = (
+    targetUserKey: string | null | undefined = isLoaded ? userKey : undefined,
+  ) => {
+    const result = clearPrincipalBrowserStorage(targetUserKey);
+    if (!result.resolved) return result;
+    const failureCount = result.local.failures.length + result.session.failures.length;
+    if (failureCount > 0) {
+      console.warn("[local-data] Account-local browser cleanup was incomplete", {
+        failureCount,
+      });
+    }
+    return result;
+  };
+
   const handleDeleteAccount = async () => {
     if (deleteConfirmation !== "DELETE" || deleteAccountBusy) return;
+    const deletionUserKey = isLoaded ? userKey : undefined;
     setDeleteAccountBusy(true);
+    let response: Response;
     try {
-      const response = await authFetch("/api/account", {
+      response = await authFetch("/api/account", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ confirmation: deleteConfirmation }),
       });
-      if (!response.ok) {
-        const result = (await response.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        toast.error(result?.error || "Account deletion failed. Your account remains active.");
-        return;
-      }
-      clearPrincipalChatStorage(userKey);
-      clearPrincipalPreferences(userKey);
-      onClearAll();
-      setDeleteAccountOpen(false);
-      onOpenChange(false);
-      toast.success("Account deletion completed. Active subscriptions were canceled.");
-      // The auth user no longer exists, so a post-delete sign-out failure must
-      // not reclassify the already-completed server deletion as a failure.
-      try {
-        await clerk?.signOut();
-      } catch (error) {
-        console.error("[account-delete] post-delete sign-out failed", {
-          error: error instanceof Error ? error.name : "unknown_error",
-        });
-      }
     } catch (error) {
       console.error("[account-delete] request failed", {
         error: error instanceof Error ? error.name : "unknown_error",
       });
       toast.error("Account deletion could not be completed. Your account remains active.");
+      setDeleteAccountBusy(false);
+      return;
+    }
+
+    if (!response.ok) {
+      const result = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      toast.error(result?.error || "Account deletion failed. Your account remains active.");
+      setDeleteAccountBusy(false);
+      return;
+    }
+
+    // From this point on the server deletion is authoritative. Local UI,
+    // storage, or sign-out failures may require browser cleanup, but must never
+    // be reported as though the account remains active.
+    let localCleanupIncomplete = false;
+    try {
+      const cleanupResult = clearLocalBrowserData(deletionUserKey);
+      if (cleanupResult.resolved) {
+        dispatchPrincipalBrowserStorageCleared(deletionUserKey);
+      }
+      if (currentAuthUserKeyRef.current === deletionUserKey) {
+        onClearAll();
+        setDeleteAccountOpen(false);
+        onOpenChange(false);
+      }
+      const cleanupFailureCount =
+        cleanupResult.local.failures.length + cleanupResult.session.failures.length;
+      localCleanupIncomplete = !cleanupResult.resolved || cleanupFailureCount > 0;
+    } catch (error) {
+      localCleanupIncomplete = true;
+      console.error("[account-delete] local cleanup failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+    }
+
+    if (localCleanupIncomplete) {
+      toast.warning(
+        "Account deletion completed, but some data in this browser could not be removed. Clear KovaGPT site data in your browser settings.",
+      );
+    } else {
+      toast.success("Account deletion completed. Active subscriptions were canceled.");
+    }
+
+    try {
+      // The auth user no longer exists, so a post-delete sign-out failure must
+      // not reclassify the already-completed server deletion as a failure.
+      if (currentAuthUserKeyRef.current === deletionUserKey) await clerk?.signOut();
+    } catch (error) {
+      console.error("[account-delete] post-delete sign-out failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
     } finally {
       setDeleteAccountBusy(false);
     }
@@ -734,7 +788,7 @@ export function SettingsDialog({
                 </section>
 
                 <section className="space-y-3">
-                  <PersonalitySliders />
+                  <PersonalitySliders userKey={userKey} principalResolved={isLoaded} />
                 </section>
               </TabsContent>
 
@@ -1246,7 +1300,7 @@ export function SettingsDialog({
                     Customize shortcuts for common actions. Click a combo to record a new one.
                   </p>
                 </div>
-                <ShortcutsEditor />
+                <ShortcutsEditor userKey={userKey} principalResolved={isLoaded} />
               </TabsContent>
 
               {/* LOCATION */}
@@ -1391,22 +1445,35 @@ export function SettingsDialog({
                 <div className="rounded-2xl border border-border bg-card/60 backdrop-blur-sm p-5 space-y-3">
                   <h3 className="text-sm font-semibold">Local device data</h3>
                   <p className="text-xs text-muted-foreground">
-                    Clears cached chats, drafts, and preferences stored on this device. Cloud data
-                    is not affected.
+                    Resets chats, drafts, handoffs, work data, and account preferences stored for
+                    this KovaGPT profile on this browser. Ownerless private data, including
+                    transitional values from older versions, is also removed so another profile
+                    cannot receive it. Other profiles' scoped data, device-wide display preferences,
+                    and cloud data are preserved.
                   </p>
                   <Button
                     variant="destructive"
                     size="sm"
                     onClick={() => {
-                      clearPrincipalChatStorage(userKey);
-                      clearPrincipalPreferences(userKey);
+                      const result = clearLocalBrowserData();
+                      if (!result.resolved) {
+                        toast.error("Account data is still loading. Try again in a moment.");
+                        return;
+                      }
+                      dispatchPrincipalBrowserStorageCleared(userKey);
                       onChange(DEFAULT_SETTINGS);
                       onClearAll();
-                      toast.success("Local storage cleared.");
+                      const failureCount =
+                        result.local.failures.length + result.session.failures.length;
+                      if (failureCount > 0) {
+                        toast.warning("Some local data could not be reset. Reload and try again.");
+                      } else {
+                        toast.success("This profile's local browser data was reset.");
+                      }
                     }}
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
-                    Clear local storage
+                    Reset this profile's local data
                   </Button>
                 </div>
               </TabsContent>
@@ -2741,25 +2808,58 @@ function FamilyPinPanel() {
 
 // ---------- Keyboard shortcuts editor ----------
 
-function ShortcutsEditor() {
+function ShortcutsEditor({
+  userKey,
+  principalResolved,
+}: {
+  userKey: string | null;
+  principalResolved: boolean;
+}) {
   // Lazy-load lib to keep imports colocated at usage.
+  const principal = principalResolved ? browserStoragePrincipal(userKey) : null;
+  const principalRef = useRef(principal);
+  principalRef.current = principal;
   const [list, setList] = useState<import("@/lib/shortcuts").Shortcut[]>([]);
+  const [listPrincipal, setListPrincipal] = useState<string | null>(null);
   const [recordingId, setRecordingId] = useState<string | null>(null);
+  const ready = principal !== null && listPrincipal === principal;
+  const visibleList = ready ? list : [];
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const mod = await import("@/lib/shortcuts");
-      if (!cancelled) setList(mod.loadShortcuts());
+      if (!cancelled) {
+        setList(principal ? mod.loadShortcuts(userKey) : []);
+        setListPrincipal(principal);
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [principal, userKey]);
+
+  useEffect(() => {
+    if (!principalResolved || !principal) return;
+    const reset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      setList([]);
+      setListPrincipal(null);
+      setRecordingId(null);
+      void import("@/lib/shortcuts").then((mod) => {
+        if (principalRef.current !== principal) return;
+        setList(mod.DEFAULT_SHORTCUTS);
+        setListPrincipal(principal);
+      });
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+    return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+  }, [principal, principalResolved, userKey]);
 
   useEffect(() => {
     if (!recordingId) return;
     const onKey = async (e: KeyboardEvent) => {
+      if (!ready) return;
       e.preventDefault();
       e.stopPropagation();
       // Ignore lone modifiers.
@@ -2771,10 +2871,12 @@ function ShortcutsEditor() {
       const key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
       parts.push(key);
       const combo = parts.join("+");
+      const actionPrincipal = principal;
       const mod = await import("@/lib/shortcuts");
-      const next = list.map((s) => (s.id === recordingId ? { ...s, combo } : s));
+      if (!actionPrincipal || principalRef.current !== actionPrincipal) return;
+      const next = visibleList.map((s) => (s.id === recordingId ? { ...s, combo } : s));
       setList(next);
-      mod.saveShortcuts(next);
+      mod.saveShortcuts(userKey, next);
       setRecordingId(null);
     };
     window.addEventListener("keydown", onKey, { capture: true });
@@ -2782,11 +2884,12 @@ function ShortcutsEditor() {
       window.removeEventListener("keydown", onKey, {
         capture: true,
       } as unknown as EventListenerOptions);
-  }, [recordingId, list]);
+  }, [recordingId, ready, userKey, visibleList]);
 
   const reset = async () => {
     const mod = await import("@/lib/shortcuts");
-    mod.resetShortcuts();
+    if (!ready) return;
+    mod.resetShortcuts(userKey);
     setList(mod.DEFAULT_SHORTCUTS);
     toast.success("Shortcuts reset");
   };
@@ -2794,7 +2897,7 @@ function ShortcutsEditor() {
   return (
     <div className="space-y-2">
       <div className="rounded-lg border border-border divide-y divide-border">
-        {list.map((s) => (
+        {visibleList.map((s) => (
           <ShortcutRow
             key={s.id}
             id={s.id}

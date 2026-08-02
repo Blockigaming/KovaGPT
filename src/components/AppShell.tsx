@@ -22,6 +22,10 @@ import {
   savePendingActive,
 } from "@/lib/chat-store";
 import { useNovaSettings } from "@/lib/use-nova-settings";
+import {
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+} from "@/lib/principal-browser-storage.mjs";
 
 /**
  * Shared shell that renders the chat Sidebar alongside any page (e.g. /apps,
@@ -81,44 +85,58 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [isLoaded, storagePrincipal, userKey]);
 
   useEffect(() => {
-    return installShortcutListener({
-      "new-chat": () => {
-        try {
-          clearPendingActive(userKey);
-        } catch {
-          /* ignore */
-        }
-        navigate({ to: "/" });
+    if (!isLoaded) return;
+    const reset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      setConversationState({ principal: null, items: [] });
+      setSettingsOpen(false);
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+    return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+  }, [isLoaded, userKey]);
+
+  useEffect(() => {
+    return installShortcutListener(
+      {
+        "new-chat": () => {
+          try {
+            clearPendingActive(userKey);
+          } catch {
+            /* ignore */
+          }
+          navigate({ to: "/" });
+        },
+        search: () => {
+          window.dispatchEvent(new CustomEvent("kova-open-search"));
+        },
+        "open-projects": () => {
+          navigate({ to: "/projects" as never });
+        },
+        "open-library": () => {
+          navigate({ to: "/library" });
+        },
+        "open-settings": () => {
+          settingsReturnFocusRef.current =
+            document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          setSettingsTab(undefined);
+          setSettingsOpen(true);
+        },
+        "generate-image": () => {
+          navigate({ to: "/images" });
+        },
+        "toggle-sidebar": () => {
+          setSidebarOpen((v) => !v);
+        },
+        "focus-input": () => {
+          const el = document.querySelector<HTMLTextAreaElement>(
+            'textarea, [contenteditable="true"]',
+          );
+          el?.focus();
+        },
       },
-      search: () => {
-        window.dispatchEvent(new CustomEvent("kova-open-search"));
-      },
-      "open-projects": () => {
-        navigate({ to: "/projects" as never });
-      },
-      "open-library": () => {
-        navigate({ to: "/library" });
-      },
-      "open-settings": () => {
-        settingsReturnFocusRef.current =
-          document.activeElement instanceof HTMLElement ? document.activeElement : null;
-        setSettingsTab(undefined);
-        setSettingsOpen(true);
-      },
-      "generate-image": () => {
-        navigate({ to: "/images" });
-      },
-      "toggle-sidebar": () => {
-        setSidebarOpen((v) => !v);
-      },
-      "focus-input": () => {
-        const el = document.querySelector<HTMLTextAreaElement>(
-          'textarea, [contenteditable="true"]',
-        );
-        el?.focus();
-      },
-    });
-  }, [navigate, userKey]);
+      isLoaded ? userKey : undefined,
+    );
+  }, [isLoaded, navigate, userKey]);
 
   const openSettings = useCallback((tab?: string) => {
     settingsReturnFocusRef.current =
@@ -232,11 +250,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             returnFocusTarget={settingsReturnFocusRef.current}
             onChange={setSettings}
             onClearAll={() => {
-              setConversationState((previous) =>
-                previous.principal === storagePrincipal
-                  ? { principal: storagePrincipal, items: [] }
-                  : previous,
-              );
+              setConversationState({ principal: storagePrincipal, items: [] });
             }}
             onOpenHelp={openHelp}
             initialTab={settingsTab}
@@ -244,7 +258,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
         <OnboardingDialog />
       </Suspense>
-      <TimersWidget />
+      <TimersWidget userKey={userKey} principalResolved={isLoaded} />
     </div>
   );
 }

@@ -1,6 +1,11 @@
 // Client-side timers & alarms store. Persists to localStorage so timers
 // survive page refresh and continue counting from wall-clock time.
 // Emits a "kova-timers" event when the list changes so the widget re-renders.
+import {
+  browserStoragePrincipal,
+  principalScopedStorageKey,
+  safeBrowserStorage,
+} from "@/lib/principal-browser-storage.mjs";
 
 export type TimerItem = {
   id: string;
@@ -13,13 +18,15 @@ export type TimerItem = {
   fired?: boolean;
 };
 
-const KEY = "kova-timers-v1";
+const KEY_BASE = "kova-timers";
 const EVT = "kova-timers-change";
+type TimerUserKey = string | null | undefined;
 
-function read(): TimerItem[] {
-  if (typeof window === "undefined") return [];
+function read(userKey: TimerUserKey): TimerItem[] {
+  const key = principalScopedStorageKey(KEY_BASE, userKey);
+  if (!key) return [];
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = safeBrowserStorage("localStorage")?.getItem(key);
     if (!raw) return [];
     const arr = JSON.parse(raw);
     return Array.isArray(arr) ? arr : [];
@@ -28,22 +35,33 @@ function read(): TimerItem[] {
   }
 }
 
-function write(items: TimerItem[]) {
-  if (typeof window === "undefined") return;
+function write(userKey: TimerUserKey, items: TimerItem[]) {
+  const key = principalScopedStorageKey(KEY_BASE, userKey);
+  const principal = browserStoragePrincipal(userKey);
+  if (!key || !principal) return;
   try {
-    localStorage.setItem(KEY, JSON.stringify(items));
-    window.dispatchEvent(new CustomEvent(EVT));
+    safeBrowserStorage("localStorage")?.setItem(key, JSON.stringify(items));
+    window.dispatchEvent(new CustomEvent(EVT, { detail: { principal } }));
   } catch {
     /* ignore */
   }
 }
 
-export function listTimers(): TimerItem[] {
-  return read();
+export function listTimers(userKey: TimerUserKey): TimerItem[] {
+  return read(userKey);
 }
 
-export function subscribeTimers(cb: () => void): () => void {
-  const handler = () => cb();
+export function subscribeTimers(userKey: TimerUserKey, cb: () => void): () => void {
+  const key = principalScopedStorageKey(KEY_BASE, userKey);
+  const principal = browserStoragePrincipal(userKey);
+  if (!key || !principal || typeof window === "undefined") return () => {};
+  const handler = (event: Event) => {
+    if (event instanceof StorageEvent) {
+      if (event.key === key) cb();
+      return;
+    }
+    if ((event as CustomEvent<{ principal?: string }>).detail?.principal === principal) cb();
+  };
   window.addEventListener(EVT, handler);
   window.addEventListener("storage", handler);
   return () => {
@@ -52,7 +70,7 @@ export function subscribeTimers(cb: () => void): () => void {
   };
 }
 
-export function addTimer(durationMs: number, label = "Timer"): TimerItem {
+export function addTimer(userKey: TimerUserKey, durationMs: number, label = "Timer"): TimerItem {
   const item: TimerItem = {
     id: `t_${crypto.randomUUID()}`,
     kind: "timer",
@@ -60,31 +78,40 @@ export function addTimer(durationMs: number, label = "Timer"): TimerItem {
     durationMs,
     fireAt: Date.now() + durationMs,
   };
-  write([...read(), item]);
+  write(userKey, [...read(userKey), item]);
   return item;
 }
 
-export function addAlarm(fireAt: number, label = "Alarm"): TimerItem {
+export function addAlarm(userKey: TimerUserKey, fireAt: number, label = "Alarm"): TimerItem {
   const item: TimerItem = {
     id: `a_${crypto.randomUUID()}`,
     kind: "alarm",
     label,
     fireAt,
   };
-  write([...read(), item]);
+  write(userKey, [...read(userKey), item]);
   return item;
 }
 
-export function removeTimer(id: string) {
-  write(read().filter((t) => t.id !== id));
+export function removeTimer(userKey: TimerUserKey, id: string) {
+  write(
+    userKey,
+    read(userKey).filter((t) => t.id !== id),
+  );
 }
 
-export function markFired(id: string) {
-  write(read().map((t) => (t.id === id ? { ...t, fired: true } : t)));
+export function markFired(userKey: TimerUserKey, id: string) {
+  write(
+    userKey,
+    read(userKey).map((t) => (t.id === id ? { ...t, fired: true } : t)),
+  );
 }
 
-export function clearFired() {
-  write(read().filter((t) => !t.fired));
+export function clearFired(userKey: TimerUserKey) {
+  write(
+    userKey,
+    read(userKey).filter((t) => !t.fired),
+  );
 }
 
 export function formatRemaining(ms: number): string {
