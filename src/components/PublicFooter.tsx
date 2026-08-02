@@ -28,14 +28,27 @@ export function PublicFooter() {
           </Link>
         </nav>
         <p className="leading-relaxed max-w-3xl">
-          KovaGPT is an AI assistant for writing, studying, coding, research, and image generation.
-          AI can make mistakes, so always verify important information. Need help? Contact{" "}
-          <a href="mailto:support@kovagpt.com" className="underline hover:text-foreground">
+          KovaGPT is an AI assistant for writing, studying, coding, research,
+          and image generation. AI can make mistakes, and search, research,
+          image, and connected-app features can depend on plan eligibility and
+          external providers. Always verify important information. Need help?
+          Contact{" "}
+          <a
+            href="mailto:support@kovagpt.com"
+            className="underline hover:text-foreground"
+          >
             support@kovagpt.com
           </a>
           .
         </p>
-        <p className="text-xs opacity-70">© {new Date().getFullYear()} KovaGPT</p>
+        <p className="max-w-3xl text-xs leading-relaxed opacity-80">
+          KovaGPT is independently developed. Third-party product names used in
+          editorial comparisons belong to their respective owners and do not
+          imply sponsorship, endorsement, or affiliation.
+        </p>
+        <p className="text-xs opacity-70">
+          © {new Date().getFullYear()} KovaGPT
+        </p>
       </div>
     </footer>
   );

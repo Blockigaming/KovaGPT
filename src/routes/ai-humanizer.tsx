@@ -3,16 +3,16 @@ import { SeoLanding, seoLandingHead } from "@/components/SeoLanding";
 
 const faq = [
   {
-    q: "Does it actually beat AI detectors?",
-    a: "KovaGPT rewrites for natural rhythm, varied sentence length, and specific detail - the exact signals detectors use to flag machine-written text. Results vary by detector and content, so always review the output before submitting.",
+    q: "Does rewriting guarantee that text will pass an AI detector?",
+    a: "No. AI detectors can be inaccurate and their results vary by tool, version, and text. KovaGPT is a style editor, not a way to prove human authorship or guarantee a detector result.",
   },
   {
     q: "Will my meaning stay the same?",
-    a: "Yes. Humanizing changes the delivery, not the argument. If you want factual accuracy preserved, paste the source content and KovaGPT will keep every claim intact while rewriting the prose.",
+    a: "Not automatically. Any rewrite can change meaning, emphasis, numbers, or citations. Compare the revision with the source and restore anything that changed incorrectly.",
   },
   {
     q: "Can it match my personal writing style?",
-    a: "Yes. Paste one or two samples of your past writing and ask KovaGPT to match your voice. It will pick up your rhythm, vocabulary, and quirks.",
+    a: "You can provide writing samples and ask for similar tone, vocabulary, and pacing. The result is an approximation, so review it rather than treating it as a verified match.",
   },
   {
     q: "Is this ethical to use for school work?",
@@ -23,9 +23,9 @@ const faq = [
 export const Route = createFileRoute("/ai-humanizer")({
   head: () =>
     seoLandingHead({
-      title: "AI Humanizer - Rewrite AI Text to Sound Human | KovaGPT",
+      title: "AI Humanizer - Revise Tone and Clarity | KovaGPT",
       description:
-        "Humanize AI-generated text with KovaGPT. Rewrite stiff, robotic AI output into natural, human-sounding writing that reads clearly and passes AI detection.",
+        "Revise stiff or generic drafts with KovaGPT for clearer tone, varied pacing, and a more personal voice, without promises about AI detectors.",
       path: "/ai-humanizer",
       ogImage: "/og/writer.jpg",
       faq,
@@ -36,25 +36,25 @@ export const Route = createFileRoute("/ai-humanizer")({
 function Page() {
   return (
     <SeoLanding
-      h1="AI Humanizer: Make AI Text Sound Human"
-      intro="KovaGPT rewrites AI-generated drafts so they sound natural, conversational, and clearly written by a person. Paste any AI output and ask KovaGPT to humanize it - vary sentence length, drop generic phrasing, add specifics, and match your own voice. Useful for emails, essays, blog posts, social captions, and anything that currently reads stiff or robotic."
+      h1="AI Humanizer: Revise Stiff or Generic Drafts"
+      intro="KovaGPT can revise a draft for clearer wording, varied sentence rhythm, and a tone closer to the samples or instructions you provide. It cannot prove who wrote the text, guarantee a detector result, or preserve every fact without review."
       benefits={[
-        "Rewrite AI text in a natural, human tone",
-        "Vary sentence length and rhythm so it reads like you wrote it",
+        "Rewrite a draft in a clearer, more conversational tone",
+        "Vary sentence length and rhythm",
         "Remove generic AI phrasing and filler words",
-        "Match a specific voice: casual, professional, academic, friendly",
-        "Refine output to pass common AI detection patterns",
-        "Preserve the original meaning and factual claims",
+        "Request a specific tone: casual, professional, academic, or friendly",
+        "Ask for several alternatives instead of accepting one revision",
+        "Review changes against the source for meaning and factual accuracy",
       ]}
       details={[
-        "AI text has tells: uniformly-long sentences, hedging phrases, over-signposting, and vocabulary that no human would reach for. KovaGPT rewrites past those tells - mixing short and long sentences, cutting throat-clearing, using specific words instead of vague ones.",
-        "For best results, tell KovaGPT the context: who's reading it, what tone you want, and whether it should sound polished, casual, or somewhere in between. The more context, the more human the output.",
+        "Tell KovaGPT who will read the draft, the tone you want, and which phrases or facts must remain unchanged. Supplying a short sample can help describe your preference, but the model may still introduce mistakes.",
+        "Use rewriting to improve work you are allowed to edit. Follow your school, employer, publisher, or client's disclosure and authorship rules. Do not use a rewrite to misrepresent authorship or evade a required review process.",
       ]}
       prompts={[
-        "Humanize this paragraph and make it sound like I wrote it",
+        "Revise this paragraph using the tone notes and writing sample I own",
         "Rewrite this in a casual, conversational tone",
-        "Make this AI text less robotic and more natural",
-        "Edit this so it reads like a real person, not a chatbot",
+        "Make this draft less formulaic and more direct without adding facts",
+        "Edit this to remove chatbot-like filler without inventing personal details",
         "Match the voice of the sample below when you rewrite this draft",
       ]}
       ctas={[

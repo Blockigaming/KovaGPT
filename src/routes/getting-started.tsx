@@ -30,13 +30,16 @@ const STEPS: { title: string; body: string }[] = [
   },
   {
     title: "2. Choose a mode",
-    body: "Use KovaGPT modes to match the assistant to your task, such as studying, writing, coding, research, or creative work.",
+    body: "Choose Instant, Medium, or Thinking on Free; Plus also unlocks High; Pro exposes its published Pro mode menu. Search and Deep Research are separate tools with provider and plan requirements.",
   },
   {
     title: "3. Sign in to save your work",
-    body: "Creating an account lets you save chats, continue working across devices, and access more features.",
+    body: "Signing in unlocks account-backed features such as projects, Library, uploads, and image generation. Standard browser conversation history is not a guaranteed cross-device archive.",
   },
-  { title: "4. Generate images", body: "Use the Images page to create visuals from text prompts." },
+  {
+    title: "4. Generate images",
+    body: "Verified, signed-in accounts can use the Images page within the plan's daily quota when the configured image provider is available.",
+  },
   {
     title: "5. Check your usage",
     body: "Signed-in users can view daily usage from Settings → Subscription.",
@@ -48,17 +51,24 @@ function GettingStartedPage() {
   return (
     <>
       <main className="mx-auto max-w-3xl px-6 py-16">
-        <h1 className="text-4xl font-bold tracking-tight mb-3">Getting Started with KovaGPT</h1>
+        <h1 className="text-4xl font-bold tracking-tight mb-3">
+          Getting Started with KovaGPT
+        </h1>
         <p className="text-muted-foreground mb-10">
-          KovaGPT is an AI assistant for writing, studying, coding, research, image generation, and
-          everyday questions.
+          KovaGPT is an AI assistant for writing, studying, coding, research,
+          image generation, and everyday questions.
         </p>
 
         <div className="space-y-4">
           {STEPS.map((s) => (
-            <div key={s.title} className="rounded-xl border border-border p-5 bg-card">
+            <div
+              key={s.title}
+              className="rounded-xl border border-border p-5 bg-card"
+            >
               <h2 className="font-semibold mb-1">{s.title}</h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">{s.body}</p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {s.body}
+              </p>
             </div>
           ))}
         </div>
@@ -73,7 +83,10 @@ function GettingStartedPage() {
           <Link to="/pricing" className="underline hover:text-foreground">
             View pricing
           </Link>
-          <Link to="/contact-support" className="underline hover:text-foreground">
+          <Link
+            to="/contact-support"
+            className="underline hover:text-foreground"
+          >
             Contact support
           </Link>
         </div>
@@ -81,16 +94,25 @@ function GettingStartedPage() {
           <Link to="/ai-writer" className="underline hover:text-foreground">
             AI Writer
           </Link>
-          <Link to="/study-assistant" className="underline hover:text-foreground">
+          <Link
+            to="/study-assistant"
+            className="underline hover:text-foreground"
+          >
             Study Assistant
           </Link>
           <Link to="/code-helper" className="underline hover:text-foreground">
             Code Helper
           </Link>
-          <Link to="/research-assistant" className="underline hover:text-foreground">
+          <Link
+            to="/research-assistant"
+            className="underline hover:text-foreground"
+          >
             Research Assistant
           </Link>
-          <Link to="/ai-image-generator" className="underline hover:text-foreground">
+          <Link
+            to="/ai-image-generator"
+            className="underline hover:text-foreground"
+          >
             AI Image Generator
           </Link>
         </div>

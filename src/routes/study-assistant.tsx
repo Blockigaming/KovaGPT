@@ -4,19 +4,19 @@ import { SeoLanding, seoLandingHead } from "@/components/SeoLanding";
 const faq = [
   {
     q: "Will KovaGPT do my homework for me?",
-    a: "KovaGPT is a study tool, not a shortcut. It explains concepts, walks through worked examples, and quizzes you - the goal is to help you actually learn the material. Follow your school's rules on AI use.",
+    a: "KovaGPT is intended as a study aid, not a shortcut. It can attempt explanations, draft worked examples, and generate quizzes, but you should verify the material and follow your school's rules on AI use.",
   },
   {
     q: "Can it help with math and STEM?",
-    a: "Yes. KovaGPT works through algebra, calculus, physics, chemistry, and CS problems step by step, showing the reasoning at each stage so you can follow along and check your own work.",
+    a: "KovaGPT can attempt explanations and worked examples across common STEM subjects. It can make calculation or reasoning mistakes, so check each step against course material or a qualified instructor.",
   },
   {
     q: "Can I upload my textbook or lecture notes?",
-    a: "Yes. Paste text or upload images of your notes, and KovaGPT will summarize, quiz you, or answer questions grounded in that material.",
+    a: "You can paste text or upload supported files and images when uploads are available. KovaGPT can use content only when extraction succeeds; verify that a summary or answer matches the original material.",
   },
   {
     q: "Does it work for language learning?",
-    a: "Yes. Practice conversation, drill vocabulary, get grammar explanations, and translate with context - in most major languages.",
+    a: "You can request conversation practice, vocabulary drills, grammar explanations, and translation in languages the underlying model supports. Quality varies, so use fluent or authoritative review where accuracy matters.",
   },
 ];
 
@@ -25,7 +25,7 @@ export const Route = createFileRoute("/study-assistant")({
     seoLandingHead({
       title: "AI Study Assistant - Explanations, Quizzes & Notes | KovaGPT",
       description:
-        "Study smarter with KovaGPT: step-by-step explanations, practice quizzes, note summaries, flashcards, and worked examples across every subject.",
+        "Ask KovaGPT for explanations, practice questions, note summaries, flashcards, and worked examples, then verify the material against trusted course sources.",
       path: "/study-assistant",
       ogImage: "/og/writer.jpg",
       faq,
@@ -36,19 +36,19 @@ export const Route = createFileRoute("/study-assistant")({
 function Page() {
   return (
     <SeoLanding
-      h1="AI Study Assistant That Actually Teaches"
-      intro="KovaGPT explains hard topics step by step, quizzes you on what you just learned, and turns dense notes into study guides you'll actually use. It works across math, science, humanities, coding, and languages - from middle school through grad school."
+      h1="AI Study Assistant for Explanations and Practice"
+      intro="KovaGPT can explain topics, draft quizzes, and turn supplied notes into study materials. It can also be wrong or misunderstand an uploaded source, so check important steps and facts against your course material and follow your school's AI rules."
       benefits={[
-        "Step-by-step explanations you can actually follow",
-        "Practice questions and quizzes on any topic",
+        "Request step-by-step explanations at a chosen level",
+        "Practice questions and quizzes on supported topics",
         "Turn lecture notes and textbooks into summaries and flashcards",
-        "Worked examples for math, physics, chemistry, and CS",
+        "Worked-example drafts for math, science, and coding topics",
         "Language practice: conversation, grammar, vocabulary drills",
         "Build a focused study plan and work through it step by step",
       ]}
       details={[
-        "The best tutors don't lecture - they check your understanding, catch misconceptions early, and adjust. KovaGPT does the same: ask it to explain something and it will follow up with a question to check if it landed. Ask for practice and it generates problems tuned to what you just studied.",
-        "Upload notes or a chapter, and KovaGPT becomes an expert on that specific material. Ask it to quiz you, summarize, or explain the part you got stuck on last night.",
+        "Ask KovaGPT to explain a concept and then test your understanding. You can request hints before answers, practice at a particular level, or a second explanation using a different analogy. These are generated suggestions, not a substitute for an instructor.",
+        "Upload supported notes or paste a section when file extraction is available. Ask KovaGPT to summarize, quiz you, or point to confusing parts, then compare the result with the original instead of assuming it read every detail correctly.",
       ]}
       prompts={[
         "Explain photosynthesis at a 10th-grade level, then quiz me",
