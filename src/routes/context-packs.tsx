@@ -207,7 +207,7 @@ function ContextPacksPage() {
         title: template.name,
         content: template.steps.map((step, index) => `${index + 1}. ${step}`).join("\n"),
       })),
-      ...loadWorkTasks().map((task) => ({
+      ...loadWorkTasks(userKey).map((task) => ({
         key: `work:${task.id}`,
         type: "work" as const,
         id: task.id,

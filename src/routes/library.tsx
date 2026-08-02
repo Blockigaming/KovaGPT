@@ -163,7 +163,7 @@ function LibraryPage() {
           created_at: new Date(chat.updatedAt).toISOString(),
         }),
       ),
-      ...loadWorkTasks().map(
+      ...loadWorkTasks(userKey).map(
         (task): LibItem => ({
           id: `work:${task.id}`,
           title: task.objective,
@@ -264,7 +264,10 @@ function LibraryPage() {
       return;
     }
     if (id.startsWith("work:")) {
-      saveWorkTasks(loadWorkTasks().filter((task) => `work:${task.id}` !== id));
+      saveWorkTasks(
+        userKey,
+        loadWorkTasks(userKey).filter((task) => `work:${task.id}` !== id),
+      );
       toast.success("Work item deleted.");
       return;
     }
@@ -319,7 +322,10 @@ function LibraryPage() {
         userKey,
         loadConversations(userKey).filter((chat) => !selected.includes(`chat:${chat.id}`)),
       );
-      saveWorkTasks(loadWorkTasks().filter((task) => !selected.includes(`work:${task.id}`)));
+      saveWorkTasks(
+        userKey,
+        loadWorkTasks(userKey).filter((task) => !selected.includes(`work:${task.id}`)),
+      );
       setSelected([]);
       toast.success("Selected items deleted.");
     } catch (error) {
