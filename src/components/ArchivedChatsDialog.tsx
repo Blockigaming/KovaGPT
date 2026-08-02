@@ -7,6 +7,7 @@ import {
   type Conversation,
 } from "@/lib/chat-store";
 import { searchConversations } from "@/lib/conversation-search";
+import { ConfirmActionDialog } from "./ConfirmActionDialog";
 
 export function ArchivedChatsDialog({
   open,
@@ -19,6 +20,7 @@ export function ArchivedChatsDialog({
 }) {
   const [items, setItems] = useState<Conversation[]>([]);
   const [query, setQuery] = useState("");
+  const [deleteAllOpen, setDeleteAllOpen] = useState(false);
   useEffect(() => {
     if (!open) return;
     setItems(loadArchivedConversations());
@@ -62,12 +64,7 @@ export function ArchivedChatsDialog({
             <button
               type="button"
               className="rounded-md px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 focus-visible:ring-2 focus-visible:ring-ring"
-              onClick={() => {
-                if (!window.confirm(`Permanently delete all ${items.length} archived chats?`))
-                  return;
-                saveArchivedConversations([]);
-                setItems([]);
-              }}
+              onClick={() => setDeleteAllOpen(true)}
             >
               Delete all archived
             </button>
@@ -125,6 +122,18 @@ export function ArchivedChatsDialog({
           </p>
         ) : null}
       </section>
+      <ConfirmActionDialog
+        open={deleteAllOpen}
+        onOpenChange={setDeleteAllOpen}
+        title="Delete all archived chats?"
+        description={`This permanently removes ${items.length} archived chat${items.length === 1 ? "" : "s"} from this device. This cannot be undone.`}
+        confirmLabel="Delete all"
+        destructive
+        onConfirm={() => {
+          saveArchivedConversations([]);
+          setItems([]);
+        }}
+      />
     </div>
   );
 }

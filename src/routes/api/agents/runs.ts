@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 import { controlAgentRun, createAgentRun } from "@/agents/execution.server";
 import type { BrowserAction } from "@/agents/policy";
+import { z } from "zod";
 export const Route = createFileRoute("/api/agents/runs")({
   server: {
     handlers: {
@@ -13,7 +14,7 @@ export const Route = createFileRoute("/api/agents/runs")({
         let query = auth.supabaseAdmin
           .from("agent_runs" as never)
           .select(
-            "id,project_id,entitlement,objective,status,current_step,attempt,max_attempts,usage,created_at,updated_at,expires_at,cancelled_at" as never,
+            "id,agent_definition_id,agent_definition_version,project_id,entitlement,status,current_step,attempt,max_attempts,usage,started_at,completed_at,failure_category,tool_call_count,tool_ids,retry_count,provider_id,model_id,created_at,updated_at,expires_at,cancelled_at" as never,
           )
           .eq("owner_id" as never, auth.userId)
           .order("created_at" as never, { ascending: false })
@@ -40,8 +41,18 @@ export const Route = createFileRoute("/api/agents/runs")({
           idempotencyKey?: string;
           actions?: BrowserAction[];
           allowedDomains?: string[];
+          agentDefinitionId?: string;
+          expectedDefinitionVersion?: number;
         } | null;
-        if (!body?.objective || !body.idempotencyKey || !Array.isArray(body.actions))
+        if (
+          !body?.objective ||
+          !body.idempotencyKey ||
+          !Array.isArray(body.actions) ||
+          (body.agentDefinitionId &&
+            !z.string().uuid().safeParse(body.agentDefinitionId).success) ||
+          (body.agentDefinitionId &&
+            !z.number().int().positive().safeParse(body.expectedDefinitionVersion).success)
+        )
           return Response.json({ error: "invalid_agent_run" }, { status: 400 });
         try {
           return Response.json(
@@ -51,6 +62,8 @@ export const Route = createFileRoute("/api/agents/runs")({
               idempotencyKey: body.idempotencyKey,
               actions: body.actions,
               allowedDomains: body.allowedDomains ?? [],
+              agentDefinitionId: body.agentDefinitionId,
+              expectedDefinitionVersion: body.expectedDefinitionVersion,
             }),
             { status: 202 },
           );
@@ -67,14 +80,15 @@ export const Route = createFileRoute("/api/agents/runs")({
         if (auth instanceof Response) return auth;
         const body = (await request.json().catch(() => null)) as {
           runId?: string;
-          command?: "pause" | "resume" | "cancel" | "delete" | "deny";
+          command?: "pause" | "resume" | "cancel" | "delete" | "deny" | "retry";
           approvalId?: string;
+          retryKey?: string;
         } | null;
         if (!body?.runId || !body.command)
           return Response.json({ error: "invalid_control_request" }, { status: 400 });
         try {
           return Response.json(
-            await controlAgentRun(auth, body.runId, body.command, body.approvalId),
+            await controlAgentRun(auth, body.runId, body.command, body.approvalId, body.retryKey),
           );
         } catch (error) {
           return Response.json(

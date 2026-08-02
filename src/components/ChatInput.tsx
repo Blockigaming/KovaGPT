@@ -6,7 +6,6 @@ import {
   Image as ImageIcon,
   FileText,
   Camera,
-  Puzzle,
   Search,
   Lightbulb,
   Sparkles,
@@ -27,6 +26,7 @@ import { toast } from "sonner";
 import { ResponsiveModelSelector as ModelSelector } from "@/components/ResponsiveModelSelector";
 import type { ModeId, Tier } from "@/lib/modes";
 import { createSpeechRecognition, type BrowserSpeechRecognition } from "@/lib/browser-voice";
+import { useOnline } from "@/hooks/use-online";
 
 export type PendingAttachment = {
   kind: "image" | "text_file" | "library_file";
@@ -52,12 +52,7 @@ export type RecentLibraryFile = {
   projectName?: string | null;
 };
 export type ComposerToolId =
-  | "web_search"
-  | "deep_research"
-  | "image"
-  | "study"
-  | "data_analysis"
-  | "file_analysis";
+  "web_search" | "deep_research" | "image" | "study" | "data_analysis" | "file_analysis";
 
 type ComposerAction = {
   id: ComposerToolId;
@@ -109,6 +104,7 @@ export function ChatInput({
   recentLibraryLoading = false,
   recentLibraryError = null,
   onRecentLibraryRetry,
+  sendOnEnter = true,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -132,8 +128,10 @@ export function ChatInput({
   recentLibraryLoading?: boolean;
   recentLibraryError?: string | null;
   onRecentLibraryRetry?: () => void;
+  sendOnEnter?: boolean;
 }) {
   const { isDesktop } = useLayout();
+  const online = useOnline();
   const isMobileLayout = !isDesktop;
 
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -156,6 +154,7 @@ export function ChatInput({
   const [recentQuery, setRecentQuery] = useState("");
   const [dictationSupported, setDictationSupported] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isDraggingFiles, setIsDraggingFiles] = useState(false);
 
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -283,6 +282,11 @@ export function ChatInput({
 
   const triggerSubmit = () => {
     if (submittingRef.current || isStreaming) return;
+    if (!online) {
+      setUploadAnnouncement("You're offline. Reconnect before sending.");
+      toast.error("You're offline. Reconnect before sending.");
+      return;
+    }
     if (!value.trim() && attachments.length === 0) return;
     const blocked = attachments.find(
       (attachment) => attachment.status === "uploading" || attachment.status === "failed",
@@ -305,7 +309,13 @@ export function ChatInput({
 
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const native = e.nativeEvent as KeyboardEvent & { isComposing?: boolean };
-    if (e.key === "Enter" && !e.shiftKey && !native.isComposing && !composingRef.current) {
+    if (
+      sendOnEnter &&
+      e.key === "Enter" &&
+      !e.shiftKey &&
+      !native.isComposing &&
+      !composingRef.current
+    ) {
       e.preventDefault();
       triggerSubmit();
     }
@@ -353,12 +363,6 @@ export function ChatInput({
         continue;
       }
 
-      const u = getUsage();
-      if (u.uploads >= DAILY_UPLOAD_LIMIT || !tryUseUpload()) {
-        onUploadLimit?.();
-        return;
-      }
-
       if (isImage) {
         if (f.size > MAX_IMAGE_FILE_BYTES) {
           nextAttachments = [
@@ -374,6 +378,11 @@ export function ChatInput({
           ];
           setUploadAnnouncement(`${f.name}: image is larger than 3 MB`);
           continue;
+        }
+        const usage = getUsage();
+        if (usage.uploads >= DAILY_UPLOAD_LIMIT || !tryUseUpload()) {
+          onUploadLimit?.();
+          return;
         }
         const uploading: PendingAttachment = {
           kind: "image",
@@ -427,6 +436,11 @@ export function ChatInput({
           setUploadAnnouncement(`${f.name}: text file is larger than 256 KB`);
           continue;
         }
+        const usage = getUsage();
+        if (usage.uploads >= DAILY_UPLOAD_LIMIT || !tryUseUpload()) {
+          onUploadLimit?.();
+          return;
+        }
         const uploading: PendingAttachment = {
           kind: "text_file",
           dataUrl: "",
@@ -479,6 +493,7 @@ export function ChatInput({
   };
 
   const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    setIsDraggingFiles(false);
     const files = Array.from(e.dataTransfer.files || []);
     if (files.length === 0) return;
     e.preventDefault();
@@ -486,7 +501,11 @@ export function ChatInput({
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    if (e.dataTransfer.types.includes("Files")) e.preventDefault();
+    if (e.dataTransfer.types.includes("Files")) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+      setIsDraggingFiles(true);
+    }
   };
 
   const attachLibraryFile = (item: RecentLibraryFile) => {
@@ -676,6 +695,11 @@ export function ChatInput({
       onPaste={handlePaste}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setIsDraggingFiles(false);
+        }
+      }}
     >
       <div className="mx-auto max-w-[48rem]">
         <div
@@ -687,10 +711,25 @@ export function ChatInput({
                 } as React.CSSProperties)
               : undefined
           }
-          className={`kova-composer overflow-visible rounded-[28px] transition-[border-color,box-shadow,transform] duration-200 ${
-            sendFlash ? "scale-[0.995]" : isStreaming ? "ring-1 ring-foreground/10" : ""
+          className={`kova-composer relative overflow-visible rounded-[28px] transition-[border-color,box-shadow,transform] duration-200 ${
+            sendFlash
+              ? "scale-[0.995]"
+              : isDraggingFiles
+                ? "ring-2 ring-foreground/40"
+                : isStreaming
+                  ? "ring-1 ring-foreground/10"
+                  : ""
           }`}
         >
+          {isDraggingFiles ? (
+            <div
+              className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center rounded-[28px] bg-background/90 text-sm font-medium backdrop-blur-sm"
+              role="status"
+              aria-live="polite"
+            >
+              Drop files to attach
+            </div>
+          ) : null}
           {attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 p-3 pb-0" aria-label="Attachments">
               {attachments.map((a, i) => (
@@ -816,7 +855,7 @@ export function ChatInput({
               <button
                 type="button"
                 onClick={() => setPlusOpen((v) => !v)}
-                className={`kova-attach-button w-11 h-11 lg:w-9 lg:h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/60 active:scale-95 transition ${plusOpen && !isMobileLayout ? "rotate-45 text-foreground" : ""}`}
+                className={`kova-attach-button w-11 h-11 lg:w-8 lg:h-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/60 active:scale-95 transition ${plusOpen && !isMobileLayout ? "rotate-45 text-foreground" : ""}`}
                 aria-label="Add files, tools, or prompts"
                 aria-haspopup="dialog"
                 aria-expanded={plusOpen}
@@ -851,17 +890,6 @@ export function ChatInput({
                   >
                     <ImageIcon className="w-4 h-4 text-muted-foreground" />
                     <span>Photos</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlusOpen(false);
-                      window.location.href = "/apps";
-                    }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
-                  >
-                    <Puzzle className="w-4 h-4 text-muted-foreground" />
-                    <span>Plugins</span>
                   </button>
                   <button
                     type="button"
@@ -920,17 +948,6 @@ export function ChatInput({
                     <FileText className="w-5 h-5 text-muted-foreground" />
                     <span>Files</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlusOpen(false);
-                      window.location.href = "/apps";
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
-                  >
-                    <Puzzle className="w-5 h-5 text-muted-foreground" />
-                    <span>Plugins</span>
-                  </button>
                   {renderComposerActions(true)}
                   {renderRecentLibraryFiles()}
                 </div>
@@ -967,7 +984,7 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={toggleDictation}
-                  className={`mb-1 flex h-10 w-10 items-center justify-center rounded-full transition active:scale-95 lg:h-9 lg:w-9 ${
+                  className={`mb-1 flex h-10 w-10 items-center justify-center rounded-full transition active:scale-95 lg:h-8 lg:w-8 ${
                     isListening
                       ? "bg-destructive text-destructive-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -987,7 +1004,7 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={onStop}
-                  className="kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-80 lg:h-9 lg:w-9"
+                  className="kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-80 lg:h-8 lg:w-8"
                   aria-label="Stop"
                 >
                   <Square className="h-3.5 w-3.5 fill-current" />
@@ -1000,8 +1017,9 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={triggerSubmit}
-                  className={`kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-foreground text-background transition duration-150 hover:opacity-90 active:scale-90 active:opacity-70 lg:h-9 lg:w-9 ${sendFlash ? "scale-90 opacity-80" : ""}`}
-                  aria-label="Send"
+                  className={`kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-foreground text-background transition duration-150 hover:opacity-90 active:scale-90 active:opacity-70 disabled:cursor-not-allowed disabled:opacity-40 lg:h-8 lg:w-8 ${sendFlash ? "scale-90 opacity-80" : ""}`}
+                  aria-label={online ? "Send" : "Reconnect to send"}
+                  disabled={!online}
                 >
                   <ArrowUp
                     className={`w-5 h-5 transition-transform duration-300 ${sendFlash ? "-translate-y-1.5 opacity-0" : ""}`}
@@ -1011,7 +1029,7 @@ export function ChatInput({
                 <button
                   type="button"
                   disabled
-                  className="kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground lg:h-9 lg:w-9"
+                  className="kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground lg:h-8 lg:w-8"
                   aria-label="Send"
                   title="Type a message to send"
                 >
@@ -1021,6 +1039,9 @@ export function ChatInput({
             </div>
           </div>
         </div>
+        <p className="mt-2 px-3 text-center text-[11px] leading-4 text-muted-foreground sm:text-xs">
+          KovaGPT can make mistakes. Check important information.
+        </p>
       </div>
     </div>
   );

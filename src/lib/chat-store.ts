@@ -53,15 +53,116 @@ export type Conversation = {
   };
 };
 
-const KEY = "nova-gpt-conversations-v2";
+export const CONVERSATIONS_STORAGE_KEY = "nova-gpt-conversations-v2";
 const ARCHIVED_KEY = "kovagpt:archived";
+const MAX_STORED_CONVERSATIONS = 500;
+const MAX_MESSAGES_PER_CONVERSATION = 1_000;
+
+function isConversation(value: unknown): value is Conversation {
+  if (!value || typeof value !== "object") return false;
+  const conversation = value as Partial<Conversation>;
+  return (
+    typeof conversation.id === "string" &&
+    typeof conversation.title === "string" &&
+    Array.isArray(conversation.messages) &&
+    conversation.messages.every(
+      (message) =>
+        message &&
+        typeof message === "object" &&
+        typeof message.id === "string" &&
+        (message.role === "user" || message.role === "assistant") &&
+        typeof message.content === "string",
+    ) &&
+    typeof conversation.createdAt === "number" &&
+    typeof conversation.updatedAt === "number"
+  );
+}
+
+function boundConversations(values: unknown[]): Conversation[] {
+  const seen = new Set<string>();
+  return values
+    .filter(isConversation)
+    .filter((conversation) => {
+      if (seen.has(conversation.id)) return false;
+      seen.add(conversation.id);
+      return true;
+    })
+    .map((conversation) => ({
+      ...conversation,
+      title: conversation.title.trim().slice(0, 100) || "New chat",
+      messages: dedupeMessages(conversation.messages).slice(-MAX_MESSAGES_PER_CONVERSATION),
+    }))
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, MAX_STORED_CONVERSATIONS);
+}
+
+function dedupeMessages(messages: Message[]): Message[] {
+  const seen = new Set<string>();
+  return messages.filter((message) => {
+    if (seen.has(message.id)) return false;
+    seen.add(message.id);
+    return true;
+  });
+}
+
+export type ConversationStats = {
+  messages: number;
+  attachments: number;
+  words: number;
+  estimatedTokens: number;
+  readingMinutes: number;
+  lastActive: number;
+};
+
+export function getConversationStats(conversation: Conversation): ConversationStats {
+  const words = conversation.messages.reduce((total, message) => {
+    const count = message.content.trim().match(/\S+/g)?.length ?? 0;
+    return total + count;
+  }, 0);
+  return {
+    messages: conversation.messages.length,
+    attachments: conversation.messages.reduce(
+      (total, message) => total + (message.attachments?.length ?? 0),
+      0,
+    ),
+    words,
+    estimatedTokens: Math.ceil(words * 1.33),
+    readingMinutes: Math.max(1, Math.ceil(words / 220)),
+    lastActive: conversation.updatedAt,
+  };
+}
+
+export function exportConversationMarkdown(conversation: Conversation): string {
+  const stats = getConversationStats(conversation);
+  const metadata = [
+    `# ${conversation.title}`,
+    "",
+    `- Exported: ${new Date().toISOString()}`,
+    `- Last active: ${new Date(stats.lastActive).toISOString()}`,
+    `- Messages: ${stats.messages}`,
+    `- Attachments: ${stats.attachments}`,
+    `- Estimated reading time: ${stats.readingMinutes} min`,
+    "",
+    "---",
+    "",
+  ];
+  const transcript = conversation.messages.flatMap((message) => [
+    `## ${message.role === "user" ? "You" : "KovaGPT"}`,
+    "",
+    message.content || "_(No text content)_",
+    ...(message.attachments?.length ? ["", `Attachments: ${message.attachments.length}`] : []),
+    "",
+  ]);
+  return [...metadata, ...transcript].join("\n");
+}
 
 export function loadConversations(): Conversation[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(CONVERSATIONS_STORAGE_KEY);
     if (!raw) return [];
-    return JSON.parse(raw) as Conversation[];
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? boundConversations(parsed) : [];
   } catch {
     return [];
   }
@@ -69,18 +170,34 @@ export function loadConversations(): Conversation[] {
 
 export function saveConversations(convs: Conversation[]) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(KEY, JSON.stringify(convs));
+  try {
+    localStorage.setItem(CONVERSATIONS_STORAGE_KEY, JSON.stringify(boundConversations(convs)));
+  } catch {
+    // Storage can be unavailable or full (especially when chats contain image
+    // attachments). Keep the live in-memory conversation usable instead of
+    // throwing from a React effect and crashing the chat surface.
+  }
 }
 
 export function clearConversations() {
   if (typeof window === "undefined") return;
-  localStorage.removeItem(KEY);
+  localStorage.removeItem(CONVERSATIONS_STORAGE_KEY);
+}
+
+export function subscribeToConversationChanges(callback: (items: Conversation[]) => void) {
+  if (typeof window === "undefined") return () => {};
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === CONVERSATIONS_STORAGE_KEY) callback(loadConversations());
+  };
+  window.addEventListener("storage", onStorage);
+  return () => window.removeEventListener("storage", onStorage);
 }
 
 export function loadArchivedConversations(): Conversation[] {
   if (typeof window === "undefined") return [];
   try {
-    return JSON.parse(localStorage.getItem(ARCHIVED_KEY) ?? "[]") as Conversation[];
+    const parsed: unknown = JSON.parse(localStorage.getItem(ARCHIVED_KEY) ?? "[]");
+    return Array.isArray(parsed) ? boundConversations(parsed) : [];
   } catch {
     return [];
   }

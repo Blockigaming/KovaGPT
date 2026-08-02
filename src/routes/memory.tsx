@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { Brain, Pencil, Search, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { addToContextPack, continueInResearch, openInWork } from "@/lib/workspace-handoffs";
 import { useUser } from "@/components/auth/ClerkSafe";
 import {
@@ -12,6 +13,7 @@ import {
   type MemoryRecord,
 } from "@/lib/workspace.functions";
 import { toast } from "sonner";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 export const Route = createFileRoute("/memory")({
   component: MemoryPage,
   head: () => ({
@@ -31,6 +33,7 @@ function MemoryPage() {
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
+  const [deleting, setDeleting] = useState<MemoryRecord | null>(null);
   useEffect(() => {
     if (!isLoaded) return;
     if (!isSignedIn) {
@@ -68,13 +71,14 @@ function MemoryPage() {
     }
   };
   const del = async (item: MemoryRecord) => {
-    if (!confirm("Delete this memory? This cannot be undone.")) return;
     try {
       await remove({ data: { id: item.id, source: item.source } });
       setItems((all) => all.filter((value) => value.id !== item.id));
       toast.success("Memory deleted");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Memory could not be deleted");
+    } finally {
+      setDeleting(null);
     }
   };
   const merge = async () => {
@@ -104,16 +108,11 @@ function MemoryPage() {
   return (
     <AppShell>
       <main className="mx-auto w-full max-w-4xl px-4 py-7 sm:px-6">
-        <header>
-          <div className="flex items-center gap-2">
-            <Brain className="h-5 w-5" />
-            <h1 className="text-2xl font-semibold">Memory Center</h1>
-          </div>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Review durable conversation summaries and project context. Temporary chats are never
-            stored here.
-          </p>
-        </header>
+        <WorkspacePageHeader
+          icon={Brain}
+          title="Memory Center"
+          description="Review durable conversation summaries and project context. Temporary chats are never stored here."
+        />
         <div className="my-6 grid gap-3 sm:grid-cols-[1fr_auto]">
           <label className="relative">
             <span className="sr-only">Search memories</span>
@@ -269,7 +268,7 @@ function MemoryPage() {
                       </button>
                     )}
                     <button
-                      onClick={() => del(item)}
+                      onClick={() => setDeleting(item)}
                       aria-label={`Delete ${item.title}`}
                       className="grid min-h-11 min-w-11 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
                     >
@@ -290,6 +289,15 @@ function MemoryPage() {
           </p>
         </aside>
       </main>
+      <ConfirmActionDialog
+        open={Boolean(deleting)}
+        onOpenChange={(open) => !open && setDeleting(null)}
+        title="Delete this memory?"
+        description="This saved memory will no longer be available as context. This cannot be undone."
+        confirmLabel="Delete memory"
+        destructive
+        onConfirm={() => deleting && void del(deleting)}
+      />
     </AppShell>
   );
 }

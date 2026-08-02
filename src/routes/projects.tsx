@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
+import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -58,6 +59,7 @@ import {
   type PendingInvite,
 } from "@/lib/projects.functions";
 import { moveChatToProject, setProjectArchived } from "@/lib/project-workspace.functions";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 
 export const Route = createFileRoute("/projects")({
   component: ProjectsPage,
@@ -88,6 +90,7 @@ function ProjectsPage() {
     return localStorage.getItem("kova-projects-view") === "list" ? "list" : "grid";
   });
   const [showArchived, setShowArchived] = useState(false);
+  const [deletingProject, setDeletingProject] = useState<ProjectSummary | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") localStorage.setItem("kova-projects-view", view);
@@ -165,7 +168,6 @@ function ProjectsPage() {
     }
   }
   async function handleDelete(p: ProjectSummary) {
-    if (!confirm(`Delete “${p.name}”? This cannot be undone.`)) return;
     const prev = projects;
     setProjects((cur) => cur.filter((x) => x.id !== p.id));
     try {
@@ -213,7 +215,6 @@ function ProjectsPage() {
       setProjects(p);
       setInvites(i);
     } catch (e) {
-      console.error(e);
       setLoadError(e instanceof Error ? e.message : "Could not load your projects.");
     } finally {
       setLoading(false);
@@ -259,7 +260,6 @@ function ProjectsPage() {
       void refresh();
       await navigate({ to: "/projects/$projectId", params: { projectId: id } });
     } catch (e) {
-      console.error("[createProject]", e);
       toast.error(e instanceof Error ? e.message : "Failed to create project");
     } finally {
       setBusy(false);
@@ -362,16 +362,17 @@ function ProjectsPage() {
   return (
     <AppShell>
       <div className="kova-page kova-secondary-page pb-24 lg:pb-8">
-        <div className="kova-page-header">
-          <div className="min-w-0">
-            <h1 className="kova-page-title">Projects</h1>
-            <p className="kova-page-description">Shared workspaces for you and your team.</p>
-          </div>
-          <Button onClick={() => setCreateOpen(true)} className="hidden lg:inline-flex">
-            <Plus className="w-4 h-4 mr-1.5" />
-            New project
-          </Button>
-        </div>
+        <WorkspacePageHeader
+          icon={FolderKanban}
+          title="Projects"
+          description="Shared workspaces for your chats, files, instructions, and team."
+          actions={
+            <Button onClick={() => setCreateOpen(true)} className="hidden lg:inline-flex">
+              <Plus className="mr-1.5 h-4 w-4" />
+              New project
+            </Button>
+          }
+        />
 
         {invites.length > 0 && (
           <div className="mb-6 border rounded-xl p-4 bg-accent/30">
@@ -580,7 +581,7 @@ function ProjectsPage() {
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        onClick={() => handleDelete(p)}
+                        onClick={() => setDeletingProject(p)}
                         disabled={p.role !== "owner"}
                         className="text-destructive focus:text-destructive"
                       >
@@ -830,6 +831,23 @@ function ProjectsPage() {
           </form>
         </DialogContent>
       </Dialog>
+      <ConfirmActionDialog
+        open={Boolean(deletingProject)}
+        onOpenChange={(open) => !open && setDeletingProject(null)}
+        title="Delete this project?"
+        description={
+          deletingProject
+            ? `“${deletingProject.name}” and its project content will be permanently deleted.`
+            : "This project will be permanently deleted."
+        }
+        confirmLabel="Delete project"
+        destructive
+        onConfirm={() => {
+          const project = deletingProject;
+          setDeletingProject(null);
+          if (project) void handleDelete(project);
+        }}
+      />
     </AppShell>
   );
 }

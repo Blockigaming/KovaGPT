@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { SeoLanding, seoLandingHead } from "@/components/SeoLanding";
+import { SeoLanding } from "@/components/SeoLanding";
+import { seoLandingHead } from "@/components/seo-landing-head";
 
 const faq = [
   {

@@ -42,7 +42,7 @@ async function resolveOrCreateCustomer(
 
 export const createCheckoutSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (data: { priceId: string; quantity?: number; returnUrl: string; environment: StripeEnv }) => {
       if (!/^[a-zA-Z0-9_-]+$/.test(data.priceId)) throw new Error("Invalid priceId");
       return data;
@@ -137,7 +137,7 @@ type PortalResult = { url: string } | { error: string };
 // recent subscription row for this user + env (RLS-scoped via `context.supabase`).
 export const createPortalSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { returnUrl?: string; environment: StripeEnv }) => data)
+  .validator((data: { returnUrl?: string; environment: StripeEnv }) => data)
   .handler(async ({ data, context }): Promise<PortalResult> => {
     const { supabase, userId } = context;
     const { data: sub } = await supabase
@@ -178,7 +178,7 @@ export type SubscriptionSummary = {
 // ever see their own row.
 export const getSubscriptionSummary = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { environment: StripeEnv }) => data)
+  .validator((data: { environment: StripeEnv }) => data)
   .handler(async ({ data, context }): Promise<SubscriptionSummary> => {
     const { supabase, userId } = context;
     const { data: row } = await supabase

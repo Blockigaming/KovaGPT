@@ -129,8 +129,10 @@ test("archived chats can be removed from Settings data controls", async ({ page 
 
   const archived = page.getByRole("region", { name: "Archived chats" });
   await expect(archived).toBeVisible();
-  page.once("dialog", (dialog) => dialog.accept());
   await archived.getByRole("button", { name: "Delete archived chat Archived chat" }).click();
+  const confirmation = page.getByRole("alertdialog", { name: "Permanently delete this chat?" });
+  await expect(confirmation).toBeVisible();
+  await confirmation.getByRole("button", { name: "Delete permanently" }).click();
   await expect(archived.getByText("No archived chats", { exact: true })).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem("kovagpt:archived"))).toBe("[]");
 });

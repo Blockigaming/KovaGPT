@@ -22,11 +22,11 @@ import {
   Volume2,
   CircleStop,
 } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileBottomSheet } from "./MobileBottomSheet";
 import { useLayout } from "@/hooks/use-mobile";
 import type { Message } from "@/lib/chat-store";
-import { ChatChart, extractCharts } from "./ChatChart";
+import { extractCharts } from "./chat-chart-utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,11 +38,22 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { saveToLibrary } from "@/lib/library.functions";
 import { useUser } from "@/components/auth/ClerkSafe";
-import { ArtifactEditor, detectArtifactKind, extractCodeBlocks } from "./ArtifactEditor";
+import { detectArtifactKind, extractCodeBlocks } from "./artifact-utils";
 import { ToolConfirmCard } from "./ToolConfirmCard";
 import type { PendingConfirm } from "@/lib/chat-store";
-import { InfoChip, detectInfoChip } from "./InfoChip";
+import { InfoChip } from "./InfoChip";
+import { detectInfoChip } from "./info-chip-utils";
 import { canReadAloud, speechText } from "@/lib/browser-voice";
+import { submitResponseFeedback } from "@/lib/feedback.functions";
+import { MessageImage } from "./MessageImage";
+import { extractEmailFromMessage, openEmailCompose } from "./message-action-utils";
+
+const ChatChart = lazy(() =>
+  import("./ChatChart").then((module) => ({ default: module.ChatChart })),
+);
+const ArtifactEditor = lazy(() =>
+  import("./ArtifactEditor").then((module) => ({ default: module.ArtifactEditor })),
+);
 
 function MarkdownCode({ className, children }: React.ComponentProps<"code">) {
   const language = /language-([\w-]+)/.exec(className ?? "")?.[1];
@@ -56,9 +67,13 @@ function MarkdownCode({ className, children }: React.ComponentProps<"code">) {
         <button
           type="button"
           onClick={async () => {
-            await navigator.clipboard.writeText(text);
-            setCopied(true);
-            window.setTimeout(() => setCopied(false), 1600);
+            try {
+              await navigator.clipboard.writeText(text);
+              setCopied(true);
+              window.setTimeout(() => setCopied(false), 1600);
+            } catch {
+              toast.error("Code could not be copied. Check clipboard access and try again.");
+            }
           }}
           aria-label={copied ? "Code copied" : "Copy code"}
         >
@@ -87,7 +102,16 @@ const markdownComponents = {
       <span className="sr-only"> (opens in a new tab)</span>
     </a>
   ),
+  img: (props: React.ComponentProps<"img">) => <MessageImage {...props} />,
 };
+
+const MarkdownContent = memo(function MarkdownContent({ content }: { content: string }) {
+  return (
+    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+      {content}
+    </ReactMarkdown>
+  );
+});
 
 // Preserve the model's markdown exactly enough for source links, citation
 // markers, lists, and typography to survive rendering. ReactMarkdown handles
@@ -101,71 +125,6 @@ function cleanAssistantText(text: string): string {
 // "Send email" button can prefill Gmail / Outlook compose windows. Handles
 // three shapes: an explicit "Subject: ..." line, a fenced block labelled
 // email, or a message that opens with a greeting like Hi/Hello/Dear.
-export function extractEmailFromMessage(raw: string): { subject: string; body: string } | null {
-  if (!raw) return null;
-  const text = raw.replace(/\r\n/g, "\n").trim();
-
-  // 1) "Subject: ..." on its own line (case-insensitive).
-  const subjectMatch = text.match(/^\s*subject\s*:\s*(.+)$/im);
-  if (subjectMatch) {
-    const subject = subjectMatch[1].trim().replace(/^["']|["']$/g, "");
-    const body = text
-      .replace(subjectMatch[0], "")
-      .replace(/^\s*to\s*:.*$/im, "")
-      .replace(/^\s*from\s*:.*$/im, "")
-      .replace(/^\s*cc\s*:.*$/im, "")
-      .replace(/^\s*bcc\s*:.*$/im, "")
-      .replace(/^```(?:email|markdown|text)?\n?/i, "")
-      .replace(/```\s*$/i, "")
-      .trim();
-    if (body.length > 10) return { subject, body };
-  }
-
-  // 2) Fenced ```email block.
-  const fenced = text.match(/```(?:email|eml)?\s*\n([\s\S]+?)```/i);
-  if (fenced) {
-    const inner = fenced[1].trim();
-    const nested = extractEmailFromMessage(inner);
-    if (nested) return nested;
-  }
-
-  // 3) Greeting heuristic - starts with Hi/Hello/Dear/Hey <Name>, and has
-  // enough body + a signoff to feel like a real email draft.
-  const greeting = text.match(
-    /^(hi|hello|dear|hey|good\s+(morning|afternoon|evening))\b[^\n]{0,60},?\s*\n/i,
-  );
-  const signoff =
-    /\n\s*(best|thanks|thank you|regards|sincerely|cheers|kind regards|warmly|talk soon)[,\s]/i.test(
-      text,
-    );
-  if (greeting && signoff && text.length > 80) {
-    return { subject: "", body: text };
-  }
-
-  return null;
-}
-
-// Open a compose window in Gmail or Outlook prefilled with subject/body, and
-// copy the body to the clipboard as a fallback so the user can paste manually.
-export async function openEmailCompose(
-  provider: "gmail" | "outlook",
-  subject: string,
-  body: string,
-) {
-  try {
-    await navigator.clipboard.writeText(body);
-  } catch {
-    /* clipboard may be blocked; the compose URL still carries the body */
-  }
-  const su = encodeURIComponent(subject);
-  const bo = encodeURIComponent(body);
-  const url =
-    provider === "gmail"
-      ? `https://mail.google.com/mail/?view=cm&fs=1&tf=1&su=${su}&body=${bo}`
-      : `https://outlook.office.com/mail/deeplink/compose?subject=${su}&body=${bo}`;
-  window.open(url, "_blank", "noopener,noreferrer");
-}
-
 // Short status label shown while the assistant is streaming but has no text yet.
 // Derives from the latest running/last activity tool, so users see
 // "Searching", "Reading Files", "Interacting with Gmail", etc.
@@ -222,13 +181,27 @@ function ChatMessageInner({
       /* ignore */
     }
   }, [feedbackKey]);
-  const persistFeedback = (next: "up" | "down" | null) => {
+  const persistFeedback = async (next: "up" | "down" | null) => {
+    const previous = feedback;
     setFeedback(next);
     try {
       if (next) localStorage.setItem(feedbackKey, next);
       else localStorage.removeItem(feedbackKey);
     } catch {
       /* ignore */
+    }
+    if (!isSignedIn) return;
+    try {
+      await feedbackFn({
+        data: {
+          messageId: message.id,
+          rating: next,
+          contextExcerpt: next ? message.content.slice(0, 2_000) : undefined,
+        },
+      });
+    } catch {
+      setFeedback(previous);
+      toast.error("Feedback could not be saved. Try again.");
     }
   };
   const isUser = message.role === "user";
@@ -265,6 +238,7 @@ function ChatMessageInner({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [readAloudSupported, setReadAloudSupported] = useState(false);
   const { isSignedIn } = useUser();
+  const feedbackFn = useServerFn(submitResponseFeedback);
 
   const saveFn = useServerFn(saveToLibrary);
 
@@ -311,9 +285,13 @@ function ChatMessageInner({
   );
 
   const copy = async () => {
-    await navigator.clipboard.writeText(message.content);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error("Response could not be copied. Check clipboard access and try again.");
+    }
   };
 
   const saveItem = async () => {
@@ -383,7 +361,7 @@ function ChatMessageInner({
     <article
       id={`message-${message.id}`}
       data-message-id={message.id}
-      className="kova-message group w-full animate-fade-in px-3 py-3 text-[15px] leading-[1.65] sm:px-5 lg:px-10 lg:py-4 lg:text-[16px] lg:leading-[1.7]"
+      className="kova-message group w-full animate-fade-in px-3 py-3 text-[15px] leading-[1.6] sm:px-5 lg:px-10 lg:py-4 lg:text-[16px] lg:leading-[1.65]"
       aria-label={isUser ? "Your message" : "KovaGPT response"}
     >
       {isUser ? (
@@ -394,7 +372,7 @@ function ChatMessageInner({
                 {message.attachments
                   .filter((a): a is Extract<typeof a, { kind: "image" }> => a.kind === "image")
                   .map((a, i) => (
-                    <img
+                    <MessageImage
                       key={i}
                       src={a.dataUrl}
                       alt={
@@ -476,9 +454,9 @@ function ChatMessageInner({
           >
             {message.activities && message.activities.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-1.5">
-                {message.activities.map((a, i) => (
+                {message.activities.map((a) => (
                   <span
-                    key={i}
+                    key={`${a.tool}:${a.label}`}
                     className="inline-flex items-center gap-1.5 rounded-full border border-border bg-accent/40 px-2.5 py-1 text-xs text-muted-foreground"
                   >
                     <Check className="w-3 h-3 text-primary" />
@@ -496,33 +474,14 @@ function ChatMessageInner({
                 />
               ))}
               {message.pendingImage && !message.content ? (
-                <div className="relative w-full max-w-sm aspect-square rounded-2xl border border-border overflow-hidden bg-gradient-to-br from-accent/60 via-muted to-accent/60">
-                  <div
-                    aria-hidden
-                    className="absolute inset-0 opacity-70"
-                    style={{
-                      backgroundImage:
-                        "linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.25) 50%, transparent 70%)",
-                      backgroundSize: "200% 100%",
-                      animation: "shimmer 1.8s linear infinite",
-                    }}
-                  />
+                <div className="kova-image-skeleton relative aspect-square w-full max-w-sm overflow-hidden rounded-xl border border-border bg-muted">
+                  <div aria-hidden className="kova-skeleton-shimmer absolute inset-0 opacity-70" />
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
                     <div className="relative">
                       <ImageIcon className="w-10 h-10 text-foreground/70" />
                       <Loader2 className="w-5 h-5 absolute -bottom-1 -right-1 animate-spin text-primary" />
                     </div>
-                    <div
-                      className="text-sm font-medium bg-clip-text text-transparent"
-                      style={{
-                        backgroundImage:
-                          "linear-gradient(90deg, var(--color-muted-foreground) 0%, var(--color-foreground) 50%, var(--color-muted-foreground) 100%)",
-                        backgroundSize: "200% 100%",
-                        animation: "shimmer 1.8s linear infinite",
-                      }}
-                    >
-                      Creating image
-                    </div>
+                    <div className="text-sm font-medium text-muted-foreground">Creating image</div>
                   </div>
                 </div>
               ) : streaming && !message.content ? (
@@ -536,22 +495,21 @@ function ChatMessageInner({
                     <div className="space-y-2">
                       {parts.map((p, i) =>
                         p.kind === "chart" ? (
-                          <ChatChart key={i} spec={p.spec} />
-                        ) : p.value.trim() ? (
-                          <ReactMarkdown
+                          <Suspense
                             key={i}
-                            remarkPlugins={[remarkGfm]}
-                            components={markdownComponents}
+                            fallback={
+                              <div className="my-4 h-48 animate-pulse rounded-2xl bg-muted" />
+                            }
                           >
-                            {p.value}
-                          </ReactMarkdown>
+                            <ChatChart spec={p.spec} />
+                          </Suspense>
+                        ) : p.value.trim() ? (
+                          <MarkdownContent key={i} content={p.value} />
                         ) : null,
                       )}
                     </div>
                   ) : (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                      {cleaned}
-                    </ReactMarkdown>
+                    <MarkdownContent content={cleaned} />
                   );
                   if (artifactKind || streaming) return md;
                   const chip = detectInfoChip(cleaned);
@@ -564,7 +522,7 @@ function ChatMessageInner({
                   return md;
                 })()
               )}
-              {streaming && message.content && <span className="cursor-blink" />}
+              {streaming && message.content && <span className="cursor-blink" aria-hidden="true" />}
             </div>
           </div>
         </div>
@@ -586,40 +544,44 @@ function ChatMessageInner({
                   <Copy className="w-4 h-4" />
                 )}
               </button>
-              <button
-                onClick={() => {
-                  const next = feedback === "up" ? null : "up";
-                  persistFeedback(next);
-                  if (next) toast.success("Thanks for the feedback");
-                }}
-                className={`inline-flex items-center justify-center p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95 ${
-                  feedback === "up"
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                title="Good response"
-                aria-label="Good response"
-                aria-pressed={feedback === "up"}
-              >
-                <ThumbsUp className={`w-4 h-4 ${feedback === "up" ? "fill-current" : ""}`} />
-              </button>
-              <button
-                onClick={() => {
-                  const next = feedback === "down" ? null : "down";
-                  persistFeedback(next);
-                  if (next) toast.success("Thanks, we'll improve");
-                }}
-                className={`inline-flex items-center justify-center p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95 ${
-                  feedback === "down"
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                title="Bad response"
-                aria-label="Bad response"
-                aria-pressed={feedback === "down"}
-              >
-                <ThumbsDown className={`w-4 h-4 ${feedback === "down" ? "fill-current" : ""}`} />
-              </button>
+              {isSignedIn ? (
+                <button
+                  onClick={() => {
+                    const next = feedback === "up" ? null : "up";
+                    void persistFeedback(next);
+                    if (next) toast.success("Thanks for the feedback");
+                  }}
+                  className={`inline-flex items-center justify-center p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95 ${
+                    feedback === "up"
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  title="Good response"
+                  aria-label="Good response"
+                  aria-pressed={feedback === "up"}
+                >
+                  <ThumbsUp className={`w-4 h-4 ${feedback === "up" ? "fill-current" : ""}`} />
+                </button>
+              ) : null}
+              {isSignedIn ? (
+                <button
+                  onClick={() => {
+                    const next = feedback === "down" ? null : "down";
+                    void persistFeedback(next);
+                    if (next) toast.success("Thanks, we'll improve");
+                  }}
+                  className={`inline-flex items-center justify-center p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95 ${
+                    feedback === "down"
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  title="Bad response"
+                  aria-label="Bad response"
+                  aria-pressed={feedback === "down"}
+                >
+                  <ThumbsDown className={`w-4 h-4 ${feedback === "down" ? "fill-current" : ""}`} />
+                </button>
+              ) : null}
               <button
                 onClick={async () => {
                   const text = message.content;
@@ -804,14 +766,16 @@ function ChatMessageInner({
         </div>
       </div>
       {artifactKind && (
-        <ArtifactEditor
-          open={editorOpen}
-          onClose={() => setEditorOpen(false)}
-          initialContent={editorContent}
-          kind={artifactKind}
-          onImprove={onFollowUp}
-          initialMode={editorMode}
-        />
+        <Suspense fallback={null}>
+          <ArtifactEditor
+            open={editorOpen}
+            onClose={() => setEditorOpen(false)}
+            initialContent={editorContent}
+            kind={artifactKind}
+            onImprove={onFollowUp}
+            initialMode={editorMode}
+          />
+        </Suspense>
       )}
       {!isUser && message.content && (
         <MobileBottomSheet
@@ -829,22 +793,26 @@ function ChatMessageInner({
                   setMobileSheetOpen(false);
                 },
               },
-              {
-                label: feedback === "up" ? "Remove good rating" : "Good response",
-                icon: ThumbsUp,
-                onClick: () => {
-                  persistFeedback(feedback === "up" ? null : "up");
-                  setMobileSheetOpen(false);
-                },
-              },
-              {
-                label: feedback === "down" ? "Remove bad rating" : "Bad response",
-                icon: ThumbsDown,
-                onClick: () => {
-                  persistFeedback(feedback === "down" ? null : "down");
-                  setMobileSheetOpen(false);
-                },
-              },
+              ...(isSignedIn
+                ? [
+                    {
+                      label: feedback === "up" ? "Remove good rating" : "Good response",
+                      icon: ThumbsUp,
+                      onClick: () => {
+                        void persistFeedback(feedback === "up" ? null : "up");
+                        setMobileSheetOpen(false);
+                      },
+                    },
+                    {
+                      label: feedback === "down" ? "Remove bad rating" : "Bad response",
+                      icon: ThumbsDown,
+                      onClick: () => {
+                        void persistFeedback(feedback === "down" ? null : "down");
+                        setMobileSheetOpen(false);
+                      },
+                    },
+                  ]
+                : []),
               {
                 label: "Share",
                 icon: Share2,

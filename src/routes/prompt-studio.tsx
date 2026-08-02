@@ -3,6 +3,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { BarChart3, FlaskConical, Heart, History, Play, Plus, Search, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { listProjects, type ProjectSummary } from "@/lib/projects.functions";
 import { listContextPacks, type ContextPack } from "@/lib/workspace.functions";
@@ -70,7 +72,9 @@ function PromptStudio() {
     [historyLoading, setHistoryLoading] = useState(false),
     [editBody, setEditBody] = useState(""),
     [rating, setRating] = useState(5),
-    [notes, setNotes] = useState("");
+    [notes, setNotes] = useState(""),
+    [deletingPrompt, setDeletingPrompt] = useState<PromptTemplate | null>(null),
+    [deletePending, setDeletePending] = useState(false);
   useEffect(() => {
     if (!isLoaded) return;
     if (!isSignedIn) {
@@ -184,16 +188,11 @@ function PromptStudio() {
   return (
     <AppShell>
       <main className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6">
-        <header>
-          <div className="flex items-center gap-2">
-            <FlaskConical className="h-5 w-5" />
-            <h1 className="text-2xl font-semibold">Prompt Studio</h1>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Build reusable prompts with variables, Projects, and Context Packs, then test them in
-            chat.
-          </p>
-        </header>
+        <WorkspacePageHeader
+          icon={FlaskConical}
+          title="Prompt Studio"
+          description="Build reusable prompts with variables, Projects, and Context Packs, then test them in chat."
+        />
         {!isSignedIn && !loading ? (
           <div className="mt-6 rounded-2xl border p-8 text-center">
             Sign in to save reusable prompts.
@@ -393,19 +392,7 @@ function PromptStudio() {
                           </button>
                           <button
                             aria-label={`Delete ${item.name}`}
-                            onClick={async () => {
-                              if (!confirm("Delete this prompt?")) return;
-                              try {
-                                await remove({ data: { id: item.id } });
-                                setItems((all) => all.filter((value) => value.id !== item.id));
-                              } catch (reason) {
-                                toast.error(
-                                  reason instanceof Error
-                                    ? reason.message
-                                    : "Prompt could not be deleted",
-                                );
-                              }
-                            }}
+                            onClick={() => setDeletingPrompt(item)}
                             className="grid min-h-10 min-w-10 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -659,6 +646,29 @@ function PromptStudio() {
           </div>
         ) : null}
       </main>
+      <ConfirmActionDialog
+        open={Boolean(deletingPrompt)}
+        onOpenChange={(open) => !open && !deletePending && setDeletingPrompt(null)}
+        title="Delete prompt?"
+        description={`“${deletingPrompt?.name ?? "This prompt"}” and its saved versions will be permanently removed.`}
+        confirmLabel={deletePending ? "Deleting…" : "Delete prompt"}
+        destructive
+        disabled={deletePending}
+        onConfirm={async () => {
+          if (!deletingPrompt || deletePending) return;
+          setDeletePending(true);
+          try {
+            await remove({ data: { id: deletingPrompt.id } });
+            setItems((all) => all.filter((value) => value.id !== deletingPrompt.id));
+            setDeletingPrompt(null);
+            toast.success("Prompt deleted");
+          } catch (reason) {
+            toast.error(reason instanceof Error ? reason.message : "Prompt could not be deleted");
+          } finally {
+            setDeletePending(false);
+          }
+        }}
+      />
     </AppShell>
   );
 }

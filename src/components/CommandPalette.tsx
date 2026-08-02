@@ -1,12 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   Search,
   SquarePen,
   Settings,
   Image as ImageIcon,
   FolderOpen,
-  Plug,
   Calendar,
   X,
   FlaskConical,
@@ -24,6 +23,7 @@ import { extensionRegistry } from "@/platform/extensions";
 import { platformEvents } from "@/platform/events";
 import { applyThemeMode } from "@/lib/theme";
 import { searchConversations } from "@/lib/conversation-search";
+import type { RecentItem } from "@/lib/workspace.functions";
 
 type PaletteAction = {
   label: string;
@@ -59,7 +59,6 @@ const fixedActions: PaletteAction[] = [
     disabledReason: "Start from the composer privacy menu.",
   },
   { label: "Create Scheduled Task", href: "/scheduled-tasks", icon: Calendar },
-  { label: "Open Apps", href: "/apps", icon: Plug },
   { label: "Open Help", href: "/help", icon: FlaskConical },
   { label: "Toggle appearance", action: "theme", icon: SunMoon },
 ];
@@ -107,31 +106,60 @@ export function CommandPalette({
   query,
   onQueryChange,
   conversations,
+  archivedConversations = [],
+  workspaceItems = [],
   onClose,
   onNewChat,
   onSelectChat,
+  onSelectArchived,
   onOpenSettings,
 }: {
   open: boolean;
   query: string;
   onQueryChange: (value: string) => void;
   conversations: Conversation[];
+  archivedConversations?: Conversation[];
+  workspaceItems?: RecentItem[];
   onClose: () => void;
   onNewChat: () => void;
   onSelectChat: (id: string) => void;
+  onSelectArchived?: (conversation: Conversation) => void;
   onOpenSettings: () => void;
 }) {
-  const normalized = query.trim().toLowerCase();
+  const deferredQuery = useDeferredValue(query);
+  const normalized = deferredQuery.trim().toLowerCase();
+  const archivedIds = useMemo(
+    () => new Set(archivedConversations.map((conversation) => conversation.id)),
+    [archivedConversations],
+  );
+  const searchableConversations = useMemo(() => {
+    const currentIds = new Set(conversations.map((conversation) => conversation.id));
+    return [
+      ...conversations,
+      ...archivedConversations.filter((conversation) => !currentIds.has(conversation.id)),
+    ];
+  }, [archivedConversations, conversations]);
   const conversationMatches = normalized
-    ? searchConversations(conversations, query).slice(0, 8)
-    : conversations.slice(0, 6).map((conversation) => ({
-        conversation,
-        snippet: `${conversation.messages.length} messages`,
-        score: 0,
-      }));
+    ? searchConversations(searchableConversations, deferredQuery).slice(0, 12)
+    : [...searchableConversations]
+        .sort((a, b) => b.updatedAt - a.updatedAt)
+        .slice(0, 8)
+        .map((conversation) => ({
+          conversation,
+          snippet: `${conversation.messages.length} messages`,
+          score: 0,
+        }));
   const [activeIndex, setActiveIndex] = useState(0);
   const [recentCommands, setRecentCommands] = useState<string[]>([]);
   const [pinnedCommands, setPinnedCommands] = useState<string[]>([]);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    returnFocusRef.current = document.activeElement as HTMLElement | null;
+    return () => {
+      window.requestAnimationFrame(() => returnFocusRef.current?.focus());
+    };
+  }, [open]);
   useEffect(() => {
     try {
       setRecentCommands(JSON.parse(localStorage.getItem("kova-command-history-v1") ?? "[]"));
@@ -160,7 +188,16 @@ export function CommandPalette({
     () => ["new-chat", "settings", ...visibleActions.map((action) => action.href ?? action.action)],
     [visibleActions],
   );
-  const totalItems = actionItems.length + conversationMatches.length;
+  const workspaceMatches = useMemo(() => {
+    const term = normalized;
+    return workspaceItems
+      .filter(
+        (item) =>
+          !term || `${item.title} ${item.subtitle} ${item.type}`.toLowerCase().includes(term),
+      )
+      .slice(0, 20);
+  }, [normalized, workspaceItems]);
+  const totalItems = actionItems.length + conversationMatches.length + workspaceMatches.length;
 
   useEffect(() => {
     setActiveIndex(0);
@@ -207,7 +244,15 @@ export function CommandPalette({
     if (!action) {
       const match = conversationMatches[activeIndex - actionItems.length];
       if (match) {
-        onSelectChat(match.conversation.id);
+        if (archivedIds.has(match.conversation.id)) onSelectArchived?.(match.conversation);
+        else onSelectChat(match.conversation.id);
+        onClose();
+        return;
+      }
+      const workspace =
+        workspaceMatches[activeIndex - actionItems.length - conversationMatches.length];
+      if (workspace) {
+        window.location.assign(workspace.href);
         onClose();
       }
     }
@@ -411,7 +456,8 @@ export function CommandPalette({
                 key={chat.id}
                 type="button"
                 onClick={() => {
-                  onSelectChat(chat.id);
+                  if (archivedIds.has(chat.id)) onSelectArchived?.(chat);
+                  else onSelectChat(chat.id);
                   onClose();
                 }}
                 id={`command-option-${actionItems.length + chatIndex}`}
@@ -420,13 +466,53 @@ export function CommandPalette({
                 className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === actionItems.length + chatIndex ? "bg-accent" : ""}`}
               >
                 <span className="h-2 w-2 rounded-full bg-muted-foreground/50" />
-                <span className="min-w-0 flex-1 truncate">{chat.title}</span>
+                <span className="min-w-0 flex-1 truncate" title={chat.title}>
+                  {chat.title}
+                </span>
+                {archivedIds.has(chat.id) ? (
+                  <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                    Archived
+                  </span>
+                ) : null}
                 <span className="hidden max-w-52 truncate text-xs text-muted-foreground sm:block">
                   {snippet}
                 </span>
               </button>
             ))
           )}
+          {workspaceMatches.length ? (
+            <>
+              <div className="px-3 pb-1 pt-4 text-xs font-medium text-muted-foreground">
+                Workspace
+              </div>
+              {workspaceMatches.map((item, itemIndex) => {
+                const index = actionItems.length + conversationMatches.length + itemIndex;
+                return (
+                  <a
+                    key={`${item.type}:${item.id}`}
+                    href={item.href}
+                    id={`command-option-${index}`}
+                    role="option"
+                    aria-selected={activeIndex === index}
+                    className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm hover:bg-accent ${activeIndex === index ? "bg-accent" : ""}`}
+                    onClick={onClose}
+                  >
+                    <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] capitalize text-muted-foreground">
+                      {item.type.replaceAll("_", " ")}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate" title={item.title}>
+                        {item.title}
+                      </span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {item.subtitle}
+                      </span>
+                    </span>
+                  </a>
+                );
+              })}
+            </>
+          ) : null}
           <p className="border-t px-3 py-2 text-[11px] text-muted-foreground">
             Press Alt+Enter to pin or unpin the selected command.
           </p>

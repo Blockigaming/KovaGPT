@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { DEFAULT_SETTINGS, type Settings } from "@/components/SettingsDialog";
+import { DEFAULT_SETTINGS, type Settings } from "@/lib/settings-types";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 
 const SETTINGS_KEY_BASE = "nova-gpt-settings-v1";

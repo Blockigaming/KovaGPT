@@ -774,9 +774,10 @@ body {
 .kova-glass,
 .glassy {
   border-color: var(--border);
-  background: color-mix(in oklab, var(--surface-raised) 97%, transparent);
-  box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(12px);
+  background: var(--popover);
+  box-shadow: 0 10px 30px oklch(0 0 0 / 12%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .kova-topbar {
@@ -872,6 +873,104 @@ body {
   }
 }
 
+/* Publication-quality response rhythm. Kept as a final, shared layer so chat,
+   saved responses, and artifact previews render with one typographic system. */
+.prose-chat > :first-child {
+  margin-top: 0;
+}
+.prose-chat > :last-child {
+  margin-bottom: 0;
+}
+.prose-chat :where(ul, ol) :where(ul, ol) {
+  margin-block: 0.25rem;
+}
+.prose-chat li > p {
+  margin-block: 0.2rem;
+}
+.prose-chat li:has(> input[type="checkbox"]) {
+  list-style: none;
+  margin-left: -1.35rem;
+}
+.prose-chat input[type="checkbox"] {
+  margin-right: 0.45rem;
+  width: 1rem;
+  height: 1rem;
+  appearance: auto;
+  -webkit-appearance: checkbox;
+  accent-color: var(--foreground);
+  vertical-align: -0.12em;
+}
+.prose-chat hr {
+  margin-block: 1.5rem;
+  border: 0;
+  border-top: 1px solid var(--border-subtle);
+}
+.prose-chat strong {
+  font-weight: 650;
+}
+.prose-chat :where(a, code, td, th) {
+  overflow-wrap: anywhere;
+}
+.prose-chat a:focus-visible,
+.kova-code-toolbar button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.kova-code-toolbar span:first-child {
+  overflow: hidden;
+  max-width: 60%;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: lowercase;
+}
+.kova-skeleton-shimmer {
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    color-mix(in oklab, var(--skeleton-highlight) 70%, transparent) 48%,
+    transparent 66%
+  );
+  background-size: 220% 100%;
+  animation: shimmer 1.6s var(--ease-standard) infinite;
+}
+.kova-skeleton {
+  position: relative;
+}
+.kova-skeleton::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    color-mix(in oklab, var(--skeleton-highlight) 70%, transparent) 48%,
+    transparent 66%
+  );
+  background-size: 220% 100%;
+  animation: shimmer 1.6s var(--ease-standard) infinite;
+}
+.kova-thinking-indicator > span:first-child {
+  animation: thinking-pulse 1.35s var(--ease-standard) infinite;
+}
+@keyframes thinking-pulse {
+  50% {
+    opacity: 0.35;
+    transform: scale(0.78);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor-blink::after,
+  .kova-skeleton-shimmer,
+  .kova-skeleton::after,
+  .kova-thinking-indicator > span:first-child {
+    animation: none !important;
+  }
+  .cursor-blink::after {
+    opacity: 0.65;
+  }
+}
+
 /* Product-wide interaction finishing: Radix primitives share one calm motion
    language even when individual routes use different component wrappers. */
 ::selection {
@@ -885,10 +984,10 @@ body {
 :where([role="dialog"], [role="menu"], [role="listbox"], [data-radix-popper-content-wrapper]) {
   transform-origin: var(--radix-popover-content-transform-origin, center);
 }
-:where([role="dialog"], [role="menu"], [role="listbox"])[data-state="open"] {
+:where([role="menu"], [role="listbox"])[data-state="open"] {
   animation: kova-surface-in var(--motion-menu) var(--ease-spring) both;
 }
-:where([role="dialog"], [role="menu"], [role="listbox"])[data-state="closed"] {
+:where([role="menu"], [role="listbox"])[data-state="closed"] {
   animation: kova-surface-out var(--motion-fast) var(--ease-standard) both;
 }
 @keyframes kova-surface-in {
@@ -1373,21 +1472,14 @@ body {
 
 @layer components {
   .kova-glass {
-    background: color-mix(
-      in oklab,
-      var(--surface-floating, var(--surface-raised)) 86%,
-      transparent
-    );
-    border: 1px solid color-mix(in oklab, var(--foreground) 9%, transparent);
-    box-shadow:
-      var(--shadow-floating),
-      inset 0 1px color-mix(in oklab, white 40%, transparent);
-    backdrop-filter: blur(var(--blur-glass)) saturate(125%);
+    background: var(--popover);
+    border: 1px solid var(--border);
+    box-shadow: 0 10px 30px oklch(0 0 0 / 12%);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
   .dark .kova-glass {
-    box-shadow:
-      var(--shadow-floating),
-      inset 0 1px color-mix(in oklab, white 8%, transparent);
+    box-shadow: 0 12px 36px oklch(0 0 0 / 38%);
   }
   .kova-nav-row {
     display: flex;
@@ -1406,6 +1498,19 @@ body {
   }
   .kova-nav-row:hover {
     background: var(--sidebar-hover);
+  }
+  .kova-nav-icon {
+    transition:
+      transform 180ms var(--ease-spring),
+      color 180ms var(--ease-standard);
+    transform-origin: center;
+  }
+  :where(.kova-nav-row, a):hover > .kova-nav-icon,
+  :where(.kova-nav-row, a):focus-visible > .kova-nav-icon {
+    transform: translateY(-1px) scale(1.1) rotate(-4deg);
+  }
+  :where(.kova-nav-row, a):active > .kova-nav-icon {
+    transform: scale(0.9) rotate(3deg);
   }
   .kova-nav-row[aria-current="page"],
   .kova-nav-row[data-active="true"] {
@@ -1724,9 +1829,11 @@ body {
   }
 
   .kova-message-actions button {
+    width: 46px;
     min-width: 44px;
-    min-height: 44px;
-    flex: 0 0 44px;
+    height: 46px;
+    min-height: 46px;
+    flex: 0 0 46px;
   }
 
   input:not([type="checkbox"]):not([type="radio"]),
@@ -1791,8 +1898,8 @@ body {
   }
 
   .kova-composer:focus-within {
-    border-color: color-mix(in oklab, var(--ring) 72%, transparent) !important;
-    box-shadow: 0 0 0 2px color-mix(in oklab, var(--ring) 72%, transparent) !important;
+    border-color: color-mix(in oklab, var(--foreground) 12%, transparent) !important;
+    box-shadow: none !important;
   }
 
   .kova-capability-card,
@@ -1805,7 +1912,7 @@ body {
 
   .kova-capability-card:hover,
   .kova-starter-card:hover {
-    transform: translateY(-1px);
+    transform: none;
   }
 
   .kova-capability-card:active,
@@ -1822,6 +1929,31 @@ body {
 
   .kova-thinking-indicator > :first-child {
     animation: kova-status-pulse 1.4s var(--ease-standard) infinite;
+  }
+
+  .kova-starter-card {
+    animation: kova-starter-enter 180ms var(--ease-standard) both;
+  }
+
+  .kova-starter-card:nth-child(2) {
+    animation-delay: 25ms;
+  }
+  .kova-starter-card:nth-child(3) {
+    animation-delay: 50ms;
+  }
+  .kova-starter-card:nth-child(4) {
+    animation-delay: 75ms;
+  }
+}
+
+@keyframes kova-starter-enter {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -1863,8 +1995,8 @@ body {
   }
 
   .kova-starter-card {
-    min-height: 4.5rem;
-    background: color-mix(in oklab, var(--card) 72%, transparent);
+    min-height: 3rem;
+    background: var(--background);
   }
 }
 
@@ -1878,6 +2010,10 @@ body {
   .kova-thinking-indicator > :first-child {
     animation: none;
     opacity: 1;
+  }
+
+  .kova-starter-card {
+    animation: none;
   }
 
   .kova-capability-card:hover,
@@ -1960,7 +2096,43 @@ body {
 
   .kova-secondary-page [role="tab"][aria-selected="true"],
   .kova-settings-dialog [role="tab"][aria-selected="true"] {
-    box-shadow: inset 0 -2px var(--kova-blue);
+    box-shadow: none;
+    background: var(--background);
+  }
+}
+
+/* Final chat surface rhythm: neutral, compact, and shared by messages and previews. */
+.prose-chat {
+  font-size: 1rem;
+  line-height: 1.65;
+  letter-spacing: 0;
+}
+.prose-chat p {
+  margin-block: 0.65em;
+}
+.prose-chat :is(ul, ol) {
+  margin-block: 0.65em;
+  padding-left: 1.5em;
+}
+.prose-chat li {
+  margin-block: 0.2em;
+}
+.prose-chat :is(h1, h2, h3, h4) {
+  font-family: inherit;
+  margin-block: 1.25em 0.55em;
+  letter-spacing: -0.015em;
+}
+.kova-skeleton-shimmer {
+  background: var(--skeleton-highlight) !important;
+  animation: kova-skeleton-pulse 1.5s ease-in-out infinite;
+}
+@keyframes kova-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 0.8;
   }
 }
 

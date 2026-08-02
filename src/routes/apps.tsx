@@ -37,7 +37,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AppShell } from "@/components/AppShell";
+import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { toast } from "sonner";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
+import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
 import {
   getGoogleStatus,
   startGoogleConnect,
@@ -325,6 +329,8 @@ function GitHubManager() {
         .catch(() => toast.error("GitHub status unavailable")),
     [load],
   );
+  const [revokeOpen, setRevokeOpen] = useState(false);
+  const [disconnectOpen, setDisconnectOpen] = useState(false);
   useEffect(() => {
     void reload();
   }, [reload]);
@@ -344,15 +350,20 @@ function GitHubManager() {
     else toast.error(result.error ?? "GitHub is unavailable");
   }
   async function update(granted: boolean) {
+    if (!granted) {
+      setRevokeOpen(true);
+      return;
+    }
+    await applyGrantUpdate(true);
+  }
+  async function applyGrantUpdate(granted: boolean) {
     setBusy(true);
     try {
       await grants({
         data: {
           repositoryIds: selected,
           granted,
-          confirmed:
-            granted ||
-            confirm("Remove selected GitHub repositories? Coding Agents will lose access."),
+          confirmed: true,
         },
       });
       setSelected([]);
@@ -398,14 +409,7 @@ function GitHubManager() {
             </button>
             <button
               className="rounded-full border px-3 py-2 text-sm text-destructive"
-              onClick={() =>
-                void disconnect({
-                  data: {
-                    accountId: data.accounts[0].id,
-                    removeData: confirm("Also remove synchronized GitHub metadata?"),
-                  },
-                }).then(reload)
-              }
+              onClick={() => setDisconnectOpen(true)}
             >
               Disconnect
             </button>
@@ -439,6 +443,56 @@ function GitHubManager() {
           </div>
         </div>
       ))}
+      <ConfirmActionDialog
+        open={revokeOpen}
+        onOpenChange={setRevokeOpen}
+        title="Remove repository access?"
+        description="Coding Agents will immediately lose access to the selected repositories."
+        confirmLabel="Remove access"
+        destructive
+        onConfirm={() => {
+          setRevokeOpen(false);
+          void applyGrantUpdate(false);
+        }}
+      />
+      <Dialog open={disconnectOpen} onOpenChange={setDisconnectOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Disconnect GitHub?</DialogTitle>
+            <DialogDescription>
+              Repository access will be revoked. Choose whether synchronized metadata should also be
+              removed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button variant="outline" onClick={() => setDisconnectOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDisconnectOpen(false);
+                void disconnect({
+                  data: { accountId: data.accounts[0].id, removeData: false },
+                }).then(reload);
+              }}
+            >
+              Disconnect only
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setDisconnectOpen(false);
+                void disconnect({
+                  data: { accountId: data.accounts[0].id, removeData: true },
+                }).then(reload);
+              }}
+            >
+              Disconnect and remove data
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {data.installations.length > 0 && (
         <div className="mt-4">
           <h3 className="text-sm font-medium">Installations</h3>
@@ -784,20 +838,11 @@ function AppsPage() {
             )}
           </DialogContent>
         </Dialog>
-        <header className="space-y-3">
-          <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
-            <span className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-sky-500 to-violet-500 text-white shadow-sm">
-              <PanelsTopLeft className="h-4 w-4" />
-            </span>
-            Apps
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Your KovaGPT workspace</h1>
-          <p className="text-sm text-muted-foreground max-w-2xl">
-            Link Google once to enable Gmail, Calendar, and Drive capabilities according to the
-            scopes you grant. KovaGPT never stores connector tokens in browser storage, and write
-            actions require confirmation.
-          </p>
-        </header>
+        <WorkspacePageHeader
+          icon={PanelsTopLeft}
+          title="Your KovaGPT workspace"
+          description="Connect supported services with explicit permissions. Tokens stay server-side and consequential write actions require confirmation."
+        />
 
         <div className="space-y-3">
           <div className="relative max-w-md">

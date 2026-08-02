@@ -1,10 +1,9 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { saveToLibrary } from "@/lib/library.functions";
 import {
-  PanelLeft,
   ArrowUp,
   Loader2,
   Download,
@@ -16,16 +15,16 @@ import {
   RefreshCw,
   Copy,
 } from "lucide-react";
-import { Sidebar } from "@/components/Sidebar";
-import { SettingsDialog } from "@/components/SettingsDialog";
+import { AppShell } from "@/components/AppShell";
 
 import { LoginPromptDialog } from "@/components/LoginPromptDialog";
 import { LimitReachedDialog } from "@/components/LimitReachedDialog";
 import { getUsage } from "@/lib/limits";
-import { useNovaSettings } from "@/lib/use-nova-settings";
-import { SignInButton, SignUpButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
+import { SignInButton, useUser } from "@/components/auth/ClerkSafe";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { OperationalState } from "@/components/OperationalState";
+import { capabilityState, useReadiness } from "@/lib/readiness-client";
 
 export const Route = createFileRoute("/images")({
   component: ImagesPage,
@@ -281,26 +280,10 @@ function saveHistory(userKey: string | null, items: HistoryItem[]) {
 }
 
 function ImagesPage() {
-  const navigate = useNavigate();
+  const { readiness, refresh } = useReadiness();
+  const imageState = capabilityState(readiness, "images");
   const { isSignedIn, user } = useUser();
   const userKey = (user as { id?: string } | null)?.id ?? null;
-  const [settings, setSettings] = useNovaSettings(userKey);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
-  const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
-  const openSettings = (tab?: string) => {
-    settingsReturnFocusRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    setSettingsTab(tab);
-    setSettingsOpen(true);
-  };
-  useEffect(() => {
-    const h = (e: Event) => openSettings((e as CustomEvent<{ tab?: string }>).detail?.tab);
-    window.addEventListener("kova-open-settings", h);
-    return () => window.removeEventListener("kova-open-settings", h);
-  }, []);
-  const openHelp = () => navigate({ to: "/help" as never });
 
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
@@ -460,53 +443,24 @@ function ImagesPage() {
   };
 
   return (
-    <div className="flex h-dvh w-full bg-background text-foreground">
-      <Sidebar
-        conversations={[]}
-        activeId={null}
-        onSelect={() => {}}
-        onNew={() => navigate({ to: "/" })}
-        onDelete={() => {}}
-        open={sidebarOpen}
-        onToggle={() => setSidebarOpen((v) => !v)}
-        onOpenSettings={openSettings}
-        onOpenHelp={openHelp}
-      />
-
-      <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 flex items-center px-3 border-b border-border shrink-0">
-          {!sidebarOpen && (
-            <button
-              onClick={() => setSidebarOpen((v) => !v)}
-              className="p-2 rounded-lg hover:bg-accent transition mr-1"
-              aria-label="Toggle sidebar"
-            >
-              <PanelLeft className="w-5 h-5" />
-            </button>
-          )}
+    <AppShell>
+      <main className="flex min-h-full min-w-0 flex-1 flex-col bg-background text-foreground">
+        <header className="flex h-14 shrink-0 items-center border-b border-border px-4 lg:px-6">
           <h1 className="text-lg font-semibold tracking-tight">Images</h1>
           <div className="ml-auto flex items-center gap-2">
-            {isSignedIn ? (
-              <UserButton />
-            ) : (
-              <>
-                <SignInButton mode="modal">
-                  <button className="text-sm font-medium px-4 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition">
-                    Log in
-                  </button>
-                </SignInButton>
-                <SignUpButton mode="modal">
-                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full bg-neutral-200 text-neutral-900 hover:bg-neutral-300 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700 transition whitespace-nowrap">
-                    Sign up for free
-                  </button>
-                </SignUpButton>
-              </>
-            )}
+            {!isSignedIn ? (
+              <SignInButton mode="modal">
+                <button className="rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition hover:opacity-90">
+                  Log in
+                </button>
+              </SignInButton>
+            ) : null}
           </div>
         </header>
 
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-40">
+            <OperationalState state={imageState} onRetry={refresh} />
             {/* Create an image */}
             <section>
               <h2 className="text-[22px] font-semibold tracking-tight mb-3">Create an image</h2>
@@ -738,7 +692,7 @@ function ImagesPage() {
               />
               <button
                 type="submit"
-                disabled={!prompt.trim() || loading}
+                disabled={!prompt.trim() || loading || imageState !== "ready"}
                 className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center disabled:opacity-30 hover:opacity-90 transition shrink-0"
                 aria-label="Generate"
               >
@@ -752,26 +706,6 @@ function ImagesPage() {
           </form>
         </div>
       </main>
-
-      <SettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        settings={settings}
-        onChange={setSettings}
-        initialTab={settingsTab}
-        returnFocusTarget={settingsReturnFocusRef.current}
-        onClearAll={() => {
-          try {
-            for (const k of Object.keys(localStorage)) {
-              if (k.startsWith("novagpt-image-history-") || k.startsWith("nova-gpt-conversations"))
-                localStorage.removeItem(k);
-            }
-          } catch {
-            /* ignore */
-          }
-          setHistory([]);
-        }}
-      />
 
       <LoginPromptDialog
         open={loginOpen}
@@ -863,6 +797,6 @@ function ImagesPage() {
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 }

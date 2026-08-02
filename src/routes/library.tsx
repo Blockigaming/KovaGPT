@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -108,45 +110,44 @@ function LibraryPage() {
   const [favorites, setFavorites] = useState<Set<string>>(() => readFavorites());
   const [previewItem, setPreviewItem] = useState<LibItem | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  const [deleteRequest, setDeleteRequest] = useState<
+    { kind: "single"; id: string } | { kind: "bulk" } | null
+  >(null);
 
   const load = async () => {
     setLoadError(null);
     const localItems: LibItem[] = [
-      ...loadConversations().map(
-        (chat): LibItem => ({
-          id: `chat:${chat.id}`,
-          title: chat.title,
-          item_type: "chat_artifact",
-          source: "chat",
-          content_text: chat.messages
-            .map((message) => `${message.role}: ${message.content}`)
-            .join("\n\n"),
-          file_url: null,
-          file_name: null,
-          file_type: "application/x-kova-chat",
-          file_size: null,
-          created_at: new Date(chat.updatedAt).toISOString(),
-        }),
-      ),
-      ...loadWorkTasks().map(
-        (task): LibItem => ({
-          id: `work:${task.id}`,
-          title: task.objective,
-          item_type: "other",
-          source: "other",
-          content_text: [
-            task.context,
-            ...task.steps.map((step) => `${step.done ? "✓" : "○"} ${step.text}`),
-          ]
-            .filter(Boolean)
-            .join("\n"),
-          file_url: null,
-          file_name: null,
-          file_type: "application/x-kova-work",
-          file_size: null,
-          created_at: new Date(task.updatedAt).toISOString(),
-        }),
-      ),
+      ...loadConversations().map((chat): LibItem => ({
+        id: `chat:${chat.id}`,
+        title: chat.title,
+        item_type: "chat_artifact",
+        source: "chat",
+        content_text: chat.messages
+          .map((message) => `${message.role}: ${message.content}`)
+          .join("\n\n"),
+        file_url: null,
+        file_name: null,
+        file_type: "application/x-kova-chat",
+        file_size: null,
+        created_at: new Date(chat.updatedAt).toISOString(),
+      })),
+      ...loadWorkTasks().map((task): LibItem => ({
+        id: `work:${task.id}`,
+        title: task.objective,
+        item_type: "other",
+        source: "other",
+        content_text: [
+          task.context,
+          ...task.steps.map((step) => `${step.done ? "✓" : "○"} ${step.text}`),
+        ]
+          .filter(Boolean)
+          .join("\n"),
+        file_url: null,
+        file_name: null,
+        file_type: "application/x-kova-work",
+        file_size: null,
+        created_at: new Date(task.updatedAt).toISOString(),
+      })),
     ];
     if (!isSignedIn) {
       setItems([...localItems, ...loadGuestLibrary()]);
@@ -174,7 +175,6 @@ function LibraryPage() {
         }));
       setItems([...localItems, ...saved, ...workspaceItems]);
     } catch (e) {
-      console.error(e);
       setLoadError(e instanceof Error ? e.message : "Could not load your library.");
       toast.error("Could not load your library.");
     } finally {
@@ -202,8 +202,11 @@ function LibraryPage() {
   }, [previewItem]);
 
   const remove = async (id: string) => {
+    setDeleteRequest({ kind: "single", id });
+  };
+
+  const removeConfirmed = async (id: string) => {
     const existing = items;
-    if (!confirm("Delete this Library item?")) return;
     setItems((prev) => prev.filter((i) => i.id !== id));
     if (id.startsWith("chat:")) {
       saveConversations(loadConversations().filter((chat) => `chat:${chat.id}` !== id));
@@ -242,7 +245,11 @@ function LibraryPage() {
   };
 
   const deleteSelected = async () => {
-    if (!selected.length || !confirm(`Delete ${selected.length} selected Library items?`)) return;
+    if (!selected.length) return;
+    setDeleteRequest({ kind: "bulk" });
+  };
+
+  const deleteSelectedConfirmed = async () => {
     const existing = items;
     setItems((current) => current.filter((item) => !selected.includes(item.id)));
     try {
@@ -499,28 +506,22 @@ function LibraryPage() {
   return (
     <AppShell>
       <main className="kova-page kova-secondary-page" aria-labelledby="library-title">
-        <header className="kova-page-header">
-          <div className="min-w-0">
-            <h1 id="library-title" className="kova-page-title">
-              Library
-            </h1>
-            <p className="kova-page-description">
-              Chats, work, files, images, responses, and reusable context in one place.
-            </p>
-            {storageTotal !== null ? (
-              <p className="mt-1 text-xs text-muted-foreground">
-                Known file storage: {humanBytes(storageTotal)}
-              </p>
-            ) : (
-              <p className="mt-1 text-xs text-muted-foreground">
-                Storage totals require backend usage records and are omitted here.
-              </p>
-            )}
-          </div>
-          <Button size="sm" variant="outline" onClick={load} disabled={loading}>
-            <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
-          </Button>
-        </header>
+        <WorkspacePageHeader
+          titleId="library-title"
+          title="Library"
+          description="Chats, work, files, images, responses, and reusable context in one place."
+          meta={
+            storageTotal !== null
+              ? `Known file storage: ${humanBytes(storageTotal)}`
+              : "Storage totals require backend usage records and are omitted here."
+          }
+          actions={
+            <Button size="sm" variant="outline" onClick={load} disabled={loading}>
+              <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          }
+        />
 
         {!isSignedIn && isLoaded ? (
           <section className="kova-card p-4 text-sm" aria-label="Guest Library notice">
@@ -729,6 +730,24 @@ function LibraryPage() {
           </div>
         ) : null}
       </main>
+      <ConfirmActionDialog
+        open={Boolean(deleteRequest)}
+        onOpenChange={(open) => !open && setDeleteRequest(null)}
+        title={
+          deleteRequest?.kind === "bulk"
+            ? `Delete ${selected.length} items?`
+            : "Delete this Library item?"
+        }
+        description="Deleted Library content cannot be recovered from this workspace."
+        confirmLabel={deleteRequest?.kind === "bulk" ? "Delete selected" : "Delete item"}
+        destructive
+        onConfirm={() => {
+          const request = deleteRequest;
+          setDeleteRequest(null);
+          if (request?.kind === "single") void removeConfirmed(request.id);
+          else if (request?.kind === "bulk") void deleteSelectedConfirmed();
+        }}
+      />
     </AppShell>
   );
 }

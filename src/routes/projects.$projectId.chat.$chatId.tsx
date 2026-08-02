@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useServerFn } from "@tanstack/react-start";
@@ -35,6 +36,10 @@ function ProjectChatPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const fnGetChat = useServerFn(getProjectChat);
@@ -58,8 +63,7 @@ function ProjectChatPage() {
         setProject(p);
         setTitle(c.title);
         setMessages(c.snapshot.messages ?? []);
-      } catch (e) {
-        console.error(e);
+      } catch {
         toast.error("Failed to load chat");
       } finally {
         setLoading(false);
@@ -180,17 +184,20 @@ function ProjectChatPage() {
     }
   }
 
-  async function handleDelete() {
-    if (!confirm("Delete this chat for everyone?")) return;
-    await fnDelete({ data: { id: chatId } });
-    navigate({ to: "/projects/$projectId", params: { projectId } });
-  }
-
-  async function handleRename() {
-    const next = prompt("Rename chat", title);
-    if (!next || next === title) return;
-    setTitle(next);
-    await fnSave({ data: { id: chatId, title: next, messages } });
+  async function commitRename() {
+    const next = renameValue.trim();
+    if (!next || next === title) {
+      setRenaming(false);
+      return;
+    }
+    try {
+      await fnSave({ data: { id: chatId, title: next, messages } });
+      setTitle(next);
+      setRenaming(false);
+      toast.success("Project chat renamed");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Chat could not be renamed");
+    }
   }
 
   return (
@@ -204,18 +211,72 @@ function ProjectChatPage() {
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
-          <button
-            className="font-medium truncate flex-1 text-left hover:underline"
-            onClick={handleRename}
-          >
-            {title}
-          </button>
+          {renaming ? (
+            <form
+              className="flex min-w-0 flex-1 gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void commitRename();
+              }}
+            >
+              <input
+                autoFocus
+                value={renameValue}
+                onChange={(event) => setRenameValue(event.target.value)}
+                onKeyDown={(event) => event.key === "Escape" && setRenaming(false)}
+                maxLength={120}
+                aria-label="Project chat title"
+                className="h-10 min-w-0 flex-1 rounded-lg border bg-background px-3"
+              />
+              <Button type="submit" size="sm" disabled={!renameValue.trim()}>
+                Save
+              </Button>
+              <Button type="button" size="sm" variant="ghost" onClick={() => setRenaming(false)}>
+                Cancel
+              </Button>
+            </form>
+          ) : (
+            <button
+              className="flex-1 truncate text-left font-medium hover:underline"
+              onClick={() => {
+                setRenameValue(title);
+                setRenaming(true);
+              }}
+            >
+              {title}
+            </button>
+          )}
           {canEdit && (
-            <Button variant="ghost" size="icon" onClick={handleDelete} aria-label="Delete">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setDeleteOpen(true)}
+              aria-label="Delete chat"
+            >
               <Trash2 className="w-4 h-4" />
             </Button>
           )}
         </div>
+        <ConfirmActionDialog
+          open={deleteOpen}
+          onOpenChange={(open) => !deleting && setDeleteOpen(open)}
+          title="Delete project chat?"
+          description="This chat will be permanently removed for every project member."
+          confirmLabel={deleting ? "Deleting…" : "Delete chat"}
+          destructive
+          disabled={deleting}
+          onConfirm={async () => {
+            if (deleting) return;
+            setDeleting(true);
+            try {
+              await fnDelete({ data: { id: chatId } });
+              navigate({ to: "/projects/$projectId", params: { projectId } });
+            } catch (error) {
+              toast.error(error instanceof Error ? error.message : "Chat could not be deleted");
+              setDeleting(false);
+            }
+          }}
+        />
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
           {messages.filter((m) => m.role !== "system").length === 0 && (
             <div className="text-center text-muted-foreground text-sm">

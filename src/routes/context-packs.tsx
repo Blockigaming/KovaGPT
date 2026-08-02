@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { Boxes, Plus, Search, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { loadConversations } from "@/lib/chat-store";
 import { listMyLibrary, type LibraryItem } from "@/lib/library.functions";
@@ -61,7 +62,9 @@ function ContextPacksPage() {
     [name, setName] = useState(""),
     [description, setDescription] = useState(""),
     [query, setQuery] = useState(""),
-    [selected, setSelected] = useState<string[]>([]);
+    [selected, setSelected] = useState<string[]>([]),
+    [deletingPack, setDeletingPack] = useState<ContextPack | null>(null),
+    [deletePending, setDeletePending] = useState(false);
   useEffect(() => {
     if (!isLoaded) return;
     if (!isSignedIn) {
@@ -375,15 +378,7 @@ function ContextPacksPage() {
                         </button>
                         <button
                           aria-label={`Delete ${pack.name}`}
-                          onClick={async () => {
-                            if (!confirm("Delete this context pack?")) return;
-                            try {
-                              await remove({ data: { id: pack.id } });
-                              setPacks((all) => all.filter((p) => p.id !== pack.id));
-                            } catch (e) {
-                              toast.error(e instanceof Error ? e.message : "Could not delete");
-                            }
-                          }}
+                          onClick={() => setDeletingPack(pack)}
                           className="grid min-h-10 min-w-10 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -397,6 +392,31 @@ function ContextPacksPage() {
           </div>
         )}
       </main>
+      <ConfirmActionDialog
+        open={Boolean(deletingPack)}
+        onOpenChange={(open) => !open && !deletePending && setDeletingPack(null)}
+        title="Delete context pack?"
+        description={`“${deletingPack?.name ?? "This context pack"}” will be permanently removed. Its source items are not deleted.`}
+        confirmLabel={deletePending ? "Deleting…" : "Delete context pack"}
+        destructive
+        disabled={deletePending}
+        onConfirm={async () => {
+          if (!deletingPack || deletePending) return;
+          setDeletePending(true);
+          try {
+            await remove({ data: { id: deletingPack.id } });
+            setPacks((all) => all.filter((pack) => pack.id !== deletingPack.id));
+            setDeletingPack(null);
+            toast.success("Context pack deleted");
+          } catch (cause) {
+            toast.error(
+              cause instanceof Error ? cause.message : "Context pack could not be deleted",
+            );
+          } finally {
+            setDeletePending(false);
+          }
+        }}
+      />
     </AppShell>
   );
 }

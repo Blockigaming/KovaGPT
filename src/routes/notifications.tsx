@@ -4,6 +4,7 @@ import { Bell, Check, CheckCheck, Loader2, Search, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { EmptyState, ErrorState } from "@/components/states";
 import { useUser } from "@/components/auth/ClerkSafe";
 import {
@@ -94,27 +95,28 @@ function NotificationsRoute() {
         className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 py-6 sm:px-6"
         aria-labelledby="notifications-title"
       >
-        <header className="rounded-3xl border border-border bg-card p-5 shadow-sm">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-medium text-primary">Notification center</p>
-              <h1 id="notifications-title" className="text-2xl font-semibold">
-                Notifications
-              </h1>
-              <p className="mt-1 text-sm text-muted-foreground" aria-live="polite">
+        <section className="rounded-xl border border-border bg-card/40 p-4 sm:p-5">
+          <WorkspacePageHeader
+            titleId="notifications-title"
+            title="Notifications"
+            description="Updates from scheduled tasks, shared workspaces, and account activity."
+            meta={
+              <span aria-live="polite">
                 {unread} unread notification{unread === 1 ? "" : "s"}
-              </p>
-            </div>
-            <button
-              type="button"
-              disabled={!unread || busy !== null}
-              onClick={() => void read()}
-              className="inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm disabled:opacity-50"
-            >
-              <CheckCheck className="h-4 w-4" />
-              Mark all read
-            </button>
-          </div>
+              </span>
+            }
+            actions={
+              <button
+                type="button"
+                disabled={!unread || busy !== null}
+                onClick={() => void read()}
+                className="inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm disabled:opacity-50"
+              >
+                <CheckCheck className="h-4 w-4" />
+                Mark all read
+              </button>
+            }
+          />
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
             <label className="relative flex-1">
               <span className="sr-only">Search notifications</span>
@@ -139,7 +141,7 @@ function NotificationsRoute() {
               <option value="scheduled">Scheduled tasks</option>
             </select>
           </div>
-        </header>
+        </section>
         {!isSignedIn && isLoaded ? (
           <EmptyState
             icon={Bell}

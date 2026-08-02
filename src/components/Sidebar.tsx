@@ -9,9 +9,9 @@ import {
   ImageIcon,
   MoreHorizontal,
   PanelLeft,
+  Pencil,
   Pin,
   PinOff,
-  PanelsTopLeft,
   Search,
   Settings as SettingsIcon,
   Share2,
@@ -48,6 +48,7 @@ export function Sidebar({
   onSelect,
   onNew,
   onDelete,
+  onRename,
   onShare,
   onDuplicate,
   onArchive,
@@ -56,12 +57,14 @@ export function Sidebar({
   onToggle,
   onOpenSettings,
   onOpenHelp,
+  focusToggleOnChange = true,
 }: {
   conversations: Conversation[];
   activeId: string | null;
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
+  onRename?: (id: string, title: string) => void;
   onShare?: (id: string) => void;
   onDuplicate?: (id: string) => void;
   onArchive?: (id: string) => void;
@@ -70,6 +73,8 @@ export function Sidebar({
   onToggle: () => void;
   onOpenSettings: (tab?: string) => void;
   onOpenHelp: () => void;
+  /** Disable while restoring the persisted desktop state so hydration never steals focus. */
+  focusToggleOnChange?: boolean;
 }) {
   const { user, isSignedIn, isLoaded } = useUser();
   const { tier } = useTier();
@@ -78,6 +83,8 @@ export function Sidebar({
   const previousOpenRef = useRef(open);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
 
   const showSignedIn = isLoaded && isSignedIn;
   const showSignedOut = isLoaded && !isSignedIn;
@@ -103,13 +110,13 @@ export function Sidebar({
   useEffect(() => {
     const wasOpen = previousOpenRef.current;
     previousOpenRef.current = open;
-    if (wasOpen === open || isMobileViewport()) return;
+    if (wasOpen === open || isMobileViewport() || !focusToggleOnChange) return;
 
     window.requestAnimationFrame(() => {
       const label = open ? "Collapse sidebar" : "Open sidebar";
       document.querySelector<HTMLElement>(`[aria-label="${label}"]`)?.focus();
     });
-  }, [open]);
+  }, [focusToggleOnChange, open]);
 
   useEffect(() => {
     if (!open || !isMobileViewport()) return;
@@ -177,7 +184,7 @@ export function Sidebar({
       aria-current={active ? "page" : undefined}
       onClick={closeAfterMobileNavigation}
     >
-      <Icon className="h-[18px] w-[18px] shrink-0" />
+      <Icon className="kova-nav-icon h-[18px] w-[18px] shrink-0" />
       <span className={labelClass}>{title}</span>
     </Link>
   );
@@ -189,7 +196,14 @@ export function Sidebar({
   const pinned = filtered
     .filter((c) => c.pinned)
     .sort((a, b) => (b.pinnedAt ?? 0) - (a.pinnedAt ?? 0));
-  const recents = filtered.filter((c) => !c.pinned);
+  const recents = filtered.filter((c) => !c.pinned).sort((a, b) => b.updatedAt - a.updatedAt);
+
+  const commitRename = (conversation: Conversation) => {
+    const next = renameValue.trim().replace(/\s+/g, " ").slice(0, 100);
+    setRenamingId(null);
+    setRenameValue("");
+    if (next && next !== conversation.title) onRename?.(conversation.id, next);
+  };
 
   const renderRow = (c: Conversation) => (
     <div
@@ -198,20 +212,45 @@ export function Sidebar({
         activeId === c.id ? "bg-sidebar-active" : "hover:bg-sidebar-hover/60"
       }`}
     >
-      <button
-        type="button"
-        className="flex min-w-0 flex-1 items-center gap-1.5 rounded px-1 py-1.5 text-left focus-visible:ring-2 focus-visible:ring-ring"
-        onClick={() => {
-          onSelect(c.id);
-          closeAfterMobileNavigation();
-        }}
-        aria-label={`Open chat ${c.title}`}
-        aria-current={activeId === c.id ? "page" : undefined}
-        title={c.title}
-      >
-        {c.pinned ? <Pin className="h-3 w-3 shrink-0 fill-current text-muted-foreground" /> : null}
-        <span className="min-w-0 flex-1 truncate">{c.title}</span>
-      </button>
+      {renamingId === c.id ? (
+        <input
+          autoFocus
+          value={renameValue}
+          maxLength={100}
+          onChange={(event) => setRenameValue(event.target.value)}
+          onBlur={() => commitRename(c)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              commitRename(c);
+            } else if (event.key === "Escape") {
+              event.preventDefault();
+              setRenamingId(null);
+              setRenameValue("");
+            }
+          }}
+          onClick={(event) => event.stopPropagation()}
+          aria-label={`Rename ${c.title}`}
+          className="h-8 min-w-0 flex-1 rounded-md border border-border bg-background px-2 text-[13px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        />
+      ) : (
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-center gap-1.5 rounded px-1 py-1.5 text-left focus-visible:ring-2 focus-visible:ring-ring"
+          onClick={() => {
+            onSelect(c.id);
+            closeAfterMobileNavigation();
+          }}
+          aria-label={`Open chat ${c.title}`}
+          aria-current={activeId === c.id ? "page" : undefined}
+          title={c.title}
+        >
+          {c.pinned ? (
+            <Pin className="h-3 w-3 shrink-0 fill-current text-muted-foreground" />
+          ) : null}
+          <span className="min-w-0 flex-1 truncate">{c.title}</span>
+        </button>
+      )}
       {!collapsed ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -233,6 +272,16 @@ export function Sidebar({
             {onShare ? (
               <DropdownMenuItem onClick={() => onShare(c.id)}>
                 <Share2 className="mr-2 h-4 w-4" /> Share
+              </DropdownMenuItem>
+            ) : null}
+            {onRename ? (
+              <DropdownMenuItem
+                onClick={() => {
+                  setRenamingId(c.id);
+                  setRenameValue(c.title);
+                }}
+              >
+                <Pencil className="mr-2 h-4 w-4" /> Rename
               </DropdownMenuItem>
             ) : null}
             {onDuplicate ? (
@@ -346,7 +395,7 @@ export function Sidebar({
               aria-label="New chat"
               title="New chat"
             >
-              <SquarePen className="h-[18px] w-[18px] shrink-0" />
+              <SquarePen className="kova-nav-icon h-[18px] w-[18px] shrink-0" />
               <span className={labelClass}>New chat</span>
             </button>
             <button
@@ -356,13 +405,12 @@ export function Sidebar({
               aria-label="Search chats"
               title="Search chats"
             >
-              <Search className="h-[18px] w-[18px] shrink-0" />
+              <Search className="kova-nav-icon h-[18px] w-[18px] shrink-0" />
               <span className={labelClass}>Search</span>
             </button>
             {showSignedIn ? renderNavLink("/projects", "Projects", FolderKanban) : null}
             {renderNavLink("/library", "Library", FolderOpen)}
             {renderNavLink("/images", "Images", ImageIcon)}
-            {renderNavLink("/apps", "Apps", PanelsTopLeft)}
             {showSignedIn && (tier === "plus" || tier === "pro")
               ? renderNavLink(
                   "/scheduled-tasks",
@@ -383,7 +431,7 @@ export function Sidebar({
           >
             <div
               aria-hidden="true"
-              className="pointer-events-none sticky top-0 z-10 h-4 bg-gradient-to-b from-sidebar to-transparent"
+              className="pointer-events-none sticky top-0 z-10 h-3 bg-sidebar"
             />
             {!collapsed ? (
               <>
@@ -432,7 +480,7 @@ export function Sidebar({
             )}
             <div
               aria-hidden="true"
-              className="pointer-events-none sticky bottom-0 z-10 h-8 bg-gradient-to-t from-sidebar to-transparent"
+              className="pointer-events-none sticky bottom-0 z-10 h-4 bg-sidebar"
             />
           </div>
 

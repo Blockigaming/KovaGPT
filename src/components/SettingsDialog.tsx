@@ -67,6 +67,7 @@ import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { getMyDailyUsage, type DailyUsageDto } from "@/utils/usage.functions";
 import {
   createPortalSession,
@@ -84,6 +85,7 @@ import {
   loadConversations,
   saveArchivedConversations,
   saveConversations,
+  type Conversation,
 } from "@/lib/chat-store";
 import {
   DEVICE_EXPORT_VERSION,
@@ -93,62 +95,9 @@ import {
 import { getUsage } from "@/lib/limits";
 import { useUser, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
-import { applyThemeMode, DEFAULT_THEME, type ThemeColors, type ThemeMode } from "@/lib/theme";
+import { applyThemeMode, type ThemeMode } from "@/lib/theme";
+import { type Mood, type Settings } from "@/lib/settings-types";
 import { authFetch } from "@/lib/auth-fetch";
-
-export type Mood = "neutral" | "friendly" | "professional" | "concise";
-
-export type Settings = {
-  displayName: string;
-  email: string;
-  extraFacts: string;
-  customInstructions: string;
-  mood: Mood;
-  responseLength: "short" | "medium" | "long";
-  rememberAcross: boolean;
-  webSearch: boolean;
-  sendOnEnter: boolean;
-  mode: ThemeMode;
-  // Notifications
-  notifyEmail?: boolean;
-  notifyProduct?: boolean;
-  // Parental controls
-  parentalMode?: boolean;
-  // Data control
-  trainingOptOut?: boolean;
-  // deprecated fields kept so old localStorage payloads still load
-  preferredPronouns?: string;
-  phone?: string;
-  addressLine1?: string;
-  addressLine2?: string;
-  city?: string;
-  region?: string;
-  postalCode?: string;
-  country?: string;
-  language?: string;
-  showTimestamps?: boolean;
-  theme?: ThemeColors;
-  buttonColor?: string;
-};
-
-export const DEFAULT_SETTINGS: Settings = {
-  displayName: "",
-  email: "",
-  extraFacts: "",
-  customInstructions: "",
-  mood: "neutral",
-  responseLength: "medium",
-  rememberAcross: true,
-  webSearch: true,
-  sendOnEnter: true,
-  mode: "system",
-  notifyEmail: true,
-  notifyProduct: true,
-  parentalMode: false,
-  trainingOptOut: false,
-  theme: DEFAULT_THEME,
-  buttonColor: "#2563eb",
-};
 
 const MOODS: { value: Mood; label: string; hint: string }[] = [
   { value: "neutral", label: "Neutral", hint: "Balanced and helpful" },
@@ -408,7 +357,7 @@ export function SettingsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="kova-settings-dialog bg-background border border-border max-w-4xl max-h-[92vh] overflow-hidden flex flex-col gap-0 p-0 rounded-2xl"
+        className="kova-settings-dialog bg-background border border-border sm:w-[min(92vw,800px)] sm:max-w-[800px] max-h-[88vh] overflow-hidden flex flex-col gap-0 p-0 rounded-2xl"
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           if (window.innerWidth < 1024) {
@@ -482,7 +431,7 @@ export function SettingsDialog({
             </TabsList>
 
             {/* Desktop: grouped sidebar */}
-            <TabsList className="hidden md:flex flex-col h-full w-64 shrink-0 overflow-y-auto items-stretch justify-start gap-4 p-3 bg-muted/40 border-r border-border rounded-none">
+            <TabsList className="hidden md:flex flex-col h-full w-[220px] shrink-0 overflow-y-auto items-stretch justify-start gap-4 p-3 bg-muted/30 border-r border-border rounded-none">
               {visibleTabGroups.map((group) => (
                 <div key={group.title} className="flex flex-col gap-0.5">
                   <div className="px-2 pt-1 pb-1.5">
@@ -1780,7 +1729,6 @@ function LibraryPanel() {
       setShared(inbox);
       setMine(mineShares);
     } catch (e) {
-      console.error(e);
       setLoadError(e instanceof Error ? e.message : "Library data could not be loaded.");
     } finally {
       setLoading(false);
@@ -2009,7 +1957,7 @@ function SignedOutSettings({
     <div className="overflow-y-auto max-h-[78vh] bg-background">
       {/* Hero sign-in card */}
       <div className="px-6 pt-8 pb-2">
-        <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-b from-muted/40 to-background p-7 text-center">
+        <div className="relative overflow-hidden rounded-2xl border border-border bg-muted/30 p-7 text-center">
           <div className="mx-auto w-14 h-14 rounded-2xl bg-foreground text-background flex items-center justify-center shadow-sm mb-4">
             <Sparkles className="w-6 h-6" />
           </div>
@@ -2134,6 +2082,7 @@ function SignedOutSettings({
 
 function ArchivedChatsPanel() {
   const [revision, setRevision] = useState(0);
+  const [deletingChat, setDeletingChat] = useState<Conversation | null>(null);
   const archived = loadArchivedConversations();
 
   return (
@@ -2176,14 +2125,7 @@ function ArchivedChatsPanel() {
                 variant="ghost"
                 className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive"
                 aria-label={`Delete archived chat ${chat.title}`}
-                onClick={() => {
-                  if (!window.confirm(`Permanently delete "${chat.title}"?`)) return;
-                  saveArchivedConversations(
-                    loadArchivedConversations().filter((item) => item.id !== chat.id),
-                  );
-                  setRevision((value) => value + 1);
-                  toast.success("Archived chat deleted");
-                }}
+                onClick={() => setDeletingChat(chat)}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -2193,6 +2135,29 @@ function ArchivedChatsPanel() {
           <p className="px-3 py-2 text-sm text-muted-foreground">No archived chats</p>
         )}
       </div>
+      <ConfirmActionDialog
+        open={Boolean(deletingChat)}
+        onOpenChange={(open) => {
+          if (!open) setDeletingChat(null);
+        }}
+        title="Permanently delete this chat?"
+        description={
+          deletingChat
+            ? `“${deletingChat.title}” will be removed from this device. This cannot be undone.`
+            : "This archived chat will be permanently deleted."
+        }
+        confirmLabel="Delete permanently"
+        destructive
+        onConfirm={() => {
+          if (!deletingChat) return;
+          saveArchivedConversations(
+            loadArchivedConversations().filter((item) => item.id !== deletingChat.id),
+          );
+          setRevision((value) => value + 1);
+          setDeletingChat(null);
+          toast.success("Archived chat deleted");
+        }}
+      />
     </section>
   );
 }

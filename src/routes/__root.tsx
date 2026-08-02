@@ -14,7 +14,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { applyThemeMode } from "@/lib/theme";
 import { loadSettings } from "@/lib/use-nova-settings";
-import { useEffect, useLayoutEffect } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { PlatformRuntime } from "@/components/PlatformRuntime";
 
 function NotFoundComponent() {
@@ -39,9 +39,8 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  const correlationId = `kova-${crypto.randomUUID()}`;
-  console.error("[KovaRouteError]", { correlationId, error });
+function ErrorComponent({ error: _error, reset }: { error: Error; reset: () => void }) {
+  const [correlationId] = useState(() => `kova-${crypto.randomUUID()}`);
   const router = useRouter();
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4" role="main">

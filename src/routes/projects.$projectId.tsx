@@ -137,8 +137,7 @@ function ProjectDetailPage() {
       setMembers(m);
       setInvites(i);
       setChats(c);
-    } catch (e) {
-      console.error(e);
+    } catch {
       toast.error("Failed to load project");
     } finally {
       setLoading(false);
@@ -667,8 +666,7 @@ function FilesTab({
     setLoading(true);
     try {
       setItems(await fnList({ data: { project_id: projectId, kind } }));
-    } catch (e) {
-      console.error(e);
+    } catch {
       toast.error("Failed to load");
     } finally {
       setLoading(false);

@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Sidebar } from "@/components/Sidebar";
-import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
+import { type Settings, DEFAULT_SETTINGS } from "@/lib/settings-types";
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog })),
 );
@@ -13,7 +13,12 @@ import { AppErrorBoundary, OfflineBanner } from "@/components/states";
 import { MobileTopBar } from "@/components/MobileTopBar";
 import { installShortcutListener } from "@/lib/shortcuts";
 import { PanelLeft } from "lucide-react";
-import { type Conversation, loadConversations, saveConversations } from "@/lib/chat-store";
+import {
+  type Conversation,
+  loadConversations,
+  saveConversations,
+  subscribeToConversationChanges,
+} from "@/lib/chat-store";
 
 /**
  * Shared shell that renders the chat Sidebar alongside any page (e.g. /apps,
@@ -25,8 +30,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   // Default closed to avoid a flash-of-open sidebar during SSR/hydration on
   // narrow viewports; on desktop we restore the persisted user preference.
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarRestored, setSidebarRestored] = useState(false);
   useEffect(() => {
-    if (typeof window === "undefined" || window.innerWidth < 1024) return;
+    if (typeof window === "undefined" || window.innerWidth < 1024) {
+      setSidebarRestored(true);
+      return;
+    }
     let saved: string | null = null;
     try {
       saved = localStorage.getItem("kova-sidebar-open");
@@ -34,6 +43,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       /* ignore */
     }
     setSidebarOpen(saved === null ? true : saved === "1");
+    const frame = window.requestAnimationFrame(() => setSidebarRestored(true));
+    return () => window.cancelAnimationFrame(frame);
   }, []);
   useEffect(() => {
     if (typeof window === "undefined" || window.innerWidth < 1024) return;
@@ -53,6 +64,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setConversations(loadConversations());
+    return subscribeToConversationChanges(setConversations);
   }, []);
 
   useEffect(() => {
@@ -135,6 +147,14 @@ export function AppShell({ children }: { children: ReactNode }) {
     saveConversations(next);
   };
 
+  const handleRename = (id: string, title: string) => {
+    const next = conversations.map((conversation) =>
+      conversation.id === id ? { ...conversation, title, updatedAt: Date.now() } : conversation,
+    );
+    setConversations(next);
+    saveConversations(next);
+  };
+
   return (
     <div
       className="relative flex h-[100dvh] w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
@@ -168,10 +188,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         onSelect={goToConversation}
         onNew={handleNew}
         onDelete={handleDelete}
+        onRename={handleRename}
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
         onOpenHelp={openHelp}
+        focusToggleOnChange={sidebarRestored}
       />
 
       <div className="flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">

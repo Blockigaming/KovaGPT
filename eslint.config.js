@@ -40,4 +40,19 @@ export default tseslint.config(
       "@typescript-eslint/no-unused-vars": "off",
     },
   },
+  {
+    // These modules are intentionally public facades rather than route-level
+    // component modules: shadcn-style primitives export variants, the auth
+    // facade exports hooks and controls together, and email templates export
+    // renderers with delivery metadata. Fast Refresh boundaries do not apply
+    // to these modules, while keeping the rule active everywhere else catches
+    // accidental mixed exports in application components.
+    files: [
+      "src/components/ui/**/*.{ts,tsx}",
+      "src/components/auth/ClerkSafe.tsx",
+      "src/components/PersonalitySliders.tsx",
+      "src/lib/email-templates/**/*.{ts,tsx}",
+    ],
+    rules: { "react-refresh/only-export-components": "off" },
+  },
 );

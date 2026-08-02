@@ -1,16 +1,51 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Activity, Bot, Building2, Cable, GitBranch, Network, ServerCog } from "lucide-react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Activity,
+  Archive,
+  ArchiveRestore,
+  BarChart3,
+  Bot,
+  Building2,
+  Cable,
+  Copy,
+  Download,
+  History,
+  Pencil,
+  Upload,
+  GitBranch,
+  Network,
+  ServerCog,
+} from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
+import { authFetch } from "@/lib/auth-fetch";
+import { platformEvents } from "@/platform/events";
 import { AppShell } from "@/components/AppShell";
-import { useUser } from "@/components/auth/ClerkSafe";
+import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
+import { SignInButton, useUser } from "@/components/auth/ClerkSafe";
 import {
   emptyPipeline,
   loadOmega,
   saveOmega,
-  type AgentDefinition,
   type EnterpriseDraft,
   type McpDraft,
 } from "@/lib/omega-store";
+import {
+  archiveSavedAgent,
+  createSavedAgent,
+  duplicateSavedAgent,
+  importSavedAgent,
+  listSavedAgents,
+  type SavedAgent,
+} from "@/lib/agent-definitions.functions";
+import {
+  exportAgent,
+  parseAgentImport,
+  safeAgentFilename,
+  type PortableAgent,
+} from "@/lib/agent-portability";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import {
   canTransitionAgent,
   simulatePipeline,
@@ -19,6 +54,8 @@ import {
   type PipelineNode,
 } from "@/platform/omega";
 import { providerAdapters } from "@/platform/providers";
+import { OperationalState } from "@/components/OperationalState";
+import { capabilityState, useReadiness } from "@/lib/readiness-client";
 
 export const Route = createFileRoute("/omega")({
   component: OmegaPage,
@@ -52,8 +89,20 @@ const unavailable = (label: string) => (
     </p>
   </div>
 );
+const AgentDefinitionDialog = lazy(() =>
+  import("@/components/AgentDefinitionDialog").then((module) => ({
+    default: module.AgentDefinitionDialog,
+  })),
+);
+const AgentAnalyticsDialog = lazy(() =>
+  import("@/components/AgentAnalyticsDialog").then((module) => ({
+    default: module.AgentAnalyticsDialog,
+  })),
+);
 
 function OmegaPage() {
+  const { readiness, refresh } = useReadiness();
+  const runnerState = capabilityState(readiness, "agentRunner");
   const { isLoaded, isSignedIn, user } = useUser();
   const scope = user?.id ?? "signed-out";
   const [tab, setTab] = useState<Tab>("collaboration");
@@ -73,19 +122,26 @@ function OmegaPage() {
           <p className="mt-2 text-muted-foreground">
             Sign in to prepare account-scoped platform integrations.
           </p>
+          <SignInButton mode="modal">
+            <button className="mt-5 min-h-11 rounded-full bg-foreground px-5 text-sm font-medium text-background hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              Sign in to Omega
+            </button>
+          </SignInButton>
         </main>
       </AppShell>
     );
   return (
     <AppShell>
       <main className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6">
-        <header>
-          <h1 className="text-2xl font-semibold">Omega Control Center</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Backend-ready orchestration surfaces. Drafts are local until their corresponding service
-            is connected.
-          </p>
-        </header>
+        <WorkspacePageHeader
+          icon={Bot}
+          title="Omega Control Center"
+          description="Account-scoped agents, provider health, execution controls, and backend-ready orchestration surfaces."
+        />
+        <OperationalState
+          state={runnerState === "unavailable" ? "runner-unavailable" : runnerState}
+          onRetry={refresh}
+        />
         <div className="my-5 flex gap-1 overflow-x-auto" role="tablist" aria-label="Omega systems">
           {tabs.map(([id, label, Icon]) => (
             <button
@@ -111,7 +167,7 @@ function OmegaPage() {
         ) : tab === "providers" ? (
           <ProviderPanel />
         ) : tab === "agents" ? (
-          <AgentPanel scope={scope} />
+          <AgentPanel />
         ) : (
           <PipelinePanel scope={scope} />
         )}
@@ -406,29 +462,68 @@ function ProviderPanel() {
   );
 }
 
-function AgentPanel({ scope }: { scope: string }) {
-  const [agents, setAgents] = useState<AgentDefinition[]>(() => loadOmega(scope, "agents", []));
+function AgentPanel() {
+  const listAgents = useServerFn(listSavedAgents),
+    createAgent = useServerFn(createSavedAgent),
+    duplicateAgent = useServerFn(duplicateSavedAgent),
+    archiveAgent = useServerFn(archiveSavedAgent),
+    importAgent = useServerFn(importSavedAgent);
+  const [agents, setAgents] = useState<SavedAgent[]>([]);
   const [name, setName] = useState("");
   const [prompt, setPrompt] = useState("");
-  const add = () => {
-    const next = [
-      ...agents,
-      {
-        id: crypto.randomUUID(),
-        name: name.trim(),
-        prompt: prompt.trim(),
-        tools: [],
-        memory: false,
-        fileIds: [],
-        contextPackIds: [],
-        version: 1,
-        updatedAt: new Date().toISOString(),
-      },
-    ];
-    setAgents(next);
-    saveOmega(scope, "agents", next);
-    setName("");
-    setPrompt("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [selected, setSelected] = useState<SavedAgent | null>(null);
+  const [dialogMode, setDialogMode] = useState<"edit" | "history" | null>(null);
+  const [analyticsAgent, setAnalyticsAgent] = useState<SavedAgent | null>(null);
+  const [importPreview, setImportPreview] = useState<PortableAgent | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [runs, setRuns] = useState<
+    { id: string; status: string; created_at: string; updated_at: string; usage?: unknown }[]
+  >([]);
+  useEffect(() => {
+    Promise.all([
+      listAgents({}),
+      authFetch("/api/agents/runs").then(async (response) => {
+        if (!response.ok) return [];
+        const payload = (await response.json()) as { runs?: typeof runs };
+        return payload.runs ?? [];
+      }),
+    ])
+      .then(([saved, history]) => {
+        setAgents(saved);
+        setRuns(history);
+      })
+      .catch((error) => toast.error(error instanceof Error ? error.message : "Agents unavailable"))
+      .finally(() => setLoading(false));
+  }, [listAgents]);
+  const completedRuns = runs.filter((run) => run.status === "completed");
+  const averageRuntime = completedRuns.length
+    ? Math.round(
+        completedRuns.reduce(
+          (total, run) =>
+            total + Math.max(0, Date.parse(run.updated_at) - Date.parse(run.created_at)),
+          0,
+        ) /
+          completedRuns.length /
+          1000,
+      )
+    : null;
+  const add = async () => {
+    setSaving(true);
+    try {
+      const created = await createAgent({
+        data: { name, instructions: prompt, allowedTools: [], memoryEnabled: false },
+      });
+      setAgents((current) => [created, ...current]);
+      setName("");
+      setPrompt("");
+      toast.success("Agent saved to your account");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Agent could not be saved");
+    } finally {
+      setSaving(false);
+    }
   };
   return (
     <section aria-labelledby="agent-title">
@@ -436,6 +531,26 @@ function AgentPanel({ scope }: { scope: string }) {
         Agent Studio
       </h2>
       <div className="mt-3">{unavailable("Agent execution")}</div>
+      <p className="mt-3 text-sm text-muted-foreground">
+        Saved agents are reusable account-scoped instruction profiles. Execution remains separate
+        and is available only when the authenticated runner and plan entitlement are healthy.
+      </p>
+      <dl className="mt-4 grid gap-2 sm:grid-cols-3" aria-label="Agent execution analytics">
+        <div className="rounded-xl border p-3">
+          <dt className="text-xs text-muted-foreground">Recent executions</dt>
+          <dd className="mt-1 text-lg font-semibold">{runs.length}</dd>
+        </div>
+        <div className="rounded-xl border p-3">
+          <dt className="text-xs text-muted-foreground">Completed</dt>
+          <dd className="mt-1 text-lg font-semibold">{completedRuns.length}</dd>
+        </div>
+        <div className="rounded-xl border p-3">
+          <dt className="text-xs text-muted-foreground">Average completed runtime</dt>
+          <dd className="mt-1 text-lg font-semibold">
+            {averageRuntime === null ? "No data" : `${averageRuntime}s`}
+          </dd>
+        </div>
+      </dl>
       <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_2fr_auto]">
         <input
           aria-label="Agent name"
@@ -452,22 +567,217 @@ function AgentPanel({ scope }: { scope: string }) {
           className="h-10 rounded-lg border bg-background px-3"
         />
         <button
-          disabled={!name.trim() || !prompt.trim()}
-          onClick={add}
+          disabled={saving || !name.trim() || !prompt.trim()}
+          onClick={() => void add()}
           className="min-h-10 rounded-lg border px-4 text-sm disabled:opacity-40"
         >
-          Save draft
+          {saving ? "Saving…" : "Save agent"}
         </button>
       </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          className="min-h-10 rounded-lg border px-3 text-sm"
+          onClick={() => fileRef.current?.click()}
+        >
+          <Upload className="mr-2 inline h-4 w-4" />
+          Import agent
+        </button>
+        <input
+          ref={fileRef}
+          className="sr-only"
+          type="file"
+          accept="application/json,.json"
+          aria-label="Import agent file"
+          onChange={async (event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (!file) return;
+            try {
+              setImportPreview(parseAgentImport(await file.text()));
+            } catch {
+              toast.error("This is not a valid KovaGPT agent file");
+            }
+          }}
+        />
+        <p className="self-center text-xs text-muted-foreground">
+          Imported tools and memory are disabled until you review and save them.
+        </p>
+      </div>
       <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-        {agents.map((agent) => (
-          <li key={agent.id} className="rounded-xl border p-4">
-            <strong>{agent.name}</strong>
-            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{agent.prompt}</p>
-            <p className="mt-2 text-xs">Version {agent.version} · Not executed</p>
+        {loading ? (
+          <li
+            className="h-28 animate-pulse rounded-xl bg-muted"
+            aria-label="Loading saved agents"
+          />
+        ) : agents.length === 0 ? (
+          <li className="rounded-xl border p-5 text-sm text-muted-foreground">
+            No saved agents. Create one above without granting tools or execution permissions.
           </li>
-        ))}
+        ) : (
+          agents.map((agent) => (
+            <li key={agent.id} className="rounded-xl border p-4">
+              <div className="flex items-start justify-between gap-2">
+                <strong className="truncate">{agent.name}</strong>
+                <span className="text-xs text-muted-foreground">v{agent.version}</span>
+              </div>
+              <p className="mt-1 line-clamp-3 text-xs text-muted-foreground">
+                {agent.instructions}
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {agent.project_id ? "Project scoped" : "Account scoped"} · Updated{" "}
+                {new Date(agent.updated_at).toLocaleDateString()}
+              </p>
+              <div className="mt-3 flex gap-1">
+                <button
+                  className="grid h-10 w-10 place-items-center rounded-lg hover:bg-accent"
+                  aria-label={`Analytics for ${agent.name}`}
+                  onClick={() => setAnalyticsAgent(agent)}
+                >
+                  <BarChart3 className="h-4 w-4" />
+                </button>
+                <button
+                  className="grid h-10 w-10 place-items-center rounded-lg hover:bg-accent"
+                  aria-label={`Edit ${agent.name}`}
+                  onClick={() => {
+                    setSelected(agent);
+                    setDialogMode("edit");
+                  }}
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
+                  className="grid h-10 w-10 place-items-center rounded-lg hover:bg-accent"
+                  aria-label={`Version history for ${agent.name}`}
+                  onClick={() => {
+                    setSelected(agent);
+                    setDialogMode("history");
+                  }}
+                >
+                  <History className="h-4 w-4" />
+                </button>
+                <button
+                  className="grid h-10 w-10 place-items-center rounded-lg hover:bg-accent"
+                  aria-label={`Export ${agent.name}`}
+                  onClick={() => {
+                    const blob = new Blob([JSON.stringify(exportAgent(agent), null, 2)], {
+                      type: "application/json",
+                    });
+                    const url = URL.createObjectURL(blob);
+                    const anchor = document.createElement("a");
+                    anchor.href = url;
+                    anchor.download = safeAgentFilename(agent.name);
+                    anchor.click();
+                    URL.revokeObjectURL(url);
+                    platformEvents.publish("platform", "agent.exported", {
+                      sourceVersion: agent.version,
+                    });
+                    toast.success("Agent exported without secrets or execution history");
+                  }}
+                >
+                  <Download className="h-4 w-4" />
+                </button>
+                <button
+                  className="grid h-10 w-10 place-items-center rounded-lg hover:bg-accent"
+                  aria-label={`Duplicate ${agent.name}`}
+                  onClick={async () => {
+                    try {
+                      const copy = await duplicateAgent({ data: { id: agent.id } });
+                      setAgents((current) => [copy, ...current]);
+                      toast.success("Agent duplicated");
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error ? error.message : "Agent could not be duplicated",
+                      );
+                    }
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </button>
+                <button
+                  className="grid h-10 w-10 place-items-center rounded-lg hover:bg-accent"
+                  aria-label={`${agent.archived_at ? "Restore" : "Archive"} ${agent.name}`}
+                  onClick={async () => {
+                    const archived = !agent.archived_at;
+                    try {
+                      await archiveAgent({ data: { id: agent.id, archived } });
+                      setAgents((current) =>
+                        current.map((item) =>
+                          item.id === agent.id
+                            ? { ...item, archived_at: archived ? new Date().toISOString() : null }
+                            : item,
+                        ),
+                      );
+                      toast.success(archived ? "Agent archived" : "Agent restored");
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error ? error.message : "Agent could not be updated",
+                      );
+                    }
+                  }}
+                >
+                  {agent.archived_at ? (
+                    <ArchiveRestore className="h-4 w-4" />
+                  ) : (
+                    <Archive className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </li>
+          ))
+        )}
       </ul>
+      {selected && dialogMode ? (
+        <Suspense
+          fallback={
+            <p role="status" className="mt-4 text-sm text-muted-foreground">
+              Loading agent editor…
+            </p>
+          }
+        >
+          <AgentDefinitionDialog
+            agent={selected}
+            mode={dialogMode}
+            onClose={() => {
+              setSelected(null);
+              setDialogMode(null);
+            }}
+            onSaved={(saved) => {
+              setAgents((items) => items.map((item) => (item.id === saved.id ? saved : item)));
+              setSelected(saved);
+            }}
+          />
+        </Suspense>
+      ) : null}
+      {analyticsAgent ? (
+        <Suspense fallback={<p role="status">Loading analytics…</p>}>
+          <AgentAnalyticsDialog agent={analyticsAgent} onClose={() => setAnalyticsAgent(null)} />
+        </Suspense>
+      ) : null}
+      <ConfirmActionDialog
+        open={Boolean(importPreview)}
+        onOpenChange={(open) => !open && setImportPreview(null)}
+        title={`Import ${importPreview?.name ?? "agent"}?`}
+        description="A private copy will be created. Imported tool permissions and memory are disabled for safety."
+        confirmLabel="Import private copy"
+        disabled={saving}
+        onConfirm={async () => {
+          if (!importPreview) return;
+          setSaving(true);
+          try {
+            const created = await importAgent({ data: importPreview });
+            setAgents((items) => [created, ...items]);
+            platformEvents.publish("platform", "agent.imported", {
+              sourceVersion: importPreview.sourceVersion,
+            });
+            toast.success("Agent imported safely");
+            setImportPreview(null);
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Agent could not be imported");
+          } finally {
+            setSaving(false);
+          }
+        }}
+      />
     </section>
   );
 }

@@ -1,8 +1,20 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, Download, FlaskConical, Plus, Save, Trash2 } from "lucide-react";
+import {
+  Archive,
+  ArchiveRestore,
+  ArrowDown,
+  ArrowUp,
+  Download,
+  FlaskConical,
+  Plus,
+  Save,
+  Trash2,
+} from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { RelatedWorkspaceItems } from "@/components/WorkspaceIntelligence";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { listProjects, createProjectChat, type ProjectSummary } from "@/lib/projects.functions";
@@ -12,6 +24,12 @@ import {
   type ResearchTemplate,
 } from "@/lib/professional.functions";
 import { toast } from "sonner";
+import {
+  archiveResearchSession,
+  deleteResearchSession,
+  listResearchSessions,
+  type ResearchSession,
+} from "@/lib/research.functions";
 export const Route = createFileRoute("/research-planner")({
   component: ResearchPlanner,
   head: () => ({
@@ -31,7 +49,11 @@ function ResearchPlanner() {
     save = useServerFn(saveResearchTemplate),
     getProjects = useServerFn(listProjects),
     createChat = useServerFn(createProjectChat);
+  const getSessions = useServerFn(listResearchSessions),
+    archiveSession = useServerFn(archiveResearchSession),
+    deleteSession = useServerFn(deleteResearchSession);
   const [templates, setTemplates] = useState<ResearchTemplate[]>([]),
+    [sessions, setSessions] = useState<ResearchSession[]>([]),
     [projects, setProjects] = useState<ProjectSummary[]>([]),
     [loading, setLoading] = useState(true),
     [error, setError] = useState<string | null>(null),
@@ -57,7 +79,9 @@ function ResearchPlanner() {
       }
     }),
     [projectId, setProjectId] = useState(""),
-    [saving, setSaving] = useState(false);
+    [saving, setSaving] = useState(false),
+    [pendingDelete, setPendingDelete] = useState<ResearchSession | null>(null),
+    [deleting, setDeleting] = useState(false);
   useEffect(() => {
     if (!isLoaded) return;
     if (!isSignedIn) {
@@ -75,14 +99,15 @@ function ResearchPlanner() {
     } catch {
       localStorage.removeItem("kova-research-draft");
     }
-    Promise.all([list({}), getProjects({})])
-      .then(([t, p]) => {
+    Promise.all([list({}), getProjects({}), getSessions({})])
+      .then(([t, p, r]) => {
         setTemplates(t);
         setProjects(p);
+        setSessions(r);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Research plans could not be loaded"))
       .finally(() => setLoading(false));
-  }, [isLoaded, isSignedIn, list, getProjects]);
+  }, [isLoaded, isSignedIn, list, getProjects, getSessions]);
   const allowed = sites
     .split(/[\n,]/)
     .map((value) => value.trim())
@@ -121,16 +146,11 @@ function ResearchPlanner() {
   return (
     <AppShell>
       <main className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6">
-        <header>
-          <div className="flex items-center gap-2">
-            <FlaskConical className="h-5 w-5" />
-            <h1 className="text-2xl font-semibold">Research Planner</h1>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Design and reuse research plans before starting provider-backed Deep Research. Progress
-            appears only after a real run begins.
-          </p>
-        </header>
+        <WorkspacePageHeader
+          icon={FlaskConical}
+          title="Research Planner"
+          description="Design and reuse research plans before starting provider-backed Deep Research. Progress appears only after a real run begins."
+        />
         {!isSignedIn && !loading ? (
           <div className="mt-6 rounded-2xl border p-8 text-center">
             Sign in to save and reuse research plans.
@@ -373,9 +393,123 @@ function ResearchPlanner() {
               kinds={["project", "file", "artifact", "context_pack", "memory"]}
               title="Research context"
             />
+            <section className="mt-8" aria-labelledby="research-history-heading">
+              <h2 id="research-history-heading" className="text-lg font-semibold">
+                Research history
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Real provider-backed research runs saved to your account. Archived runs remain
+                private and restorable.
+              </p>
+              {sessions.length === 0 ? (
+                <div className="mt-3 rounded-2xl border p-6 text-sm text-muted-foreground">
+                  No research runs yet. Starting Deep Research creates a session only after the
+                  provider accepts the request.
+                </div>
+              ) : (
+                <ul className="mt-3 divide-y rounded-2xl border">
+                  {sessions.map((session) => (
+                    <li key={session.id} className="flex flex-wrap items-center gap-3 p-4">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium" title={session.title || session.query}>
+                          {session.title || session.query}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {session.status.replaceAll("_", " ")} · Updated{" "}
+                          {new Date(session.updated_at).toLocaleDateString()}
+                          {session.archived_at ? " · Archived" : ""}
+                        </p>
+                      </div>
+                      {session.report ? (
+                        <button
+                          className="min-h-10 rounded-lg px-3 hover:bg-accent"
+                          onClick={() => {
+                            localStorage.setItem("kova-writing-draft", session.report ?? "");
+                            navigate({ to: "/write" });
+                          }}
+                        >
+                          Send to Writing
+                        </button>
+                      ) : null}
+                      <button
+                        className="grid min-h-10 min-w-10 place-items-center rounded-lg hover:bg-accent"
+                        aria-label={
+                          session.archived_at
+                            ? "Restore research session"
+                            : "Archive research session"
+                        }
+                        onClick={async () => {
+                          const archived = !session.archived_at;
+                          try {
+                            await archiveSession({ data: { id: session.id, archived } });
+                            setSessions((all) =>
+                              all.map((item) =>
+                                item.id === session.id
+                                  ? {
+                                      ...item,
+                                      archived_at: archived ? new Date().toISOString() : null,
+                                    }
+                                  : item,
+                              ),
+                            );
+                            toast.success(
+                              archived ? "Research session archived" : "Research session restored",
+                            );
+                          } catch (cause) {
+                            toast.error(
+                              cause instanceof Error
+                                ? cause.message
+                                : "Research session could not be updated",
+                            );
+                          }
+                        }}
+                      >
+                        {session.archived_at ? (
+                          <ArchiveRestore className="h-4 w-4" />
+                        ) : (
+                          <Archive className="h-4 w-4" />
+                        )}
+                      </button>
+                      <button
+                        className="grid min-h-10 min-w-10 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
+                        aria-label="Delete research session"
+                        onClick={() => setPendingDelete(session)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
           </>
         )}
       </main>
+      <ConfirmActionDialog
+        open={Boolean(pendingDelete)}
+        onOpenChange={(open) => !open && !deleting && setPendingDelete(null)}
+        title="Delete research session?"
+        description="This permanently removes the saved run and its evidence. This action cannot be undone."
+        confirmLabel={deleting ? "Deleting…" : "Delete session"}
+        destructive
+        disabled={deleting}
+        onConfirm={async () => {
+          if (!pendingDelete || deleting) return;
+          setDeleting(true);
+          try {
+            await deleteSession({ data: { id: pendingDelete.id } });
+            setSessions((all) => all.filter((item) => item.id !== pendingDelete.id));
+            setPendingDelete(null);
+            toast.success("Research session deleted");
+          } catch (cause) {
+            toast.error(
+              cause instanceof Error ? cause.message : "Research session could not be deleted",
+            );
+          } finally {
+            setDeleting(false);
+          }
+        }}
+      />
     </AppShell>
   );
 }

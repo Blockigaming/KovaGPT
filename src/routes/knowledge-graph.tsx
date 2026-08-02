@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { Clock3, Network, Search } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { useUser } from "@/components/auth/ClerkSafe";
 import {
@@ -10,6 +11,10 @@ import {
   type KnowledgeNode,
 } from "@/lib/professional.functions";
 import { loadConversations } from "@/lib/chat-store";
+import {
+  decideKnowledgeRelationship,
+  listKnowledgeRelationships,
+} from "@/lib/knowledge-provenance.functions";
 export const Route = createFileRoute("/knowledge-graph")({
   component: KnowledgeGraph,
   head: () => ({
@@ -27,6 +32,8 @@ const colors = {
 function KnowledgeGraph() {
   const { isLoaded, isSignedIn } = useUser();
   const list = useServerFn(listKnowledgeGraph);
+  const listProvenance = useServerFn(listKnowledgeRelationships);
+  const decideProvenance = useServerFn(decideKnowledgeRelationship);
   const [nodes, setNodes] = useState<KnowledgeNode[]>([]),
     [edges, setEdges] = useState<KnowledgeEdge[]>([]),
     [loading, setLoading] = useState(true),
@@ -41,7 +48,17 @@ function KnowledgeGraph() {
       "context",
     ]),
     [selected, setSelected] = useState<string | null>(null);
+  const [provenance, setProvenance] = useState<Record<string, unknown>[]>([]);
   const [mode, setMode] = useState<"graph" | "timeline">("graph");
+  useEffect(() => {
+    if (!selected?.startsWith("project:")) {
+      setProvenance([]);
+      return;
+    }
+    listProvenance({ data: { type: "project", id: selected.slice(8) } })
+      .then((rows) => setProvenance(rows as Record<string, unknown>[]))
+      .catch(() => setProvenance([]));
+  }, [selected, listProvenance]);
   useEffect(() => {
     if (!isLoaded) return;
     if (!isSignedIn) {
@@ -344,6 +361,85 @@ function KnowledgeGraph() {
                         </li>
                       ))}
                   </ul>
+                  <h4 className="mt-5 text-sm font-medium">Why is this remembered?</h4>
+                  {provenance.length ? (
+                    <ul className="mt-2 space-y-2" aria-label="Knowledge provenance">
+                      {provenance.map((row) => (
+                        <li key={String(row.id)} className="rounded-lg border p-2 text-xs">
+                          <p>
+                            <strong>{String(row.relationship_type)}</strong> ·{" "}
+                            {String(row.derivation_method)} · confidence{" "}
+                            {Math.round(Number(row.confidence) * 100)}%
+                          </p>
+                          <p className="mt-1 text-muted-foreground">
+                            Created {new Date(String(row.created_at)).toLocaleString()}
+                          </p>
+                          {row.derivation_method === "model-suggested" &&
+                          !row.approved_at &&
+                          !row.rejected_at ? (
+                            <div className="mt-2 flex gap-2">
+                              <button
+                                className="min-h-10 rounded-lg border px-2"
+                                onClick={async () => {
+                                  try {
+                                    await decideProvenance({
+                                      data: { id: String(row.id), decision: "approve" },
+                                    });
+                                    setProvenance((all) =>
+                                      all.map((item) =>
+                                        item.id === row.id
+                                          ? { ...item, approved_at: new Date().toISOString() }
+                                          : item,
+                                      ),
+                                    );
+                                    toast.success("Knowledge link approved");
+                                  } catch (error) {
+                                    toast.error(
+                                      error instanceof Error
+                                        ? error.message
+                                        : "Knowledge link could not be approved",
+                                    );
+                                  }
+                                }}
+                              >
+                                Approve link
+                              </button>
+                              <button
+                                className="min-h-10 rounded-lg border px-2"
+                                onClick={async () => {
+                                  try {
+                                    await decideProvenance({
+                                      data: { id: String(row.id), decision: "reject" },
+                                    });
+                                    setProvenance((all) =>
+                                      all.map((item) =>
+                                        item.id === row.id
+                                          ? { ...item, rejected_at: new Date().toISOString() }
+                                          : item,
+                                      ),
+                                    );
+                                    toast.success("Knowledge link rejected");
+                                  } catch (error) {
+                                    toast.error(
+                                      error instanceof Error
+                                        ? error.message
+                                        : "Knowledge link could not be rejected",
+                                    );
+                                  }
+                                }}
+                              >
+                                Reject link
+                              </button>
+                            </div>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      No persisted provenance links explain this resource yet.
+                    </p>
+                  )}
                 </div>
               ) : (
                 <p className="mt-2 text-sm text-muted-foreground">
