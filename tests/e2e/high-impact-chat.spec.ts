@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { waitForKovaHydration } from "./hydration";
 
 const projects = new Set(["phone-390x844", "desktop-1440x900"]);
 
@@ -50,6 +51,7 @@ test("editing a prompt replaces its turn and keeps attachments", async ({ page }
     });
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
   await page.getByRole("button", { name: "Edit message" }).click();
   const editingBanner = page.getByText("Editing a previous prompt", { exact: true });
   await expect(editingBanner).toBeVisible();
@@ -88,6 +90,7 @@ test("regenerate resends the prompt with its attachment without duplicating the 
     });
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
   await page.getByRole("button", { name: "More actions" }).click();
   await page.getByRole("menuitem", { name: "Retry" }).click();
 
@@ -118,6 +121,7 @@ test("archived chats can be removed from Settings data controls", async ({ page 
     );
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
   if (page.viewportSize()!.width < 1024) {
     await page.getByRole("button", { name: "Open menu" }).click();
   }
@@ -134,10 +138,16 @@ test("archived chats can be removed from Settings data controls", async ({ page 
   await expect(confirmation).toBeVisible();
   await confirmation.getByRole("button", { name: "Delete permanently" }).click();
   await expect(archived.getByText("No archived chats", { exact: true })).toBeVisible();
-  expect(await page.evaluate(() => localStorage.getItem("kovagpt:archived"))).toBe("[]");
+  expect(
+    await page.evaluate(() => ({
+      legacy: localStorage.getItem("kovagpt:archived"),
+      guest: localStorage.getItem("kovagpt:archived:v2:guest"),
+    })),
+  ).toEqual({ legacy: null, guest: "[]" });
 });
 test("deleting a chat offers a working undo", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
   if (page.viewportSize()!.width < 1024) {
     await page.getByRole("button", { name: "Open menu" }).click();
   }
@@ -163,6 +173,7 @@ test("text files are attached as real request context and remain visible in hist
     });
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
   await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeVisible();
   await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
   await page.locator('input[type="file"][accept*=".csv"]').setInputFiles({

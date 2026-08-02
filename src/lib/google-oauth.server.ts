@@ -267,7 +267,8 @@ export async function disconnectGoogle(userId: string) {
       method: "POST",
     }).catch(() => {});
   }
-  await db.from("google_oauth_tokens").delete().eq("user_id", userId);
+  const { error } = await db.from("google_oauth_tokens").delete().eq("user_id", userId);
+  if (error) throw new Error("google_token_purge_failed");
 }
 
 async function refreshAccessToken(userId: string): Promise<string> {

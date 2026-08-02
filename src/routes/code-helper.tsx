@@ -5,19 +5,19 @@ import { seoLandingHead } from "@/components/seo-landing-head";
 const faq = [
   {
     q: "What languages and frameworks does it know?",
-    a: "JavaScript, TypeScript, Python, Go, Rust, Java, C#, C++, PHP, Ruby, SQL, Swift, Kotlin, and the major frameworks (React, Next, Vue, Svelte, Node, Django, Rails, .NET, Spring, Flutter, and more).",
+    a: "KovaGPT can attempt help across common programming languages and frameworks. Coverage and accuracy depend on the underlying model and supplied context, so run the code and consult current official documentation.",
   },
   {
     q: "Can it debug a real error from my project?",
-    a: "Yes. Paste the error message, the relevant code, and any context - KovaGPT explains what's wrong, why it's happening, and how to fix it. For gnarlier bugs, share the stack trace.",
+    a: "Paste the error message, relevant code, runtime version, and stack trace when available. KovaGPT can propose a cause and possible fix, but you still need to reproduce the issue, test the change, and check current official documentation.",
   },
   {
     q: "Does it write tests?",
-    a: "Yes. Ask for unit tests, integration tests, or e2e tests in your framework of choice - Jest, Vitest, Pytest, Playwright, Cypress - and KovaGPT delivers runnable test files.",
+    a: "You can ask for unit, integration, or end-to-end test drafts. Generated tests can contain invalid APIs, weak assertions, or unsafe assumptions, so run and review them in your own isolated development environment.",
   },
   {
     q: "Will it explain code I don't understand?",
-    a: "Paste any function or file and ask for a plain-English walkthrough. KovaGPT is especially good at explaining regex, complex SQL, TypeScript generics, and unfamiliar codebases.",
+    a: "Paste the relevant function or file and ask for a plain-English walkthrough. KovaGPT can attempt to explain regex, complex SQL, TypeScript generics, and unfamiliar code, but you should verify the explanation against the code and current documentation.",
   },
 ];
 
@@ -26,7 +26,7 @@ export const Route = createFileRoute("/code-helper")({
     seoLandingHead({
       title: "AI Code Helper - Debug, Explain, Refactor | KovaGPT",
       description:
-        "Ship faster with KovaGPT: debug errors, explain unfamiliar code, generate tests, refactor for readability, and scaffold components across every major language and framework.",
+        "Use KovaGPT to inspect errors, explain supplied code, draft tests, and suggest refactors, then validate every change in your own development environment.",
       path: "/code-helper",
       ogImage: "/og/code.jpg",
       faq,
@@ -37,19 +37,19 @@ export const Route = createFileRoute("/code-helper")({
 function Page() {
   return (
     <SeoLanding
-      h1="AI Code Helper for Developers Who Ship"
-      intro="KovaGPT debugs stack traces, explains unfamiliar code, generates tests, refactors for readability, and scaffolds components across every major language and framework. It's the pair programmer that never gets tired and never judges your variable names."
+      h1="AI Code Helper for Debugging and Drafting"
+      intro="KovaGPT can inspect stack traces and supplied code, suggest tests or refactors, and draft components. It does not run or verify the result for you, and model knowledge can be outdated, so use version-specific documentation and execute changes in an isolated development environment."
       benefits={[
-        "Debug errors with stack-trace-level reasoning",
+        "Analyze error messages and relevant stack-trace context",
         "Explain unfamiliar functions, regex, SQL, or TypeScript generics in plain English",
-        "Generate unit, integration, and e2e tests in your framework",
+        "Draft unit, integration, and end-to-end tests for review",
         "Refactor for readability, performance, or a different pattern",
         "Scaffold components, API routes, migrations, and boilerplate",
-        "Answer language and framework questions with runnable code",
+        "Draft code examples that you can test against current documentation",
       ]}
       details={[
-        "Every developer has three recurring problems: an error they've never seen, a codebase they didn't write, and a task they know how to do but not fast. KovaGPT is built for exactly those. Paste the error, paste the file, describe the task - get an answer that compiles.",
-        "It also handles the invisible work: writing the test you skipped, documenting the function you promised to document, converting the CommonJS file to ESM, cleaning up the migration you rushed. The unsexy stuff that makes codebases livable.",
+        "Paste the smallest relevant error, code section, runtime version, and expected behavior. KovaGPT can propose a diagnosis, but the answer is not guaranteed to compile or address the real root cause without the full environment.",
+        "Use generated tests, documentation, migrations, and refactors as reviewable drafts. Check security boundaries, data-loss risk, dependency versions, licenses, and rollback behavior before applying a change.",
       ]}
       prompts={[
         "Why am I getting 'Cannot read property map of undefined' in this React component?",

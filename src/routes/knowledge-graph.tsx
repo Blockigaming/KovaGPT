@@ -2,7 +2,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { Clock3, Network, Search } from "lucide-react";
-import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { useUser } from "@/components/auth/ClerkSafe";
 import {
@@ -10,11 +9,7 @@ import {
   type KnowledgeEdge,
   type KnowledgeNode,
 } from "@/lib/professional.functions";
-import { loadConversations } from "@/lib/chat-store";
-import {
-  decideKnowledgeRelationship,
-  listKnowledgeRelationships,
-} from "@/lib/knowledge-provenance.functions";
+import { chatStoragePrincipal, loadConversations, savePendingActive } from "@/lib/chat-store";
 export const Route = createFileRoute("/knowledge-graph")({
   component: KnowledgeGraph,
   head: () => ({
@@ -29,14 +24,28 @@ const colors = {
   memory: "#ec4899",
   context: "#22c55e",
 };
+const EMPTY_KNOWLEDGE_NODES: KnowledgeNode[] = [];
+const EMPTY_KNOWLEDGE_EDGES: KnowledgeEdge[] = [];
+
 function KnowledgeGraph() {
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const userKey = user?.id ?? null;
+  const principal = isLoaded ? chatStoragePrincipal(userKey) : null;
   const list = useServerFn(listKnowledgeGraph);
-  const listProvenance = useServerFn(listKnowledgeRelationships);
-  const decideProvenance = useServerFn(decideKnowledgeRelationship);
-  const [nodes, setNodes] = useState<KnowledgeNode[]>([]),
-    [edges, setEdges] = useState<KnowledgeEdge[]>([]),
-    [loading, setLoading] = useState(true),
+  const [graphState, setGraphState] = useState<{
+    principal: string | null;
+    nodes: KnowledgeNode[];
+    edges: KnowledgeEdge[];
+  }>({ principal: null, nodes: [], edges: [] });
+  const nodes =
+    principal !== null && graphState.principal === principal
+      ? graphState.nodes
+      : EMPTY_KNOWLEDGE_NODES;
+  const edges =
+    principal !== null && graphState.principal === principal
+      ? graphState.edges
+      : EMPTY_KNOWLEDGE_EDGES;
+  const [loading, setLoading] = useState(true),
     [error, setError] = useState<string | null>(null),
     [query, setQuery] = useState(""),
     [kinds, setKinds] = useState<KnowledgeNode["kind"][]>([
@@ -48,40 +57,46 @@ function KnowledgeGraph() {
       "context",
     ]),
     [selected, setSelected] = useState<string | null>(null);
-  const [provenance, setProvenance] = useState<Record<string, unknown>[]>([]);
   const [mode, setMode] = useState<"graph" | "timeline">("graph");
   useEffect(() => {
-    if (!selected?.startsWith("project:")) {
-      setProvenance([]);
+    if (!isLoaded || principal === null) {
+      setGraphState({ principal: null, nodes: [], edges: [] });
+      setLoading(true);
+      setError(null);
       return;
     }
-    listProvenance({ data: { type: "project", id: selected.slice(8) } })
-      .then((rows) => setProvenance(rows as Record<string, unknown>[]))
-      .catch(() => setProvenance([]));
-  }, [selected, listProvenance]);
-  useEffect(() => {
-    if (!isLoaded) return;
     if (!isSignedIn) {
+      setGraphState({ principal, nodes: [], edges: [] });
       setLoading(false);
+      setError(null);
       return;
     }
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
     list({})
       .then((graph) => {
-        const local = loadConversations().map((chat) => ({
+        if (cancelled) return;
+        const local = loadConversations(userKey).map((chat) => ({
           id: `local-chat:${chat.id}`,
           kind: "chat" as const,
           label: chat.title,
           href: `/?chat=${chat.id}`,
           updatedAt: new Date(chat.updatedAt).toISOString(),
         }));
-        setNodes([...graph.nodes, ...local]);
-        setEdges(graph.edges);
+        setGraphState({ principal, nodes: [...graph.nodes, ...local], edges: graph.edges });
       })
-      .catch((e) =>
-        setError(e instanceof Error ? e.message : "Knowledge graph could not be loaded"),
-      )
-      .finally(() => setLoading(false));
-  }, [isLoaded, isSignedIn, list]);
+      .catch((e) => {
+        if (!cancelled)
+          setError(e instanceof Error ? e.message : "Knowledge graph could not be loaded");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, isSignedIn, list, principal, userKey]);
   const visible = useMemo(
     () =>
       nodes
@@ -341,11 +356,13 @@ function KnowledgeGraph() {
                     to={positions.get(selected)!.href}
                     onClick={() => {
                       const node = positions.get(selected);
-                      if (node?.id.startsWith("local-chat:"))
-                        localStorage.setItem(
-                          "nova-gpt-pending-active",
-                          node.id.replace("local-chat:", ""),
-                        );
+                      if (node?.id.startsWith("local-chat:")) {
+                        try {
+                          savePendingActive(userKey, node.id.replace("local-chat:", ""));
+                        } catch {
+                          // Navigation still works when browser storage is unavailable.
+                        }
+                      }
                     }}
                     className="mt-4 inline-flex min-h-10 items-center rounded-lg bg-foreground px-3 text-sm text-background"
                   >
@@ -361,85 +378,6 @@ function KnowledgeGraph() {
                         </li>
                       ))}
                   </ul>
-                  <h4 className="mt-5 text-sm font-medium">Why is this remembered?</h4>
-                  {provenance.length ? (
-                    <ul className="mt-2 space-y-2" aria-label="Knowledge provenance">
-                      {provenance.map((row) => (
-                        <li key={String(row.id)} className="rounded-lg border p-2 text-xs">
-                          <p>
-                            <strong>{String(row.relationship_type)}</strong> ·{" "}
-                            {String(row.derivation_method)} · confidence{" "}
-                            {Math.round(Number(row.confidence) * 100)}%
-                          </p>
-                          <p className="mt-1 text-muted-foreground">
-                            Created {new Date(String(row.created_at)).toLocaleString()}
-                          </p>
-                          {row.derivation_method === "model-suggested" &&
-                          !row.approved_at &&
-                          !row.rejected_at ? (
-                            <div className="mt-2 flex gap-2">
-                              <button
-                                className="min-h-10 rounded-lg border px-2"
-                                onClick={async () => {
-                                  try {
-                                    await decideProvenance({
-                                      data: { id: String(row.id), decision: "approve" },
-                                    });
-                                    setProvenance((all) =>
-                                      all.map((item) =>
-                                        item.id === row.id
-                                          ? { ...item, approved_at: new Date().toISOString() }
-                                          : item,
-                                      ),
-                                    );
-                                    toast.success("Knowledge link approved");
-                                  } catch (error) {
-                                    toast.error(
-                                      error instanceof Error
-                                        ? error.message
-                                        : "Knowledge link could not be approved",
-                                    );
-                                  }
-                                }}
-                              >
-                                Approve link
-                              </button>
-                              <button
-                                className="min-h-10 rounded-lg border px-2"
-                                onClick={async () => {
-                                  try {
-                                    await decideProvenance({
-                                      data: { id: String(row.id), decision: "reject" },
-                                    });
-                                    setProvenance((all) =>
-                                      all.map((item) =>
-                                        item.id === row.id
-                                          ? { ...item, rejected_at: new Date().toISOString() }
-                                          : item,
-                                      ),
-                                    );
-                                    toast.success("Knowledge link rejected");
-                                  } catch (error) {
-                                    toast.error(
-                                      error instanceof Error
-                                        ? error.message
-                                        : "Knowledge link could not be rejected",
-                                    );
-                                  }
-                                }}
-                              >
-                                Reject link
-                              </button>
-                            </div>
-                          ) : null}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      No persisted provenance links explain this resource yet.
-                    </p>
-                  )}
                 </div>
               ) : (
                 <p className="mt-2 text-sm text-muted-foreground">

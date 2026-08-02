@@ -1,20 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, Check } from "lucide-react";
 import { MODES, modesForTier, type ModeId, type Tier } from "@/lib/modes";
 import { useLayout } from "@/hooks/use-mobile";
-import { ModelSelector } from "@/components/ModelSelector";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
-import {
-  KOVA_VERSIONS,
-  getKovaVersion,
-  setKovaVersion,
-  type KovaVersion,
-} from "@/lib/kova-version";
 
 /**
- * Adaptive model selector:
- *  - Desktop (pointer, >=1200): reuses the existing popover ModelSelector.
- *  - Mobile/tablet (touch or <1200): renders a native bottom sheet.
+ * Adaptive model selector with a stable trigger element.
+ *
+ * The interaction mode is detected after hydration. Keeping the trigger in
+ * the same React position prevents a keyboard-focused desktop trigger from
+ * being replaced when a touch-capable 1024px device is detected.
  */
 export function ResponsiveModelSelector({
   mode,
@@ -32,102 +27,142 @@ export function ResponsiveModelSelector({
   const { isDesktop, interaction } = useLayout();
   const useSheet = !isDesktop || interaction === "touch";
   const [open, setOpen] = useState(false);
-  const [version, setVersion] = useState<KovaVersion>("3.5");
-  useEffect(() => {
-    setVersion(getKovaVersion());
-  }, []);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
   const current = MODES.find((m) => m.id === mode) ?? MODES[0];
-
-  if (!useSheet) {
-    return (
-      <ModelSelector
-        mode={mode}
-        onChange={onChange}
-        userTier={userTier}
-        compact={compact}
-        placement={placement}
-      />
-    );
-  }
-
   const topbar = placement === "topbar";
 
-  return (
-    <>
+  useEffect(() => {
+    if (useSheet || !open) return;
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [open, useSheet]);
+
+  const closeAndRestoreFocus = () => {
+    setOpen(false);
+    window.requestAnimationFrame(() => triggerRef.current?.focus({ preventScroll: true }));
+  };
+
+  const triggerClass =
+    "kova-model-trigger inline-flex items-center gap-1.5 font-medium transition " +
+    (topbar
+      ? useSheet
+        ? "h-11 max-w-full rounded-lg bg-transparent px-2 text-[15px] active:bg-accent"
+        : "h-10 rounded-lg bg-transparent px-2.5 text-[15px] hover:bg-accent"
+      : "rounded-full bg-accent/70 " +
+        (useSheet ? "active:bg-accent " : "hover:bg-accent ") +
+        (compact ? "h-8 px-3.5 text-[13px]" : "h-9 px-4 text-sm"));
+
+  const options = modesForTier(userTier).map((availableMode) => {
+    const selected = availableMode.id === mode;
+    return (
       <button
+        key={availableMode.id}
         type="button"
-        onClick={() => setOpen(true)}
-        aria-haspopup="dialog"
-        aria-label={`Choose model: KovaGPT ${version} ${current.label}`}
-        aria-expanded={open}
-        data-testid="model-selector-trigger"
-        className={`kova-model-trigger inline-flex items-center gap-1.5 font-medium transition active:bg-accent ${
-          topbar
-            ? "h-11 max-w-full rounded-lg bg-transparent px-2 text-[15px]"
-            : `rounded-full bg-accent/70 ${compact ? "h-8 px-3.5 text-[13px]" : "h-9 px-4 text-sm"}`
-        }`}
+        aria-pressed={selected}
+        onClick={() => {
+          onChange(availableMode.id);
+          closeAndRestoreFocus();
+        }}
+        className={
+          useSheet ? "w-full" : "w-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        }
+        data-testid={"model-option-" + availableMode.id}
       >
-        <span className="truncate text-foreground leading-none">
-          {topbar ? "KovaGPT" : `Kova ${version}`}
-          <span className="ml-1 text-muted-foreground font-normal">· {current.label}</span>
-        </span>
-        <ChevronDown className="w-4 h-4 text-muted-foreground" />
-      </button>
-      <MobileBottomSheet
-        open={open}
-        onOpenChange={setOpen}
-        title="Intelligence"
-        ariaLabel="Choose model"
-      >
-        {version === "3.5" ? (
-          <div className="flex flex-col gap-1">
-            {modesForTier(userTier).map((m) => {
-              const selected = m.id === mode;
-              return (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => {
-                    onChange(m.id);
-                    setOpen(false);
-                  }}
-                  className="w-full"
-                  data-testid={`model-option-${m.id}`}
-                >
-                  <div
-                    className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left ${selected ? "bg-accent" : "hover:bg-accent/60 active:bg-accent"}`}
-                  >
-                    <span className="flex-1 text-base font-medium">{m.label}</span>
-                    {selected && <Check className="h-5 w-5" aria-label="Selected" />}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
-        <div className="mt-3 pt-3 border-t border-border">
-          <div className="px-1 pb-2 text-xs font-medium text-muted-foreground">KovaGPT version</div>
-          <div className="flex flex-wrap gap-1.5">
-            {KOVA_VERSIONS.map((v) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => {
-                  setKovaVersion(v);
-                  setVersion(v);
-                }}
-                className={`text-sm px-3 py-1.5 rounded-lg border transition ${
-                  v === version
-                    ? "bg-foreground text-background border-foreground"
-                    : "bg-transparent text-foreground border-border active:bg-accent"
-                }`}
-              >
-                Kova {v}
-              </button>
-            ))}
-          </div>
+        <div
+          className={
+            useSheet
+              ? "flex min-h-11 w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left " +
+                (selected ? "bg-accent" : "hover:bg-accent/60 active:bg-accent")
+              : "flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left transition " +
+                (selected ? "bg-accent" : "hover:bg-accent/60")
+          }
+        >
+          <span
+            className={useSheet ? "flex-1 text-base font-medium" : "flex-1 text-sm font-medium"}
+          >
+            {availableMode.label}
+          </span>
+          {selected && (
+            <Check
+              className={useSheet ? "h-5 w-5" : "h-4 w-4 text-foreground"}
+              aria-label={useSheet ? "Selected" : undefined}
+            />
+          )}
         </div>
-      </MobileBottomSheet>
-    </>
+      </button>
+    );
+  });
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative inline-flex min-w-0"
+      onKeyDown={(event) => {
+        if (event.key !== "Escape" || !open) return;
+        event.preventDefault();
+        closeAndRestoreFocus();
+      }}
+    >
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setOpen((value) => (useSheet ? true : !value))}
+        aria-haspopup="dialog"
+        aria-label={"Choose model: KovaGPT " + current.label}
+        aria-expanded={open}
+        aria-controls={!useSheet && open ? menuId : undefined}
+        data-testid="model-selector-trigger"
+        className={triggerClass}
+      >
+        <span className={(useSheet ? "truncate " : "") + "text-foreground leading-none"}>
+          KovaGPT
+          <span className="ml-1 font-normal text-muted-foreground">· {current.label}</span>
+        </span>
+        <ChevronDown
+          className={
+            "h-4 w-4 text-muted-foreground transition-transform " +
+            (!useSheet && open ? "rotate-180" : "")
+          }
+        />
+      </button>
+
+      {useSheet ? (
+        <MobileBottomSheet
+          open={open}
+          onOpenChange={(next) => {
+            if (next) setOpen(true);
+            else closeAndRestoreFocus();
+          }}
+          title="Intelligence"
+          ariaLabel="Choose model"
+        >
+          <div className="flex flex-col gap-1">{options}</div>
+        </MobileBottomSheet>
+      ) : (
+        open && (
+          <div
+            id={menuId}
+            role="dialog"
+            aria-label="Choose model"
+            className={
+              "kova-model-menu absolute left-0 z-50 w-64 rounded-2xl border border-border bg-popover p-1.5 shadow-xl animate-in fade-in-0 zoom-in-95 duration-150 " +
+              (topbar ? "top-full mt-1 origin-top-left" : "bottom-full mb-2 origin-bottom-left")
+            }
+          >
+            <div className="px-3 pb-1.5 pt-2 text-xs font-medium text-muted-foreground">
+              Choose how KovaGPT responds
+            </div>
+            {options}
+          </div>
+        )
+      )}
+    </div>
   );
 }

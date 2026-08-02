@@ -5,19 +5,19 @@ import { seoLandingHead } from "@/components/seo-landing-head";
 const faq = [
   {
     q: "Can it read PDFs and documents?",
-    a: "Yes. Upload PDFs, Word docs, spreadsheets, slides, and text files. KovaGPT extracts the content and answers questions against it, summarizes, or pulls out specific data.",
+    a: "KovaGPT can use supported files when upload access is available and text extraction succeeds. File type, size, formatting, permissions, and provider support can limit what is actually read.",
   },
   {
     q: "Does it cite sources?",
-    a: "When you give KovaGPT source material - a PDF, article, or document - it points to the sections it drew from. For open-ended research, always verify facts against primary sources.",
+    a: "Search and Deep Research can return source links when their providers are available. A citation can be missing, wrong, or unrelated to the claim. Open the source and verify important facts against primary material.",
   },
   {
     q: "Can it compare multiple options for me?",
-    a: "Yes. Give it two or more options and KovaGPT builds a side-by-side comparison across the criteria you care about - price, features, pros, cons, use cases.",
+    a: "You can request a side-by-side comparison using criteria you supply. Check every time-sensitive price or feature against the option's current official source.",
   },
   {
     q: "Is it good for academic research?",
-    a: "It's a strong first-pass tool for organizing sources, outlining arguments, and summarizing readings. Always verify claims and citations against primary sources before submitting academic work.",
+    a: "It can be used for a first-pass organization of supplied sources, argument outlines, and reading summaries. Always verify claims and citations against primary sources before submitting academic work.",
   },
 ];
 
@@ -26,7 +26,7 @@ export const Route = createFileRoute("/research-assistant")({
     seoLandingHead({
       title: "AI Research Assistant for Reports, Notes & Comparisons | KovaGPT",
       description:
-        "KovaGPT organizes sources, summarizes long documents, compares options, and turns messy notes into structured research. Upload PDFs and ask questions directly.",
+        "Use KovaGPT to organize supplied material, draft summaries, compare options, and structure notes, with source and provider verification.",
       path: "/research-assistant",
       ogImage: "/og/writer.jpg",
       faq,
@@ -37,19 +37,19 @@ export const Route = createFileRoute("/research-assistant")({
 function Page() {
   return (
     <SeoLanding
-      h1="AI Research Assistant That Turns Sources Into Insight"
-      intro="KovaGPT reads what you give it, organizes it, and answers questions in plain English. Drop in a PDF, a stack of notes, or a URL and get summaries, comparisons, outlines, and specific answers - with the structure ready to use in reports, briefs, or study guides."
+      h1="AI Research Assistant for Organizing Sources and Drafting Insights"
+      intro="KovaGPT can organize extracted file content and supplied notes, draft summaries or comparisons, and help structure a report. It may miss content, misunderstand a source, or generate an incorrect citation, so keep the originals open and verify the result."
       benefits={[
-        "Summarize long PDFs, papers, and articles in seconds",
+        "Draft summaries of supported files when extraction succeeds",
         "Compare two or more options across criteria you define",
-        "Extract structured data - dates, prices, entities, decisions - from documents",
-        "Turn messy notes into clean outlines, briefs, or slide plans",
-        "Answer specific questions against uploaded sources",
-        "Save research threads so you can continue tomorrow",
+        "Attempt structured extraction of dates, prices, entities, and decisions",
+        "Draft structured outlines, briefs, or slide plans from supplied notes",
+        "Ask questions against successfully extracted source content",
+        "Continue locally stored research threads later in the same browser while that history remains available",
       ]}
       details={[
-        "Research is mostly reading, note-taking, and pattern-finding. KovaGPT accelerates all three. Upload a 40-page report and ask 'what are the three main risks the authors identify' - you get the answer in seconds, with pointers back to the relevant sections.",
-        "It's built for real work: competitive teardowns, literature reviews, market snapshots, product research, due diligence, and study guides. When you're ready to write, it can turn the research thread into a first draft.",
+        "Use KovaGPT to reduce the manual work of organizing notes and drafting an initial synthesis. Extraction and model output can omit tables, footnotes, scanned text, or qualifiers, so compare the answer with the original source.",
+        "For competitive research, literature reviews, market snapshots, product research, due diligence, or study guides, label sourced facts, inferences, and estimates separately. Treat the generated brief as a first draft for human review.",
       ]}
       prompts={[
         "Summarize this PDF and pull out every decision the authors recommend",

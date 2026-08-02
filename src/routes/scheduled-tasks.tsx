@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
@@ -29,13 +29,24 @@ import {
 import { toast } from "sonner";
 import { AutomationBuilder, type AutomationDraft } from "@/components/AutomationBuilder";
 import { RelatedWorkspaceItems } from "@/components/WorkspaceIntelligence";
+import {
+  browserStoragePrincipal,
+  consumePrincipalHandoff,
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+  safeBrowserStorage,
+} from "@/lib/principal-browser-storage.mjs";
 
 export const Route = createFileRoute("/scheduled-tasks")({
   component: ScheduledTasksPage,
   head: () => ({
     meta: [
-      { title: "Scheduled Tasks - KovaGPT" },
-      { name: "description", content: "Schedule KovaGPT to do something for you later." },
+      { title: "Scheduled Tasks Status - KovaGPT" },
+      {
+        name: "description",
+        content:
+          "Review historical scheduled-task status. Background execution is unavailable in this deployment.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -45,7 +56,17 @@ type PlanState = "loading" | "free" | "paid" | "signed-out" | "error";
 type TaskFilter = "all" | "active" | "paused" | "history" | "failed";
 
 function ScheduledTasksPage() {
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const userKey = user?.id ?? null;
+  const principal = isLoaded ? browserStoragePrincipal(userKey) : null;
+  const principalRef = useRef(principal);
+  principalRef.current = principal;
+  const generationRef = useRef(0);
+  const [dataPrincipal, setDataPrincipal] = useState<string | null>(null);
+  const [dataGeneration, setDataGeneration] = useState(0);
+  const [lifecycleVersion, setLifecycleVersion] = useState(0);
+  const dataReady =
+    principal !== null && dataPrincipal === principal && dataGeneration === generationRef.current;
   const [plan, setPlan] = useState<PlanState>("loading");
   const [tasks, setTasks] = useState<ScheduledTask[]>([]);
   const [loading, setLoading] = useState(false);
@@ -68,67 +89,125 @@ function ScheduledTasksPage() {
   const checkEligible = useServerFn(isScheduledTasksEligible);
 
   useEffect(() => {
-    if (!isLoaded) return;
+    const generation = generationRef.current + 1;
+    generationRef.current = generation;
+    setDataPrincipal(null);
+    setDataGeneration(generation);
+    setPlan("loading");
+    setTasks([]);
+    setLoading(false);
+    setCreating(false);
+    setLoadError(null);
+    setQuery("");
+    setFilter("all");
+    setBuilderOpen(false);
+    setExecutionAvailable(false);
+    setTitle("");
+    setPrompt("");
+    setWhen("");
+    setRepeat("none");
+    if (!principal) return;
     if (!isSignedIn) {
+      setDataPrincipal(principal);
+      setDataGeneration(generation);
       setPlan("signed-out");
       return;
     }
     let cancel = false;
     checkEligible({})
       .then((r) => {
-        if (cancel) return;
+        if (cancel || generationRef.current !== generation || principalRef.current !== principal)
+          return;
         setExecutionAvailable(r.executionAvailable);
+        setDataPrincipal(principal);
+        setDataGeneration(generation);
         setPlan(r.eligible ? "paid" : "free");
       })
       .catch(() => {
-        if (!cancel) setPlan("error");
+        if (!cancel && generationRef.current === generation && principalRef.current === principal) {
+          setDataPrincipal(principal);
+          setDataGeneration(generation);
+          setPlan("error");
+        }
       });
     return () => {
       cancel = true;
     };
-  }, [isLoaded, isSignedIn, checkEligible]);
+  }, [checkEligible, isSignedIn, lifecycleVersion, principal]);
 
   const loadTasks = useCallback(async () => {
-    if (plan !== "paid") return;
+    if (!dataReady || dataGeneration !== generationRef.current || plan !== "paid") return;
+    const generation = generationRef.current;
     setLoading(true);
     setLoadError(null);
     try {
-      setTasks(await list({}));
+      const next = await list({});
+      if (generation !== generationRef.current || principalRef.current !== principal) return;
+      setTasks(next);
     } catch (error) {
+      if (generation !== generationRef.current || principalRef.current !== principal) return;
       const message = error instanceof Error ? error.message : "Failed to load tasks";
       setLoadError(message);
       toast.error(message);
     } finally {
-      setLoading(false);
+      if (generation === generationRef.current && principalRef.current === principal) {
+        setLoading(false);
+      }
     }
-  }, [plan, list]);
+  }, [dataGeneration, dataReady, list, plan, principal]);
 
   useEffect(() => {
     void loadTasks();
   }, [loadTasks]);
 
   useEffect(() => {
+    if (!dataReady || dataGeneration !== generationRef.current) return;
+    const handoff = consumePrincipalHandoff<{
+      title: string;
+      prompt: string;
+      repeat: ScheduledTask["repeat"];
+    }>(safeBrowserStorage("sessionStorage"), "kova-automation-draft", userKey);
+    if (!handoff.ok) {
+      if (handoff.reason !== "missing") {
+        toast.error("The saved scheduling draft could not be loaded.");
+      }
+      return;
+    }
     try {
-      const raw = localStorage.getItem("kova-automation-draft");
-      if (!raw) return;
-      const draft = JSON.parse(raw) as {
-        title: string;
-        prompt: string;
-        repeat: ScheduledTask["repeat"];
-      };
+      const draft = handoff.value;
+      if (typeof draft.title !== "string" || typeof draft.prompt !== "string") {
+        throw new Error("invalid_automation_handoff");
+      }
       setTitle(draft.title);
       setPrompt(draft.prompt);
       setRepeat(draft.repeat);
-      localStorage.removeItem("kova-automation-draft");
       toast.message("Work follow-up loaded. Choose when it should run.");
     } catch {
-      localStorage.removeItem("kova-automation-draft");
+      toast.error("The saved scheduling draft could not be loaded.");
     }
-  }, []);
+  }, [dataGeneration, dataReady, userKey]);
+
+  useEffect(() => {
+    if (!isLoaded || !principal) return;
+    const reset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      generationRef.current += 1;
+      setDataPrincipal(null);
+      setTasks([]);
+      setTitle("");
+      setPrompt("");
+      setWhen("");
+      setRepeat("none");
+      setBuilderOpen(false);
+      setLifecycleVersion((value) => value + 1);
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+    return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+  }, [isLoaded, principal, userKey]);
 
   const visibleTasks = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    return tasks.filter((task) => {
+    return (dataReady ? tasks : []).filter((task) => {
       const statusMatch =
         filter === "all" ||
         (filter === "active" && ["scheduled", "running"].includes(task.status)) ||
@@ -140,17 +219,28 @@ function ScheduledTasksPage() {
         (!normalized || `${task.title} ${task.prompt}`.toLowerCase().includes(normalized))
       );
     });
-  }, [filter, query, tasks]);
+  }, [dataReady, filter, query, tasks]);
+
+  const visiblePlan: PlanState = dataReady ? plan : "loading";
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !prompt.trim() || !when) return;
+    if (
+      !dataReady ||
+      dataGeneration !== generationRef.current ||
+      !title.trim() ||
+      !prompt.trim() ||
+      !when
+    )
+      return;
+    const generation = generationRef.current;
     setCreating(true);
     try {
       const iso = new Date(when).toISOString();
       const row = await create({
         data: { title: title.trim(), prompt: prompt.trim(), run_at: iso, repeat },
       });
+      if (generation !== generationRef.current || principalRef.current !== principal) return;
       setTasks((t) => [...t, row].sort((a, b) => a.run_at.localeCompare(b.run_at)));
       setTitle("");
       setPrompt("");
@@ -158,46 +248,68 @@ function ScheduledTasksPage() {
       setRepeat("none");
       toast.success("Task scheduled");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to schedule task");
+      if (generation === generationRef.current && principalRef.current === principal) {
+        toast.error(err instanceof Error ? err.message : "Failed to schedule task");
+      }
     } finally {
-      setCreating(false);
+      if (generation === generationRef.current && principalRef.current === principal) {
+        setCreating(false);
+      }
     }
   };
 
   const createAutomation = async (draft: AutomationDraft) => {
+    if (!dataReady || dataGeneration !== generationRef.current) return;
+    const generation = generationRef.current;
     const row = await create({
       data: { title: draft.title, prompt: draft.prompt, run_at: draft.runAt, repeat: draft.repeat },
     });
+    if (generation !== generationRef.current || principalRef.current !== principal) return;
     setTasks((current) => [...current, row].sort((a, b) => a.run_at.localeCompare(b.run_at)));
     toast.success("Automation scheduled");
   };
 
   const togglePause = async (t: ScheduledTask) => {
+    if (!dataReady || dataGeneration !== generationRef.current) return;
+    const generation = generationRef.current;
     const next = t.status === "paused" ? "scheduled" : "paused";
     try {
       const updated = await update({ data: { id: t.id, status: next } });
+      if (generation !== generationRef.current || principalRef.current !== principal) return;
       setTasks((arr) => arr.map((x) => (x.id === t.id ? updated : x)));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to update");
+      if (generation === generationRef.current && principalRef.current === principal) {
+        toast.error(e instanceof Error ? e.message : "Failed to update");
+      }
     }
   };
 
   const del = async (t: ScheduledTask) => {
+    if (!dataReady || dataGeneration !== generationRef.current) return;
+    const generation = generationRef.current;
     try {
       await remove({ data: { id: t.id } });
+      if (generation !== generationRef.current || principalRef.current !== principal) return;
       setTasks((arr) => arr.filter((x) => x.id !== t.id));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to delete");
+      if (generation === generationRef.current && principalRef.current === principal) {
+        toast.error(e instanceof Error ? e.message : "Failed to delete");
+      }
     }
   };
 
   const retry = async (task: ScheduledTask) => {
+    if (!dataReady || dataGeneration !== generationRef.current) return;
+    const generation = generationRef.current;
     try {
       const updated = await update({ data: { id: task.id, status: "scheduled" } });
+      if (generation !== generationRef.current || principalRef.current !== principal) return;
       setTasks((current) => current.map((item) => (item.id === task.id ? updated : item)));
       toast.success("Task queued to retry");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not retry task");
+      if (generation === generationRef.current && principalRef.current === principal) {
+        toast.error(error instanceof Error ? error.message : "Could not retry task");
+      }
     }
   };
 
@@ -214,21 +326,25 @@ function ScheduledTasksPage() {
 
           <div className="flex items-center gap-3 mb-2">
             <Calendar className="w-6 h-6" />
-            <h1 className="font-display text-2xl font-semibold tracking-tight">Scheduled Tasks</h1>
+            <h1 className="font-display text-2xl font-semibold tracking-tight">
+              Scheduled Tasks Status
+            </h1>
           </div>
           <p className="text-sm text-muted-foreground mb-8">
             Review scheduled work and its real execution status. New tasks are available only when a
             background runner is configured.
           </p>
 
-          {plan === "loading" && <div className="text-sm text-muted-foreground">Loading…</div>}
+          {visiblePlan === "loading" && (
+            <div className="text-sm text-muted-foreground">Loading…</div>
+          )}
 
-          {plan === "signed-out" && (
+          {visiblePlan === "signed-out" && (
             <div className="kova-empty-state">
               <Lock className="w-6 h-6 mx-auto mb-3 text-muted-foreground" />
-              <div className="font-medium mb-1">Sign in to use scheduled tasks</div>
+              <div className="font-medium mb-1">Sign in to review task history</div>
               <p className="text-sm text-muted-foreground mb-4">
-                Available on Plus, Pro, and higher plans.
+                Background execution is unavailable in this deployment.
               </p>
               <Link
                 to="/"
@@ -239,23 +355,24 @@ function ScheduledTasksPage() {
             </div>
           )}
 
-          {plan === "free" && (
+          {visiblePlan === "free" && (
             <div className="kova-empty-state">
               <Lock className="w-6 h-6 mx-auto mb-3 text-muted-foreground" />
-              <div className="font-medium mb-1">Scheduled Tasks is a Plus feature</div>
+              <div className="font-medium mb-1">Scheduled execution is unavailable</div>
               <p className="text-sm text-muted-foreground mb-4">
-                Upgrade to Plus, Pro, or higher to schedule Kova to do things for you later.
+                This deployment has no background runner. Upgrading will not enable scheduled
+                execution.
               </p>
               <Link
-                to="/pricing"
+                to="/"
                 className="inline-flex items-center justify-center px-4 py-2 rounded-full bg-foreground text-background text-sm font-medium"
               >
-                View plans
+                Back to chat
               </Link>
             </div>
           )}
 
-          {plan === "error" && (
+          {visiblePlan === "error" && (
             <div className="kova-empty-state" role="alert">
               <AlertCircle className="mx-auto mb-3 h-6 w-6 text-destructive" />
               <div className="font-medium mb-1">Plan status is unavailable</div>
@@ -273,7 +390,7 @@ function ScheduledTasksPage() {
             </div>
           )}
 
-          {plan === "paid" && (
+          {visiblePlan === "paid" && (
             <>
               {!executionAvailable ? (
                 <div

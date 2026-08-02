@@ -1,11 +1,12 @@
 import { Link } from "@tanstack/react-router";
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Search,
   SquarePen,
   Settings,
   Image as ImageIcon,
   FolderOpen,
+  Plug,
   Calendar,
   X,
   FlaskConical,
@@ -23,7 +24,14 @@ import { extensionRegistry } from "@/platform/extensions";
 import { platformEvents } from "@/platform/events";
 import { applyThemeMode } from "@/lib/theme";
 import { searchConversations } from "@/lib/conversation-search";
-import type { RecentItem } from "@/lib/workspace.functions";
+import { useUser } from "@/components/auth/ClerkSafe";
+import {
+  browserStoragePrincipal,
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+  principalScopedStorageKey,
+  safeBrowserStorage,
+} from "@/lib/principal-browser-storage.mjs";
 
 type PaletteAction = {
   label: string;
@@ -58,7 +66,8 @@ const fixedActions: PaletteAction[] = [
     icon: ShieldCheck,
     disabledReason: "Start from the composer privacy menu.",
   },
-  { label: "Create Scheduled Task", href: "/scheduled-tasks", icon: Calendar },
+  { label: "Scheduled Tasks status", href: "/scheduled-tasks", icon: Calendar },
+  { label: "Open Apps", href: "/apps", icon: Plug },
   { label: "Open Help", href: "/help", icon: FlaskConical },
   { label: "Toggle appearance", action: "theme", icon: SunMoon },
 ];
@@ -101,74 +110,186 @@ function fuzzyScore(candidate: string, query: string) {
   return 10;
 }
 
+function parseStoredCommandIds(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === "string").slice(0, 50)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function resolveReturnFocusTarget(target: HTMLElement | null): HTMLElement | null {
+  if (target?.isConnected) return target;
+  const candidates = document.querySelectorAll<HTMLElement>(
+    '[data-testid="model-selector-trigger"], button[aria-label="Open menu"], button[aria-label="Search chats"]',
+  );
+  return (
+    Array.from(candidates).find((candidate) => {
+      const rect = candidate.getBoundingClientRect();
+      const style = window.getComputedStyle(candidate);
+      return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden";
+    }) ?? null
+  );
+}
+
 export function CommandPalette({
   open,
   query,
   onQueryChange,
   conversations,
-  archivedConversations = [],
-  workspaceItems = [],
   onClose,
   onNewChat,
   onSelectChat,
-  onSelectArchived,
   onOpenSettings,
+  returnFocusTarget,
 }: {
   open: boolean;
   query: string;
   onQueryChange: (value: string) => void;
   conversations: Conversation[];
-  archivedConversations?: Conversation[];
-  workspaceItems?: RecentItem[];
   onClose: () => void;
   onNewChat: () => void;
   onSelectChat: (id: string) => void;
-  onSelectArchived?: (conversation: Conversation) => void;
   onOpenSettings: () => void;
+  returnFocusTarget?: HTMLElement | null;
 }) {
-  const deferredQuery = useDeferredValue(query);
-  const normalized = deferredQuery.trim().toLowerCase();
-  const archivedIds = useMemo(
-    () => new Set(archivedConversations.map((conversation) => conversation.id)),
-    [archivedConversations],
-  );
-  const searchableConversations = useMemo(() => {
-    const currentIds = new Set(conversations.map((conversation) => conversation.id));
-    return [
-      ...conversations,
-      ...archivedConversations.filter((conversation) => !currentIds.has(conversation.id)),
-    ];
-  }, [archivedConversations, conversations]);
+  const { isLoaded, user } = useUser();
+  const userKey = user?.id ?? null;
+  const principal = isLoaded ? browserStoragePrincipal(userKey) : null;
+  const historyStorageKey = isLoaded
+    ? principalScopedStorageKey("kova-command-history-v1", userKey)
+    : null;
+  const pinsStorageKey = isLoaded
+    ? principalScopedStorageKey("kova-command-pins-v1", userKey)
+    : null;
+  const normalized = query.trim().toLowerCase();
   const conversationMatches = normalized
-    ? searchConversations(searchableConversations, deferredQuery).slice(0, 12)
-    : [...searchableConversations]
-        .sort((a, b) => b.updatedAt - a.updatedAt)
-        .slice(0, 8)
-        .map((conversation) => ({
-          conversation,
-          snippet: `${conversation.messages.length} messages`,
-          score: 0,
-        }));
+    ? searchConversations(conversations, query).slice(0, 8)
+    : conversations.slice(0, 6).map((conversation) => ({
+        conversation,
+        snippet: `${conversation.messages.length} messages`,
+        score: 0,
+      }));
   const [activeIndex, setActiveIndex] = useState(0);
-  const [recentCommands, setRecentCommands] = useState<string[]>([]);
-  const [pinnedCommands, setPinnedCommands] = useState<string[]>([]);
+  const storageGenerationRef = useRef(0);
+  const [commandState, setCommandState] = useState<{
+    principal: string | null;
+    generation: number;
+    recent: string[];
+    pinned: string[];
+  }>({ principal: null, generation: 0, recent: [], pinned: [] });
+  const commandReady =
+    principal !== null &&
+    commandState.principal === principal &&
+    commandState.generation === storageGenerationRef.current;
+  const recentCommands = commandReady ? commandState.recent : [];
+  const pinnedCommands = commandReady ? commandState.pinned : [];
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
+  const shouldRestoreFocusRef = useRef(true);
+
   useEffect(() => {
     if (!open) return;
-    returnFocusRef.current = document.activeElement as HTMLElement | null;
+    shouldRestoreFocusRef.current = true;
+    returnFocusRef.current =
+      returnFocusTarget ??
+      (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+
+    const returnTarget = returnFocusRef.current;
+    window.requestAnimationFrame(() => searchInputRef.current?.focus());
+
     return () => {
-      window.requestAnimationFrame(() => returnFocusRef.current?.focus());
+      if (!shouldRestoreFocusRef.current) return;
+      const restoreFocus = () => {
+        const target = resolveReturnFocusTarget(returnTarget);
+        if (target && document.activeElement !== target) {
+          target.focus({ preventScroll: true });
+        }
+      };
+      restoreFocus();
+      window.requestAnimationFrame(restoreFocus);
     };
-  }, [open]);
+  }, [open, returnFocusTarget]);
   useEffect(() => {
-    try {
-      setRecentCommands(JSON.parse(localStorage.getItem("kova-command-history-v1") ?? "[]"));
-      setPinnedCommands(JSON.parse(localStorage.getItem("kova-command-pins-v1") ?? "[]"));
-    } catch {
-      setRecentCommands([]);
-      setPinnedCommands([]);
+    const generation = storageGenerationRef.current + 1;
+    storageGenerationRef.current = generation;
+    if (!open || !isLoaded || !principal || !historyStorageKey || !pinsStorageKey) {
+      setCommandState({ principal, generation, recent: [], pinned: [] });
+      return;
     }
-  }, [open]);
+    const storage = safeBrowserStorage("localStorage");
+    try {
+      const recent = parseStoredCommandIds(storage?.getItem(historyStorageKey) ?? null);
+      const pinned = parseStoredCommandIds(storage?.getItem(pinsStorageKey) ?? null);
+      if (storageGenerationRef.current !== generation) return;
+      setCommandState({ principal, generation, recent, pinned });
+    } catch {
+      if (storageGenerationRef.current !== generation) return;
+      setCommandState({ principal, generation, recent: [], pinned: [] });
+    }
+  }, [historyStorageKey, isLoaded, open, pinsStorageKey, principal]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    const handlePrincipalReset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      const generation = storageGenerationRef.current + 1;
+      storageGenerationRef.current = generation;
+      setCommandState({ principal, generation, recent: [], pinned: [] });
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, handlePrincipalReset);
+    return () =>
+      window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, handlePrincipalReset);
+  }, [isLoaded, principal, userKey]);
+
+  const saveRecentCommands = (next: string[]) => {
+    const generation = commandState.generation;
+    if (
+      !commandReady ||
+      !historyStorageKey ||
+      generation !== storageGenerationRef.current ||
+      commandState.principal !== principal
+    )
+      return;
+    setCommandState((current) =>
+      current.principal === principal && current.generation === generation
+        ? { ...current, recent: next }
+        : current,
+    );
+    try {
+      if (generation !== storageGenerationRef.current) return;
+      safeBrowserStorage("localStorage")?.setItem(historyStorageKey, JSON.stringify(next));
+    } catch {
+      // Command history is optional; the action itself can still continue.
+    }
+  };
+
+  const savePinnedCommands = (next: string[]) => {
+    const generation = commandState.generation;
+    if (
+      !commandReady ||
+      !pinsStorageKey ||
+      generation !== storageGenerationRef.current ||
+      commandState.principal !== principal
+    )
+      return;
+    setCommandState((current) =>
+      current.principal === principal && current.generation === generation
+        ? { ...current, pinned: next }
+        : current,
+    );
+    try {
+      if (generation !== storageGenerationRef.current) return;
+      safeBrowserStorage("localStorage")?.setItem(pinsStorageKey, JSON.stringify(next));
+    } catch {
+      // Pins remain available for this render when durable storage is blocked.
+    }
+  };
   const visibleActions = useMemo(
     () =>
       quickActions
@@ -188,72 +309,83 @@ export function CommandPalette({
     () => ["new-chat", "settings", ...visibleActions.map((action) => action.href ?? action.action)],
     [visibleActions],
   );
-  const workspaceMatches = useMemo(() => {
-    const term = normalized;
-    return workspaceItems
-      .filter(
-        (item) =>
-          !term || `${item.title} ${item.subtitle} ${item.type}`.toLowerCase().includes(term),
-      )
-      .slice(0, 20);
-  }, [normalized, workspaceItems]);
-  const totalItems = actionItems.length + conversationMatches.length + workspaceMatches.length;
+  const totalItems = actionItems.length + conversationMatches.length;
 
   useEffect(() => {
     setActiveIndex(0);
   }, [query, open]);
 
+  const suppressFocusRestore = () => {
+    shouldRestoreFocusRef.current = false;
+  };
+
+  const closePalette = () => {
+    const returnTarget = returnFocusRef.current;
+    const shouldRestore = shouldRestoreFocusRef.current;
+    onClose();
+    if (!shouldRestore) return;
+
+    const restoreFocus = () => {
+      const target = resolveReturnFocusTarget(returnTarget);
+      if (target && document.activeElement !== target) {
+        target.focus({ preventScroll: true });
+      }
+    };
+    queueMicrotask(restoreFocus);
+    window.setTimeout(restoreFocus, 0);
+    window.requestAnimationFrame(() => {
+      restoreFocus();
+      window.requestAnimationFrame(restoreFocus);
+    });
+  };
+
   const chooseActive = () => {
     const action = actionItems[activeIndex];
     if (action === "new-chat") {
       onNewChat();
-      onClose();
+      closePalette();
       return;
     }
     if (action === "settings") {
+      suppressFocusRestore();
       onOpenSettings();
-      onClose();
+      closePalette();
       return;
     }
     if (typeof action === "string" && action.startsWith("/")) {
+      suppressFocusRestore();
       const next = [action, ...recentCommands.filter((item) => item !== action)].slice(0, 12);
-      localStorage.setItem("kova-command-history-v1", JSON.stringify(next));
+      saveRecentCommands(next);
       platformEvents.publish("platform", "command.executed", { command: action });
       window.location.assign(action);
-      onClose();
+      closePalette();
       return;
     }
     if (action === "focus-input") {
+      suppressFocusRestore();
       document.querySelector<HTMLTextAreaElement>("textarea")?.focus();
       platformEvents.publish("platform", "command.executed", { command: action });
-      onClose();
+      closePalette();
       return;
     }
     if (action === "theme") {
       applyThemeMode(document.documentElement.classList.contains("dark") ? "light" : "dark");
       platformEvents.publish("platform", "command.executed", { command: action });
-      onClose();
+      closePalette();
       return;
     }
     if (action === "search") {
+      suppressFocusRestore();
       window.dispatchEvent(new CustomEvent("kova-open-search"));
       platformEvents.publish("platform", "command.executed", { command: action });
-      onClose();
+      closePalette();
       return;
     }
     if (!action) {
       const match = conversationMatches[activeIndex - actionItems.length];
       if (match) {
-        if (archivedIds.has(match.conversation.id)) onSelectArchived?.(match.conversation);
-        else onSelectChat(match.conversation.id);
-        onClose();
-        return;
-      }
-      const workspace =
-        workspaceMatches[activeIndex - actionItems.length - conversationMatches.length];
-      if (workspace) {
-        window.location.assign(workspace.href);
-        onClose();
+        onSelectChat(match.conversation.id);
+        closePalette();
       }
     }
   };
@@ -262,14 +394,32 @@ export function CommandPalette({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-start justify-center bg-black/35 px-3 pt-[12vh] backdrop-blur-sm"
+      ref={dialogRef}
+      data-kova-shell-overlay=""
+      className="fixed inset-0 z-[70] flex items-start justify-center bg-black/35 px-[max(.75rem,var(--safe-left),var(--safe-right))] pb-[var(--safe-bottom)] pt-[max(12vh,var(--safe-top))] backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label="Search chats and actions"
       onKeyDown={(event) => {
+        if (event.key === "Tab" && dialogRef.current) {
+          const focusable = Array.from(
+            dialogRef.current.querySelectorAll<HTMLElement>(
+              'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+            ),
+          ).filter((element) => element.offsetParent !== null);
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (first && last && event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+          } else if (first && last && !event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          }
+        }
         if (event.key === "Escape") {
           event.preventDefault();
-          onClose();
+          closePalette();
         }
         if (event.key === "ArrowDown") {
           event.preventDefault();
@@ -287,8 +437,7 @@ export function CommandPalette({
               const next = pinnedCommands.includes(command)
                 ? pinnedCommands.filter((item) => item !== command)
                 : [command, ...pinnedCommands];
-              setPinnedCommands(next);
-              localStorage.setItem("kova-command-pins-v1", JSON.stringify(next));
+              savePinnedCommands(next);
               return;
             }
           }
@@ -300,7 +449,7 @@ export function CommandPalette({
         <div className="flex items-center gap-3 border-b border-border px-4 py-3">
           <Search className="h-5 w-5 text-muted-foreground" />
           <input
-            autoFocus
+            ref={searchInputRef}
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Search chats, apps, files, and actions"
@@ -313,8 +462,8 @@ export function CommandPalette({
           />
           <button
             type="button"
-            onClick={onClose}
-            className="rounded-full p-2 text-muted-foreground hover:bg-accent hover:text-foreground"
+            onClick={closePalette}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
             aria-label="Close command palette"
           >
             <X className="h-4 w-4" />
@@ -332,12 +481,12 @@ export function CommandPalette({
             type="button"
             onClick={() => {
               onNewChat();
-              onClose();
+              closePalette();
             }}
             id="command-option-0"
             role="option"
             aria-selected={activeIndex === 0}
-            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 0 ? "bg-accent" : ""}`}
+            className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 0 ? "bg-accent" : ""}`}
           >
             <SquarePen className="h-4 w-4 text-muted-foreground" />
             <span>Start a new chat</span>
@@ -348,13 +497,14 @@ export function CommandPalette({
           <button
             type="button"
             onClick={() => {
+              suppressFocusRestore();
               onOpenSettings();
-              onClose();
+              closePalette();
             }}
             id="command-option-1"
             role="option"
             aria-selected={activeIndex === 1}
-            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 1 ? "bg-accent" : ""}`}
+            className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === 1 ? "bg-accent" : ""}`}
           >
             <Settings className="h-4 w-4 text-muted-foreground" />
             <span>Open settings</span>
@@ -362,7 +512,7 @@ export function CommandPalette({
           {visibleActions.map((action, actionIndex) => {
             const Icon = action.icon;
             const index = actionIndex + 2;
-            const className = `flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === index ? "bg-accent" : ""} ${action.disabledReason ? "text-muted-foreground" : ""}`;
+            const className = `flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === index ? "bg-accent" : ""} ${action.disabledReason ? "text-muted-foreground" : ""}`;
             const content = (
               <>
                 <Icon className="h-4 w-4 text-muted-foreground" />
@@ -384,15 +534,16 @@ export function CommandPalette({
                   aria-selected={activeIndex === index}
                   to={action.href as never}
                   onClick={() => {
+                    suppressFocusRestore();
                     const next = [
                       action.href!,
                       ...recentCommands.filter((item) => item !== action.href),
                     ].slice(0, 12);
-                    localStorage.setItem("kova-command-history-v1", JSON.stringify(next));
+                    saveRecentCommands(next);
                     platformEvents.publish("platform", "command.executed", {
                       command: action.href,
                     });
-                    onClose();
+                    closePalette();
                   }}
                   className={className}
                 >
@@ -412,11 +563,12 @@ export function CommandPalette({
                   const targetIndex = actionItems.indexOf(action.action);
                   if (targetIndex >= 0) setActiveIndex(targetIndex);
                   if (action.action === "focus-input") {
+                    suppressFocusRestore();
                     document.querySelector<HTMLTextAreaElement>("textarea")?.focus();
                     platformEvents.publish("platform", "command.executed", {
                       command: action.action,
                     });
-                    onClose();
+                    closePalette();
                   } else if (action.action === "theme") {
                     applyThemeMode(
                       document.documentElement.classList.contains("dark") ? "light" : "dark",
@@ -424,13 +576,14 @@ export function CommandPalette({
                     platformEvents.publish("platform", "command.executed", {
                       command: action.action,
                     });
-                    onClose();
+                    closePalette();
                   } else if (action.action === "search") {
+                    suppressFocusRestore();
                     window.dispatchEvent(new CustomEvent("kova-open-search"));
                     platformEvents.publish("platform", "command.executed", {
                       command: action.action,
                     });
-                    onClose();
+                    closePalette();
                   }
                 }}
                 className={className}
@@ -456,63 +609,22 @@ export function CommandPalette({
                 key={chat.id}
                 type="button"
                 onClick={() => {
-                  if (archivedIds.has(chat.id)) onSelectArchived?.(chat);
-                  else onSelectChat(chat.id);
-                  onClose();
+                  onSelectChat(chat.id);
+                  closePalette();
                 }}
                 id={`command-option-${actionItems.length + chatIndex}`}
                 role="option"
                 aria-selected={activeIndex === actionItems.length + chatIndex}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === actionItems.length + chatIndex ? "bg-accent" : ""}`}
+                className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent ${activeIndex === actionItems.length + chatIndex ? "bg-accent" : ""}`}
               >
                 <span className="h-2 w-2 rounded-full bg-muted-foreground/50" />
-                <span className="min-w-0 flex-1 truncate" title={chat.title}>
-                  {chat.title}
-                </span>
-                {archivedIds.has(chat.id) ? (
-                  <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                    Archived
-                  </span>
-                ) : null}
+                <span className="min-w-0 flex-1 truncate">{chat.title}</span>
                 <span className="hidden max-w-52 truncate text-xs text-muted-foreground sm:block">
                   {snippet}
                 </span>
               </button>
             ))
           )}
-          {workspaceMatches.length ? (
-            <>
-              <div className="px-3 pb-1 pt-4 text-xs font-medium text-muted-foreground">
-                Workspace
-              </div>
-              {workspaceMatches.map((item, itemIndex) => {
-                const index = actionItems.length + conversationMatches.length + itemIndex;
-                return (
-                  <a
-                    key={`${item.type}:${item.id}`}
-                    href={item.href}
-                    id={`command-option-${index}`}
-                    role="option"
-                    aria-selected={activeIndex === index}
-                    className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm hover:bg-accent ${activeIndex === index ? "bg-accent" : ""}`}
-                    onClick={onClose}
-                  >
-                    <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] capitalize text-muted-foreground">
-                      {item.type.replaceAll("_", " ")}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate" title={item.title}>
-                        {item.title}
-                      </span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {item.subtitle}
-                      </span>
-                    </span>
-                  </a>
-                );
-              })}
-            </>
-          ) : null}
           <p className="border-t px-3 py-2 text-[11px] text-muted-foreground">
             Press Alt+Enter to pin or unpin the selected command.
           </p>

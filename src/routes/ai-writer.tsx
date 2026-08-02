@@ -40,7 +40,7 @@ function Page() {
       h1="AI Writer That Sounds Like You, Not Like a Bot"
       intro="KovaGPT helps you draft, rewrite, and polish writing across every format that matters - emails, essays, blog posts, scripts, LinkedIn posts, captions, product copy - while keeping your voice, not replacing it. Give it a topic or a rough draft and it delivers clear, publishable prose in seconds."
       benefits={[
-        "Turn bullet points or voice notes into a finished draft",
+        "Turn bullet points or pasted notes into a finished draft",
         "Rewrite emails to sound more professional, warmer, or more direct",
         "Match your existing tone from writing samples",
         "Generate outlines, hooks, titles, and social captions",

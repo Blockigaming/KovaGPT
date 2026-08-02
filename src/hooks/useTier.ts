@@ -2,15 +2,9 @@
 // row from Supabase (RLS scoped to auth.uid()) and resolves to free/plus/pro.
 import { useEffect, useState } from "react";
 import { getSupabaseClientConfigStatus, supabase } from "@/integrations/supabase/client";
+import { BILLING_ENV, tierForLookupKey, type BillingTier } from "@/lib/billing-plans";
 
-export type Tier = "free" | "plus" | "pro";
-
-function classify(priceId: string | null | undefined): Tier {
-  const id = (priceId ?? "").toLowerCase();
-  if (id.includes("pro")) return "pro";
-  if (id.includes("plus")) return "plus";
-  return "free";
-}
+export type Tier = BillingTier;
 
 export function useTier(): { tier: Tier; loading: boolean } {
   const [tier, setTier] = useState<Tier>("free");
@@ -39,6 +33,7 @@ export function useTier(): { tier: Tier; loading: boolean } {
           .from("subscriptions")
           .select("price_id, status, current_period_end")
           .eq("user_id", targetUid)
+          .eq("environment", BILLING_ENV)
           .order("created_at", { ascending: false })
           .limit(5);
         const now = Date.now();
@@ -50,7 +45,7 @@ export function useTier(): { tier: Tier; loading: boolean } {
               (!row.current_period_end || end > now)) ||
             (row.status === "canceled" && end > now);
           if (!active) continue;
-          const t = classify(row.price_id);
+          const t = tierForLookupKey(row.price_id);
           if (t === "pro") return "pro";
           if (t === "plus") resolved = "plus";
         }

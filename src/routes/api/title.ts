@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { chatCompletions, chatModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
 
 const RATE_LIMIT_MAX = 30;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
@@ -79,7 +78,11 @@ export const Route = createFileRoute("/api/title")({
               headers: { "Content-Type": "application/json" },
             });
           }
-          const missingProvider = missingAiProviderResponse({ title: "New chat" });
+          const { chatCompletions, chatModel, missingAiProviderResponse } =
+            await import("@/lib/ai/provider.server");
+          const missingProvider = missingAiProviderResponse({
+            title: "New chat",
+          });
           if (missingProvider) return missingProvider;
 
           const excerpt = messages

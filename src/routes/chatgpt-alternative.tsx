@@ -4,29 +4,33 @@ import { seoLandingHead } from "@/components/seo-landing-head";
 
 const faq = [
   {
-    q: "Is KovaGPT a real ChatGPT alternative?",
-    a: "Yes. KovaGPT is an AI chatbot that handles writing, studying, coding, research, and image generation in a single app, with focused modes so you get answers tuned to the task instead of a one-size-fits-all reply.",
+    q: "Is KovaGPT affiliated with OpenAI or ChatGPT?",
+    a: "No. KovaGPT is an independently developed and branded product. It is not affiliated with, endorsed by, or sponsored by OpenAI. ChatGPT is a trademark of OpenAI.",
   },
   {
-    q: "Do I need to pay to try it?",
-    a: "No. You can try KovaGPT free with a generous daily allowance. Paid plans unlock higher limits, priority models, larger uploads, and image generation credits.",
+    q: "What can I use KovaGPT for?",
+    a: "KovaGPT offers focused experiences for chat, writing, study, coding, research, and image tasks. The tools and limits available to you are shown in the product and can vary by account or configuration.",
   },
   {
-    q: "Can KovaGPT connect to my Gmail and Google Calendar?",
-    a: "Yes. Connect your Google account from the Apps page and KovaGPT can search email, read messages, draft or send email, and create calendar events - always asking you to confirm before it sends anything.",
+    q: "Can I try KovaGPT before choosing a paid plan?",
+    a: "Open KovaGPT to see the access currently available to your account. The pricing page and in-product usage displays are the source of truth for current plans and limits.",
   },
   {
-    q: "Does KovaGPT keep my chats private?",
-    a: "Your conversations are stored in your account so you can pick them up later. You can delete any chat at any time, and we never sell your data.",
+    q: "How are connected apps handled?",
+    a: "Connected-app capabilities appear only after an integration is enabled. KovaGPT asks for confirmation before supported consequential actions, and exact capabilities depend on the provider and account configuration.",
+  },
+  {
+    q: "Where can I review KovaGPT's privacy terms?",
+    a: "The Privacy page describes current data-handling terms. In-product controls show the deletion and account options that are actually available to you.",
   },
 ];
 
 export const Route = createFileRoute("/chatgpt-alternative")({
   head: () =>
     seoLandingHead({
-      title: "ChatGPT Alternative for Work, Study & Creativity | KovaGPT",
+      title: "KovaGPT | Independent AI Workspace",
       description:
-        "KovaGPT is a fast ChatGPT alternative with focused modes for writing, studying, coding, research, and image generation. Free to try, no card required.",
+        "KovaGPT is an independent AI workspace with focused experiences for chat, writing, study, coding, research, and images. Availability varies by account.",
       path: "/chatgpt-alternative",
       ogImage: "/og/home.jpg",
       faq,
@@ -37,30 +41,30 @@ export const Route = createFileRoute("/chatgpt-alternative")({
 function Page() {
   return (
     <SeoLanding
-      h1="The ChatGPT Alternative Built Around How You Actually Work"
-      intro="KovaGPT is a modern AI chatbot that swaps a blank prompt for focused modes - writing, study, code, research, images, everyday chat - so answers arrive tuned to the task. It runs fast, remembers what you asked, and can act on Gmail and Google Calendar when you connect them."
+      h1="KovaGPT, built for focused AI work"
+      intro="KovaGPT is an independent AI workspace for chat, writing, study, code, research, and images. Choose a focused experience and use the tools available to your account. KovaGPT is not affiliated with or endorsed by OpenAI."
       benefits={[
-        "Purpose-built modes for writing, study, coding, research, and images",
-        "Connect Gmail and Google Calendar to read, draft, and schedule",
-        "Long-term memory of your projects, preferences, and tone",
-        "Upload files, screenshots, and documents for context",
-        "Saved chat history you can search and share",
-        "Transparent pricing with a real free tier",
+        "Focused experiences for writing, study, coding, research, and image tasks",
+        "Project and conversation organization",
+        "File context where uploads are available",
+        "Optional connected apps when configured",
+        "Confirmation steps for supported consequential actions",
+        "Account-specific settings, plan information, and usage limits",
       ]}
       details={[
-        "Most AI chatbots hand you a blank text box and expect you to figure out how to prompt them. KovaGPT flips that: pick a mode and the assistant already knows what good looks like - a study mode that explains step-by-step, a writer mode that keeps your voice, a code mode that debugs before it lectures.",
-        "It also does the thing generic chatbots can't: real work in your inbox and calendar. Connect Google once and KovaGPT can find that email from your accountant, draft a reply in your tone, or schedule a meeting for next Tuesday - with a confirmation card before anything is sent.",
+        "KovaGPT is developed and branded as its own product. Third-party names on this comparison page identify products people may be comparing; they do not imply sponsorship, endorsement, or affiliation.",
+        "Capabilities can vary by plan, region, connected provider, and account configuration. The live product, pricing page, and in-product usage displays show what is available to a particular account.",
       ]}
       prompts={[
-        "Draft a follow-up email to the client I met yesterday",
-        "Summarize this PDF and pull out the three decisions",
-        "Explain gradient descent like I'm a first-year CS student",
-        "Find my Amazon receipts from November and total them",
-        "Create a 30-minute focus block tomorrow at 10am",
+        "Turn these notes into a concise outline",
+        "Explain this concept step by step",
+        "Review this function for likely bugs",
+        "Summarize this document and list open questions",
+        "Create an image prompt for a product illustration",
       ]}
       ctas={[
-        { label: "Try KovaGPT Free", to: "/" },
-        { label: "See Pricing", to: "/pricing" },
+        { label: "Open KovaGPT", to: "/" },
+        { label: "Review Pricing", to: "/pricing" },
         { label: "Explore Modes", to: "/modes" },
       ]}
       faq={faq}

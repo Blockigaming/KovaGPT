@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Sidebar } from "@/components/Sidebar";
-import { type Settings, DEFAULT_SETTINGS } from "@/lib/settings-types";
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog })),
 );
@@ -13,12 +12,20 @@ import { AppErrorBoundary, OfflineBanner } from "@/components/states";
 import { MobileTopBar } from "@/components/MobileTopBar";
 import { installShortcutListener } from "@/lib/shortcuts";
 import { PanelLeft } from "lucide-react";
+import { useUser } from "@/components/auth/ClerkSafe";
 import {
   type Conversation,
+  chatStoragePrincipal,
+  clearPendingActive,
   loadConversations,
   saveConversations,
-  subscribeToConversationChanges,
+  savePendingActive,
 } from "@/lib/chat-store";
+import { useNovaSettings } from "@/lib/use-nova-settings";
+import {
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+} from "@/lib/principal-browser-storage.mjs";
 
 /**
  * Shared shell that renders the chat Sidebar alongside any page (e.g. /apps,
@@ -26,16 +33,20 @@ import {
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const { isLoaded, user } = useUser();
+  const userKey = user?.id ?? null;
+  const storagePrincipal = chatStoragePrincipal(userKey);
+  const [conversationState, setConversationState] = useState<{
+    principal: string | null;
+    items: Conversation[];
+  }>({ principal: null, items: [] });
+  const principalReady = isLoaded && conversationState.principal === storagePrincipal;
+  const conversations = principalReady ? conversationState.items : [];
   // Default closed to avoid a flash-of-open sidebar during SSR/hydration on
   // narrow viewports; on desktop we restore the persisted user preference.
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarRestored, setSidebarRestored] = useState(false);
   useEffect(() => {
-    if (typeof window === "undefined" || window.innerWidth < 1024) {
-      setSidebarRestored(true);
-      return;
-    }
+    if (typeof window === "undefined" || window.innerWidth < 1024) return;
     let saved: string | null = null;
     try {
       saved = localStorage.getItem("kova-sidebar-open");
@@ -43,8 +54,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       /* ignore */
     }
     setSidebarOpen(saved === null ? true : saved === "1");
-    const frame = window.requestAnimationFrame(() => setSidebarRestored(true));
-    return () => window.cancelAnimationFrame(frame);
   }, []);
   useEffect(() => {
     if (typeof window === "undefined" || window.innerWidth < 1024) return;
@@ -60,52 +69,74 @@ export function AppShell({ children }: { children: ReactNode }) {
   const openHelp = useCallback(() => {
     navigate({ to: "/help" as never });
   }, [navigate]);
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useNovaSettings(userKey, isLoaded);
 
   useEffect(() => {
-    setConversations(loadConversations());
-    return subscribeToConversationChanges(setConversations);
-  }, []);
-
-  useEffect(() => {
-    return installShortcutListener({
-      "new-chat": () => {
-        try {
-          localStorage.removeItem("nova-gpt-pending-active");
-        } catch {
-          /* ignore */
-        }
-        navigate({ to: "/" });
-      },
-      search: () => {
-        window.dispatchEvent(new CustomEvent("kova-open-search"));
-      },
-      "open-projects": () => {
-        navigate({ to: "/projects" as never });
-      },
-      "open-library": () => {
-        navigate({ to: "/library" });
-      },
-      "open-settings": () => {
-        settingsReturnFocusRef.current =
-          document.activeElement instanceof HTMLElement ? document.activeElement : null;
-        setSettingsTab(undefined);
-        setSettingsOpen(true);
-      },
-      "generate-image": () => {
-        navigate({ to: "/images" });
-      },
-      "toggle-sidebar": () => {
-        setSidebarOpen((v) => !v);
-      },
-      "focus-input": () => {
-        const el = document.querySelector<HTMLTextAreaElement>(
-          'textarea, [contenteditable="true"]',
-        );
-        el?.focus();
-      },
+    if (!isLoaded) {
+      setConversationState({ principal: null, items: [] });
+      setSettingsOpen(false);
+      return;
+    }
+    setSettingsOpen(false);
+    setConversationState({
+      principal: storagePrincipal,
+      items: loadConversations(userKey),
     });
-  }, [navigate]);
+  }, [isLoaded, storagePrincipal, userKey]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    const reset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      setConversationState({ principal: null, items: [] });
+      setSettingsOpen(false);
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+    return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+  }, [isLoaded, userKey]);
+
+  useEffect(() => {
+    return installShortcutListener(
+      {
+        "new-chat": () => {
+          try {
+            clearPendingActive(userKey);
+          } catch {
+            /* ignore */
+          }
+          navigate({ to: "/" });
+        },
+        search: () => {
+          window.dispatchEvent(new CustomEvent("kova-open-search"));
+        },
+        "open-projects": () => {
+          navigate({ to: "/projects" as never });
+        },
+        "open-library": () => {
+          navigate({ to: "/library" });
+        },
+        "open-settings": () => {
+          settingsReturnFocusRef.current =
+            document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          setSettingsTab(undefined);
+          setSettingsOpen(true);
+        },
+        "generate-image": () => {
+          navigate({ to: "/images" });
+        },
+        "toggle-sidebar": () => {
+          setSidebarOpen((v) => !v);
+        },
+        "focus-input": () => {
+          const el = document.querySelector<HTMLTextAreaElement>(
+            'textarea, [contenteditable="true"]',
+          );
+          el?.focus();
+        },
+      },
+      isLoaded ? userKey : undefined,
+    );
+  }, [isLoaded, navigate, userKey]);
 
   const openSettings = useCallback((tab?: string) => {
     settingsReturnFocusRef.current =
@@ -124,8 +155,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [openSettings]);
 
   const goToConversation = (id: string) => {
+    if (!principalReady) return;
     try {
-      localStorage.setItem("nova-gpt-pending-active", id);
+      savePendingActive(userKey, id);
     } catch {
       /* ignore */
     }
@@ -134,7 +166,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const handleNew = () => {
     try {
-      localStorage.removeItem("nova-gpt-pending-active");
+      clearPendingActive(userKey);
     } catch {
       /* ignore */
     }
@@ -142,17 +174,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   const handleDelete = (id: string) => {
+    if (!principalReady) return;
     const next = conversations.filter((c) => c.id !== id);
-    setConversations(next);
-    saveConversations(next);
-  };
-
-  const handleRename = (id: string, title: string) => {
-    const next = conversations.map((conversation) =>
-      conversation.id === id ? { ...conversation, title, updatedAt: Date.now() } : conversation,
-    );
-    setConversations(next);
-    saveConversations(next);
+    setConversationState({ principal: storagePrincipal, items: next });
+    saveConversations(userKey, next);
   };
 
   return (
@@ -188,12 +213,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         onSelect={goToConversation}
         onNew={handleNew}
         onDelete={handleDelete}
-        onRename={handleRename}
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
         onOpenHelp={openHelp}
-        focusToggleOnChange={sidebarRestored}
       />
 
       <div className="flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">
@@ -201,7 +224,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         <MobileTopBar onOpenSidebar={() => setSidebarOpen(true)} onNewChat={handleNew} />
         {!sidebarOpen && (
           <button
-            onClick={() => setSidebarOpen(true)}
+            onClick={() => {
+              setSidebarOpen(true);
+              window.requestAnimationFrame(() => {
+                document
+                  .querySelector<HTMLElement>('[aria-label="Collapse sidebar"]')
+                  ?.focus({ preventScroll: true });
+              });
+            }}
             className="hidden lg:flex fixed top-3 left-3 z-30 p-2 rounded-md bg-background/90 border border-border hover:bg-accent transition shadow-sm items-center justify-center"
             aria-label="Open sidebar"
           >
@@ -220,12 +250,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             returnFocusTarget={settingsReturnFocusRef.current}
             onChange={setSettings}
             onClearAll={() => {
-              try {
-                localStorage.removeItem("nova-gpt-conversations-v2");
-              } catch {
-                /* ignore */
-              }
-              setConversations([]);
+              setConversationState({ principal: storagePrincipal, items: [] });
             }}
             onOpenHelp={openHelp}
             initialTab={settingsTab}
@@ -233,7 +258,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
         <OnboardingDialog />
       </Suspense>
-      <TimersWidget />
+      <TimersWidget userKey={userKey} principalResolved={isLoaded} />
     </div>
   );
 }

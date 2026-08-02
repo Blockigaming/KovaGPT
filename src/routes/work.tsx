@@ -10,8 +10,6 @@ import {
   FileText,
   Globe,
   Loader2,
-  Pause,
-  Play,
   RefreshCw,
   Search,
   Square,
@@ -59,17 +57,9 @@ const statusTone: Record<string, string> = {
   retrying: "bg-orange-500",
 };
 function factualStatus(run: WorkRun) {
-  if (run.status === "retrying") return `Retrying attempt ${run.attempts} of ${run.maxAttempts}`;
-  if (run.status === "approval_required") return "Approval required";
-  if (run.status === "leased") return "Waiting for worker";
-  if (run.status === "cancelling") return "Cancellation in progress";
+  if (!terminal.has(run.status))
+    return `Execution unavailable · stored status: ${run.status.replaceAll("_", " ")}`;
   return run.status.replaceAll("_", " ");
-}
-function elapsed(run: WorkRun, now: number) {
-  const start = new Date(run.startedAt ?? run.createdAt).getTime();
-  const end = run.completedAt ? new Date(run.completedAt).getTime() : now;
-  const seconds = Math.max(0, Math.floor((end - start) / 1000));
-  return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
 }
 
 function WorkRoute() {
@@ -81,7 +71,6 @@ function WorkRoute() {
     [detail, setDetail] = useState<WorkDetail | null>(null),
     [loading, setLoading] = useState(true),
     [error, setError] = useState<string | null>(null),
-    [now, setNow] = useState(Date.now()),
     [tab, setTab] = useState<"graph" | "timeline" | "evidence" | "deliverables" | "approvals">(
       "graph",
     );
@@ -111,21 +100,14 @@ function WorkRoute() {
   useEffect(() => {
     void loadDetail();
   }, [loadDetail]);
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setNow(Date.now());
-      if (detail && !terminal.has(detail.run.status)) void loadDetail();
-    }, 2000);
-    return () => clearInterval(timer);
-  }, [detail, loadDetail]);
-  async function act(action: "pause" | "resume" | "cancel") {
+  async function cancelRun() {
     if (!selected) return;
     try {
-      await control({ data: { id: selected, action } });
+      await control({ data: { id: selected, action: "cancel" } });
       await loadDetail();
       await loadRuns();
     } catch {
-      toast.error("Run state changed. Reload and try again.");
+      toast.error("The historical run could not be cancelled. Reload and try again.");
     }
   }
   return (
@@ -179,7 +161,7 @@ function WorkRoute() {
             <EmptyState
               icon={Activity}
               title="No Work runs"
-              description="Agent and browser runs will appear here as soon as they are queued."
+              description="Agent execution is unavailable. Historical records will appear here when present."
             />
           ) : (
             <>
@@ -192,27 +174,14 @@ function WorkRoute() {
                       />
                       <h2 className="font-semibold capitalize">{detail.run.kind} run</h2>
                     </div>
-                    <p className="mt-1 text-sm capitalize text-muted-foreground" aria-live="polite">
-                      {factualStatus(detail.run)} · {elapsed(detail.run, now)} ·{" "}
-                      {detail.events.length} actions
+                    <p className="mt-1 text-sm text-muted-foreground" aria-live="polite">
+                      {factualStatus(detail.run)} · {detail.events.length} recorded events
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    {["running", "leased", "queued", "retrying"].includes(detail.run.status) && (
-                      <button onClick={() => void act("pause")} className="work-action">
-                        <Pause />
-                        Pause
-                      </button>
-                    )}
-                    {["paused", "approval_required"].includes(detail.run.status) && (
-                      <button onClick={() => void act("resume")} className="work-action">
-                        <Play />
-                        Resume
-                      </button>
-                    )}
                     {!terminal.has(detail.run.status) && (
                       <button
-                        onClick={() => void act("cancel")}
+                        onClick={() => void cancelRun()}
                         className="work-action text-destructive"
                       >
                         <Square />
@@ -221,6 +190,10 @@ function WorkRoute() {
                     )}
                   </div>
                 </div>
+                <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
+                  Agent execution is unavailable. Historical records remain readable; active legacy
+                  runs can only be cancelled.
+                </p>
                 <select
                   className="mt-3 min-h-11 w-full rounded-xl border bg-background px-3 md:hidden"
                   value={selected ?? ""}
@@ -926,9 +899,9 @@ function Deliverables({
 }
 function Approvals({ detail, refresh }: { detail: WorkDetail; refresh: () => Promise<void> }) {
   const decide = useServerFn(decideApproval);
-  async function act(id: string, decision: "approved" | "denied") {
+  async function deny(id: string) {
     try {
-      await decide({ data: { id, decision } });
+      await decide({ data: { id, decision: "denied" } });
       await refresh();
     } catch {
       toast.error("Approval is no longer pending.");
@@ -955,17 +928,13 @@ function Approvals({ detail, refresh }: { detail: WorkDetail; refresh: () => Pro
                 <p className="mt-1 text-sm text-muted-foreground">Destination: {a.destination}</p>
                 {a.status === "pending" && (
                   <div className="mt-3 flex gap-2">
-                    <button className="work-small" onClick={() => void act(a.id, "approved")}>
-                      <Check />
-                      Approve
-                    </button>
-                    <button
-                      className="work-small text-destructive"
-                      onClick={() => void act(a.id, "denied")}
-                    >
+                    <button className="work-small text-destructive" onClick={() => void deny(a.id)}>
                       <X />
                       Deny
                     </button>
+                    <span className="self-center text-xs text-muted-foreground">
+                      Approval is disabled while execution is unavailable.
+                    </span>
                   </div>
                 )}
               </div>

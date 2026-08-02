@@ -19,8 +19,6 @@ import {
   Globe,
   Mail,
   FileText,
-  Volume2,
-  CircleStop,
 } from "lucide-react";
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileBottomSheet } from "./MobileBottomSheet";
@@ -43,16 +41,19 @@ import { ToolConfirmCard } from "./ToolConfirmCard";
 import type { PendingConfirm } from "@/lib/chat-store";
 import { InfoChip } from "./InfoChip";
 import { detectInfoChip } from "./info-chip-utils";
-import { canReadAloud, speechText } from "@/lib/browser-voice";
-import { submitResponseFeedback } from "@/lib/feedback.functions";
-import { MessageImage } from "./MessageImage";
-import { extractEmailFromMessage, openEmailCompose } from "./message-action-utils";
+import {
+  browserStoragePrincipal,
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+  principalScopedStorageKey,
+  safeBrowserStorage,
+} from "@/lib/principal-browser-storage.mjs";
 
 const ChatChart = lazy(() =>
-  import("./ChatChart").then((module) => ({ default: module.ChatChart })),
+  import("./ChatChart").then(({ ChatChart }) => ({ default: ChatChart })),
 );
 const ArtifactEditor = lazy(() =>
-  import("./ArtifactEditor").then((module) => ({ default: module.ArtifactEditor })),
+  import("./ArtifactEditor").then(({ ArtifactEditor }) => ({ default: ArtifactEditor })),
 );
 
 function MarkdownCode({ className, children }: React.ComponentProps<"code">) {
@@ -67,13 +68,9 @@ function MarkdownCode({ className, children }: React.ComponentProps<"code">) {
         <button
           type="button"
           onClick={async () => {
-            try {
-              await navigator.clipboard.writeText(text);
-              setCopied(true);
-              window.setTimeout(() => setCopied(false), 1600);
-            } catch {
-              toast.error("Code could not be copied. Check clipboard access and try again.");
-            }
+            await navigator.clipboard.writeText(text);
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 1600);
           }}
           aria-label={copied ? "Code copied" : "Copy code"}
         >
@@ -102,16 +99,7 @@ const markdownComponents = {
       <span className="sr-only"> (opens in a new tab)</span>
     </a>
   ),
-  img: (props: React.ComponentProps<"img">) => <MessageImage {...props} />,
 };
-
-const MarkdownContent = memo(function MarkdownContent({ content }: { content: string }) {
-  return (
-    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-      {content}
-    </ReactMarkdown>
-  );
-});
 
 // Preserve the model's markdown exactly enough for source links, citation
 // markers, lists, and typography to survive rendering. ReactMarkdown handles
@@ -125,6 +113,71 @@ function cleanAssistantText(text: string): string {
 // "Send email" button can prefill Gmail / Outlook compose windows. Handles
 // three shapes: an explicit "Subject: ..." line, a fenced block labelled
 // email, or a message that opens with a greeting like Hi/Hello/Dear.
+export function extractEmailFromMessage(raw: string): { subject: string; body: string } | null {
+  if (!raw) return null;
+  const text = raw.replace(/\r\n/g, "\n").trim();
+
+  // 1) "Subject: ..." on its own line (case-insensitive).
+  const subjectMatch = text.match(/^\s*subject\s*:\s*(.+)$/im);
+  if (subjectMatch) {
+    const subject = subjectMatch[1].trim().replace(/^["']|["']$/g, "");
+    const body = text
+      .replace(subjectMatch[0], "")
+      .replace(/^\s*to\s*:.*$/im, "")
+      .replace(/^\s*from\s*:.*$/im, "")
+      .replace(/^\s*cc\s*:.*$/im, "")
+      .replace(/^\s*bcc\s*:.*$/im, "")
+      .replace(/^```(?:email|markdown|text)?\n?/i, "")
+      .replace(/```\s*$/i, "")
+      .trim();
+    if (body.length > 10) return { subject, body };
+  }
+
+  // 2) Fenced ```email block.
+  const fenced = text.match(/```(?:email|eml)?\s*\n([\s\S]+?)```/i);
+  if (fenced) {
+    const inner = fenced[1].trim();
+    const nested = extractEmailFromMessage(inner);
+    if (nested) return nested;
+  }
+
+  // 3) Greeting heuristic - starts with Hi/Hello/Dear/Hey <Name>, and has
+  // enough body + a signoff to feel like a real email draft.
+  const greeting = text.match(
+    /^(hi|hello|dear|hey|good\s+(morning|afternoon|evening))\b[^\n]{0,60},?\s*\n/i,
+  );
+  const signoff =
+    /\n\s*(best|thanks|thank you|regards|sincerely|cheers|kind regards|warmly|talk soon)[,\s]/i.test(
+      text,
+    );
+  if (greeting && signoff && text.length > 80) {
+    return { subject: "", body: text };
+  }
+
+  return null;
+}
+
+// Open a compose window in Gmail or Outlook prefilled with subject/body, and
+// copy the body to the clipboard as a fallback so the user can paste manually.
+export async function openEmailCompose(
+  provider: "gmail" | "outlook",
+  subject: string,
+  body: string,
+) {
+  try {
+    await navigator.clipboard.writeText(body);
+  } catch {
+    /* clipboard may be blocked; the compose URL still carries the body */
+  }
+  const su = encodeURIComponent(subject);
+  const bo = encodeURIComponent(body);
+  const url =
+    provider === "gmail"
+      ? `https://mail.google.com/mail/?view=cm&fs=1&tf=1&su=${su}&body=${bo}`
+      : `https://outlook.office.com/mail/deeplink/compose?subject=${su}&body=${bo}`;
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
 // Short status label shown while the assistant is streaming but has no text yet.
 // Derives from the latest running/last activity tool, so users see
 // "Searching", "Reading Files", "Interacting with Gmail", etc.
@@ -162,6 +215,8 @@ function ChatMessageInner({
   onBranch,
   onEdit,
   onUpdatePendingConfirm,
+  userKey,
+  principalResolved,
 }: {
   message: Message;
   streaming?: boolean;
@@ -170,38 +225,51 @@ function ChatMessageInner({
   onBranch?: () => void;
   onEdit?: () => void;
   onUpdatePendingConfirm?: (messageId: string, next: PendingConfirm) => void;
+  userKey: string | null;
+  principalResolved: boolean;
 }) {
-  const feedbackKey = `kova-feedback:${message.id}`;
-  const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
+  const principal = principalResolved ? browserStoragePrincipal(userKey) : null;
+  const principalRef = useRef(principal);
+  principalRef.current = principal;
+  const lifecycleGenerationRef = useRef(0);
+  const feedbackKey = principalResolved
+    ? principalScopedStorageKey("kova-message-feedback", userKey)
+    : null;
+  const messageFeedbackKey = feedbackKey
+    ? `${feedbackKey}:${encodeURIComponent(message.id)}`
+    : null;
+  const [feedbackState, setFeedbackState] = useState<{
+    principal: string | null;
+    value: "up" | "down" | null;
+  }>({ principal: null, value: null });
+  const feedback = feedbackState.principal === principal ? feedbackState.value : null;
   useEffect(() => {
-    try {
-      const v = localStorage.getItem(feedbackKey);
-      if (v === "up" || v === "down") setFeedback(v);
-    } catch {
-      /* ignore */
+    lifecycleGenerationRef.current += 1;
+  }, [principal]);
+  useEffect(() => {
+    if (!principal || !messageFeedbackKey) {
+      setFeedbackState({ principal: null, value: null });
+      return;
     }
-  }, [feedbackKey]);
-  const persistFeedback = async (next: "up" | "down" | null) => {
-    const previous = feedback;
-    setFeedback(next);
     try {
-      if (next) localStorage.setItem(feedbackKey, next);
-      else localStorage.removeItem(feedbackKey);
-    } catch {
-      /* ignore */
-    }
-    if (!isSignedIn) return;
-    try {
-      await feedbackFn({
-        data: {
-          messageId: message.id,
-          rating: next,
-          contextExcerpt: next ? message.content.slice(0, 2_000) : undefined,
-        },
+      const v = safeBrowserStorage("localStorage")?.getItem(messageFeedbackKey);
+      setFeedbackState({
+        principal,
+        value: v === "up" || v === "down" ? v : null,
       });
     } catch {
-      setFeedback(previous);
-      toast.error("Feedback could not be saved. Try again.");
+      setFeedbackState({ principal, value: null });
+    }
+  }, [messageFeedbackKey, principal]);
+  const persistFeedback = (next: "up" | "down" | null) => {
+    if (!principal || !messageFeedbackKey || feedbackState.principal !== principal) return;
+    setFeedbackState({ principal, value: next });
+    try {
+      const storage = safeBrowserStorage("localStorage");
+      if (next) storage?.setItem(messageFeedbackKey, next);
+      else storage?.removeItem(messageFeedbackKey);
+    } catch {
+      /* ignore */
     }
   };
   const isUser = message.role === "user";
@@ -235,36 +303,26 @@ function ChatMessageInner({
   const [saved, setSaved] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState<"edit" | "preview">("edit");
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [readAloudSupported, setReadAloudSupported] = useState(false);
   const { isSignedIn } = useUser();
-  const feedbackFn = useServerFn(submitResponseFeedback);
 
   const saveFn = useServerFn(saveToLibrary);
 
   useEffect(() => {
-    setReadAloudSupported(canReadAloud());
-    return () => {
-      if (typeof window !== "undefined") window.speechSynthesis?.cancel();
+    if (!principalResolved || !principal) return;
+    const reset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      lifecycleGenerationRef.current += 1;
+      setFeedbackState({ principal: null, value: null });
+      setSaving(false);
+      setSaved(false);
+      setCopied(false);
+      setEditorOpen(false);
+      setMobileSheetOpen(false);
+      cancelLongPress();
     };
-  }, []);
-
-  const toggleReadAloud = useCallback(() => {
-    if (!canReadAloud()) return;
-    if (isSpeaking) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-      return;
-    }
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(speechText(message.content));
-    utterance.lang = document.documentElement.lang || navigator.language || "en-US";
-    utterance.rate = 1;
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-    setIsSpeaking(true);
-    window.speechSynthesis.speak(utterance);
-  }, [isSpeaking, message.content]);
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+    return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+  }, [cancelLongPress, principal, principalResolved, userKey]);
 
   const artifactKind = useMemo(
     () => (isUser ? null : detectArtifactKind(message.content || "")),
@@ -285,13 +343,9 @@ function ChatMessageInner({
   );
 
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(message.content);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1500);
-    } catch {
-      toast.error("Response could not be copied. Check clipboard access and try again.");
-    }
+    await navigator.clipboard.writeText(message.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
   };
 
   const saveItem = async () => {
@@ -299,10 +353,21 @@ function ChatMessageInner({
     // ClerkSafe sign-in prompt is no longer shown here.
 
     // Duplicate-safe: stable per-message id stored in localStorage avoids re-saves.
-    const dedupKey = "kovagpt:savedMessageIds";
+    const dedupKey = principalResolved
+      ? principalScopedStorageKey("kovagpt-saved-message-ids", userKey)
+      : null;
+    if (!principal || !dedupKey) {
+      toast.error("Your account is still loading. Try again.");
+      return;
+    }
+    const requestGeneration = lifecycleGenerationRef.current;
+    const requestPrincipal = principal;
+    const isCurrent = () =>
+      requestGeneration === lifecycleGenerationRef.current &&
+      requestPrincipal === principalRef.current;
     let savedIds: string[];
     try {
-      savedIds = JSON.parse(localStorage.getItem(dedupKey) || "[]");
+      savedIds = JSON.parse(safeBrowserStorage("localStorage")?.getItem(dedupKey) || "[]");
     } catch {
       savedIds = [];
     }
@@ -336,24 +401,32 @@ function ChatMessageInner({
         await saveFn({ data: payload });
       } else {
         const { saveGuestItem } = await import("@/lib/guest-library");
+        if (!isCurrent()) return;
         saveGuestItem(payload);
       }
+
+      if (!isCurrent()) return;
 
       if (message.id) {
         try {
           savedIds.push(message.id);
-          localStorage.setItem(dedupKey, JSON.stringify(savedIds.slice(-500)));
+          safeBrowserStorage("localStorage")?.setItem(
+            dedupKey,
+            JSON.stringify(savedIds.slice(-500)),
+          );
         } catch {
           /* ignore */
         }
       }
       setSaved(true);
       toast.success("Saved to Library");
-      setTimeout(() => setSaved(false), 2000);
+      setTimeout(() => {
+        if (isCurrent()) setSaved(false);
+      }, 2000);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not save");
+      if (isCurrent()) toast.error(e instanceof Error ? e.message : "Could not save");
     } finally {
-      setSaving(false);
+      if (isCurrent()) setSaving(false);
     }
   };
 
@@ -361,7 +434,7 @@ function ChatMessageInner({
     <article
       id={`message-${message.id}`}
       data-message-id={message.id}
-      className="kova-message group w-full animate-fade-in px-3 py-3 text-[15px] leading-[1.6] sm:px-5 lg:px-10 lg:py-4 lg:text-[16px] lg:leading-[1.65]"
+      className="kova-message group w-full animate-fade-in px-3 py-3 text-[15px] leading-[1.65] sm:px-5 lg:px-10 lg:py-4 lg:text-[16px] lg:leading-[1.7]"
       aria-label={isUser ? "Your message" : "KovaGPT response"}
     >
       {isUser ? (
@@ -372,7 +445,7 @@ function ChatMessageInner({
                 {message.attachments
                   .filter((a): a is Extract<typeof a, { kind: "image" }> => a.kind === "image")
                   .map((a, i) => (
-                    <MessageImage
+                    <img
                       key={i}
                       src={a.dataUrl}
                       alt={
@@ -454,9 +527,9 @@ function ChatMessageInner({
           >
             {message.activities && message.activities.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-1.5">
-                {message.activities.map((a) => (
+                {message.activities.map((a, i) => (
                   <span
-                    key={`${a.tool}:${a.label}`}
+                    key={i}
                     className="inline-flex items-center gap-1.5 rounded-full border border-border bg-accent/40 px-2.5 py-1 text-xs text-muted-foreground"
                   >
                     <Check className="w-3 h-3 text-primary" />
@@ -474,14 +547,33 @@ function ChatMessageInner({
                 />
               ))}
               {message.pendingImage && !message.content ? (
-                <div className="kova-image-skeleton relative aspect-square w-full max-w-sm overflow-hidden rounded-xl border border-border bg-muted">
-                  <div aria-hidden className="kova-skeleton-shimmer absolute inset-0 opacity-70" />
+                <div className="relative w-full max-w-sm aspect-square rounded-2xl border border-border overflow-hidden bg-gradient-to-br from-accent/60 via-muted to-accent/60">
+                  <div
+                    aria-hidden
+                    className="absolute inset-0 opacity-70"
+                    style={{
+                      backgroundImage:
+                        "linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.25) 50%, transparent 70%)",
+                      backgroundSize: "200% 100%",
+                      animation: "shimmer 1.8s linear infinite",
+                    }}
+                  />
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
                     <div className="relative">
                       <ImageIcon className="w-10 h-10 text-foreground/70" />
                       <Loader2 className="w-5 h-5 absolute -bottom-1 -right-1 animate-spin text-primary" />
                     </div>
-                    <div className="text-sm font-medium text-muted-foreground">Creating image</div>
+                    <div
+                      className="text-sm font-medium bg-clip-text text-transparent"
+                      style={{
+                        backgroundImage:
+                          "linear-gradient(90deg, var(--color-muted-foreground) 0%, var(--color-foreground) 50%, var(--color-muted-foreground) 100%)",
+                        backgroundSize: "200% 100%",
+                        animation: "shimmer 1.8s linear infinite",
+                      }}
+                    >
+                      Creating image
+                    </div>
                   </div>
                 </div>
               ) : streaming && !message.content ? (
@@ -495,21 +587,24 @@ function ChatMessageInner({
                     <div className="space-y-2">
                       {parts.map((p, i) =>
                         p.kind === "chart" ? (
-                          <Suspense
-                            key={i}
-                            fallback={
-                              <div className="my-4 h-48 animate-pulse rounded-2xl bg-muted" />
-                            }
-                          >
+                          <Suspense key={i} fallback={null}>
                             <ChatChart spec={p.spec} />
                           </Suspense>
                         ) : p.value.trim() ? (
-                          <MarkdownContent key={i} content={p.value} />
+                          <ReactMarkdown
+                            key={i}
+                            remarkPlugins={[remarkGfm]}
+                            components={markdownComponents}
+                          >
+                            {p.value}
+                          </ReactMarkdown>
                         ) : null,
                       )}
                     </div>
                   ) : (
-                    <MarkdownContent content={cleaned} />
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                      {cleaned}
+                    </ReactMarkdown>
                   );
                   if (artifactKind || streaming) return md;
                   const chip = detectInfoChip(cleaned);
@@ -522,7 +617,7 @@ function ChatMessageInner({
                   return md;
                 })()
               )}
-              {streaming && message.content && <span className="cursor-blink" aria-hidden="true" />}
+              {streaming && message.content && <span className="cursor-blink" />}
             </div>
           </div>
         </div>
@@ -544,44 +639,40 @@ function ChatMessageInner({
                   <Copy className="w-4 h-4" />
                 )}
               </button>
-              {isSignedIn ? (
-                <button
-                  onClick={() => {
-                    const next = feedback === "up" ? null : "up";
-                    void persistFeedback(next);
-                    if (next) toast.success("Thanks for the feedback");
-                  }}
-                  className={`inline-flex items-center justify-center p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95 ${
-                    feedback === "up"
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                  title="Good response"
-                  aria-label="Good response"
-                  aria-pressed={feedback === "up"}
-                >
-                  <ThumbsUp className={`w-4 h-4 ${feedback === "up" ? "fill-current" : ""}`} />
-                </button>
-              ) : null}
-              {isSignedIn ? (
-                <button
-                  onClick={() => {
-                    const next = feedback === "down" ? null : "down";
-                    void persistFeedback(next);
-                    if (next) toast.success("Thanks, we'll improve");
-                  }}
-                  className={`inline-flex items-center justify-center p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95 ${
-                    feedback === "down"
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                  title="Bad response"
-                  aria-label="Bad response"
-                  aria-pressed={feedback === "down"}
-                >
-                  <ThumbsDown className={`w-4 h-4 ${feedback === "down" ? "fill-current" : ""}`} />
-                </button>
-              ) : null}
+              <button
+                onClick={() => {
+                  const next = feedback === "up" ? null : "up";
+                  persistFeedback(next);
+                  if (next) toast.success("Rating saved on this device");
+                }}
+                className={`inline-flex items-center justify-center p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95 ${
+                  feedback === "up"
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="Good response"
+                aria-label="Good response"
+                aria-pressed={feedback === "up"}
+              >
+                <ThumbsUp className={`w-4 h-4 ${feedback === "up" ? "fill-current" : ""}`} />
+              </button>
+              <button
+                onClick={() => {
+                  const next = feedback === "down" ? null : "down";
+                  persistFeedback(next);
+                  if (next) toast.success("Rating saved on this device");
+                }}
+                className={`inline-flex items-center justify-center p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95 ${
+                  feedback === "down"
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="Bad response"
+                aria-label="Bad response"
+                aria-pressed={feedback === "down"}
+              >
+                <ThumbsDown className={`w-4 h-4 ${feedback === "down" ? "fill-current" : ""}`} />
+              </button>
               <button
                 onClick={async () => {
                   const text = message.content;
@@ -606,23 +697,6 @@ function ChatMessageInner({
               >
                 <Share2 className="w-4 h-4" />
               </button>
-
-              {readAloudSupported && (
-                <button
-                  type="button"
-                  onClick={toggleReadAloud}
-                  className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-all hover:scale-[1.08] hover:bg-accent hover:text-foreground active:scale-95"
-                  title={isSpeaking ? "Stop reading" : "Read aloud"}
-                  aria-label={isSpeaking ? "Stop reading response" : "Read response aloud"}
-                  aria-pressed={isSpeaking}
-                >
-                  {isSpeaking ? (
-                    <CircleStop className="h-4 w-4" />
-                  ) : (
-                    <Volume2 className="h-4 w-4" />
-                  )}
-                </button>
-              )}
 
               {email && (
                 <DropdownMenu>
@@ -793,26 +867,22 @@ function ChatMessageInner({
                   setMobileSheetOpen(false);
                 },
               },
-              ...(isSignedIn
-                ? [
-                    {
-                      label: feedback === "up" ? "Remove good rating" : "Good response",
-                      icon: ThumbsUp,
-                      onClick: () => {
-                        void persistFeedback(feedback === "up" ? null : "up");
-                        setMobileSheetOpen(false);
-                      },
-                    },
-                    {
-                      label: feedback === "down" ? "Remove bad rating" : "Bad response",
-                      icon: ThumbsDown,
-                      onClick: () => {
-                        void persistFeedback(feedback === "down" ? null : "down");
-                        setMobileSheetOpen(false);
-                      },
-                    },
-                  ]
-                : []),
+              {
+                label: feedback === "up" ? "Remove good rating" : "Good response",
+                icon: ThumbsUp,
+                onClick: () => {
+                  persistFeedback(feedback === "up" ? null : "up");
+                  setMobileSheetOpen(false);
+                },
+              },
+              {
+                label: feedback === "down" ? "Remove bad rating" : "Bad response",
+                icon: ThumbsDown,
+                onClick: () => {
+                  persistFeedback(feedback === "down" ? null : "down");
+                  setMobileSheetOpen(false);
+                },
+              },
               {
                 label: "Share",
                 icon: Share2,

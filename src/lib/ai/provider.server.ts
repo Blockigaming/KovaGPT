@@ -17,13 +17,10 @@ export type ProviderCapability =
   | "realtime_voice";
 
 export type ProviderErrorCode =
-  | "missing_openai_api_key"
   | "provider_timeout"
   | "provider_rate_limited"
-  | "provider_auth_failed"
   | "provider_unavailable"
-  | "provider_bad_response"
-  | "provider_network_error";
+  | "provider_bad_response";
 
 export type ProviderErrorEnvelope = {
   error: string;
@@ -35,7 +32,7 @@ export type ProviderErrorEnvelope = {
 export type ProviderModelKind = "fast" | "balanced" | "deep";
 
 export type ProviderConfig = {
-  provider: "lovable" | "openai";
+  provider: "openai";
   baseUrl: string;
   chatModel: string;
   fastModel: string;
@@ -47,22 +44,19 @@ export type ProviderConfig = {
   configured: boolean;
 };
 
-const LOVABLE_MODELS = {
-    chat: "google/gemini-3.1-flash-lite",
-    fast: "google/gemini-3.1-flash-lite",
-    deep: "google/gemini-3.6-flash",
-    image: "google/gemini-3.1-flash-lite-image",
-    embedding: "openai/text-embedding-3-small",
-  },
-  OPENAI_MODELS = {
-    chat: "gpt-4o-mini",
-    fast: "gpt-4o-mini",
-    deep: "gpt-4o",
-    image: "gpt-image-1",
-    embedding: "text-embedding-3-small",
-  };
+const OPENAI_API_BASE_URL = "https://api.openai.com/v1";
+
+const OPENAI_MODELS = {
+  chat: "gpt-4o-mini",
+  fast: "gpt-4o-mini",
+  deep: "gpt-4o",
+  image: "gpt-image-1",
+  embedding: "text-embedding-3-small",
+};
 
 const DEFAULT_TIMEOUT_MS = 45_000;
+const NO_STORE_HEADERS = { "Cache-Control": "no-store" } as const;
+const PROVIDER_FAILURE_CATEGORY = "model_provider_failure";
 
 const DEFAULT_CAPABILITIES: ProviderCapability[] = [
   "chat",
@@ -119,24 +113,11 @@ function parseCapabilities(value: string | undefined): ProviderCapability[] {
   return configured.length ? Array.from(new Set(configured)) : DEFAULT_CAPABILITIES;
 }
 
-function shouldUseLovableGateway() {
-  return Boolean(env("LOVABLE_API_KEY"));
-}
-
-function baseUrl(lovable: boolean) {
-  return (
-    lovable
-      ? (env("LOVABLE_AI_BASE_URL") ?? "https://ai.gateway.lovable.dev/v1")
-      : (env("OPENAI_BASE_URL") ?? "https://api.openai.com/v1")
-  ).replace(/\/$/, "");
-}
-
 export function getAiProviderConfig(): ProviderConfig {
-  const lovable = shouldUseLovableGateway(),
-    defaults = lovable ? LOVABLE_MODELS : OPENAI_MODELS;
+  const defaults = OPENAI_MODELS;
   return {
-    provider: lovable ? "lovable" : "openai",
-    baseUrl: baseUrl(lovable),
+    provider: "openai",
+    baseUrl: OPENAI_API_BASE_URL,
     chatModel: env("KOVA_CHAT_MODEL") ?? defaults.chat,
     fastModel: env("KOVA_FAST_MODEL") ?? defaults.fast,
     deepModel: env("KOVA_DEEP_MODEL") ?? defaults.deep,
@@ -144,20 +125,16 @@ export function getAiProviderConfig(): ProviderConfig {
     embeddingModel: env("KOVA_EMBEDDING_MODEL") ?? defaults.embedding,
     timeoutMs: parseTimeout(env("KOVA_AI_TIMEOUT_MS")),
     capabilities: parseCapabilities(env("KOVA_AI_CAPABILITIES")),
-    configured: Boolean(env("LOVABLE_API_KEY") || env("OPENAI_API_KEY")),
+    configured: Boolean(env("OPENAI_API_KEY")),
   };
 }
 
 export function validateAiProviderConfig(): ProviderErrorEnvelope | null {
-  if (env("LOVABLE_API_KEY") || env("OPENAI_API_KEY")) return null;
+  if (env("OPENAI_API_KEY")) return null;
   return {
-    error: "AI provider is not configured. Set LOVABLE_API_KEY or OPENAI_API_KEY on the server.",
-    code: "missing_openai_api_key",
+    error: "KovaGPT is temporarily unavailable. Please try again later.",
+    code: "provider_unavailable",
     retryable: false,
-    // A missing deployment dependency is a temporary service-availability
-    // problem, not an opaque application crash. Returning 503 lets the client
-    // show the actionable message and avoids the generic "Internal Server
-    // Error" page produced by some hosting layers for status 500 responses.
     status: 503,
   };
 }
@@ -177,7 +154,7 @@ export function providerUnavailableEnvelope(
   if (configError) return configError;
   if (capability && !supportsProviderCapability(capability)) {
     return {
-      error: `${capability.replace(/_/g, " ")} is not enabled for the configured AI provider.`,
+      error: "This KovaGPT capability is unavailable.",
       code: "provider_unavailable",
       retryable: false,
       status: 501,
@@ -189,19 +166,27 @@ export function providerUnavailableEnvelope(
 export function missingAiProviderResponse(fallback?: JsonObject): Response | null {
   const missing = validateAiProviderConfig();
   if (!missing) return null;
-  if (fallback) return Response.json(fallback, { status: 200 });
+  if (fallback) {
+    return Response.json(fallback, { status: 200, headers: NO_STORE_HEADERS });
+  }
   return Response.json(
-    { error: missing.error, code: missing.code, retryable: missing.retryable },
-    { status: missing.status },
+    {
+      error: missing.error,
+      code: missing.code,
+      category: PROVIDER_FAILURE_CATEGORY,
+      retryable: missing.retryable,
+    },
+    { status: missing.status, headers: NO_STORE_HEADERS },
   );
 }
 
 function headers(): Record<string, string> {
-  const lovableKey = env("LOVABLE_API_KEY");
-  if (lovableKey) return { "Lovable-API-Key": lovableKey, "Content-Type": "application/json" };
   const openAiKey = env("OPENAI_API_KEY");
   if (!openAiKey) throw new AiProviderError(validateAiProviderConfig()!);
-  return { Authorization: `Bearer ${openAiKey}`, "Content-Type": "application/json" };
+  return {
+    Authorization: `Bearer ${openAiKey}`,
+    "Content-Type": "application/json",
+  };
 }
 
 export function chatModel(kind: ProviderModelKind = "balanced") {
@@ -221,58 +206,39 @@ export function embeddingModel() {
 
 function normalizeProviderError(error: unknown): AiProviderError {
   if (error instanceof AiProviderError) return error;
-  if (error instanceof DOMException && error.name === "AbortError") {
+  if (
+    (error instanceof DOMException && error.name === "AbortError") ||
+    (error instanceof Error && error.name === "AbortError")
+  ) {
     return new AiProviderError({
-      error: "AI provider request timed out. Please retry.",
-      code: "provider_timeout",
-      retryable: true,
-      status: 504,
-    });
-  }
-  if (error instanceof Error && error.name === "AbortError") {
-    return new AiProviderError({
-      error: "AI provider request timed out. Please retry.",
+      error: "KovaGPT took too long to respond. Please try again.",
       code: "provider_timeout",
       retryable: true,
       status: 504,
     });
   }
   return new AiProviderError({
-    error: "AI provider network request failed. Please retry.",
-    code: "provider_network_error",
+    error: "KovaGPT is temporarily unavailable. Please try again later.",
+    code: "provider_unavailable",
     retryable: true,
     status: 502,
   });
 }
 
 export async function providerErrorFromResponse(response: Response): Promise<AiProviderError> {
-  let providerMessage = "";
-  const text = await response.text().catch(() => "");
-  if (text) {
-    try {
-      const parsed = JSON.parse(text) as {
-        error?: { message?: string } | string;
-        message?: string;
-      };
-      if (typeof parsed.error === "string") providerMessage = parsed.error;
-      else if (typeof parsed.error?.message === "string") providerMessage = parsed.error.message;
-      else if (typeof parsed.message === "string") providerMessage = parsed.message;
-    } catch {
-      providerMessage = text.slice(0, 300);
-    }
-  }
+  await response.body?.cancel().catch(() => undefined);
 
-  if (response.status === 401 || response.status === 403) {
+  if (response.status === 401 || response.status === 402 || response.status === 403) {
     return new AiProviderError({
-      error: "AI provider authentication failed. Check the server provider credentials.",
-      code: "provider_auth_failed",
+      error: "KovaGPT is temporarily unavailable. Please try again later.",
+      code: "provider_unavailable",
       retryable: false,
-      status: response.status,
+      status: 503,
     });
   }
   if (response.status === 429) {
     return new AiProviderError({
-      error: "AI provider rate limit reached. Please retry shortly.",
+      error: "KovaGPT is busy right now. Please try again shortly.",
       code: "provider_rate_limited",
       retryable: true,
       status: 429,
@@ -280,17 +246,17 @@ export async function providerErrorFromResponse(response: Response): Promise<AiP
   }
   if (response.status >= 500) {
     return new AiProviderError({
-      error: "AI provider is temporarily unavailable. Please retry.",
+      error: "KovaGPT is temporarily unavailable. Please try again later.",
       code: "provider_unavailable",
       retryable: true,
-      status: response.status,
+      status: 503,
     });
   }
   return new AiProviderError({
-    error: providerMessage || "AI provider returned an invalid response.",
+    error: "KovaGPT couldn't complete that request. Please try again.",
     code: "provider_bad_response",
     retryable: false,
-    status: response.status,
+    status: 502,
   });
 }
 
@@ -324,14 +290,17 @@ async function providerFetch(
   const config = getAiProviderConfig();
   const { signal, cleanup } = mergeSignals(init?.signal ?? undefined, config.timeoutMs);
   try {
-    const response = await fetch(`${config.baseUrl}${path}`, {
+    return await fetch(`${OPENAI_API_BASE_URL}${path}`, {
       ...init,
       method: "POST",
+      redirect: "error",
       signal,
-      headers: { ...headers(), ...Object.fromEntries(new Headers(init?.headers).entries()) },
+      headers: {
+        ...Object.fromEntries(new Headers(init?.headers).entries()),
+        ...headers(),
+      },
       body: JSON.stringify(body),
     });
-    return response;
   } catch (error) {
     throw normalizeProviderError(error);
   } finally {
@@ -343,8 +312,13 @@ export function providerErrorResponse(error: unknown, fallbackStatus = 502): Res
   const normalized = normalizeProviderError(error);
   const envelope = normalized.toEnvelope();
   return Response.json(
-    { error: envelope.error, code: envelope.code, retryable: envelope.retryable },
-    { status: envelope.status || fallbackStatus },
+    {
+      error: envelope.error,
+      code: envelope.code,
+      category: PROVIDER_FAILURE_CATEGORY,
+      retryable: envelope.retryable,
+    },
+    { status: envelope.status || fallbackStatus, headers: NO_STORE_HEADERS },
   );
 }
 

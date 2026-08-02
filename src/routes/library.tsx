@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,8 +20,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
-import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
-import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,7 +46,13 @@ type SortId = "newest" | "oldest" | "name" | "size";
 type ViewId = "grid" | "list";
 
 import { loadGuestLibrary, deleteGuestItem } from "@/lib/guest-library";
-import { loadConversations, saveConversations } from "@/lib/chat-store";
+import {
+  chatStoragePrincipal,
+  clearPendingActive,
+  loadConversations,
+  saveConversations,
+  saveDraft,
+} from "@/lib/chat-store";
 import { loadWorkTasks, saveWorkTasks } from "@/lib/work-store";
 import { safeNavigationUrl } from "@/lib/safe-url";
 import {
@@ -58,22 +62,29 @@ import {
   openInWork,
   type WorkspaceHandoff,
 } from "@/lib/workspace-handoffs";
+import {
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+  principalScopedStorageKey,
+  safeBrowserStorage,
+} from "@/lib/principal-browser-storage.mjs";
 
 const VIEW_KEY = "kova-library-view";
 const FAVORITES_KEY = "kova-library-favorites";
+const EMPTY_LIBRARY_ITEMS: LibItem[] = [];
 
-function readFavorites(): Set<string> {
-  if (typeof window === "undefined") return new Set();
+function readFavorites(key: string | null): Set<string> {
+  if (!key) return new Set();
   try {
-    return new Set(JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]"));
+    return new Set(JSON.parse(safeBrowserStorage("localStorage")?.getItem(key) || "[]"));
   } catch {
     return new Set();
   }
 }
 
-function writeFavorites(ids: Set<string>) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(FAVORITES_KEY, JSON.stringify([...ids].slice(0, 1000)));
+function writeFavorites(key: string | null, ids: Set<string>) {
+  if (!key) return;
+  safeBrowserStorage("localStorage")?.setItem(key, JSON.stringify([...ids].slice(0, 1000)));
 }
 
 function isImageItem(it: LibItem) {
@@ -96,8 +107,33 @@ function humanBytes(n: number | null | undefined): string | null {
 }
 
 function LibraryPage() {
-  const { isSignedIn, isLoaded } = useUser();
-  const [items, setItems] = useState<LibItem[]>([]);
+  const { isSignedIn, isLoaded, user } = useUser();
+  const userKey = user?.id ?? null;
+  const principal = isLoaded ? chatStoragePrincipal(userKey) : null;
+  const favoritesKey = isLoaded ? principalScopedStorageKey(FAVORITES_KEY, userKey) : null;
+  const principalRef = useRef(principal);
+  principalRef.current = principal;
+  const lifecycleGenerationRef = useRef(0);
+  const [itemState, setItemState] = useState<{
+    principal: string | null;
+    items: LibItem[];
+  }>({ principal: null, items: [] });
+  const principalReady = principal !== null && itemState.principal === principal;
+  const items = principalReady ? itemState.items : EMPTY_LIBRARY_ITEMS;
+  const setItems = useCallback(
+    (next: SetStateAction<LibItem[]>) => {
+      setItemState((previous) => {
+        if (principal === null || principalRef.current !== principal) return previous;
+        const current = previous.principal === principal ? previous.items : [];
+        return {
+          principal,
+          items: typeof next === "function" ? next(current) : next,
+        };
+      });
+    },
+    [principal],
+  );
+  const loadGenerationRef = useRef(0);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -105,52 +141,64 @@ function LibraryPage() {
   const [sort, setSort] = useState<SortId>("newest");
   const [view, setView] = useState<ViewId>(() => {
     if (typeof window === "undefined") return "grid";
-    return localStorage.getItem(VIEW_KEY) === "list" ? "list" : "grid";
+    return safeBrowserStorage("localStorage")?.getItem(VIEW_KEY) === "list" ? "list" : "grid";
   });
-  const [favorites, setFavorites] = useState<Set<string>>(() => readFavorites());
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [favoritesPrincipal, setFavoritesPrincipal] = useState<string | null>(null);
+  const favoritesReady = principal !== null && favoritesPrincipal === principal;
+  const visibleFavorites = favoritesReady ? favorites : new Set<string>();
   const [previewItem, setPreviewItem] = useState<LibItem | null>(null);
+  const visiblePreviewItem = principalReady ? previewItem : null;
   const [selected, setSelected] = useState<string[]>([]);
-  const [deleteRequest, setDeleteRequest] = useState<
-    { kind: "single"; id: string } | { kind: "bulk" } | null
-  >(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
+    const generation = ++loadGenerationRef.current;
+    if (!isLoaded || principal === null) return;
+    const isCurrent = () =>
+      loadGenerationRef.current === generation && principalRef.current === principal;
     setLoadError(null);
     const localItems: LibItem[] = [
-      ...loadConversations().map((chat): LibItem => ({
-        id: `chat:${chat.id}`,
-        title: chat.title,
-        item_type: "chat_artifact",
-        source: "chat",
-        content_text: chat.messages
-          .map((message) => `${message.role}: ${message.content}`)
-          .join("\n\n"),
-        file_url: null,
-        file_name: null,
-        file_type: "application/x-kova-chat",
-        file_size: null,
-        created_at: new Date(chat.updatedAt).toISOString(),
-      })),
-      ...loadWorkTasks().map((task): LibItem => ({
-        id: `work:${task.id}`,
-        title: task.objective,
-        item_type: "other",
-        source: "other",
-        content_text: [
-          task.context,
-          ...task.steps.map((step) => `${step.done ? "✓" : "○"} ${step.text}`),
-        ]
-          .filter(Boolean)
-          .join("\n"),
-        file_url: null,
-        file_name: null,
-        file_type: "application/x-kova-work",
-        file_size: null,
-        created_at: new Date(task.updatedAt).toISOString(),
-      })),
+      ...loadConversations(userKey).map(
+        (chat): LibItem => ({
+          id: `chat:${chat.id}`,
+          title: chat.title,
+          item_type: "chat_artifact",
+          source: "chat",
+          content_text: chat.messages
+            .map((message) => `${message.role}: ${message.content}`)
+            .join("\n\n"),
+          file_url: null,
+          file_name: null,
+          file_type: "application/x-kova-chat",
+          file_size: null,
+          created_at: new Date(chat.updatedAt).toISOString(),
+        }),
+      ),
+      ...loadWorkTasks(userKey).map(
+        (task): LibItem => ({
+          id: `work:${task.id}`,
+          title: task.objective,
+          item_type: "other",
+          source: "other",
+          content_text: [
+            task.context,
+            ...task.steps.map((step) => `${step.done ? "✓" : "○"} ${step.text}`),
+          ]
+            .filter(Boolean)
+            .join("\n"),
+          file_url: null,
+          file_name: null,
+          file_type: "application/x-kova-work",
+          file_size: null,
+          created_at: new Date(task.updatedAt).toISOString(),
+        }),
+      ),
     ];
     if (!isSignedIn) {
-      setItems([...localItems, ...loadGuestLibrary()]);
+      if (isCurrent()) {
+        setItems([...localItems, ...loadGuestLibrary()]);
+        setLoading(false);
+      }
       return;
     }
     setLoading(true);
@@ -173,48 +221,101 @@ function LibraryPage() {
           file_size: null,
           created_at: item.updatedAt,
         }));
-      setItems([...localItems, ...saved, ...workspaceItems]);
+      if (isCurrent()) setItems([...localItems, ...saved, ...workspaceItems]);
     } catch (e) {
+      if (!isCurrent()) return;
+      console.error(e);
       setLoadError(e instanceof Error ? e.message : "Could not load your library.");
       toast.error("Could not load your library.");
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  };
+  }, [isLoaded, isSignedIn, principal, setItems, userKey]);
 
   useEffect(() => {
-    if (!isLoaded) return;
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, isSignedIn]);
+    lifecycleGenerationRef.current += 1;
+    setQuery("");
+    setFilter("all");
+    setSort("newest");
+    setPreviewItem(null);
+    setSelected([]);
+    setLoadError(null);
+    if (!principal || !favoritesKey) {
+      setFavorites(new Set());
+      setFavoritesPrincipal(null);
+      return;
+    }
+    setFavorites(readFavorites(favoritesKey));
+    setFavoritesPrincipal(principal);
+  }, [favoritesKey, principal]);
 
   useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem(VIEW_KEY, view);
+    if (!isLoaded || !principal) return;
+    const reset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      loadGenerationRef.current += 1;
+      lifecycleGenerationRef.current += 1;
+      setItemState({ principal, items: [] });
+      setFavorites(new Set());
+      setFavoritesPrincipal(principal);
+      setPreviewItem(null);
+      setSelected([]);
+      setQuery("");
+      setFilter("all");
+      setSort("newest");
+      setLoading(false);
+      setLoadError(null);
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+    return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+  }, [isLoaded, principal, userKey]);
+
+  useEffect(() => {
+    if (!isLoaded || principal === null) {
+      loadGenerationRef.current += 1;
+      setItemState({ principal: null, items: [] });
+      setLoading(false);
+      setLoadError(null);
+      return;
+    }
+    void load();
+  }, [isLoaded, load, principal]);
+
+  useEffect(() => {
+    safeBrowserStorage("localStorage")?.setItem(VIEW_KEY, view);
   }, [view]);
 
   useEffect(() => {
-    if (!previewItem) return;
+    if (!visiblePreviewItem) return;
     const close = (event: KeyboardEvent) => {
       if (event.key === "Escape") setPreviewItem(null);
     };
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);
-  }, [previewItem]);
+  }, [visiblePreviewItem]);
 
   const remove = async (id: string) => {
-    setDeleteRequest({ kind: "single", id });
-  };
-
-  const removeConfirmed = async (id: string) => {
+    if (!principalReady || !principal) return;
+    const generation = lifecycleGenerationRef.current;
+    const requestPrincipal = principal;
+    const isCurrent = () =>
+      generation === lifecycleGenerationRef.current && principalRef.current === requestPrincipal;
     const existing = items;
+    if (!confirm("Delete this Library item?")) return;
     setItems((prev) => prev.filter((i) => i.id !== id));
     if (id.startsWith("chat:")) {
-      saveConversations(loadConversations().filter((chat) => `chat:${chat.id}` !== id));
+      saveConversations(
+        userKey,
+        loadConversations(userKey).filter((chat) => `chat:${chat.id}` !== id),
+      );
       toast.success("Chat deleted.");
       return;
     }
     if (id.startsWith("work:")) {
-      saveWorkTasks(loadWorkTasks().filter((task) => `work:${task.id}` !== id));
+      saveWorkTasks(
+        userKey,
+        loadWorkTasks(userKey).filter((task) => `work:${task.id}` !== id),
+      );
       toast.success("Work item deleted.");
       return;
     }
@@ -227,29 +328,32 @@ function LibraryPage() {
     try {
       const { deleteLibraryItem } = await import("@/lib/library.functions");
       await deleteLibraryItem({ data: { id } });
-      toast.success("Deleted.");
+      if (isCurrent()) toast.success("Deleted.");
     } catch (e) {
+      if (!isCurrent()) return;
       setItems(existing);
       toast.error(e instanceof Error ? e.message : "Could not delete.");
     }
   };
 
   const toggleFavorite = (id: string) => {
+    if (!favoritesReady || !favoritesKey) return;
     setFavorites((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
-      writeFavorites(next);
+      writeFavorites(favoritesKey, next);
       return next;
     });
   };
 
   const deleteSelected = async () => {
-    if (!selected.length) return;
-    setDeleteRequest({ kind: "bulk" });
-  };
-
-  const deleteSelectedConfirmed = async () => {
+    if (!principalReady || !principal) return;
+    const generation = lifecycleGenerationRef.current;
+    const requestPrincipal = principal;
+    const isCurrent = () =>
+      generation === lifecycleGenerationRef.current && principalRef.current === requestPrincipal;
+    if (!selected.length || !confirm(`Delete ${selected.length} selected Library items?`)) return;
     const existing = items;
     setItems((current) => current.filter((item) => !selected.includes(item.id)));
     try {
@@ -262,6 +366,7 @@ function LibraryPage() {
         );
         if (results.some((result) => result.status === "rejected")) {
           await load();
+          if (!isCurrent()) return;
           throw new Error("Some selected items could not be deleted. Library was refreshed.");
         }
       } else {
@@ -269,13 +374,19 @@ function LibraryPage() {
           .filter((id) => !id.startsWith("chat:") && !id.startsWith("work:"))
           .forEach(deleteGuestItem);
       }
+      if (!isCurrent()) return;
       saveConversations(
-        loadConversations().filter((chat) => !selected.includes(`chat:${chat.id}`)),
+        userKey,
+        loadConversations(userKey).filter((chat) => !selected.includes(`chat:${chat.id}`)),
       );
-      saveWorkTasks(loadWorkTasks().filter((task) => !selected.includes(`work:${task.id}`)));
+      saveWorkTasks(
+        userKey,
+        loadWorkTasks(userKey).filter((task) => !selected.includes(`work:${task.id}`)),
+      );
       setSelected([]);
       toast.success("Selected items deleted.");
     } catch (error) {
+      if (!isCurrent()) return;
       if (!isSignedIn) setItems(existing);
       toast.error(error instanceof Error ? error.message : "Selected items could not be deleted.");
     }
@@ -286,8 +397,8 @@ function LibraryPage() {
       ? `Use this saved Library item as context:\n\n${item.content_text.slice(0, 20_000)}`
       : `Help me work with this saved Library item: ${item.title}`;
     try {
-      localStorage.setItem("kova-draft:__new__", context);
-      localStorage.removeItem("nova-gpt-pending-active");
+      saveDraft(userKey, null, context);
+      clearPendingActive(userKey);
     } catch {
       toast.error("Could not prepare this item for chat.");
       return;
@@ -299,7 +410,7 @@ function LibraryPage() {
     const q = query.trim().toLowerCase();
     return items
       .filter((item) => {
-        if (filter === "favorites" && !favorites.has(item.id)) return false;
+        if (filter === "favorites" && !visibleFavorites.has(item.id)) return false;
         if (filter === "chats" && !item.id.startsWith("chat:")) return false;
         if (filter === "work" && !item.id.startsWith("work:")) return false;
         if (filter === "images" && !isImageItem(item)) return false;
@@ -323,7 +434,7 @@ function LibraryPage() {
         const delta = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         return sort === "oldest" ? -delta : delta;
       });
-  }, [favorites, filter, items, query, sort]);
+  }, [filter, items, query, sort, visibleFavorites]);
 
   const storageKnown = items.some((item) => typeof item.file_size === "number");
   const storageTotal = storageKnown
@@ -375,7 +486,8 @@ function LibraryPage() {
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem onClick={() => toggleFavorite(item.id)}>
-          <Star className="mr-2 h-4 w-4" /> {favorites.has(item.id) ? "Unfavorite" : "Favorite"}
+          <Star className="mr-2 h-4 w-4" />{" "}
+          {visibleFavorites.has(item.id) ? "Unfavorite" : "Favorite"}
         </DropdownMenuItem>
         {!item.id.startsWith("workspace:") ? (
           <>
@@ -439,7 +551,7 @@ function LibraryPage() {
             <div className="truncate text-sm font-medium">{item.title}</div>
             <div className="truncate text-xs text-muted-foreground">{meta}</div>
           </div>
-          {favorites.has(item.id) ? (
+          {visibleFavorites.has(item.id) ? (
             <Star className="h-4 w-4 fill-current text-amber-500" aria-label="Favorite" />
           ) : null}
           {renderActions(item)}
@@ -491,7 +603,7 @@ function LibraryPage() {
             <div className="truncate text-sm font-medium">{item.title}</div>
             <div className="mt-0.5 truncate text-[11px] text-muted-foreground">{meta}</div>
           </div>
-          {favorites.has(item.id) ? (
+          {visibleFavorites.has(item.id) ? (
             <Star
               className="mt-2 h-4 w-4 shrink-0 fill-current text-amber-500"
               aria-label="Favorite"
@@ -506,22 +618,28 @@ function LibraryPage() {
   return (
     <AppShell>
       <main className="kova-page kova-secondary-page" aria-labelledby="library-title">
-        <WorkspacePageHeader
-          titleId="library-title"
-          title="Library"
-          description="Chats, work, files, images, responses, and reusable context in one place."
-          meta={
-            storageTotal !== null
-              ? `Known file storage: ${humanBytes(storageTotal)}`
-              : "Storage totals require backend usage records and are omitted here."
-          }
-          actions={
-            <Button size="sm" variant="outline" onClick={load} disabled={loading}>
-              <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
-          }
-        />
+        <header className="kova-page-header">
+          <div className="min-w-0">
+            <h1 id="library-title" className="kova-page-title">
+              Library
+            </h1>
+            <p className="kova-page-description">
+              Chats, work, files, images, responses, and reusable context in one place.
+            </p>
+            {storageTotal !== null ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Known file storage: {humanBytes(storageTotal)}
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Storage totals require backend usage records and are omitted here.
+              </p>
+            )}
+          </div>
+          <Button size="sm" variant="outline" onClick={load} disabled={loading}>
+            <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
+          </Button>
+        </header>
 
         {!isSignedIn && isLoaded ? (
           <section className="kova-card p-4 text-sm" aria-label="Guest Library notice">
@@ -616,10 +734,11 @@ function LibraryPage() {
                 size="sm"
                 variant="outline"
                 onClick={() => {
-                  const next = new Set(favorites);
+                  if (!favoritesReady || !favoritesKey) return;
+                  const next = new Set(visibleFavorites);
                   selected.forEach((id) => next.add(id));
                   setFavorites(next);
-                  writeFavorites(next);
+                  writeFavorites(favoritesKey, next);
                 }}
               >
                 Favorite
@@ -677,7 +796,7 @@ function LibraryPage() {
             {filtered.map(renderItem)}
           </ul>
         )}
-        {previewItem ? (
+        {visiblePreviewItem ? (
           <div
             className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-6"
             role="dialog"
@@ -692,14 +811,14 @@ function LibraryPage() {
               <header className="flex items-center gap-3 border-b border-border p-4">
                 <div className="min-w-0 flex-1">
                   <h2 id="library-preview-title" className="truncate font-semibold">
-                    {previewItem.title}
+                    {visiblePreviewItem.title}
                   </h2>
                   <p className="text-xs text-muted-foreground">
-                    {previewItem.item_type.replace(/_/g, " ")} ·{" "}
-                    {new Date(previewItem.created_at).toLocaleDateString()}
+                    {visiblePreviewItem.item_type.replace(/_/g, " ")} ·{" "}
+                    {new Date(visiblePreviewItem.created_at).toLocaleDateString()}
                   </p>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => reuseInChat(previewItem)}>
+                <Button size="sm" variant="outline" onClick={() => reuseInChat(visiblePreviewItem)}>
                   Reuse in chat
                 </Button>
                 <button
@@ -712,16 +831,16 @@ function LibraryPage() {
                 </button>
               </header>
               <div className="max-h-[70dvh] overflow-auto p-4 sm:p-6">
-                {isImageItem(previewItem) ? (
+                {isImageItem(visiblePreviewItem) ? (
                   <img
-                    src={previewItem.file_url!}
-                    alt={previewItem.title}
+                    src={visiblePreviewItem.file_url!}
+                    alt={visiblePreviewItem.title}
                     className="mx-auto max-h-[65dvh] rounded-xl object-contain"
                   />
                 ) : (
                   <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
-                    {previewItem.content_text ||
-                      previewItem.file_name ||
+                    {visiblePreviewItem.content_text ||
+                      visiblePreviewItem.file_name ||
                       "No preview is available for this item."}
                   </pre>
                 )}
@@ -730,24 +849,6 @@ function LibraryPage() {
           </div>
         ) : null}
       </main>
-      <ConfirmActionDialog
-        open={Boolean(deleteRequest)}
-        onOpenChange={(open) => !open && setDeleteRequest(null)}
-        title={
-          deleteRequest?.kind === "bulk"
-            ? `Delete ${selected.length} items?`
-            : "Delete this Library item?"
-        }
-        description="Deleted Library content cannot be recovered from this workspace."
-        confirmLabel={deleteRequest?.kind === "bulk" ? "Delete selected" : "Delete item"}
-        destructive
-        onConfirm={() => {
-          const request = deleteRequest;
-          setDeleteRequest(null);
-          if (request?.kind === "single") void removeConfirmed(request.id);
-          else if (request?.kind === "bulk") void deleteSelectedConfirmed();
-        }}
-      />
     </AppShell>
   );
 }

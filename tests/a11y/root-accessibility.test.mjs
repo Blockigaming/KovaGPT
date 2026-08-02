@@ -9,5 +9,5 @@ test("root shell declares language, viewport fit, theme color, and recoverable e
   assert.match(root, /viewport-fit=cover/);
   assert.match(root, /theme-color/);
   assert.match(root, /errorComponent: ErrorComponent/);
-  assert.match(root, /Try again/);
+  assert.match(root, />\s*Retry\s*</);
 });
