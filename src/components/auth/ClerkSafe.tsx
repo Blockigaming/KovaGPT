@@ -245,7 +245,7 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
           setIsLoaded(true);
           return;
         }
-        if (!validatedUser) return;
+        if (!validatedUser || !assurance) return;
 
         if (assurance.nextLevel === "aal2" && assurance.currentLevel !== "aal2") {
           if (
@@ -364,7 +364,7 @@ export function ClerkProvider({ children }: { children: ReactNode }) {
               const cleanupIds = [
                 browserStorageUserIdRef.current,
                 pendingValidationUserIdRef.current,
-                data.session?.user.id ?? undefined,
+                undefined,
               ] as const;
               setSession(null);
               setPendingMfaSession(null);

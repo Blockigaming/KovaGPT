@@ -20,11 +20,11 @@ import {
   Mail,
   FileText,
 } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileBottomSheet } from "./MobileBottomSheet";
 import { useLayout } from "@/hooks/use-mobile";
 import type { Message } from "@/lib/chat-store";
-import { ChatChart, extractCharts } from "./ChatChart";
+import { extractCharts } from "./chat-chart-utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,10 +36,11 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { saveToLibrary } from "@/lib/library.functions";
 import { useUser } from "@/components/auth/ClerkSafe";
-import { ArtifactEditor, detectArtifactKind, extractCodeBlocks } from "./ArtifactEditor";
+import { detectArtifactKind, extractCodeBlocks } from "./artifact-utils";
 import { ToolConfirmCard } from "./ToolConfirmCard";
 import type { PendingConfirm } from "@/lib/chat-store";
-import { InfoChip, detectInfoChip } from "./InfoChip";
+import { InfoChip } from "./InfoChip";
+import { detectInfoChip } from "./info-chip-utils";
 import {
   browserStoragePrincipal,
   isPrincipalBrowserStorageClearedEvent,
@@ -47,6 +48,13 @@ import {
   principalScopedStorageKey,
   safeBrowserStorage,
 } from "@/lib/principal-browser-storage.mjs";
+
+const ChatChart = lazy(() =>
+  import("./ChatChart").then(({ ChatChart }) => ({ default: ChatChart })),
+);
+const ArtifactEditor = lazy(() =>
+  import("./ArtifactEditor").then(({ ArtifactEditor }) => ({ default: ArtifactEditor })),
+);
 
 function MarkdownCode({ className, children }: React.ComponentProps<"code">) {
   const language = /language-([\w-]+)/.exec(className ?? "")?.[1];
@@ -579,7 +587,9 @@ function ChatMessageInner({
                     <div className="space-y-2">
                       {parts.map((p, i) =>
                         p.kind === "chart" ? (
-                          <ChatChart key={i} spec={p.spec} />
+                          <Suspense key={i} fallback={null}>
+                            <ChatChart spec={p.spec} />
+                          </Suspense>
                         ) : p.value.trim() ? (
                           <ReactMarkdown
                             key={i}
@@ -830,14 +840,16 @@ function ChatMessageInner({
         </div>
       </div>
       {artifactKind && (
-        <ArtifactEditor
-          open={editorOpen}
-          onClose={() => setEditorOpen(false)}
-          initialContent={editorContent}
-          kind={artifactKind}
-          onImprove={onFollowUp}
-          initialMode={editorMode}
-        />
+        <Suspense fallback={null}>
+          <ArtifactEditor
+            open={editorOpen}
+            onClose={() => setEditorOpen(false)}
+            initialContent={editorContent}
+            kind={artifactKind}
+            onImprove={onFollowUp}
+            initialMode={editorMode}
+          />
+        </Suspense>
       )}
       {!isUser && message.content && (
         <MobileBottomSheet

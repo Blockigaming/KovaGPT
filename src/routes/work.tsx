@@ -697,6 +697,8 @@ function Deliverables({
     restoreRevision = useServerFn(restoreDeliverableRevision);
   const [query, setQuery] = useState("");
   const [history, setHistory] = useState<WorkDeliverable[] | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const shown = items.filter((i) =>
     `${i.title} ${i.type}`.toLowerCase().includes(query.toLowerCase()),
   );
@@ -736,15 +738,45 @@ function Deliverables({
               </div>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                className="work-small"
-                onClick={() => {
-                  const title = prompt("Rename deliverable", item.title);
-                  if (title) void action(() => rename({ data: { id: item.id, title } }), "Renamed");
-                }}
-              >
-                Rename
-              </button>
+              {renamingId === item.id ? (
+                <form
+                  className="flex min-w-0 flex-1 gap-2"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const title = renameValue.trim();
+                    if (!title) return;
+                    void action(() => rename({ data: { id: item.id, title } }), "Renamed").then(
+                      () => setRenamingId(null),
+                    );
+                  }}
+                >
+                  <input
+                    autoFocus
+                    aria-label="Deliverable title"
+                    maxLength={160}
+                    value={renameValue}
+                    onChange={(event) => setRenameValue(event.target.value)}
+                    onKeyDown={(event) => event.key === "Escape" && setRenamingId(null)}
+                    className="h-10 min-w-0 flex-1 rounded-lg border bg-background px-3 text-sm"
+                  />
+                  <button className="work-small" type="submit" disabled={!renameValue.trim()}>
+                    Save
+                  </button>
+                  <button className="work-small" type="button" onClick={() => setRenamingId(null)}>
+                    Cancel
+                  </button>
+                </form>
+              ) : (
+                <button
+                  className="work-small"
+                  onClick={() => {
+                    setRenameValue(item.title);
+                    setRenamingId(item.id);
+                  }}
+                >
+                  Rename
+                </button>
+              )}
               <button
                 className="work-small"
                 onClick={() =>

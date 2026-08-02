@@ -420,7 +420,7 @@ export function SettingsDialog({
     // From this point on the server deletion is authoritative. Local UI,
     // storage, or sign-out failures may require browser cleanup, but must never
     // be reported as though the account remains active.
-    let localCleanupIncomplete = false;
+    let localCleanupIncomplete: boolean;
     try {
       const cleanupResult = clearLocalBrowserData(deletionUserKey);
       if (cleanupResult.resolved) {

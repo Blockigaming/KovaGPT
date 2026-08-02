@@ -1,10 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PublicFooter } from "@/components/PublicFooter";
-import {
-  DAILY_IMAGE_LIMIT_BY_TIER,
-  modesForTier,
-  type Tier,
-} from "@/lib/modes";
+import { DAILY_IMAGE_LIMIT_BY_TIER, modesForTier, type Tier } from "@/lib/modes";
 
 const CANONICAL = "https://kovagpt.com/blog/best-ai-assistants";
 const DESCRIPTION =
@@ -103,64 +99,51 @@ function BestAiAssistantsPage() {
       </nav>
 
       <article className="prose prose-invert max-w-none">
-        <h1 className="text-4xl font-bold tracking-tight">
-          How to Choose an AI Assistant in 2026
-        </h1>
-        <p className="mt-3 text-sm text-muted-foreground">
-          Updated August 1, 2026 · 7 min read
-        </p>
+        <h1 className="text-4xl font-bold tracking-tight">How to Choose an AI Assistant in 2026</h1>
+        <p className="mt-3 text-sm text-muted-foreground">Updated August 1, 2026 · 7 min read</p>
 
         <p className="mt-6 text-lg leading-relaxed">
-          The best assistant is the one whose current product, limits, and
-          privacy terms fit your work. Static rankings age quickly. ChatGPT,
-          Claude, Gemini, Microsoft Copilot, Perplexity, KovaGPT, and other
-          products can change plans and capabilities without this article
-          changing at the same time, so verify material details on each
-          product's official pages before paying.
+          The best assistant is the one whose current product, limits, and privacy terms fit your
+          work. Static rankings age quickly. ChatGPT, Claude, Gemini, Microsoft Copilot, Perplexity,
+          KovaGPT, and other products can change plans and capabilities without this article
+          changing at the same time, so verify material details on each product's official pages
+          before paying.
         </p>
 
         <aside className="my-8 rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
-          KovaGPT publishes this guide. KovaGPT is independently developed and
-          is not affiliated with, endorsed by, or sponsored by the third-party
-          products named here. Product names belong to their respective owners.
+          KovaGPT publishes this guide. KovaGPT is independently developed and is not affiliated
+          with, endorsed by, or sponsored by the third-party products named here. Product names
+          belong to their respective owners.
         </aside>
 
-        <h2 className="mt-10 text-2xl font-semibold">
-          Use a task-based comparison
-        </h2>
+        <h2 className="mt-10 text-2xl font-semibold">Use a task-based comparison</h2>
         <ul>
           <li>
-            <strong>Answer quality:</strong> test the same representative
-            prompts and check important facts rather than trusting a demo or
-            benchmark headline.
+            <strong>Answer quality:</strong> test the same representative prompts and check
+            important facts rather than trusting a demo or benchmark headline.
           </li>
           <li>
-            <strong>Sources:</strong> check whether search is available for your
-            plan and whether you can open the cited pages. A citation is
-            evidence to inspect, not a guarantee.
+            <strong>Sources:</strong> check whether search is available for your plan and whether
+            you can open the cited pages. A citation is evidence to inspect, not a guarantee.
           </li>
           <li>
-            <strong>Workflow:</strong> test the files, projects, connected apps,
-            sharing, and export paths you actually need.
+            <strong>Workflow:</strong> test the files, projects, connected apps, sharing, and export
+            paths you actually need.
           </li>
           <li>
-            <strong>Privacy and control:</strong> read the current privacy terms
-            and confirm deletion, retention, and connected-app controls in the
-            product.
+            <strong>Privacy and control:</strong> read the current privacy terms and confirm
+            deletion, retention, and connected-app controls in the product.
           </li>
           <li>
-            <strong>Total cost:</strong> compare the live checkout price,
-            quotas, trial eligibility, and provider-dependent features, not only
-            the plan name.
+            <strong>Total cost:</strong> compare the live checkout price, quotas, trial eligibility,
+            and provider-dependent features, not only the plan name.
           </li>
         </ul>
 
-        <h2 className="mt-12 text-2xl font-semibold">
-          Current KovaGPT mode access
-        </h2>
+        <h2 className="mt-12 text-2xl font-semibold">Current KovaGPT mode access</h2>
         <p>
-          KovaGPT's public plan pages are generated from the same mode catalog
-          used for server-side entitlement checks. The current plan menus are:
+          KovaGPT's public plan pages are generated from the same mode catalog used for server-side
+          entitlement checks. The current plan menus are:
         </p>
         <div className="mt-4 overflow-x-auto rounded-lg border border-border">
           <table className="w-full border-collapse text-sm">
@@ -187,48 +170,29 @@ function BestAiAssistantsPage() {
           </table>
         </div>
         <p className="mt-3 text-sm text-muted-foreground">
-          Image generation requires a signed-in, verified account and an
-          available image provider. Search is conditional and
-          provider-dependent. Deep Research requires a signed-in Plus or Pro
-          account and available search and AI providers.
+          Image generation requires a signed-in, verified account and an available image provider.
+          Search is conditional and provider-dependent. Deep Research requires a signed-in Plus or
+          Pro account and available search and AI providers.
         </p>
 
-        <h2 className="mt-12 text-2xl font-semibold">
-          Run a short evaluation before subscribing
-        </h2>
+        <h2 className="mt-12 text-2xl font-semibold">Run a short evaluation before subscribing</h2>
         <ol>
-          <li>
-            Choose five real tasks, including one where a wrong answer would be
-            obvious.
-          </li>
-          <li>
-            Use the same input and source files in each product where permitted.
-          </li>
-          <li>
-            Record whether the answer is correct, useful, editable, and easy to
-            verify.
-          </li>
-          <li>
-            Test the usage limit and recovery behavior that matters to your
-            workflow.
-          </li>
+          <li>Choose five real tasks, including one where a wrong answer would be obvious.</li>
+          <li>Use the same input and source files in each product where permitted.</li>
+          <li>Record whether the answer is correct, useful, editable, and easy to verify.</li>
+          <li>Test the usage limit and recovery behavior that matters to your workflow.</li>
           <li>Review the live price and terms immediately before purchase.</li>
         </ol>
 
-        <h2 className="mt-12 text-2xl font-semibold">
-          KovaGPT availability notes
-        </h2>
+        <h2 className="mt-12 text-2xl font-semibold">KovaGPT availability notes</h2>
         <p>
-          KovaGPT can make mistakes. Search, research, images, connected apps,
-          and some account features depend on plan eligibility, configuration,
-          region, maintenance state, and external providers. The live product,{" "}
-          <Link to="/pricing">Pricing page</Link>, and in-product usage display
-          are the source of truth for a particular account.
+          KovaGPT can make mistakes. Search, research, images, connected apps, and some account
+          features depend on plan eligibility, configuration, region, maintenance state, and
+          external providers. The live product, <Link to="/pricing">Pricing page</Link>, and
+          in-product usage display are the source of truth for a particular account.
         </p>
 
-        <h2 className="mt-12 text-2xl font-semibold">
-          Frequently asked questions
-        </h2>
+        <h2 className="mt-12 text-2xl font-semibold">Frequently asked questions</h2>
         {FAQ.map((item) => (
           <section key={item.q} className="mt-5">
             <h3 className="text-lg font-medium">{item.q}</h3>

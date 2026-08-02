@@ -113,7 +113,7 @@ async function updateTables(
 
 export const markNotificationsRead = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => mutationSchema.parse(input))
+  .validator((input: unknown) => mutationSchema.parse(input))
   .handler(async ({ data, context }) => {
     await updateTables(context.supabase as unknown as LooseClient, context.userId, data, "read");
     return { ok: true };
@@ -121,7 +121,7 @@ export const markNotificationsRead = createServerFn({ method: "POST" })
 
 export const deleteNotifications = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     mutationSchema.extend({ ids: z.array(z.string().uuid()).min(1).max(200) }).parse(input),
   )
   .handler(async ({ data, context }) => {

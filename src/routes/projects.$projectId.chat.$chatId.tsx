@@ -52,7 +52,8 @@ function isAbortError(error: unknown) {
 
 function ProjectChatPage() {
   const { projectId, chatId } = Route.useParams();
-  const { isSignedIn, isLoaded } = useUser();
+  const { isSignedIn, isLoaded, user } = useUser();
+  const userKey = user?.id ?? null;
   const navigate = useNavigate();
 
   const [project, setProject] = useState<ProjectDetail | null>(null);
@@ -413,6 +414,8 @@ function ProjectChatPage() {
             return (
               <ChatMessage
                 key={messageId}
+                userKey={userKey}
+                principalResolved={isLoaded}
                 message={{
                   id: messageId,
                   role: message.role,

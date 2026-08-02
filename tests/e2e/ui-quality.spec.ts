@@ -97,6 +97,7 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
 
   if (page.viewportSize()!.width < 1024) {
     const action = page.getByRole("button", { name: "Copy", exact: true });
+    await expect(action).toBeVisible();
     const box = await action.boundingBox();
     expect(box).not.toBeNull();
     // Chromium can report an exact 44 CSS-pixel target a few millionths below 44

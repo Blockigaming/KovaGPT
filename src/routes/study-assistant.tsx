@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { SeoLanding, seoLandingHead } from "@/components/SeoLanding";
+import { SeoLanding } from "@/components/SeoLanding";
+import { seoLandingHead } from "@/components/seo-landing-head";
 
 const faq = [
   {
@@ -48,7 +49,7 @@ function Page() {
       ]}
       details={[
         "Ask KovaGPT to explain a concept and then test your understanding. You can request hints before answers, practice at a particular level, or a second explanation using a different analogy. These are generated suggestions, not a substitute for an instructor.",
-        "Upload supported notes or paste a section when file extraction is available. Ask KovaGPT to summarize, quiz you, or point to confusing parts, then compare the result with the original instead of assuming it read every detail correctly.",
+        "Paste text or upload images of your notes. Ask KovaGPT to summarize, quiz you, or point to confusing parts, then compare the result with the original instead of assuming it read every detail correctly.",
       ]}
       prompts={[
         "Explain photosynthesis at a 10th-grade level, then quiz me",
