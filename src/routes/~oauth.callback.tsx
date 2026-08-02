@@ -10,6 +10,12 @@ import {
 
 export const Route = createFileRoute("/~oauth/callback")({
   component: OAuthCallbackPage,
+  head: () => ({
+    meta: [
+      { title: "Complete sign in | KovaGPT" },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
+  }),
 });
 
 function OAuthCallbackPage() {
@@ -17,6 +23,9 @@ function OAuthCallbackPage() {
 
   useEffect(() => {
     let cancelled = false;
+    const timeout = window.setTimeout(() => {
+      if (!cancelled) setError("Sign in timed out. Check your connection and try again.");
+    }, 20_000);
 
     async function finishSignIn() {
       try {
@@ -42,6 +51,7 @@ function OAuthCallbackPage() {
     finishSignIn();
     return () => {
       cancelled = true;
+      window.clearTimeout(timeout);
     };
   }, []);
 
@@ -53,6 +63,7 @@ function OAuthCallbackPage() {
           <>
             <h1 className="mt-5 text-lg font-semibold">Sign in could not finish</h1>
             <p className="mt-2 text-sm text-muted-foreground">{error}</p>
+            <p className="mt-2 text-xs text-muted-foreground">Support reference: AUTH-CALLBACK</p>
             <a
               href="/?sign-in=1"
               className="mt-5 inline-flex items-center justify-center rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background hover:opacity-90"

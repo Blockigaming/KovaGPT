@@ -19,6 +19,7 @@
     "test:integration": "node --test tests/integration/*.test.mjs",
     "test:e2e": "playwright test",
     "test:e2e:production": "playwright test --config=playwright.production.config.ts",
+    "smoke:deployment": "node scripts/post-deploy-smoke.mjs",
     "test:e2e:install": "playwright install --with-deps chromium",
     "test:a11y": "node --test tests/a11y/*.test.mjs",
     "test:visual": "node --test tests/visual/*.test.mjs",
