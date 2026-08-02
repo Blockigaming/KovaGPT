@@ -7,6 +7,7 @@ import {
   loadPrincipalStoredRecord,
   loadStoredSettings,
   LOCATION_KEY_BASE,
+  MEMORY_WRITE_BLOCK_KEY_BASE,
   principalStorageKey,
   savePrincipalStoredRecord,
   saveStoredSettings,
@@ -145,13 +146,15 @@ test("workspace and location records use the same guest-only migration boundary"
   );
 });
 
-test("preference cleanup removes workspace and location only for the current principal", () => {
+test("preference cleanup removes workspace, location, and memory blocks for one principal", () => {
   saveStoredSettings("account-a", { mode: "dark" });
   savePrincipalStoredRecord(WORKSPACE_DEFAULTS_KEY_BASE, "account-a", { project: "A" });
   savePrincipalStoredRecord(LOCATION_KEY_BASE, "account-a", { enabled: true, lat: 1, lon: 2 });
+  savePrincipalStoredRecord(MEMORY_WRITE_BLOCK_KEY_BASE, "account-a", { blocked: true });
   saveStoredSettings("account-b", { mode: "light" });
   savePrincipalStoredRecord(WORKSPACE_DEFAULTS_KEY_BASE, "account-b", { project: "B" });
   savePrincipalStoredRecord(LOCATION_KEY_BASE, "account-b", { enabled: true, lat: 3, lon: 4 });
+  savePrincipalStoredRecord(MEMORY_WRITE_BLOCK_KEY_BASE, "account-b", { blocked: true });
 
   clearPrincipalPreferences("account-a");
 
@@ -161,10 +164,18 @@ test("preference cleanup removes workspace and location only for the current pri
     null,
   );
   assert.equal(storage.getItem(principalStorageKey(LOCATION_KEY_BASE, "account-a")), null);
+  assert.equal(
+    storage.getItem(principalStorageKey(MEMORY_WRITE_BLOCK_KEY_BASE, "account-a")),
+    null,
+  );
   assert.notEqual(storage.getItem(settingsKey("account-b")), null);
   assert.notEqual(
     storage.getItem(principalStorageKey(WORKSPACE_DEFAULTS_KEY_BASE, "account-b")),
     null,
   );
   assert.notEqual(storage.getItem(principalStorageKey(LOCATION_KEY_BASE, "account-b")), null);
+  assert.notEqual(
+    storage.getItem(principalStorageKey(MEMORY_WRITE_BLOCK_KEY_BASE, "account-b")),
+    null,
+  );
 });

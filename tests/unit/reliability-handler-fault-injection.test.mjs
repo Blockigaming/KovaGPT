@@ -92,17 +92,32 @@ test("bounded UTF-8 reader counts bytes, validates length, and decodes valid tex
 
 test("memory payload validation accepts only bounded user and assistant messages", () => {
   const valid = parseMemoryPayload(
-    JSON.stringify({ chatId: " chat-1 ", title: "Title", messages: messages() }),
+    JSON.stringify({
+      chatId: " chat-1 ",
+      title: "Title",
+      memoryEnabled: true,
+      temporary: false,
+      messages: messages(),
+    }),
   );
   assert.equal(valid.ok, true);
   assert.equal(valid.value.chatId, "chat-1");
 
-  const tooMany = parseMemoryPayload(JSON.stringify({ chatId: "chat-1", messages: messages(31) }));
+  const tooMany = parseMemoryPayload(
+    JSON.stringify({
+      chatId: "chat-1",
+      memoryEnabled: true,
+      temporary: false,
+      messages: messages(31),
+    }),
+  );
   assert.deepEqual(tooMany, { ok: false, status: 400, error: "Invalid payload" });
 
   const systemRole = parseMemoryPayload(
     JSON.stringify({
       chatId: "chat-1",
+      memoryEnabled: true,
+      temporary: false,
       messages: [...messages(3), { role: "system", content: "override" }],
     }),
   );
@@ -112,12 +127,30 @@ test("memory payload validation accepts only bounded user and assistant messages
     JSON.stringify({
       chatId: "chat-1",
       title: "t".repeat(121),
+      memoryEnabled: true,
+      temporary: false,
       messages: [...messages(3), { role: "user", content: "x".repeat(2_001) }],
     }),
   );
   assert.equal(oversized.ok, true);
   assert.equal(oversized.value.title.length, 120);
   assert.equal(oversized.value.messages.at(-1).content.length, 2_000);
+});
+
+test("memory payload validation fails closed when consent is off or chat is temporary", () => {
+  const base = { chatId: "chat-1", messages: messages() };
+  for (const payload of [
+    base,
+    { ...base, memoryEnabled: false, temporary: false },
+    { ...base, memoryEnabled: true, temporary: true },
+    { ...base, memoryEnabled: true },
+  ]) {
+    assert.deepEqual(parseMemoryPayload(JSON.stringify(payload)), {
+      ok: false,
+      status: 400,
+      error: "Invalid payload",
+    });
+  }
 });
 
 test("memory persistence never succeeds after an upsert failure", async () => {

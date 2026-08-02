@@ -105,6 +105,8 @@ export function parseMemoryPayload(raw) {
     !chatId ||
     chatId.length > MEMORY_LIMITS.maxChatIdChars ||
     (body.title != null && title === null) ||
+    body.memoryEnabled !== true ||
+    body.temporary !== false ||
     !Array.isArray(body.messages) ||
     body.messages.length < 4 ||
     body.messages.length > MEMORY_LIMITS.maxMessages
