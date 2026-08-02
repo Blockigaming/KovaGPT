@@ -1,5 +1,10 @@
 // Keyboard shortcuts: defaults, persistence, global handler.
 // Users can rebind via Settings → Keyboard shortcuts. Persists to localStorage.
+import {
+  browserStoragePrincipal,
+  principalScopedStorageKey,
+  safeBrowserStorage,
+} from "@/lib/principal-browser-storage.mjs";
 
 export type ShortcutId =
   | "new-chat"
@@ -65,12 +70,14 @@ export const DEFAULT_SHORTCUTS: Shortcut[] = [
   },
 ];
 
-const KEY = "kova-shortcuts-v1";
+const KEY_BASE = "kova-shortcuts";
+type ShortcutUserKey = string | null | undefined;
 
-export function loadShortcuts(): Shortcut[] {
-  if (typeof window === "undefined") return DEFAULT_SHORTCUTS;
+export function loadShortcuts(userKey: ShortcutUserKey): Shortcut[] {
+  const key = principalScopedStorageKey(KEY_BASE, userKey);
+  if (!key) return DEFAULT_SHORTCUTS;
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = safeBrowserStorage("localStorage")?.getItem(key);
     if (!raw) return DEFAULT_SHORTCUTS;
     const saved = JSON.parse(raw) as Partial<Shortcut>[];
     return DEFAULT_SHORTCUTS.map((d) => {
@@ -82,19 +89,28 @@ export function loadShortcuts(): Shortcut[] {
   }
 }
 
-export function saveShortcuts(list: Shortcut[]) {
+export function saveShortcuts(userKey: ShortcutUserKey, list: Shortcut[]) {
+  const key = principalScopedStorageKey(KEY_BASE, userKey);
+  const principal = browserStoragePrincipal(userKey);
+  if (!key || !principal) return;
   try {
-    localStorage.setItem(KEY, JSON.stringify(list.map((s) => ({ id: s.id, combo: s.combo }))));
-    window.dispatchEvent(new CustomEvent("kova-shortcuts-change"));
+    safeBrowserStorage("localStorage")?.setItem(
+      key,
+      JSON.stringify(list.map((s) => ({ id: s.id, combo: s.combo }))),
+    );
+    window.dispatchEvent(new CustomEvent("kova-shortcuts-change", { detail: { principal } }));
   } catch {
     /* ignore */
   }
 }
 
-export function resetShortcuts() {
+export function resetShortcuts(userKey: ShortcutUserKey) {
+  const key = principalScopedStorageKey(KEY_BASE, userKey);
+  const principal = browserStoragePrincipal(userKey);
+  if (!key || !principal) return;
   try {
-    localStorage.removeItem(KEY);
-    window.dispatchEvent(new CustomEvent("kova-shortcuts-change"));
+    safeBrowserStorage("localStorage")?.removeItem(key);
+    window.dispatchEvent(new CustomEvent("kova-shortcuts-change", { detail: { principal } }));
   } catch {
     /* ignore */
   }
@@ -136,14 +152,18 @@ function matches(e: KeyboardEvent, combo: string): boolean {
 
 export type ShortcutHandlers = Partial<Record<ShortcutId, () => void>>;
 
-export function installShortcutListener(handlers: ShortcutHandlers): () => void {
+export function installShortcutListener(
+  handlers: ShortcutHandlers,
+  userKey: ShortcutUserKey,
+): () => void {
+  if (!browserStoragePrincipal(userKey) || typeof window === "undefined") return () => {};
   const listener = (e: KeyboardEvent) => {
     // Don't hijack typing in inputs unless combo uses Mod/Shift/Alt.
     const target = e.target as HTMLElement | null;
     const inEditable =
       target &&
       (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
-    const shortcuts = loadShortcuts();
+    const shortcuts = loadShortcuts(userKey);
     for (const s of shortcuts) {
       const usesMod =
         s.combo.includes("Mod") || s.combo.includes("Ctrl") || s.combo.includes("Alt");
