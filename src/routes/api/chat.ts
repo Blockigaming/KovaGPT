@@ -32,6 +32,12 @@ import {
 import { NEWS_TRIGGER, runWebSearch, shouldRunWebSearch } from "@/lib/ai/search.server";
 import { getDeepResearchAccess } from "@/lib/ai/deep-research-access.mjs";
 import { runDeepResearch, type ResearchProgressEvent } from "@/lib/ai/deep-research.server";
+import {
+  authorizeResearchPersistence,
+  ResearchPersistenceAuthorizationError,
+  type AuthorizedResearchReferences,
+  type ResearchAuthorizationClient,
+} from "@/lib/research-persistence-authorization.server.mjs";
 import { activityToSseDelta, createToolActivityEvent } from "@/lib/ai/activity.server";
 import { selectModelForMode, mapProviderError } from "@/lib/ai/registry.server";
 import { formatMemoryBlock, selectRelevantMemories, type KovaMemory } from "@/lib/ai/memory.server";
@@ -430,6 +436,52 @@ export const Route = createFileRoute("/api/chat")({
               );
             }
 
+            // Deep Research persists through a service-role client. Prove that
+            // every caller-supplied relationship is visible through the
+            // authenticated user's RLS-scoped client before quota checks or
+            // provider execution. Unknown and cross-user ids fail closed.
+            let authorizedResearchReferences: AuthorizedResearchReferences | undefined;
+            if (clientTool === "deep_research" && auth) {
+              try {
+                authorizedResearchReferences = await authorizeResearchPersistence({
+                  supabaseUser: auth.supabaseUser as unknown as ResearchAuthorizationClient,
+                  chatId,
+                  projectId,
+                });
+              } catch (error) {
+                if (error instanceof ResearchPersistenceAuthorizationError) {
+                  if (error.status === 503) {
+                    logSafeFailure(
+                      "warn",
+                      "[chat] research authorization unavailable",
+                      logContext,
+                      {
+                        status: error.status,
+                        category: "server",
+                        code: error.code,
+                      },
+                    );
+                  }
+                  return Response.json(
+                    { error: error.publicMessage },
+                    {
+                      status: error.status,
+                      headers: { "Cache-Control": "no-store" },
+                    },
+                  );
+                }
+                logSafeFailure("error", "[chat] research authorization failed", logContext, {
+                  status: 503,
+                  category: "server",
+                  code: "research_authorization_failed",
+                });
+                return Response.json(
+                  { error: "Research storage authorization is temporarily unavailable." },
+                  { status: 503, headers: { "Cache-Control": "no-store" } },
+                );
+              }
+            }
+
             const missingProvider = missingAiProviderResponse();
             if (missingProvider) return missingProvider;
 
@@ -558,11 +610,8 @@ export const Route = createFileRoute("/api/chat")({
                       supabase:
                         auth.supabaseAdmin as unknown as import("@/lib/ai/deep-research.server").ResearchPersistence["supabase"],
                       userId: auth.userId,
-                      chatId,
-                      projectId:
-                        typeof projectId === "string" && /^[0-9a-f-]{36}$/i.test(projectId)
-                          ? projectId
-                          : undefined,
+                      chatId: authorizedResearchReferences?.chatId,
+                      projectId: authorizedResearchReferences?.projectId,
                       temporary: Boolean(temporary),
                     }
                   : undefined,
