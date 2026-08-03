@@ -8,6 +8,8 @@ import {
 } from "@/lib/ai/provider.server";
 import { createToolActivityEvent, type ToolActivityEvent } from "@/lib/ai/activity.server";
 import { searchWeb, type WebSource } from "@/lib/ai/search.server";
+import { modelForRole } from "@/lib/ai/model-router.server";
+import { UTILITY_MAX_OUTPUT_TOKENS } from "@/lib/ai/model-config.mjs";
 
 export type ResearchStageStatus =
   | "created"
@@ -185,7 +187,12 @@ function parsePlan(raw: string, originalQuery: string): string[] {
 async function makePlan(query: string, signal?: AbortSignal): Promise<string[]> {
   const upstream = await chatCompletions(
     {
+
       model: utilityModel(),
+
+      model: modelForRole("UTILITY"),
+      max_completion_tokens: UTILITY_MAX_OUTPUT_TOKENS,
+
       messages: [
         {
           role: "system",
@@ -248,7 +255,7 @@ async function writeReport(
 ): Promise<string> {
   const upstream = await chatCompletions(
     {
-      model: chatModel("deep"),
+      model: modelForRole("PREMIUM_REASONING"),
       messages: [
         {
           role: "system",

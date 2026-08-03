@@ -16,6 +16,7 @@ import {
   getCallerTier,
 } from "@/lib/api-auth.server";
 import { DAILY_CHAT_LIMIT_BY_TIER } from "@/lib/modes";
+import { modelForRole } from "@/lib/ai/model-router.server";
 
 type Action =
   | "improve"
@@ -129,7 +130,7 @@ export const Route = createFileRoute("/api/write")({
         let upstream: Response;
         try {
           upstream = await chatCompletions({
-            model: chatModel("balanced"),
+            model: modelForRole("DEFAULT_CHAT"),
             messages: [
               {
                 role: "system",

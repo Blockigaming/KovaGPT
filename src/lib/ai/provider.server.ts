@@ -1,7 +1,11 @@
 import { runtimeEnv } from "@/lib/runtime-env.server";
+
 import { responsesStreamToChatStream } from "@/lib/ai/responses-compat.server.mjs";
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
 import { maximumServerOutputForModel, modelForPolicy } from "@/lib/ai/model-catalog.server";
+
+import { DEFAULT_MODELS } from "./model-config.mjs";
+
 
 export type JsonObject = Record<string, unknown>;
 
@@ -49,6 +53,15 @@ export type ProviderConfig = {
 
 const OPENAI_API_BASE_URL = "https://api.openai.com/v1";
 
+// Model ids live in ONE place: src/lib/ai/model-config.mjs. This adapter only
+// mirrors the logical roles so nothing in the repository hardcodes a model.
+const OPENAI_MODELS = {
+  chat: DEFAULT_MODELS.DEFAULT_CHAT,
+  fast: DEFAULT_MODELS.UTILITY,
+  deep: DEFAULT_MODELS.PREMIUM_REASONING,
+  image: DEFAULT_MODELS.IMAGE_GENERATION,
+  embedding: DEFAULT_MODELS.EMBEDDING,
+};
 const DEFAULT_TIMEOUT_MS = 45_000;
 const NO_STORE_HEADERS = { "Cache-Control": "no-store" } as const;
 const PROVIDER_FAILURE_CATEGORY = "model_provider_failure";

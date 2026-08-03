@@ -324,6 +324,7 @@ export function Sidebar({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search titles, messages, or operators…"
                 className="h-10 w-full rounded-lg border border-border/60 bg-background px-3 text-sm outline-none transition focus:border-ring focus-visible:ring-2 focus-visible:ring-ring"
+
               />
             </div>
           ) : null}
