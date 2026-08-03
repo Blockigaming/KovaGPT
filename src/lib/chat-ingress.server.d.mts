@@ -6,7 +6,16 @@ export const CHAT_MAX_IMAGE_BYTES: number;
 export const CHAT_MAX_TEXT_ATTACHMENT_CHARS: number;
 export const CHAT_MAX_ANON_BUCKETS: number;
 
-export type ChatModeId = "instant" | "medium" | "thinking" | "high" | "extra_high" | "pro";
+export type ChatModeId =
+  | "instant"
+  | "medium"
+  | "thinking"
+  | "high"
+  | "extra_high"
+  | "pro"
+  | "kova_5_5"
+  | "kova_5_4"
+  | "kova_o3";
 export type ChatClientTool =
   | "web_search"
   | "deep_research"

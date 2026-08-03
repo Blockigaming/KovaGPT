@@ -63,6 +63,9 @@ export const MODE_MAX_OUTPUT_TOKENS = Object.freeze({
   high: 4000,
   extra_high: 6000,
   pro: 8000,
+  kova_5_5: 1600,
+  kova_5_4: 1200,
+  kova_o3: 1200,
 });
 
 export const UTILITY_MAX_OUTPUT_TOKENS = 256;
