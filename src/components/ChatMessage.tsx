@@ -283,27 +283,8 @@ function ChatMessageInner({
   const [editorMode, setEditorMode] = useState<"edit" | "preview">("edit");
   const { isSignedIn } = useUser();
 
-  const feedbackKey = useMemo(
-    () => principalScopedStorageKey(`n:feedback:${message.id}`, userKey),
-    [message.id, userKey],
-  );
-  const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
-  useEffect(() => {
-    if (!principalResolved || !feedbackKey) return;
-    const storage = safeBrowserStorage("localStorage");
-    const stored = storage?.getItem(feedbackKey);
-    setFeedback(stored === "up" || stored === "down" ? stored : null);
-  }, [feedbackKey, principalResolved]);
-  const persistFeedback = useCallback(
-    (next: "up" | "down" | null) => {
-      setFeedback(next);
-      const storage = safeBrowserStorage("localStorage");
-      if (!storage || !feedbackKey) return;
-      if (next) storage.setItem(feedbackKey, next);
-      else storage.removeItem(feedbackKey);
-    },
-    [feedbackKey],
-  );
+
+
 
 
   const saveFn = useServerFn(saveToLibrary);
