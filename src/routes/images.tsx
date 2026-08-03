@@ -30,7 +30,7 @@ export const Route = createFileRoute("/images")({
   component: ImagesPage,
   head: () => ({
     meta: [
-      { title: "AI Image Generation | KovaGPT" },
+      { title: "KovaGPT Images" },
       {
         name: "description",
         content:

@@ -1,5 +1,4 @@
 import { Menu, MessageSquareDashed, SquarePen } from "lucide-react";
-import { NovaLogo } from "@/components/NovaLogo";
 import { useUser, SignInButton, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { ResponsiveModelSelector } from "@/components/ResponsiveModelSelector";
 import type { ModeId, Tier } from "@/lib/modes";
@@ -54,12 +53,12 @@ export function MobileTopBar({
               compact
             />
           ) : (
-            <div className="flex min-w-0 items-center justify-center gap-2">
-              <NovaLogo className="w-5 h-5 shrink-0" />
-              <span className="font-display font-semibold tracking-tight text-[15px] truncate">
+            <div className="flex min-w-0 items-center justify-center">
+              <span className="font-display font-semibold tracking-tight text-base truncate">
                 {title || "KovaGPT"}
               </span>
             </div>
+
           )}
         </div>
         {showAuth ? (

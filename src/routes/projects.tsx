@@ -65,7 +65,7 @@ export const Route = createFileRoute("/projects")({
   component: ProjectsPage,
   head: () => ({
     meta: [
-      { title: "Projects | KovaGPT" },
+      { title: "KovaGPT Projects" },
       { name: "description", content: "Shared collaboration workspaces in KovaGPT." },
       { name: "robots", content: "noindex" },
     ],

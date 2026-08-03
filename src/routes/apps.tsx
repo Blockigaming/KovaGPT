@@ -99,7 +99,7 @@ export const Route = createFileRoute("/apps")({
   component: AppsPage,
   head: () => ({
     meta: [
-      { title: "Apps | KovaGPT" },
+      { title: "KovaGPT Apps" },
       {
         name: "description",
         content: "Connect KovaGPT to supported Google, Drive, Gmail, and Calendar services.",

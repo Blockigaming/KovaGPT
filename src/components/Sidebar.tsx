@@ -23,7 +23,6 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
 import { SignInButton, SignUpButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
-import { NovaLogo } from "@/components/NovaLogo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -276,12 +275,10 @@ export function Sidebar({
       >
         <div className="flex h-full min-w-[var(--sidebar-expanded)] flex-col overflow-hidden">
           <div className="relative z-20 flex min-h-[52px] items-center gap-1 bg-sidebar/90 px-2.5 pt-[var(--safe-top)]">
-            <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
-              <span className="inline-flex shrink-0">
-                <NovaLogo className="h-7 w-7" />
-              </span>
-              <span className="truncate text-sm font-semibold">KovaGPT</span>
+            <div className="flex min-w-0 flex-1 items-center px-1">
+              <span className="truncate text-base font-semibold tracking-tight">KovaGPT</span>
             </div>
+
             <button
               onClick={onToggle}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
@@ -335,7 +332,7 @@ export function Sidebar({
                 onNew();
                 closeAfterMobileNavigation();
               }}
-              className={`kova-nav-row kova-new-chat ${iconOnly}`}
+              className={navItemClass(false)}
               aria-label="New chat"
               title="New chat"
             >
@@ -345,10 +342,11 @@ export function Sidebar({
             <button
               type="button"
               onClick={() => setSearchOpen((v) => !v)}
-              className={`kova-nav-row ${iconOnly}`}
+              className={navItemClass(false)}
               aria-label="Search chats"
               title="Search chats"
             >
+
               <Search className="h-[18px] w-[18px] shrink-0" />
               <span className={labelClass}>Search</span>
             </button>

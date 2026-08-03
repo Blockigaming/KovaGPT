@@ -121,10 +121,10 @@ export function ResponsiveModelSelector({
         data-testid="model-selector-trigger"
         className={triggerClass}
       >
-        <span className={(useSheet ? "truncate " : "") + "text-foreground leading-none"}>
-          KovaGPT
-          <span className="ml-1 font-normal text-muted-foreground">· {current.label}</span>
+        <span className={(useSheet ? "truncate " : "") + "leading-none text-muted-foreground"}>
+          {compact ? current.label : <>KovaGPT<span className="ml-1 font-normal">· {current.label}</span></>}
         </span>
+
         <ChevronDown
           className={
             "h-4 w-4 text-muted-foreground transition-transform " +

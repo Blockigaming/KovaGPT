@@ -30,7 +30,7 @@ import { loadPrincipalStoredRecord, WORKSPACE_DEFAULTS_KEY_BASE } from "@/lib/se
 export const Route = createFileRoute("/prompt-studio")({
   component: PromptStudio,
   head: () => ({
-    meta: [{ title: "Prompt Studio | KovaGPT" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: "KovaGPT Prompts" }, { name: "robots", content: "noindex" }],
   }),
 });
 const variables = (body: string) => [

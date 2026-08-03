@@ -42,7 +42,7 @@ import {
 export const Route = createFileRoute("/projects/$projectId/chat/$chatId")({
   component: ProjectChatPage,
   head: () => ({
-    meta: [{ title: "Project chat | KovaGPT" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: "KovaGPT Project" }, { name: "robots", content: "noindex" }],
   }),
 });
 

@@ -11,6 +11,7 @@ import {
   Brain,
   AlertCircle,
   RotateCcw,
+  Mic,
   type LucideIcon,
 } from "lucide-react";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
@@ -155,6 +156,61 @@ export function ChatInput({
   const composingRef = useRef(false);
   const [uploadAnnouncement, setUploadAnnouncement] = useState("");
   const [recentQuery, setRecentQuery] = useState("");
+  const [dictating, setDictating] = useState(false);
+  const recognitionRef = useRef<{ stop: () => void } | null>(null);
+  const dictationBaseRef = useRef("");
+
+  useEffect(() => () => recognitionRef.current?.stop(), []);
+
+  const toggleDictation = () => {
+    if (dictating) {
+      recognitionRef.current?.stop();
+      return;
+    }
+    const Ctor = (
+      window as unknown as {
+        SpeechRecognition?: new () => never;
+        webkitSpeechRecognition?: new () => never;
+      }
+    ).SpeechRecognition ??
+      (window as unknown as { webkitSpeechRecognition?: new () => never }).webkitSpeechRecognition;
+    if (!Ctor) {
+      toast.error("Dictation is not supported in this browser");
+      return;
+    }
+    const recognition = new Ctor() as unknown as {
+      continuous: boolean;
+      interimResults: boolean;
+      lang: string;
+      start: () => void;
+      stop: () => void;
+      onresult: (event: { resultIndex: number; results: ArrayLike<{ 0: { transcript: string } }> }) => void;
+      onerror: () => void;
+      onend: () => void;
+    };
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = navigator.language || "en-US";
+    dictationBaseRef.current = value ? `${value.replace(/\s+$/, "")} ` : "";
+    recognition.onresult = (event) => {
+      let transcript = "";
+      for (let i = 0; i < event.results.length; i += 1)
+        transcript += event.results[i][0].transcript;
+      onChange(`${dictationBaseRef.current}${transcript.trimStart()}`);
+    };
+    recognition.onerror = () => {
+      setDictating(false);
+      recognitionRef.current = null;
+    };
+    recognition.onend = () => {
+      setDictating(false);
+      recognitionRef.current = null;
+    };
+    recognition.start();
+    recognitionRef.current = recognition;
+    setDictating(true);
+  };
+
 
   useEffect(() => {
     if (!plusOpen) return;
@@ -854,6 +910,20 @@ export function ChatInput({
                   <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
                 </div>
               )}
+              <button
+                type="button"
+                onClick={toggleDictation}
+                disabled={disabled}
+                className={`kova-composer-button flex items-center justify-center rounded-full ${
+                  dictating ? "text-destructive" : "text-foreground/70 hover:text-foreground"
+                }`}
+                aria-label={dictating ? "Stop dictation" : "Dictate message"}
+                aria-pressed={dictating}
+                title={dictating ? "Stop dictation" : "Dictate"}
+              >
+                <Mic className="h-[18px] w-[18px]" strokeWidth={2} />
+              </button>
+
               {isStreaming ? (
                 <button
                   type="button"

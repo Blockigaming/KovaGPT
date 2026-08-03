@@ -12,7 +12,7 @@ import { CAPABILITY_REGISTRY } from "@/lib/capability-registry";
 export const Route = createFileRoute("/help")({
   head: () => ({
     meta: [
-      { title: "Help Center - KovaGPT" },
+      { title: "KovaGPT Help" },
       {
         name: "description",
         content:

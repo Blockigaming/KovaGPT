@@ -17,7 +17,7 @@ export const Route = createFileRoute("/reset-password")({
   component: ResetPassword,
   head: () => ({
     meta: [
-      { title: "Reset password - KovaGPT" },
+      { title: "KovaGPT Password" },
       {
         name: "description",
         content: "Set a new password for your KovaGPT account.",

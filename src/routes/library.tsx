@@ -32,7 +32,7 @@ export const Route = createFileRoute("/library")({
   component: LibraryPage,
   head: () => ({
     meta: [
-      { title: "Library | KovaGPT" },
+      { title: "KovaGPT Library" },
       { name: "description", content: "Your saved chats, files, and generated images in KovaGPT." },
       { name: "robots", content: "noindex" },
     ],
