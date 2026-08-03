@@ -13,12 +13,11 @@ import {
   Share2,
   Pencil,
   RefreshCw,
-  ThumbsUp,
-  ThumbsDown,
   GitBranch,
   Globe,
   Mail,
   FileText,
+  Volume2,
 } from "lucide-react";
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileBottomSheet } from "./MobileBottomSheet";
@@ -232,46 +231,9 @@ function ChatMessageInner({
   const principalRef = useRef(principal);
   principalRef.current = principal;
   const lifecycleGenerationRef = useRef(0);
-  const feedbackKey = principalResolved
-    ? principalScopedStorageKey("kova-message-feedback", userKey)
-    : null;
-  const messageFeedbackKey = feedbackKey
-    ? `${feedbackKey}:${encodeURIComponent(message.id)}`
-    : null;
-  const [feedbackState, setFeedbackState] = useState<{
-    principal: string | null;
-    value: "up" | "down" | null;
-  }>({ principal: null, value: null });
-  const feedback = feedbackState.principal === principal ? feedbackState.value : null;
   useEffect(() => {
     lifecycleGenerationRef.current += 1;
   }, [principal]);
-  useEffect(() => {
-    if (!principal || !messageFeedbackKey) {
-      setFeedbackState({ principal: null, value: null });
-      return;
-    }
-    try {
-      const v = safeBrowserStorage("localStorage")?.getItem(messageFeedbackKey);
-      setFeedbackState({
-        principal,
-        value: v === "up" || v === "down" ? v : null,
-      });
-    } catch {
-      setFeedbackState({ principal, value: null });
-    }
-  }, [messageFeedbackKey, principal]);
-  const persistFeedback = (next: "up" | "down" | null) => {
-    if (!principal || !messageFeedbackKey || feedbackState.principal !== principal) return;
-    setFeedbackState({ principal, value: next });
-    try {
-      const storage = safeBrowserStorage("localStorage");
-      if (next) storage?.setItem(messageFeedbackKey, next);
-      else storage?.removeItem(messageFeedbackKey);
-    } catch {
-      /* ignore */
-    }
-  };
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
   const { isMobile } = useLayout();
@@ -312,7 +274,6 @@ function ChatMessageInner({
     const reset = (event: Event) => {
       if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
       lifecycleGenerationRef.current += 1;
-      setFeedbackState({ principal: null, value: null });
       setSaving(false);
       setSaved(false);
       setCopied(false);
@@ -478,7 +439,7 @@ function ChatMessageInner({
               </div>
             )}
             {message.content && (
-              <div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-lg border border-border/60 bg-[var(--user-bubble)] px-3.5 py-2.5 text-foreground">
+              <div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-3xl border border-border/40 bg-[var(--user-bubble)] px-4 py-2.5 text-foreground">
                 {message.content}
               </div>
             )}
@@ -640,40 +601,6 @@ function ChatMessageInner({
                 )}
               </button>
               <button
-                onClick={() => {
-                  const next = feedback === "up" ? null : "up";
-                  persistFeedback(next);
-                  if (next) toast.success("Rating saved on this device");
-                }}
-                className={`inline-flex items-center justify-center p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95 ${
-                  feedback === "up"
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                title="Good response"
-                aria-label="Good response"
-                aria-pressed={feedback === "up"}
-              >
-                <ThumbsUp className={`w-4 h-4 ${feedback === "up" ? "fill-current" : ""}`} />
-              </button>
-              <button
-                onClick={() => {
-                  const next = feedback === "down" ? null : "down";
-                  persistFeedback(next);
-                  if (next) toast.success("Rating saved on this device");
-                }}
-                className={`inline-flex items-center justify-center p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95 ${
-                  feedback === "down"
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                title="Bad response"
-                aria-label="Bad response"
-                aria-pressed={feedback === "down"}
-              >
-                <ThumbsDown className={`w-4 h-4 ${feedback === "down" ? "fill-current" : ""}`} />
-              </button>
-              <button
                 onClick={async () => {
                   const text = message.content;
                   if (typeof navigator !== "undefined" && navigator.share) {
@@ -747,92 +674,28 @@ function ChatMessageInner({
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-52">
-                  {onEdit ? (
-                    <DropdownMenuItem onClick={onEdit}>
-                      <Pencil className="w-4 h-4 mr-2" /> Edit
-                    </DropdownMenuItem>
-                  ) : null}
-                  {onRetry ? (
-                    <DropdownMenuItem onClick={onRetry}>
-                      <RefreshCw className="w-4 h-4 mr-2" /> Retry
-                    </DropdownMenuItem>
-                  ) : null}
-                  {onBranch ? (
-                    <DropdownMenuItem onClick={onBranch}>
-                      <GitBranch className="w-4 h-4 mr-2" /> Branch in new chat
-                    </DropdownMenuItem>
-                  ) : null}
                   <DropdownMenuItem
                     onClick={() => {
-                      const q = encodeURIComponent(message.content.slice(0, 300));
-                      window.open(
-                        `https://www.google.com/search?q=${q}`,
-                        "_blank",
-                        "noopener,noreferrer",
+                      const sourceActivity = message.activities?.find((activity) =>
+                        /search|source|web/i.test(activity.tool + activity.label),
                       );
+                      if (sourceActivity) toast.message(sourceActivity.label);
+                      else toast.message("No linked sources for this response");
                     }}
                   >
-                    <Globe className="w-4 h-4 mr-2" /> Search the web
+                    <Globe className="mr-2 h-4 w-4" /> View sources
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={saveItem} disabled={saving}>
-                    <Bookmark className={`w-4 h-4 mr-2 ${saved ? "fill-current" : ""}`} />
-                    {saved ? "Saved" : saving ? "Saving…" : "Save to Library"}
+                  <DropdownMenuItem onClick={onBranch} disabled={!onBranch}>
+                    <GitBranch className="mr-2 h-4 w-4" /> Branch into new chat
                   </DropdownMenuItem>
-                  {artifactKind && (
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setEditorMode("edit");
-                        setEditorOpen(true);
-                      }}
-                    >
-                      {artifactKind === "writing" ? (
-                        <FileEdit className="w-4 h-4 mr-2" />
-                      ) : (
-                        <Code2 className="w-4 h-4 mr-2" />
-                      )}
-                      {artifactKind === "website"
-                        ? "Open website full screen"
-                        : artifactKind === "code"
-                          ? "Open code full screen"
-                          : "Open writing full screen"}
-                    </DropdownMenuItem>
-                  )}
-                  {artifactKind === "website" && (
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setEditorMode("preview");
-                        setEditorOpen(true);
-                      }}
-                    >
-                      <Eye className="w-4 h-4 mr-2" /> Preview website
-                    </DropdownMenuItem>
-                  )}
-                  {onFollowUp && (
-                    <>
-                      <DropdownMenuSeparator />
-                      {[
-                        { label: "Continue", prompt: "Continue from where you left off." },
-                        {
-                          label: "Shorter",
-                          prompt:
-                            "Rewrite your last response to be shorter, keeping the key points.",
-                        },
-                        {
-                          label: "Longer",
-                          prompt: "Expand your last response with more detail and examples.",
-                        },
-                        {
-                          label: "Improve",
-                          prompt: "Improve the wording and clarity of your last response.",
-                        },
-                      ].map((a) => (
-                        <DropdownMenuItem key={a.label} onClick={() => onFollowUp(a.prompt)}>
-                          {a.label}
-                        </DropdownMenuItem>
-                      ))}
-                    </>
-                  )}
+                  <DropdownMenuItem
+                    onClick={() => {
+                      window.speechSynthesis.cancel();
+                      window.speechSynthesis.speak(new SpeechSynthesisUtterance(message.content));
+                    }}
+                  >
+                    <Volume2 className="mr-2 h-4 w-4" /> Read aloud
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -864,22 +727,6 @@ function ChatMessageInner({
                 icon: Copy,
                 onClick: () => {
                   copy();
-                  setMobileSheetOpen(false);
-                },
-              },
-              {
-                label: feedback === "up" ? "Remove good rating" : "Good response",
-                icon: ThumbsUp,
-                onClick: () => {
-                  persistFeedback(feedback === "up" ? null : "up");
-                  setMobileSheetOpen(false);
-                },
-              },
-              {
-                label: feedback === "down" ? "Remove bad rating" : "Bad response",
-                icon: ThumbsDown,
-                onClick: () => {
-                  persistFeedback(feedback === "down" ? null : "down");
                   setMobileSheetOpen(false);
                 },
               },
