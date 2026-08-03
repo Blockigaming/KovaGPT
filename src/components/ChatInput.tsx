@@ -6,11 +6,8 @@ import {
   Image as ImageIcon,
   FileText,
   Camera,
-  Puzzle,
   Search,
-  Lightbulb,
   Sparkles,
-  GraduationCap,
   Brain,
   AlertCircle,
   RotateCcw,
@@ -61,12 +58,9 @@ type ComposerAction = {
 };
 
 const COMPOSER_TOOLS: readonly ComposerAction[] = [
-  { id: "web_search", label: "Search the web", icon: Search },
   { id: "deep_research", label: "Deep research", icon: Brain },
-  { id: "image", label: "Create an image", icon: Sparkles },
-  { id: "study", label: "Study and learn", icon: GraduationCap },
-  { id: "data_analysis", label: "Analyze data", icon: Lightbulb },
-  { id: "file_analysis", label: "Analyze files", icon: FileText },
+  { id: "web_search", label: "Search the Web", icon: Search },
+  { id: "image", label: "Create Image", icon: Sparkles },
 ];
 
 const PROMPT_SHORTCUTS = [
@@ -553,6 +547,11 @@ export function ChatInput({
   const ActiveToolIcon = selectedToolOption?.icon;
 
   const chooseTool = (tool: ComposerAction) => {
+    if (tool.id === "deep_research" && !user) {
+      toast.message("Log in to use Deep research");
+      setPlusOpen(false);
+      return;
+    }
     const next = selectedTool === tool.id ? null : tool.id;
     onToolSelect?.(next);
     setPlusOpen(false);
@@ -730,7 +729,7 @@ export function ChatInput({
               <input
                 ref={fileRef}
                 type="file"
-                accept="text/*,.md,.markdown,.csv,.tsv,.json,.jsonl,.yml,.yaml,.toml,.xml,.html,.htm,.css,.scss,.less,.js,.jsx,.ts,.tsx,.mjs,.cjs,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cc,.cpp,.hpp,.cs,.php,.sql,.sh,.bash,.env,.log,.srt,.vtt"
+                accept="image/*,text/*,.md,.markdown,.csv,.tsv,.json,.jsonl,.yml,.yaml,.toml,.xml,.html,.htm,.css,.scss,.less,.js,.jsx,.ts,.tsx,.mjs,.cjs,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cc,.cpp,.hpp,.cs,.php,.sql,.sh,.bash,.env,.log,.srt,.vtt"
                 multiple
                 className="hidden"
                 onChange={onFileChange}
@@ -777,48 +776,14 @@ export function ChatInput({
                     type="button"
                     onClick={() => {
                       setPlusOpen(false);
-                      cameraRef.current?.click();
-                    }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
-                  >
-                    <Camera className="w-4 h-4 text-muted-foreground" />
-                    <span>Camera</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlusOpen(false);
-                      photoRef.current?.click();
-                    }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
-                  >
-                    <ImageIcon className="w-4 h-4 text-muted-foreground" />
-                    <span>Photos</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlusOpen(false);
-                      window.location.href = "/apps";
-                    }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
-                  >
-                    <Puzzle className="w-4 h-4 text-muted-foreground" />
-                    <span>Plugins</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlusOpen(false);
                       fileRef.current?.click();
                     }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left"
                   >
-                    <FileText className="w-4 h-4 text-muted-foreground" />
-                    <span>Files</span>
+                    <ImageIcon className="w-4 h-4 text-muted-foreground" />
+                    <span>Add photos and files</span>
                   </button>
                   {renderComposerActions(false)}
-                  {renderRecentLibraryFiles()}
                 </div>
               )}
             </div>
@@ -845,37 +810,14 @@ export function ChatInput({
                     type="button"
                     onClick={() => {
                       setPlusOpen(false);
-                      photoRef.current?.click();
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
-                  >
-                    <ImageIcon className="w-5 h-5 text-muted-foreground" />
-                    <span>Photos</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlusOpen(false);
                       fileRef.current?.click();
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
+                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent text-left"
                   >
-                    <FileText className="w-5 h-5 text-muted-foreground" />
-                    <span>Files</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlusOpen(false);
-                      window.location.href = "/apps";
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
-                  >
-                    <Puzzle className="w-5 h-5 text-muted-foreground" />
-                    <span>Plugins</span>
+                    <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                    <span>Add photos and files</span>
                   </button>
                   {renderComposerActions(true)}
-                  {renderRecentLibraryFiles()}
                 </div>
               </MobileBottomSheet>
             )}
