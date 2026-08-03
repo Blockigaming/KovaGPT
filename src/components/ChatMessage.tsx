@@ -439,18 +439,11 @@ function ChatMessageInner({
               </div>
             )}
             {message.content && (
-
               <div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-3xl bg-[var(--user-bubble)] px-4 py-2.5 text-foreground">
-
-
-              <div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-3xl bg-[var(--user-bubble)] px-4 py-2.5 text-foreground">
-
-              <div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-3xl border border-border/40 bg-[var(--user-bubble)] px-4 py-2.5 text-foreground">
-
-
                 {message.content}
               </div>
             )}
+
             {(onEdit || onBranch) && (
               <div className="mt-1 flex min-h-9 items-center opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
                 {onEdit && (
