@@ -1182,9 +1182,9 @@ export const Route = createFileRoute("/api/chat")({
             }> = [];
 
             if (enableTools) {
-              const MAX_TOOL_HOPS = 8;
+              const MAX_TOOL_HOPS = 3;
               const MAX_TOOL_CALLS_TOTAL = 16;
-              const PER_HOP_TIMEOUT_MS = 25_000;
+              const PER_HOP_TIMEOUT_MS = 12_000;
               let totalToolCalls = 0;
               let toolsWereUsed = false;
               let hopFailed = false;
