@@ -339,3 +339,21 @@
 :where([role="menuitem"], [role="option"]) {
   border: 0 !important;
 }
+
+/* Text fields: focus reads as a subtle border shift, never a bright outline box. */
+:where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not(
+      [type="submit"]
+    ),
+  textarea,
+  select
+):focus-visible,
+:where(input, textarea, select):focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: color-mix(in oklab, var(--foreground) 32%, transparent) !important;
+}
+.kova-composer:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
+}
