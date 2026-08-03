@@ -15,9 +15,9 @@ const MIME_PATTERN = /^(?:text\/[a-z0-9!#$&^_.+-]+|application\/json)$/i;
 const IMAGE_DATA_URL_PATTERN = /^data:image\/(png|jpe?g|webp|gif);base64,([a-z0-9+/]*={0,2})$/i;
 
 const MODE_ALIASES = Object.freeze({
-  default: "medium",
+  default: "instant",
   fast: "instant",
-  auto: "medium",
+  auto: "instant",
   creative: "thinking",
   precise: "thinking",
   code: "thinking",

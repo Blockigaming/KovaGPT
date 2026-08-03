@@ -50,7 +50,7 @@ export function routeAiModel(
     metadata: {
       role: decision.role,
       model: decision.modelId,
-      mode: input.mode ?? "medium",
+      mode: input.mode ?? "instant",
       tier: input.tier ?? "free",
       complexity: decision.complexityScore,
       maxOutputTokens: decision.maxOutputTokens,
