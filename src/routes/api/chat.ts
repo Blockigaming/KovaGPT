@@ -39,7 +39,8 @@ import {
   type ResearchAuthorizationClient,
 } from "@/lib/research-persistence-authorization.server.mjs";
 import { activityToSseDelta, createToolActivityEvent } from "@/lib/ai/activity.server";
-import { selectModelForMode, mapProviderError } from "@/lib/ai/registry.server";
+import { mapProviderError } from "@/lib/ai/registry.server";
+import { routeAiModel } from "@/lib/ai/model-router.server";
 import { formatMemoryBlock, selectRelevantMemories, type KovaMemory } from "@/lib/ai/memory.server";
 import {
   CHAT_BODY_LIMIT_BYTES,
@@ -774,20 +775,30 @@ export const Route = createFileRoute("/api/chat")({
               }),
             );
 
-            // Model routing:
-            // - instant: fastest available (Gemini flash-lite) for snappy replies.
-            // - medium:  balanced quality/speed (Gemini 3.1 Pro preview).
-            // - high:    smartest available (GPT-5.5 Pro extended reasoning).
-            const selectedModel = selectModelForMode(m.id, {
-              hasImages,
-              needsTools: m.id !== "instant",
-              needsSearch: false,
-            });
-            const model = selectedModel.model.modelId;
-
-            // INTENTIONAL-DEFERRED(routing): per-request classification can be added
-            // and an explicit "Improve answer" client action that re-runs with a
-            // stronger model only on demand.
+            // Centralized server-side model routing. The client can pick a mode
+            // but never a model: the router resolves a logical role
+            // (DEFAULT_CHAT / ADVANCED_REASONING / PREMIUM_REASONING) to a
+            // concrete model id, always choosing the cheapest capable option.
+            const routeDecision = routeAiModel(
+              {
+                task: clientTool === "deep_research" ? "deep_research" : "chat",
+                mode: m.id,
+                tier: callerTier,
+                deepMode: m.id === "pro" || clientTool === "deep_research",
+                hasImages,
+                needsTools: m.id !== "instant" && Boolean(auth),
+                text: lastText ?? "",
+                contextChars: transformed.reduce(
+                  (total, msg) =>
+                    total + (typeof msg.content === "string" ? msg.content.length : 0),
+                  0,
+                ),
+                attachmentCount: totalAttachments,
+                historyTurns: transformed.length,
+              },
+              { requestId },
+            );
+            const model = routeDecision.modelId;
 
             // Live web data is on for everyone by default. Users can still opt
             // out in settings except for explicit/time-sensitive search asks.
@@ -999,6 +1010,10 @@ export const Route = createFileRoute("/api/chat")({
                 ...transformed,
               ],
             };
+            // Cost control: cap output length per mode from the router config.
+            if (routeDecision.maxOutputTokens > 0) {
+              body.max_completion_tokens = routeDecision.maxOutputTokens;
+            }
             // Only enable reasoning when the user explicitly chose a backed
             // reasoning mode. Every visible selector option maps to this real behavior.
             if (m.reasoning) {
