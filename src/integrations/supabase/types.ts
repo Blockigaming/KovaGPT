@@ -999,6 +999,7 @@ export type Database = {
           environment: string
           id: string
           last_stripe_event_created_at: string | null
+          last_stripe_event_id: string | null
           price_id: string
           product_id: string
           status: string
@@ -1015,6 +1016,7 @@ export type Database = {
           environment?: string
           id?: string
           last_stripe_event_created_at?: string | null
+          last_stripe_event_id?: string | null
           price_id: string
           product_id: string
           status?: string
@@ -1031,6 +1033,7 @@ export type Database = {
           environment?: string
           id?: string
           last_stripe_event_created_at?: string | null
+          last_stripe_event_id?: string | null
           price_id?: string
           product_id?: string
           status?: string
