@@ -256,8 +256,7 @@
 .kova-auth-surface :is(input, textarea, select):focus-visible {
   border-color: var(--parity-focus) !important;
   box-shadow: none !important;
-  outline: 2px solid var(--parity-focus) !important;
-  outline-offset: 1px;
+  outline: none !important;
 }
 .kova-settings-dialog [role="tab"][aria-selected="true"],
 .kova-secondary-page [role="tab"][aria-selected="true"] {
@@ -338,4 +337,23 @@
 }
 :where([role="menuitem"], [role="option"]) {
   border: 0 !important;
+}
+
+/* Text fields: focus reads as a subtle border shift, never a bright outline box. */
+:where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not(
+      [type="submit"]
+    ),
+  textarea,
+  select
+):focus-visible,
+html :is(input, textarea, select):focus,
+html :is(input, textarea, select):focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: color-mix(in oklab, var(--foreground) 32%, transparent) !important;
+}
+.kova-composer:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
 }

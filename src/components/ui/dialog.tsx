@@ -74,9 +74,21 @@ const DialogContent = React.forwardRef<
 ));
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
-const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col space-y-1.5 pr-10 text-left", className)} {...props} />
-);
+const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
+  // Centered headers must not keep the close-button gutter, otherwise the
+  // title and icon sit visibly off center inside the dialog.
+  const centered = typeof className === "string" && className.includes("text-center");
+  return (
+    <div
+      className={cn(
+        "flex flex-col space-y-1.5",
+        centered ? "px-6 text-center" : "pr-10 text-left",
+        className,
+      )}
+      {...props}
+    />
+  );
+};
 DialogHeader.displayName = "DialogHeader";
 
 const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (

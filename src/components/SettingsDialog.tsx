@@ -2241,103 +2241,94 @@ function SignedOutSettings({
   onSignIn: () => void;
   onClose: () => void;
 }) {
-  return (
-    <div className="overflow-y-auto max-h-[78vh] bg-background">
-      {/* Hero sign-in card */}
-      <div className="px-6 pt-8 pb-2">
-        <div className="relative overflow-hidden rounded-xl border border-border/60 bg-gradient-to-b from-muted/40 to-background p-7 text-center">
-          <div className="mx-auto w-14 h-14 rounded-xl bg-foreground text-background flex items-center justify-center mb-4">
-            <Sparkles className="w-6 h-6" />
-          </div>
-          <h2 className="text-[19px] font-semibold tracking-tight font-display">
-            Sign in to KovaGPT
-          </h2>
-          <p className="text-[13px] text-muted-foreground mt-2 leading-relaxed max-w-sm mx-auto">
-            Sync your chats, memory, and connected apps across every device.
-          </p>
-          <div className="mt-5">
-            <Button onClick={onSignIn} className="rounded-full px-6 h-10 text-sm font-medium">
-              Sign in
-            </Button>
-          </div>
-          <p className="text-[11px] text-muted-foreground/80 mt-4">
-            Guest preferences below are saved on this device only.
-          </p>
-        </div>
-      </div>
+  const [section, setSection] = useState<"general" | "data">("general");
+  void onChange;
 
-      <div className="px-6 py-6 space-y-8">
-        {/* Appearance */}
-        <section>
-          <h3 className="text-[11px] uppercase tracking-[0.08em] font-medium text-muted-foreground px-1 mb-2.5">
-            Appearance
-          </h3>
-          <div className="rounded-xl border border-border/60 bg-card/40 p-2">
-            <div className="grid grid-cols-3 gap-1">
-              {(["system", "light", "dark"] as ThemeMode[]).map((m) => {
-                const active = settings.mode === m;
-                const Icon = m === "system" ? Monitor : m === "light" ? Sun : Moon;
-                return (
-                  <button
-                    key={m}
-                    onClick={() => setMode(m)}
-                    className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[13px] capitalize transition ${
-                      active
-                        ? "bg-background text-foreground font-medium"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span>{m}</span>
-                  </button>
-                );
-              })}
+  return (
+    <div className="flex max-h-[78vh] min-h-0 flex-1 flex-col overflow-hidden bg-background md:flex-row">
+      <nav
+        aria-label="Settings sections"
+        className="flex shrink-0 gap-1 overflow-x-auto border-b border-border p-2 md:w-56 md:flex-col md:overflow-visible md:border-b-0 md:border-r md:p-3"
+      >
+        {(
+          [
+            ["general", "General", Cog],
+            ["data", "Data controls", Database],
+          ] as const
+        ).map(([value, label, Icon]) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setSection(value)}
+            aria-current={section === value}
+            className={`flex shrink-0 items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
+              section === value
+                ? "bg-accent text-foreground font-medium"
+                : "text-muted-foreground hover:bg-accent/60"
+            }`}
+          >
+            <Icon className="h-4 w-4 shrink-0" />
+            <span>{label}</span>
+          </button>
+        ))}
+      </nav>
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+        {section === "general" ? (
+          <div className="divide-y divide-border">
+            <div className="flex items-center justify-between gap-4 py-4 first:pt-0">
+              <span className="text-sm">Appearance</span>
+              <div className="w-44">
+                <Select value={settings.mode ?? "system"} onValueChange={(v) => setMode(v as ThemeMode)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="system">System</SelectItem>
+                    <SelectItem value="light">Light</SelectItem>
+                    <SelectItem value="dark">Dark</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-4 py-4">
+              <span className="text-sm">Language</span>
+              <div className="w-44">
+                <GuestLanguageSelect />
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-4 py-4">
+              <div className="min-w-0">
+                <div className="text-sm">Account</div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Sign in to sync chats, memory, and settings across devices.
+                </p>
+              </div>
+              <Button onClick={onSignIn} className="h-9 rounded-full px-5 text-sm">
+                Sign in
+              </Button>
             </div>
           </div>
-        </section>
-
-        {/* Language */}
-        <section>
-          <h3 className="text-[11px] uppercase tracking-[0.08em] font-medium text-muted-foreground px-1 mb-2.5">
-            Language
-          </h3>
-          <div className="rounded-xl border border-border/60 bg-card/40 p-3">
-            <GuestLanguageSelect />
-            <p className="text-[12px] text-muted-foreground mt-2.5 px-0.5">
-              KovaGPT replies in the language you write in.
-            </p>
+        ) : (
+          <div className="space-y-5">
+            <ArchivedChatsPanel userKey={null} />
+            <div className="rounded-xl border border-border/60 bg-card/40 p-4">
+              <div className="text-sm font-medium">Guest data stays on this device</div>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                Signed out chats and preferences are stored in this browser session only and are
+                cleared when the tab closes. Read the{" "}
+                <Link
+                  to="/privacy"
+                  onClick={onClose}
+                  className="underline underline-offset-2 hover:text-foreground"
+                >
+                  Privacy Policy
+                </Link>{" "}
+                for the data-processing terms that apply.
+              </p>
+            </div>
           </div>
-        </section>
-
-        {/* Privacy */}
-        <section>
-          <h3 className="text-[11px] uppercase tracking-[0.08em] font-medium text-muted-foreground px-1 mb-2.5">
-            Privacy
-          </h3>
-          <div className="rounded-xl border border-border/60 bg-card/40 p-4 space-y-2">
-            <div className="text-sm font-medium">No browser-only provider controls</div>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              The removed guest training and marketing switches changed only browser-local values;
-              they were not wired to account-level or AI-provider controls. They are not shown as
-              functional controls. Read the{" "}
-              <Link
-                to="/privacy"
-                onClick={onClose}
-                className="underline underline-offset-2 hover:text-foreground"
-              >
-                Privacy Policy
-              </Link>{" "}
-              for the data-processing terms that apply.
-            </p>
-          </div>
-        </section>
-
-        <section>
-          <h3 className="mb-2.5 px-1 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-            Data controls
-          </h3>
-          <ArchivedChatsPanel userKey={null} />
-        </section>
+        )}
       </div>
     </div>
   );
