@@ -302,7 +302,7 @@ function PlanCard({
     <div
       className={`kova-plan-card relative flex flex-col rounded-xl border p-6 shadow-none ${
         enterprise
-          ? "border-foreground/20 bg-foreground text-background"
+          ? "border-foreground/30 bg-card"
           : highlight
             ? "border-foreground bg-card"
             : "border-border bg-card/50"
@@ -316,7 +316,7 @@ function PlanCard({
       <div className="mb-3 flex items-center gap-2.5">
         {Icon ? (
           <span
-            className={`grid h-9 w-9 place-items-center rounded-xl ${enterprise ? "bg-background/15" : "bg-muted"}`}
+            className={`grid h-9 w-9 place-items-center rounded-xl bg-muted`}
           >
             <Icon className="h-4 w-4" />
           </span>
@@ -327,7 +327,7 @@ function PlanCard({
         <span className="text-4xl font-bold">{price}</span>
         <span className="text-muted-foreground text-sm">{period}</span>
       </div>
-      <p className={`mb-6 text-sm ${enterprise ? "text-background/70" : "text-muted-foreground"}`}>
+      <p className="mb-6 text-sm text-muted-foreground">
         {description}
       </p>
       <button
@@ -335,7 +335,7 @@ function PlanCard({
         disabled={ctaDisabled}
         className={`mb-6 w-full rounded-full py-2.5 text-sm font-medium transition ${
           enterprise
-            ? "bg-background text-foreground hover:bg-background/90"
+            ? "border border-foreground/40 hover:bg-accent"
             : highlight
               ? "bg-foreground text-background hover:opacity-90"
               : "border border-border hover:bg-accent"
