@@ -179,16 +179,6 @@ export function ChatInput({
       return;
     }
 
-    // Ask for the microphone first. Inside embedded previews the permission
-    // prompt never appears, and recognition then fails silently.
-    try {
-      const stream = await navigator.mediaDevices?.getUserMedia({ audio: true });
-      stream?.getTracks().forEach((track) => track.stop());
-    } catch {
-      toast.error("Microphone access is blocked. Allow it in your browser settings, then retry.");
-      return;
-    }
-
     const recognition = new Ctor() as unknown as {
       continuous: boolean;
       interimResults: boolean;
@@ -217,7 +207,7 @@ export function ChatInput({
       recognitionRef.current = null;
       const code = event?.error;
       if (code === "not-allowed" || code === "service-not-allowed")
-        toast.error("Microphone access is blocked. Allow it in your browser settings, then retry.");
+        toast.error("Microphone permission was not granted. Open KovaGPT in its own tab and retry.");
       else if (code === "no-speech") toast.error("No speech detected. Try dictating again.");
       else if (code === "network") toast.error("Dictation needs a network connection.");
       else if (code && code !== "aborted") toast.error("Dictation stopped unexpectedly.");
