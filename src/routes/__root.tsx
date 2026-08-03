@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   ScriptOnce,
   Scripts,
@@ -300,12 +301,38 @@ function RootThemeManager() {
   return null;
 }
 
+const PAGE_TITLES: Record<string, string> = {
+  "/": "KovaGPT Chat",
+  "/pricing": "KovaGPT Billing",
+  "/library": "KovaGPT Library",
+  "/images": "KovaGPT Images",
+  "/projects": "KovaGPT Projects",
+  "/help": "KovaGPT Help",
+  "/memory": "KovaGPT Memory",
+  "/settings": "KovaGPT Settings",
+  "/status": "KovaGPT Status",
+};
+
+function PageTitleManager() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  useEffect(() => {
+    const exact = PAGE_TITLES[pathname];
+    const section = pathname.split("/").filter(Boolean)[0];
+    const fallback = section
+      ? `KovaGPT ${section.charAt(0).toUpperCase()}${section.slice(1)}`
+      : "KovaGPT Chat";
+    document.title = exact ?? fallback;
+  }, [pathname]);
+  return null;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <ClerkProvider>
       <QueryClientProvider client={queryClient}>
         <RootThemeManager />
+        <PageTitleManager />
         <PlatformRuntime />
         <Outlet />
         <Toaster />
