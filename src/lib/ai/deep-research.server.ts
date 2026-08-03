@@ -188,8 +188,6 @@ async function makePlan(query: string, signal?: AbortSignal): Promise<string[]> 
   const upstream = await chatCompletions(
     {
 
-      model: utilityModel(),
-
       model: modelForRole("UTILITY"),
       max_completion_tokens: UTILITY_MAX_OUTPUT_TOKENS,
 

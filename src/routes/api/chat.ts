@@ -50,7 +50,6 @@ import {
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
 import { estimateProviderInput } from "@/lib/ai/token-estimator.server";
 
-import { mapProviderError } from "@/lib/ai/registry.server";
 import { routeAiModel } from "@/lib/ai/model-router.server";
 
 import { formatMemoryBlock, selectRelevantMemories, type KovaMemory } from "@/lib/ai/memory.server";

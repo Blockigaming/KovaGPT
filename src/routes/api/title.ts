@@ -79,10 +79,6 @@ export const Route = createFileRoute("/api/title")({
             });
           }
 
-          const { chatCompletions, utilityModel, missingAiProviderResponse } =
-            await import("@/lib/ai/provider.server");
-
-          // eslint-disable-next-line prettier/prettier
           const provider = await import("@/lib/ai/provider.server");
           const { chatCompletions, missingAiProviderResponse } = provider;
           const { modelForRole } = await import("@/lib/ai/model-router.server");
@@ -109,8 +105,6 @@ export const Route = createFileRoute("/api/title")({
           }
 
           const upstream = await chatCompletions({
-
-            model: utilityModel(),
 
             model: modelForRole("UTILITY"),
             max_completion_tokens: UTILITY_MAX_OUTPUT_TOKENS,
