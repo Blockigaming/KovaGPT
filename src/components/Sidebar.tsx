@@ -7,6 +7,7 @@ import {
   FolderOpen,
   HelpCircle,
   ImageIcon,
+  MessageSquare,
   MoreHorizontal,
   PanelLeft,
   Pin,
