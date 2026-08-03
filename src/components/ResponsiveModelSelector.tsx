@@ -27,6 +27,8 @@ export function ResponsiveModelSelector({
   placement?: "composer" | "topbar";
 }) {
   const { isDesktop, interaction } = useLayout();
+  const { isSignedIn, isLoaded } = useUser();
+  const locked = isLoaded && !isSignedIn;
   const useSheet = !isDesktop || interaction === "touch";
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -46,6 +48,13 @@ export function ResponsiveModelSelector({
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, [open, useSheet]);
 
+  // Signed-out visitors are pinned to the cheapest mode and never see the picker.
+  useEffect(() => {
+    if (!locked) return;
+    setOpen(false);
+    if (mode !== "instant") onChange("instant");
+  }, [locked, mode, onChange]);
+
   const closeAndRestoreFocus = () => {
     setOpen(false);
     window.requestAnimationFrame(() => triggerRef.current?.focus({ preventScroll: true }));
@@ -55,13 +64,13 @@ export function ResponsiveModelSelector({
     "kova-model-trigger inline-flex items-center gap-1 font-medium transition-colors duration-100 " +
     (topbar
       ? useSheet
-        ? "h-11 max-w-full rounded-lg bg-transparent px-2 text-base active:bg-accent"
-        : "h-10 rounded-lg bg-transparent px-2.5 text-base hover:bg-accent"
+        ? "h-11 max-w-full rounded-lg bg-transparent px-2 text-[15px] active:bg-accent"
+        : "h-10 rounded-lg bg-transparent px-2.5 text-[15px] hover:bg-accent"
       : "rounded-lg bg-transparent " +
         (useSheet ? "active:bg-accent " : "hover:bg-accent ") +
-        (compact ? "h-8 px-3.5 text-[13px]" : "h-9 px-4 text-sm"));
+        (compact ? "h-8 px-3.5 text-sm" : "h-9 px-4 text-[15px]"));
 
-  const options = modesForTier(userTier).map((availableMode) => {
+  const renderOption = (availableMode: (typeof MODES)[number]) => {
     const selected = availableMode.id === mode;
     return (
       <button
@@ -86,11 +95,7 @@ export function ResponsiveModelSelector({
                 (selected ? "bg-accent" : "hover:bg-accent/60")
           }
         >
-          <span
-            className={useSheet ? "flex-1 text-base font-medium" : "flex-1 text-sm font-medium"}
-          >
-            {availableMode.label}
-          </span>
+          <span className="flex-1 text-[15px] font-medium">{availableMode.label}</span>
           {selected && (
             <Check
               className={useSheet ? "h-5 w-5" : "h-4 w-4 text-foreground"}
@@ -100,7 +105,18 @@ export function ResponsiveModelSelector({
         </div>
       </button>
     );
-  });
+  };
+
+  const groups = versionGroupsForTier(userTier);
+  const options = groups.map((group) => (
+    <div key={group.id} className="pb-1">
+      <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">{group.label}</div>
+      {group.modes.map(renderOption)}
+    </div>
+  ));
+
+  if (locked) return null;
+
 
   return (
     <div
