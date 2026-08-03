@@ -283,27 +283,8 @@ function ChatMessageInner({
   const [editorMode, setEditorMode] = useState<"edit" | "preview">("edit");
   const { isSignedIn } = useUser();
 
-  const feedbackKey = useMemo(
-    () => principalScopedStorageKey(`n:feedback:${message.id}`, userKey),
-    [message.id, userKey],
-  );
-  const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
-  useEffect(() => {
-    if (!principalResolved || !feedbackKey) return;
-    const storage = safeBrowserStorage("localStorage");
-    const stored = storage?.getItem(feedbackKey);
-    setFeedback(stored === "up" || stored === "down" ? stored : null);
-  }, [feedbackKey, principalResolved]);
-  const persistFeedback = useCallback(
-    (next: "up" | "down" | null) => {
-      setFeedback(next);
-      const storage = safeBrowserStorage("localStorage");
-      if (!storage || !feedbackKey) return;
-      if (next) storage.setItem(feedbackKey, next);
-      else storage.removeItem(feedbackKey);
-    },
-    [feedbackKey],
-  );
+
+
 
 
   const saveFn = useServerFn(saveToLibrary);
@@ -479,14 +460,11 @@ function ChatMessageInner({
               </div>
             )}
             {message.content && (
-
-              <div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-3xl border border-border/40 bg-[var(--user-bubble)] px-4 py-2.5 text-foreground">
-
-              <div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-3xl bg-[var(--user-bubble)] px-4 py-2.5 text-foreground">
-
+              <div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-[1.75rem] bg-[var(--user-bubble)] px-4 py-2.5 text-foreground">
                 {message.content}
               </div>
             )}
+
 
             {(onEdit || onBranch) && (
               <div className="mt-1 flex min-h-9 items-center opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
@@ -632,7 +610,7 @@ function ChatMessageInner({
         <div className={isUser ? "flex justify-end" : "flex justify-start"}>
           {!streaming && !isUser && message.content && (
             <div className="kova-message-actions mt-1 max-w-full overflow-x-auto">
-              {/* Visible: Copy, Thumbs up, Thumbs down, Share */}
+              {/* Visible: Copy, Share */}
               <button
                 onClick={copy}
                 className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-accent transition-colors duration-100"
@@ -645,40 +623,7 @@ function ChatMessageInner({
                   <Copy className="w-4 h-4" />
                 )}
               </button>
-              <button
-                onClick={() => {
-                  const next = feedback === "up" ? null : "up";
-                  persistFeedback(next);
-                  if (next) toast.success("Rating saved on this device");
-                }}
-                className={`inline-flex items-center justify-center p-1.5 rounded-lg hover:bg-accent transition-colors duration-100 ${
-                  feedback === "up"
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                title="Good response"
-                aria-label="Good response"
-                aria-pressed={feedback === "up"}
-              >
-                <ThumbsUp className={`w-4 h-4 ${feedback === "up" ? "fill-current" : ""}`} />
-              </button>
-              <button
-                onClick={() => {
-                  const next = feedback === "down" ? null : "down";
-                  persistFeedback(next);
-                  if (next) toast.success("Rating saved on this device");
-                }}
-                className={`inline-flex items-center justify-center p-1.5 rounded-lg hover:bg-accent transition-colors duration-100 ${
-                  feedback === "down"
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                title="Bad response"
-                aria-label="Bad response"
-                aria-pressed={feedback === "down"}
-              >
-                <ThumbsDown className={`w-4 h-4 ${feedback === "down" ? "fill-current" : ""}`} />
-              </button>
+
               <button
                 onClick={async () => {
                   const text = message.content;

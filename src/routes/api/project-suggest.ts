@@ -84,8 +84,6 @@ export const Route = createFileRoute("/api/project-suggest")({
           if (quota) return quota;
           const upstream = await chatCompletions({
 
-            model: utilityModel(),
-
             model: modelForRole("UTILITY"),
             max_completion_tokens: UTILITY_MAX_OUTPUT_TOKENS,
 

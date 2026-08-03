@@ -52,6 +52,46 @@ export type ProviderConfig = {
 };
 
 const OPENAI_API_BASE_URL = "https://api.openai.com/v1";
+const LOVABLE_GATEWAY_BASE_URL = "https://ai.gateway.lovable.dev/v1";
+
+/**
+ * Kova buys inference through the managed AI gateway when a gateway key is
+ * present, and only falls back to a direct provider account otherwise. The
+ * gateway namespaces every model id, so catalog ids are translated here and
+ * nowhere else.
+ */
+const GATEWAY_MODEL_IDS: Record<string, string> = {
+  "gpt-5.6-luna": "openai/gpt-5-mini",
+  "gpt-5.6-terra": "openai/gpt-5",
+  "gpt-5.6-sol": "openai/gpt-5.5",
+  "gpt-4.1-nano": "openai/gpt-5-nano",
+  "gpt-4.1-mini": "openai/gpt-5-mini",
+  "gpt-5-mini": "openai/gpt-5-mini",
+  "gpt-5": "openai/gpt-5",
+  "gpt-image-1": "openai/gpt-image-1-mini",
+  "text-embedding-3-small": "openai/text-embedding-3-small",
+  "text-embedding-3-large": "openai/text-embedding-3-large",
+};
+
+function usingGateway(): boolean {
+  return Boolean(env("LOVABLE_API_KEY"));
+}
+
+export function providerBaseUrl(): string {
+  return usingGateway() ? LOVABLE_GATEWAY_BASE_URL : OPENAI_API_BASE_URL;
+}
+
+/** Translates a catalog model id into the id the active provider accepts. */
+export function providerModelId(modelId: string): string {
+  if (!usingGateway()) return modelId;
+  if (modelId.includes("/")) return modelId;
+  return GATEWAY_MODEL_IDS[modelId] ?? "openai/gpt-5-mini";
+}
+
+function withProviderModel(body: JsonObject): JsonObject {
+  if (typeof body.model !== "string") return body;
+  return { ...body, model: providerModelId(body.model) };
+}
 
 // Model ids live in ONE place: src/lib/ai/model-config.mjs. This adapter only
 // mirrors the logical roles so nothing in the repository hardcodes a model.
@@ -62,6 +102,7 @@ const OPENAI_MODELS = {
   image: DEFAULT_MODELS.IMAGE_GENERATION,
   embedding: DEFAULT_MODELS.EMBEDDING,
 };
+
 const DEFAULT_TIMEOUT_MS = 45_000;
 const NO_STORE_HEADERS = { "Cache-Control": "no-store" } as const;
 const PROVIDER_FAILURE_CATEGORY = "model_provider_failure";
@@ -124,7 +165,7 @@ function parseCapabilities(value: string | undefined): ProviderCapability[] {
 export function getAiProviderConfig(): ProviderConfig {
   return {
     provider: "openai",
-    baseUrl: OPENAI_API_BASE_URL,
+    baseUrl: providerBaseUrl(),
     chatModel: modelForPolicy("normal").id,
     fastModel: modelForPolicy("instant").id,
     deepModel: modelForPolicy("deep").id,
@@ -132,7 +173,7 @@ export function getAiProviderConfig(): ProviderConfig {
     embeddingModel: env("KOVA_EMBEDDING_MODEL") ?? "text-embedding-3-small",
     timeoutMs: parseTimeout(env("KOVA_AI_TIMEOUT_MS")),
     capabilities: parseCapabilities(env("KOVA_AI_CAPABILITIES")),
-    configured: Boolean(env("OPENAI_API_KEY")),
+    configured: Boolean(env("LOVABLE_API_KEY") ?? env("OPENAI_API_KEY")),
   };
 }
 
@@ -156,7 +197,7 @@ export function validateAiProviderConfig(): ProviderErrorEnvelope | null {
       status: 503,
     };
   }
-  if (env("OPENAI_API_KEY")) return null;
+  if (env("LOVABLE_API_KEY") || env("OPENAI_API_KEY")) return null;
   return {
     error: "KovaGPT is temporarily unavailable. Please try again later.",
     code: "provider_unavailable",
@@ -207,10 +248,10 @@ export function missingAiProviderResponse(fallback?: JsonObject): Response | nul
 }
 
 function headers(): Record<string, string> {
-  const openAiKey = env("OPENAI_API_KEY");
-  if (!openAiKey) throw new AiProviderError(validateAiProviderConfig()!);
+  const key = env("LOVABLE_API_KEY") ?? env("OPENAI_API_KEY");
+  if (!key) throw new AiProviderError(validateAiProviderConfig()!);
   return {
-    Authorization: `Bearer ${openAiKey}`,
+    Authorization: `Bearer ${key}`,
     "Content-Type": "application/json",
   };
 }
@@ -320,7 +361,7 @@ async function providerFetch(
   const config = getAiProviderConfig();
   const { signal, cleanup } = mergeSignals(init?.signal ?? undefined, config.timeoutMs);
   try {
-    return await fetch(`${OPENAI_API_BASE_URL}${path}`, {
+    return await fetch(`${providerBaseUrl()}${path}`, {
       ...init,
       method: "POST",
       redirect: "error",
@@ -329,7 +370,7 @@ async function providerFetch(
         ...Object.fromEntries(new Headers(init?.headers).entries()),
         ...headers(),
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(withProviderModel(body)),
     });
   } catch (error) {
     throw normalizeProviderError(error);
