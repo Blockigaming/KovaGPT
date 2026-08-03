@@ -577,7 +577,7 @@ function KovaGPT() {
     [],
   );
 
-  const greeting = "What can I help with?";
+  const greeting = "Where should we begin?";
 
   const updateNearBottom = useCallback(() => {
     const el = scrollRef.current;
@@ -1543,7 +1543,7 @@ function KovaGPT() {
                 </h1>
               </div>
 
-              <div className="mx-auto w-full max-w-[48rem]">
+              <div className="mx-auto w-full max-w-[48rem] px-1 sm:px-2">
                 <ChatInput
                   value={principalReady ? input : ""}
                   onChange={setInput}

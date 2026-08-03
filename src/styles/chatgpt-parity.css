@@ -1,0 +1,35 @@
+/* Audited shell tokens. Component rules consume these values; this file does
+   not style generic buttons, links, cards, menus, or dialogs. */
+:root {
+  --parity-sidebar-expanded: 260px;
+  --parity-topbar-height: 52px;
+  --parity-content-max: 48rem;
+  --parity-composer-gutter: max(0.75rem, env(safe-area-inset-left));
+  --parity-focus: color-mix(in oklab, var(--foreground) 62%, transparent);
+  --parity-motion-fast: 120ms;
+  --parity-motion-standard: 200ms;
+}
+
+.kova-composer:focus-within {
+  outline: 2px solid var(--parity-focus);
+  outline-offset: 2px;
+}
+
+@media (min-width: 640px) and (max-width: 768px) {
+  .kova-empty-chat .kova-composer,
+  .kova-composer-dock .kova-composer {
+    max-width: calc(100vw - (2 * var(--parity-composer-gutter)));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kova-composer,
+  .kova-composer-button,
+  .kova-sidebar,
+  .kova-topbar {
+    scroll-behavior: auto;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
