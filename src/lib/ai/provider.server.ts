@@ -61,9 +61,9 @@ const LOVABLE_GATEWAY_BASE_URL = "https://ai.gateway.lovable.dev/v1";
  * nowhere else.
  */
 const GATEWAY_MODEL_IDS: Record<string, string> = {
-  "gpt-5.6-luna": "openai/gpt-5-mini",
-  "gpt-5.6-terra": "openai/gpt-5",
-  "gpt-5.6-sol": "openai/gpt-5.5",
+  "gpt-5.6-luna": "openai/gpt-5.6-luna",
+  "gpt-5.6-terra": "openai/gpt-5.6-terra",
+  "gpt-5.6-sol": "openai/gpt-5.6-sol",
   "gpt-4.1-nano": "openai/gpt-5-nano",
   "gpt-4.1-mini": "openai/gpt-5-mini",
   "gpt-5-mini": "openai/gpt-5-mini",
@@ -467,7 +467,13 @@ function toResponsesRequest(body: JsonObject): JsonObject {
   if (typeof body.max_completion_tokens === "number")
     request.max_output_tokens = Math.min(body.max_completion_tokens, serverOutputCeiling);
   if (request.max_output_tokens === undefined) request.max_output_tokens = serverOutputCeiling;
-  if (body.reasoning && typeof body.reasoning === "object") request.reasoning = body.reasoning;
+  // Reasoning models default to medium effort, which makes ordinary chat slow
+  // and expensive. Kova asks for low effort unless a caller opts into more.
+  request.reasoning =
+    body.reasoning && typeof body.reasoning === "object"
+      ? body.reasoning
+      : { effort: "low", summary: "auto" };
+  request.store = false;
   return request;
 }
 

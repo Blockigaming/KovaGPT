@@ -14,6 +14,99 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_generation_events: {
+        Row: {
+          actual_cost_usd: number | null
+          cached_input_tokens: number | null
+          context_trimmed: boolean
+          conversation_id: string | null
+          created_at: string
+          error: string | null
+          estimated_cost_usd: number
+          estimated_input_tokens: number
+          finalized_at: string | null
+          guest_ip_hash: string | null
+          id: string
+          idempotency_key: string
+          input_tokens: number | null
+          latency_ms: number | null
+          lease_expires_at: string
+          mode: string
+          model: string
+          output_tokens: number | null
+          period_end: string
+          period_start: string
+          plan: string
+          premium: boolean
+          reasoning_tokens: number | null
+          request_id: string
+          reserved_tokens: number
+          status: string
+          tools: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          actual_cost_usd?: number | null
+          cached_input_tokens?: number | null
+          context_trimmed?: boolean
+          conversation_id?: string | null
+          created_at?: string
+          error?: string | null
+          estimated_cost_usd?: number
+          estimated_input_tokens?: number
+          finalized_at?: string | null
+          guest_ip_hash?: string | null
+          id?: string
+          idempotency_key: string
+          input_tokens?: number | null
+          latency_ms?: number | null
+          lease_expires_at: string
+          mode: string
+          model: string
+          output_tokens?: number | null
+          period_end: string
+          period_start: string
+          plan: string
+          premium?: boolean
+          reasoning_tokens?: number | null
+          request_id: string
+          reserved_tokens?: number
+          status?: string
+          tools?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          actual_cost_usd?: number | null
+          cached_input_tokens?: number | null
+          context_trimmed?: boolean
+          conversation_id?: string | null
+          created_at?: string
+          error?: string | null
+          estimated_cost_usd?: number
+          estimated_input_tokens?: number
+          finalized_at?: string | null
+          guest_ip_hash?: string | null
+          id?: string
+          idempotency_key?: string
+          input_tokens?: number | null
+          latency_ms?: number | null
+          lease_expires_at?: string
+          mode?: string
+          model?: string
+          output_tokens?: number | null
+          period_end?: string
+          period_start?: string
+          plan?: string
+          premium?: boolean
+          reasoning_tokens?: number | null
+          request_id?: string
+          reserved_tokens?: number
+          status?: string
+          tools?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       banned_users: {
         Row: {
           banned_at: string
@@ -1260,6 +1353,36 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acquire_ai_generation: {
+        Args: {
+          p_context_trimmed: boolean
+          p_conversation_id: string
+          p_daily_limit: number
+          p_estimated_cost: number
+          p_estimated_input: number
+          p_global_concurrency: number
+          p_guest_ip_hash: string
+          p_guest_limit: number
+          p_idempotency_key: string
+          p_lease_seconds: number
+          p_mode: string
+          p_model: string
+          p_monthly_limit: number
+          p_period_end: string
+          p_period_start: string
+          p_plan: string
+          p_premium: boolean
+          p_premium_limit: number
+          p_principal_concurrency: number
+          p_request_id: string
+          p_reserved_tokens: number
+          p_user_id: string
+        }
+        Returns: {
+          decision: string
+          event_id: string
+        }[]
+      }
       can_edit_project: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
@@ -1274,6 +1397,21 @@ export type Database = {
         Returns: number
       }
       family_owner_of: { Args: { _user_id: string }; Returns: string }
+      finalize_ai_generation: {
+        Args: {
+          p_actual_cost: number
+          p_cached: number
+          p_error: string
+          p_event_id: string
+          p_input: number
+          p_latency: number
+          p_output: number
+          p_reasoning: number
+          p_status: string
+          p_tools: Json
+        }
+        Returns: boolean
+      }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
         Returns: boolean
