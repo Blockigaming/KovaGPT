@@ -194,15 +194,22 @@ export function AuthDialog({
         >
           <div
             className={cn(
-              "kova-auth-surface relative rounded-2xl border border-border/60 bg-card",
+              "kova-auth-surface relative rounded-xl border border-border/60 bg-card",
               "p-7 sm:p-9",
-              "animate-in fade-in-0 zoom-in-95 duration-300",
+              "animate-in fade-in-0 duration-100",
             )}
           >
             {/* Header */}
             <div className="flex flex-col items-center text-center">
+
+              <div className="mb-5 animate-in fade-in-0 duration-100">
+                <div className="relative w-14 h-14 rounded-xl bg-foreground/[0.04] ring-1 ring-border flex items-center justify-center">
+                  <NovaLogo className="w-9 h-9" />
+                </div>
+
               <div className="mb-5 animate-in fade-in-0 duration-300">
                 <NovaLogo className="h-12 w-12 rounded-full" />
+
               </div>
               <h1 className="text-[26px] leading-tight font-semibold tracking-tight">
                 {step === "magic-sent"
@@ -235,7 +242,7 @@ export function AuthDialog({
                         onBlur={() => setEmailTouched(true)}
                         aria-invalid={emailTouched && !emailValid}
                         className={cn(
-                          "h-14 rounded-2xl text-[15px] px-4",
+                          "h-14 rounded-xl text-[15px] px-4",
                           emailTouched &&
                             !emailValid &&
                             "border-destructive focus-visible:ring-destructive",
@@ -250,7 +257,7 @@ export function AuthDialog({
                     <Button
                       type="submit"
                       disabled={loading || !emailValid}
-                      className="w-full h-14 rounded-2xl text-[15px] font-medium"
+                      className="w-full h-14 rounded-xl text-[15px] font-medium"
                     >
                       Continue
                     </Button>
@@ -271,7 +278,7 @@ export function AuthDialog({
                     type="button"
                     onClick={handleGoogle}
                     disabled={loading}
-                    className="w-full h-14 rounded-2xl border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-3 text-[15px] font-medium disabled:opacity-60"
+                    className="w-full h-14 rounded-xl border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-3 text-[15px] font-medium disabled:opacity-60"
                   >
                     {loading ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
@@ -302,7 +309,7 @@ export function AuthDialog({
                     type="button"
                     onClick={handleMagicLink}
                     disabled={loading || !emailValid}
-                    className="w-full h-14 rounded-2xl border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-3 text-[15px] font-medium disabled:opacity-60"
+                    className="w-full h-14 rounded-xl border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-3 text-[15px] font-medium disabled:opacity-60"
                   >
                     <Mail className="h-5 w-5" />
                     Email me a sign-in link
@@ -311,10 +318,7 @@ export function AuthDialog({
               )}
 
               {step === "password" && (
-                <form
-                  onSubmit={handleAuth}
-                  className="space-y-3 animate-in fade-in-0 slide-in-from-right-2 duration-300"
-                >
+                <form onSubmit={handleAuth} className="space-y-3 animate-in fade-in-0 duration-100">
                   <button
                     type="button"
                     onClick={() => setStep("identify")}
@@ -331,7 +335,7 @@ export function AuthDialog({
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       maxLength={80}
-                      className="h-14 rounded-2xl text-[15px] px-4"
+                      className="h-14 rounded-xl text-[15px] px-4"
                     />
                   )}
 
@@ -345,7 +349,7 @@ export function AuthDialog({
                       onChange={(e) => setPassword(e.target.value)}
                       minLength={6}
                       maxLength={1024}
-                      className="h-14 rounded-2xl text-[15px] px-4 pr-12"
+                      className="h-14 rounded-xl text-[15px] px-4 pr-12"
                     />
                     <button
                       type="button"
@@ -372,7 +376,7 @@ export function AuthDialog({
                   <Button
                     type="submit"
                     disabled={loading}
-                    className="w-full h-14 rounded-2xl text-[15px] font-medium"
+                    className="w-full h-14 rounded-xl text-[15px] font-medium"
                   >
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {isSignUp ? "Create account" : "Sign in"}
@@ -382,7 +386,7 @@ export function AuthDialog({
                     type="button"
                     onClick={handleMagicLink}
                     disabled={loading}
-                    className="w-full h-12 rounded-2xl text-sm text-muted-foreground hover:text-foreground transition inline-flex items-center justify-center"
+                    className="w-full h-12 rounded-xl text-sm text-muted-foreground hover:text-foreground transition inline-flex items-center justify-center"
                   >
                     Email me a link instead
                   </button>
@@ -390,11 +394,11 @@ export function AuthDialog({
               )}
 
               {step === "magic-sent" && (
-                <div className="animate-in fade-in-0 duration-300 space-y-3">
+                <div className="animate-in fade-in-0 duration-100 space-y-3">
                   <button
                     type="button"
                     onClick={() => setStep("identify")}
-                    className="w-full h-12 rounded-2xl text-sm text-muted-foreground hover:text-foreground transition inline-flex items-center justify-center gap-2"
+                    className="w-full h-12 rounded-xl text-sm text-muted-foreground hover:text-foreground transition inline-flex items-center justify-center gap-2"
                   >
                     <ArrowLeft className="h-4 w-4" /> Use a different email
                   </button>
@@ -441,7 +445,7 @@ export function AuthDialog({
               type="button"
               onClick={() => onOpenChange(false)}
               aria-label="Close"
-              className="absolute -top-3 -right-3 w-9 h-9 rounded-full bg-background border border-border shadow-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition"
+              className="absolute -top-3 -right-3 w-9 h-9 rounded-full bg-background border border-border shadow-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition"
             >
               <svg
                 width="14"

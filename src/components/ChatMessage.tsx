@@ -395,12 +395,12 @@ function ChatMessageInner({
     <article
       id={`message-${message.id}`}
       data-message-id={message.id}
-      className="kova-message group w-full animate-fade-in px-3 py-3 text-[15px] leading-[1.65] sm:px-5 lg:px-10 lg:py-4 lg:text-[16px] lg:leading-[1.7]"
+      className="kova-message group w-full px-3 py-3 text-[15px] leading-7 sm:px-5 lg:px-10 lg:py-4 lg:text-base"
       aria-label={isUser ? "Your message" : "KovaGPT response"}
     >
       {isUser ? (
         <div className="mx-auto flex max-w-[48rem] justify-end">
-          <div className="flex min-w-0 max-w-[88%] flex-col items-end sm:max-w-[78%] lg:max-w-[76%]">
+          <div className="flex min-w-0 max-w-[85%] flex-col items-end sm:max-w-[75%]">
             {message.attachments && message.attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2 justify-end">
                 {message.attachments
@@ -439,7 +439,11 @@ function ChatMessageInner({
               </div>
             )}
             {message.content && (
+
+              <div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-3xl bg-[var(--user-bubble)] px-4 py-2.5 text-foreground">
+
               <div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-3xl border border-border/40 bg-[var(--user-bubble)] px-4 py-2.5 text-foreground">
+
                 {message.content}
               </div>
             )}
@@ -472,7 +476,7 @@ function ChatMessageInner({
           </div>
         </div>
       ) : (
-        <div className="kova-assistant-message mx-auto flex max-w-[48rem] animate-fade-up items-start justify-start">
+        <div className="kova-assistant-message mx-auto flex max-w-[48rem] items-start justify-start">
           <div
             className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text"
             onTouchStart={startLongPress}
@@ -586,11 +590,11 @@ function ChatMessageInner({
       <div className="mx-auto max-w-[48rem]">
         <div className={isUser ? "flex justify-end" : "flex justify-start"}>
           {!streaming && !isUser && message.content && (
-            <div className="kova-message-actions mt-1 max-w-full overflow-x-auto transition-opacity lg:opacity-60 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
+            <div className="kova-message-actions mt-1 max-w-full overflow-x-auto">
               {/* Visible: Copy, Thumbs up, Thumbs down, Share */}
               <button
                 onClick={copy}
-                className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
+                className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-accent transition-colors duration-100"
                 title={copied ? "Copied" : "Copy"}
                 aria-label={copied ? "Copied" : "Copy"}
               >
@@ -601,6 +605,42 @@ function ChatMessageInner({
                 )}
               </button>
               <button
+
+                onClick={() => {
+                  const next = feedback === "up" ? null : "up";
+                  persistFeedback(next);
+                  if (next) toast.success("Rating saved on this device");
+                }}
+                className={`inline-flex items-center justify-center p-1.5 rounded-lg hover:bg-accent transition-colors duration-100 ${
+                  feedback === "up"
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="Good response"
+                aria-label="Good response"
+                aria-pressed={feedback === "up"}
+              >
+                <ThumbsUp className={`w-4 h-4 ${feedback === "up" ? "fill-current" : ""}`} />
+              </button>
+              <button
+                onClick={() => {
+                  const next = feedback === "down" ? null : "down";
+                  persistFeedback(next);
+                  if (next) toast.success("Rating saved on this device");
+                }}
+                className={`inline-flex items-center justify-center p-1.5 rounded-lg hover:bg-accent transition-colors duration-100 ${
+                  feedback === "down"
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                title="Bad response"
+                aria-label="Bad response"
+                aria-pressed={feedback === "down"}
+              >
+                <ThumbsDown className={`w-4 h-4 ${feedback === "down" ? "fill-current" : ""}`} />
+              </button>
+              <button
+
                 onClick={async () => {
                   const text = message.content;
                   if (typeof navigator !== "undefined" && navigator.share) {

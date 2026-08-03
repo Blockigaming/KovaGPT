@@ -216,8 +216,8 @@ function PricingPage() {
       <EnterpriseContactDialog open={enterpriseOpen} onOpenChange={setEnterpriseOpen} />
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center overflow-y-auto py-10 px-4">
-          <div className="relative w-full max-w-2xl bg-background rounded-2xl border border-border overflow-hidden">
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-start justify-center overflow-y-auto py-10 px-4">
+          <div className="relative w-full max-w-2xl bg-background rounded-xl border border-border overflow-hidden">
             <button
               onClick={closeCheckout}
               className="absolute top-3 right-3 z-10 p-2 rounded-full bg-background/80 border border-border hover:bg-accent transition"
@@ -237,27 +237,27 @@ function PricingPage() {
       <section className="mx-auto max-w-5xl px-6 mt-16">
         <h2 className="text-2xl font-semibold mb-6 text-left">Pricing FAQ</h2>
         <div className="grid gap-5 text-sm sm:grid-cols-2">
-          <div className="rounded-2xl border border-border bg-card/50 p-5">
+          <div className="rounded-xl border border-border bg-card/50 p-5">
             <h3 className="font-medium mb-1">Can I cancel anytime?</h3>
             <p className="text-muted-foreground">
               Open Billing in Settings to see the options available for your subscription and when a
               change takes effect.
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/50 p-5">
+          <div className="rounded-xl border border-border bg-card/50 p-5">
             <h3 className="font-medium mb-1">What happens if I hit my limit?</h3>
             <p className="text-muted-foreground">
               You can wait until your limit resets or upgrade to a higher plan for more usage.
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/50 p-5">
+          <div className="rounded-xl border border-border bg-card/50 p-5">
             <h3 className="font-medium mb-1">Can I switch plans?</h3>
             <p className="text-muted-foreground">
               Available plan changes appear in Billing. Review the portal or checkout confirmation
               for timing and price before accepting.
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/50 p-5">
+          <div className="rounded-xl border border-border bg-card/50 p-5">
             <h3 className="font-medium mb-1">Do unused credits roll over?</h3>
             <p className="text-muted-foreground">
               Published daily allowances reset rather than rolling over.
@@ -300,11 +300,11 @@ function PlanCard({
 }: CardProps) {
   return (
     <div
-      className={`kova-plan-card relative flex flex-col rounded-[24px] border p-6 shadow-[0_1px_2px_rgb(0_0_0/.04)] ${
+      className={`kova-plan-card relative flex flex-col rounded-xl border p-6 shadow-none ${
         enterprise
           ? "border-foreground/20 bg-foreground text-background"
           : highlight
-            ? "border-[var(--kova-blue)] bg-card"
+            ? "border-foreground bg-card"
             : "border-border bg-card/50"
       }`}
     >

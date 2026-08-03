@@ -577,7 +577,7 @@ function KovaGPT() {
     [],
   );
 
-  const greeting = "Where should we begin?";
+  const greeting = "What can I help with?";
 
   const updateNearBottom = useCallback(() => {
     const el = scrollRef.current;
@@ -1541,7 +1541,7 @@ function KovaGPT() {
               <div className="kova-greeting mb-5 flex animate-fade-in flex-col items-center gap-2.5 lg:mb-6">
                 <h1
                   id="chat-greeting"
-                  className="text-balance px-4 text-center font-display text-[26px] font-semibold leading-[1.15] tracking-[-.025em] text-foreground lg:text-[32px]"
+                  className="text-balance px-4 text-center text-[28px] font-semibold leading-9 tracking-tight text-foreground lg:text-[32px]"
                 >
                   {greeting}
                 </h1>

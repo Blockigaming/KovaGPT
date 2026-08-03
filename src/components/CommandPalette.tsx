@@ -396,7 +396,7 @@ export function CommandPalette({
     <div
       ref={dialogRef}
       data-kova-shell-overlay=""
-      className="fixed inset-0 z-[70] flex items-start justify-center bg-black/35 px-[max(.75rem,var(--safe-left),var(--safe-right))] pb-[var(--safe-bottom)] pt-[max(12vh,var(--safe-top))] backdrop-blur-sm"
+      className="fixed inset-0 z-[70] flex items-start justify-center bg-black/50 px-[max(.75rem,var(--safe-left),var(--safe-right))] pb-[var(--safe-bottom)] pt-[max(12vh,var(--safe-top))]"
       role="dialog"
       aria-modal="true"
       aria-label="Search chats and actions"
@@ -445,7 +445,7 @@ export function CommandPalette({
         }
       }}
     >
-      <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-border bg-popover text-popover-foreground shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+      <div className="w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-xl animate-in fade-in duration-100">
         <div className="flex items-center gap-3 border-b border-border px-4 py-3">
           <Search className="h-5 w-5 text-muted-foreground" />
           <input

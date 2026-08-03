@@ -46,14 +46,14 @@ const DialogContent = React.forwardRef<
       ref={ref}
       className={cn(
         // Base + animation shared across viewports
-        "fixed z-50 flex flex-col gap-4 border border-border bg-background shadow-[0_18px_50px_rgba(0,0,0,0.18)] duration-200",
+        "fixed z-50 flex flex-col gap-4 border border-border bg-background shadow-xl duration-150",
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         // Mobile (<sm): bottom sheet — cap height and scroll body, respect safe areas
         "inset-x-0 bottom-0 top-auto w-full max-w-full rounded-t-2xl rounded-b-none border-b-0 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]",
         "max-h-[92dvh] overflow-y-auto overscroll-contain",
         "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
         // sm+ (tablet/desktop/preview iframe): centered modal
-        "sm:inset-auto sm:left-[50%] sm:top-[50%] sm:bottom-auto sm:w-[min(92vw,720px)] sm:max-w-[92vw] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:border-b sm:p-6 sm:pb-6 sm:max-h-[88dvh]",
+        "sm:inset-auto sm:left-[50%] sm:top-[50%] sm:bottom-auto sm:w-[min(92vw,720px)] sm:max-w-[92vw] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-xl sm:border-b sm:p-6 sm:pb-6 sm:max-h-[88dvh]",
         "sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:slide-in-from-bottom-0",
         className,
       )}
@@ -93,7 +93,7 @@ const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn("text-lg font-semibold leading-tight tracking-[-0.015em]", className)}
+    className={cn("text-lg font-semibold leading-tight tracking-tight", className)}
     {...props}
   />
 ));

@@ -513,7 +513,7 @@ function HelpPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search for answers… try 'cancel subscription' or 'connect Gmail'"
-            className="pl-12 h-14 text-base rounded-2xl shadow-sm"
+            className="pl-12 h-14 text-base rounded-xl"
             aria-label="Search help articles"
           />
         </div>
@@ -546,7 +546,7 @@ function HelpPage() {
 
         <section aria-label="FAQ results" className="space-y-2 mb-12">
           {results.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border p-8 text-center">
+            <div className="rounded-xl border border-dashed border-border p-8 text-center">
               <Sparkles className="w-6 h-6 mx-auto text-muted-foreground mb-3" />
               <h3 className="font-medium">No matches found</h3>
               <p className="text-sm text-muted-foreground mt-1">
@@ -697,7 +697,7 @@ function SupportForm() {
   };
 
   return (
-    <section id="support-form" className="rounded-2xl border border-border bg-card p-6 sm:p-8">
+    <section id="support-form" className="rounded-xl border border-border bg-card p-6 sm:p-8">
       <div className="flex items-start gap-3 mb-5">
         <div className="w-10 h-10 rounded-full bg-foreground/5 flex items-center justify-center">
           <Mail className="w-5 h-5" />
