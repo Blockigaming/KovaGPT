@@ -278,7 +278,11 @@ export function Sidebar({
           <div className="relative z-20 flex min-h-[52px] items-center gap-1 bg-sidebar/90 px-2.5 pt-[var(--safe-top)]">
             <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
               <span className="inline-flex shrink-0">
+
+                <NovaLogo className="h-6 w-6" />
+
                 <NovaLogo className="h-7 w-7" />
+
               </span>
               <span className="truncate text-sm font-semibold">KovaGPT</span>
             </div>
@@ -326,7 +330,11 @@ export function Sidebar({
 
                 className="h-9 w-full rounded-lg bg-sidebar-hover px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
 
+
+                className="h-9 w-full rounded-lg bg-sidebar-hover px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+
                 className="h-10 w-full rounded-lg border border-border/60 bg-background px-3 text-sm outline-none transition focus:border-ring focus-visible:ring-2 focus-visible:ring-ring"
+
 
               />
             </div>
