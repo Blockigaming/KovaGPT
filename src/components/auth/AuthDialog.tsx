@@ -192,6 +192,10 @@ export function AuthDialog({
             returnFocusTarget.focus();
           }}
         >
+          <DialogTitle className="sr-only">
+            {isSignUp ? "Create your account" : "Log in or sign up"}
+          </DialogTitle>
+
           <div
             className={cn(
               "kova-auth-surface relative rounded-xl border border-border/60 bg-card",
