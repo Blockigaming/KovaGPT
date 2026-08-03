@@ -629,7 +629,7 @@ function ChatMessageInner({
         <div className={isUser ? "flex justify-end" : "flex justify-start"}>
           {!streaming && !isUser && message.content && (
             <div className="kova-message-actions mt-1 max-w-full overflow-x-auto">
-              {/* Visible: Copy, Thumbs up, Thumbs down, Share */}
+              {/* Visible: Copy, Share */}
               <button
                 onClick={copy}
                 className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-accent transition-colors duration-100"
@@ -642,40 +642,7 @@ function ChatMessageInner({
                   <Copy className="w-4 h-4" />
                 )}
               </button>
-              <button
-                onClick={() => {
-                  const next = feedback === "up" ? null : "up";
-                  persistFeedback(next);
-                  if (next) toast.success("Rating saved on this device");
-                }}
-                className={`inline-flex items-center justify-center p-1.5 rounded-lg hover:bg-accent transition-colors duration-100 ${
-                  feedback === "up"
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                title="Good response"
-                aria-label="Good response"
-                aria-pressed={feedback === "up"}
-              >
-                <ThumbsUp className={`w-4 h-4 ${feedback === "up" ? "fill-current" : ""}`} />
-              </button>
-              <button
-                onClick={() => {
-                  const next = feedback === "down" ? null : "down";
-                  persistFeedback(next);
-                  if (next) toast.success("Rating saved on this device");
-                }}
-                className={`inline-flex items-center justify-center p-1.5 rounded-lg hover:bg-accent transition-colors duration-100 ${
-                  feedback === "down"
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                title="Bad response"
-                aria-label="Bad response"
-                aria-pressed={feedback === "down"}
-              >
-                <ThumbsDown className={`w-4 h-4 ${feedback === "down" ? "fill-current" : ""}`} />
-              </button>
+
               <button
                 onClick={async () => {
                   const text = message.content;
