@@ -1,8 +1,10 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, Check } from "lucide-react";
-import { MODES, modesForTier, type ModeId, type Tier } from "@/lib/modes";
+import { MODES, versionGroupsForTier, type ModeId, type Tier } from "@/lib/modes";
 import { useLayout } from "@/hooks/use-mobile";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
+import { useUser } from "@/components/auth/ClerkSafe";
+
 
 /**
  * Adaptive model selector with a stable trigger element.
