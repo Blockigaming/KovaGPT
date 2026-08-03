@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Eye, EyeOff, ArrowLeft, Mail, Sparkles } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowLeft, Sparkles } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { ForgotPasswordDialog } from "@/components/auth/ForgotPasswordDialog";
 import { getOAuthRedirectUri, rememberPostAuthRedirect } from "@/lib/oauth-session";
@@ -192,6 +192,10 @@ export function AuthDialog({
             returnFocusTarget.focus();
           }}
         >
+          <DialogTitle className="sr-only">
+            {isSignUp ? "Create your account" : "Log in or sign up"}
+          </DialogTitle>
+
           <div
             className={cn(
               "kova-auth-surface relative rounded-xl border border-border/60 bg-card",
@@ -307,8 +311,8 @@ export function AuthDialog({
                     disabled={loading || !emailValid}
                     className="w-full h-14 rounded-xl border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-3 text-[15px] font-medium disabled:opacity-60"
                   >
-                    <Mail className="h-5 w-5" />
                     Email me a sign-in link
+
                   </button>
                 </>
               )}
