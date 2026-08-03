@@ -162,30 +162,44 @@ export function ChatInput({
 
   useEffect(() => () => recognitionRef.current?.stop(), []);
 
-  const toggleDictation = () => {
+  const toggleDictation = async () => {
     if (dictating) {
       recognitionRef.current?.stop();
+      recognitionRef.current = null;
+      setDictating(false);
       return;
     }
-    const Ctor = (
-      window as unknown as {
-        SpeechRecognition?: new () => never;
-        webkitSpeechRecognition?: new () => never;
-      }
-    ).SpeechRecognition ??
-      (window as unknown as { webkitSpeechRecognition?: new () => never }).webkitSpeechRecognition;
+    const w = window as unknown as {
+      SpeechRecognition?: new () => never;
+      webkitSpeechRecognition?: new () => never;
+    };
+    const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
     if (!Ctor) {
-      toast.error("Dictation is not supported in this browser");
+      toast.error("Dictation is not supported in this browser. Try Chrome or Safari.");
       return;
     }
+
+    // Ask for the microphone first. Inside embedded previews the permission
+    // prompt never appears, and recognition then fails silently.
+    try {
+      const stream = await navigator.mediaDevices?.getUserMedia({ audio: true });
+      stream?.getTracks().forEach((track) => track.stop());
+    } catch {
+      toast.error("Microphone access is blocked. Allow it in your browser settings, then retry.");
+      return;
+    }
+
     const recognition = new Ctor() as unknown as {
       continuous: boolean;
       interimResults: boolean;
       lang: string;
       start: () => void;
       stop: () => void;
-      onresult: (event: { resultIndex: number; results: ArrayLike<{ 0: { transcript: string } }> }) => void;
-      onerror: () => void;
+      onresult: (event: {
+        resultIndex: number;
+        results: ArrayLike<{ 0: { transcript: string } }>;
+      }) => void;
+      onerror: (event: { error?: string }) => void;
       onend: () => void;
     };
     recognition.continuous = true;
@@ -198,15 +212,26 @@ export function ChatInput({
         transcript += event.results[i][0].transcript;
       onChange(`${dictationBaseRef.current}${transcript.trimStart()}`);
     };
-    recognition.onerror = () => {
+    recognition.onerror = (event) => {
       setDictating(false);
       recognitionRef.current = null;
+      const code = event?.error;
+      if (code === "not-allowed" || code === "service-not-allowed")
+        toast.error("Microphone access is blocked. Allow it in your browser settings, then retry.");
+      else if (code === "no-speech") toast.error("No speech detected. Try dictating again.");
+      else if (code === "network") toast.error("Dictation needs a network connection.");
+      else if (code && code !== "aborted") toast.error("Dictation stopped unexpectedly.");
     };
     recognition.onend = () => {
       setDictating(false);
       recognitionRef.current = null;
     };
-    recognition.start();
+    try {
+      recognition.start();
+    } catch {
+      toast.error("Dictation could not start. Try again in a moment.");
+      return;
+    }
     recognitionRef.current = recognition;
     setDictating(true);
   };
