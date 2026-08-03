@@ -78,8 +78,13 @@ export const Route = createFileRoute("/api/title")({
               headers: { "Content-Type": "application/json" },
             });
           }
-          const { chatCompletions, chatModel, missingAiProviderResponse } =
-            await import("@/lib/ai/provider.server");
+          // eslint-disable-next-line prettier/prettier
+          const provider = await import("@/lib/ai/provider.server");
+          const { chatCompletions, missingAiProviderResponse } = provider;
+          const { modelForRole } = await import("@/lib/ai/model-router.server");
+          const { UTILITY_MAX_OUTPUT_TOKENS } = await import("@/lib/ai/model-config.mjs");
+          const { readUtilityCache, writeUtilityCache } =
+            await import("@/lib/ai/utility-cache.server");
           const missingProvider = missingAiProviderResponse({
             title: "New chat",
           });
@@ -91,8 +96,16 @@ export const Route = createFileRoute("/api/title")({
             .join("\n")
             .slice(0, 4000);
 
+          const cached = readUtilityCache("chat_title", excerpt);
+          if (cached) {
+            return new Response(JSON.stringify({ title: cached }), {
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+
           const upstream = await chatCompletions({
-            model: chatModel("fast"),
+            model: modelForRole("UTILITY"),
+            max_completion_tokens: UTILITY_MAX_OUTPUT_TOKENS,
             messages: [
               {
                 role: "system",
@@ -111,6 +124,7 @@ export const Route = createFileRoute("/api/title")({
           const data = await upstream.json();
           let title = (data.choices?.[0]?.message?.content ?? "New chat").trim();
           title = title.replace(/^["']|["']$/g, "").slice(0, 50);
+          writeUtilityCache("chat_title", excerpt, title);
           return new Response(JSON.stringify({ title }), {
             headers: { "Content-Type": "application/json" },
           });
