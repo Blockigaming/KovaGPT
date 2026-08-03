@@ -175,8 +175,9 @@ export function ResponsiveModelSelector({
             }
           >
             <div className="px-3 pb-1.5 pt-2 text-xs font-medium text-muted-foreground">
-              Choose how KovaGPT responds
+              Intelligence
             </div>
+
             {options}
           </div>
         )
