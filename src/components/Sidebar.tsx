@@ -534,34 +534,62 @@ export function Sidebar({
                 ) : null}
               </div>
             ) : showSignedOut ? (
-              <div className="space-y-2">
-                <button
-                  onClick={() => {
-                    onOpenSettings("general");
-                    closeAfterMobileNavigation();
-                  }}
-                  className={`flex h-9 w-full items-center rounded-lg py-1 text-sm transition-colors hover:bg-sidebar-hover ${iconOnly}`}
-                  aria-label="Settings"
-                >
-                  <SettingsIcon className="h-4 w-4" />
-                  <span className={labelClass}>Settings</span>
-                </button>
+              <div className={collapsed ? "" : "-mx-2.5 -mb-2.5"}>
+                <div className={`flex flex-col gap-0.5 ${collapsed ? "" : "px-2 pb-2"}`}>
+                  <Link
+                    to="/pricing"
+                    className={navItemClass(isOn("/pricing"))}
+                    aria-label="See plans and pricing"
+                    title="See plans and pricing"
+                    onClick={closeAfterMobileNavigation}
+                  >
+                    <Sparkles className="h-[18px] w-[18px] shrink-0" />
+                    <span className={labelClass}>See plans and pricing</span>
+                  </Link>
+                  <button
+                    onClick={() => {
+                      onOpenSettings("general");
+                      closeAfterMobileNavigation();
+                    }}
+                    className={navItemClass(false)}
+                    aria-label="Settings"
+                    title="Settings"
+                  >
+                    <SettingsIcon className="h-[18px] w-[18px] shrink-0" />
+                    <span className={labelClass}>Settings</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      onOpenHelp();
+                      closeAfterMobileNavigation();
+                    }}
+                    className={navItemClass(false)}
+                    aria-label="Help"
+                    title="Help"
+                  >
+                    <LifeBuoy className="h-[18px] w-[18px] shrink-0" />
+                    <span className={labelClass}>Help</span>
+                  </button>
+                </div>
                 {!collapsed ? (
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="border-t border-border/60 px-4 pb-4 pt-4">
+                    <p className="text-[15px] font-semibold text-foreground">
+                      Get responses tailored to you
+                    </p>
+                    <p className="mt-1.5 text-[13px] leading-5 text-muted-foreground">
+                      Log in to get answers based on saved chats, plus create images and upload
+                      files.
+                    </p>
                     <SignInButton mode="modal">
-                      <button className="flex min-h-10 items-center justify-center rounded-full border border-border bg-background px-3 text-sm font-medium transition hover:bg-sidebar-hover">
+                      <button className="mt-4 flex min-h-10 w-full items-center justify-center rounded-full border border-border bg-transparent px-4 text-sm font-medium transition hover:bg-sidebar-hover">
                         Log in
                       </button>
                     </SignInButton>
-                    <SignUpButton mode="modal">
-                      <button className="flex min-h-10 items-center justify-center rounded-full bg-foreground px-3 text-sm font-medium text-background transition hover:opacity-90">
-                        Sign up
-                      </button>
-                    </SignUpButton>
                   </div>
                 ) : null}
               </div>
             ) : null}
+
           </div>
         </div>
       </aside>
