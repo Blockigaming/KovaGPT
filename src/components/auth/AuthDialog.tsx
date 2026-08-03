@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Eye, EyeOff, ArrowLeft, Mail, Sparkles } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowLeft, Sparkles } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { ForgotPasswordDialog } from "@/components/auth/ForgotPasswordDialog";
 import { getOAuthRedirectUri, rememberPostAuthRedirect } from "@/lib/oauth-session";
