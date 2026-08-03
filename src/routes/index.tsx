@@ -1397,7 +1397,7 @@ function KovaGPT() {
           onTemporaryChatChange={setTemporaryChatEnabled}
         />
         <header className="kova-topbar relative hidden h-[52px] items-center gap-1 px-3 lg:flex">
-          <div hidden={sidebarOpen} className="flex items-center gap-1 mr-2 shrink-0">
+          <div hidden={sidebarOpen || Boolean(isSignedIn)} className="flex items-center gap-1 mr-2 shrink-0">
             <button
               onClick={() => {
                 setSidebarOpen(true);

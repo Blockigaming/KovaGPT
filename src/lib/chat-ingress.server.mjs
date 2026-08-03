@@ -28,7 +28,17 @@ const MODE_ALIASES = Object.freeze({
   writer: "thinking",
   tutor: "thinking",
 });
-const MODE_IDS = new Set(["instant", "medium", "thinking", "high", "extra_high", "pro"]);
+const MODE_IDS = new Set([
+  "instant",
+  "medium",
+  "thinking",
+  "high",
+  "extra_high",
+  "pro",
+  "kova_5_5",
+  "kova_5_4",
+  "kova_o3",
+]);
 const CLIENT_TOOLS = new Set([
   "web_search",
   "deep_research",
