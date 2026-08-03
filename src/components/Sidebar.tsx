@@ -255,6 +255,76 @@ export function Sidebar({
         />
       ) : null}
 
+      {collapsed && showSignedIn ? (
+        <div
+          className="hidden h-[100dvh] w-[52px] shrink-0 flex-col items-center gap-1 border-r border-border/60 bg-sidebar pb-[max(.625rem,var(--safe-bottom))] pt-[max(.5rem,var(--safe-top))] lg:flex"
+          aria-label="Collapsed navigation"
+        >
+          <button
+            type="button"
+            onClick={onToggle}
+            className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Open sidebar"
+            title="Open sidebar"
+          >
+            <PanelLeft className="h-[18px] w-[18px]" />
+          </button>
+          <button
+            type="button"
+            onClick={onNew}
+            className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="New chat"
+            title="New chat"
+          >
+            <SquarePen className="h-[18px] w-[18px]" />
+          </button>
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event("kova-open-search"))}
+            className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Search chats"
+            title="Search chats"
+          >
+            <Search className="h-[18px] w-[18px]" />
+          </button>
+          <Link
+            to="/projects"
+            className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Projects"
+            title="Projects"
+          >
+            <FolderKanban className="h-[18px] w-[18px]" />
+          </Link>
+          {conversations[0] ? (
+            <button
+              type="button"
+              onClick={() => onSelect(conversations[0].id)}
+              className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={`Open chat ${conversations[0].title}`}
+              title={conversations[0].title}
+            >
+              <MessageSquare className="h-[18px] w-[18px]" />
+            </button>
+          ) : null}
+          <div className="mt-auto flex flex-col items-center gap-1">
+            <button
+              type="button"
+              onClick={() => onOpenSettings("general")}
+              className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Settings"
+              title="Settings"
+            >
+              <SettingsIcon className="h-[18px] w-[18px]" />
+            </button>
+            <div onClick={(e) => e.stopPropagation()}>
+              <UserButton />
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+
+
       <aside
         ref={drawerRef}
         style={
