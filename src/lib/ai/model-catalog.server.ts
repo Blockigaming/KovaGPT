@@ -68,6 +68,39 @@ export const OPENAI_TEXT_MODELS: readonly CatalogModel[] = [
     pricePerMillion: { input: 1.25, cachedInput: 0.125, output: 10 },
     tiers: ["pro"],
   },
+  {
+    id: "gpt-5.6-luna",
+    endpoint: "responses",
+    reasoning: true,
+    vision: true,
+    tools: true,
+    structuredOutput: true,
+    maxOutputTokens: 128_000,
+    pricePerMillion: { input: 0.25, cachedInput: 0.025, output: 2 },
+    tiers: ["guest", "free", "plus", "pro"],
+  },
+  {
+    id: "gpt-5.6-terra",
+    endpoint: "responses",
+    reasoning: true,
+    vision: true,
+    tools: true,
+    structuredOutput: true,
+    maxOutputTokens: 128_000,
+    pricePerMillion: { input: 1.25, cachedInput: 0.125, output: 10 },
+    tiers: ["free", "plus", "pro"],
+  },
+  {
+    id: "gpt-5.6-sol",
+    endpoint: "responses",
+    reasoning: true,
+    vision: true,
+    tools: true,
+    structuredOutput: true,
+    maxOutputTokens: 128_000,
+    pricePerMillion: { input: 2.5, cachedInput: 0.25, output: 20 },
+    tiers: ["plus", "pro"],
+  },
 ] as const;
 
 const policies: Record<
@@ -76,35 +109,36 @@ const policies: Record<
 > = {
   instant: {
     env: "KOVA_INSTANT_MODEL",
-    fallback: "gpt-4.1-nano",
-    maxOutput: 600,
-    allowed: ["gpt-4.1-nano"],
+    fallback: "gpt-5.6-luna",
+    maxOutput: 1_200,
+    allowed: ["gpt-4.1-nano", "gpt-5.6-luna"],
   },
   normal: {
     env: "KOVA_NORMAL_MODEL",
-    fallback: "gpt-4.1-mini",
-    maxOutput: 1_500,
-    allowed: ["gpt-4.1-nano", "gpt-4.1-mini"],
+    fallback: "gpt-5.6-luna",
+    maxOutput: 4_000,
+    allowed: ["gpt-4.1-nano", "gpt-4.1-mini", "gpt-5.6-luna"],
   },
   thinking: {
     env: "KOVA_THINKING_MODEL",
-    fallback: "gpt-5-mini",
-    maxOutput: 3_000,
-    allowed: ["gpt-5-mini"],
+    fallback: "gpt-5.6-terra",
+    maxOutput: 8_000,
+    allowed: ["gpt-5-mini", "gpt-5.6-terra"],
   },
   deep: {
     env: "KOVA_DEEP_MODEL",
-    fallback: "gpt-5",
-    maxOutput: 4_000,
-    allowed: ["gpt-5-mini", "gpt-5"],
+    fallback: "gpt-5.6-sol",
+    maxOutput: 16_000,
+    allowed: ["gpt-5-mini", "gpt-5", "gpt-5.6-terra", "gpt-5.6-sol"],
   },
   utility: {
     env: "KOVA_UTILITY_MODEL",
-    fallback: "gpt-4.1-nano",
-    maxOutput: 500,
-    allowed: ["gpt-4.1-nano"],
+    fallback: "gpt-5.6-luna",
+    maxOutput: 800,
+    allowed: ["gpt-4.1-nano", "gpt-5.6-luna"],
   },
 };
+
 
 export function modelForPolicy(policy: ModelPolicy): CatalogModel & { outputCeiling: number } {
   const definition = policies[policy];
