@@ -50,11 +50,12 @@
     "release:db:references": "node scripts/release/database-references.mjs",
     "release:launch-report": "node scripts/release/launch-report.mjs",
     "release:production-guard": "node scripts/release/production-guard.mjs",
-    "release:visual:authenticated": "node scripts/release/visual-harness.mjs --dry-run"
+    "release:visual:authenticated": "node scripts/release/visual-harness.mjs --dry-run",
+    "security:ai-runtime": "node scripts/security/scan-ai-runtime.mjs"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.3",
-    "@cloudflare/vite-plugin": "^1.25.5",
+    "@cloudflare/vite-plugin": "^1.50.0",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -100,7 +101,7 @@
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.575.0",
-    "nitro": "3.0.260603-beta",
+    "nitro": "3.0.260610-beta",
     "react": "^19.2.0",
     "react-day-picker": "^9.14.0",
     "react-dom": "^19.2.0",
@@ -122,6 +123,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.4",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "1.56.0",
     "@types/node": "^22.16.5",
@@ -144,5 +146,8 @@
     "overrides": {
       "entities": "4.5.0"
     }
+  },
+  "overrides": {
+    "undici": "8.10.0"
   }
 }

@@ -6,7 +6,7 @@ import test from "node:test";
 const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), "utf8");
 
-test("voice controls remain intentionally disabled", () => {
+test("provider voice remains disabled while local browser read-aloud needs no AI secret", () => {
   const matrix = read("docs/kova-final-completion-matrix.md");
   const chatInput = read("src/components/ChatInput.tsx");
   const chatMessage = read("src/components/ChatMessage.tsx");
@@ -15,7 +15,9 @@ test("voice controls remain intentionally disabled", () => {
 
   assert.match(matrix, /Voice: INTENTIONALLY DISABLED/);
   assert.doesNotMatch(chatInput, /createSpeechRecognition|Start voice input|MicOff/);
-  assert.doesNotMatch(chatMessage, /speechSynthesis|Read response aloud|Volume2/);
+  assert.match(chatMessage, /speechSynthesis/);
+  assert.match(chatMessage, /Read aloud/);
+  assert.doesNotMatch(chatMessage, /OPENAI_API_KEY|audio\/speech|realtime/);
   assert.match(start, /microphone=\(\)/);
   assert.match(server, /microphone=\(\)/);
 });

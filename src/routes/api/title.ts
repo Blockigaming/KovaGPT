@@ -78,6 +78,10 @@ export const Route = createFileRoute("/api/title")({
               headers: { "Content-Type": "application/json" },
             });
           }
+
+          const { chatCompletions, utilityModel, missingAiProviderResponse } =
+            await import("@/lib/ai/provider.server");
+
           // eslint-disable-next-line prettier/prettier
           const provider = await import("@/lib/ai/provider.server");
           const { chatCompletions, missingAiProviderResponse } = provider;
@@ -85,6 +89,7 @@ export const Route = createFileRoute("/api/title")({
           const { UTILITY_MAX_OUTPUT_TOKENS } = await import("@/lib/ai/model-config.mjs");
           const { readUtilityCache, writeUtilityCache } =
             await import("@/lib/ai/utility-cache.server");
+
           const missingProvider = missingAiProviderResponse({
             title: "New chat",
           });
@@ -104,8 +109,12 @@ export const Route = createFileRoute("/api/title")({
           }
 
           const upstream = await chatCompletions({
+
+            model: utilityModel(),
+
             model: modelForRole("UTILITY"),
             max_completion_tokens: UTILITY_MAX_OUTPUT_TOKENS,
+
             messages: [
               {
                 role: "system",

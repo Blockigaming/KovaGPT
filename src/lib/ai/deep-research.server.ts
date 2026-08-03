@@ -2,6 +2,7 @@ import { replaceControlCharacters } from "@/lib/sanitize-text";
 import {
   chatCompletions,
   chatModel,
+  utilityModel,
   providerErrorFromResponse,
   type JsonObject,
 } from "@/lib/ai/provider.server";
@@ -186,8 +187,12 @@ function parsePlan(raw: string, originalQuery: string): string[] {
 async function makePlan(query: string, signal?: AbortSignal): Promise<string[]> {
   const upstream = await chatCompletions(
     {
+
+      model: utilityModel(),
+
       model: modelForRole("UTILITY"),
       max_completion_tokens: UTILITY_MAX_OUTPUT_TOKENS,
+
       messages: [
         {
           role: "system",

@@ -239,6 +239,19 @@ function ChatMessageInner({
   }, [principal]);
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
+  const feedbackKey = message.id ? `kova-message-feedback:${message.id}` : null;
+  const [feedback, setFeedback] = useState<"up" | "down" | null>(() => {
+    if (!feedbackKey) return null;
+    const stored = safeBrowserStorage("localStorage")?.getItem(feedbackKey);
+    return stored === "up" || stored === "down" ? stored : null;
+  });
+  const persistFeedback = (next: "up" | "down" | null) => {
+    setFeedback(next);
+    if (!feedbackKey) return;
+    const storage = safeBrowserStorage("localStorage");
+    if (next) storage?.setItem(feedbackKey, next);
+    else storage?.removeItem(feedbackKey);
+  };
   const { isMobile } = useLayout();
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const pressTimer = useRef<number | null>(null);
@@ -466,7 +479,11 @@ function ChatMessageInner({
               </div>
             )}
             {message.content && (
+
+              <div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-3xl border border-border/40 bg-[var(--user-bubble)] px-4 py-2.5 text-foreground">
+
               <div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-3xl bg-[var(--user-bubble)] px-4 py-2.5 text-foreground">
+
                 {message.content}
               </div>
             )}
@@ -629,7 +646,6 @@ function ChatMessageInner({
                 )}
               </button>
               <button
-
                 onClick={() => {
                   const next = feedback === "up" ? null : "up";
                   persistFeedback(next);
@@ -664,7 +680,6 @@ function ChatMessageInner({
                 <ThumbsDown className={`w-4 h-4 ${feedback === "down" ? "fill-current" : ""}`} />
               </button>
               <button
-
                 onClick={async () => {
                   const text = message.content;
                   if (typeof navigator !== "undefined" && navigator.share) {
@@ -724,6 +739,30 @@ function ChatMessageInner({
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+              )}
+
+              {artifactKind && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditorMode(artifactKind === "code" ? "preview" : "edit");
+                    setEditorOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-accent px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:bg-accent/80"
+                  aria-label={
+                    artifactKind === "code" ? "Open code full screen" : "Open writing full screen"
+                  }
+                  title={
+                    artifactKind === "code" ? "Open code full screen" : "Open writing full screen"
+                  }
+                >
+                  {artifactKind === "code" ? (
+                    <Code2 className="h-3.5 w-3.5" />
+                  ) : (
+                    <FileEdit className="h-3.5 w-3.5" />
+                  )}
+                  {artifactKind === "code" ? "Open code" : "Open writing"}
+                </button>
               )}
 
               {/* Everything else lives behind the 3-dot menu */}

@@ -1,5 +1,6 @@
 import { getAiProviderConfig, type JsonObject } from "@/lib/ai/provider.server";
 import type { ModeId } from "@/lib/modes";
+import { modelForPolicy, type ModelPolicy } from "@/lib/ai/model-catalog.server";
 
 export type ProviderCapability =
   | "chat"
@@ -161,6 +162,21 @@ export function getProviderRegistry(): ProviderModelDefinition[] {
     },
     {
       providerId: "openai_compatible",
+      modelId: modelForPolicy("thinking").id,
+      displayName: "Kova Thinking",
+      capabilities: ["chat", "stream", "tools", "structured_output", "vision"],
+      intendedUse: ["advanced_chat"],
+      speedClass: "deep",
+      costClass: "high",
+      contextWindowTokens: 128_000,
+      fallbackAllowed: false,
+      streaming: true,
+      tools: true,
+      vision: true,
+      structuredOutput: true,
+    },
+    {
+      providerId: "openai_compatible",
       modelId: cfg.deepModel,
       displayName: "Kova Thinking",
       capabilities: ["chat", "stream", "tools", "structured_output", "vision", "deep_research"],
@@ -267,17 +283,19 @@ export function selectModelForMode(
       ["chat", "stream", "deep_research"],
       "deep_research",
     );
-  const cfg = getAiProviderConfig();
   const required: ProviderCapability[] = ["chat", "stream"];
   if (options.needsTools) required.push("tools");
   if (options.hasImages) required.push("vision");
   if (options.needsSearch) required.push("search");
-  const preferred =
+  const policy: ModelPolicy =
     mode === "instant"
-      ? cfg.fastModel
-      : ["thinking", "high", "extra_high", "pro"].includes(mode)
-        ? cfg.deepModel
-        : cfg.chatModel;
+      ? "instant"
+      : mode === "thinking"
+        ? "thinking"
+        : ["high", "extra_high", "pro"].includes(mode)
+          ? "deep"
+          : "normal";
+  const preferred = modelForPolicy(policy).id;
   return selectModelForCapabilities(
     preferred,
     required,
