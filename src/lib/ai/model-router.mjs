@@ -146,7 +146,7 @@ export function routeModel(input) {
   const env = input.env ?? {};
   const config = getModelConfig(env);
   const tier = input.tier ?? "free";
-  const mode = typeof input.mode === "string" ? input.mode : "medium";
+  const mode = typeof input.mode === "string" ? input.mode : "instant";
 
   /** @param {ModelRole} role @param {number} maxOutputTokens @param {string[]} reasons @param {number} score @param {ModelRole=} downgradedFrom */
   const decide = (role, maxOutputTokens, reasons, score, downgradedFrom) => {
