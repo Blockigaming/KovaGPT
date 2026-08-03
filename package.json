@@ -23,6 +23,8 @@
     "test:e2e:install": "playwright install --with-deps chromium",
     "test:a11y": "node --test tests/a11y/*.test.mjs",
     "test:visual": "node --test tests/visual/*.test.mjs",
+    "audit:ui-parity": "node scripts/ui-parity-audit.mjs",
+    "test:ui-parity": "playwright test tests/e2e/chatgpt-parity.spec.ts --project=desktop-1280x800",
     "format:check:changed": "node scripts/check-format-changed.mjs",
     "worker:dev": "node --watch worker/src/index.mjs",
     "worker:start": "node worker/src/index.mjs",
