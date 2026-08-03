@@ -1,4 +1,4 @@
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useUser } from "@/components/auth/ClerkSafe";
 
 export function LogoutConfirmDialog({
