@@ -28,7 +28,8 @@ export function ResponsiveModelSelector({
 }) {
   const { isDesktop, interaction } = useLayout();
   const { isSignedIn, isLoaded } = useUser();
-  const locked = isLoaded && !isSignedIn;
+  // Hidden until auth confirms a session: guests must never see the picker.
+  const locked = !isSignedIn;
   const useSheet = !isDesktop || interaction === "touch";
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -50,10 +51,10 @@ export function ResponsiveModelSelector({
 
   // Signed-out visitors are pinned to the cheapest mode and never see the picker.
   useEffect(() => {
-    if (!locked) return;
+    if (!isLoaded || isSignedIn) return;
     setOpen(false);
     if (mode !== "instant") onChange("instant");
-  }, [locked, mode, onChange]);
+  }, [isLoaded, isSignedIn, mode, onChange]);
 
   const closeAndRestoreFocus = () => {
     setOpen(false);
