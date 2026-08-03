@@ -273,21 +273,22 @@ function ChatMessageInner({
   );
   const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
   useEffect(() => {
-    if (!principalResolved) return;
-    const storage = safeBrowserStorage("local", browserStoragePrincipal(userKey));
+    if (!principalResolved || !feedbackKey) return;
+    const storage = safeBrowserStorage("localStorage");
     const stored = storage?.getItem(feedbackKey);
     setFeedback(stored === "up" || stored === "down" ? stored : null);
-  }, [feedbackKey, principalResolved, userKey]);
+  }, [feedbackKey, principalResolved]);
   const persistFeedback = useCallback(
     (next: "up" | "down" | null) => {
       setFeedback(next);
-      const storage = safeBrowserStorage("local", browserStoragePrincipal(userKey));
-      if (!storage) return;
+      const storage = safeBrowserStorage("localStorage");
+      if (!storage || !feedbackKey) return;
       if (next) storage.setItem(feedbackKey, next);
       else storage.removeItem(feedbackKey);
     },
-    [feedbackKey, userKey],
+    [feedbackKey],
   );
+
 
   const saveFn = useServerFn(saveToLibrary);
 
