@@ -11,7 +11,6 @@ import {
   PanelLeft,
   Pin,
   PinOff,
-  PanelsTopLeft,
   Search,
   Settings as SettingsIcon,
   Share2,
@@ -279,7 +278,7 @@ export function Sidebar({
           <div className="relative z-20 flex min-h-[52px] items-center gap-1 bg-sidebar/90 px-2.5 pt-[var(--safe-top)]">
             <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
               <span className="inline-flex shrink-0">
-                <NovaLogo className="h-6 w-6" />
+                <NovaLogo className="h-7 w-7" />
               </span>
               <span className="truncate font-display text-[15px] font-semibold tracking-[-0.01em]">
                 KovaGPT
@@ -316,7 +315,7 @@ export function Sidebar({
           />
 
           {searchOpen && !collapsed ? (
-            <div className="px-3 pb-2">
+            <div className="px-2 pb-1 pt-2">
               <label className="sr-only" htmlFor="sidebar-chat-search">
                 Search chats
               </label>
@@ -326,7 +325,7 @@ export function Sidebar({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search titles, messages, or operators…"
-                className="h-11 w-full rounded-xl bg-sidebar-hover/60 px-3 text-sm outline-none transition focus:bg-sidebar-hover focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-10 w-full rounded-lg border border-border/60 bg-background px-3 text-sm outline-none transition focus:border-ring focus-visible:ring-2 focus-visible:ring-ring"
               />
             </div>
           ) : null}
@@ -357,7 +356,6 @@ export function Sidebar({
             {showSignedIn ? renderNavLink("/projects", "Projects", FolderKanban) : null}
             {renderNavLink("/library", "Library", FolderOpen)}
             {renderNavLink("/images", "Images", ImageIcon)}
-            {renderNavLink("/apps", "Apps", PanelsTopLeft)}
             {showSignedIn && (tier === "plus" || tier === "pro")
               ? renderNavLink(
                   "/scheduled-tasks",
