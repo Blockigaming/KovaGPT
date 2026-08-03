@@ -18,6 +18,9 @@ import {
   Mail,
   FileText,
   Volume2,
+  ThumbsUp,
+  ThumbsDown,
+
 } from "lucide-react";
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileBottomSheet } from "./MobileBottomSheet";
@@ -267,7 +270,31 @@ function ChatMessageInner({
   const [editorMode, setEditorMode] = useState<"edit" | "preview">("edit");
   const { isSignedIn } = useUser();
 
+  const feedbackKey = useMemo(
+    () => principalScopedStorageKey(`n:feedback:${message.id}`, userKey),
+    [message.id, userKey],
+  );
+  const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
+  useEffect(() => {
+    if (!principalResolved || !feedbackKey) return;
+    const storage = safeBrowserStorage("localStorage");
+    const stored = storage?.getItem(feedbackKey);
+    setFeedback(stored === "up" || stored === "down" ? stored : null);
+  }, [feedbackKey, principalResolved]);
+  const persistFeedback = useCallback(
+    (next: "up" | "down" | null) => {
+      setFeedback(next);
+      const storage = safeBrowserStorage("localStorage");
+      if (!storage || !feedbackKey) return;
+      if (next) storage.setItem(feedbackKey, next);
+      else storage.removeItem(feedbackKey);
+    },
+    [feedbackKey],
+  );
+
+
   const saveFn = useServerFn(saveToLibrary);
+
 
   useEffect(() => {
     if (!principalResolved || !principal) return;
@@ -439,18 +466,11 @@ function ChatMessageInner({
               </div>
             )}
             {message.content && (
-
               <div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-3xl bg-[var(--user-bubble)] px-4 py-2.5 text-foreground">
-
-
-              <div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-3xl bg-[var(--user-bubble)] px-4 py-2.5 text-foreground">
-
-              <div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-3xl border border-border/40 bg-[var(--user-bubble)] px-4 py-2.5 text-foreground">
-
-
                 {message.content}
               </div>
             )}
+
             {(onEdit || onBranch) && (
               <div className="mt-1 flex min-h-9 items-center opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
                 {onEdit && (

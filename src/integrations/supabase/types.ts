@@ -998,6 +998,8 @@ export type Database = {
           current_period_start: string | null
           environment: string
           id: string
+          last_stripe_event_created_at: string | null
+          last_stripe_event_id: string | null
           price_id: string
           product_id: string
           status: string
@@ -1013,6 +1015,8 @@ export type Database = {
           current_period_start?: string | null
           environment?: string
           id?: string
+          last_stripe_event_created_at?: string | null
+          last_stripe_event_id?: string | null
           price_id: string
           product_id: string
           status?: string
@@ -1028,6 +1032,8 @@ export type Database = {
           current_period_start?: string | null
           environment?: string
           id?: string
+          last_stripe_event_created_at?: string | null
+          last_stripe_event_id?: string | null
           price_id?: string
           product_id?: string
           status?: string
@@ -1158,6 +1164,97 @@ export type Database = {
         }
         Relationships: []
       }
+      writing_document_versions: {
+        Row: {
+          content: string
+          created_at: string
+          document_id: string
+          id: string
+          owner_id: string
+          source: string
+          title: string
+          version: number
+          word_count: number
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          document_id: string
+          id?: string
+          owner_id: string
+          source?: string
+          title: string
+          version: number
+          word_count?: number
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          document_id?: string
+          id?: string
+          owner_id?: string
+          source?: string
+          title?: string
+          version?: number
+          word_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "writing_document_versions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "writing_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      writing_documents: {
+        Row: {
+          archived_at: string | null
+          content: string
+          created_at: string
+          id: string
+          last_opened_at: string
+          owner_id: string
+          project_id: string | null
+          title: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          archived_at?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          last_opened_at?: string
+          owner_id: string
+          project_id?: string | null
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          archived_at?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          last_opened_at?: string
+          owner_id?: string
+          project_id?: string | null
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "writing_documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1222,6 +1319,33 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      save_writing_document: {
+        Args: {
+          p_content: string
+          p_expected_version: number
+          p_id: string
+          p_source: string
+          p_title: string
+        }
+        Returns: {
+          archived_at: string | null
+          content: string
+          created_at: string
+          id: string
+          last_opened_at: string
+          owner_id: string
+          project_id: string | null
+          title: string
+          updated_at: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "writing_documents"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       try_add_storage_bytes: {
         Args: { _bytes: number; _limit: number; _user_id: string }
