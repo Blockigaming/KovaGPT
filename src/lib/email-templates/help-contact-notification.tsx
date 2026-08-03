@@ -13,7 +13,7 @@ import {
 } from "@react-email/components";
 import type { TemplateEntry } from "./registry";
 
-const LOGO_URL = "https://kovagpt.com/favicon.png";
+const LOGO_URL = "https://kovagpt.com/kova-logo.svg";
 
 interface Props {
   name?: string;

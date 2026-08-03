@@ -770,7 +770,7 @@ export function ChatInput({
           </div>
           <div className="flex min-h-[58px] items-end">
             <div
-              className={`${showAddMenu ? "flex" : "hidden"} items-center pl-1.5 relative`}
+              className={`${showAddMenu ? "flex" : "hidden"} relative self-end items-center pb-1.5 pl-1.5`}
               ref={plusWrapRef}
             >
               <input
@@ -952,7 +952,7 @@ export function ChatInput({
                   : "Control+Enter Meta+Enter"
               }
             />
-            <div className="flex items-center gap-1.5 pr-1.5">
+            <div className="flex self-end items-center gap-1.5 pb-1.5 pr-1.5">
               {canChangeAgent && mode && onModeChange && (
                 <div className="flex items-center">
                   <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
@@ -962,7 +962,7 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={onStop}
-                  className="kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-80 lg:h-9 lg:w-9"
+                  className="kova-send-button flex h-10 w-10 items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-80 lg:h-9 lg:w-9"
                   aria-label="Stop"
                 >
                   <Square className="h-3.5 w-3.5 fill-current" />
@@ -976,7 +976,7 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={triggerSubmit}
-                  className={`kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-foreground text-background transition duration-150 hover:opacity-90 active:scale-90 active:opacity-70 lg:h-9 lg:w-9 ${sendFlash ? "scale-90 opacity-80" : ""}`}
+                  className={`kova-send-button flex h-10 w-10 items-center justify-center rounded-full bg-foreground text-background transition duration-150 hover:opacity-90 active:scale-90 active:opacity-70 lg:h-9 lg:w-9 ${sendFlash ? "scale-90 opacity-80" : ""}`}
                   aria-label="Send"
                 >
                   <ArrowUp
@@ -987,7 +987,7 @@ export function ChatInput({
                 <button
                   type="button"
                   disabled
-                  className="kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground lg:h-9 lg:w-9"
+                  className="kova-send-button flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground lg:h-9 lg:w-9"
                   aria-label="Send"
                   title={disabled ? "Messaging is unavailable" : "Type a message to send"}
                 >
