@@ -50,7 +50,8 @@
     "release:db:references": "node scripts/release/database-references.mjs",
     "release:launch-report": "node scripts/release/launch-report.mjs",
     "release:production-guard": "node scripts/release/production-guard.mjs",
-    "release:visual:authenticated": "node scripts/release/visual-harness.mjs --dry-run"
+    "release:visual:authenticated": "node scripts/release/visual-harness.mjs --dry-run",
+    "security:ai-runtime": "node scripts/security/scan-ai-runtime.mjs"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.3",
@@ -122,6 +123,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.4",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "1.56.0",
     "@types/node": "^22.16.5",

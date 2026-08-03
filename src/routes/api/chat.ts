@@ -40,6 +40,14 @@ import {
 } from "@/lib/research-persistence-authorization.server.mjs";
 import { activityToSseDelta, createToolActivityEvent } from "@/lib/ai/activity.server";
 import { selectModelForMode, mapProviderError } from "@/lib/ai/registry.server";
+import { acquireGeneration, finalizeGeneration, hashGuestIp } from "@/lib/ai/accounting.server";
+import {
+  estimateMaximumCostUsd,
+  modelForPolicy,
+  OPENAI_TEXT_MODELS,
+} from "@/lib/ai/model-catalog.server";
+import { getAiRuntimeConfig } from "@/lib/ai/config.server";
+import { estimateProviderInput } from "@/lib/ai/token-estimator.server";
 import { formatMemoryBlock, selectRelevantMemories, type KovaMemory } from "@/lib/ai/memory.server";
 import {
   CHAT_BODY_LIMIT_BYTES,
@@ -164,6 +172,41 @@ function sseEvent(obj: Record<string, unknown>) {
 
 function sseDone() {
   return `data: [DONE]\n\n`;
+}
+
+type ReportedUsage = {
+  input: number;
+  cachedInput: number;
+  output: number;
+  reasoning: number;
+};
+
+function reportedUsageFromSse(buffer: string): ReportedUsage | null {
+  let result: ReportedUsage | null = null;
+  for (const frame of buffer.split("\n\n")) {
+    const data = frame
+      .split("\n")
+      .find((line) => line.startsWith("data:"))
+      ?.slice(5)
+      .trim();
+    if (!data || data === "[DONE]") continue;
+    try {
+      const parsed = JSON.parse(data) as Record<string, unknown>;
+      const usage = parsed.usage as Record<string, unknown> | undefined;
+      if (!usage) continue;
+      const inputDetails = usage.input_tokens_details as Record<string, unknown> | undefined;
+      const outputDetails = usage.output_tokens_details as Record<string, unknown> | undefined;
+      result = {
+        input: Number(usage.prompt_tokens ?? 0),
+        cachedInput: Number(inputDetails?.cached_tokens ?? 0),
+        output: Number(usage.completion_tokens ?? 0),
+        reasoning: Number(outputDetails?.reasoning_tokens ?? 0),
+      };
+    } catch {
+      // Provider framing validation handles malformed events separately.
+    }
+  }
+  return result;
 }
 
 function parseToolHopResponse(
@@ -450,8 +493,8 @@ export const Route = createFileRoute("/api/chat")({
             const auth = await optionalUser(request);
             if (auth instanceof Response) return auth;
 
+            const clientKey = !auth ? resolveAnonymousClientKey(request.headers) : "";
             if (!auth) {
-              const clientKey = resolveAnonymousClientKey(request.headers);
               if (chatAnonymousRateLimiter.isLimited(clientKey)) {
                 return new Response(
                   JSON.stringify({
@@ -973,6 +1016,17 @@ export const Route = createFileRoute("/api/chat")({
             const body: Record<string, unknown> = {
               model,
               stream: true,
+              // A client cannot override this value: it is derived only from
+              // the server-authorized mode and entitlement above.
+              max_completion_tokens: modelForPolicy(
+                m.id === "instant"
+                  ? "instant"
+                  : m.id === "thinking"
+                    ? "thinking"
+                    : ["high", "extra_high", "pro"].includes(m.id)
+                      ? "deep"
+                      : "normal",
+              ).outputCeiling,
               messages: [
                 {
                   role: "system",
@@ -1023,7 +1077,86 @@ export const Route = createFileRoute("/api/chat")({
                 : [];
             const enableTools = availableTools.length > 0;
 
+            const catalogModel = OPENAI_TEXT_MODELS.find((entry) => entry.id === model);
+            if (!catalogModel) {
+              return Response.json(
+                { error: "AI model configuration is unavailable." },
+                { status: 503 },
+              );
+            }
+            const inputEstimate = estimateProviderInput({
+              messages: body.messages,
+              tools: availableTools,
+            });
+            const outputCeiling = Number(body.max_completion_tokens);
+            const maximumProviderCalls = enableTools ? 9 : 1;
+            const estimatedCost =
+              estimateMaximumCostUsd(catalogModel, inputEstimate.tokens, outputCeiling) *
+              maximumProviderCalls;
+            let runtimeConfig;
+            try {
+              runtimeConfig = getAiRuntimeConfig();
+            } catch {
+              return Response.json(
+                { error: "AI runtime configuration is unavailable." },
+                { status: 503 },
+              );
+            }
+            if (estimatedCost > runtimeConfig.maxCostUsdPerRequest) {
+              return Response.json(
+                {
+                  error: "This request exceeds KovaGPT's safe generation budget.",
+                  code: "request_budget",
+                },
+                { status: 413 },
+              );
+            }
+            const idempotencyKey = request.headers.get("idempotency-key");
+            if (!idempotencyKey || !/^[A-Za-z0-9:_-]{8,200}$/.test(idempotencyKey)) {
+              return Response.json(
+                { error: "A valid generation identifier is required." },
+                { status: 400 },
+              );
+            }
+            let usageEventId: string;
+            try {
+              const acquisition = await acquireGeneration({
+                requestId,
+                idempotencyKey,
+                userId: auth?.userId ?? null,
+                guestIpHash: clientKey ? await hashGuestIp(clientKey) : null,
+                conversationId: chatId,
+                mode: m.id,
+                plan: auth ? callerTier : "guest",
+                premium: ["thinking", "high", "extra_high", "pro"].includes(m.id),
+                model: catalogModel,
+                estimatedInputTokens: inputEstimate.tokens,
+                reservedTokens: (inputEstimate.tokens + outputCeiling) * maximumProviderCalls,
+                estimatedCostUsd: estimatedCost,
+                contextTrimmed: messages.length > HISTORY_TURNS,
+              });
+              if ("rejection" in acquisition) {
+                const duplicate = acquisition.rejection === "duplicate";
+                return Response.json(
+                  {
+                    error: duplicate
+                      ? "This generation request is already running."
+                      : "Generation quota reached. Please try again later.",
+                    code: acquisition.rejection,
+                  },
+                  { status: duplicate ? 409 : 429 },
+                );
+              }
+              usageEventId = acquisition.eventId;
+            } catch {
+              return Response.json(
+                { error: "Usage authorization is temporarily unavailable." },
+                { status: 503 },
+              );
+            }
+
             const workingMessages: ChatMsg[] = [...(body.messages as unknown as ChatMsg[])];
+            let providerCalls = 0;
             const activityEvents: Array<{
               tool: string;
               label: string;
@@ -1065,6 +1198,7 @@ export const Route = createFileRoute("/api/chat")({
                 });
                 let hopRes: Response;
                 try {
+                  providerCalls += 1;
                   hopRes = await chatCompletions(
                     {
                       model,
@@ -1157,6 +1291,15 @@ export const Route = createFileRoute("/api/chat")({
                         controller.enqueue(enc.encode(sseDone()));
                         controller.close();
                       },
+                    });
+                    await finalizeGeneration({
+                      eventId: usageEventId,
+                      status: "completed",
+                      model: catalogModel,
+                      inputTokens: inputEstimate.tokens * providerCalls,
+                      outputTokens: estimateProviderInput(msg.content).tokens,
+                      latencyMs: Date.now() - startedAt,
+                      toolCalls: activityEvents.length,
                     });
                     return new Response(stream, {
                       headers: {
@@ -1303,10 +1446,20 @@ export const Route = createFileRoute("/api/chat")({
             const hasStreamedActivity = activityCount > 0 || pendingCount > 0;
             let upstream: Response;
             try {
+              providerCalls += 1;
               upstream = await chatCompletions(finalBody, {
                 signal: request.signal,
               });
             } catch {
+              await finalizeGeneration({
+                eventId: usageEventId,
+                status: request.signal.aborted ? "client_disconnected" : "provider_failed",
+                model: catalogModel,
+                inputTokens: inputEstimate.tokens * providerCalls,
+                latencyMs: Date.now() - startedAt,
+                toolCalls: activityEvents.length,
+                error: request.signal.aborted ? "client_disconnected" : "provider_network_error",
+              }).catch(() => undefined);
               if (request.signal?.aborted) return new Response(null, { status: 499 });
               logSafeFailure("error", "[chat] final provider request failed", logContext, {
                 status: 502,
@@ -1332,6 +1485,15 @@ export const Route = createFileRoute("/api/chat")({
                     ? "Image provider quota exhausted."
                     : "AI service is temporarily unavailable. Please try again.";
               const status = upstream.status === 429 ? 429 : upstream.status === 402 ? 402 : 502;
+              await finalizeGeneration({
+                eventId: usageEventId,
+                status: "provider_rejected",
+                model: catalogModel,
+                inputTokens: 0,
+                latencyMs: Date.now() - startedAt,
+                toolCalls: activityEvents.length,
+                error: `provider_http_${upstream.status}`,
+              }).catch(() => undefined);
               void upstream.body?.cancel().catch(() => undefined);
               logSafeFailure("error", "[chat] final provider rejected request", logContext, {
                 status: upstream.status,
@@ -1407,6 +1569,15 @@ export const Route = createFileRoute("/api/chat")({
                 request.signal,
               );
             } catch {
+              await finalizeGeneration({
+                eventId: usageEventId,
+                status: request.signal.aborted ? "client_disconnected" : "provider_failed",
+                model: catalogModel,
+                inputTokens: inputEstimate.tokens * providerCalls,
+                latencyMs: Date.now() - startedAt,
+                toolCalls: activityEvents.length,
+                error: request.signal.aborted ? "client_disconnected" : "invalid_provider_stream",
+              }).catch(() => undefined);
               if (request.signal?.aborted) return new Response(null, { status: 499 });
               logSafeFailure("error", "[chat] final provider response rejected", logContext, {
                 status: 502,
@@ -1440,6 +1611,48 @@ export const Route = createFileRoute("/api/chat")({
               ).__pending ?? [];
             const enc = new TextEncoder();
             const upstreamReader = boundedUpstreamBody.getReader();
+            let usageBuffer = "";
+            let usageFinalized = false;
+            const finalizeUsage = async (
+              status:
+                | "completed"
+                | "aborted"
+                | "provider_failed"
+                | "client_disconnected"
+                | "accounting_failed",
+              error?: string,
+            ) => {
+              if (usageFinalized) return;
+              usageFinalized = true;
+              const reported = reportedUsageFromSse(usageBuffer);
+              const outputFallback = estimateProviderInput(
+                [...usageBuffer.matchAll(/"content":"((?:\\.|[^"\\])*)"/g)]
+                  .map((match) => match[1])
+                  .join(""),
+              ).tokens;
+              try {
+                await finalizeGeneration({
+                  eventId: usageEventId,
+                  status,
+                  model: catalogModel,
+                  inputTokens:
+                    (reported?.input ?? inputEstimate.tokens) +
+                    inputEstimate.tokens * Math.max(0, providerCalls - 1),
+                  cachedInputTokens: reported?.cachedInput ?? 0,
+                  outputTokens: reported?.output ?? outputFallback,
+                  reasoningTokens: reported?.reasoning ?? 0,
+                  latencyMs: Date.now() - startedAt,
+                  toolCalls: activityEvents.length,
+                  error,
+                });
+              } catch {
+                logSafeFailure("error", "[chat] usage finalization failed", logContext, {
+                  status: 503,
+                  category: "server",
+                  code: "accounting_finalize_failed",
+                });
+              }
+            };
             const stream = new ReadableStream({
               async start(controller) {
                 for (const a of activityEvents) {
@@ -1471,9 +1684,15 @@ export const Route = createFileRoute("/api/chat")({
                   while (true) {
                     const { done, value } = await upstreamReader.read();
                     if (done) break;
+                    usageBuffer += new TextDecoder().decode(value, { stream: true });
                     controller.enqueue(value);
                   }
+                  await finalizeUsage(request.signal.aborted ? "aborted" : "completed");
                 } catch {
+                  await finalizeUsage(
+                    request.signal.aborted ? "client_disconnected" : "provider_failed",
+                    request.signal.aborted ? "client_disconnected" : "stream_terminated",
+                  );
                   if (!request.signal?.aborted) {
                     logSafeFailure("error", "[chat] final provider stream stopped", logContext, {
                       status: 502,
@@ -1498,6 +1717,7 @@ export const Route = createFileRoute("/api/chat")({
               },
               async cancel(reason) {
                 await upstreamReader.cancel(reason).catch(() => undefined);
+                await finalizeUsage("client_disconnected", "client_disconnected");
               },
             });
 

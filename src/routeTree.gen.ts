@@ -72,6 +72,7 @@ import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projec
 import { Route as Char126oauthCallbackRouteImport } from './routes/~oauth.callback'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as ApiAdminAiUsageRouteImport } from './routes/api/admin/ai-usage'
 import { Route as ApiAdminDiagnosticsRouteImport } from './routes/api/admin/diagnostics'
 import { Route as ApiAgentsRunsRouteImport } from './routes/api/agents/runs'
 import { Route as ApiAgentsTeamsRouteImport } from './routes/api/agents/teams'
@@ -424,6 +425,11 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAdminAiUsageRoute = ApiAdminAiUsageRouteImport.update({
+  id: '/api/admin/ai-usage',
+  path: '/api/admin/ai-usage',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminDiagnosticsRoute = ApiAdminDiagnosticsRouteImport.update({
   id: '/api/admin/diagnostics',
   path: '/api/admin/diagnostics',
@@ -652,6 +658,7 @@ export interface FileRoutesByFullPath {
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
@@ -748,6 +755,7 @@ export interface FileRoutesByTo {
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
@@ -845,6 +853,7 @@ export interface FileRoutesById {
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
@@ -943,6 +952,7 @@ export interface FileRouteTypes {
     | '/~oauth/callback'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/admin/ai-usage'
     | '/api/admin/diagnostics'
     | '/api/agents/runs'
     | '/api/agents/teams'
@@ -1039,6 +1049,7 @@ export interface FileRouteTypes {
     | '/~oauth/callback'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/admin/ai-usage'
     | '/api/admin/diagnostics'
     | '/api/agents/runs'
     | '/api/agents/teams'
@@ -1135,6 +1146,7 @@ export interface FileRouteTypes {
     | '/~oauth/callback'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/admin/ai-usage'
     | '/api/admin/diagnostics'
     | '/api/agents/runs'
     | '/api/agents/teams'
@@ -1231,6 +1243,7 @@ export interface RootRouteChildren {
   Char126oauthCallbackRoute: typeof Char126oauthCallbackRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiAdminAiUsageRoute: typeof ApiAdminAiUsageRoute
   ApiAdminDiagnosticsRoute: typeof ApiAdminDiagnosticsRoute
   ApiAgentsRunsRoute: typeof ApiAgentsRunsRoute
   ApiAgentsTeamsRoute: typeof ApiAgentsTeamsRoute
@@ -1705,6 +1718,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/ai-usage': {
+      id: '/api/admin/ai-usage'
+      path: '/api/admin/ai-usage'
+      fullPath: '/api/admin/ai-usage'
+      preLoaderRoute: typeof ApiAdminAiUsageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin/diagnostics': {
       id: '/api/admin/diagnostics'
       path: '/api/admin/diagnostics'
@@ -2023,6 +2043,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char126oauthCallbackRoute: Char126oauthCallbackRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiAdminAiUsageRoute: ApiAdminAiUsageRoute,
   ApiAdminDiagnosticsRoute: ApiAdminDiagnosticsRoute,
   ApiAgentsRunsRoute: ApiAgentsRunsRoute,
   ApiAgentsTeamsRoute: ApiAgentsTeamsRoute,

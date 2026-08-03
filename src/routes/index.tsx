@@ -966,7 +966,10 @@ function KovaGPT() {
 
         const resp = await authFetch("/api/chat", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": userMsg.id,
+          },
           body: JSON.stringify({
             messages: payloadMessages,
             mode: activeTool === "deep_research" ? "thinking" : mode,

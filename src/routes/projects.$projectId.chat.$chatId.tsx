@@ -189,7 +189,10 @@ function ProjectChatPage() {
     try {
       const response = await authFetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": crypto.randomUUID(),
+        },
         signal: controller.signal,
         body: JSON.stringify({
           messages: nextHistory

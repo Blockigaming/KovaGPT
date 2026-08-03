@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   AiProviderError,
   chatCompletions,
-  chatModel,
+  utilityModel,
   missingAiProviderResponse,
   providerErrorFromResponse,
   providerErrorResponse,
@@ -81,7 +81,7 @@ export const Route = createFileRoute("/api/project-suggest")({
           const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[tier]);
           if (quota) return quota;
           const upstream = await chatCompletions({
-            model: chatModel("fast"),
+            model: utilityModel(),
             messages: [
               {
                 role: "system",

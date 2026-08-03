@@ -78,7 +78,7 @@ export const Route = createFileRoute("/api/title")({
               headers: { "Content-Type": "application/json" },
             });
           }
-          const { chatCompletions, chatModel, missingAiProviderResponse } =
+          const { chatCompletions, utilityModel, missingAiProviderResponse } =
             await import("@/lib/ai/provider.server");
           const missingProvider = missingAiProviderResponse({
             title: "New chat",
@@ -92,7 +92,7 @@ export const Route = createFileRoute("/api/title")({
             .slice(0, 4000);
 
           const upstream = await chatCompletions({
-            model: chatModel("fast"),
+            model: utilityModel(),
             messages: [
               {
                 role: "system",

@@ -7,7 +7,7 @@ import {
   requireUser,
   type AuthedCaller,
 } from "@/lib/api-auth.server";
-import { chatCompletions, chatModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
+import { chatCompletions, utilityModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
 import {
   assertDatabaseSuccess,
   BodyReadError,
@@ -69,7 +69,7 @@ async function summarize(messages: Array<{ role: "user" | "assistant"; content: 
     .map((message) => `${message.role === "user" ? "User" : "KovaGPT"}: ${message.content}`)
     .join("\n");
   const response = await chatCompletions({
-    model: chatModel("fast"),
+    model: utilityModel(),
     messages: [
       {
         role: "system",

@@ -998,6 +998,8 @@ export type Database = {
           current_period_start: string | null
           environment: string
           id: string
+          last_stripe_event_created_at: string | null
+          last_stripe_event_id: string | null
           price_id: string
           product_id: string
           status: string
@@ -1013,6 +1015,8 @@ export type Database = {
           current_period_start?: string | null
           environment?: string
           id?: string
+          last_stripe_event_created_at?: string | null
+          last_stripe_event_id?: string | null
           price_id: string
           product_id: string
           status?: string
@@ -1028,6 +1032,8 @@ export type Database = {
           current_period_start?: string | null
           environment?: string
           id?: string
+          last_stripe_event_created_at?: string | null
+          last_stripe_event_id?: string | null
           price_id?: string
           product_id?: string
           status?: string
@@ -1140,6 +1146,18 @@ export type Database = {
         }
         Relationships: []
       }
+      writing_document_versions: {
+        Row: { id: string; document_id: string; owner_id: string; version: number; title: string; content: string; word_count: number; source: string; created_at: string }
+        Insert: { id?: string; document_id: string; owner_id: string; version: number; title: string; content: string; word_count?: number; source: string; created_at?: string }
+        Update: { id?: string; document_id?: string; owner_id?: string; version?: number; title?: string; content?: string; word_count?: number; source?: string; created_at?: string }
+        Relationships: []
+      }
+      writing_documents: {
+        Row: { id: string; owner_id: string; project_id: string | null; title: string; content: string; content_format: string; version: number; metadata: Json; archived_at: string | null; last_opened_at: string; created_at: string; updated_at: string }
+        Insert: { id?: string; owner_id: string; project_id?: string | null; title: string; content?: string; content_format?: string; version?: number; metadata?: Json; archived_at?: string | null; last_opened_at?: string; created_at?: string; updated_at?: string }
+        Update: { id?: string; owner_id?: string; project_id?: string | null; title?: string; content?: string; content_format?: string; version?: number; metadata?: Json; archived_at?: string | null; last_opened_at?: string; created_at?: string; updated_at?: string }
+        Relationships: []
+      }
       user_storage: {
         Row: {
           bytes_used: number
@@ -1222,6 +1240,10 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      save_writing_document: {
+        Args: { p_id: string; p_title: string; p_content: string; p_expected_version: number; p_source: string }
+        Returns: Database["public"]["Tables"]["writing_documents"]["Row"]
       }
       try_add_storage_bytes: {
         Args: { _bytes: number; _limit: number; _user_id: string }

@@ -201,15 +201,10 @@ export function AuthDialog({
           >
             {/* Header */}
             <div className="flex flex-col items-center text-center">
-
               <div className="mb-5 animate-in fade-in-0 duration-100">
-                <div className="relative w-14 h-14 rounded-xl bg-foreground/[0.04] ring-1 ring-border flex items-center justify-center">
-                  <NovaLogo className="w-9 h-9" />
+                <div className="relative flex h-14 w-14 items-center justify-center rounded-xl bg-foreground/[0.04] ring-1 ring-border">
+                  <NovaLogo className="h-9 w-9" />
                 </div>
-
-              <div className="mb-5 animate-in fade-in-0 duration-300">
-                <NovaLogo className="h-12 w-12 rounded-full" />
-
               </div>
               <h1 className="text-[26px] leading-tight font-semibold tracking-tight">
                 {step === "magic-sent"
