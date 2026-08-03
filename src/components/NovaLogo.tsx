@@ -38,7 +38,7 @@ export function NovaLogo({
     </svg>
   ) : (
     <img
-      src="/kova-logo.svg"
+      src="/kova-logo.png"
       className={`${className} block shrink-0 object-contain ${animated ? "animate-kova-float" : ""}`}
       alt="KovaGPT logo"
     />

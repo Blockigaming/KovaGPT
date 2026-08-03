@@ -33,6 +33,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { NovaLogo } from "@/components/NovaLogo";
 import { useTier } from "@/hooks/useTier";
 import type { Conversation } from "@/lib/chat-store";
 import { searchConversations } from "@/lib/conversation-search";
@@ -348,9 +349,21 @@ export function Sidebar({
       >
         <div className="flex h-full min-w-[var(--sidebar-expanded)] flex-col overflow-hidden">
           <div className="relative z-20 flex min-h-[52px] items-center gap-1 bg-sidebar/90 px-2.5 pt-[var(--safe-top)]">
-            <div className="flex min-w-0 flex-1 items-center px-1">
+            <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
+              <NovaLogo className="h-6 w-6 rounded-md" />
               <span className="truncate text-base font-semibold tracking-tight">KovaGPT</span>
             </div>
+
+            {showSignedOut ? (
+              <Link
+                to="/library"
+                className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:flex"
+                aria-label="Search"
+                title="Search"
+              >
+                <Search className="h-[18px] w-[18px]" />
+              </Link>
+            ) : null}
 
             <button
               onClick={onToggle}
@@ -412,19 +425,20 @@ export function Sidebar({
               <SquarePen className="h-[18px] w-[18px] shrink-0" />
               <span className={labelClass}>New chat</span>
             </button>
-            <button
-              type="button"
-              onClick={() => setSearchOpen((v) => !v)}
-              className={navItemClass(false)}
-              aria-label="Search chats"
-              title="Search chats"
-            >
-
-              <Search className="h-[18px] w-[18px] shrink-0" />
-              <span className={labelClass}>Search</span>
-            </button>
+            {showSignedIn ? (
+              <button
+                type="button"
+                onClick={() => setSearchOpen((v) => !v)}
+                className={navItemClass(false)}
+                aria-label="Search chats"
+                title="Search chats"
+              >
+                <Search className="h-[18px] w-[18px] shrink-0" />
+                <span className={labelClass}>Search</span>
+              </button>
+            ) : null}
             {showSignedIn ? renderNavLink("/projects", "Projects", FolderKanban) : null}
-            {renderNavLink("/library", "Library", FolderOpen)}
+            {showSignedIn ? renderNavLink("/library", "Library", FolderOpen) : null}
             {renderNavLink("/images", "Images", ImageIcon)}
             {showSignedIn && (tier === "plus" || tier === "pro")
               ? renderNavLink(
@@ -434,7 +448,7 @@ export function Sidebar({
                   isOn("/scheduled-tasks"),
                 )
               : null}
-            {tier !== "plus" && tier !== "pro"
+            {showSignedIn && tier !== "plus" && tier !== "pro"
               ? renderNavLink("/pricing", "Subscriptions", CreditCard, isOn("/pricing"))
               : null}
           </div>
@@ -448,7 +462,7 @@ export function Sidebar({
               aria-hidden="true"
               className="pointer-events-none sticky top-0 z-10 h-4 bg-gradient-to-b from-sidebar to-transparent"
             />
-            {!collapsed ? (
+            {!collapsed && showSignedIn ? (
               <>
                 {!isLoaded && conversations.length === 0 ? (
                   <div className="space-y-2 px-3 pt-4" aria-hidden="true">
@@ -485,14 +499,14 @@ export function Sidebar({
                   </>
                 )}
               </>
-            ) : (
+            ) : collapsed ? (
               <div
                 className="px-2 pt-3 text-center text-xs text-muted-foreground"
                 aria-hidden="true"
               >
                 •••
               </div>
-            )}
+            ) : null}
             <div
               aria-hidden="true"
               className="pointer-events-none sticky bottom-0 z-10 h-8 bg-gradient-to-t from-sidebar to-transparent"
