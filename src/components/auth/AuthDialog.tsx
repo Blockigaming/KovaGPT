@@ -311,8 +311,8 @@ export function AuthDialog({
                     disabled={loading || !emailValid}
                     className="w-full h-14 rounded-xl border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-3 text-[15px] font-medium disabled:opacity-60"
                   >
-                    <Mail className="h-5 w-5" />
                     Email me a sign-in link
+
                   </button>
                 </>
               )}
