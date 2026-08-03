@@ -139,7 +139,7 @@ export const listWorkRuns = createServerFn({ method: "GET" })
   });
 export const getWorkRun = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((v: unknown) => z.object({ id: z.string().uuid() }).parse(v))
+  .validator((v: unknown) => z.object({ id: z.string().uuid() }).parse(v))
   .handler(async ({ data, context }): Promise<WorkDetail> => {
     const client = db(context.supabase);
     const runResult = await client
@@ -260,7 +260,7 @@ export const getWorkRun = createServerFn({ method: "GET" })
 
 export const saveGraphPreference = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((value: unknown) =>
+  .validator((value: unknown) =>
     z
       .object({
         runId: z.string().uuid(),
@@ -296,7 +296,7 @@ export const saveGraphPreference = createServerFn({ method: "POST" })
 
 export const controlWorkRun = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((v: unknown) =>
+  .validator((v: unknown) =>
     z
       .object({
         id: z.string().uuid(),
@@ -316,7 +316,7 @@ export const controlWorkRun = createServerFn({ method: "POST" })
 const deliverableMutation = z.object({ id: z.string().uuid() });
 export const renameDeliverable = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((v: unknown) =>
+  .validator((v: unknown) =>
     deliverableMutation.extend({ title: z.string().trim().min(1).max(160) }).parse(v),
   )
   .handler(async ({ data, context }) => {
@@ -330,7 +330,7 @@ export const renameDeliverable = createServerFn({ method: "POST" })
   });
 export const moveDeliverable = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((v: unknown) =>
+  .validator((v: unknown) =>
     deliverableMutation.extend({ projectId: z.string().uuid().nullable() }).parse(v),
   )
   .handler(async ({ data, context }) => {
@@ -354,7 +354,7 @@ export const moveDeliverable = createServerFn({ method: "POST" })
   });
 export const deleteDeliverable = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((v: unknown) => deliverableMutation.parse(v))
+  .validator((v: unknown) => deliverableMutation.parse(v))
   .handler(async ({ data, context }) => {
     const { error } = await db(context.supabase)
       .from("agent_deliverables")
@@ -366,7 +366,7 @@ export const deleteDeliverable = createServerFn({ method: "POST" })
   });
 export const restoreDeliverable = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((v: unknown) => deliverableMutation.parse(v))
+  .validator((v: unknown) => deliverableMutation.parse(v))
   .handler(async ({ data, context }) => {
     const { error } = await db(context.supabase)
       .from("agent_deliverables")
@@ -379,7 +379,7 @@ export const restoreDeliverable = createServerFn({ method: "POST" })
   });
 export const duplicateDeliverable = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((v: unknown) => deliverableMutation.parse(v))
+  .validator((v: unknown) => deliverableMutation.parse(v))
   .handler(async ({ data, context }) => {
     const client = db(context.supabase);
     const source = await client
@@ -414,7 +414,7 @@ export const duplicateDeliverable = createServerFn({ method: "POST" })
   });
 export const downloadDeliverable = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((v: unknown) => deliverableMutation.parse(v))
+  .validator((v: unknown) => deliverableMutation.parse(v))
   .handler(async ({ data, context }) => {
     const client = db(context.supabase);
     const row = await client
@@ -442,7 +442,7 @@ const previewMime = new Set([
   previewBytes = 5_000_000;
 export const getDeliverableContent = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((value: unknown) => deliverableMutation.parse(value))
+  .validator((value: unknown) => deliverableMutation.parse(value))
   .handler(async ({ data, context }) => {
     const client = db(context.supabase);
     const row = await client
@@ -482,7 +482,7 @@ export const getDeliverableContent = createServerFn({ method: "GET" })
 
 export const compareDeliverableContent = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((value: unknown) =>
+  .validator((value: unknown) =>
     z.object({ leftId: z.string().uuid(), rightId: z.string().uuid() }).parse(value),
   )
   .handler(async ({ data, context }) => {
@@ -523,7 +523,7 @@ export const compareDeliverableContent = createServerFn({ method: "GET" })
 
 export const listDeliverableVersions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((value: unknown) => deliverableMutation.parse(value))
+  .validator((value: unknown) => deliverableMutation.parse(value))
   .handler(async ({ data, context }): Promise<WorkDeliverable[]> => {
     const client = db(context.supabase);
     const source = await client
@@ -545,7 +545,7 @@ export const listDeliverableVersions = createServerFn({ method: "GET" })
 
 export const restoreDeliverableRevision = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((value: unknown) => deliverableMutation.parse(value))
+  .validator((value: unknown) => deliverableMutation.parse(value))
   .handler(async ({ data, context }) => {
     const client = db(context.supabase);
     const source = await client
@@ -578,7 +578,7 @@ export const restoreDeliverableRevision = createServerFn({ method: "POST" })
   });
 export const decideApproval = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((v: unknown) =>
+  .validator((v: unknown) =>
     z
       .object({
         id: z.string().uuid(),
