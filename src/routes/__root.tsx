@@ -302,7 +302,7 @@ function RootThemeManager() {
 }
 
 const PAGE_TITLES: Record<string, string> = {
-  "/": "KovaGPT Chat",
+  "/": "KovaGPT",
   "/pricing": "KovaGPT Billing",
   "/library": "KovaGPT Library",
   "/images": "KovaGPT Images",
@@ -320,7 +320,7 @@ function PageTitleManager() {
     const section = pathname.split("/").filter(Boolean)[0];
     const fallback = section
       ? `KovaGPT ${section.charAt(0).toUpperCase()}${section.slice(1)}`
-      : "KovaGPT Chat";
+      : "KovaGPT";
     document.title = exact ?? fallback;
   }, [pathname]);
   return null;

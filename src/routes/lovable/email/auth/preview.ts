@@ -18,7 +18,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "x9k-p2mq8-vl4wx-7br3y-z5jn6-ht1fc9-dk2gm8b"
+const SITE_NAME = "KovaGPT"
 const ROOT_DOMAIN = "kovagpt.com"
 
 // Sample data for preview mode ONLY (not used in actual email sending).

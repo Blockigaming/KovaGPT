@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
 import {
   lazy,
@@ -1575,6 +1575,22 @@ function KovaGPT() {
                 />
               </div>
             </div>
+            {!isLoaded || isSignedIn ? null : (
+              <p className="kova-disclaimer mx-auto w-full max-w-[48rem] px-4 pb-3 text-center text-[11px] leading-4 text-muted-foreground/80">
+                KovaGPT is AI. By using it, you agree to our{" "}
+                <Link to="/terms" className="underline underline-offset-2 hover:text-foreground">
+                  Terms
+                </Link>{" "}
+                &amp;{" "}
+                <Link to="/privacy" className="underline underline-offset-2 hover:text-foreground">
+                  Privacy Policy
+                </Link>
+                . Chats may be reviewed and used to improve our AI models.{" "}
+                <Link to="/privacy" className="underline underline-offset-2 hover:text-foreground">
+                  Learn more.
+                </Link>
+              </p>
+            )}
           </section>
         ) : (
           <>

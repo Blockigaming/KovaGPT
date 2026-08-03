@@ -58,7 +58,7 @@
 
 /* Composer */
 .kova-composer {
-  --composer-height: 58px !important;
+  --composer-height: 48px !important;
   --composer-control: 36px !important;
   --composer-inset: 10px !important;
   border: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent) !important;
@@ -94,8 +94,8 @@
   transform: none !important;
 }
 .kova-composer-input {
-  min-height: 56px !important;
-  padding-block: 16px !important;
+  min-height: 46px !important;
+  padding-block: 11px !important;
   font-size: 16px !important;
   line-height: 24px !important;
 }
