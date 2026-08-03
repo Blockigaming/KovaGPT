@@ -18,7 +18,7 @@ export const Route = createFileRoute("/pricing")({
   component: PricingPage,
   head: () => ({
     meta: [
-      { title: "Pricing - KovaGPT Plus & Pro plans" },
+      { title: "KovaGPT Billing" },
       {
         name: "description",
         content:

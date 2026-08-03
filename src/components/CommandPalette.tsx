@@ -6,7 +6,6 @@ import {
   Settings,
   Image as ImageIcon,
   FolderOpen,
-  Plug,
   Calendar,
   X,
   FlaskConical,
@@ -67,7 +66,6 @@ const fixedActions: PaletteAction[] = [
     disabledReason: "Start from the composer privacy menu.",
   },
   { label: "Scheduled Tasks status", href: "/scheduled-tasks", icon: Calendar },
-  { label: "Open Apps", href: "/apps", icon: Plug },
   { label: "Open Help", href: "/help", icon: FlaskConical },
   { label: "Toggle appearance", action: "theme", icon: SunMoon },
 ];

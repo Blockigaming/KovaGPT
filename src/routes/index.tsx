@@ -1562,7 +1562,7 @@ function KovaGPT() {
                   mode={mode}
                   onModeChange={setMode}
                   userTier={tier}
-                  canChangeAgent={false}
+                  canChangeAgent
                   onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
                   placeholder="Ask anything"
                   onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
@@ -1806,7 +1806,7 @@ function KovaGPT() {
                 mode={mode}
                 onModeChange={setMode}
                 userTier={tier}
-                canChangeAgent={false}
+                canChangeAgent
                 onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
                 placeholder="Ask anything"
                 onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}

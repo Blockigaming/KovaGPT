@@ -328,3 +328,14 @@
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Menu rows: keep only the soft grey highlight, never a hard outline box. */
+:where([role="menu"], [role="listbox"], [role="dialog"], .kova-model-menu, .kova-glass)
+  :where(button, [role="menuitem"], [role="option"]):focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  background: var(--accent) !important;
+}
+:where([role="menuitem"], [role="option"]) {
+  border: 0 !important;
+}

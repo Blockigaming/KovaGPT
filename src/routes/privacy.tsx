@@ -8,7 +8,7 @@ const DESCRIPTION =
 export const Route = createFileRoute("/privacy")({
   head: () => ({
     meta: [
-      { title: "Privacy Policy - KovaGPT" },
+      { title: "KovaGPT Privacy" },
       { name: "description", content: DESCRIPTION },
       { property: "og:title", content: "Privacy Policy - KovaGPT" },
       { property: "og:description", content: DESCRIPTION },
