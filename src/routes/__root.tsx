@@ -194,8 +194,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       links: [
         { rel: "stylesheet", href: appCss },
         { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
-        { rel: "alternate icon", type: "image/png", href: "/favicon.png" },
-        { rel: "apple-touch-icon", href: "/favicon.svg" },
+        { rel: "apple-touch-icon", href: "/kova-logo.svg" },
         { rel: "preconnect", href: "https://fonts.googleapis.com" },
         {
           rel: "preconnect",
@@ -218,7 +217,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
                     "@type": "Organization",
                     name: "KovaGPT",
                     url: "https://kovagpt.com",
-                    logo: "https://kovagpt.com/favicon.png",
+                    logo: "https://kovagpt.com/kova-logo.svg",
                   },
                   {
                     "@type": "WebSite",
