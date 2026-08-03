@@ -1760,23 +1760,169 @@ body {
    without changing route behavior or introducing page-specific themes. */
 @layer components {
   .kova-composer {
-    border-radius: 1.75rem !important;
-    border: 1px solid color-mix(in oklab, var(--foreground) 6%, transparent) !important;
+    /* One 4px-based system drives the shell, controls, and text rhythm. */
+    --composer-unit: 0.25rem;
+    --composer-height: calc(var(--composer-unit) * 14);
+    --composer-control: calc(var(--composer-unit) * 9);
+    --composer-inset: calc(var(--composer-unit) * 2.5);
+    --composer-icon: calc(var(--composer-unit) * 5);
+    border-radius: calc(var(--composer-height) / 2) !important;
+    border: 1px solid color-mix(in oklab, var(--foreground) 7%, transparent) !important;
     background: var(--surface-composer) !important;
     box-shadow: none !important;
     transition:
-      border-color var(--motion-standard) var(--ease-standard),
-      box-shadow var(--motion-standard) var(--ease-standard),
-      background-color var(--motion-standard) var(--ease-standard) !important;
+      border-color var(--motion-fast) var(--ease-standard),
+      box-shadow var(--motion-fast) var(--ease-standard),
+      background-color var(--motion-fast) var(--ease-standard) !important;
   }
 
   .kova-composer:hover {
-    border-color: color-mix(in oklab, var(--foreground) 9%, transparent) !important;
+    border-color: color-mix(in oklab, var(--foreground) 10%, transparent) !important;
   }
 
   .kova-composer:focus-within {
-    border-color: color-mix(in oklab, var(--ring) 72%, transparent) !important;
-    box-shadow: 0 0 0 2px color-mix(in oklab, var(--ring) 72%, transparent) !important;
+    border-color: color-mix(in oklab, var(--foreground) 14%, transparent) !important;
+    box-shadow: 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent) !important;
+  }
+
+  .kova-composer.is-streaming {
+    border-color: color-mix(in oklab, var(--foreground) 10%, transparent) !important;
+  }
+
+  .kova-composer-row {
+    min-height: var(--composer-height);
+  }
+
+  .kova-composer-leading,
+  .kova-composer-trailing {
+    gap: var(--composer-unit);
+    padding-bottom: var(--composer-inset);
+  }
+
+  .kova-composer-leading {
+    padding-left: var(--composer-inset);
+  }
+
+  .kova-composer-trailing {
+    padding-right: var(--composer-inset);
+  }
+
+  .kova-composer-button {
+    width: var(--composer-control);
+    height: var(--composer-control);
+    flex: 0 0 var(--composer-control);
+    border-radius: 50%;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      color var(--motion-fast) var(--ease-standard),
+      background-color var(--motion-fast) var(--ease-standard),
+      opacity var(--motion-fast) var(--ease-standard),
+      transform var(--motion-fast) var(--ease-spring);
+  }
+
+  .kova-composer-button:focus-visible {
+    box-shadow:
+      0 0 0 2px var(--surface-composer),
+      0 0 0 4px color-mix(in oklab, var(--foreground) 35%, transparent) !important;
+  }
+
+  .kova-composer-button:active:not(:disabled) {
+    transform: scale(0.95);
+  }
+
+  .kova-attach-button {
+    color: color-mix(in oklab, var(--foreground) 68%, transparent);
+  }
+
+  .kova-attach-button:hover,
+  .kova-attach-button.is-open {
+    color: var(--foreground);
+    background: color-mix(in oklab, var(--foreground) 7%, transparent);
+  }
+
+  .kova-attach-icon,
+  .kova-send-icon {
+    width: var(--composer-icon);
+    height: var(--composer-icon);
+  }
+
+  .kova-attach-icon {
+    transition: transform var(--motion-standard) var(--ease-spring);
+  }
+
+  .kova-attach-button.is-open .kova-attach-icon {
+    transform: rotate(45deg);
+  }
+
+  .kova-send-button {
+    color: color-mix(in oklab, var(--foreground) 42%, transparent);
+    background: color-mix(in oklab, var(--foreground) 8%, transparent);
+  }
+
+  .kova-send-button.is-enabled {
+    color: var(--background);
+    background: var(--foreground);
+  }
+
+  .kova-send-button.is-enabled:hover {
+    opacity: 0.82;
+  }
+
+  .kova-send-button:disabled {
+    opacity: 1;
+  }
+
+  .kova-composer-input {
+    min-width: 0;
+    min-height: calc(var(--composer-unit) * 13.5);
+    max-height: calc(var(--composer-unit) * 50);
+    padding: calc(var(--composer-unit) * 3.75) calc(var(--composer-unit) * 2);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--foreground) 20%, transparent) transparent;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5rem;
+    letter-spacing: normal;
+    caret-color: var(--foreground);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .kova-composer-input::placeholder {
+    color: color-mix(in oklab, var(--foreground) 52%, transparent);
+    opacity: 1;
+  }
+
+  .kova-composer-input::selection {
+    color: var(--foreground);
+    background: color-mix(in oklab, var(--ring) 24%, transparent);
+  }
+
+  .kova-composer-input::-webkit-scrollbar {
+    width: var(--composer-unit);
+  }
+
+  .kova-composer-input::-webkit-scrollbar-thumb {
+    border-radius: calc(var(--composer-unit) / 2);
+    background: color-mix(in oklab, var(--foreground) 20%, transparent);
+  }
+
+  @media (pointer: coarse) {
+    .kova-composer {
+      --composer-control: calc(var(--composer-unit) * 11);
+      --composer-inset: calc(var(--composer-unit) * 1.5);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .kova-composer,
+    .kova-composer-button,
+    .kova-attach-icon {
+      transition-duration: 0.01ms !important;
+    }
   }
 
   .kova-capability-card,

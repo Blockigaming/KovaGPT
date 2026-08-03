@@ -52,12 +52,7 @@ export type RecentLibraryFile = {
   projectName?: string | null;
 };
 export type ComposerToolId =
-  | "web_search"
-  | "deep_research"
-  | "image"
-  | "study"
-  | "data_analysis"
-  | "file_analysis";
+  "web_search" | "deep_research" | "image" | "study" | "data_analysis" | "file_analysis";
 
 type ComposerAction = {
   id: ComposerToolId;
@@ -160,8 +155,6 @@ export function ChatInput({
   const plusWrapRef = useRef<HTMLDivElement>(null);
   const plusTriggerRef = useRef<HTMLButtonElement>(null);
 
-  const [sendFlash, setSendFlash] = useState(false);
-  const [actionColor, setActionColor] = useState<string>("#3b82f6");
   const [plusOpen, setPlusOpen] = useState(false);
   const [kbOffset, setKbOffset] = useState(0);
   const submittingRef = useRef(false);
@@ -188,31 +181,6 @@ export function ChatInput({
       document.removeEventListener("keydown", onEsc);
     };
   }, [plusOpen]);
-
-  useEffect(() => {
-    try {
-      const c = localStorage.getItem("kova-action-color");
-      if (c && /^#[0-9a-f]{6}$/i.test(c)) setActionColor(c);
-    } catch {
-      /* ignore */
-    }
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === "kova-action-color" && e.newValue && /^#[0-9a-f]{6}$/i.test(e.newValue)) {
-        setActionColor(e.newValue);
-      }
-    };
-    window.addEventListener("storage", onStorage);
-    const onLocal = (e: Event) => {
-      const ce = e as CustomEvent<string>;
-      if (typeof ce.detail === "string" && /^#[0-9a-f]{6}$/i.test(ce.detail))
-        setActionColor(ce.detail);
-    };
-    window.addEventListener("kova-action-color", onLocal as EventListener);
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("kova-action-color", onLocal as EventListener);
-    };
-  }, []);
 
   useEffect(() => {
     const el = ref.current;
@@ -263,9 +231,7 @@ export function ChatInput({
       return;
     }
     submittingRef.current = true;
-    setSendFlash(true);
     setUploadAnnouncement("Message submitted");
-    window.setTimeout(() => setSendFlash(false), 380);
     onSubmit();
   };
 
@@ -656,26 +622,14 @@ export function ChatInput({
 
   return (
     <div
-      className="w-full px-2.5 pb-[max(.75rem,var(--safe-bottom))] pt-2 transition-[padding] duration-150 sm:px-6 lg:px-8"
+      className="w-full px-2.5 pb-[max(.75rem,var(--safe-bottom))] pt-2 transition-[padding] duration-150 sm:px-0"
       style={isMobileLayout && kbOffset > 0 ? { paddingBottom: `${kbOffset + 8}px` } : undefined}
       onPaste={handlePaste}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
     >
       <div className="mx-auto max-w-[48rem]">
-        <div
-          style={
-            sendFlash
-              ? ({
-                  boxShadow: `0 0 0 2px ${actionColor}33`,
-                  borderColor: `${actionColor}99`,
-                } as React.CSSProperties)
-              : undefined
-          }
-          className={`kova-composer overflow-visible rounded-[28px] transition-[border-color,box-shadow,transform] duration-200 ${
-            sendFlash ? "scale-[0.995]" : isStreaming ? "ring-1 ring-foreground/10" : ""
-          }`}
-        >
+        <div className={`kova-composer overflow-visible ${isStreaming ? "is-streaming" : ""}`}>
           {attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 p-3 pb-0" aria-label="Attachments">
               {attachments.map((a, i) => (
@@ -768,9 +722,9 @@ export function ChatInput({
           <div aria-live="polite" className="sr-only">
             {uploadAnnouncement}
           </div>
-          <div className="flex min-h-[58px] items-end">
+          <div className="kova-composer-row flex items-end">
             <div
-              className={`${showAddMenu ? "flex" : "hidden"} relative self-end items-center pb-1.5 pl-1.5`}
+              className={`${showAddMenu ? "flex" : "hidden"} kova-composer-leading relative self-end items-center`}
               ref={plusWrapRef}
             >
               <input
@@ -805,13 +759,13 @@ export function ChatInput({
                 type="button"
                 onClick={() => setPlusOpen((v) => !v)}
                 disabled={disabled || isStreaming}
-                className={`kova-attach-button w-11 h-11 lg:w-9 lg:h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/60 active:scale-95 transition ${plusOpen && !isMobileLayout ? "rotate-45 text-foreground" : ""}`}
+                className={`kova-composer-button kova-attach-button flex items-center justify-center rounded-full ${plusOpen && !isMobileLayout ? "is-open" : ""}`}
                 aria-label="Add files, tools, or prompts"
                 aria-haspopup="dialog"
                 aria-expanded={plusOpen}
                 title="Add"
               >
-                <Plus className="w-5 h-5 transition-transform" />
+                <Plus className="kova-attach-icon" strokeWidth={2} />
               </button>
               {plusOpen && !isMobileLayout && (
                 <div
@@ -944,7 +898,7 @@ export function ChatInput({
               autoComplete="off"
               autoCorrect="on"
               autoCapitalize="sentences"
-              className="min-h-[44px] max-h-[200px] flex-1 resize-none border-0 bg-transparent px-2 py-[.72rem] text-[16px] leading-[1.45] text-foreground outline-none placeholder:text-muted-foreground focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-70 lg:text-[15px]"
+              className="kova-composer-input flex-1 resize-none border-0 bg-transparent text-foreground outline-none focus:outline-none focus:ring-0 disabled:cursor-not-allowed"
               aria-label="Message KovaGPT"
               aria-keyshortcuts={
                 effectiveSendOnEnter && !isMobileLayout && !isCoarsePointer
@@ -952,7 +906,7 @@ export function ChatInput({
                   : "Control+Enter Meta+Enter"
               }
             />
-            <div className="flex self-end items-center gap-1.5 pb-1.5 pr-1.5">
+            <div className="kova-composer-trailing flex self-end items-center">
               {canChangeAgent && mode && onModeChange && (
                 <div className="flex items-center">
                   <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
@@ -962,7 +916,7 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={onStop}
-                  className="kova-send-button flex h-10 w-10 items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-80 lg:h-9 lg:w-9"
+                  className="kova-composer-button kova-send-button is-enabled flex items-center justify-center rounded-full"
                   aria-label="Stop"
                 >
                   <Square className="h-3.5 w-3.5 fill-current" />
@@ -976,22 +930,20 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={triggerSubmit}
-                  className={`kova-send-button flex h-10 w-10 items-center justify-center rounded-full bg-foreground text-background transition duration-150 hover:opacity-90 active:scale-90 active:opacity-70 lg:h-9 lg:w-9 ${sendFlash ? "scale-90 opacity-80" : ""}`}
+                  className="kova-composer-button kova-send-button is-enabled flex items-center justify-center rounded-full"
                   aria-label="Send"
                 >
-                  <ArrowUp
-                    className={`w-5 h-5 transition-transform duration-300 ${sendFlash ? "-translate-y-1.5 opacity-0" : ""}`}
-                  />
+                  <ArrowUp className="kova-send-icon" strokeWidth={2.5} />
                 </button>
               ) : (
                 <button
                   type="button"
                   disabled
-                  className="kova-send-button flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground lg:h-9 lg:w-9"
+                  className="kova-composer-button kova-send-button flex items-center justify-center rounded-full"
                   aria-label="Send"
                   title={disabled ? "Messaging is unavailable" : "Type a message to send"}
                 >
-                  <ArrowUp className="h-5 w-5" />
+                  <ArrowUp className="kova-send-icon" strokeWidth={2.5} />
                 </button>
               )}
             </div>
