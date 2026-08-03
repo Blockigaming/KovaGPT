@@ -87,6 +87,10 @@ const MODE_PUBLIC_COPY: Record<ModeId, string> = {
   high: "Plus response instructions emphasizing verification and completeness.",
   extra_high: "Pro response instructions emphasizing alternatives and detail.",
   pro: "Pro response instructions emphasizing polished, comprehensive answers.",
+  kova_5_5: "Previous generation Kova with balanced response instructions.",
+  kova_5_4: "Older generation Kova kept for consistency with past work.",
+  kova_o3: "Oldest available Kova generation.",
+
 };
 
 const modes: readonly PublishedMode[] = MODES.map((mode) => ({
