@@ -150,7 +150,7 @@ export function Sidebar({
   const labelClass = collapsed ? "sr-only lg:sr-only" : "truncate";
   const iconOnly = collapsed ? "justify-center px-0" : "gap-3 px-2.5";
   const navItemClass = (active: boolean) =>
-    `relative flex min-h-10 items-center rounded-md py-1.5 text-[13.5px] transition-colors duration-150 active:scale-[0.99] ${iconOnly} ${
+    `relative flex h-9 items-center rounded-lg py-1 text-sm transition-colors duration-100 ${iconOnly} ${
       active
         ? "bg-sidebar-active text-foreground font-medium"
         : "text-sidebar-foreground hover:bg-sidebar-hover"
@@ -182,7 +182,7 @@ export function Sidebar({
   const renderRow = (c: Conversation) => (
     <div
       key={c.id}
-      className={`kova-chat-row group relative mx-2 my-0.5 flex min-h-9 items-center gap-1 rounded-md px-1.5 text-[13px] transition ${
+      className={`kova-chat-row group relative mx-2 flex h-9 items-center gap-1 rounded-lg px-1.5 text-sm transition-colors duration-100 ${
         activeId === c.id ? "bg-sidebar-active" : "hover:bg-sidebar-hover/60"
       }`}
     >
@@ -266,7 +266,7 @@ export function Sidebar({
         }
         className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-border/60 bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 ease-[var(--ease-spring)] lg:w-[var(--sidebar-expanded)] ${
           collapsed ? "lg:!w-0 lg:border-r-0" : ""
-        } max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,320px)] max-lg:shadow-2xl ${
+        } max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,320px)] max-lg:shadow-lg ${
           open ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"
         }`}
         aria-label="Primary navigation"
@@ -281,9 +281,7 @@ export function Sidebar({
               <span className="inline-flex shrink-0">
                 <NovaLogo className="h-6 w-6" />
               </span>
-              <span className="truncate font-display text-[15px] font-semibold tracking-[-0.01em]">
-                KovaGPT
-              </span>
+              <span className="truncate text-sm font-semibold">KovaGPT</span>
             </div>
             <button
               onClick={onToggle}
@@ -326,7 +324,7 @@ export function Sidebar({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search titles, messages, or operators…"
-                className="h-11 w-full rounded-xl bg-sidebar-hover/60 px-3 text-sm outline-none transition focus:bg-sidebar-hover focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-9 w-full rounded-lg bg-sidebar-hover px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
             </div>
           ) : null}
@@ -387,7 +385,7 @@ export function Sidebar({
                     {Array.from({ length: 5 }).map((_, i) => (
                       <div
                         key={i}
-                        className="mx-2 h-8 rounded-md bg-sidebar-hover/50 animate-pulse"
+                        className="mx-2 h-8 rounded-lg bg-sidebar-hover/50 animate-pulse"
                         style={{ opacity: 1 - i * 0.15 }}
                       />
                     ))}
@@ -474,7 +472,7 @@ export function Sidebar({
                     onOpenSettings("general");
                     closeAfterMobileNavigation();
                   }}
-                  className={`flex min-h-11 w-full items-center rounded-xl py-2 text-sm transition hover:bg-sidebar-hover ${iconOnly}`}
+                  className={`flex h-9 w-full items-center rounded-lg py-1 text-sm transition-colors hover:bg-sidebar-hover ${iconOnly}`}
                   aria-label="Settings"
                 >
                   <SettingsIcon className="h-4 w-4" />

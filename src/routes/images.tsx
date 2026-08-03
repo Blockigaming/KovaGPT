@@ -553,7 +553,7 @@ function ImagesPage() {
                       onClick={() => applyPreset(p)}
                       className="group flex flex-col items-start w-[128px] shrink-0 focus:outline-none"
                     >
-                      <div className="relative w-[128px] h-[176px] rounded-2xl overflow-hidden ring-1 ring-border/60 bg-muted transition-transform duration-200 group-hover:scale-[1.03] group-hover:ring-foreground/30">
+                      <div className="relative w-[128px] h-[176px] rounded-2xl overflow-hidden ring-1 ring-border/60 bg-muted ">
                         <img
                           src={p.image}
                           alt={p.label}
@@ -576,7 +576,7 @@ function ImagesPage() {
             {(loading || result || error) && (
               <section className="mt-8">
                 {loading && !result && (
-                  <div className="max-w-md mx-auto aspect-square rounded-3xl overflow-hidden relative ring-1 ring-border bg-gradient-to-br from-fuchsia-500/20 via-violet-500/20 to-cyan-500/20">
+                  <div className="max-w-md mx-auto aspect-square rounded-2xl overflow-hidden relative ring-1 ring-border bg-gradient-to-br from-fuchsia-500/20 via-violet-500/20 to-cyan-500/20">
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(280_90%_60%/0.35),transparent_55%),radial-gradient(circle_at_70%_80%,hsl(190_90%_55%/0.35),transparent_55%),radial-gradient(circle_at_50%_50%,hsl(320_90%_60%/0.25),transparent_60%)] animate-[imgAura_6s_ease-in-out_infinite]" />
                     <div
                       className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent animate-[shimmer_1.8s_infinite]"
@@ -614,7 +614,7 @@ function ImagesPage() {
                       src={result}
                       alt={resultPrompt || "Generated image"}
                       decoding="async"
-                      className="w-full rounded-3xl ring-1 ring-border"
+                      className="w-full rounded-2xl ring-1 ring-border"
                     />
                     <div className="flex justify-center mt-3 gap-2 flex-wrap">
                       <button
@@ -690,7 +690,7 @@ function ImagesPage() {
                           alt={h.prompt}
                           loading="lazy"
                           decoding="async"
-                          className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                          className="absolute inset-0 h-full w-full object-cover "
                         />
                       </button>
                       <div className="pointer-events-none absolute inset-0 flex flex-col justify-end gap-1.5 bg-gradient-to-t from-black/85 via-black/25 to-transparent p-2 opacity-100 transition md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
@@ -743,7 +743,7 @@ function ImagesPage() {
             }}
             className="max-w-3xl mx-auto px-4 sm:px-6 py-3"
           >
-            <div className="flex items-end gap-2 rounded-3xl border border-border bg-card shadow-sm px-3 py-2.5">
+            <div className="flex items-end gap-2 rounded-2xl border border-border bg-card px-3 py-2.5">
               <textarea
                 ref={inputRef}
                 value={prompt}
@@ -822,7 +822,7 @@ function ImagesPage() {
           <DialogContent
             constrainToViewport={false}
             data-image-lightbox
-            className="image-lightbox left-0 right-0 top-0 bottom-0 h-dvh w-screen max-h-none max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-none border-0 bg-black/85 p-4 pb-4 text-white shadow-none backdrop-blur-md sm:inset-0 sm:h-dvh sm:w-screen sm:max-h-none sm:max-w-none sm:translate-x-0 sm:translate-y-0 sm:rounded-none sm:border-0 sm:p-8 sm:pb-8"
+            className="image-lightbox left-0 right-0 top-0 bottom-0 h-dvh w-screen max-h-none max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-none border-0 bg-black/85 p-4 pb-4 text-white shadow-none  sm:inset-0 sm:h-dvh sm:w-screen sm:max-h-none sm:max-w-none sm:translate-x-0 sm:translate-y-0 sm:rounded-none sm:border-0 sm:p-8 sm:pb-8"
             onOpenAutoFocus={(event) => {
               event.preventDefault();
               lightboxInitialFocusRef.current?.focus();
@@ -843,7 +843,7 @@ function ImagesPage() {
                 src={lightbox.imageUrl}
                 alt={lightbox.prompt}
                 decoding="async"
-                className="max-h-[75dvh] w-auto max-w-full rounded-2xl shadow-2xl object-contain"
+                className="max-h-[75dvh] w-auto max-w-full rounded-2xl shadow-lg object-contain"
               />
               <DialogDescription className="max-w-2xl px-4 text-center text-sm text-white/85 line-clamp-3">
                 {lightbox.prompt}

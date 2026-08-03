@@ -551,7 +551,7 @@ export function SettingsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="kova-settings-dialog bg-background border border-border max-w-4xl max-h-[92vh] overflow-hidden flex flex-col gap-0 p-0 rounded-2xl"
+        className="kova-settings-dialog bg-background border border-border max-w-4xl max-h-[92vh] overflow-hidden flex flex-col gap-0 p-0 rounded-xl"
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           if (window.innerWidth < 1024) {
@@ -581,7 +581,7 @@ export function SettingsDialog({
             {loggedIn && (
               <div
                 aria-live="polite"
-                className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition-all duration-300 ${
+                className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition-colors duration-100 ${
                   savedPulse
                     ? "opacity-100 translate-y-0 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                     : "opacity-0 -translate-y-1 border-transparent bg-transparent text-transparent pointer-events-none"
@@ -641,7 +641,7 @@ export function SettingsDialog({
                     <TabsTrigger
                       key={v}
                       value={v}
-                      className="w-full justify-start gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
+                      className="w-full justify-start gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-colors"
                     >
                       <Icon className="w-4 h-4 shrink-0" />
                       <span className="truncate text-left">{label}</span>
@@ -1184,7 +1184,7 @@ export function SettingsDialog({
                           onClick={() => setMode(v)}
                           className={`flex flex-col items-center justify-center gap-2 rounded-xl border px-4 py-5 text-sm font-medium transition ${
                             active
-                              ? "border-foreground bg-accent text-foreground shadow-sm"
+                              ? "border-foreground bg-accent text-foreground"
                               : "border-border hover:bg-accent/60 text-muted-foreground"
                           }`}
                         >
@@ -1390,7 +1390,7 @@ export function SettingsDialog({
               {/* STORAGE */}
               <TabsContent value="storage" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
                 <StorageDashboard signedIn={loggedIn} />
-                <div className="rounded-2xl border border-border bg-card/60 backdrop-blur-sm p-5 space-y-3">
+                <div className="rounded-xl border border-border bg-card/60 p-5 space-y-3">
                   <h3 className="text-sm font-semibold">Local device data</h3>
                   <p className="text-xs text-muted-foreground">
                     Resets chats, drafts, handoffs, work data, and account preferences stored for
@@ -2149,7 +2149,7 @@ function LibraryPanel() {
                         await navigator.clipboard.writeText(it.content_text ?? "");
                         toast.success("Copied.");
                       }}
-                      className="p-1.5 rounded hover:bg-accent transition active:scale-95"
+                      className="p-1.5 rounded hover:bg-accent transition"
                       title="Copy"
                     >
                       <Check className="w-3.5 h-3.5" />
@@ -2157,7 +2157,7 @@ function LibraryPanel() {
                   )}
                   <button
                     onClick={() => remove(it.id)}
-                    className="p-1.5 rounded hover:bg-accent transition active:scale-95"
+                    className="p-1.5 rounded hover:bg-accent transition"
                     title="Delete"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -2245,8 +2245,8 @@ function SignedOutSettings({
     <div className="overflow-y-auto max-h-[78vh] bg-background">
       {/* Hero sign-in card */}
       <div className="px-6 pt-8 pb-2">
-        <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-b from-muted/40 to-background p-7 text-center">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-foreground text-background flex items-center justify-center shadow-sm mb-4">
+        <div className="relative overflow-hidden rounded-xl border border-border/60 bg-gradient-to-b from-muted/40 to-background p-7 text-center">
+          <div className="mx-auto w-14 h-14 rounded-xl bg-foreground text-background flex items-center justify-center mb-4">
             <Sparkles className="w-6 h-6" />
           </div>
           <h2 className="text-[19px] font-semibold tracking-tight font-display">
@@ -2256,10 +2256,7 @@ function SignedOutSettings({
             Sync your chats, memory, and connected apps across every device.
           </p>
           <div className="mt-5">
-            <Button
-              onClick={onSignIn}
-              className="rounded-full px-6 h-10 text-sm font-medium shadow-sm"
-            >
+            <Button onClick={onSignIn} className="rounded-full px-6 h-10 text-sm font-medium">
               Sign in
             </Button>
           </div>
@@ -2275,7 +2272,7 @@ function SignedOutSettings({
           <h3 className="text-[11px] uppercase tracking-[0.08em] font-medium text-muted-foreground px-1 mb-2.5">
             Appearance
           </h3>
-          <div className="rounded-2xl border border-border/60 bg-card/40 p-2">
+          <div className="rounded-xl border border-border/60 bg-card/40 p-2">
             <div className="grid grid-cols-3 gap-1">
               {(["system", "light", "dark"] as ThemeMode[]).map((m) => {
                 const active = settings.mode === m;
@@ -2286,7 +2283,7 @@ function SignedOutSettings({
                     onClick={() => setMode(m)}
                     className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[13px] capitalize transition ${
                       active
-                        ? "bg-background text-foreground shadow-sm font-medium"
+                        ? "bg-background text-foreground font-medium"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -2304,7 +2301,7 @@ function SignedOutSettings({
           <h3 className="text-[11px] uppercase tracking-[0.08em] font-medium text-muted-foreground px-1 mb-2.5">
             Language
           </h3>
-          <div className="rounded-2xl border border-border/60 bg-card/40 p-3">
+          <div className="rounded-xl border border-border/60 bg-card/40 p-3">
             <GuestLanguageSelect />
             <p className="text-[12px] text-muted-foreground mt-2.5 px-0.5">
               KovaGPT replies in the language you write in.
@@ -2317,7 +2314,7 @@ function SignedOutSettings({
           <h3 className="text-[11px] uppercase tracking-[0.08em] font-medium text-muted-foreground px-1 mb-2.5">
             Privacy
           </h3>
-          <div className="rounded-2xl border border-border/60 bg-card/40 p-4 space-y-2">
+          <div className="rounded-xl border border-border/60 bg-card/40 p-4 space-y-2">
             <div className="text-sm font-medium">No browser-only provider controls</div>
             <p className="text-xs text-muted-foreground leading-relaxed">
               The removed guest training and marketing switches changed only browser-local values;
@@ -2352,7 +2349,7 @@ function ArchivedChatsPanel({ userKey }: { userKey: string | null }) {
 
   return (
     <section
-      className="rounded-2xl border border-border/70 bg-card/60 p-4"
+      className="rounded-xl border border-border/70 bg-card/60 p-4"
       aria-label="Archived chats"
     >
       <div className="mb-3">

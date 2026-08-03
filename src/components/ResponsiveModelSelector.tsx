@@ -50,12 +50,12 @@ export function ResponsiveModelSelector({
   };
 
   const triggerClass =
-    "kova-model-trigger inline-flex items-center gap-1.5 font-medium transition " +
+    "kova-model-trigger inline-flex items-center gap-1 font-medium transition-colors duration-100 " +
     (topbar
       ? useSheet
-        ? "h-11 max-w-full rounded-lg bg-transparent px-2 text-[15px] active:bg-accent"
-        : "h-10 rounded-lg bg-transparent px-2.5 text-[15px] hover:bg-accent"
-      : "rounded-full bg-accent/70 " +
+        ? "h-11 max-w-full rounded-lg bg-transparent px-2 text-base active:bg-accent"
+        : "h-10 rounded-lg bg-transparent px-2.5 text-base hover:bg-accent"
+      : "rounded-lg bg-transparent " +
         (useSheet ? "active:bg-accent " : "hover:bg-accent ") +
         (compact ? "h-8 px-3.5 text-[13px]" : "h-9 px-4 text-sm"));
 
@@ -80,7 +80,7 @@ export function ResponsiveModelSelector({
             useSheet
               ? "flex min-h-11 w-full items-center gap-3 rounded-xl px-4 py-3.5 text-left " +
                 (selected ? "bg-accent" : "hover:bg-accent/60 active:bg-accent")
-              : "flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left transition " +
+              : "flex h-10 w-full items-center gap-2 rounded-lg px-3 text-left transition-colors duration-100 " +
                 (selected ? "bg-accent" : "hover:bg-accent/60")
           }
         >
@@ -152,7 +152,7 @@ export function ResponsiveModelSelector({
             role="dialog"
             aria-label="Choose model"
             className={
-              "kova-model-menu absolute left-0 z-50 w-64 rounded-2xl border border-border bg-popover p-1.5 shadow-xl animate-in fade-in-0 zoom-in-95 duration-150 " +
+              "kova-model-menu absolute left-0 z-50 w-64 rounded-xl border border-border bg-popover p-1.5 shadow-lg animate-in fade-in-0 duration-100 " +
               (topbar ? "top-full mt-1 origin-top-left" : "bottom-full mb-2 origin-bottom-left")
             }
           >
