@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 60,
-  "latest": "20260803123000_stripe_lifecycle_metadata.sql",
+  "count": 63,
+  "latest": "20260803130000_ai_usage_accounting.sql",
   "migrations": [
     {
       "order": 1,
@@ -428,14 +428,14 @@
       "order": 24,
       "filename": "20260704033129_4459a668-0d41-48f1-995e-09d2377c7b01.sql",
       "timestamp": "20260704033129",
-      "sha256": "818af1650450eb8741dcafac02fed76599e23322145d53a5e2dce542d4551519",
+      "sha256": "fb1dc6d1025824b81c6ed7650f75804abf169bcdcd8500166caee15b2c40f2d1",
       "tables": ["google_oauth_tokens", "connected_account_audit_log", "user_onboarding"],
       "functions": [],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
       "rls": ["google_oauth_tokens", "connected_account_audit_log", "user_onboarding"],
-      "policies": ["own tokens select", "own tokens delete", "own audit select", "own"],
+      "policies": ["own audit select", "own"],
       "indexes": ["connected_account_audit_log_user_created_idx"]
     },
     {
@@ -871,11 +871,11 @@
       "order": 41,
       "filename": "20260728090000_helios_agent_runtime.sql",
       "timestamp": "20260728090000",
-      "sha256": "6ca36c6e6fbd2fcaaa7a3f7f4f2557eca2a2555b7108422343726acce39f2479",
+      "sha256": "39f15a5ea1e686e5bfd53a4862a571f6fd551fc91bb2bf6ed3eba83576da8099",
       "tables": [
         "agent_workers",
         "agent_jobs",
-        "agent_run_events",
+        "agent_job_events",
         "agent_deliverables",
         "agent_notifications",
         "agent_approvals"
@@ -897,7 +897,7 @@
       "rls": [
         "agent_workers",
         "agent_jobs",
-        "agent_run_events",
+        "agent_job_events",
         "agent_deliverables",
         "agent_notifications",
         "agent_approvals"
@@ -913,7 +913,11 @@
         "Owners read approvals",
         "Owners read agent evidence"
       ],
-      "indexes": ["agent_jobs_queue_idx", "agent_notifications_owner_idx"]
+      "indexes": [
+        "agent_jobs_queue_idx",
+        "agent_job_events_job_idx",
+        "agent_notifications_owner_idx"
+      ]
     },
     {
       "order": 42,
@@ -1086,6 +1090,45 @@
     },
     {
       "order": 50,
+      "filename": "20260801235959_agent_runtime_event_schema_compatibility.sql",
+      "timestamp": "20260801235959",
+      "sha256": "546d288c173b5a2d65bdecddc24231979d261bdf69a15d7e6b08b5a6117ede9b",
+      "tables": ["agent_job_events"],
+      "functions": [
+        "enforce_supported_agent_job_kind",
+        "lease_agent_job",
+        "control_agent_job",
+        "decide_agent_approval",
+        "recover_expired_agent_leases",
+        "complete_agent_job",
+        "heartbeat_agent_job",
+        "settle_interrupted_agent_job",
+        "fail_agent_job",
+        "release_agent_lease"
+      ],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["agent_job_events"],
+      "policies": ["Owners read job events", "Owners create agent jobs"],
+      "indexes": ["agent_job_events_job_idx"]
+    },
+    {
+      "order": 51,
+      "filename": "20260802003000_google_oauth_tokens_server_only.sql",
+      "timestamp": "20260802003000",
+      "sha256": "669df3183002238adfdd237e6470d31df1efff67aa1f09f60ec29d9d325a7cc0",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 52,
       "filename": "20260802120000_agent_definitions.sql",
       "timestamp": "20260802120000",
       "sha256": "8510151ce75c8f62e4f9f61eabf46110ce1e6e06f18c8a77dc34436c5b97df9e",
@@ -1104,7 +1147,7 @@
       "indexes": ["agent_definitions_owner_updated_idx", "agent_definition_versions_latest_idx"]
     },
     {
-      "order": 51,
+      "order": 53,
       "filename": "20260802130000_agent_definition_lifecycle.sql",
       "timestamp": "20260802130000",
       "sha256": "a7966eece1b692116372e2db0cc2c738dc190a998b5e290f35958ca4e3837385",
@@ -1118,7 +1161,7 @@
       "indexes": ["agent_definition_versions_owner_time_idx"]
     },
     {
-      "order": 52,
+      "order": 54,
       "filename": "20260802131000_agent_run_attribution.sql",
       "timestamp": "20260802131000",
       "sha256": "44df9145411e68907cc7cfbbb13e16efc76186b32330ee7733fe82de7cd7f98c",
@@ -1132,7 +1175,7 @@
       "indexes": ["agent_runs_definition_time_idx"]
     },
     {
-      "order": 53,
+      "order": 55,
       "filename": "20260802132000_operational_analytics.sql",
       "timestamp": "20260802132000",
       "sha256": "1ef8b9bedcf9ca87c668e2a6bfe0c29d988c5e50343d41f6cd733912774a9f47",
@@ -1150,7 +1193,7 @@
       "indexes": ["operational_events_owner_time_idx", "operational_events_expiry_idx"]
     },
     {
-      "order": 54,
+      "order": 56,
       "filename": "20260803100000_knowledge_provenance.sql",
       "timestamp": "20260803100000",
       "sha256": "29aee6e6b36b817c8be434aa6be704593a1f684c9675700c996d3463bc6611ef",
@@ -1167,7 +1210,7 @@
       ]
     },
     {
-      "order": 55,
+      "order": 57,
       "filename": "20260803101000_agent_run_retry_hardening.sql",
       "timestamp": "20260803101000",
       "sha256": "ba27b6c31bf922d4258fe541806f4218d73f29113c45667be10f3b9927500487",
@@ -1181,7 +1224,7 @@
       "indexes": ["agent_runs_prior_run_idx"]
     },
     {
-      "order": 56,
+      "order": 58,
       "filename": "20260803110000_release_security_hardening.sql",
       "timestamp": "20260803110000",
       "sha256": "d05cf457ef66b13c9f3864d0b550f2e8adf776b6e670e162d9fc77d4eae0aa9c",
@@ -1195,7 +1238,7 @@
       "indexes": ["processed_stripe_events_created_at_idx"]
     },
     {
-      "order": 57,
+      "order": 59,
       "filename": "20260803120000_schema_contract_health.sql",
       "timestamp": "20260803120000",
       "sha256": "a610689dddc6c269c3a009c296c2e2f20a493b09195dd2c64b31c1eb9b5f09aa",
@@ -1209,7 +1252,7 @@
       "indexes": []
     },
     {
-      "order": 58,
+      "order": 60,
       "filename": "20260803121000_stripe_event_ordering.sql",
       "timestamp": "20260803121000",
       "sha256": "23b379385cce9e9dc93d673861ae6eb9dadd54479168f8d403c2a93a1c7df882",
@@ -1223,7 +1266,7 @@
       "indexes": ["subscriptions_stripe_order_idx", "processed_stripe_events_order_idx"]
     },
     {
-      "order": 59,
+      "order": 61,
       "filename": "20260803122000_distributed_diagnostics_limit.sql",
       "timestamp": "20260803122000",
       "sha256": "ea33a587d6db85ae1c50a77bff5711d626fe2893bac38765d3ce6cd3541e5c1b",
@@ -1237,7 +1280,7 @@
       "indexes": []
     },
     {
-      "order": 60,
+      "order": 62,
       "filename": "20260803123000_stripe_lifecycle_metadata.sql",
       "timestamp": "20260803123000",
       "sha256": "3b249d1f2898d9ac3a29baa9a7818bc1610aa12d3208bc0fae7211f0c7db8f38",
@@ -1249,6 +1292,26 @@
       "rls": [],
       "policies": [],
       "indexes": ["processed_stripe_events_subscription_order_idx"]
+    },
+    {
+      "order": 63,
+      "filename": "20260803130000_ai_usage_accounting.sql",
+      "timestamp": "20260803130000",
+      "sha256": "bff734c01ddeabda56038b7da43e416f1fe9480ad2fd0a2bf80e6f72624e6538",
+      "tables": ["ai_usage_events"],
+      "functions": ["acquire_ai_generation", "finalize_ai_generation"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["ai_usage_events"],
+      "policies": ["Users inspect own AI usage"],
+      "indexes": [
+        "ai_usage_events_user_created_idx",
+        "ai_usage_events_guest_created_idx",
+        "ai_usage_events_active_lease_idx",
+        "ai_usage_events_user_idempotency_idx",
+        "ai_usage_events_guest_idempotency_idx"
+      ]
     }
   ]
 }
