@@ -1,4 +1,4 @@
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { SignInButton, SignUpButton } from "@/components/auth/ClerkSafe";
 import { NovaLogo } from "@/components/NovaLogo";
 
