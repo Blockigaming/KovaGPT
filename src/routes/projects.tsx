@@ -705,7 +705,7 @@ function ProjectsPage() {
       {/* Mobile floating new-project button */}
       <button
         onClick={() => setCreateOpen(true)}
-        className="lg:hidden fixed bottom-24 right-4 z-40 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center active:scale-95 transition"
+        className="lg:hidden fixed bottom-24 right-4 z-40 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-md flex items-center justify-center transition-colors"
         aria-label="New project"
       >
         <Plus className="w-6 h-6" />
