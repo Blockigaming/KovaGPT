@@ -42,7 +42,7 @@ import {
 export const Route = createFileRoute("/projects/$projectId/chat/$chatId")({
   component: ProjectChatPage,
   head: () => ({
-    meta: [{ title: "Project chat | KovaGPT" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: "KovaGPT Project" }, { name: "robots", content: "noindex" }],
   }),
 });
 
@@ -52,7 +52,8 @@ function isAbortError(error: unknown) {
 
 function ProjectChatPage() {
   const { projectId, chatId } = Route.useParams();
-  const { isSignedIn, isLoaded } = useUser();
+  const { isSignedIn, isLoaded, user } = useUser();
+  const userKey = user?.id ?? null;
   const navigate = useNavigate();
 
   const [project, setProject] = useState<ProjectDetail | null>(null);
@@ -188,7 +189,10 @@ function ProjectChatPage() {
     try {
       const response = await authFetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": crypto.randomUUID(),
+        },
         signal: controller.signal,
         body: JSON.stringify({
           messages: nextHistory
@@ -413,6 +417,8 @@ function ProjectChatPage() {
             return (
               <ChatMessage
                 key={messageId}
+                userKey={userKey}
+                principalResolved={isLoaded}
                 message={{
                   id: messageId,
                   role: message.role,

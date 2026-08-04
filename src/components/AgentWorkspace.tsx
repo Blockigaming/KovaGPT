@@ -1,8 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Bot, CheckCircle2, Globe2, LockKeyhole, Play, RotateCcw } from "lucide-react";
+import { useUser } from "@/components/auth/ClerkSafe";
 import { useTier } from "@/hooks/useTier";
-import { loadAgentRuns, saveAgentRuns, type AgentRun, type AgentRunStatus } from "@/lib/work-store";
+import {
+  loadAgentRuns,
+  saveAgentRuns,
+  workStoragePrincipal,
+  type AgentRun,
+  type AgentRunStatus,
+} from "@/lib/work-store";
+import {
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+  safeBrowserStorage,
+  writePrincipalHandoff,
+} from "@/lib/principal-browser-storage.mjs";
 
 const DEFAULT_STEPS = [
   "Review the objective and context",
@@ -10,12 +23,26 @@ const DEFAULT_STEPS = [
   "Request approval before external or destructive actions",
   "Prepare the deliverable",
 ];
+const EMPTY_AGENT_RUNS: AgentRun[] = [];
 
 export function AgentWorkspace() {
   const navigate = useNavigate();
+  const { isLoaded, user } = useUser();
+  const userKey = user?.id ?? null;
+  const principal = isLoaded ? workStoragePrincipal(userKey) : null;
   const { tier, loading } = useTier();
   const available = tier === "plus" || tier === "pro";
-  const [runs, setRuns] = useState<AgentRun[]>([]);
+  const [runState, setRunState] = useState<{
+    principal: string | null;
+    generation: number;
+    items: AgentRun[];
+  }>({ principal: null, generation: 0, items: [] });
+  const storageGenerationRef = useRef(0);
+  const principalReady =
+    principal !== null &&
+    runState.principal === principal &&
+    runState.generation === storageGenerationRef.current;
+  const runs = principalReady ? runState.items : EMPTY_AGENT_RUNS;
   const [name, setName] = useState("Research and deliver");
   const [objective, setObjective] = useState("");
   const [instructions, setInstructions] = useState("");
@@ -26,12 +53,59 @@ export function AgentWorkspace() {
   const [tools, setTools] = useState<AgentRun["tools"]>(["web", "files"]);
   const [validation, setValidation] = useState<string[]>([]);
 
-  useEffect(() => setRuns(loadAgentRuns()), []);
+  useEffect(() => {
+    const generation = storageGenerationRef.current + 1;
+    storageGenerationRef.current = generation;
+    setName("Research and deliver");
+    setObjective("");
+    setInstructions("");
+    setProject("");
+    setContext("");
+    setSteps(DEFAULT_STEPS);
+    setApprovalSteps([2]);
+    setTools(["web", "files"]);
+    setValidation([]);
+    if (!isLoaded || principal === null) {
+      setRunState({ principal: null, generation, items: [] });
+      return;
+    }
+    setRunState({ principal, generation, items: loadAgentRuns(userKey) });
+  }, [isLoaded, principal, userKey]);
+
+  useEffect(() => {
+    if (!isLoaded || principal === null) return;
+    const handlePrincipalReset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      const generation = storageGenerationRef.current + 1;
+      storageGenerationRef.current = generation;
+      setRunState({ principal, generation, items: [] });
+      setName("Research and deliver");
+      setObjective("");
+      setInstructions("");
+      setProject("");
+      setContext("");
+      setSteps(DEFAULT_STEPS);
+      setApprovalSteps([2]);
+      setTools(["web", "files"]);
+      setValidation([]);
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, handlePrincipalReset);
+    return () =>
+      window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, handlePrincipalReset);
+  }, [isLoaded, principal, userKey]);
+
   const persist = (next: AgentRun[]) => {
-    setRuns(next);
-    saveAgentRuns(next);
+    if (!principalReady || principal === null) return;
+    const generation = runState.generation;
+    if (generation !== storageGenerationRef.current) return;
+    setRunState({ principal, generation, items: next });
+    saveAgentRuns(userKey, next);
   };
-  const canSave = available && objective.trim().length > 4 && steps.every((step) => step.trim());
+  const canSave =
+    principalReady &&
+    available &&
+    objective.trim().length > 4 &&
+    steps.every((step) => step.trim());
   const contextItems = useMemo(
     () =>
       context
@@ -92,9 +166,11 @@ export function AgentWorkspace() {
     );
   };
   const handoff = (run: AgentRun) => {
-    localStorage.setItem(
+    const result = writePrincipalHandoff(
+      safeBrowserStorage("sessionStorage"),
       "kova-work-context",
-      JSON.stringify({
+      isLoaded ? userKey : undefined,
+      {
         objective: run.objective,
         project: run.project,
         context: run.context.join("\n"),
@@ -104,8 +180,12 @@ export function AgentWorkspace() {
         })),
         tools: run.tools,
         instructions: run.instructions,
-      }),
+      },
     );
+    if (!result.ok) {
+      setValidation(["Work context could not be prepared. Reload and try again."]);
+      return;
+    }
     update(run.id, "handed_off", "Opened in Chat for user-supervised execution.");
     navigate({ to: "/" });
   };
@@ -144,6 +224,10 @@ export function AgentWorkspace() {
             View plans
           </button>
         </div>
+      ) : !principalReady ? (
+        <p className="mt-4 text-sm text-muted-foreground" role="status">
+          Loading agent workspace…
+        </p>
       ) : (
         <>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -269,7 +353,7 @@ export function AgentWorkspace() {
           )}
         </>
       )}
-      {available && (
+      {available && principalReady && (
         <div className="mt-6">
           <h3 className="font-medium">Execution history</h3>
           {runs.length === 0 ? (
@@ -313,14 +397,22 @@ export function AgentWorkspace() {
                     ) : null}
                     <button
                       onClick={() => {
-                        localStorage.setItem(
+                        const result = writePrincipalHandoff(
+                          safeBrowserStorage("sessionStorage"),
                           "kova-automation-draft",
-                          JSON.stringify({
+                          isLoaded ? userKey : undefined,
+                          {
                             title: run.name,
                             prompt: run.objective,
                             repeat: "none",
-                          }),
+                          },
                         );
+                        if (!result.ok) {
+                          setValidation([
+                            "Scheduling context could not be prepared. Reload and try again.",
+                          ]);
+                          return;
+                        }
                         navigate({ to: "/scheduled-tasks" });
                       }}
                       className="min-h-10 rounded-lg border px-3 text-sm"

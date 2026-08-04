@@ -34,7 +34,7 @@ const ShareSchema = z.object({
 
 export const shareChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => ShareSchema.parse(input))
+  .validator((input: unknown) => ShareSchema.parse(input))
   .handler(async ({ data, context }): Promise<{ id: string }> => {
     const callerEmail =
       (context.claims as { email?: string } | undefined)?.email?.toLowerCase() ?? "";
@@ -105,7 +105,7 @@ export const listSharedWithMe = createServerFn({ method: "GET" })
 
 export const revokeSharedChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     const { error } = await context.supabase
       .from("shared_chats")

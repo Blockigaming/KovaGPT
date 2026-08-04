@@ -76,7 +76,7 @@ async function logActivity(
 // ============= NOTES =============
 export const getProjectNote = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ project_id: z.string().uuid() }).parse(i))
+  .validator((i: unknown) => z.object({ project_id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }): Promise<ProjectNote> => {
     const { data: row } = await context.supabase
       .from("project_notes")
@@ -94,7 +94,7 @@ export const getProjectNote = createServerFn({ method: "GET" })
 
 export const saveProjectNote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) =>
+  .validator((i: unknown) =>
     z
       .object({
         project_id: z.string().uuid(),
@@ -117,7 +117,7 @@ export const saveProjectNote = createServerFn({ method: "POST" })
 // ============= TASKS =============
 export const listTasks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ project_id: z.string().uuid() }).parse(i))
+  .validator((i: unknown) => z.object({ project_id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }): Promise<ProjectTask[]> => {
     const { data: rows, error } = await context.supabase
       .from("project_tasks")
@@ -130,7 +130,7 @@ export const listTasks = createServerFn({ method: "GET" })
 
 export const createTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) =>
+  .validator((i: unknown) =>
     z
       .object({
         project_id: z.string().uuid(),
@@ -172,7 +172,7 @@ export const createTask = createServerFn({ method: "POST" })
 
 export const updateTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) =>
+  .validator((i: unknown) =>
     z
       .object({
         id: z.string().uuid(),
@@ -211,7 +211,7 @@ export const updateTask = createServerFn({ method: "POST" })
 
 export const reorderTasks = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) =>
+  .validator((i: unknown) =>
     z
       .object({
         project_id: z.string().uuid(),
@@ -233,7 +233,7 @@ export const reorderTasks = createServerFn({ method: "POST" })
 
 export const deleteTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
+  .validator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     const { data: row } = await context.supabase
       .from("project_tasks")
@@ -256,7 +256,7 @@ export const deleteTask = createServerFn({ method: "POST" })
 // ============= FILES =============
 export const listFiles = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) =>
+  .validator((i: unknown) =>
     z
       .object({
         project_id: z.string().uuid(),
@@ -286,7 +286,7 @@ export const listFiles = createServerFn({ method: "GET" })
 
 export const registerUploadedFile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) =>
+  .validator((i: unknown) =>
     z
       .object({
         project_id: z.string().uuid(),
@@ -367,7 +367,7 @@ export const registerUploadedFile = createServerFn({ method: "POST" })
 
 export const reindexProjectFile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
+  .validator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(
     async ({ data, context }): Promise<{ indexed: boolean; chunks: number; reason?: string }> => {
       const { data: row, error } = await context.supabase
@@ -394,7 +394,7 @@ export const reindexProjectFile = createServerFn({ method: "POST" })
 
 export const deleteProjectFile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
+  .validator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     const { data: row } = await context.supabase
       .from("project_files")
@@ -418,7 +418,7 @@ export const deleteProjectFile = createServerFn({ method: "POST" })
 // ============= MEMORY =============
 export const listMemory = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ project_id: z.string().uuid() }).parse(i))
+  .validator((i: unknown) => z.object({ project_id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }): Promise<ProjectMemoryItem[]> => {
     const { data: rows, error } = await context.supabase
       .from("project_memory")
@@ -431,7 +431,7 @@ export const listMemory = createServerFn({ method: "GET" })
 
 export const addMemory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) =>
+  .validator((i: unknown) =>
     z
       .object({
         project_id: z.string().uuid(),
@@ -458,7 +458,7 @@ export const addMemory = createServerFn({ method: "POST" })
 
 export const deleteMemory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
+  .validator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     const { data: row } = await context.supabase
       .from("project_memory")
@@ -481,7 +481,7 @@ export const deleteMemory = createServerFn({ method: "POST" })
 // ============= ACTIVITY =============
 export const listActivity = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ project_id: z.string().uuid() }).parse(i))
+  .validator((i: unknown) => z.object({ project_id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }): Promise<ProjectActivity[]> => {
     const { data: rows, error } = await context.supabase
       .from("project_activity")
@@ -496,7 +496,7 @@ export const listActivity = createServerFn({ method: "GET" })
 // ============= ARCHIVE =============
 export const setProjectArchived = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) =>
+  .validator((i: unknown) =>
     z
       .object({
         id: z.string().uuid(),
@@ -530,7 +530,7 @@ export type SearchResult = {
 
 export const searchProject = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) =>
+  .validator((i: unknown) =>
     z
       .object({
         project_id: z.string().uuid(),
@@ -596,7 +596,7 @@ export const searchProject = createServerFn({ method: "GET" })
 // ============= MOVE CHAT INTO / OUT OF PROJECT =============
 export const importChatToProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) =>
+  .validator((i: unknown) =>
     z
       .object({
         project_id: z.string().uuid(),
@@ -636,7 +636,7 @@ export const importChatToProject = createServerFn({ method: "POST" })
 
 export const moveChatToProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) =>
+  .validator((i: unknown) =>
     z
       .object({
         chat_id: z.string().uuid(),

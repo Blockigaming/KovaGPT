@@ -32,7 +32,7 @@ const [
 
 test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
   assert.match(route, /const greeting = "What can I help with\?";/);
-  assert.match(route, /KovaGPT can make mistakes\. Check important info\./);
+  assert.match(chatInput, /KovaGPT can make mistakes\. Check important information\./);
   assert.doesNotMatch(route, /ConversationOutline/);
   assert.equal((route.match(/canChangeAgent=\{false\}/g) ?? []).length, 2);
   assert.match(route, /<ResponsiveModelSelector[\s\S]{0,240}placement="topbar"/);
@@ -55,7 +55,7 @@ test("composer actions, message editing, and markdown stay reachable and lossles
   assert.match(chatInput, /COMPOSER_TOOLS\.map/);
   assert.match(chatInput, /onToolSelect\?\.\(next\)/);
   assert.equal((route.match(/selectedTool=\{selectedTool\}/g) ?? []).length, 2);
-  assert.match(chatInput, /kova-send-button[^"\n]*bg-foreground text-background/);
+  assert.match(chatInput, /kova-send-button is-enabled/);
   assert.match(chatMessage, /return text\.replace\(\/\\r\\n\?\/g, "\\n"\);/);
   assert.doesNotMatch(chatMessage, /LongResponseCard|shouldWrapAsDocument/);
   assert.match(route, /setInput\(m\.content\);/);

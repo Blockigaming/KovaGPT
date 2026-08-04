@@ -6,7 +6,6 @@ import {
   Settings,
   Image as ImageIcon,
   FolderOpen,
-  Plug,
   Calendar,
   X,
   FlaskConical,
@@ -24,6 +23,14 @@ import { extensionRegistry } from "@/platform/extensions";
 import { platformEvents } from "@/platform/events";
 import { applyThemeMode } from "@/lib/theme";
 import { searchConversations } from "@/lib/conversation-search";
+import { useUser } from "@/components/auth/ClerkSafe";
+import {
+  browserStoragePrincipal,
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+  principalScopedStorageKey,
+  safeBrowserStorage,
+} from "@/lib/principal-browser-storage.mjs";
 
 type PaletteAction = {
   label: string;
@@ -59,21 +66,27 @@ const fixedActions: PaletteAction[] = [
     disabledReason: "Start from the composer privacy menu.",
   },
   { label: "Scheduled Tasks status", href: "/scheduled-tasks", icon: Calendar },
-  { label: "Open Apps", href: "/apps", icon: Plug },
   { label: "Open Help", href: "/help", icon: FlaskConical },
   { label: "Toggle appearance", action: "theme", icon: SunMoon },
 ];
 
+// Routes that are internal or retired stay out of workspace search so results
+// never point at pages we no longer surface in navigation.
+const HIDDEN_PALETTE_ROUTES = new Set(["/apps", "/omega"]);
+
 const quickActions: PaletteAction[] = [
   ...fixedActions,
   ...CAPABILITIES.filter(
-    (capability) => !fixedActions.some((action) => action.href === capability.route),
+    (capability) =>
+      !HIDDEN_PALETTE_ROUTES.has(capability.route) &&
+      !fixedActions.some((action) => action.href === capability.route),
   ).map((capability) => ({
     label: `Open ${capability.label}`,
     href: capability.route,
     icon: Boxes,
     keywords: capability.keywords,
   })),
+
   ...extensionRegistry.contributions("command").flatMap((contribution) =>
     contribution.command
       ? [
@@ -100,6 +113,18 @@ function fuzzyScore(candidate: string, query: string) {
     cursor += 1;
   }
   return 10;
+}
+
+function parseStoredCommandIds(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === "string").slice(0, 50)
+      : [];
+  } catch {
+    return [];
+  }
 }
 
 function resolveReturnFocusTarget(target: HTMLElement | null): HTMLElement | null {
@@ -137,6 +162,15 @@ export function CommandPalette({
   onOpenSettings: () => void;
   returnFocusTarget?: HTMLElement | null;
 }) {
+  const { isLoaded, user } = useUser();
+  const userKey = user?.id ?? null;
+  const principal = isLoaded ? browserStoragePrincipal(userKey) : null;
+  const historyStorageKey = isLoaded
+    ? principalScopedStorageKey("kova-command-history-v1", userKey)
+    : null;
+  const pinsStorageKey = isLoaded
+    ? principalScopedStorageKey("kova-command-pins-v1", userKey)
+    : null;
   const normalized = query.trim().toLowerCase();
   const conversationMatches = normalized
     ? searchConversations(conversations, query).slice(0, 8)
@@ -146,8 +180,19 @@ export function CommandPalette({
         score: 0,
       }));
   const [activeIndex, setActiveIndex] = useState(0);
-  const [recentCommands, setRecentCommands] = useState<string[]>([]);
-  const [pinnedCommands, setPinnedCommands] = useState<string[]>([]);
+  const storageGenerationRef = useRef(0);
+  const [commandState, setCommandState] = useState<{
+    principal: string | null;
+    generation: number;
+    recent: string[];
+    pinned: string[];
+  }>({ principal: null, generation: 0, recent: [], pinned: [] });
+  const commandReady =
+    principal !== null &&
+    commandState.principal === principal &&
+    commandState.generation === storageGenerationRef.current;
+  const recentCommands = commandReady ? commandState.recent : [];
+  const pinnedCommands = commandReady ? commandState.pinned : [];
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
@@ -176,14 +221,80 @@ export function CommandPalette({
     };
   }, [open, returnFocusTarget]);
   useEffect(() => {
-    try {
-      setRecentCommands(JSON.parse(localStorage.getItem("kova-command-history-v1") ?? "[]"));
-      setPinnedCommands(JSON.parse(localStorage.getItem("kova-command-pins-v1") ?? "[]"));
-    } catch {
-      setRecentCommands([]);
-      setPinnedCommands([]);
+    const generation = storageGenerationRef.current + 1;
+    storageGenerationRef.current = generation;
+    if (!open || !isLoaded || !principal || !historyStorageKey || !pinsStorageKey) {
+      setCommandState({ principal, generation, recent: [], pinned: [] });
+      return;
     }
-  }, [open]);
+    const storage = safeBrowserStorage("localStorage");
+    try {
+      const recent = parseStoredCommandIds(storage?.getItem(historyStorageKey) ?? null);
+      const pinned = parseStoredCommandIds(storage?.getItem(pinsStorageKey) ?? null);
+      if (storageGenerationRef.current !== generation) return;
+      setCommandState({ principal, generation, recent, pinned });
+    } catch {
+      if (storageGenerationRef.current !== generation) return;
+      setCommandState({ principal, generation, recent: [], pinned: [] });
+    }
+  }, [historyStorageKey, isLoaded, open, pinsStorageKey, principal]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    const handlePrincipalReset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      const generation = storageGenerationRef.current + 1;
+      storageGenerationRef.current = generation;
+      setCommandState({ principal, generation, recent: [], pinned: [] });
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, handlePrincipalReset);
+    return () =>
+      window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, handlePrincipalReset);
+  }, [isLoaded, principal, userKey]);
+
+  const saveRecentCommands = (next: string[]) => {
+    const generation = commandState.generation;
+    if (
+      !commandReady ||
+      !historyStorageKey ||
+      generation !== storageGenerationRef.current ||
+      commandState.principal !== principal
+    )
+      return;
+    setCommandState((current) =>
+      current.principal === principal && current.generation === generation
+        ? { ...current, recent: next }
+        : current,
+    );
+    try {
+      if (generation !== storageGenerationRef.current) return;
+      safeBrowserStorage("localStorage")?.setItem(historyStorageKey, JSON.stringify(next));
+    } catch {
+      // Command history is optional; the action itself can still continue.
+    }
+  };
+
+  const savePinnedCommands = (next: string[]) => {
+    const generation = commandState.generation;
+    if (
+      !commandReady ||
+      !pinsStorageKey ||
+      generation !== storageGenerationRef.current ||
+      commandState.principal !== principal
+    )
+      return;
+    setCommandState((current) =>
+      current.principal === principal && current.generation === generation
+        ? { ...current, pinned: next }
+        : current,
+    );
+    try {
+      if (generation !== storageGenerationRef.current) return;
+      safeBrowserStorage("localStorage")?.setItem(pinsStorageKey, JSON.stringify(next));
+    } catch {
+      // Pins remain available for this render when durable storage is blocked.
+    }
+  };
   const visibleActions = useMemo(
     () =>
       quickActions
@@ -249,7 +360,7 @@ export function CommandPalette({
     if (typeof action === "string" && action.startsWith("/")) {
       suppressFocusRestore();
       const next = [action, ...recentCommands.filter((item) => item !== action)].slice(0, 12);
-      localStorage.setItem("kova-command-history-v1", JSON.stringify(next));
+      saveRecentCommands(next);
       platformEvents.publish("platform", "command.executed", { command: action });
       window.location.assign(action);
       closePalette();
@@ -290,7 +401,7 @@ export function CommandPalette({
     <div
       ref={dialogRef}
       data-kova-shell-overlay=""
-      className="fixed inset-0 z-[70] flex items-start justify-center bg-black/35 px-[max(.75rem,var(--safe-left),var(--safe-right))] pb-[var(--safe-bottom)] pt-[max(12vh,var(--safe-top))] backdrop-blur-sm"
+      className="fixed inset-0 z-[70] flex items-start justify-center bg-black/50 px-[max(.75rem,var(--safe-left),var(--safe-right))] pb-[var(--safe-bottom)] pt-[max(12vh,var(--safe-top))]"
       role="dialog"
       aria-modal="true"
       aria-label="Search chats and actions"
@@ -331,8 +442,7 @@ export function CommandPalette({
               const next = pinnedCommands.includes(command)
                 ? pinnedCommands.filter((item) => item !== command)
                 : [command, ...pinnedCommands];
-              setPinnedCommands(next);
-              localStorage.setItem("kova-command-pins-v1", JSON.stringify(next));
+              savePinnedCommands(next);
               return;
             }
           }
@@ -340,7 +450,7 @@ export function CommandPalette({
         }
       }}
     >
-      <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-border bg-popover text-popover-foreground shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+      <div className="w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-xl animate-in fade-in duration-100">
         <div className="flex items-center gap-3 border-b border-border px-4 py-3">
           <Search className="h-5 w-5 text-muted-foreground" />
           <input
@@ -434,7 +544,7 @@ export function CommandPalette({
                       action.href!,
                       ...recentCommands.filter((item) => item !== action.href),
                     ].slice(0, 12);
-                    localStorage.setItem("kova-command-history-v1", JSON.stringify(next));
+                    saveRecentCommands(next);
                     platformEvents.publish("platform", "command.executed", {
                       command: action.href,
                     });

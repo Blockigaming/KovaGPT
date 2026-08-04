@@ -43,6 +43,12 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Release contracts
+        run: npm run release:migrations && npm run release:manifest && npm run release:schema && npm run release:env && npm run release:security
+
+      - name: Dependency audit
+        run: npm audit --audit-level=high --omit=dev
+
       - name: Unit tests
         run: npm run test:unit
 
@@ -63,6 +69,15 @@ jobs:
 
       - name: Visual checks
         run: npm run test:visual
+
+      - name: Browser smoke checks
+        run: npm run test:browser
+
+      - name: Release checks
+        run: npm run release:bundle && npm run test:release
+
+      - name: Clean tree check
+        run: git diff --check
 
       - name: Upload Playwright report
         if: always()
@@ -138,3 +153,51 @@ jobs:
             test-results
             playwright-report
           if-no-files-found: ignore
+
+  release-e2e:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with: { node-version: 24, cache: npm }
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e -- --shard=${{ matrix.shard }}/3 --reporter=blob
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: e2e-blob-${{ matrix.shard }}
+          path: blob-report
+          if-no-files-found: error
+
+  e2e-report:
+    if: always()
+    needs: release-e2e
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with: { node-version: 24, cache: npm }
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with: { pattern: e2e-blob-*, path: blob-reports, merge-multiple: true }
+      - run: npx playwright merge-reports --reporter=html ./blob-reports
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with: { name: merged-playwright-report, path: playwright-report }
+
+  isolated-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with: { node-version: 24, cache: npm }
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run release:db:isolated
+      - run: npm run release:schema && git diff --exit-code -- database-contract.json

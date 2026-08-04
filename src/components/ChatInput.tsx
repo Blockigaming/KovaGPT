@@ -1,21 +1,22 @@
 import {
   ArrowUp,
+  Atom,
+  Paperclip,
+  Telescope,
   Square,
   Plus,
   X,
   Image as ImageIcon,
+  ImagePlus,
+  Globe,
   FileText,
   Camera,
-  Puzzle,
-  Search,
-  Lightbulb,
   Sparkles,
-  GraduationCap,
-  Brain,
   AlertCircle,
   RotateCcw,
   type LucideIcon,
 } from "lucide-react";
+
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { useLayout } from "@/hooks/use-mobile";
@@ -24,7 +25,6 @@ import { useSharedSendOnEnter } from "@/lib/composer-preferences";
 import { useEffect, useRef, useState } from "react";
 import { tryUseUpload } from "@/lib/limits";
 import { toast } from "sonner";
-import { ResponsiveModelSelector as ModelSelector } from "@/components/ResponsiveModelSelector";
 import { DAILY_UPLOAD_LIMIT_BY_TIER, type ModeId, type Tier } from "@/lib/modes";
 import { shouldSubmitComposerOnEnter } from "@/lib/composer-keyboard.mjs";
 
@@ -66,12 +66,8 @@ type ComposerAction = {
 };
 
 const COMPOSER_TOOLS: readonly ComposerAction[] = [
-  { id: "web_search", label: "Search the web", icon: Search },
-  { id: "deep_research", label: "Deep research", icon: Brain },
-  { id: "image", label: "Create an image", icon: Sparkles },
-  { id: "study", label: "Study and learn", icon: GraduationCap },
-  { id: "data_analysis", label: "Analyze data", icon: Lightbulb },
-  { id: "file_analysis", label: "Analyze files", icon: FileText },
+  { id: "web_search", label: "Search the Web", icon: Globe },
+  { id: "image", label: "Create Image", icon: ImagePlus },
 ];
 
 const PROMPT_SHORTCUTS = [
@@ -101,10 +97,7 @@ export function ChatInput({
   showAddMenu = true,
   attachments,
   onAttachmentsChange,
-  mode,
-  onModeChange,
   userTier = "free",
-  canChangeAgent = true,
   onUploadLimit,
   placeholder,
   onPromptShortcut,
@@ -160,8 +153,6 @@ export function ChatInput({
   const plusWrapRef = useRef<HTMLDivElement>(null);
   const plusTriggerRef = useRef<HTMLButtonElement>(null);
 
-  const [sendFlash, setSendFlash] = useState(false);
-  const [actionColor, setActionColor] = useState<string>("#3b82f6");
   const [plusOpen, setPlusOpen] = useState(false);
   const [kbOffset, setKbOffset] = useState(0);
   const submittingRef = useRef(false);
@@ -169,8 +160,10 @@ export function ChatInput({
   const [uploadAnnouncement, setUploadAnnouncement] = useState("");
   const [recentQuery, setRecentQuery] = useState("");
 
+  const [isDragActive, setIsDragActive] = useState(false);
+
   useEffect(() => {
-    if (!plusOpen) return;
+    if (!plusOpen || isMobileLayout) return;
     const onDoc = (e: MouseEvent) => {
       const target = e.target as Node;
       if (!plusWrapRef.current?.contains(target)) setPlusOpen(false);
@@ -187,32 +180,7 @@ export function ChatInput({
       document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onEsc);
     };
-  }, [plusOpen]);
-
-  useEffect(() => {
-    try {
-      const c = localStorage.getItem("kova-action-color");
-      if (c && /^#[0-9a-f]{6}$/i.test(c)) setActionColor(c);
-    } catch {
-      /* ignore */
-    }
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === "kova-action-color" && e.newValue && /^#[0-9a-f]{6}$/i.test(e.newValue)) {
-        setActionColor(e.newValue);
-      }
-    };
-    window.addEventListener("storage", onStorage);
-    const onLocal = (e: Event) => {
-      const ce = e as CustomEvent<string>;
-      if (typeof ce.detail === "string" && /^#[0-9a-f]{6}$/i.test(ce.detail))
-        setActionColor(ce.detail);
-    };
-    window.addEventListener("kova-action-color", onLocal as EventListener);
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("kova-action-color", onLocal as EventListener);
-    };
-  }, []);
+  }, [isMobileLayout, plusOpen]);
 
   useEffect(() => {
     const el = ref.current;
@@ -263,9 +231,7 @@ export function ChatInput({
       return;
     }
     submittingRef.current = true;
-    setSendFlash(true);
     setUploadAnnouncement("Message submitted");
-    window.setTimeout(() => setSendFlash(false), 380);
     onSubmit();
   };
 
@@ -463,6 +429,7 @@ export function ChatInput({
   };
 
   const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    setIsDragActive(false);
     const files = Array.from(e.dataTransfer.files || []);
     if (files.length === 0) return;
     e.preventDefault();
@@ -471,7 +438,18 @@ export function ChatInput({
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    if (!disabled && showAddMenu && e.dataTransfer.types.includes("Files")) e.preventDefault();
+    if (!disabled && showAddMenu && e.dataTransfer.types.includes("Files")) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+      setIsDragActive(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    const nextTarget = e.relatedTarget;
+    if (!(nextTarget instanceof Node) || !e.currentTarget.contains(nextTarget)) {
+      setIsDragActive(false);
+    }
   };
 
   const attachLibraryFile = (item: RecentLibraryFile) => {
@@ -587,6 +565,11 @@ export function ChatInput({
   const ActiveToolIcon = selectedToolOption?.icon;
 
   const chooseTool = (tool: ComposerAction) => {
+    if (tool.id === "deep_research" && !user) {
+      toast.message("Log in to use Deep research");
+      setPlusOpen(false);
+      return;
+    }
     const next = selectedTool === tool.id ? null : tool.id;
     onToolSelect?.(next);
     setPlusOpen(false);
@@ -601,87 +584,186 @@ export function ChatInput({
     window.requestAnimationFrame(() => ref.current?.focus());
   };
 
-  const renderComposerActions = (mobile: boolean) => (
-    <>
-      {onToolSelect ? (
-        <div className="mt-1 border-t border-border/70 pt-1" aria-label="Tools">
-          <div className="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Tools
-          </div>
-          {COMPOSER_TOOLS.map((tool) => {
-            const Icon = tool.icon;
-            const active = selectedTool === tool.id;
+  const renderComposerActions = (mobile: boolean) => {
+    const rowClass = `flex w-full items-center gap-3 rounded-xl text-left transition-colors duration-150 hover:bg-accent active:bg-accent disabled:cursor-not-allowed disabled:opacity-50 outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
+      mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5 text-sm"
+    }`;
 
-            return (
-              <button
-                key={tool.id}
-                type="button"
-                aria-pressed={active}
-                disabled={disabled || isStreaming}
-                onClick={() => chooseTool(tool)}
-                className={`kova-tool-button flex w-full items-center gap-3 rounded-xl text-left text-sm transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 ${
-                  mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5"
-                } ${active ? "bg-accent text-foreground" : ""}`}
-              >
-                <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span>{tool.label}</span>
-              </button>
-            );
-          })}
+    const iconClass = mobile
+      ? "h-5 w-5 shrink-0 text-muted-foreground"
+      : "h-4 w-4 shrink-0 text-muted-foreground";
+    return (
+      <>
+        <div
+          className="px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+          aria-hidden="true"
+        >
+          Tools
         </div>
-      ) : null}
-
-      {onPromptShortcut && !value.trim() ? (
-        <div className="mt-1 border-t border-border/70 pt-1" aria-label="Prompt starters">
-          <div className="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Prompt starters
-          </div>
-          {PROMPT_SHORTCUTS.map((shortcut) => (
+        {COMPOSER_TOOLS.map((tool) => {
+          const Icon = tool.icon;
+          const active = selectedTool === tool.id;
+          return (
             <button
-              key={shortcut.label}
+              key={tool.id}
               type="button"
-              onClick={() => choosePromptShortcut(shortcut.label, shortcut.prompt)}
-              className={`flex w-full items-center gap-3 rounded-xl text-left text-sm transition hover:bg-accent ${
-                mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5"
-              }`}
+              aria-pressed={active}
+              disabled={disabled || isStreaming}
+              onClick={() => chooseTool(tool)}
+              className={`kova-tool-button ${rowClass} ${active ? "bg-accent text-foreground" : ""}`}
             >
-              <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span>{shortcut.label}</span>
+              <Icon className={iconClass} />
+              <span>{tool.label}</span>
             </button>
-          ))}
+          );
+        })}
+
+    const iconClass = mobile ? "h-5 w-5 shrink-0 text-muted-foreground" : "h-4 w-4 shrink-0 text-muted-foreground";
+    const webSearchTool = COMPOSER_TOOLS.find((tool) => tool.id === "web_search");
+    const imageTool = COMPOSER_TOOLS.find((tool) => tool.id === "image");
+    const deepResearchTool = COMPOSER_TOOLS.find((tool) => tool.id === "deep_research");
+
+    const addPhotosRow = (
+      <button
+        type="button"
+        onClick={() => {
+          setPlusOpen(false);
+          fileRef.current?.click();
+        }}
+        className={rowClass}
+      >
+        <Paperclip className={iconClass} />
+        <span>{user ? "Add photos and files" : "Add photos"}</span>
+      </button>
+    );
+
+    const cameraRow = mobile ? (
+      <button
+        type="button"
+        onClick={() => {
+          setPlusOpen(false);
+          cameraRef.current?.click();
+        }}
+        className={rowClass}
+      >
+        <Camera className={iconClass} />
+        <span>Camera</span>
+      </button>
+    ) : null;
+
+    const toolRow = (tool: ComposerAction) => {
+      const Icon = tool.icon;
+      const active = selectedTool === tool.id;
+      return (
+
+        <button
+          key={tool.id}
+          type="button"
+          aria-pressed={active}
+          disabled={disabled || isStreaming}
+          onClick={() => chooseTool(tool)}
+          className={`kova-tool-button ${rowClass} ${active ? "bg-accent text-foreground" : ""}`}
+        >
+          <Icon className={iconClass} />
+          <span>{tool.label}</span>
+        </button>
+      );
+    };
+
+    if (!user) {
+      const lockedRow = (
+        key: string,
+        Icon: React.ComponentType<{ className?: string }>,
+        label: string,
+      ) => (
+        <div
+          key={key}
+          aria-disabled="true"
+          className={`${rowClass} cursor-not-allowed text-muted-foreground hover:bg-transparent active:bg-transparent`}
+        >
+          <Icon className={`${iconClass} opacity-70`} />
+          <span className="opacity-70">{label}</span>
         </div>
-      ) : null}
-    </>
-  );
+      );
+      return (
+        <>
+          {addPhotosRow}
+          {cameraRow}
+          {webSearchTool ? toolRow({ ...webSearchTool, label: "Web search" }) : null}
+          <p
+            className={`pt-3 pb-1 text-sm text-muted-foreground ${mobile ? "px-4" : "px-3"}`}
+          >
+
+            <Camera className={iconClass} />
+            <span>Camera</span>
+          </button>
+        ) : null}
+        <div className="mx-2 my-1 border-t border-border/70" aria-hidden="true" />
+        <div
+          className="px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+          aria-hidden="true"
+        >
+          Suggestions
+        </div>
+        {PROMPT_SHORTCUTS.map((shortcut) => (
+          <button
+            key={shortcut.label}
+            type="button"
+            disabled={disabled || isStreaming}
+            onClick={() => choosePromptShortcut(shortcut.label, shortcut.prompt)}
+            className={rowClass}
+          >
+            <Sparkles className={iconClass} />
+            <span>{shortcut.label}</span>
+          </button>
+        ))}
+        {user ? renderRecentLibraryFiles() : null}
+
+            Log in to use...
+          </p>
+          {lockedRow("locked-deep-research", deepResearchTool?.icon ?? Telescope, "Deep research")}
+          {lockedRow("locked-image", imageTool?.icon ?? ImageIcon, "Create image")}
+          {lockedRow("locked-model", Atom, "Kova-5.5")}
+        </>
+      );
+    }
+
+    return (
+      <>
+        {webSearchTool ? toolRow(webSearchTool) : null}
+        {addPhotosRow}
+        {cameraRow}
+        {imageTool ? toolRow(imageTool) : null}
+
+      </>
+    );
+  };
 
   return (
     <div
-      className="w-full px-2.5 pb-[max(.75rem,var(--safe-bottom))] pt-2 transition-[padding] duration-150 sm:px-6 lg:px-8"
+      className="kova-composer-dock relative w-full pb-[max(.75rem,var(--safe-bottom))] pt-2 transition-[padding] duration-150"
       style={isMobileLayout && kbOffset > 0 ? { paddingBottom: `${kbOffset + 8}px` } : undefined}
       onPaste={handlePaste}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
     >
-      <div className="mx-auto max-w-[48rem]">
-        <div
-          style={
-            sendFlash
-              ? ({
-                  boxShadow: `0 0 0 2px ${actionColor}33`,
-                  borderColor: `${actionColor}99`,
-                } as React.CSSProperties)
-              : undefined
-          }
-          className={`kova-composer overflow-visible rounded-[28px] transition-[border-color,box-shadow,transform] duration-200 ${
-            sendFlash ? "scale-[0.995]" : isStreaming ? "ring-1 ring-foreground/10" : ""
-          }`}
-        >
+      <div className="kova-composer-frame relative mx-auto max-w-[48rem]">
+        {isDragActive ? (
+          <div
+            className="pointer-events-none absolute inset-0 z-20 grid place-items-center rounded-[var(--composer-radius)] border-2 border-dashed border-foreground/35 bg-background/90 text-sm font-medium text-foreground shadow-sm backdrop-blur-sm"
+            role="status"
+          >
+            Drop files to attach
+          </div>
+        ) : null}
+        <div className={`kova-composer overflow-visible ${isStreaming ? "is-streaming" : ""}`}>
           {attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 p-3 pb-0" aria-label="Attachments">
               {attachments.map((a, i) => (
                 <div
                   key={`${a.name}:${a.size ?? i}:${i}`}
-                  className="relative min-h-16 w-24 overflow-hidden rounded-xl border border-border/70 bg-muted/45 shadow-sm"
+                  className="kova-attachment-card relative overflow-hidden border border-border/70 bg-muted/45 shadow-sm"
                 >
                   {a.kind === "library_file" ? (
                     <div className="flex h-16 w-full flex-col items-center justify-center gap-1 text-muted-foreground">
@@ -752,7 +834,6 @@ export function ChatInput({
           {showAddMenu && selectedToolOption && ActiveToolIcon && onToolSelect ? (
             <div className="flex px-3 pt-2">
               <button
-                ref={plusTriggerRef}
                 type="button"
                 disabled={disabled || isStreaming}
                 onClick={() => chooseTool(selectedToolOption)}
@@ -768,15 +849,15 @@ export function ChatInput({
           <div aria-live="polite" className="sr-only">
             {uploadAnnouncement}
           </div>
-          <div className="flex min-h-[58px] items-end">
+          <div className="kova-composer-row flex items-end">
             <div
-              className={`${showAddMenu ? "flex" : "hidden"} items-center pl-1.5 relative`}
+              className={`${showAddMenu ? "flex" : "hidden"} kova-composer-leading relative self-end items-center`}
               ref={plusWrapRef}
             >
               <input
                 ref={fileRef}
                 type="file"
-                accept="text/*,.md,.markdown,.csv,.tsv,.json,.jsonl,.yml,.yaml,.toml,.xml,.html,.htm,.css,.scss,.less,.js,.jsx,.ts,.tsx,.mjs,.cjs,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cc,.cpp,.hpp,.cs,.php,.sql,.sh,.bash,.env,.log,.srt,.vtt"
+                accept="image/*,text/*,.md,.markdown,.csv,.tsv,.json,.jsonl,.yml,.yaml,.toml,.xml,.html,.htm,.css,.scss,.less,.js,.jsx,.ts,.tsx,.mjs,.cjs,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cc,.cpp,.hpp,.cs,.php,.sql,.sh,.bash,.env,.log,.srt,.vtt"
                 multiple
                 className="hidden"
                 onChange={onFileChange}
@@ -802,16 +883,17 @@ export function ChatInput({
                 onChange={onFileChange}
               />
               <button
+                ref={plusTriggerRef}
                 type="button"
                 onClick={() => setPlusOpen((v) => !v)}
                 disabled={disabled || isStreaming}
-                className={`kova-attach-button w-11 h-11 lg:w-9 lg:h-9 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent/60 active:scale-95 transition ${plusOpen && !isMobileLayout ? "rotate-45 text-foreground" : ""}`}
+                className={`kova-composer-button kova-attach-button flex items-center justify-center rounded-full ${plusOpen && !isMobileLayout ? "is-open" : ""}`}
                 aria-label="Add files, tools, or prompts"
                 aria-haspopup="dialog"
                 aria-expanded={plusOpen}
                 title="Add"
               >
-                <Plus className="w-5 h-5 transition-transform" />
+                <Plus className="kova-attach-icon" strokeWidth={2} />
               </button>
               {plusOpen && !isMobileLayout && (
                 <div
@@ -819,52 +901,7 @@ export function ChatInput({
                   aria-label="Add files, tools, or prompts"
                   className="kova-glass absolute bottom-11 left-0 z-50 max-h-[70vh] min-w-[240px] overflow-y-auto rounded-xl p-1.5 animate-in fade-in slide-in-from-bottom-1"
                 >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlusOpen(false);
-                      cameraRef.current?.click();
-                    }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
-                  >
-                    <Camera className="w-4 h-4 text-muted-foreground" />
-                    <span>Camera</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlusOpen(false);
-                      photoRef.current?.click();
-                    }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
-                  >
-                    <ImageIcon className="w-4 h-4 text-muted-foreground" />
-                    <span>Photos</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlusOpen(false);
-                      window.location.href = "/apps";
-                    }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
-                  >
-                    <Puzzle className="w-4 h-4 text-muted-foreground" />
-                    <span>Plugins</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlusOpen(false);
-                      fileRef.current?.click();
-                    }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
-                  >
-                    <FileText className="w-4 h-4 text-muted-foreground" />
-                    <span>Files</span>
-                  </button>
                   {renderComposerActions(false)}
-                  {renderRecentLibraryFiles()}
                 </div>
               )}
             </div>
@@ -876,52 +913,7 @@ export function ChatInput({
                 ariaLabel="Add files, tools, or prompts"
               >
                 <div className="flex max-h-[70vh] flex-col gap-1 overflow-y-auto p-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlusOpen(false);
-                      cameraRef.current?.click();
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
-                  >
-                    <Camera className="w-5 h-5 text-muted-foreground" />
-                    <span>Camera</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlusOpen(false);
-                      photoRef.current?.click();
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
-                  >
-                    <ImageIcon className="w-5 h-5 text-muted-foreground" />
-                    <span>Photos</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlusOpen(false);
-                      fileRef.current?.click();
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
-                  >
-                    <FileText className="w-5 h-5 text-muted-foreground" />
-                    <span>Files</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlusOpen(false);
-                      window.location.href = "/apps";
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
-                  >
-                    <Puzzle className="w-5 h-5 text-muted-foreground" />
-                    <span>Plugins</span>
-                  </button>
                   {renderComposerActions(true)}
-                  {renderRecentLibraryFiles()}
                 </div>
               </MobileBottomSheet>
             )}
@@ -938,13 +930,13 @@ export function ChatInput({
               onCompositionEnd={() => {
                 composingRef.current = false;
               }}
-              placeholder={placeholder ?? "Ask anything"}
+              placeholder={placeholder ?? "Message KovaGPT"}
               rows={1}
               spellCheck
               autoComplete="off"
               autoCorrect="on"
               autoCapitalize="sentences"
-              className="min-h-[44px] max-h-[200px] flex-1 resize-none border-0 bg-transparent px-2 py-[.72rem] text-[16px] leading-[1.45] text-foreground outline-none placeholder:text-muted-foreground focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-70 lg:text-[15px]"
+              className="kova-composer-input flex-1 resize-none border-0 bg-transparent text-foreground outline-none focus:outline-none focus:ring-0 disabled:cursor-not-allowed"
               aria-label="Message KovaGPT"
               aria-keyshortcuts={
                 effectiveSendOnEnter && !isMobileLayout && !isCoarsePointer
@@ -952,18 +944,21 @@ export function ChatInput({
                   : "Control+Enter Meta+Enter"
               }
             />
-            <div className="flex items-center gap-1.5 pr-1.5">
+            <div className="kova-composer-trailing flex self-end items-center">
+
               {canChangeAgent && mode && onModeChange && (
                 <div className="flex items-center">
                   <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
                 </div>
               )}
+
+
               {isStreaming ? (
                 <button
                   type="button"
                   onClick={onStop}
-                  className="kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-80 lg:h-9 lg:w-9"
-                  aria-label="Stop"
+                  className="kova-composer-button kova-send-button is-enabled flex items-center justify-center rounded-full"
+                  aria-label="Stop generating"
                 >
                   <Square className="h-3.5 w-3.5 fill-current" />
                 </button>
@@ -976,27 +971,28 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={triggerSubmit}
-                  className={`kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-foreground text-background transition duration-150 hover:opacity-90 active:scale-90 active:opacity-70 lg:h-9 lg:w-9 ${sendFlash ? "scale-90 opacity-80" : ""}`}
+                  className="kova-composer-button kova-send-button is-enabled flex items-center justify-center rounded-full"
                   aria-label="Send"
                 >
-                  <ArrowUp
-                    className={`w-5 h-5 transition-transform duration-300 ${sendFlash ? "-translate-y-1.5 opacity-0" : ""}`}
-                  />
+                  <ArrowUp className="kova-send-icon" strokeWidth={2.5} />
                 </button>
               ) : (
                 <button
                   type="button"
                   disabled
-                  className="kova-send-button mb-1 flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground lg:h-9 lg:w-9"
+                  className="kova-composer-button kova-send-button flex items-center justify-center rounded-full"
                   aria-label="Send"
-                  title={disabled ? "Messaging is unavailable" : "Type a message to send"}
+                  title={disabled ? "Reconnect to send" : "Type a message to send"}
                 >
-                  <ArrowUp className="h-5 w-5" />
+                  <ArrowUp className="kova-send-icon" strokeWidth={2.5} />
                 </button>
               )}
             </div>
           </div>
         </div>
+        <p className="kova-disclaimer mt-2 select-none text-center text-[11px] leading-4 text-muted-foreground/80">
+          KovaGPT can make mistakes. Check important information.
+        </p>
       </div>
     </div>
   );

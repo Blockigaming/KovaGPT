@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import {
   CONNECTOR_CATALOG,
@@ -37,13 +37,25 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AppShell } from "@/components/AppShell";
+import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { toast } from "sonner";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
+import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
 import {
   getGoogleStatus,
   startGoogleConnect,
   disconnectGoogleAccount,
   type GoogleStatus,
 } from "@/lib/google-client";
+import {
+  browserStoragePrincipal,
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+  principalScopedStorageKey,
+  safeBrowserStorage,
+  writePrincipalHandoff,
+} from "@/lib/principal-browser-storage.mjs";
 
 const GOOGLE_IDS = new Set(["google", "gmail", "google-drive", "google-calendar"]);
 
@@ -87,7 +99,7 @@ export const Route = createFileRoute("/apps")({
   component: AppsPage,
   head: () => ({
     meta: [
-      { title: "Apps | KovaGPT" },
+      { title: "KovaGPT Apps" },
       {
         name: "description",
         content: "Connect KovaGPT to supported Google, Drive, Gmail, and Calendar services.",
@@ -225,8 +237,7 @@ function AppCard({
   onDetails: () => void;
   onUseInChat: () => void;
 }) {
-  const baseBtn =
-    "text-xs px-3 py-1.5 rounded-full transition active:scale-[0.97] shrink-0 font-medium";
+  const baseBtn = "text-xs px-3 py-1.5 rounded-full transition-colors shrink-0 font-medium";
 
   let action: React.ReactNode;
   if (!configured) {
@@ -325,13 +336,15 @@ function GitHubManager() {
         .catch(() => toast.error("GitHub status unavailable")),
     [load],
   );
+  const [revokeOpen, setRevokeOpen] = useState(false);
+  const [disconnectOpen, setDisconnectOpen] = useState(false);
   useEffect(() => {
     void reload();
   }, [reload]);
   if (!data)
     return (
       <div
-        className="h-28 animate-pulse rounded-2xl bg-muted"
+        className="h-28 animate-pulse rounded-xl bg-muted"
         role="status"
         aria-label="Loading GitHub"
       />
@@ -344,15 +357,20 @@ function GitHubManager() {
     else toast.error(result.error ?? "GitHub is unavailable");
   }
   async function update(granted: boolean) {
+    if (!granted) {
+      setRevokeOpen(true);
+      return;
+    }
+    await applyGrantUpdate(true);
+  }
+  async function applyGrantUpdate(granted: boolean) {
     setBusy(true);
     try {
       await grants({
         data: {
           repositoryIds: selected,
           granted,
-          confirmed:
-            granted ||
-            confirm("Remove selected GitHub repositories? Coding Agents will lose access."),
+          confirmed: true,
         },
       });
       setSelected([]);
@@ -398,14 +416,7 @@ function GitHubManager() {
             </button>
             <button
               className="rounded-full border px-3 py-2 text-sm text-destructive"
-              onClick={() =>
-                void disconnect({
-                  data: {
-                    accountId: data.accounts[0].id,
-                    removeData: confirm("Also remove synchronized GitHub metadata?"),
-                  },
-                }).then(reload)
-              }
+              onClick={() => setDisconnectOpen(true)}
             >
               Disconnect
             </button>
@@ -439,6 +450,56 @@ function GitHubManager() {
           </div>
         </div>
       ))}
+      <ConfirmActionDialog
+        open={revokeOpen}
+        onOpenChange={setRevokeOpen}
+        title="Remove repository access?"
+        description="Coding Agents will immediately lose access to the selected repositories."
+        confirmLabel="Remove access"
+        destructive
+        onConfirm={() => {
+          setRevokeOpen(false);
+          void applyGrantUpdate(false);
+        }}
+      />
+      <Dialog open={disconnectOpen} onOpenChange={setDisconnectOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Disconnect GitHub?</DialogTitle>
+            <DialogDescription>
+              Repository access will be revoked. Choose whether synchronized metadata should also be
+              removed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button variant="outline" onClick={() => setDisconnectOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDisconnectOpen(false);
+                void disconnect({
+                  data: { accountId: data.accounts[0].id, removeData: false },
+                }).then(reload);
+              }}
+            >
+              Disconnect only
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setDisconnectOpen(false);
+                void disconnect({
+                  data: { accountId: data.accounts[0].id, removeData: true },
+                }).then(reload);
+              }}
+            >
+              Disconnect and remove data
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {data.installations.length > 0 && (
         <div className="mt-4">
           <h3 className="text-sm font-medium">Installations</h3>
@@ -513,7 +574,14 @@ function GitHubManager() {
 }
 
 function AppsPage() {
-  const { isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const userKey = user?.id ?? null;
+  const principal = isLoaded ? browserStoragePrincipal(userKey) : null;
+  const activityKey = isLoaded ? principalScopedStorageKey("kova-app-activity", userKey) : null;
+  const principalRef = useRef(principal);
+  principalRef.current = principal;
+  const generationRef = useRef(0);
+  const [lifecycleVersion, setLifecycleVersion] = useState(0);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<ConnectorCategory | "All">("All");
   const [connecting, setConnecting] = useState<Record<string, true>>({});
@@ -522,33 +590,79 @@ function AppsPage() {
   const [googleLoading, setGoogleLoading] = useState(true);
   const [selectedApp, setSelectedApp] = useState<ConnectorItem | null>(null);
   const [activity, setActivity] = useState<{ app: string; action: string; at: string }[]>([]);
+  const [activityPrincipal, setActivityPrincipal] = useState<string | null>(null);
+  const activityReady = principal !== null && activityPrincipal === principal;
+  const visibleActivity = activityReady ? activity : [];
+  const visibleGoogleStatus = activityReady ? googleStatus : null;
+  const visibleGoogleLoading = activityReady ? googleLoading : true;
+  const visibleSelectedApp = activityReady ? selectedApp : null;
 
   useEffect(() => {
+    generationRef.current += 1;
+    setQuery("");
+    setCategory("All");
+    setActivity([]);
+    setActivityPrincipal(null);
+    setGoogleStatus(null);
+    setGoogleLoading(true);
+    setSelectedApp(null);
+    setConnecting({});
+    setFailed({});
+    if (!principal || !activityKey) return;
     try {
-      setActivity(JSON.parse(localStorage.getItem("kova-app-activity-v1") ?? "[]"));
+      setActivity(JSON.parse(safeBrowserStorage("localStorage")?.getItem(activityKey) ?? "[]"));
     } catch {
       setActivity([]);
     }
-  }, []);
+    setActivityPrincipal(principal);
+  }, [activityKey, principal]);
+
+  useEffect(() => {
+    if (!isLoaded || !principal) return;
+    const reset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      generationRef.current += 1;
+      setActivity([]);
+      setActivityPrincipal(principal);
+      setGoogleStatus(null);
+      setGoogleLoading(true);
+      setSelectedApp(null);
+      setConnecting({});
+      setFailed({});
+      setQuery("");
+      setCategory("All");
+      setLifecycleVersion((value) => value + 1);
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+    return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+  }, [isLoaded, principal, userKey]);
 
   const recordActivity = (app: string, action: string) => {
+    if (!activityReady || !activityKey) return;
     setActivity((current) => {
       const next = [{ app, action, at: new Date().toISOString() }, ...current].slice(0, 50);
-      localStorage.setItem("kova-app-activity-v1", JSON.stringify(next));
+      safeBrowserStorage("localStorage")?.setItem(activityKey, JSON.stringify(next));
       return next;
     });
   };
 
   const refreshGoogle = useCallback(async () => {
+    if (!isLoaded || !principal) return;
+    const generation = generationRef.current;
+    const requestPrincipal = principal;
     try {
       const s = await getGoogleStatus();
+      if (generation !== generationRef.current || principalRef.current !== requestPrincipal) return;
       setGoogleStatus(s);
     } catch {
+      if (generation !== generationRef.current || principalRef.current !== requestPrincipal) return;
       setGoogleStatus({ connected: false, state: "temporarily_unavailable" });
     } finally {
-      setGoogleLoading(false);
+      if (generation === generationRef.current && principalRef.current === requestPrincipal) {
+        setGoogleLoading(false);
+      }
     }
-  }, []);
+  }, [isLoaded, principal]);
 
   useEffect(() => {
     if (!isSignedIn) {
@@ -557,11 +671,11 @@ function AppsPage() {
       return;
     }
     refreshGoogle();
-  }, [isSignedIn, refreshGoogle]);
+  }, [isSignedIn, lifecycleVersion, refreshGoogle]);
 
   // Handle OAuth return params (?google_connected=1 or ?google_error=...)
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !activityReady || !isSignedIn) return;
     const params = new URLSearchParams(window.location.search);
     const ok = params.get("google_connected");
     const err = params.get("google_error");
@@ -586,16 +700,21 @@ function AppsPage() {
       const url = window.location.pathname + (params.toString() ? `?${params}` : "");
       window.history.replaceState({}, "", url);
     }
-  }, [refreshGoogle]);
+  }, [activityReady, isSignedIn, refreshGoogle]);
 
   const isGoogleId = (id: string) => GOOGLE_IDS.has(id);
 
   const handleConnect = async (item: ConnectorItem) => {
+    if (!activityReady || !principal) return;
+    const generation = generationRef.current;
+    const requestPrincipal = principal;
     if (isGoogleId(item.id)) {
       setConnecting((c) => ({ ...c, [item.id]: true }));
       try {
         await startGoogleConnect();
       } catch (e) {
+        if (generation !== generationRef.current || principalRef.current !== requestPrincipal)
+          return;
         setConnecting((c) => {
           const n = { ...c };
           delete n[item.id];
@@ -610,14 +729,20 @@ function AppsPage() {
   };
 
   const handleDisconnect = async (item: ConnectorItem) => {
+    if (!activityReady || !principal) return;
+    const generation = generationRef.current;
+    const requestPrincipal = principal;
+    const isCurrent = () =>
+      generation === generationRef.current && principalRef.current === requestPrincipal;
     if (isGoogleId(item.id)) {
       try {
         await disconnectGoogleAccount();
+        if (!isCurrent()) return;
         setGoogleStatus({ connected: false, state: "disconnected" });
         recordActivity(item.label, "Disconnected");
         toast("Google account disconnected");
       } catch {
-        toast.error("Could not disconnect Google. Try again.");
+        if (isCurrent()) toast.error("Could not disconnect Google. Try again.");
       }
       return;
     }
@@ -625,11 +750,11 @@ function AppsPage() {
   };
 
   const isGoogleConnected = (id: string): boolean => {
-    if (!googleStatus?.connected) return false;
+    if (!visibleGoogleStatus?.connected) return false;
     if (id === "google") return true;
-    if (id === "gmail") return !!googleStatus.has?.gmail;
-    if (id === "google-calendar") return !!googleStatus.has?.calendar;
-    if (id === "google-drive") return !!googleStatus.has?.drive;
+    if (id === "gmail") return !!visibleGoogleStatus.has?.gmail;
+    if (id === "google-calendar") return !!visibleGoogleStatus.has?.calendar;
+    if (id === "google-drive") return !!visibleGoogleStatus.has?.drive;
     return false;
   };
 
@@ -656,13 +781,14 @@ function AppsPage() {
   const stateOf = (id: string): ConnState => {
     if (!isSignedIn) return "idle";
     if (isGoogleId(id)) {
-      if (googleLoading) return "syncing";
-      if (connecting[id]) return "connecting";
-      if (failed[id]) return "failed";
-      if (googleStatus?.state === "temporarily_unavailable") return "temporarily_unavailable";
-      if (googleStatus?.state === "reauthorization_required") return "reauthorize";
+      if (visibleGoogleLoading) return "syncing";
+      if (activityReady && connecting[id]) return "connecting";
+      if (activityReady && failed[id]) return "failed";
+      if (visibleGoogleStatus?.state === "temporarily_unavailable")
+        return "temporarily_unavailable";
+      if (visibleGoogleStatus?.state === "reauthorization_required") return "reauthorize";
       if (isGoogleConnected(id)) return "connected";
-      if (googleStatus?.connected) return "permission_incomplete";
+      if (visibleGoogleStatus?.connected) return "permission_incomplete";
       return "idle";
     }
     return "temporarily_unavailable";
@@ -682,10 +808,16 @@ function AppsPage() {
           onRetry={() => handleConnect(item)}
           onDetails={() => setSelectedApp(item)}
           onUseInChat={() => {
-            sessionStorage.setItem(
+            const handoff = writePrincipalHandoff(
+              safeBrowserStorage("sessionStorage"),
               "kova-app-chat-context",
+              isLoaded ? userKey : undefined,
               `Use my connected ${item.label} account for this request when relevant: `,
             );
+            if (!handoff.ok) {
+              toast.error("App context could not be prepared. Reload and try again.");
+              return;
+            }
             window.location.href = "/";
           }}
         />
@@ -726,37 +858,37 @@ function AppsPage() {
   return (
     <AppShell>
       <main className="kova-page kova-secondary-page max-w-5xl space-y-8">
-        <Dialog open={!!selectedApp} onOpenChange={(open) => !open && setSelectedApp(null)}>
+        <Dialog open={!!visibleSelectedApp} onOpenChange={(open) => !open && setSelectedApp(null)}>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
-              <DialogTitle>{selectedApp?.label}</DialogTitle>
-              <DialogDescription>{selectedApp?.description}</DialogDescription>
+              <DialogTitle>{visibleSelectedApp?.label}</DialogTitle>
+              <DialogDescription>{visibleSelectedApp?.description}</DialogDescription>
             </DialogHeader>
-            {selectedApp && (
+            {visibleSelectedApp && (
               <div className="space-y-4 text-sm">
                 <section className="rounded-xl border p-3">
                   <h3 className="font-medium">Capabilities and permissions</h3>
                   <p className="mt-1 text-muted-foreground">
-                    {selectedApp.id === "gmail"
+                    {visibleSelectedApp.id === "gmail"
                       ? "Read message context. Sending email always requires explicit confirmation."
-                      : selectedApp.id === "google-calendar"
+                      : visibleSelectedApp.id === "google-calendar"
                         ? "Read calendars and propose events. Creating an event requires explicit confirmation."
-                        : selectedApp.id === "google-drive"
+                        : visibleSelectedApp.id === "google-drive"
                           ? "Search and read files covered by the Drive scopes you granted."
                           : "Manage the Google connection shared by supported Google apps."}
                   </p>
-                  {isGoogleId(selectedApp.id) && googleStatus?.email ? (
+                  {isGoogleId(visibleSelectedApp.id) && visibleGoogleStatus?.email ? (
                     <p className="mt-2 text-xs text-muted-foreground">
-                      Connected as {googleStatus.email}. Only permissions granted by Google are
-                      available in chat.
+                      Connected as {visibleGoogleStatus.email}. Only permissions granted by Google
+                      are available in chat.
                     </p>
                   ) : null}
-                  {isGoogleId(selectedApp.id) &&
-                  googleStatus?.state === "reauthorization_required" ? (
+                  {isGoogleId(visibleSelectedApp.id) &&
+                  visibleGoogleStatus?.state === "reauthorization_required" ? (
                     <button
                       type="button"
                       className="mt-3 min-h-11 rounded-lg bg-foreground px-4 text-sm font-medium text-background"
-                      onClick={() => void handleConnect(selectedApp)}
+                      onClick={() => void handleConnect(visibleSelectedApp)}
                     >
                       Reconnect Google
                     </button>
@@ -764,11 +896,12 @@ function AppsPage() {
                 </section>
                 <section>
                   <h3 className="font-medium">Recent activity</h3>
-                  {activity.filter((entry) => [selectedApp.label, "Google"].includes(entry.app))
-                    .length ? (
+                  {visibleActivity.filter((entry) =>
+                    [visibleSelectedApp.label, "Google"].includes(entry.app),
+                  ).length ? (
                     <ul className="mt-2 space-y-2">
-                      {activity
-                        .filter((entry) => [selectedApp.label, "Google"].includes(entry.app))
+                      {visibleActivity
+                        .filter((entry) => [visibleSelectedApp.label, "Google"].includes(entry.app))
                         .slice(0, 5)
                         .map((entry, index) => (
                           <li key={`${entry.at}:${index}`} className="rounded-lg bg-muted/60 p-2">
@@ -784,20 +917,11 @@ function AppsPage() {
             )}
           </DialogContent>
         </Dialog>
-        <header className="space-y-3">
-          <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
-            <span className="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-sky-500 to-violet-500 text-white shadow-sm">
-              <PanelsTopLeft className="h-4 w-4" />
-            </span>
-            Apps
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Your KovaGPT workspace</h1>
-          <p className="text-sm text-muted-foreground max-w-2xl">
-            Link Google once to enable Gmail, Calendar, and Drive capabilities according to the
-            scopes you grant. KovaGPT never stores connector tokens in browser storage, and write
-            actions require confirmation.
-          </p>
-        </header>
+        <WorkspacePageHeader
+          icon={PanelsTopLeft}
+          title="Your KovaGPT workspace"
+          description="Connect supported services with explicit permissions. Tokens stay server-side and consequential write actions require confirmation."
+        />
 
         <div className="space-y-3">
           <div className="relative max-w-md">

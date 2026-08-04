@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   ScriptOnce,
   Scripts,
@@ -193,9 +194,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       ],
       links: [
         { rel: "stylesheet", href: appCss },
-        { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
-        { rel: "alternate icon", type: "image/png", href: "/favicon.png" },
-        { rel: "apple-touch-icon", href: "/favicon.svg" },
+        { rel: "icon", type: "image/png", href: "/favicon.png?v=3" },
+        { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
         { rel: "preconnect", href: "https://fonts.googleapis.com" },
         {
           rel: "preconnect",
@@ -218,7 +218,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
                     "@type": "Organization",
                     name: "KovaGPT",
                     url: "https://kovagpt.com",
-                    logo: "https://kovagpt.com/favicon.png",
+                    logo: "https://kovagpt.com/kova-logo.png",
                   },
                   {
                     "@type": "WebSite",
@@ -301,12 +301,38 @@ function RootThemeManager() {
   return null;
 }
 
+const PAGE_TITLES: Record<string, string> = {
+  "/": "KovaGPT",
+  "/pricing": "KovaGPT Billing",
+  "/library": "KovaGPT Library",
+  "/images": "KovaGPT Images",
+  "/projects": "KovaGPT Projects",
+  "/help": "KovaGPT Help",
+  "/memory": "KovaGPT Memory",
+  "/settings": "KovaGPT Settings",
+  "/status": "KovaGPT Status",
+};
+
+function PageTitleManager() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  useEffect(() => {
+    const exact = PAGE_TITLES[pathname];
+    const section = pathname.split("/").filter(Boolean)[0];
+    const fallback = section
+      ? `KovaGPT ${section.charAt(0).toUpperCase()}${section.slice(1)}`
+      : "KovaGPT";
+    document.title = exact ?? fallback;
+  }, [pathname]);
+  return null;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <ClerkProvider>
       <QueryClientProvider client={queryClient}>
         <RootThemeManager />
+        <PageTitleManager />
         <PlatformRuntime />
         <Outlet />
         <Toaster />
