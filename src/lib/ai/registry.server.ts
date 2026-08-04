@@ -1,6 +1,6 @@
 import { getAiProviderConfig, type JsonObject } from "@/lib/ai/provider.server";
 import type { ModeId } from "@/lib/modes";
-import { modelForPolicy, type ModelPolicy } from "@/lib/ai/model-catalog.server";
+import { modelForPolicy, type ModelPolicy, type ModelTier } from "@/lib/ai/model-catalog.server";
 
 export type ProviderCapability =
   | "chat"
@@ -273,7 +273,12 @@ export function selectModelForCapabilities(
 
 export function selectModelForMode(
   mode: ModeId | "deep_research" | "image",
-  options: { hasImages?: boolean; needsTools?: boolean; needsSearch?: boolean } = {},
+  options: {
+    hasImages?: boolean;
+    needsTools?: boolean;
+    needsSearch?: boolean;
+    plan?: ModelTier;
+  } = {},
 ): ProviderSelection {
   if (mode === "image")
     return selectModelForCapabilities(undefined, ["image_generation"], "image_generation");
@@ -295,7 +300,15 @@ export function selectModelForMode(
         : ["high", "extra_high", "pro"].includes(mode)
           ? "deep"
           : "normal";
-  const preferred = modelForPolicy(policy).id;
+  let selectedPolicy = policy;
+  let preferredModel = modelForPolicy(selectedPolicy);
+  if (options.plan && !preferredModel.tiers.includes(options.plan)) {
+    selectedPolicy =
+      options.plan === "pro" ? selectedPolicy : options.plan === "plus" ? "thinking" : "instant";
+    preferredModel = modelForPolicy(selectedPolicy);
+    if (!preferredModel.tiers.includes(options.plan)) preferredModel = modelForPolicy("instant");
+  }
+  const preferred = preferredModel.id;
   return selectModelForCapabilities(
     preferred,
     required,
