@@ -1168,16 +1168,11 @@ export const Route = createFileRoute("/api/chat")({
               supportsChatCompletionsReasoning(model)
             ) {
               body.reasoning = { effort: m.reasoning };
+            }
 
             // Cost control: cap output length per mode from the router config.
             if (routeDecision.maxOutputTokens > 0) {
               body.max_completion_tokens = routeDecision.maxOutputTokens;
-
-            }
-            // Only enable reasoning when the user explicitly chose a backed
-            // reasoning mode. Every visible selector option maps to this real behavior.
-            if (m.reasoning) {
-              body.reasoning = { effort: m.reasoning };
             }
 
             // === TOOL-CALLING PRE-LOOP ============================================
