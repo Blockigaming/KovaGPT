@@ -51,7 +51,12 @@ export type RecentLibraryFile = {
   projectName?: string | null;
 };
 export type ComposerToolId =
-  "web_search" | "deep_research" | "image" | "study" | "data_analysis" | "file_analysis";
+  | "web_search"
+  | "deep_research"
+  | "image"
+  | "study"
+  | "data_analysis"
+  | "file_analysis";
 
 type ComposerAction = {
   id: ComposerToolId;
@@ -63,7 +68,6 @@ const COMPOSER_TOOLS: readonly ComposerAction[] = [
   { id: "web_search", label: "Search the Web", icon: Globe },
   { id: "image", label: "Create Image", icon: ImagePlus },
 ];
-
 
 const PROMPT_SHORTCUTS = [
   { label: "Brainstorm ideas", prompt: "Help me brainstorm ideas about " },
@@ -568,7 +572,9 @@ export function ChatInput({
     const rowClass = `flex w-full items-center gap-3 rounded-xl text-left transition-colors duration-150 hover:bg-accent active:bg-accent disabled:cursor-not-allowed disabled:opacity-50 outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
       mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5 text-sm"
     }`;
-    const iconClass = mobile ? "h-5 w-5 shrink-0 text-muted-foreground" : "h-4 w-4 shrink-0 text-muted-foreground";
+    const iconClass = mobile
+      ? "h-5 w-5 shrink-0 text-muted-foreground"
+      : "h-4 w-4 shrink-0 text-muted-foreground";
     return (
       <>
         {COMPOSER_TOOLS.filter((tool) => tool.id === "web_search").map((tool) => {
@@ -632,7 +638,6 @@ export function ChatInput({
       </>
     );
   };
-
 
   return (
     <div
@@ -801,7 +806,6 @@ export function ChatInput({
                 <div className="flex max-h-[70vh] flex-col gap-1 overflow-y-auto p-1">
                   {renderComposerActions(true)}
                 </div>
-
               </MobileBottomSheet>
             )}
 
