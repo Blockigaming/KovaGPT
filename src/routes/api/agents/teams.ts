@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
-import { controlAgentTeamRun, createAgentTeamRun, getAgentTeamRuns } from "@/agents/team.server";
+import { controlAgentTeamRun, getAgentTeamRuns } from "@/agents/team.server";
 import type { AgentTaskInput } from "@/agents/team";
 export const Route = createFileRoute("/api/agents/teams")({
   server: {
@@ -31,24 +31,13 @@ export const Route = createFileRoute("/api/agents/teams")({
         } | null;
         if (!body?.objective || !body.idempotencyKey || !Array.isArray(body.tasks))
           return Response.json({ error: "invalid_agent_team" }, { status: 400 });
-        try {
-          return Response.json(
-            await createAgentTeamRun(auth, {
-              objective: body.objective,
-              projectId: body.projectId,
-              idempotencyKey: body.idempotencyKey,
-              tasks: body.tasks,
-              context: body.context ?? [],
-            }),
-            { status: 202 },
-          );
-        } catch (error) {
-          const message = error instanceof Error ? error.message : "agent_team_failed";
-          return Response.json(
-            { error: message },
-            { status: message === "agent_plan_required" ? 403 : 400 },
-          );
-        }
+        return Response.json(
+          { error: "browser_agent_unavailable" },
+          {
+            status: 503,
+            headers: { "Cache-Control": "no-store", "Retry-After": "3600" },
+          },
+        );
       },
       PATCH: async ({ request }) => {
         const auth = await requireUser(request);
@@ -65,9 +54,10 @@ export const Route = createFileRoute("/api/agents/teams")({
             await controlAgentTeamRun(auth, body.runId, body.command, body.taskId),
           );
         } catch (error) {
+          const message = error instanceof Error ? error.message : "agent_control_failed";
           return Response.json(
-            { error: error instanceof Error ? error.message : "agent_control_failed" },
-            { status: 400 },
+            { error: message },
+            { status: message === "browser_agent_unavailable" ? 503 : 400 },
           );
         }
       },
