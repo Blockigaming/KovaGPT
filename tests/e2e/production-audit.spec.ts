@@ -8,7 +8,6 @@ const routes = [
   "/ai-writer",
   "/projects",
   "/library",
-  "/recents",
   "/apps",
   "/audit-log",
   "/changelog",

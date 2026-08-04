@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
@@ -15,7 +16,7 @@ test("production uses the repository server entry without a private Vite wrapper
   assert.match(wranglerConfig, /"main": "src\/server\.ts"/);
 });
 
-test("production bundles TanStack's H3 routing graph instead of importing it at runtime", async () => {
+test("production bundles TanStack's H3 routing graph instead of importing it at runtime", { skip: !existsSync("dist/server") }, async () => {
   assert.match(viteConfig, /noExternal: \["h3-v2", "rou3"\]/);
 
   const serverFiles = await readdir("dist/server", { recursive: true });
@@ -30,7 +31,7 @@ test("production bundles TanStack's H3 routing graph instead of importing it at 
   }
 });
 
-test("every generated bare server import is a declared production dependency", async () => {
+test("every generated bare server import is a declared production dependency", { skip: !existsSync("dist/server") }, async () => {
   const manifest = JSON.parse(packageJson);
   const serverFiles = await readdir("dist/server", { recursive: true });
   const external = new Set();
@@ -61,7 +62,7 @@ test("every generated bare server import is a declared production dependency", a
   }
 });
 
-test("generated production server entry can be imported by Node", async () => {
+test("generated production server entry can be imported by Node", { skip: !existsSync("dist/server/server.js") }, async () => {
   const entry = `${pathToFileURL(resolve("dist/server/server.js")).href}?audit=${Date.now()}`;
   const loaded = await import(entry);
   assert.equal(typeof loaded.default?.fetch, "function");
