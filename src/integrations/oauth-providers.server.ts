@@ -1,11 +1,5 @@
 export type OAuthProviderId =
-  await db
-    .from("integration_deletion_requests")
-    .insert({
-      owner_id: ownerId,
-      linked_account_id: account.id,
-      status: providerRevoked ? "provider_revoked" : "pending",
-    });
+  "microsoft" | "github" | "slack" | "notion" | "linear" | "dropbox" | "box";
 export type OAuthProviderAdapter = {
   id: OAuthProviderId;
   name: string;
