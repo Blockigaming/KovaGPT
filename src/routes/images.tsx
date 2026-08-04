@@ -509,7 +509,7 @@ function ImagesPage() {
 
       <main className="kova-images-main flex min-w-0 flex-1 flex-col">
         <header className="kova-images-topbar kova-topbar flex h-14 shrink-0 items-center px-3">
-          {!sidebarOpen && (
+          {!sidebarOpen && !isSignedIn && (
             <button
               onClick={() => setSidebarOpen((v) => !v)}
               className="p-2 rounded-lg hover:bg-accent transition mr-1"
