@@ -13,7 +13,6 @@ import {
   Brain,
   AlertCircle,
   RotateCcw,
-  Mic,
   type LucideIcon,
 } from "lucide-react";
 
@@ -25,7 +24,6 @@ import { useSharedSendOnEnter } from "@/lib/composer-preferences";
 import { useEffect, useRef, useState } from "react";
 import { tryUseUpload } from "@/lib/limits";
 import { toast } from "sonner";
-import { ResponsiveModelSelector as ModelSelector } from "@/components/ResponsiveModelSelector";
 import { DAILY_UPLOAD_LIMIT_BY_TIER, type ModeId, type Tier } from "@/lib/modes";
 import { shouldSubmitComposerOnEnter } from "@/lib/composer-keyboard.mjs";
 
@@ -94,10 +92,7 @@ export function ChatInput({
   showAddMenu = true,
   attachments,
   onAttachmentsChange,
-  mode,
-  onModeChange,
   userTier = "free",
-  canChangeAgent = true,
   onUploadLimit,
   placeholder,
   onPromptShortcut,
@@ -159,77 +154,6 @@ export function ChatInput({
   const composingRef = useRef(false);
   const [uploadAnnouncement, setUploadAnnouncement] = useState("");
   const [recentQuery, setRecentQuery] = useState("");
-  const [dictating, setDictating] = useState(false);
-  const recognitionRef = useRef<{ stop: () => void } | null>(null);
-  const dictationBaseRef = useRef("");
-
-  useEffect(() => () => recognitionRef.current?.stop(), []);
-
-  const toggleDictation = async () => {
-    if (dictating) {
-      recognitionRef.current?.stop();
-      recognitionRef.current = null;
-      setDictating(false);
-      return;
-    }
-    const w = window as unknown as {
-      SpeechRecognition?: new () => never;
-      webkitSpeechRecognition?: new () => never;
-    };
-    const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
-    if (!Ctor) {
-      toast.error("Dictation is not supported in this browser. Try Chrome or Safari.");
-      return;
-    }
-
-    const recognition = new Ctor() as unknown as {
-      continuous: boolean;
-      interimResults: boolean;
-      lang: string;
-      start: () => void;
-      stop: () => void;
-      onresult: (event: {
-        resultIndex: number;
-        results: ArrayLike<{ 0: { transcript: string } }>;
-      }) => void;
-      onerror: (event: { error?: string }) => void;
-      onend: () => void;
-    };
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = navigator.language || "en-US";
-    dictationBaseRef.current = value ? `${value.replace(/\s+$/, "")} ` : "";
-    recognition.onresult = (event) => {
-      let transcript = "";
-      for (let i = 0; i < event.results.length; i += 1)
-        transcript += event.results[i][0].transcript;
-      onChange(`${dictationBaseRef.current}${transcript.trimStart()}`);
-    };
-    recognition.onerror = (event) => {
-      setDictating(false);
-      recognitionRef.current = null;
-      const code = event?.error;
-      if (code === "not-allowed" || code === "service-not-allowed")
-        toast.error("Microphone permission was not granted. Open KovaGPT in its own tab and retry.");
-      else if (code === "no-speech") toast.error("No speech detected. Try dictating again.");
-      else if (code === "network") toast.error("Dictation needs a network connection.");
-      else if (code && code !== "aborted") toast.error("Dictation stopped unexpectedly.");
-    };
-    recognition.onend = () => {
-      setDictating(false);
-      recognitionRef.current = null;
-    };
-    try {
-      recognition.start();
-    } catch {
-      toast.error("Dictation could not start. Try again in a moment.");
-      return;
-    }
-    recognitionRef.current = recognition;
-    setDictating(true);
-  };
-
-
   useEffect(() => {
     if (!plusOpen) return;
     const onDoc = (e: MouseEvent) => {
@@ -712,13 +636,13 @@ export function ChatInput({
 
   return (
     <div
-      className="w-full px-2.5 pb-[max(.75rem,var(--safe-bottom))] pt-2 transition-[padding] duration-150 sm:px-0"
+      className="kova-composer-dock w-full pb-[max(.75rem,var(--safe-bottom))] pt-2 transition-[padding] duration-150"
       style={isMobileLayout && kbOffset > 0 ? { paddingBottom: `${kbOffset + 8}px` } : undefined}
       onPaste={handlePaste}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
     >
-      <div className="mx-auto max-w-[48rem]">
+      <div className="kova-composer-frame mx-auto max-w-[48rem]">
         <div className={`kova-composer overflow-visible ${isStreaming ? "is-streaming" : ""}`}>
           {attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 p-3 pb-0" aria-label="Attachments">
@@ -908,25 +832,6 @@ export function ChatInput({
               }
             />
             <div className="kova-composer-trailing flex self-end items-center">
-              {canChangeAgent && mode && onModeChange && (
-                <div className="flex items-center">
-                  <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={toggleDictation}
-                disabled={disabled}
-                className={`kova-composer-button flex items-center justify-center rounded-full ${
-                  dictating ? "text-destructive" : "text-foreground/70 hover:text-foreground"
-                }`}
-                aria-label={dictating ? "Stop dictation" : "Dictate message"}
-                aria-pressed={dictating}
-                title={dictating ? "Stop dictation" : "Dictate"}
-              >
-                <Mic className="h-[18px] w-[18px]" strokeWidth={2} />
-              </button>
-
               {isStreaming ? (
                 <button
                   type="button"
