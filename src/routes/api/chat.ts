@@ -597,8 +597,14 @@ export const Route = createFileRoute("/api/chat")({
                 return Response.json({ error: "attachments must be an array." }, { status: 400 });
               }
               if (m.attachments) {
-                for (const a of m.attachments) {
-                  if (!a || typeof a !== "object" || !["image", "library_file"].includes(a.kind)) {
+                for (const attachment of m.attachments) {
+                  const a = attachment as unknown as {
+                    kind?: string;
+                    dataUrl?: unknown;
+                    libraryItemId?: unknown;
+                    name?: unknown;
+                  };
+                  if (!a || typeof a !== "object" || !["image", "library_file"].includes(a.kind ?? "")) {
                     return Response.json({ error: "Invalid attachment." }, { status: 400 });
                   }
                   if (a.kind === "library_file") {
@@ -624,7 +630,7 @@ export const Route = createFileRoute("/api/chat")({
                       { status: 400 },
                     );
                   }
-                  if (a.dataUrl.length > MAX_ATTACHMENT_BYTES) {
+                  if ((a.dataUrl as string).length > MAX_ATTACHMENT_BYTES) {
                     return new Response(
                       JSON.stringify({ error: "An attachment exceeds the 5 MB limit." }),
                       { status: 413, headers: { "Content-Type": "application/json" } },
