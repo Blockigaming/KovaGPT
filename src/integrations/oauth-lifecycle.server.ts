@@ -167,13 +167,21 @@ export async function completeOAuth(input: {
     .select("id, owner_id, provider_id, account_label, granted_scopes, status")
     .single();
   if (error || !account) throw new Error("linked_account_store_failed");
-  await db
-    .from("integration_deletion_requests")
-    .insert({
-      owner_id: ownerId,
-      linked_account_id: account.id,
-      status: providerRevoked ? "provider_revoked" : "pending",
-    });
+  await db.from("integration_consents").insert({
+    owner_id: record.owner_id,
+    linked_account_id: account.id,
+    scopes: granted,
+    purpose: "Connect provider services to KovaGPT",
+    decision: "granted",
+  });
+  await db.from("integration_audit_events").insert({
+    owner_id: record.owner_id,
+    linked_account_id: account.id,
+    provider_id: provider.id,
+    event_type: "connect",
+    result: "success",
+    safe_summary: `Connected ${provider.name} account`,
+  });
   return { account, returnPath: record.return_path as string };
 }
 
@@ -214,16 +222,11 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     });
     providerRevoked = response.ok;
   }
-  await db
-    .from("integration_audit_events")
-    .insert({
-      owner_id: ownerId,
-      linked_account_id: account.id,
-      provider_id: provider.id,
-      event_type: "disconnect",
-      result: providerRevoked ? "success" : "failure",
-      safe_summary: `Disconnected ${provider.name} account`,
-    });
+  await db.from("integration_deletion_requests").insert({
+    owner_id: ownerId,
+    linked_account_id: account.id,
+    status: providerRevoked ? "provider_revoked" : "pending",
+  });
   await db
     .from("integration_sync_jobs")
     .update({ status: "cancelled" })
@@ -240,25 +243,13 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     })
     .eq("id", account.id)
     .eq("owner_id", ownerId);
-  await db
-    .from("integration_consents")
-    .insert({
-      owner_id: record.owner_id,
-      linked_account_id: account.id,
-      scopes: granted,
-      purpose: "Connect provider services to KovaGPT",
-      decision: "granted",
-    });
-
-  await db
-    .from("integration_audit_events")
-    .insert({
-      owner_id: record.owner_id,
-      linked_account_id: account.id,
-      provider_id: provider.id,
-      event_type: "connect",
-      result: "success",
-      safe_summary: `Connected ${provider.name} account`,
-    });
+  await db.from("integration_audit_events").insert({
+    owner_id: ownerId,
+    linked_account_id: account.id,
+    provider_id: provider.id,
+    event_type: "disconnect",
+    result: providerRevoked ? "success" : "failure",
+    safe_summary: `Disconnected ${provider.name} account`,
+  });
   return { providerRevoked };
 }
