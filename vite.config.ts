@@ -28,11 +28,7 @@ export default defineConfig({
           if (id.includes("/src/lib/connectors-catalog")) return "connectors";
           if (!id.includes("node_modules")) return;
           if (id.includes("recharts") || id.includes("d3-")) return "charts";
-          if (
-            id.includes("react-markdown") ||
-            id.includes("remark-") ||
-            id.includes("micromark")
-          ) {
+          if (id.includes("react-markdown") || id.includes("remark-") || id.includes("micromark")) {
             return "markdown";
           }
           if (id.includes("@supabase")) return "supabase";
@@ -47,6 +43,5 @@ export default defineConfig({
   // Bundle the alias into the SSR output instead of leaving that runtime edge.
   ssr: {
     noExternal: ["h3-v2"],
-  },
   },
 });
