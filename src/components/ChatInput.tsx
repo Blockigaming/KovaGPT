@@ -4,6 +4,8 @@ import {
   Plus,
   X,
   Image as ImageIcon,
+  ImagePlus,
+  Globe,
   FileText,
   Camera,
   Search,
@@ -14,6 +16,7 @@ import {
   Mic,
   type LucideIcon,
 } from "lucide-react";
+
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { useLayout } from "@/hooks/use-mobile";
