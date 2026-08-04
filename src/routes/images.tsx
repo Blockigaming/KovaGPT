@@ -328,7 +328,7 @@ function ImagesPage() {
   const submittingRef = useRef(false);
   const generationRef = useRef(0);
   const generationControllerRef = useRef<AbortController | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
   const promptFileRef = useRef<HTMLInputElement>(null);
   const presetsRef = useRef<HTMLDivElement>(null);
   const scrollPresets = (direction: 1 | -1) => {
@@ -521,15 +521,9 @@ function ImagesPage() {
         onOpenHelp={openHelp}
       />
 
-
       <main className="kova-images-main flex min-w-0 flex-1 flex-col">
         <header className="kova-images-topbar kova-topbar flex h-14 shrink-0 items-center px-3">
-          {!sidebarOpen && !isSignedIn && (
-
-      <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 flex items-center px-3 shrink-0">
           {!sidebarOpen && (
-
             <button
               onClick={() => setSidebarOpen((v) => !v)}
               className="p-2 rounded-lg hover:bg-accent transition mr-1"
@@ -558,12 +552,8 @@ function ImagesPage() {
           </div>
         </header>
 
-
         <div className="kova-images-scroll flex-1 overflow-y-auto">
           <div className="kova-images-page kova-page mx-auto max-w-6xl px-4 pb-40 pt-6 sm:px-6">
-
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-2 pb-24">
             <h1 className="text-[34px] sm:text-[40px] font-semibold tracking-tight">Images</h1>
 
             {/* Prompt */}
@@ -593,7 +583,9 @@ function ImagesPage() {
                   }}
                 />
                 <input
-                  ref={inputRef}
+                  ref={(node) => {
+                    inputRef.current = node;
+                  }}
                   value={prompt}
                   aria-label="Describe a new image"
                   maxLength={2000}
@@ -617,7 +609,6 @@ function ImagesPage() {
                 </button>
               </div>
             </form>
-
 
             {/* Create an image */}
             <section className="mt-10">
@@ -656,11 +647,6 @@ function ImagesPage() {
                       className="kova-image-preset group flex w-[128px] shrink-0 flex-col items-start focus:outline-none"
                     >
                       <div className="kova-image-preset-preview relative h-[176px] w-[128px] overflow-hidden rounded-2xl bg-muted ring-1 ring-border/60">
-
-                      className="group flex flex-col items-start w-[160px] shrink-0 focus:outline-none"
-                    >
-                      <div className="relative w-[160px] h-[160px] rounded-2xl overflow-hidden ring-1 ring-border/60 bg-muted">
-
                         <img
                           src={p.image}
                           alt={p.label}
@@ -852,7 +838,9 @@ function ImagesPage() {
           >
             <div className="kova-images-composer flex items-end gap-2 rounded-2xl border border-border bg-card px-3 py-2.5">
               <textarea
-                ref={inputRef}
+                ref={(node) => {
+                  inputRef.current = node;
+                }}
                 value={prompt}
                 aria-label="Describe the image to generate"
                 maxLength={2000}
@@ -886,7 +874,6 @@ function ImagesPage() {
             </div>
           </form>
         </div>
-
       </main>
 
       <SettingsDialog
