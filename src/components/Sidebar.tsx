@@ -2,7 +2,6 @@ import {
   Archive,
   Calendar,
   Copy as CopyIcon,
-  CreditCard,
   FolderKanban,
   FolderOpen,
   HelpCircle,
@@ -41,7 +40,7 @@ import { searchConversations } from "@/lib/conversation-search";
 const EXPANDED_WIDTH = 260;
 
 function isMobileViewport() {
-  return typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches;
+  return typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
 }
 
 export function Sidebar({
@@ -149,10 +148,10 @@ export function Sidebar({
     if (open && isMobileViewport()) onToggle();
   };
 
-  const labelClass = collapsed ? "sr-only lg:sr-only" : "truncate";
-  const iconOnly = collapsed ? "justify-center px-0" : "gap-3 px-2.5";
+  const labelClass = collapsed ? "sr-only" : "truncate";
+  const iconOnly = collapsed ? "justify-center px-0" : "gap-2.5 px-2.5";
   const navItemClass = (active: boolean) =>
-    `relative flex h-9 items-center rounded-lg py-1 text-sm transition-colors duration-100 ${iconOnly} ${
+    `kova-nav-row relative flex h-[38px] items-center rounded-lg py-1 text-sm transition-colors duration-100 ${iconOnly} ${
       active
         ? "bg-sidebar-active text-foreground font-medium"
         : "text-sidebar-foreground hover:bg-sidebar-hover"
@@ -254,14 +253,14 @@ export function Sidebar({
         <button
           type="button"
           onClick={onToggle}
-          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
           aria-label="Close navigation menu"
         />
       ) : null}
 
       {collapsed && showSignedIn ? (
         <div
-          className="hidden h-[100dvh] w-[52px] shrink-0 flex-col items-center gap-1 border-r border-border/60 bg-sidebar pb-[max(.625rem,var(--safe-bottom))] pt-[max(.5rem,var(--safe-top))] lg:flex"
+          className="kova-collapsed-sidebar hidden h-[100dvh] w-16 shrink-0 flex-col items-center gap-1 border-r border-border/60 bg-sidebar pb-[max(.625rem,var(--safe-bottom))] pt-[max(.5rem,var(--safe-top))] md:flex"
           aria-label="Collapsed navigation"
         >
           <button
@@ -336,10 +335,10 @@ export function Sidebar({
             "--sidebar-expanded": `${EXPANDED_WIDTH}px`,
           } as React.CSSProperties
         }
-        className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-border/60 bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 ease-[var(--ease-spring)] lg:w-[var(--sidebar-expanded)] ${
-          collapsed ? "lg:!w-0 lg:border-r-0" : ""
-        } max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,320px)] max-lg:shadow-lg ${
-          open ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"
+        className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-border/60 bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 ease-[var(--ease-spring)] md:w-[var(--sidebar-expanded)] ${
+          collapsed ? "md:hidden" : ""
+        } max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:w-[min(86vw,320px)] max-md:shadow-lg ${
+          open ? "max-md:translate-x-0" : "max-md:-translate-x-full"
         }`}
         aria-label="Primary navigation"
         aria-modal={open && isMobileViewport() ? true : undefined}
@@ -357,7 +356,7 @@ export function Sidebar({
             {showSignedOut ? (
               <Link
                 to="/library"
-                className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:flex"
+                className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring md:flex"
                 aria-label="Search"
                 title="Search"
               >
@@ -367,7 +366,7 @@ export function Sidebar({
 
             <button
               onClick={onToggle}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring md:hidden"
               aria-label="Close navigation"
               title="Close navigation"
             >
@@ -382,7 +381,7 @@ export function Sidebar({
                     ?.focus({ preventScroll: true });
                 });
               }}
-              className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:flex"
+              className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring md:flex"
               aria-label="Collapse sidebar"
               title="Collapse sidebar"
             >
@@ -448,9 +447,6 @@ export function Sidebar({
                   isOn("/scheduled-tasks"),
                 )
               : null}
-            {showSignedIn && tier !== "plus" && tier !== "pro"
-              ? renderNavLink("/pricing", "Subscriptions", CreditCard, isOn("/pricing"))
-              : null}
           </div>
 
           <div
@@ -514,10 +510,10 @@ export function Sidebar({
           </div>
 
           <div
-            className={`mt-auto border-t border-border/60 bg-sidebar p-2.5 pb-[max(.625rem,var(--safe-bottom))] ${collapsed ? "lg:px-2" : ""}`}
+            className={`mt-auto border-t border-border/60 bg-sidebar p-2.5 pb-[max(.625rem,var(--safe-bottom))] ${collapsed ? "md:px-2" : ""}`}
           >
             {!isLoaded ? null : showSignedIn ? (
-              <div className={`flex items-center gap-2 ${collapsed ? "lg:flex-col" : ""}`}>
+              <div className={`flex items-center gap-2 ${collapsed ? "md:flex-col" : ""}`}>
                 <button
                   onClick={() => {
                     onOpenSettings("general");
