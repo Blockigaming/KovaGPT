@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { saveToLibrary } from "@/lib/library.functions";
+import { saveImageToLibrary } from "@/lib/library-images.functions";
 import {
   PanelLeft,
   ArrowUp,
@@ -324,7 +324,7 @@ function ImagesPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [lightbox, setLightbox] = useState<HistoryItem | null>(null);
   const [savingImage, setSavingImage] = useState(false);
-  const saveImage = useServerFn(saveToLibrary);
+  const saveImage = useServerFn(saveImageToLibrary);
   const submittingRef = useRef(false);
   const generationRef = useRef(0);
   const generationControllerRef = useRef<AbortController | null>(null);
@@ -391,10 +391,8 @@ function ImagesPage() {
       await saveImage({
         data: {
           title: item.prompt.slice(0, 100) || "Generated image",
-          item_type: "image",
-          source: "images",
-          content_text: item.prompt,
-          file_url: item.imageUrl,
+          prompt: item.prompt,
+          imageUrl: item.imageUrl,
         },
       });
       toast.success("Saved to Library");
