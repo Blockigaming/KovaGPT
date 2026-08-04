@@ -860,17 +860,6 @@ export function ChatInput({
                   aria-label="Add files, tools, or prompts"
                   className="kova-glass absolute bottom-11 left-0 z-50 max-h-[70vh] min-w-[240px] overflow-y-auto rounded-xl p-1.5 animate-in fade-in slide-in-from-bottom-1"
                 >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlusOpen(false);
-                      fileRef.current?.click();
-                    }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left"
-                  >
-                    <ImageIcon className="w-4 h-4 text-muted-foreground" />
-                    <span>Add photos and files</span>
-                  </button>
                   {renderComposerActions(false)}
                 </div>
               )}
@@ -883,30 +872,9 @@ export function ChatInput({
                 ariaLabel="Add files, tools, or prompts"
               >
                 <div className="flex max-h-[70vh] flex-col gap-1 overflow-y-auto p-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlusOpen(false);
-                      cameraRef.current?.click();
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
-                  >
-                    <Camera className="w-5 h-5 text-muted-foreground" />
-                    <span>Camera</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlusOpen(false);
-                      fileRef.current?.click();
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent text-left"
-                  >
-                    <ImageIcon className="w-5 h-5 text-muted-foreground" />
-                    <span>Add photos and files</span>
-                  </button>
                   {renderComposerActions(true)}
                 </div>
+
               </MobileBottomSheet>
             )}
 
