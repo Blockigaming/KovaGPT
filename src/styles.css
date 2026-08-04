@@ -1792,13 +1792,16 @@ body {
 
   .kova-composer-row {
     min-height: var(--composer-height);
+    align-items: center;
   }
 
   .kova-composer-leading,
   .kova-composer-trailing {
     gap: var(--composer-unit);
-    padding-bottom: var(--composer-inset);
+    align-self: center !important;
+    padding-bottom: 0;
   }
+
 
   .kova-composer-leading {
     padding-left: var(--composer-inset);
@@ -2023,7 +2026,18 @@ body {
   .kova-secondary-page {
     width: 100%;
     min-width: 0;
+    /* One vertical rhythm for every workspace page so headers, toolbars,
+       filter rails, and result grids never sit unevenly. */
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
   }
+
+  .kova-secondary-page > .kova-page-header,
+  .kova-secondary-page > .kova-toolbar {
+    margin-bottom: 0;
+  }
+
 
   .kova-secondary-page :is(input, textarea, select),
   .kova-settings-dialog :is(input, textarea, select),

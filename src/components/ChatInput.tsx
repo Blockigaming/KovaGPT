@@ -4,6 +4,8 @@ import {
   Plus,
   X,
   Image as ImageIcon,
+  ImagePlus,
+  Globe,
   FileText,
   Camera,
   Search,
@@ -14,6 +16,7 @@ import {
   Mic,
   type LucideIcon,
 } from "lucide-react";
+
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { useLayout } from "@/hooks/use-mobile";
@@ -59,10 +62,10 @@ type ComposerAction = {
 };
 
 const COMPOSER_TOOLS: readonly ComposerAction[] = [
-  { id: "deep_research", label: "Deep research", icon: Brain },
-  { id: "web_search", label: "Search the Web", icon: Search },
-  { id: "image", label: "Create Image", icon: Sparkles },
+  { id: "web_search", label: "Search the Web", icon: Globe },
+  { id: "image", label: "Create Image", icon: ImagePlus },
 ];
+
 
 const PROMPT_SHORTCUTS = [
   { label: "Brainstorm ideas", prompt: "Help me brainstorm ideas about " },
@@ -637,58 +640,75 @@ export function ChatInput({
     window.requestAnimationFrame(() => ref.current?.focus());
   };
 
-  const renderComposerActions = (mobile: boolean) => (
-    <>
-      {onToolSelect ? (
-        <div className="mt-1 border-t border-border/70 pt-1" aria-label="Tools">
-          <div className="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Tools
-          </div>
-          {COMPOSER_TOOLS.map((tool) => {
-            const Icon = tool.icon;
-            const active = selectedTool === tool.id;
-
-            return (
-              <button
-                key={tool.id}
-                type="button"
-                aria-pressed={active}
-                disabled={disabled || isStreaming}
-                onClick={() => chooseTool(tool)}
-                className={`kova-tool-button flex w-full items-center gap-3 rounded-xl text-left text-sm transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 ${
-                  mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5"
-                } ${active ? "bg-accent text-foreground" : ""}`}
-              >
-                <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span>{tool.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-
-      {onPromptShortcut && !value.trim() ? (
-        <div className="mt-1 border-t border-border/70 pt-1" aria-label="Prompt starters">
-          <div className="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Prompt starters
-          </div>
-          {PROMPT_SHORTCUTS.map((shortcut) => (
+  const renderComposerActions = (mobile: boolean) => {
+    const rowClass = `flex w-full items-center gap-3 rounded-xl text-left transition-colors duration-150 hover:bg-accent active:bg-accent disabled:cursor-not-allowed disabled:opacity-50 outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
+      mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5 text-sm"
+    }`;
+    const iconClass = mobile ? "h-5 w-5 shrink-0 text-muted-foreground" : "h-4 w-4 shrink-0 text-muted-foreground";
+    return (
+      <>
+        {COMPOSER_TOOLS.filter((tool) => tool.id === "web_search").map((tool) => {
+          const Icon = tool.icon;
+          const active = selectedTool === tool.id;
+          return (
             <button
-              key={shortcut.label}
+              key={tool.id}
               type="button"
-              onClick={() => choosePromptShortcut(shortcut.label, shortcut.prompt)}
-              className={`flex w-full items-center gap-3 rounded-xl text-left text-sm transition hover:bg-accent ${
-                mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5"
-              }`}
+              aria-pressed={active}
+              disabled={disabled || isStreaming}
+              onClick={() => chooseTool(tool)}
+              className={`kova-tool-button ${rowClass} ${active ? "bg-accent text-foreground" : ""}`}
             >
-              <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span>{shortcut.label}</span>
+              <Icon className={iconClass} />
+              <span>{tool.label}</span>
             </button>
-          ))}
-        </div>
-      ) : null}
-    </>
-  );
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => {
+            setPlusOpen(false);
+            fileRef.current?.click();
+          }}
+          className={rowClass}
+        >
+          <ImageIcon className={iconClass} />
+          <span>Add photos and files</span>
+        </button>
+        {mobile ? (
+          <button
+            type="button"
+            onClick={() => {
+              setPlusOpen(false);
+              cameraRef.current?.click();
+            }}
+            className={rowClass}
+          >
+            <Camera className={iconClass} />
+            <span>Camera</span>
+          </button>
+        ) : null}
+        {COMPOSER_TOOLS.filter((tool) => tool.id === "image").map((tool) => {
+          const Icon = tool.icon;
+          const active = selectedTool === tool.id;
+          return (
+            <button
+              key={tool.id}
+              type="button"
+              aria-pressed={active}
+              disabled={disabled || isStreaming}
+              onClick={() => chooseTool(tool)}
+              className={`kova-tool-button ${rowClass} ${active ? "bg-accent text-foreground" : ""}`}
+            >
+              <Icon className={iconClass} />
+              <span>{tool.label}</span>
+            </button>
+          );
+        })}
+      </>
+    );
+  };
+
 
   return (
     <div
@@ -843,17 +863,6 @@ export function ChatInput({
                   aria-label="Add files, tools, or prompts"
                   className="kova-glass absolute bottom-11 left-0 z-50 max-h-[70vh] min-w-[240px] overflow-y-auto rounded-xl p-1.5 animate-in fade-in slide-in-from-bottom-1"
                 >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlusOpen(false);
-                      fileRef.current?.click();
-                    }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent text-left"
-                  >
-                    <ImageIcon className="w-4 h-4 text-muted-foreground" />
-                    <span>Add photos and files</span>
-                  </button>
                   {renderComposerActions(false)}
                 </div>
               )}
@@ -866,30 +875,9 @@ export function ChatInput({
                 ariaLabel="Add files, tools, or prompts"
               >
                 <div className="flex max-h-[70vh] flex-col gap-1 overflow-y-auto p-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlusOpen(false);
-                      cameraRef.current?.click();
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent active:bg-accent text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
-                  >
-                    <Camera className="w-5 h-5 text-muted-foreground" />
-                    <span>Camera</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPlusOpen(false);
-                      fileRef.current?.click();
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-4 min-h-14 rounded-xl text-base hover:bg-accent text-left"
-                  >
-                    <ImageIcon className="w-5 h-5 text-muted-foreground" />
-                    <span>Add photos and files</span>
-                  </button>
                   {renderComposerActions(true)}
                 </div>
+
               </MobileBottomSheet>
             )}
 

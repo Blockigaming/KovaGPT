@@ -21,8 +21,8 @@
 
 /* Shell */
 .kova-sidebar {
-  border-color: transparent !important;
-  background: var(--sidebar) !important;
+  border-right: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent) !important;
+  background: var(--background) !important;
   box-shadow: none;
 }
 .kova-sidebar :where(button, a) {
@@ -33,13 +33,28 @@
   border-radius: 8px !important;
   gap: 10px !important;
   font-size: 14px !important;
-  transition: background-color 100ms ease !important;
+  transition:
+    background-color 140ms ease,
+    transform 140ms var(--ease-spring, ease),
+    color 140ms ease !important;
+}
+.kova-nav-row:hover,
+.kova-chat-row:hover {
+  background-color: var(--sidebar-hover) !important;
+  transform: translateX(1px);
+}
+.kova-nav-row:active,
+.kova-chat-row:active {
+  transform: translateX(1px) scale(0.99);
 }
 .kova-chat-row {
   min-height: 36px !important;
   border-radius: 8px !important;
-  transition: background-color 100ms ease !important;
+  transition:
+    background-color 140ms ease,
+    transform 140ms var(--ease-spring, ease) !important;
 }
+
 .kova-topbar {
   min-height: calc(var(--parity-topbar-height) + var(--safe-top)) !important;
   border: 0 !important;
