@@ -28,6 +28,7 @@ import {
   imageGenerations,
   imageModel,
   missingAiProviderResponse,
+  supportsChatCompletionsReasoning,
 } from "@/lib/ai/provider.server";
 import { NEWS_TRIGGER, runWebSearch, shouldRunWebSearch } from "@/lib/ai/search.server";
 import { getDeepResearchAccess } from "@/lib/ai/deep-research-access.mjs";
@@ -76,6 +77,7 @@ import {
 type ChatContentPart =
   { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
 
+
 type ToolCall = {
   id: string;
   type: "function";
@@ -93,6 +95,7 @@ type ToolResultMsg = {
 };
 type ChatMsg =
   { role: string; content: unknown; [key: string]: unknown } | AssistantMsg | ToolResultMsg;
+
 
 type ChainableQueryLike = {
   select: (columns: string) => ChainableQueryLike;
@@ -1153,9 +1156,23 @@ export const Route = createFileRoute("/api/chat")({
                 ...transformed,
               ],
             };
+
+            // Only enable reasoning when the user explicitly chose the
+            // reason mode  -  reasoning adds significant latency.
+            // Legacy Kova versions (<3.5) never use extended reasoning:
+            // they are intentionally "slightly less smart" than 3.5.
+            if (
+              m.reasoning &&
+              m.id === "high" &&
+              !IS_LEGACY_KOVA &&
+              supportsChatCompletionsReasoning(model)
+            ) {
+              body.reasoning = { effort: m.reasoning };
+
             // Cost control: cap output length per mode from the router config.
             if (routeDecision.maxOutputTokens > 0) {
               body.max_completion_tokens = routeDecision.maxOutputTokens;
+
             }
             // Only enable reasoning when the user explicitly chose a backed
             // reasoning mode. Every visible selector option maps to this real behavior.

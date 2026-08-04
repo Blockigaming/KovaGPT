@@ -289,8 +289,16 @@ export function chatModel(kind: ProviderModelKind = "balanced") {
   return config.chatModel;
 }
 
+
+export function supportsChatCompletionsReasoning(model: string): boolean {
+  const normalized = model.trim().toLowerCase();
+  if (!normalized) return false;
+  if (normalized.startsWith("gpt-4o")) return false;
+  return /^(o[134]|gpt-5)(?:-|$)/.test(normalized);
+
 export function utilityModel() {
   return modelForPolicy("utility").id;
+
 }
 
 export function imageModel() {
