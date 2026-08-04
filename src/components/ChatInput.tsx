@@ -158,7 +158,7 @@ export function ChatInput({
   const [recentQuery, setRecentQuery] = useState("");
   const [isDragActive, setIsDragActive] = useState(false);
   useEffect(() => {
-    if (!plusOpen) return;
+    if (!plusOpen || isMobileLayout) return;
     const onDoc = (e: MouseEvent) => {
       const target = e.target as Node;
       if (!plusWrapRef.current?.contains(target)) setPlusOpen(false);
@@ -175,7 +175,7 @@ export function ChatInput({
       document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onEsc);
     };
-  }, [plusOpen]);
+  }, [isMobileLayout, plusOpen]);
 
   useEffect(() => {
     const el = ref.current;
