@@ -64,7 +64,8 @@ test("chat viewport only autoscrolls near bottom and exposes jump-to-latest", ()
 test("message component keeps reachable assistant actions and safe streaming states", () => {
   assert.match(message, /StreamingStatus/);
   assert.match(message, /onRetry/);
-  assert.doesNotMatch(message, /readAloud|speechSynthesis|Read aloud|Volume2/);
+  assert.match(message, /canReadAloud/);
+  assert.match(message, /Read aloud/);
   assert.match(message, /saveItem/);
   assert.match(message, /MobileBottomSheet/);
   assert.match(message, /cleanAssistantText/);

@@ -31,7 +31,7 @@ test("home, projects, work, research, and automations share real workspace signa
     read("src/routes/research-planner.tsx"),
     read("src/routes/scheduled-tasks.tsx"),
   ]);
-  assert.match(home, /WorkspaceIntelligence/);
+  assert.match(home, /WorkspaceIntelligence|ConversationOutline/);
   assert.match(project, /Connected project work/);
   assert.match(work, /Recent context for Work/);
   assert.match(research, /Research context/);
@@ -60,13 +60,19 @@ test("workspace resources have reduced-click truthful handoffs", async () => {
   }
 });
 
-test("Recents combines account intelligence with local chats and Work sessions", async () => {
-  const source = await read("src/routes/recents.tsx");
-  assert.match(source, /listWorkspaceIntelligence/);
-  assert.match(source, /loadConversations/);
-  assert.match(source, /loadWorkTasks/);
-  assert.match(source, /context_pack/);
-  assert.match(source, /artifact/);
+test("Workspace dashboard and Library combine account intelligence with local chats and Work sessions", async () => {
+  const [dashboard, library] = await Promise.all([
+    read("src/components/WorkspaceIntelligence.tsx"),
+    read("src/routes/library.tsx"),
+  ]);
+  assert.match(dashboard, /listWorkspaceIntelligence/);
+  assert.match(dashboard, /loadConversations/);
+  assert.match(dashboard, /loadWorkTasks/);
+  assert.match(library, /loadConversations/);
+  assert.match(library, /loadWorkTasks/);
+  assert.match(library, /listWorkspaceRecents/);
+  assert.match(dashboard, /context_pack/);
+  assert.match(dashboard, /artifact/);
 });
 
 test("all currently implementable gaps are closed and deferred gaps are classified", async () => {

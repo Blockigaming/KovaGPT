@@ -34,7 +34,7 @@ test("archived conversations can be discovered, restored, and permanently remove
   const [dialog, store, sidebar, chat] = await Promise.all([
     read("src/components/ArchivedChatsDialog.tsx"),
     read("src/lib/chat-store.ts"),
-    read("src/components/Sidebar.tsx"),
+    read("src/components/SettingsDialog.tsx"),
     read("src/routes/index.tsx"),
   ]);
   assert.match(dialog, /Restore/);

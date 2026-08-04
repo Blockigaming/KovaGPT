@@ -25,6 +25,6 @@ test("shell removes decorative workspace mesh and sidebar uses blue selection in
   assert.doesNotMatch(shell, /className="kova-bg"/);
   assert.match(sidebar, /bg-\[var\(--kova-blue\)\]/);
   assert.match(sidebar, /group-focus-within:opacity-100/);
-  assert.match(sidebar, /new CustomEvent\("kova-open-lens"\)/);
-  assert.match(styles, /button\[aria-label="Open Kova Lens"\]\.fixed/);
+  assert.doesNotMatch(sidebar, /new CustomEvent\("kova-open-lens"\)/);
+  assert.doesNotMatch(styles, /button\[aria-label="Open Kova Lens"\]\.fixed/);
 });
