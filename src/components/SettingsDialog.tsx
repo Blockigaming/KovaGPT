@@ -551,7 +551,7 @@ export function SettingsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="kova-settings-dialog bg-background border border-border max-w-4xl max-h-[92vh] overflow-hidden flex flex-col gap-0 p-0 rounded-xl"
+        className="kova-settings-dialog kova-settings-surface bg-background border border-border max-w-4xl max-h-[92vh] overflow-hidden flex flex-col gap-0 p-0 rounded-xl"
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           if (window.innerWidth < 1024) {
@@ -566,7 +566,7 @@ export function SettingsDialog({
           document.querySelector<HTMLElement>('[aria-label="Open menu"]')?.focus();
         }}
       >
-        <DialogHeader className="px-5 sm:px-7 pt-5 pb-4 border-b border-border">
+        <DialogHeader className="kova-settings-header border-b border-border px-5 pb-4 pt-5 sm:px-7">
           <div className="flex items-center justify-between gap-3">
             <div>
               <DialogTitle className="text-xl font-semibold tracking-tight font-display">
@@ -607,10 +607,10 @@ export function SettingsDialog({
             value={tab}
             onValueChange={setTab}
             orientation="vertical"
-            className="flex-1 overflow-hidden flex flex-col md:flex-row"
+            className="kova-settings-layout flex flex-1 flex-col overflow-hidden md:flex-row"
           >
             {/* Mobile: horizontal scrolling section nav */}
-            <TabsList className="md:hidden flex w-full overflow-x-auto scrollbar-none justify-start gap-1 p-2 bg-muted/40 border-b border-border rounded-none h-auto shrink-0">
+            <TabsList className="kova-settings-mobile-nav md:hidden flex w-full overflow-x-auto scrollbar-none justify-start gap-1 p-2 bg-muted/40 border-b border-border rounded-none h-auto shrink-0">
               {TAB_GROUPS.flatMap((g) => g.tabs).map(({ v, icon: Icon, label }) => (
                 <TabsTrigger
                   key={v}
@@ -624,7 +624,7 @@ export function SettingsDialog({
             </TabsList>
 
             {/* Desktop: grouped sidebar */}
-            <TabsList className="hidden md:flex flex-col h-full w-64 shrink-0 overflow-y-auto items-stretch justify-start gap-4 p-3 bg-muted/40 border-r border-border rounded-none">
+            <TabsList className="kova-settings-nav hidden md:flex h-full w-64 flex-col shrink-0 overflow-y-auto items-stretch justify-start gap-4 p-3 bg-muted/40 border-r border-border rounded-none">
               {TAB_GROUPS.map((group) => (
                 <div key={group.title} className="flex flex-col gap-0.5">
                   <div className="px-2 pt-1 pb-1.5">
@@ -651,7 +651,7 @@ export function SettingsDialog({
               ))}
             </TabsList>
 
-            <div className="flex-1 overflow-hidden flex flex-col">
+            <div className="kova-settings-content flex flex-1 flex-col overflow-hidden">
               {/* GENERAL */}
               <TabsContent value="general" className="overflow-y-auto px-7 pb-8 space-y-6 py-5">
                 <section className="space-y-4">
