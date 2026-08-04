@@ -479,7 +479,13 @@ function ImagesPage() {
         }
         throw new Error(msg);
       }
-      if (typeof data.imageUrl !== "string" || !/^https?:\/\//i.test(data.imageUrl)) {
+      const isSupportedImageUrl =
+        typeof data.imageUrl === "string" &&
+        (/^https?:\/\//i.test(data.imageUrl) ||
+          /^data:image\/(?:png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/i.test(
+            data.imageUrl,
+          ));
+      if (!isSupportedImageUrl) {
         throw new Error("Image service returned an invalid image");
       }
       setResult(data.imageUrl);
