@@ -1,6 +1,8 @@
 import { chromium } from "playwright";
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
+import { lookup } from "node:dns/promises";
+import net from "node:net";
 const required = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "AGENT_WORKER_ID", "OPENAI_API_KEY"];
 for (const name of required) if (!process.env[name]) throw new Error(`${name} is required`);
 const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
@@ -8,6 +10,62 @@ const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_R
 });
 const worker = `${process.env.AGENT_WORKER_ID}:team`,
   sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const blockedHostnames = new Set(["localhost", "metadata.google.internal"]);
+function isPrivateAddress(address) {
+  if (net.isIPv4(address)) {
+    const parts = address.split(".").map((part) => Number.parseInt(part, 10));
+    const value = parts.reduce((acc, part) => (acc << 8) + part, 0) >>> 0;
+    return (
+      parts[0] === 0 ||
+      parts[0] === 10 ||
+      parts[0] === 127 ||
+      (parts[0] === 169 && parts[1] === 254) ||
+      (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
+      (parts[0] === 192 && parts[1] === 168) ||
+      (value >= 0x64400000 && value <= 0x647fffff) ||
+      (value >= 0x7f000000 && value <= 0x7fffffff) ||
+      (value >= 0xa9fe0000 && value <= 0xa9feffff) ||
+      (value >= 0xac100000 && value <= 0xac1fffff) ||
+      (value >= 0xc0000000 && value <= 0xc00000ff) ||
+      (value >= 0xc0000200 && value <= 0xc00002ff) ||
+      (value >= 0xc0a80000 && value <= 0xc0a8ffff) ||
+      (value >= 0xc6120000 && value <= 0xc613ffff) ||
+      (value >= 0xc6336400 && value <= 0xc63364ff) ||
+      (value >= 0xcb007100 && value <= 0xcb0071ff) ||
+      value >= 0xe0000000
+    );
+  }
+  if (net.isIPv6(address)) {
+    const normalized = address.toLowerCase();
+    return (
+      normalized === "::" ||
+      normalized === "::1" ||
+      normalized.startsWith("fc") ||
+      normalized.startsWith("fd") ||
+      normalized.startsWith("fe80:") ||
+      normalized.startsWith("ff") ||
+      normalized.startsWith("2001:db8:")
+    );
+  }
+  return true;
+}
+async function assertPublicHttpsUrl(rawUrl, allowedHosts) {
+  const url = new URL(rawUrl);
+  if (url.protocol !== "https:") throw new Error("https_required");
+  const host = url.hostname.toLowerCase();
+  if (
+    blockedHostnames.has(host) ||
+    [...blockedHostnames].some((domain) => host.endsWith(`.${domain}`))
+  )
+    throw new Error("domain_blocked");
+  if (allowedHosts?.size && !allowedHosts.has(host)) throw new Error("domain_not_allowed");
+  const addresses = net.isIP(host)
+    ? [{ address: host }]
+    : await lookup(host, { all: true, verbatim: true });
+  if (!addresses.length || addresses.some(({ address }) => isPrivateAddress(address)))
+    throw new Error("private_network_blocked");
+  return url;
+}
 const redact = (value) =>
   String(value)
     .replace(/(password|token|secret|authorization)\s*[:=]\s*\S+/gi, "$1=[REDACTED]")
@@ -42,7 +100,7 @@ async function claim() {
     const { count } = await db
       .from("agent_run_tasks")
       .select("id", { count: "exact", head: true })
-      .eq("run_id", candidate.run_id)
+      .eq("owner_id", candidate.owner_id)
       .in("status", ["leased", "running"]);
     if ((count ?? 0) >= limit) continue;
     const { data } = await db
@@ -145,13 +203,31 @@ async function browse(task) {
     ...`${task.instructions}\n${task.agent_runs.objective}`.matchAll(/https:\/\/[^\s)\]]+/g),
   ].map((match) => match[0]);
   if (!urls.length) throw new Error("browser_source_url_required");
+  const initialUrls = [];
+  const allowedHosts = new Set();
+  for (const url of urls.slice(0, 5)) {
+    const parsed = await assertPublicHttpsUrl(url);
+    initialUrls.push(parsed.toString());
+    allowedHosts.add(parsed.hostname.toLowerCase());
+  }
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ acceptDownloads: false, serviceWorkers: "block" });
+  await context.route("**/*", async (route) => {
+    const request = route.request();
+    if (!request.isNavigationRequest()) return route.continue();
+    try {
+      await assertPublicHttpsUrl(request.url(), allowedHosts);
+      return route.continue();
+    } catch {
+      return route.abort("blockedbyclient");
+    }
+  });
   try {
     const evidence = [];
-    for (const url of urls.slice(0, 5)) {
+    for (const url of initialUrls) {
       const page = await context.newPage();
       await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+      await assertPublicHttpsUrl(page.url(), allowedHosts);
       const text = redact(await page.locator("body").innerText());
       const shot = await page.screenshot();
       const hash = createHash("sha256").update(shot).digest("hex");
@@ -230,13 +306,22 @@ async function release(task) {
         .update({ status: "queued", available_at: new Date().toISOString() })
         .eq("id", item.id)
         .eq("status", "waiting");
+  const { data: run } = await db
+    .from("agent_runs")
+    .select("status")
+    .eq("id", task.run_id)
+    .maybeSingle();
+  if (!["queued", "running"].includes(run?.status)) return;
   const unfinished = (data ?? []).some((item) => !["completed", "cancelled"].includes(item.status));
   if (!unfinished) {
-    await db
+    const { data: completedRun } = await db
       .from("agent_runs")
       .update({ status: "completed", updated_at: new Date().toISOString() })
-      .eq("id", task.run_id);
-    await event(task, "result", { status: "completed", type: "agent_team" });
+      .eq("id", task.run_id)
+      .in("status", ["queued", "running"])
+      .select("id")
+      .maybeSingle();
+    if (completedRun) await event(task, "result", { status: "completed", type: "agent_team" });
   }
 }
 async function execute(task) {
@@ -259,10 +344,15 @@ async function execute(task) {
             task.agent_role === "browser" ? Promise.reject(error) : [],
           )
         : [];
-    await db.from("agent_run_tasks").update({ progress: 60 }).eq("id", task.id);
+    await db
+      .from("agent_run_tasks")
+      .update({ progress: 60 })
+      .eq("id", task.id)
+      .eq("lease_owner", worker)
+      .eq("status", "running");
     const output = await generate(task, evidence, dependencies, context);
     if (task.checkpoint) {
-      await db
+      const { data: checkpointTask } = await db
         .from("agent_run_tasks")
         .update({
           status: "approval_needed",
@@ -272,8 +362,20 @@ async function execute(task) {
           lease_owner: null,
           lease_expires_at: null,
         })
-        .eq("id", task.id);
-      await db.from("agent_runs").update({ status: "approval_needed" }).eq("id", task.run_id);
+        .eq("id", task.id)
+        .eq("lease_owner", worker)
+        .eq("status", "running")
+        .select("id")
+        .maybeSingle();
+      if (!checkpointTask) return;
+      const { data: approvalRun } = await db
+        .from("agent_runs")
+        .update({ status: "approval_needed" })
+        .eq("id", task.run_id)
+        .in("status", ["queued", "running"])
+        .select("id")
+        .maybeSingle();
+      if (!approvalRun) return;
       await event(task, "approval", {
         taskId: task.id,
         title: task.title,
@@ -282,7 +384,7 @@ async function execute(task) {
       });
       return;
     }
-    await db
+    const { data: completedTask } = await db
       .from("agent_run_tasks")
       .update({
         status: "completed",
@@ -293,7 +395,18 @@ async function execute(task) {
         lease_owner: null,
         lease_expires_at: null,
       })
-      .eq("id", task.id);
+      .eq("id", task.id)
+      .eq("lease_owner", worker)
+      .eq("status", "running")
+      .select("id")
+      .maybeSingle();
+    if (!completedTask) return;
+    const { data: parentRun } = await db
+      .from("agent_runs")
+      .select("status")
+      .eq("id", task.run_id)
+      .maybeSingle();
+    if (!["queued", "running"].includes(parentRun?.status)) return;
     await event(task, "artifact", {
       taskId: task.id,
       role: task.agent_role,
@@ -305,7 +418,7 @@ async function execute(task) {
   } catch (error) {
     const retry = task.attempt < task.max_attempts,
       delay = Math.min(60_000, 1000 * 2 ** task.attempt);
-    await db
+    const { data: failedTask } = await db
       .from("agent_run_tasks")
       .update({
         status: retry ? "retry_wait" : "failed",
@@ -313,13 +426,23 @@ async function execute(task) {
         lease_owner: null,
         lease_expires_at: null,
       })
-      .eq("id", task.id);
+      .eq("id", task.id)
+      .eq("lease_owner", worker)
+      .in("status", ["leased", "running"])
+      .select("id")
+      .maybeSingle();
+    if (!failedTask) return;
     await event(task, "error", {
       taskId: task.id,
       code: redact(error instanceof Error ? error.message : "agent_task_failed"),
       retry,
     });
-    if (!retry) await db.from("agent_runs").update({ status: "failed" }).eq("id", task.run_id);
+    if (!retry)
+      await db
+        .from("agent_runs")
+        .update({ status: "failed" })
+        .eq("id", task.run_id)
+        .in("status", ["queued", "running"]);
   }
 }
 while (true) {
