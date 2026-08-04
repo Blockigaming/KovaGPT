@@ -182,20 +182,11 @@ export function getAiProviderConfig(): ProviderConfig {
     timeoutMs: parseTimeout(env("KOVA_AI_TIMEOUT_MS")),
     capabilities: parseCapabilities(env("KOVA_AI_CAPABILITIES")),
 
-    configured: Boolean(env("OPENAI_API_KEY")),
-
     configured: Boolean(env("LOVABLE_API_KEY") ?? env("OPENAI_API_KEY")),
-
   };
 }
 
 export function validateAiProviderConfig(): ProviderErrorEnvelope | null {
-
-  if (env("OPENAI_API_KEY")) return null;
-  return {
-    error: "AI provider is not configured. Set OPENAI_API_KEY on the server.",
-    code: "missing_openai_api_key",
-
   let generationEnabled: boolean;
   try {
     generationEnabled = getAiRuntimeConfig().generationEnabled;
@@ -265,12 +256,6 @@ export function missingAiProviderResponse(fallback?: JsonObject): Response | nul
     { status: missing.status, headers: NO_STORE_HEADERS },
   );
 }
-
-function headers() {
-  const apiKey = env("OPENAI_API_KEY");
-  if (!apiKey) throw new AiProviderError(validateAiProviderConfig()!);
-  return {
-    Authorization: `Bearer ${apiKey}`,
 
 function headers(): Record<string, string> {
   const key = env("LOVABLE_API_KEY") ?? env("OPENAI_API_KEY");
