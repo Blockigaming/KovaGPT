@@ -254,21 +254,14 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     providerRevoked = response.ok;
   }
 
-  await db.from("integration_deletion_requests").insert({
-
   const { error: deletionRequestError } = await db.from("integration_deletion_requests").insert({
-
     owner_id: ownerId,
     linked_account_id: account.id,
     status: providerRevoked ? "provider_revoked" : "pending",
   });
-
-  await db
-
   if (deletionRequestError) throw new Error("linked_account_deletion_request_failed");
 
   const { error: syncCancellationError } = await db
-
     .from("integration_sync_jobs")
     .update({ status: "cancelled" })
     .eq("owner_id", ownerId)
@@ -285,16 +278,13 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
       deleted_at: new Date().toISOString(),
     })
     .eq("id", account.id)
-
-    .eq("owner_id", ownerId);
-  await db.from("integration_audit_events").insert({
-
     .eq("owner_id", ownerId)
     .select("id")
     .maybeSingle();
   if (credentialDeletionError || !purgedAccount) throw new Error("linked_account_purge_failed");
 
   const { error: auditError } = await db.from("integration_audit_events").insert({
+
 
     owner_id: ownerId,
     linked_account_id: account.id,

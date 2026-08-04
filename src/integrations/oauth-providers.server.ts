@@ -1,7 +1,4 @@
 export type OAuthProviderId =
-
-  "microsoft" | "github" | "slack" | "notion" | "linear" | "dropbox" | "box";
-
   | "microsoft"
   | "github"
   | "slack"

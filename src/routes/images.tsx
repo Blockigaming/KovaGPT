@@ -486,9 +486,10 @@ function ImagesPage() {
       if (!isSupportedImageUrl) {
         throw new Error("Image service returned an invalid image");
       }
-      setResult(data.imageUrl);
+      const imageUrl = data.imageUrl as string;
+      setResult(imageUrl);
       setResultPrompt(trimmed);
-      addToHistory(trimmed, data.imageUrl);
+      addToHistory(trimmed, imageUrl);
       setPrompt("");
     } catch (e) {
       if (controller.signal.aborted || generation !== generationRef.current) return;

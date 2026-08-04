@@ -5,6 +5,11 @@ import { createStripeClient, type StripeEnv } from "@/lib/stripe.server";
 import { disconnectGoogle } from "@/lib/google-oauth.server";
 
 import type { Database } from "@/integrations/supabase/types";
+import { disconnectAllGitHub } from "@/lib/github-oauth.server";
+import { disconnectAllOAuth } from "@/integrations/oauth-lifecycle.server";
+import { disconnectAllFinance } from "@/finances/plaid.server";
+import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
+import { BodyReadError, readUtf8BodyBounded } from "@/lib/endpoint-reliability.mjs";
 
 const TERMINAL_SUBSCRIPTION_STATES = new Set(["canceled", "incomplete_expired"]);
 const USER_PREFIX_STORAGE_BUCKETS = ["library-images", "agent-evidence"] as const;
@@ -82,14 +87,8 @@ async function deleteOwnedStorageObjects(supabaseAdmin: AdminClient, userId: str
   }
 
   await removeStoragePaths(supabaseAdmin, PROJECT_FILES_BUCKET, projectFilePaths);
+}
 
-import { disconnectAllGitHub } from "@/lib/github-oauth.server";
-import { disconnectAllOAuth } from "@/integrations/oauth-lifecycle.server";
-import { disconnectAllFinance } from "@/finances/plaid.server";
-import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
-import { BodyReadError, readUtf8BodyBounded } from "@/lib/endpoint-reliability.mjs";
-
-const TERMINAL_SUBSCRIPTION_STATES = new Set(["canceled", "incomplete_expired"]);
 
 const ACCOUNT_DELETION_BAN_DURATION = "876000h";
 
@@ -169,12 +168,12 @@ async function saveDeletionProgress(
     return false;
   }
   return true;
+}
 
 const MAX_DELETE_BODY_BYTES = 1_024;
 
 function jsonError(error: string, status: number) {
   return Response.json({ error }, { status, headers: { "Cache-Control": "no-store" } });
-
 }
 
 export const Route = createFileRoute("/api/account")({
@@ -295,11 +294,6 @@ export const Route = createFileRoute("/api/account")({
                 pending: true,
               },
               { status: 202 },
-
-            return jsonError(
-              "Your subscription could not be canceled, so your account was not deleted. Manage billing or contact support.",
-              502,
-
             );
           }
         }
@@ -387,12 +381,6 @@ export const Route = createFileRoute("/api/account")({
             },
             { status: 202 },
           );
-
-          console.error("[account-delete] auth deletion failed", {
-            code: deleteError.code,
-          });
-          return jsonError("Account deletion failed. Your account remains active.", 500);
-
         }
         return new Response(null, {
           status: 204,

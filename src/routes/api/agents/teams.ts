@@ -1,9 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 
-import { controlAgentTeamRun, getAgentTeamRuns } from "@/agents/team.server";
-import type { AgentTaskInput } from "@/agents/team";
-
 import { controlAgentTeamRun, createAgentTeamRun, getAgentTeamRuns } from "@/agents/team.server";
 import { validateTaskGraph } from "@/agents/team";
 import {
@@ -69,23 +66,6 @@ export const Route = createFileRoute("/api/agents/teams")({
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
 
-        const body = (await request.json().catch(() => null)) as {
-          objective?: string;
-          projectId?: string;
-          idempotencyKey?: string;
-          tasks?: AgentTaskInput[];
-          context?: string[];
-        } | null;
-        if (!body?.objective || !body.idempotencyKey || !Array.isArray(body.tasks))
-          return Response.json({ error: "invalid_agent_team" }, { status: 400 });
-        return Response.json(
-          { error: "browser_agent_unavailable" },
-          {
-            status: 503,
-            headers: { "Cache-Control": "no-store", "Retry-After": "3600" },
-          },
-        );
-
         let body: ReturnType<typeof parseAgentTeamCreatePayload>;
         try {
           body = parseAgentTeamCreatePayload(
@@ -147,10 +127,6 @@ export const Route = createFileRoute("/api/agents/teams")({
         } catch (error) {
           const message = error instanceof Error ? error.message : "agent_control_failed";
           return Response.json(
-
-            { error: message },
-            { status: message === "browser_agent_unavailable" ? 503 : 400 },
-
             {
               error: TEAM_CONTROL_ERRORS.has(message) ? message : "agent_control_failed",
             },
@@ -158,7 +134,6 @@ export const Route = createFileRoute("/api/agents/teams")({
               status: TEAM_CONTROL_ERRORS.has(message) ? 400 : 500,
               headers: { "Cache-Control": "no-store" },
             },
-
           );
         }
       },

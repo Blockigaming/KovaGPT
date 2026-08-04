@@ -15,7 +15,6 @@ const isLovableSandbox = Boolean(
 // Lovable Cloud runs the public TanStack Start Vite stack directly. Keep the
 // Start plugin ahead of React and avoid the legacy private Lovable adapter;
 // this is also the supported Nitro/h3-v2 production configuration.
-export default defineConfig({
 
 const useNodeBrowserPreview = process.env.KOVA_BROWSER_PREVIEW === "node";
 const buildSha = process.env.KOVA_BUILD_SHA || process.env.GITHUB_SHA || "unknown";
@@ -95,34 +94,5 @@ export default defineConfig(({ mode }) => {
       },
     },
   },
-
-  // TanStack Start imports its H3 v2 release through the npm alias `h3-v2`.
-  // Lovable's runtime only installs declared production package names, so an
-  // external alias import survives the build but cannot be resolved at boot.
-  // Bundle the alias into the SSR output instead of leaving that runtime edge.
-  ssr: {
-    noExternal: ["h3-v2"],
-  },
-
-          if (
-            id.includes("/react-markdown/") ||
-            id.includes("/remark-") ||
-            id.includes("/micromark") ||
-            id.includes("/mdast-") ||
-            id.includes("/hast-") ||
-            id.includes("/unist-")
-          )
-            return "vendor-markdown";
-          if (id.includes("/@radix-ui/") || id.includes("/cmdk/") || id.includes("/vaul/"))
-            return "vendor-overlays";
-          if (id.includes("/@clerk/") || id.includes("/@supabase/")) return "vendor-account";
-          if (id.includes("/@tanstack/")) return "vendor-tanstack";
-          if (id.includes("/lucide-react/")) return "vendor-icons";
-          if (id.includes("/react-dom/") || id.includes("/react/")) return "vendor-react";
-        },
-      },
-    },
-  },
   };
-
 });

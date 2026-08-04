@@ -25,6 +25,24 @@ import {
   Search,
   Share2,
 } from "lucide-react";
+
+const assistantCapabilities = [
+  {
+    label: "Summarize a file",
+    icon: FileText,
+    prompt: "Summarize the attached file into the key points, decisions, and action items.",
+  },
+  {
+    label: "Research a topic",
+    icon: Search,
+    prompt: "Research this topic and give me a concise briefing with sources: ",
+  },
+  {
+    label: "Make a plan",
+    icon: ListChecks,
+    prompt: "Help me build a step by step plan for: ",
+  },
+] as const;
 import { Sidebar } from "@/components/Sidebar";
 
 import { ChatMessage } from "@/components/ChatMessage";

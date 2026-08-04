@@ -820,13 +820,9 @@ export function SettingsDialog({
                           onChange({
                             ...settings,
                             rememberAcross: value,
-
-                            memoryConsentVersion: value ? SAVED_MEMORY_CONSENT_VERSION : undefined,
-
                             memoryConsentVersion: value
                               ? CURRENT_MEMORY_CONSENT_VERSION
                               : settings.memoryConsentVersion,
-
                           });
                         }}
                       />
