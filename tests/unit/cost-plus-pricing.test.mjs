@@ -36,7 +36,13 @@ const base = {
     collectionPercentage: 0.03,
     collectionFixed: 0.01,
   },
-  pricingVersion: { id: "price-v1", status: "approved" },
+  pricingVersion: {
+    id: "price-v1",
+    status: "approved",
+    marginFloor: 0.5,
+    effectiveAt: "2026-01-01",
+    expiresAt: "2027-01-01",
+  },
   minimumRequestCharge: 0.01,
   roundingIncrement: 0.0001,
   riskBufferPercentage: 0.15,
@@ -78,4 +84,115 @@ test("reconciliation flags below-floor requests without retroactive charging", (
   assert.equal(result.finalCustomerCharge, quote.customerCharge);
   assert.equal(result.belowFloor, true);
   assert.ok(result.requiredActions.includes("block_or_reprice_new_usage"));
+});
+
+test("promotion budgets must be finite and funded before crossing the floor", () => {
+  assert.throws(
+    () =>
+      quoteRequest({
+        ...base,
+        promotion: { discount: 0.1, administratorAuthorized: true, budgetId: "launch" },
+      }),
+    /promotion_below_margin_floor/,
+  );
+  assert.throws(
+    () =>
+      quoteRequest({
+        ...base,
+        promotion: {
+          discount: 0.1,
+          administratorAuthorized: true,
+          budgetId: "launch",
+          availableBudget: Number.POSITIVE_INFINITY,
+        },
+      }),
+    /promotion_below_margin_floor/,
+  );
+});
+
+test("configured pricing-version margin floors are enforced", () => {
+  const quote = quoteRequest({
+    ...base,
+    riskBufferPercentage: 0,
+    pricingVersion: { ...base.pricingVersion, marginFloor: 0.75 },
+  });
+  assert.equal(quote.marginFloor, 0.75);
+  assert.ok(quote.projectedGrossMarginPercentage >= 0.75);
+});
+
+test("pricing versions outside their effective window fail closed", () => {
+  assert.throws(
+    () =>
+      quoteRequest({
+        ...base,
+        pricingVersion: { ...base.pricingVersion, effectiveAt: "2026-09-01" },
+      }),
+    /pricing_version_not_effective/,
+  );
+  assert.throws(
+    () =>
+      quoteRequest({
+        ...base,
+        pricingVersion: { ...base.pricingVersion, expiresAt: "2026-08-01" },
+      }),
+    /pricing_version_expired/,
+  );
+});
+
+test("negative or non-finite allowances fail closed", () => {
+  assert.throws(
+    () => quoteRequest({ ...base, allowances: { ...base.allowances, fixed: { compute: -1 } } }),
+    /invalid_fixed_allowance:compute/,
+  );
+  assert.throws(
+    () =>
+      quoteRequest({
+        ...base,
+        allowances: { ...base.allowances, percentages: { fraud: Number.NaN } },
+      }),
+    /invalid_percentage_allowance:fraud/,
+  );
+});
+
+test("emergency controls match every supported request scope", () => {
+  for (const [scopeType, scopeId] of [
+    ["global", "global"],
+    ["provider", "provider-a"],
+    ["model", "model-a"],
+    ["capability", "responses"],
+    ["plan", "pro"],
+    ["organization", "org-1"],
+    ["project", "proj-1"],
+    ["key", "key-1"],
+  ]) {
+    assert.throws(
+      () =>
+        quoteRequest({
+          ...base,
+          usage: {
+            ...base.usage,
+            planId: "pro",
+            organizationId: "org-1",
+            projectId: "proj-1",
+            apiKeyId: "key-1",
+          },
+          emergencyControls: [{ id: `${scopeType}-block`, active: true, scopeType, scopeId }],
+        }),
+      /paid_capability_disabled/,
+    );
+  }
+});
+
+test("reconciliation rejects missing or non-finite actual upstream costs", () => {
+  const quote = quoteRequest(base);
+  assert.throws(
+    () => reconcileCharge({ quote }),
+    (error) =>
+      error instanceof PricingUnavailableError && error.code === "actual_upstream_cost_invalid",
+  );
+  assert.throws(
+    () => reconcileCharge({ quote, actualUpstreamCost: Number.NaN }),
+    (error) =>
+      error instanceof PricingUnavailableError && error.code === "actual_upstream_cost_invalid",
+  );
 });
