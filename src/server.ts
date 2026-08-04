@@ -31,7 +31,7 @@ function hardenResponse(response: Response): Response {
     "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
     "Cross-Origin-Resource-Policy": "same-origin",
     "Origin-Agent-Cluster": "?1",
-    "Permissions-Policy": "camera=(), geolocation=(self), microphone=(), payment=(self), usb=()",
+    "Permissions-Policy": "camera=(), geolocation=(self), microphone=(self), payment=(self), usb=()",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
     "X-Content-Type-Options": "nosniff",

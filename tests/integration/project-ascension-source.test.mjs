@@ -34,6 +34,9 @@ test("archived conversations can be discovered, restored, and permanently remove
   const [settings, store, chat] = await Promise.all([
     read("src/components/SettingsDialog.tsx"),
     read("src/lib/chat-store.ts"),
+
+    read("src/components/SettingsDialog.tsx"),
+
     read("src/routes/index.tsx"),
   ]);
   assert.match(settings, /aria-label="Archived chats"/);

@@ -33,5 +33,7 @@ test("shell removes decorative effects and keeps navigation neutral and reachabl
   assert.match(sidebar, /group-focus-within:opacity-100/);
   assert.doesNotMatch(sidebar, /new CustomEvent\("kova-open-lens"\)/);
   assert.doesNotMatch(styles, /button\[aria-label="Open Kova Lens"\]\.fixed/);
+
   assert.match(shell, /addEventListener\("kova-open-settings", handleOpenSettings\)/);
+
 });
