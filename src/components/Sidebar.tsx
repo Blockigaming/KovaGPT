@@ -327,8 +327,6 @@ export function Sidebar({
         </div>
       ) : null}
 
-
-
       <aside
         ref={drawerRef}
         style={
@@ -397,7 +395,6 @@ export function Sidebar({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search titles, messages, or operators…"
                 className="h-10 w-full rounded-lg border border-border/60 bg-background px-3 text-sm outline-none transition focus:border-ring focus-visible:ring-2 focus-visible:ring-ring"
-
               />
             </div>
           ) : null}
@@ -431,12 +428,7 @@ export function Sidebar({
             {showSignedIn ? renderNavLink("/library", "Library", FolderOpen) : null}
             {renderNavLink("/images", "Images", ImageIcon)}
             {showSignedIn && (tier === "plus" || tier === "pro")
-              ? renderNavLink(
-                  "/scheduled-tasks",
-                  "Tasks",
-                  Calendar,
-                  isOn("/scheduled-tasks"),
-                )
+              ? renderNavLink("/scheduled-tasks", "Tasks", Calendar, isOn("/scheduled-tasks"))
               : null}
             {showSignedIn && tier !== "plus" && tier !== "pro"
               ? renderNavLink("/pricing", "Subscriptions", CreditCard, isOn("/pricing"))
@@ -595,7 +587,6 @@ export function Sidebar({
                 ) : null}
               </div>
             ) : null}
-
           </div>
         </div>
       </aside>
