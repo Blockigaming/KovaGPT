@@ -216,7 +216,6 @@ export function Sidebar({
             autoFocus
             value={renameDraft}
             onChange={(event) => setRenameDraft(event.target.value)}
-            onBlur={() => finishRename(c)}
             onKeyDown={(event) => {
               if (event.key !== "Escape") return;
               event.preventDefault();
