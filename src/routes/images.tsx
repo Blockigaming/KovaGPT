@@ -504,7 +504,7 @@ function ImagesPage() {
   };
 
   return (
-    <div className="flex h-dvh w-full bg-background text-foreground">
+    <div className="kova-app-shell kova-images-shell flex h-dvh w-full bg-background text-foreground">
       <Sidebar
         conversations={[]}
         activeId={null}
@@ -517,9 +517,15 @@ function ImagesPage() {
         onOpenHelp={openHelp}
       />
 
+
+      <main className="kova-images-main flex min-w-0 flex-1 flex-col">
+        <header className="kova-images-topbar kova-topbar flex h-14 shrink-0 items-center px-3">
+          {!sidebarOpen && !isSignedIn && (
+
       <main className="flex-1 flex flex-col min-w-0">
         <header className="h-14 flex items-center px-3 shrink-0">
           {!sidebarOpen && (
+
             <button
               onClick={() => setSidebarOpen((v) => !v)}
               className="p-2 rounded-lg hover:bg-accent transition mr-1"
@@ -547,6 +553,10 @@ function ImagesPage() {
             )}
           </div>
         </header>
+
+
+        <div className="kova-images-scroll flex-1 overflow-y-auto">
+          <div className="kova-images-page kova-page mx-auto max-w-6xl px-4 pb-40 pt-6 sm:px-6">
 
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-2 pb-24">
@@ -604,6 +614,7 @@ function ImagesPage() {
               </div>
             </form>
 
+
             {/* Create an image */}
             <section className="mt-10">
               <div className="mb-3 flex items-center justify-between gap-3">
@@ -637,9 +648,15 @@ function ImagesPage() {
                       key={p.label}
                       type="button"
                       onClick={() => applyPreset(p)}
+
+                      className="kova-image-preset group flex w-[128px] shrink-0 flex-col items-start focus:outline-none"
+                    >
+                      <div className="kova-image-preset-preview relative h-[176px] w-[128px] overflow-hidden rounded-2xl bg-muted ring-1 ring-border/60">
+
                       className="group flex flex-col items-start w-[160px] shrink-0 focus:outline-none"
                     >
                       <div className="relative w-[160px] h-[160px] rounded-2xl overflow-hidden ring-1 ring-border/60 bg-muted">
+
                         <img
                           src={p.image}
                           alt={p.label}
@@ -818,6 +835,52 @@ function ImagesPage() {
               )}
             </section>
           </div>
+        </div>
+
+        {/* Bottom composer */}
+        <div className="kova-images-composer-dock sticky bottom-0">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              generate(prompt);
+            }}
+            className="max-w-3xl mx-auto px-4 sm:px-6 py-3"
+          >
+            <div className="kova-images-composer flex items-end gap-2 rounded-2xl border border-border bg-card px-3 py-2.5">
+              <textarea
+                ref={inputRef}
+                value={prompt}
+                aria-label="Describe the image to generate"
+                maxLength={2000}
+                onChange={(e) => setPrompt(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                    e.preventDefault();
+                    generate(prompt);
+                  }
+                }}
+                rows={1}
+                placeholder="Describe an image"
+                spellCheck={false}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                className="flex-1 bg-transparent outline-none border-0 focus:ring-0 focus:outline-none text-[15px] placeholder:text-muted-foreground resize-none py-1.5 max-h-40"
+              />
+              <button
+                type="submit"
+                disabled={!prompt.trim() || loading}
+                className="w-11 h-11 rounded-full bg-foreground text-background flex items-center justify-center disabled:opacity-30 hover:opacity-90 transition shrink-0"
+                aria-label="Generate"
+              >
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <ArrowUp className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+          </form>
         </div>
 
       </main>

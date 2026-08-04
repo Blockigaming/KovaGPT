@@ -9,6 +9,7 @@ import {
   LifeBuoy,
   MoreHorizontal,
   PanelLeft,
+  Pencil,
   Pin,
   PinOff,
   Search,
@@ -48,6 +49,7 @@ export function Sidebar({
   onSelect,
   onNew,
   onDelete,
+  onRename,
   onShare,
   onDuplicate,
   onArchive,
@@ -62,6 +64,7 @@ export function Sidebar({
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
+  onRename?: (id: string, title: string) => void;
   onShare?: (id: string) => void;
   onDuplicate?: (id: string) => void;
   onArchive?: (id: string) => void;
@@ -77,6 +80,8 @@ export function Sidebar({
   const lastFocusedRef = useRef<HTMLElement | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
 
   const showSignedIn = isLoaded && isSignedIn;
   const showSignedOut = isLoaded && !isSignedIn;
@@ -150,7 +155,12 @@ export function Sidebar({
   const labelClass = collapsed ? "sr-only" : "truncate";
   const iconOnly = collapsed ? "justify-center px-0" : "gap-2.5 px-2.5";
   const navItemClass = (active: boolean) =>
+  const navItemClass = (active: boolean) =>
     `kova-nav-row relative flex h-[38px] items-center rounded-lg py-1 text-sm transition-colors duration-100 ${iconOnly} ${
+      active
+        ? "bg-sidebar-active font-medium text-foreground"
+        : "text-sidebar-foreground hover:bg-sidebar-hover"
+    }`;
       active
         ? "bg-sidebar-active text-foreground font-medium"
         : "text-sidebar-foreground hover:bg-sidebar-hover"
@@ -177,7 +187,19 @@ export function Sidebar({
   const pinned = filtered
     .filter((c) => c.pinned)
     .sort((a, b) => (b.pinnedAt ?? 0) - (a.pinnedAt ?? 0));
-  const recents = filtered.filter((c) => !c.pinned);
+  const recents = filtered.filter((c) => !c.pinned).sort((a, b) => b.updatedAt - a.updatedAt);
+
+  const beginRename = (conversation: Conversation) => {
+    setRenamingId(conversation.id);
+    setRenameDraft(conversation.title);
+  };
+
+  const finishRename = (conversation: Conversation) => {
+    const title = renameDraft.trim();
+    if (title && title !== conversation.title) onRename?.(conversation.id, title);
+    setRenamingId(null);
+    setRenameDraft("");
+  };
 
   const renderRow = (c: Conversation) => (
     <div
@@ -186,20 +208,50 @@ export function Sidebar({
         activeId === c.id ? "bg-sidebar-active" : "hover:bg-sidebar-hover/60"
       }`}
     >
-      <button
-        type="button"
-        className="flex min-w-0 flex-1 items-center gap-1.5 rounded px-1 py-1.5 text-left focus-visible:ring-2 focus-visible:ring-ring"
-        onClick={() => {
-          onSelect(c.id);
-          closeAfterMobileNavigation();
-        }}
-        aria-label={`Open chat ${c.title}`}
-        aria-current={activeId === c.id ? "page" : undefined}
-        title={c.title}
-      >
-        {c.pinned ? <Pin className="h-3 w-3 shrink-0 fill-current text-muted-foreground" /> : null}
-        <span className="min-w-0 flex-1 truncate">{c.title}</span>
-      </button>
+      {renamingId === c.id ? (
+        <form
+          className="min-w-0 flex-1"
+          onSubmit={(event) => {
+            event.preventDefault();
+            finishRename(c);
+          }}
+        >
+          <input
+            autoFocus
+            value={renameDraft}
+            onChange={(event) => setRenameDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== "Escape") return;
+              event.preventDefault();
+              setRenamingId(null);
+              setRenameDraft("");
+            }}
+            aria-label={`Rename ${c.title}`}
+            className="h-8 w-full rounded-md border border-ring bg-background px-2 text-sm outline-none ring-2 ring-ring/20"
+            maxLength={120}
+          />
+          <button type="submit" className="sr-only">
+            Save name
+          </button>
+        </form>
+      ) : (
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-center gap-1.5 rounded px-1 py-1.5 text-left focus-visible:ring-2 focus-visible:ring-ring"
+          onClick={() => {
+            onSelect(c.id);
+            closeAfterMobileNavigation();
+          }}
+          aria-label={`Open chat ${c.title}`}
+          aria-current={activeId === c.id ? "page" : undefined}
+          title={c.title}
+        >
+          {c.pinned ? (
+            <Pin className="h-3 w-3 shrink-0 fill-current text-muted-foreground" />
+          ) : null}
+          <span className="min-w-0 flex-1 truncate">{c.title}</span>
+        </button>
+      )}
       {!collapsed ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -212,6 +264,11 @@ export function Sidebar({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44" onClick={(e) => e.stopPropagation()}>
+            {onRename ? (
+              <DropdownMenuItem onClick={() => beginRename(c)}>
+                <Pencil className="mr-2 h-4 w-4" /> Rename
+              </DropdownMenuItem>
+            ) : null}
             {onTogglePin ? (
               <DropdownMenuItem onClick={() => onTogglePin(c.id)}>
                 {c.pinned ? <PinOff className="mr-2 h-4 w-4" /> : <Pin className="mr-2 h-4 w-4" />}
@@ -259,7 +316,11 @@ export function Sidebar({
 
       {collapsed && showSignedIn ? (
         <div
+
+          className="kova-sidebar-rail hidden h-[100dvh] w-[52px] shrink-0 flex-col items-center gap-1 border-r border-border/60 bg-sidebar pb-[max(.625rem,var(--safe-bottom))] pt-[max(.5rem,var(--safe-top))] lg:flex"
+
           className="kova-collapsed-sidebar hidden h-[100dvh] w-16 shrink-0 flex-col items-center gap-1 border-r border-border/60 bg-sidebar pb-[max(.625rem,var(--safe-bottom))] pt-[max(.5rem,var(--safe-top))] md:flex"
+
           aria-label="Collapsed navigation"
         >
           <button
@@ -289,6 +350,7 @@ export function Sidebar({
           >
             <Search className="h-[18px] w-[18px]" />
           </button>
+
           <Link
             to="/images"
             className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring aria-[current=page]:bg-sidebar-hover"
@@ -297,6 +359,7 @@ export function Sidebar({
           >
             <ImageIcon className="h-[18px] w-[18px]" />
           </Link>
+
           <div className="mt-auto flex flex-col items-center gap-1">
             <div onClick={(e) => e.stopPropagation()}>
               <UserButton />
@@ -305,8 +368,6 @@ export function Sidebar({
         </div>
       ) : null}
 
-
-
       <aside
         ref={drawerRef}
         style={
@@ -314,10 +375,18 @@ export function Sidebar({
             "--sidebar-expanded": `${EXPANDED_WIDTH}px`,
           } as React.CSSProperties
         }
+
+        data-state={collapsed ? "collapsed" : "expanded"}
+        className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-border/60 bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 ease-[var(--ease-spring)] lg:w-[var(--sidebar-expanded)] ${
+          collapsed ? "lg:!w-0 lg:border-r-0" : ""
+        } max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,320px)] max-lg:shadow-lg ${
+          open ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"
+
         className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-border/60 bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 ease-[var(--ease-spring)] md:w-[var(--sidebar-expanded)] ${
           collapsed ? "md:hidden" : ""
         } max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:w-[min(86vw,320px)] max-md:shadow-lg ${
           open ? "max-md:translate-x-0" : "max-md:-translate-x-full"
+
         }`}
         aria-label="Primary navigation"
         aria-modal={open && isMobileViewport() ? true : undefined}
@@ -326,11 +395,12 @@ export function Sidebar({
         role={open && isMobileViewport() ? "dialog" : "navigation"}
       >
         <div className="flex h-full min-w-[var(--sidebar-expanded)] flex-col overflow-hidden">
-          <div className="relative z-20 flex min-h-[52px] items-center gap-1 bg-sidebar px-2.5 pt-[var(--safe-top)]">
+          <div className="kova-sidebar-header relative z-20 flex min-h-[52px] items-center gap-1 bg-sidebar px-2.5 pt-[var(--safe-top)]">
             <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
               <NovaLogo className="h-6 w-6 rounded-md" />
               <span className="truncate text-base font-semibold tracking-tight">KovaGPT</span>
             </div>
+
 
             {showSignedOut ? (
               <Link
@@ -342,6 +412,7 @@ export function Sidebar({
                 <Search className="h-[18px] w-[18px]" />
               </Link>
             ) : null}
+
 
             <button
               onClick={onToggle}
@@ -385,18 +456,17 @@ export function Sidebar({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search titles, messages, or operators…"
                 className="h-10 w-full rounded-lg border border-border/60 bg-background px-3 text-sm outline-none transition focus:border-ring focus-visible:ring-2 focus-visible:ring-ring"
-
               />
             </div>
           ) : null}
 
-          <div className="flex flex-col gap-0.5 px-2 pt-2">
+          <div className="kova-sidebar-primary flex flex-col gap-0.5 px-2 pt-2">
             <button
               onClick={() => {
                 onNew();
                 closeAfterMobileNavigation();
               }}
-              className={navItemClass(false)}
+              className={`${navItemClass(false)} kova-new-chat`}
               aria-label="New chat"
               title="New chat"
             >
@@ -419,17 +489,12 @@ export function Sidebar({
             {showSignedIn ? renderNavLink("/library", "Library", FolderOpen) : null}
             {renderNavLink("/images", "Images", ImageIcon)}
             {showSignedIn && (tier === "plus" || tier === "pro")
-              ? renderNavLink(
-                  "/scheduled-tasks",
-                  "Scheduled tasks status",
-                  Calendar,
-                  isOn("/scheduled-tasks"),
-                )
+              ? renderNavLink("/scheduled-tasks", "Tasks", Calendar, isOn("/scheduled-tasks"))
               : null}
           </div>
 
           <div
-            className="relative mt-2 min-h-0 flex-1 overflow-y-auto pb-4"
+            className="kova-sidebar-history relative mt-2 min-h-0 flex-1 overflow-y-auto pb-4"
             role="group"
             aria-label="Chats"
           >
@@ -489,7 +554,11 @@ export function Sidebar({
           </div>
 
           <div
+
+            className={`kova-sidebar-footer mt-auto border-t border-border/60 bg-sidebar p-2.5 pb-[max(.625rem,var(--safe-bottom))] ${collapsed ? "lg:px-2" : ""}`}
+
             className={`mt-auto border-t border-border/60 bg-sidebar p-2.5 pb-[max(.625rem,var(--safe-bottom))] ${collapsed ? "md:px-2" : ""}`}
+
           >
             {!isLoaded ? null : showSignedIn ? (
               <div className={`flex items-center gap-2 ${collapsed ? "md:flex-col" : ""}`}>
@@ -580,7 +649,6 @@ export function Sidebar({
                 ) : null}
               </div>
             ) : null}
-
           </div>
         </div>
       </aside>
