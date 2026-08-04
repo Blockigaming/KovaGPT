@@ -149,6 +149,35 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
 
+  /* ChatGPT-grade semantic application tokens */
+  --app-background: var(--background);
+  --sidebar-background: var(--sidebar);
+  --surface-primary: var(--card);
+  --surface-elevated: var(--surface-raised);
+  --composer-background: var(--surface-composer);
+  --user-message-background: var(--user-bubble);
+  --code-background: var(--code-block-bg);
+  --text-primary: var(--foreground);
+  --text-muted: var(--muted-foreground);
+  --focus-ring: var(--ring);
+  --overlay: var(--surface-scrim);
+  --success: var(--status-success);
+  --warning: var(--status-warning);
+  --brand-accent: var(--kova-blue);
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 11px;
+  --radius-lg: 15px;
+  --radius-xl: 20px;
+  --radius-composer: 28px;
+  --shadow-popover: var(--shadow-floating);
+  --shadow-dialog: 0 18px 48px rgb(0 0 0 / 18%);
+  --duration-fast: 120ms;
+  --duration-standard: 200ms;
+  --duration-slow: 240ms;
+  --ease-enter: cubic-bezier(0.2, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
   --scrollbar-thumb: oklch(0 0 0 / 14%);
   --scrollbar-thumb-hover: oklch(0 0 0 / 26%);
   --code-bg: oklch(0 0 0 / 7%);
@@ -1783,8 +1812,9 @@ body {
   }
 
   .kova-composer:focus-within {
-    border-color: color-mix(in oklab, var(--foreground) 14%, transparent) !important;
-    box-shadow: 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent) !important;
+    border-color: color-mix(in oklab, var(--foreground) 7%, transparent) !important;
+    outline: none !important;
+    box-shadow: none !important;
   }
 
   .kova-composer.is-streaming {
@@ -1804,7 +1834,7 @@ body {
   }
 
   .kova-composer-leading {
-    padding-left: var(--composer-inset);
+    padding-left: calc((var(--composer-height) - var(--composer-control)) / 2);
   }
 
   .kova-composer-trailing {

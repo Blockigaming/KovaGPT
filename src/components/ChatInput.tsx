@@ -1,5 +1,8 @@
 import {
   ArrowUp,
+  Atom,
+  Paperclip,
+  Telescope,
   Square,
   Plus,
   X,
@@ -156,7 +159,9 @@ export function ChatInput({
   const composingRef = useRef(false);
   const [uploadAnnouncement, setUploadAnnouncement] = useState("");
   const [recentQuery, setRecentQuery] = useState("");
+
   const [isDragActive, setIsDragActive] = useState(false);
+
   useEffect(() => {
     if (!plusOpen || isMobileLayout) return;
     const onDoc = (e: MouseEvent) => {
@@ -583,6 +588,7 @@ export function ChatInput({
     const rowClass = `flex w-full items-center gap-3 rounded-xl text-left transition-colors duration-150 hover:bg-accent active:bg-accent disabled:cursor-not-allowed disabled:opacity-50 outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
       mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5 text-sm"
     }`;
+
     const iconClass = mobile
       ? "h-5 w-5 shrink-0 text-muted-foreground"
       : "h-4 w-4 shrink-0 text-muted-foreground";
@@ -611,26 +617,83 @@ export function ChatInput({
             </button>
           );
         })}
+
+    const iconClass = mobile ? "h-5 w-5 shrink-0 text-muted-foreground" : "h-4 w-4 shrink-0 text-muted-foreground";
+    const webSearchTool = COMPOSER_TOOLS.find((tool) => tool.id === "web_search");
+    const imageTool = COMPOSER_TOOLS.find((tool) => tool.id === "image");
+    const deepResearchTool = COMPOSER_TOOLS.find((tool) => tool.id === "deep_research");
+
+    const addPhotosRow = (
+      <button
+        type="button"
+        onClick={() => {
+          setPlusOpen(false);
+          fileRef.current?.click();
+        }}
+        className={rowClass}
+      >
+        <Paperclip className={iconClass} />
+        <span>{user ? "Add photos and files" : "Add photos"}</span>
+      </button>
+    );
+
+    const cameraRow = mobile ? (
+      <button
+        type="button"
+        onClick={() => {
+          setPlusOpen(false);
+          cameraRef.current?.click();
+        }}
+        className={rowClass}
+      >
+        <Camera className={iconClass} />
+        <span>Camera</span>
+      </button>
+    ) : null;
+
+    const toolRow = (tool: ComposerAction) => {
+      const Icon = tool.icon;
+      const active = selectedTool === tool.id;
+      return (
+
         <button
+          key={tool.id}
           type="button"
-          onClick={() => {
-            setPlusOpen(false);
-            fileRef.current?.click();
-          }}
-          className={rowClass}
+          aria-pressed={active}
+          disabled={disabled || isStreaming}
+          onClick={() => chooseTool(tool)}
+          className={`kova-tool-button ${rowClass} ${active ? "bg-accent text-foreground" : ""}`}
         >
-          <ImageIcon className={iconClass} />
-          <span>Add photos and files</span>
+          <Icon className={iconClass} />
+          <span>{tool.label}</span>
         </button>
-        {mobile ? (
-          <button
-            type="button"
-            onClick={() => {
-              setPlusOpen(false);
-              cameraRef.current?.click();
-            }}
-            className={rowClass}
+      );
+    };
+
+    if (!user) {
+      const lockedRow = (
+        key: string,
+        Icon: React.ComponentType<{ className?: string }>,
+        label: string,
+      ) => (
+        <div
+          key={key}
+          aria-disabled="true"
+          className={`${rowClass} cursor-not-allowed text-muted-foreground hover:bg-transparent active:bg-transparent`}
+        >
+          <Icon className={`${iconClass} opacity-70`} />
+          <span className="opacity-70">{label}</span>
+        </div>
+      );
+      return (
+        <>
+          {addPhotosRow}
+          {cameraRow}
+          {webSearchTool ? toolRow({ ...webSearchTool, label: "Web search" }) : null}
+          <p
+            className={`pt-3 pb-1 text-sm text-muted-foreground ${mobile ? "px-4" : "px-3"}`}
           >
+
             <Camera className={iconClass} />
             <span>Camera</span>
           </button>
@@ -655,6 +718,23 @@ export function ChatInput({
           </button>
         ))}
         {user ? renderRecentLibraryFiles() : null}
+
+            Log in to use...
+          </p>
+          {lockedRow("locked-deep-research", deepResearchTool?.icon ?? Telescope, "Deep research")}
+          {lockedRow("locked-image", imageTool?.icon ?? ImageIcon, "Create image")}
+          {lockedRow("locked-model", Atom, "Kova-5.5")}
+        </>
+      );
+    }
+
+    return (
+      <>
+        {webSearchTool ? toolRow(webSearchTool) : null}
+        {addPhotosRow}
+        {cameraRow}
+        {imageTool ? toolRow(imageTool) : null}
+
       </>
     );
   };
@@ -683,7 +763,7 @@ export function ChatInput({
               {attachments.map((a, i) => (
                 <div
                   key={`${a.name}:${a.size ?? i}:${i}`}
-                  className="relative min-h-16 w-24 overflow-hidden rounded-xl border border-border/70 bg-muted/45 shadow-sm"
+                  className="kova-attachment-card relative overflow-hidden border border-border/70 bg-muted/45 shadow-sm"
                 >
                   {a.kind === "library_file" ? (
                     <div className="flex h-16 w-full flex-col items-center justify-center gap-1 text-muted-foreground">
@@ -850,7 +930,7 @@ export function ChatInput({
               onCompositionEnd={() => {
                 composingRef.current = false;
               }}
-              placeholder={placeholder ?? "Ask anything"}
+              placeholder={placeholder ?? "Message KovaGPT"}
               rows={1}
               spellCheck
               autoComplete="off"
@@ -865,12 +945,20 @@ export function ChatInput({
               }
             />
             <div className="kova-composer-trailing flex self-end items-center">
+
+              {canChangeAgent && mode && onModeChange && (
+                <div className="flex items-center">
+                  <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
+                </div>
+              )}
+
+
               {isStreaming ? (
                 <button
                   type="button"
                   onClick={onStop}
                   className="kova-composer-button kova-send-button is-enabled flex items-center justify-center rounded-full"
-                  aria-label="Stop"
+                  aria-label="Stop generating"
                 >
                   <Square className="h-3.5 w-3.5 fill-current" />
                 </button>

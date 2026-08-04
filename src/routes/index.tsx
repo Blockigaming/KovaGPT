@@ -1537,13 +1537,13 @@ function KovaGPT() {
             ) : (
               <>
                 <SignInButton mode="modal">
-                  <button className="text-sm font-medium px-4 h-9 rounded-full text-foreground hover:bg-accent transition">
+                  <button className="text-sm font-semibold px-4 h-9 rounded-full bg-foreground text-background hover:opacity-90 active:scale-[0.98] transition">
                     Log in
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button className="text-sm font-semibold px-4 h-9 rounded-full bg-foreground text-background hover:opacity-90 active:scale-[0.98] transition whitespace-nowrap">
-                    Sign up
+                  <button className="text-sm font-medium px-4 h-9 rounded-full bg-muted text-foreground hover:bg-accent active:scale-[0.98] transition whitespace-nowrap">
+                    Sign up for free
                   </button>
                 </SignUpButton>
               </>

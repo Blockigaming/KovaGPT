@@ -6,6 +6,9 @@ import { saveToLibrary } from "@/lib/library.functions";
 import {
   PanelLeft,
   ArrowUp,
+  Paperclip,
+  ChevronLeft,
+  ChevronRight,
   Loader2,
   Download,
   Trash2,
@@ -325,7 +328,14 @@ function ImagesPage() {
   const submittingRef = useRef(false);
   const generationRef = useRef(0);
   const generationControllerRef = useRef<AbortController | null>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const promptFileRef = useRef<HTMLInputElement>(null);
+  const presetsRef = useRef<HTMLDivElement>(null);
+  const scrollPresets = (direction: 1 | -1) => {
+    const el = presetsRef.current;
+    if (!el) return;
+    el.scrollBy({ left: direction * Math.max(320, el.clientWidth * 0.8), behavior: "smooth" });
+  };
   const lightboxInitialFocusRef = useRef<HTMLButtonElement>(null);
   const lightboxReturnFocusRef = useRef<HTMLElement | null>(null);
   const lightboxReturnToPromptRef = useRef(false);
@@ -507,9 +517,15 @@ function ImagesPage() {
         onOpenHelp={openHelp}
       />
 
+
       <main className="kova-images-main flex min-w-0 flex-1 flex-col">
         <header className="kova-images-topbar kova-topbar flex h-14 shrink-0 items-center px-3">
           {!sidebarOpen && !isSignedIn && (
+
+      <main className="flex-1 flex flex-col min-w-0">
+        <header className="h-14 flex items-center px-3 shrink-0">
+          {!sidebarOpen && (
+
             <button
               onClick={() => setSidebarOpen((v) => !v)}
               className="p-2 rounded-lg hover:bg-accent transition mr-1"
@@ -518,19 +534,18 @@ function ImagesPage() {
               <PanelLeft className="w-5 h-5" />
             </button>
           )}
-          <h1 className="text-lg font-semibold tracking-tight">Images</h1>
           <div className="ml-auto flex items-center gap-2">
             {isSignedIn ? (
               <UserButton />
             ) : (
               <>
                 <SignInButton mode="modal">
-                  <button className="text-sm font-medium px-4 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition">
+                  <button className="text-sm font-semibold px-4 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition">
                     Log in
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full bg-neutral-200 text-neutral-900 hover:bg-neutral-300 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700 transition whitespace-nowrap">
+                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full bg-muted text-foreground hover:bg-accent transition whitespace-nowrap">
                     Sign up for free
                   </button>
                 </SignUpButton>
@@ -539,33 +554,121 @@ function ImagesPage() {
           </div>
         </header>
 
+
         <div className="kova-images-scroll flex-1 overflow-y-auto">
           <div className="kova-images-page kova-page mx-auto max-w-6xl px-4 pb-40 pt-6 sm:px-6">
+
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-2 pb-24">
+            <h1 className="text-[34px] sm:text-[40px] font-semibold tracking-tight">Images</h1>
+
+            {/* Prompt */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                generate(prompt);
+              }}
+              className="mt-5"
+            >
+              <div className="kova-composer flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2">
+                <button
+                  type="button"
+                  onClick={() => promptFileRef.current?.click()}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                  aria-label="Attach a reference image"
+                >
+                  <Paperclip className="h-[18px] w-[18px]" />
+                </button>
+                <input
+                  ref={promptFileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={() => {
+                    toast.message("Describe the image you want and Kova will create it.");
+                  }}
+                />
+                <input
+                  ref={inputRef}
+                  value={prompt}
+                  aria-label="Describe a new image"
+                  maxLength={2000}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="Describe a new image"
+                  spellCheck={false}
+                  autoComplete="off"
+                  className="min-w-0 flex-1 border-0 bg-transparent text-[16px] outline-none placeholder:text-muted-foreground focus:outline-none focus:ring-0"
+                />
+                <button
+                  type="submit"
+                  disabled={!prompt.trim() || loading}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-90 disabled:opacity-30"
+                  aria-label="Generate"
+                >
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowUp className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </form>
+
+
             {/* Create an image */}
-            <section>
-              <h2 className="text-[22px] font-semibold tracking-tight mb-3">Create an image</h2>
-              <div className="-mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto scrollbar-none">
+            <section className="mt-10">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="text-[22px] font-semibold tracking-tight">Create an image</h2>
+                <div className="hidden items-center gap-2 sm:flex">
+                  <button
+                    type="button"
+                    onClick={() => scrollPresets(-1)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                    aria-label="Scroll styles left"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollPresets(1)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                    aria-label="Scroll styles right"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <div
+                ref={presetsRef}
+                className="-mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto scroll-smooth scrollbar-none"
+              >
                 <div className="flex gap-3 pb-2 min-w-max">
                   {PRESETS.map((p) => (
                     <button
                       key={p.label}
                       type="button"
                       onClick={() => applyPreset(p)}
+
                       className="kova-image-preset group flex w-[128px] shrink-0 flex-col items-start focus:outline-none"
                     >
                       <div className="kova-image-preset-preview relative h-[176px] w-[128px] overflow-hidden rounded-2xl bg-muted ring-1 ring-border/60">
+
+                      className="group flex flex-col items-start w-[160px] shrink-0 focus:outline-none"
+                    >
+                      <div className="relative w-[160px] h-[160px] rounded-2xl overflow-hidden ring-1 ring-border/60 bg-muted">
+
                         <img
                           src={p.image}
                           alt={p.label}
                           loading="lazy"
                           width={512}
-                          height={704}
-                          className="absolute inset-0 w-full h-full object-cover"
+                          height={512}
+                          className="absolute inset-0 w-full h-full object-cover transition duration-200 group-hover:scale-[1.02]"
                         />
+                        <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-3 pb-2 pt-8 text-left text-sm font-medium text-white">
+                          {p.label}
+                        </span>
                       </div>
-                      <span className="mt-2 text-sm text-foreground/90 group-hover:text-foreground text-center w-full">
-                        {p.label}
-                      </span>
                     </button>
                   ))}
                 </div>
@@ -666,7 +769,7 @@ function ImagesPage() {
                     <Sparkles className="w-5 h-5 text-muted-foreground" />
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Nothing here yet. Pick a style above or describe an image below.
+                    Nothing here yet. Pick a style or describe an image above.
                   </p>
                 </div>
               ) : (
@@ -779,6 +882,7 @@ function ImagesPage() {
             </div>
           </form>
         </div>
+
       </main>
 
       <SettingsDialog

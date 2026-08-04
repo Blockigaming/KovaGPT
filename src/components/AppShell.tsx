@@ -1,3 +1,5 @@
+
+import { PanelLeft } from "lucide-react";
 import { lazy, Suspense, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Sidebar } from "@/components/Sidebar";
@@ -45,7 +47,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   // narrow viewports; on desktop we restore the persisted user preference.
   const [sidebarOpen, setSidebarOpen] = useState(false);
   useEffect(() => {
-    if (typeof window === "undefined" || window.innerWidth < 1024) return;
+    if (typeof window === "undefined" || window.innerWidth < 768) return;
     let saved: string | null = null;
     try {
       saved = localStorage.getItem("kova-sidebar-open");
@@ -55,7 +57,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     setSidebarOpen(saved === null ? true : saved === "1");
   }, []);
   useEffect(() => {
-    if (typeof window === "undefined" || window.innerWidth < 1024) return;
+    if (typeof window === "undefined" || window.innerWidth < 768) return;
     try {
       localStorage.setItem("kova-sidebar-open", sidebarOpen ? "1" : "0");
     } catch {
@@ -184,7 +186,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       className="kova-app-shell relative flex h-[100dvh] w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
       onTouchStart={(e) => {
         const t = e.touches[0];
-        if (t && t.clientX < 24 && window.innerWidth < 1024) {
+        if (t && t.clientX < 24 && window.innerWidth < 768) {
           (e.currentTarget as HTMLDivElement).dataset.swipeStart = String(t.clientX);
           (e.currentTarget as HTMLDivElement).dataset.swipeY = String(t.clientY);
         }
@@ -218,9 +220,35 @@ export function AppShell({ children }: { children: ReactNode }) {
         onOpenHelp={openHelp}
       />
 
-      <div className="kova-workspace-main min-w-0 flex-1 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">
+      <div className="kova-workspace-main min-w-0 flex flex-1 flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">
         <OfflineBanner />
-        <MobileTopBar onOpenSidebar={() => setSidebarOpen(true)} onNewChat={handleNew} />
+
+        <MobileTopBar
+          onOpenSidebar={() => setSidebarOpen(true)}
+          onNewChat={handleNew}
+        />
+
+        {!sidebarOpen && (
+          <button
+            type="button"
+            onClick={() => {
+              setSidebarOpen(true);
+
+              window.requestAnimationFrame(() => {
+                document
+                  .querySelector<HTMLElement>('[aria-label="Collapse sidebar"]')
+                  ?.focus({ preventScroll: true });
+              });
+            }}
+            className="fixed left-3 top-2 z-30 hidden h-10 w-10 items-center justify-center rounded-md bg-background/90 transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:flex"
+            aria-label="Open sidebar"
+          >
+            <PanelLeft className="h-4 w-4" aria-hidden="true" />
+          </button>
+        )}
+
+        <AppErrorBoundary>{children}</AppErrorBoundary>
+      </div>
         <AppErrorBoundary>{children}</AppErrorBoundary>
       </div>
 

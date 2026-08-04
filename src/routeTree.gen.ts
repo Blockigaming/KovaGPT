@@ -16,6 +16,7 @@ import { Route as AiSafetyRouteImport } from './routes/ai-safety'
 import { Route as AiWriterRouteImport } from './routes/ai-writer'
 import { Route as AppsRouteImport } from './routes/apps'
 import { Route as AuditLogRouteImport } from './routes/audit-log'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ChangelogRouteImport } from './routes/changelog'
 import { Route as ChatgptAlternativeRouteImport } from './routes/chatgpt-alternative'
 import { Route as CodeHelperRouteImport } from './routes/code-helper'
@@ -138,6 +139,11 @@ const AppsRoute = AppsRouteImport.update({
 const AuditLogRoute = AuditLogRouteImport.update({
   id: '/audit-log',
   path: '/audit-log',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChangelogRoute = ChangelogRouteImport.update({
@@ -602,6 +608,7 @@ export interface FileRoutesByFullPath {
   '/ai-writer': typeof AiWriterRoute
   '/apps': typeof AppsRoute
   '/audit-log': typeof AuditLogRoute
+  '/auth': typeof AuthRoute
   '/changelog': typeof ChangelogRoute
   '/chatgpt-alternative': typeof ChatgptAlternativeRoute
   '/code-helper': typeof CodeHelperRoute
@@ -699,6 +706,7 @@ export interface FileRoutesByTo {
   '/ai-writer': typeof AiWriterRoute
   '/apps': typeof AppsRoute
   '/audit-log': typeof AuditLogRoute
+  '/auth': typeof AuthRoute
   '/changelog': typeof ChangelogRoute
   '/chatgpt-alternative': typeof ChatgptAlternativeRoute
   '/code-helper': typeof CodeHelperRoute
@@ -797,6 +805,7 @@ export interface FileRoutesById {
   '/ai-writer': typeof AiWriterRoute
   '/apps': typeof AppsRoute
   '/audit-log': typeof AuditLogRoute
+  '/auth': typeof AuthRoute
   '/changelog': typeof ChangelogRoute
   '/chatgpt-alternative': typeof ChatgptAlternativeRoute
   '/code-helper': typeof CodeHelperRoute
@@ -896,6 +905,7 @@ export interface FileRouteTypes {
     | '/ai-writer'
     | '/apps'
     | '/audit-log'
+    | '/auth'
     | '/changelog'
     | '/chatgpt-alternative'
     | '/code-helper'
@@ -993,6 +1003,7 @@ export interface FileRouteTypes {
     | '/ai-writer'
     | '/apps'
     | '/audit-log'
+    | '/auth'
     | '/changelog'
     | '/chatgpt-alternative'
     | '/code-helper'
@@ -1090,6 +1101,7 @@ export interface FileRouteTypes {
     | '/ai-writer'
     | '/apps'
     | '/audit-log'
+    | '/auth'
     | '/changelog'
     | '/chatgpt-alternative'
     | '/code-helper'
@@ -1188,6 +1200,7 @@ export interface RootRouteChildren {
   AiWriterRoute: typeof AiWriterRoute
   AppsRoute: typeof AppsRoute
   AuditLogRoute: typeof AuditLogRoute
+  AuthRoute: typeof AuthRoute
   ChangelogRoute: typeof ChangelogRoute
   ChatgptAlternativeRoute: typeof ChatgptAlternativeRoute
   CodeHelperRoute: typeof CodeHelperRoute
@@ -1324,6 +1337,13 @@ declare module '@tanstack/react-router' {
       path: '/audit-log'
       fullPath: '/audit-log'
       preLoaderRoute: typeof AuditLogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/changelog': {
@@ -1987,6 +2007,7 @@ const rootRouteChildren: RootRouteChildren = {
   AiWriterRoute: AiWriterRoute,
   AppsRoute: AppsRoute,
   AuditLogRoute: AuditLogRoute,
+  AuthRoute: AuthRoute,
   ChangelogRoute: ChangelogRoute,
   ChatgptAlternativeRoute: ChatgptAlternativeRoute,
   CodeHelperRoute: CodeHelperRoute,
