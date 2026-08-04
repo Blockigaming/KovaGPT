@@ -59,10 +59,10 @@ type ComposerAction = {
 };
 
 const COMPOSER_TOOLS: readonly ComposerAction[] = [
-  { id: "deep_research", label: "Deep research", icon: Brain },
-  { id: "web_search", label: "Search the Web", icon: Search },
-  { id: "image", label: "Create Image", icon: Sparkles },
+  { id: "web_search", label: "Search the Web", icon: Globe },
+  { id: "image", label: "Create Image", icon: ImagePlus },
 ];
+
 
 const PROMPT_SHORTCUTS = [
   { label: "Brainstorm ideas", prompt: "Help me brainstorm ideas about " },
