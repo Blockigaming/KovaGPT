@@ -88,8 +88,6 @@ export function safeDiagnostics(): SafeDiagnostics {
         oneOf(["SUPABASE_SERVICE_ROLE_KEY"]),
       ]),
 
-      aiProvider: feature(["OPENAI_API_KEY"]),
-
       aiProvider: feature(["LOVABLE_API_KEY", "OPENAI_API_KEY"]),
 
       search: feature(["FIRECRAWL_API_KEY"]),

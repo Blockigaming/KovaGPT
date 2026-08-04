@@ -1,12 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
 
-import {
-  DEFAULT_SETTINGS,
-  SAVED_MEMORY_CONSENT_VERSION,
-  type Settings,
-} from "@/components/SettingsDialog";
-import { loadStoredSettings, saveStoredSettings, settingsKey } from "@/lib/settings-storage";
-
 import { DEFAULT_SETTINGS, type Settings } from "@/components/SettingsDialog";
 import {
   CURRENT_MEMORY_CONSENT_VERSION,
