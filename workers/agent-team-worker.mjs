@@ -12,7 +12,20 @@ const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_R
 const worker = `${process.env.AGENT_WORKER_ID}:team`,
   sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const blockedHostnames = new Set(["localhost", "metadata.google.internal"]);
+function mappedIpv4Address(address) {
+  const normalized = address.toLowerCase().replace(/^\[|\]$/g, "");
+  const dotted = normalized.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/)?.[1];
+  if (dotted) return dotted;
+  const hex = normalized.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (!hex) return null;
+  const high = Number.parseInt(hex[1], 16);
+  const low = Number.parseInt(hex[2], 16);
+  return `${high >>> 8}.${high & 0xff}.${low >>> 8}.${low & 0xff}`;
+}
 function isPrivateAddress(address) {
+  address = address.toLowerCase().replace(/^\[|\]$/g, "");
+  const mapped = mappedIpv4Address(address);
+  if (mapped) return isPrivateAddress(mapped);
   if (net.isIPv4(address)) {
     const parts = address.split(".").map((part) => Number.parseInt(part, 10));
     const value = parts.reduce((acc, part) => (acc << 8) + part, 0) >>> 0;
@@ -53,7 +66,7 @@ function isPrivateAddress(address) {
 async function assertPublicHttpsUrl(rawUrl, allowedHosts) {
   const url = new URL(rawUrl);
   if (url.protocol !== "https:") throw new Error("https_required");
-  const host = url.hostname.toLowerCase();
+  const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
   if (
     blockedHostnames.has(host) ||
     [...blockedHostnames].some((domain) => host.endsWith(`.${domain}`))
@@ -215,9 +228,11 @@ async function browse(task) {
   const context = await browser.newContext({ acceptDownloads: false, serviceWorkers: "block" });
   await context.route("**/*", async (route) => {
     const request = route.request();
-    if (!request.isNavigationRequest()) return route.continue();
     try {
-      await assertPublicHttpsUrl(request.url(), allowedHosts);
+      await assertPublicHttpsUrl(
+        request.url(),
+        request.isNavigationRequest() ? allowedHosts : undefined,
+      );
       return route.continue();
     } catch {
       return route.abort("blockedbyclient");
