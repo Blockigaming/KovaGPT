@@ -1,4 +1,3 @@
-
 import { PanelLeft } from "lucide-react";
 import { lazy, Suspense, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -223,10 +222,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="kova-workspace-main min-w-0 flex flex-1 flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">
         <OfflineBanner />
 
-        <MobileTopBar
-          onOpenSidebar={() => setSidebarOpen(true)}
-          onNewChat={handleNew}
-        />
+        <MobileTopBar onOpenSidebar={() => setSidebarOpen(true)} onNewChat={handleNew} />
 
         {!sidebarOpen && (
           <button
@@ -247,8 +243,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           </button>
         )}
 
-        <AppErrorBoundary>{children}</AppErrorBoundary>
-      </div>
         <AppErrorBoundary>{children}</AppErrorBoundary>
       </div>
 
