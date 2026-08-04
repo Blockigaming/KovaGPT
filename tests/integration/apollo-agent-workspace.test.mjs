@@ -3,19 +3,18 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
-test("Work exposes template selection, task graph editing and live server timeline", async () => {
-  const [workspace, route] = await Promise.all([
-    read("src/components/AgentTeamWorkspace.tsx"),
+test("Work exposes the persisted specialist graph and live server timeline", async () => {
+  const [route, functions] = await Promise.all([
     read("src/routes/work.tsx"),
+    read("src/lib/work.functions.ts"),
   ]);
-  assert.match(route, /<AgentTeamWorkspace \/>/);
-  assert.match(workspace, /Direct an agent team/);
-  assert.match(workspace, /Launch \{tasks\.length\} specialists/);
-  assert.match(workspace, /Live specialist timeline/);
-  assert.match(workspace, /Evidence and deliverables/);
-  assert.match(workspace, /screenshotUrl/);
-  assert.match(workspace, /window\.setInterval/);
-  assert.match(workspace, /Approve checkpoint/);
+  assert.match(route, /DependencyGraph/);
+  assert.match(route, /Timeline/);
+  assert.match(route, /Evidence/);
+  assert.match(route, /Approvals/);
+  assert.match(route, /useServerFn\(getWorkRun\)/);
+  assert.match(functions, /agent_specialist_tasks/);
+  assert.match(functions, /agent_dependency_edges/);
 });
 
 test("Apollo migration persists parent tasks, dependencies, retries, outputs and checkpoints", async () => {
@@ -35,10 +34,9 @@ test("Apollo migration persists parent tasks, dependencies, retries, outputs and
   assert.match(migration, /agent-evidence/);
 });
 
-test("specialists receive only owner-scoped workspace context", async () => {
+test("legacy agent_runs specialist execution fails closed", async () => {
   const worker = await read("workers/agent-team-worker.mjs");
-  assert.match(worker, /eq\("owner_id", task\.owner_id\)/);
-  assert.match(worker, /eq\("uploaded_by", task\.owner_id\)/);
-  assert.match(worker, /eq\("user_id", task\.owner_id\)/);
-  assert.match(worker, /authorizedWorkspaceContext/);
+  assert.match(worker, /legacy agent_runs specialist worker is disabled/);
+  assert.match(worker, /agent execution is unavailable/);
+  assert.doesNotMatch(worker, /OPENAI_API_KEY|chromium|createClient|while \(true\)/);
 });

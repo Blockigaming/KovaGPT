@@ -1,53 +1,57 @@
 /**
- * KovaGPT logo: refined compass star inside a thin ring with inner cross detail.
- * Pure SVG so it stays sharp at any size and adds zero network/image cost.
+ * The shared KovaGPT brand mark.
  *
- * animated: applies a gentle vertical float (used in the sidebar brand row
- *           and the empty-state hero).
- * pulse:    wraps in a soft brand halo that pulses (used on the assistant
- *           avatar while a response is streaming).
+ * Keep every in-app logo routed through this component so the product uses the
+ * same source image in navigation, authentication, checkout, and landing pages.
+ * `animated` and `pulse` preserve the motion treatments used by those surfaces.
  */
 export function NovaLogo({
   className = "w-6 h-6",
   animated = false,
   pulse = false,
+  mark = false,
 }: {
   className?: string;
   animated?: boolean;
   pulse?: boolean;
-  /** @deprecated kept for backwards compat */
+  /** Render only the compass mark (no white tile) so it sits on any surface. */
+  mark?: boolean;
+  /** @deprecated kept for backwards compatibility */
   bare?: boolean;
 }) {
-  const svg = (
+  const logo = mark ? (
     <svg
-      viewBox="0 0 48 48"
-      className={`${className} ${animated ? "animate-kova-float" : ""}`}
-      aria-label="KovaGPT logo"
+      viewBox="150 180 584 496"
       role="img"
+      aria-label="KovaGPT logo"
+      className={`${className} block shrink-0 ${animated ? "animate-kova-float" : ""}`}
       fill="none"
-      xmlns="http://www.w3.org/2000/svg"
     >
-      <circle cx="24" cy="24" r="21" fill="white" />
-      <circle cx="24" cy="24" r="22" stroke="black" strokeWidth="1.5" />
-      <circle cx="24" cy="24" r="21" stroke="white" strokeWidth="1.5" strokeOpacity="0.85" />
+      <g fill="none" stroke="currentColor" strokeWidth={20} strokeLinecap="round">
+        <path d="M228 552A246 246 0 0 1 642 300" />
+        <path d="M658 329A246 246 0 0 1 249 584" />
+      </g>
       <path
-        d="M24 13L26.5 21.5L35 24L26.5 26.5L24 35L21.5 26.5L13 24L21.5 21.5L24 13Z"
-        fill="black"
-        stroke="black"
-        strokeWidth="1"
-        strokeLinejoin="round"
+        d="M442 226C459 321 470 368 504 393C529 411 574 421 642 438C575 455 530 466 504 484C471 509 459 556 441 650C423 556 411 509 378 484C353 466 309 455 243 438C309 421 353 410 378 392C411 367 423 320 442 226Z"
+        fill="currentColor"
       />
-      <path d="M24 18V30M18 24H30" stroke="white" strokeWidth="1" strokeLinecap="round" />
     </svg>
+  ) : (
+    <img
+      src="/kova-logo.png"
+      className={`${className} block shrink-0 object-contain ${animated ? "animate-kova-float" : ""}`}
+      alt="KovaGPT logo"
+    />
   );
+
 
   if (pulse) {
     return (
       <span className="relative inline-flex">
         <span aria-hidden="true" className="absolute inset-0 rounded-full animate-kova-pulse" />
-        {svg}
+        {logo}
       </span>
     );
   }
-  return svg;
+  return logo;
 }

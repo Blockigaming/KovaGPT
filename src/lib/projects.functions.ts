@@ -159,7 +159,7 @@ export const listProjects = createServerFn({ method: "GET" })
 
 export const createProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     z
       .object({
         name: z.string().trim().min(1).max(100),
@@ -208,7 +208,7 @@ export const createProject = createServerFn({ method: "POST" })
 
 export const pinProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     z
       .object({
         id: z.string().uuid(),
@@ -230,7 +230,7 @@ export const pinProject = createServerFn({ method: "POST" })
 
 export const duplicateProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<{ id: string }> => {
     // Load source (must be visible under RLS = caller is a member)
     const { data: src, error: sErr } = await context.supabase
@@ -276,7 +276,7 @@ export const duplicateProject = createServerFn({ method: "POST" })
 
 export const getProject = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<ProjectDetail | null> => {
     const { data: p, error } = await context.supabase
       .from("projects")
@@ -304,7 +304,7 @@ export const getProject = createServerFn({ method: "GET" })
 
 export const updateProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     z
       .object({
         id: z.string().uuid(),
@@ -327,7 +327,7 @@ export const updateProject = createServerFn({ method: "POST" })
 
 export const deleteProject = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     const { error } = await context.supabase.from("projects").delete().eq("id", data.id);
     if (error) {
@@ -341,7 +341,7 @@ export const deleteProject = createServerFn({ method: "POST" })
 
 export const listMembers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
+  .validator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<ProjectMember[]> => {
     const { data: rows, error } = await context.supabase
       .from("project_members")
@@ -375,7 +375,7 @@ export const listMembers = createServerFn({ method: "GET" })
 
 export const removeMember = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     z
       .object({
         project_id: z.string().uuid(),
@@ -398,7 +398,7 @@ export const removeMember = createServerFn({ method: "POST" })
 
 export const updateMemberRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     z
       .object({
         project_id: z.string().uuid(),
@@ -424,7 +424,7 @@ export const updateMemberRole = createServerFn({ method: "POST" })
 
 export const listInvites = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
+  .validator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<ProjectInvite[]> => {
     const { data: rows, error } = await context.supabase
       .from("project_invites")
@@ -440,7 +440,7 @@ export const listInvites = createServerFn({ method: "GET" })
 
 export const inviteMember = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     z
       .object({
         project_id: z.string().uuid(),
@@ -499,7 +499,7 @@ export const inviteMember = createServerFn({ method: "POST" })
 
 export const revokeInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     const { error } = await context.supabase
       .from("project_invites")
@@ -547,7 +547,7 @@ export const listMyPendingInvites = createServerFn({ method: "GET" })
 
 export const acceptInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ invite_id: z.string().uuid() }).parse(input))
+  .validator((input: unknown) => z.object({ invite_id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<{ project_id: string }> => {
     const email = (context.claims as { email?: string } | undefined)?.email?.toLowerCase();
     if (!email) throw new Error("Email required");
@@ -581,7 +581,7 @@ export const acceptInvite = createServerFn({ method: "POST" })
 
 export const declineInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ invite_id: z.string().uuid() }).parse(input))
+  .validator((input: unknown) => z.object({ invite_id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     const email = (context.claims as { email?: string } | undefined)?.email?.toLowerCase();
     if (!email) throw new Error("Email required");
@@ -602,7 +602,7 @@ export const declineInvite = createServerFn({ method: "POST" })
 
 export const listProjectChats = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
+  .validator((input: unknown) => z.object({ project_id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<ProjectChatSummary[]> => {
     const { data: rows, error } = await context.supabase
       .from("project_chats")
@@ -619,7 +619,7 @@ export const listProjectChats = createServerFn({ method: "GET" })
 
 export const getProjectChat = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<ProjectChatDetail | null> => {
     const { data: row, error } = await context.supabase
       .from("project_chats")
@@ -635,7 +635,7 @@ export const getProjectChat = createServerFn({ method: "GET" })
 
 export const createProjectChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     z
       .object({
         project_id: z.string().uuid(),
@@ -664,7 +664,7 @@ export const createProjectChat = createServerFn({ method: "POST" })
 
 export const saveProjectChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     z
       .object({
         id: z.string().uuid(),
@@ -688,7 +688,7 @@ export const saveProjectChat = createServerFn({ method: "POST" })
 
 export const deleteProjectChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     const { error } = await context.supabase.from("project_chats").delete().eq("id", data.id);
     if (error) {

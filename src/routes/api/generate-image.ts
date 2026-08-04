@@ -7,7 +7,13 @@ import {
   requireVerifiedUser,
 } from "@/lib/api-auth.server";
 import { DAILY_IMAGE_LIMIT_BY_TIER } from "@/lib/modes";
-import { imageGenerations, missingAiProviderResponse } from "@/lib/ai/provider.server";
+import {
+  AiProviderError,
+  imageGenerations,
+  missingAiProviderResponse,
+  providerErrorFromResponse,
+  providerErrorResponse,
+} from "@/lib/ai/provider.server";
 import {
   imageProviderPayload,
   imageResultMetadata,
@@ -19,36 +25,45 @@ const MODEL_TIMEOUT_MS = 22_000;
 function jsonError(message: string, status: number) {
   return new Response(JSON.stringify({ error: message }), {
     status,
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
   });
 }
 
-async function tryModel(
-  payload: ReturnType<typeof imageProviderPayload>,
-): Promise<{ imageUrl?: string; status: number; error?: string }> {
+type ModelAttempt = { imageUrl: string; status: 200 } | { error: AiProviderError };
+
+function invalidImageResponse(): AiProviderError {
+  return new AiProviderError({
+    error: "KovaGPT couldn't complete that request. Please try again.",
+    code: "provider_bad_response",
+    retryable: false,
+    status: 502,
+  });
+}
+
+async function tryModel(payload: ReturnType<typeof imageProviderPayload>): Promise<ModelAttempt> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), MODEL_TIMEOUT_MS);
   let upstream: Response;
   try {
     upstream = await imageGenerations(payload, { signal: controller.signal });
-  } catch (e) {
+  } catch (error) {
     clearTimeout(timer);
-    const aborted = (e as { name?: string } | null)?.name === "AbortError";
-    return { status: 504, error: aborted ? "Model timed out" : "Network error" };
+    return {
+      error: error instanceof AiProviderError ? error : invalidImageResponse(),
+    };
   }
   clearTimeout(timer);
 
-  if (!upstream.ok) {
-    const text = await upstream.text().catch(() => "");
-    return { status: upstream.status, error: text || `Upstream ${upstream.status}` };
-  }
+  if (!upstream.ok) return { error: await providerErrorFromResponse(upstream) };
 
   const data = await upstream.json().catch(() => null);
-  if (!data || typeof data !== "object") return { status: 500, error: "Invalid upstream response" };
+  if (!data || typeof data !== "object") return { error: invalidImageResponse() };
   const item = (data as { data?: Array<{ b64_json?: string; url?: string }> }).data?.[0];
-  if (item?.b64_json) return { imageUrl: `data:image/png;base64,${item.b64_json}`, status: 200 };
+  if (item?.b64_json) {
+    return { imageUrl: `data:image/png;base64,${item.b64_json}`, status: 200 };
+  }
   if (item?.url) return { imageUrl: item.url, status: 200 };
-  return { status: 500, error: "No image in provider response" };
+  return { error: invalidImageResponse() };
 }
 
 export const Route = createFileRoute("/api/generate-image")({
@@ -63,7 +78,12 @@ export const Route = createFileRoute("/api/generate-image")({
           if (contentLength > MAX_BODY) return jsonError("Request too large.", 413);
           const raw = await request.text();
           if (raw.length > MAX_BODY) return jsonError("Request too large.", 413);
-          const parsed = JSON.parse(raw) as Parameters<typeof normalizeImageSettings>[0];
+          let parsed: Parameters<typeof normalizeImageSettings>[0];
+          try {
+            parsed = JSON.parse(raw) as Parameters<typeof normalizeImageSettings>[0];
+          } catch {
+            return jsonError("Invalid JSON.", 400);
+          }
           let settings;
           try {
             settings = normalizeImageSettings(parsed);
@@ -87,7 +107,7 @@ export const Route = createFileRoute("/api/generate-image")({
 
           const payload = imageProviderPayload(settings);
           const result = await tryModel(payload);
-          if (result.imageUrl) {
+          if ("imageUrl" in result) {
             return new Response(
               JSON.stringify({
                 imageUrl: result.imageUrl,
@@ -99,20 +119,16 @@ export const Route = createFileRoute("/api/generate-image")({
               },
             );
           }
-          if (result.status === 429) return jsonError("Rate limit - try again in a moment.", 429);
-          if (result.error)
-            console.error(
-              "[generate-image] provider error",
-              payload.model,
-              result.status,
-              result.error,
-            );
-          return jsonError(
-            "Image service is temporarily unavailable. Please try again.",
-            result.status,
-          );
-        } catch (e) {
-          console.error("[generate-image] handler error", e);
+
+          console.error("[generate-image] provider error", {
+            code: result.error.code,
+            status: result.error.status,
+          });
+          return providerErrorResponse(result.error);
+        } catch (error) {
+          console.error("[generate-image] handler error", {
+            name: error instanceof Error ? error.name : "UnknownError",
+          });
           return jsonError("An unexpected error occurred. Please try again.", 500);
         }
       },

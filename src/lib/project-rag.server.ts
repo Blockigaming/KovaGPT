@@ -2,7 +2,7 @@ import { removeNulCharacters } from "@/lib/sanitize-text";
 // Server-only helpers for project knowledge indexing + retrieval (RAG).
 // Uses the configured direct embedding provider through the server-side AI adapter.
 
-import { embeddingModel, embeddings } from "@/lib/ai/provider.server";
+import { embeddingModel, embeddings, providerErrorFromResponse } from "@/lib/ai/provider.server";
 
 const EMBED_DIMS = 1536;
 
@@ -107,12 +107,11 @@ function chunkText(text: string): string[] {
 }
 
 async function embedBatch(inputs: string[]): Promise<number[][]> {
+
   if (!process.env.OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
+
   const resp = await embeddings({ model: embeddingModel(), input: inputs, dimensions: EMBED_DIMS });
-  if (!resp.ok) {
-    const text = await resp.text().catch(() => "");
-    throw new Error(`Embedding failed: ${resp.status} ${text.slice(0, 200)}`);
-  }
+  if (!resp.ok) throw await providerErrorFromResponse(resp);
   const json = (await resp.json()) as { data?: Array<{ index: number; embedding: number[] }> };
   const out: number[][] = new Array(inputs.length);
   for (const row of json.data ?? []) out[row.index] = row.embedding;

@@ -1,4 +1,13 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 
 import { Button } from "@/components/ui/button";
@@ -56,7 +65,7 @@ import {
 } from "@/lib/connectors-catalog";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { getMyDailyUsage, type DailyUsageDto } from "@/utils/usage.functions";
 import {
@@ -65,15 +74,48 @@ import {
   type SubscriptionSummary,
 } from "@/utils/payments.functions";
 import { getStripeEnvironment } from "@/lib/stripe";
+import { parseAllowedBillingPortalUrl } from "@/lib/billing-portal-url.mjs";
+import { setSharedSendOnEnter, useSharedSendOnEnter } from "@/lib/composer-preferences";
 import { PersonalitySliders } from "@/components/PersonalitySliders";
 import { StorageDashboard } from "@/components/StorageDashboard";
 import { FamilySharingPanel } from "@/components/FamilySharingPanel";
 import { MfaPanel } from "@/components/MfaPanel";
-import { clearConversations } from "@/lib/chat-store";
+import {
+  loadArchivedConversations,
+  loadConversations,
+  saveArchivedConversations,
+  saveConversations,
+} from "@/lib/chat-store";
+import {
+  loadPrincipalStoredRecord,
+  savePrincipalStoredRecord,
+  LOCATION_KEY_BASE,
+  WORKSPACE_DEFAULTS_KEY_BASE,
+} from "@/lib/settings-storage";
+import {
+  browserStoragePrincipal,
+  clearPrincipalBrowserStorage,
+  dispatchPrincipalBrowserStorageCleared,
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+} from "@/lib/principal-browser-storage.mjs";
+import {
+  allowMemoryWrites,
+  blockMemoryWrites,
+  configureMemoryWrites,
+  deleteSavedMemoryAfterDraining,
+} from "@/lib/memory-write-coordinator.mjs";
+import {
+  DEVICE_EXPORT_VERSION,
+  mergeConversations,
+  parseDeviceDataExport,
+} from "@/lib/device-data-portability";
 import { getUsage } from "@/lib/limits";
 import { useUser, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, DEFAULT_THEME, type ThemeColors, type ThemeMode } from "@/lib/theme";
+import { authFetch } from "@/lib/auth-fetch";
+import { CURRENT_MEMORY_CONSENT_VERSION } from "@/lib/settings-storage";
 
 export type Mood = "neutral" | "friendly" | "professional" | "concise";
 
@@ -85,6 +127,7 @@ export type Settings = {
   mood: Mood;
   responseLength: "short" | "medium" | "long";
   rememberAcross: boolean;
+  memoryConsentVersion?: number;
   webSearch: boolean;
   sendOnEnter: boolean;
   mode: ThemeMode;
@@ -93,7 +136,8 @@ export type Settings = {
   notifyProduct?: boolean;
   // Parental controls
   parentalMode?: boolean;
-  // Data control
+  // Deprecated local-only value retained so old device exports still import safely.
+  // It is not exposed as an account- or provider-level training control.
   trainingOptOut?: boolean;
   // deprecated fields kept so old localStorage payloads still load
   preferredPronouns?: string;
@@ -107,8 +151,9 @@ export type Settings = {
   language?: string;
   showTimestamps?: boolean;
   theme?: ThemeColors;
-  buttonColor?: string;
 };
+
+export const SAVED_MEMORY_CONSENT_VERSION = 1;
 
 export const DEFAULT_SETTINGS: Settings = {
   displayName: "",
@@ -117,16 +162,15 @@ export const DEFAULT_SETTINGS: Settings = {
   customInstructions: "",
   mood: "neutral",
   responseLength: "medium",
-  rememberAcross: true,
+  rememberAcross: false,
   webSearch: true,
   sendOnEnter: true,
-  mode: "dark",
+  mode: "system",
   notifyEmail: true,
   notifyProduct: true,
   parentalMode: false,
   trainingOptOut: false,
   theme: DEFAULT_THEME,
-  buttonColor: "#2563eb",
 };
 
 const MOODS: { value: Mood; label: string; hint: string }[] = [
@@ -201,6 +245,7 @@ export function SettingsDialog({
   onClearAll,
   initialTab,
   onOpenHelp,
+  returnFocusTarget,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -209,10 +254,24 @@ export function SettingsDialog({
   onClearAll: () => void;
   initialTab?: string;
   onOpenHelp?: () => void;
+  returnFocusTarget?: HTMLElement | null;
 }) {
+  const returnFocusRef = useRef<HTMLElement | null>(
+    returnFocusTarget ??
+      (typeof document !== "undefined" && document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null),
+  );
+  useEffect(() => {
+    if (open && returnFocusTarget) returnFocusRef.current = returnFocusTarget;
+  }, [open, returnFocusTarget]);
   const localUsage = open ? getUsage() : { images: 0, uploads: 0, date: "" };
 
-  const { isSignedIn, user } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const userKey = user?.id ?? null;
+  const currentAuthUserKeyRef = useRef<string | null | undefined>(undefined);
+  currentAuthUserKeyRef.current = isLoaded ? userKey : undefined;
+  const sharedSendOnEnter = useSharedSendOnEnter(user?.id ?? null);
   const clerk = useClerk();
   const loggedIn = !clerkEnabled || isSignedIn;
   const { tier } = useTier();
@@ -224,7 +283,14 @@ export function SettingsDialog({
   const [usage, setUsage] = useState<DailyUsageDto | null>(null);
   const [usageLoading, setUsageLoading] = useState(false);
   const [subSummary, setSubSummary] = useState<SubscriptionSummary | null>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deleteAccountBusy, setDeleteAccountBusy] = useState(false);
+  const [clearMemoryConfirmOpen, setClearMemoryConfirmOpen] = useState(false);
+  const [clearMemoryBusy, setClearMemoryBusy] = useState(false);
 
   useEffect(() => {
     if (!open || tab !== "subscription" || !loggedIn) return;
@@ -248,12 +314,23 @@ export function SettingsDialog({
   useEffect(() => {
     if (!open || tab !== "subscription" || !loggedIn) return;
     let cancelled = false;
+    setSubSummary(null);
+    setSubscriptionError(null);
+    setSubscriptionLoading(true);
     getSubscriptionSummary({ data: { environment: getStripeEnvironment() } })
-      .then((s) => {
-        if (!cancelled) setSubSummary(s);
+      .then((summary) => {
+        if (!cancelled) setSubSummary(summary);
       })
       .catch(() => {
-        if (!cancelled) setSubSummary(null);
+        if (!cancelled) {
+          setSubSummary(null);
+          setSubscriptionError(
+            "Billing details couldn't be verified. Select Refresh billing status to retry.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setSubscriptionLoading(false);
       });
     return () => {
       cancelled = true;
@@ -261,18 +338,16 @@ export function SettingsDialog({
   }, [open, tab, loggedIn]);
 
   const handleManageBilling = async () => {
+    if (portalLoading || !subSummary?.hasBillingAccount) return;
     setPortalLoading(true);
     try {
-      const res = await createPortalSession({
-        data: {
-          environment: getStripeEnvironment(),
-          returnUrl: `${window.location.origin}/`,
-        },
-      });
-      if ("error" in res) throw new Error(res.error);
-      window.open(res.url, "_blank", "noopener,noreferrer");
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Couldn't open the billing portal.");
+      const res = await createPortalSession({ data: {} });
+      if ("error" in res) throw new Error("billing_portal_unavailable");
+      const portalUrl = parseAllowedBillingPortalUrl(res.url);
+      if (!portalUrl) throw new Error("billing_portal_url_rejected");
+      window.location.assign(portalUrl);
+    } catch {
+      toast.error("The billing portal couldn't be opened. Try again.");
     } finally {
       setPortalLoading(false);
     }
@@ -301,33 +376,167 @@ export function SettingsDialog({
     }
   };
 
-  const visibleTabGroups = useMemo<TabGroup[]>(() => {
-    const hideSubscription = tier === "plus" || tier === "pro";
-    if (!hideSubscription) return TAB_GROUPS;
-    return TAB_GROUPS.map((g) => ({
-      ...g,
-      tabs: g.tabs.filter((t) => t.v !== "subscription"),
-    })).filter((g) => g.tabs.length > 0);
-  }, [tier]);
+  const clearLocalBrowserData = (
+    targetUserKey: string | null | undefined = isLoaded ? userKey : undefined,
+  ) => {
+    const result = clearPrincipalBrowserStorage(targetUserKey);
+    if (!result.resolved) return result;
+    const failureCount = result.local.failures.length + result.session.failures.length;
+    if (failureCount > 0) {
+      console.warn("[local-data] Account-local browser cleanup was incomplete", {
+        failureCount,
+      });
+    }
+    return result;
+  };
 
-  const handleRestore = async () => {
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmation !== "DELETE" || deleteAccountBusy) return;
+    const deletionUserKey = isLoaded ? userKey : undefined;
+    setDeleteAccountBusy(true);
+    let response: Response;
     try {
-      const s = await getSubscriptionSummary({ data: { environment: getStripeEnvironment() } });
-      setSubSummary(s);
-      if (s.tier === "free") {
-        toast.message("No active subscription found on this account.");
-      } else {
-        toast.success(`${s.tier === "pro" ? "Pro" : "Plus"} plan restored.`);
+      response = await authFetch("/api/account", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmation: deleteConfirmation }),
+      });
+    } catch (error) {
+      console.error("[account-delete] request failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      toast.error("Account deletion could not be completed. Your account remains active.");
+      setDeleteAccountBusy(false);
+      return;
+    }
+
+    if (!response.ok) {
+      const result = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      toast.error(result?.error || "Account deletion failed. Your account remains active.");
+      setDeleteAccountBusy(false);
+      return;
+    }
+
+    // From this point on the server deletion is authoritative. Local UI,
+    // storage, or sign-out failures may require browser cleanup, but must never
+    // be reported as though the account remains active.
+    let localCleanupIncomplete: boolean;
+    try {
+      const cleanupResult = clearLocalBrowserData(deletionUserKey);
+      if (cleanupResult.resolved) {
+        dispatchPrincipalBrowserStorageCleared(deletionUserKey);
       }
-    } catch {
-      toast.error("Couldn't check your subscription. Try again.");
+      if (currentAuthUserKeyRef.current === deletionUserKey) {
+        onClearAll();
+        setDeleteAccountOpen(false);
+        onOpenChange(false);
+      }
+      const cleanupFailureCount =
+        cleanupResult.local.failures.length + cleanupResult.session.failures.length;
+      localCleanupIncomplete = !cleanupResult.resolved || cleanupFailureCount > 0;
+    } catch (error) {
+      localCleanupIncomplete = true;
+      console.error("[account-delete] local cleanup failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+    }
+
+    if (localCleanupIncomplete) {
+      toast.warning(
+        "Account deletion completed, but some data in this browser could not be removed. Clear KovaGPT site data in your browser settings.",
+      );
+    } else {
+      toast.success("Account deletion completed. Active subscriptions were canceled.");
+    }
+
+    try {
+      // The auth user no longer exists, so a post-delete sign-out failure must
+      // not reclassify the already-completed server deletion as a failure.
+      if (currentAuthUserKeyRef.current === deletionUserKey) await clerk?.signOut();
+    } catch (error) {
+      console.error("[account-delete] post-delete sign-out failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+    } finally {
+      setDeleteAccountBusy(false);
     }
   };
+
+  const handleClearSavedMemory = async () => {
+    if (clearMemoryBusy) return;
+    if (!isSignedIn || !userKey) {
+      toast.error("Sign in to delete saved cross-chat memory.");
+      return;
+    }
+
+    setClearMemoryBusy(true);
+    // Block queued writes synchronously and persist the opt-out before waiting
+    // for an already-started summary. The serialized delete then runs last, so
+    // an in-flight POST cannot recreate memory after deletion succeeds.
+    blockMemoryWrites(userKey);
+    configureMemoryWrites({ principal: userKey, enabled: false });
+    onChange({ ...settings, rememberAcross: false });
+
+    try {
+      const result = await deleteSavedMemoryAfterDraining({
+        principal: userKey,
+        run: async () => {
+          const response = await authFetch("/api/memory", { method: "DELETE" });
+          if (!response.ok) {
+            const body = (await response.json().catch(() => null)) as { error?: string } | null;
+            throw new Error(body?.error || "Saved memory could not be deleted. Please try again.");
+          }
+        },
+      });
+      if (result !== "deleted") {
+        throw new Error("Your account changed before saved memory could be deleted. Please retry.");
+      }
+      setClearMemoryConfirmOpen(false);
+      toast.success("Saved cross-chat memory deleted. Memory remains off in this browser.");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Saved memory could not be deleted. Please retry.";
+      toast.error(`${message} Memory remains off in this browser.`);
+    } finally {
+      setClearMemoryBusy(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    if (subscriptionLoading) return;
+    setSubscriptionLoading(true);
+    setSubscriptionError(null);
+    try {
+      const summary = await getSubscriptionSummary({
+        data: { environment: getStripeEnvironment() },
+      });
+      setSubSummary(summary);
+      if (summary.tier === "free") {
+        toast.message("No active subscription found on this account.");
+      } else {
+        toast.success(`${summary.tier === "pro" ? "Pro" : "Plus"} plan refreshed.`);
+      }
+    } catch {
+      setSubSummary(null);
+      setSubscriptionError(
+        "Billing details couldn't be verified. Select Refresh billing status to retry.",
+      );
+      toast.error("Couldn't check your subscription. Try again.");
+    } finally {
+      setSubscriptionLoading(false);
+    }
+  };
+
+  const inheritedSubscription = !!subSummary && tierRank(tier) > tierRank(subSummary.tier);
+  const displayedSubscriptionTier = inheritedSubscription ? tier : subSummary?.tier;
 
   // "Saved" indicator: whenever settings change while the dialog is open, show
   // a subtle pill for ~1.5s. Skips the very first render so it doesn't fire on
   // open.
   const [savedPulse, setSavedPulse] = useState(false);
+  const importFileRef = useRef<HTMLInputElement>(null);
   const firstRunRef = useRef(true);
   useEffect(() => {
     if (!open) {
@@ -345,7 +554,22 @@ export function SettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-background border border-border max-w-4xl max-h-[92vh] overflow-hidden flex flex-col gap-0 p-0 rounded-2xl">
+      <DialogContent
+        className="kova-settings-dialog bg-background border border-border max-w-4xl max-h-[92vh] overflow-hidden flex flex-col gap-0 p-0 rounded-xl"
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          if (window.innerWidth < 1024) {
+            document.querySelector<HTMLElement>('[aria-label="Open menu"]')?.focus();
+            return;
+          }
+          const previous = returnFocusRef.current;
+          if (previous?.isConnected && previous.getClientRects().length > 0) {
+            previous.focus();
+            return;
+          }
+          document.querySelector<HTMLElement>('[aria-label="Open menu"]')?.focus();
+        }}
+      >
         <DialogHeader className="px-5 sm:px-7 pt-5 pb-4 border-b border-border">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -361,7 +585,7 @@ export function SettingsDialog({
             {loggedIn && (
               <div
                 aria-live="polite"
-                className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition-all duration-300 ${
+                className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition-colors duration-100 ${
                   savedPulse
                     ? "opacity-100 translate-y-0 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                     : "opacity-0 -translate-y-1 border-transparent bg-transparent text-transparent pointer-events-none"
@@ -380,6 +604,7 @@ export function SettingsDialog({
             onChange={onChange}
             setMode={setMode}
             onSignIn={() => clerk?.openSignIn()}
+            onClose={() => onOpenChange(false)}
           />
         ) : (
           <Tabs
@@ -390,23 +615,21 @@ export function SettingsDialog({
           >
             {/* Mobile: horizontal scrolling section nav */}
             <TabsList className="md:hidden flex w-full overflow-x-auto scrollbar-none justify-start gap-1 p-2 bg-muted/40 border-b border-border rounded-none h-auto shrink-0">
-              {visibleTabGroups
-                .flatMap((g) => g.tabs)
-                .map(({ v, icon: Icon, label }) => (
-                  <TabsTrigger
-                    key={v}
-                    value={v}
-                    className="shrink-0 gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                    <span>{label}</span>
-                  </TabsTrigger>
-                ))}
+              {TAB_GROUPS.flatMap((g) => g.tabs).map(({ v, icon: Icon, label }) => (
+                <TabsTrigger
+                  key={v}
+                  value={v}
+                  className="shrink-0 gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span>{label}</span>
+                </TabsTrigger>
+              ))}
             </TabsList>
 
             {/* Desktop: grouped sidebar */}
             <TabsList className="hidden md:flex flex-col h-full w-64 shrink-0 overflow-y-auto items-stretch justify-start gap-4 p-3 bg-muted/40 border-r border-border rounded-none">
-              {visibleTabGroups.map((group) => (
+              {TAB_GROUPS.map((group) => (
                 <div key={group.title} className="flex flex-col gap-0.5">
                   <div className="px-2 pt-1 pb-1.5">
                     <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
@@ -422,7 +645,7 @@ export function SettingsDialog({
                     <TabsTrigger
                       key={v}
                       value={v}
-                      className="w-full justify-start gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
+                      className="w-full justify-start gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-colors"
                     >
                       <Icon className="w-4 h-4 shrink-0" />
                       <span className="truncate text-left">{label}</span>
@@ -445,9 +668,12 @@ export function SettingsDialog({
                   />
                   <ToggleRow
                     title="Send on Enter"
-                    hint="Enter sends; Shift+Enter for a new line."
-                    checked={settings.sendOnEnter}
-                    onCheckedChange={(v) => onChange({ ...settings, sendOnEnter: v })}
+                    hint="On desktop, Enter sends when enabled. Shift+Enter always starts a new line; Ctrl/⌘+Enter sends either way. Mobile Enter starts a new line."
+                    checked={sharedSendOnEnter}
+                    onCheckedChange={(v) => {
+                      setSharedSendOnEnter(user?.id ?? null, v);
+                      onChange({ ...settings, sendOnEnter: v });
+                    }}
                   />
                   <div>
                     <label className="text-xs text-muted-foreground mb-1.5 block">
@@ -456,7 +682,10 @@ export function SettingsDialog({
                     <Select
                       value={settings.responseLength}
                       onValueChange={(v) =>
-                        onChange({ ...settings, responseLength: v as Settings["responseLength"] })
+                        onChange({
+                          ...settings,
+                          responseLength: v as Settings["responseLength"],
+                        })
                       }
                     >
                       <SelectTrigger>
@@ -484,7 +713,7 @@ export function SettingsDialog({
                     </div>
                   </div>
                 </section>
-                <WorkspaceDefaults />
+                <WorkspaceDefaults userKey={userKey} principalResolved={isLoaded} />
               </TabsContent>
 
               {/* PERSONALIZATION */}
@@ -550,7 +779,10 @@ export function SettingsDialog({
                       placeholder="e.g. Answer in clear bullets. Use simple language. Skip disclaimers."
                       value={settings.customInstructions}
                       onChange={(e) =>
-                        onChange({ ...settings, customInstructions: e.target.value })
+                        onChange({
+                          ...settings,
+                          customInstructions: e.target.value,
+                        })
                       }
                       className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm resize-y min-h-[90px]"
                     />
@@ -558,7 +790,7 @@ export function SettingsDialog({
                 </section>
 
                 <section className="space-y-3">
-                  <PersonalitySliders />
+                  <PersonalitySliders userKey={userKey} principalResolved={isLoaded} />
                 </section>
               </TabsContent>
 
@@ -568,35 +800,51 @@ export function SettingsDialog({
                   <div className="flex items-center gap-2">
                     <Brain className="w-4 h-4" />
                     <h3 className="text-sm font-semibold">Memory</h3>
-                  </div>
-                  <ToggleRow
-                    title="Remember across conversations"
-                    hint="Carry your profile and instructions into every new chat."
-                    checked={settings.rememberAcross}
-                    onCheckedChange={(v) => onChange({ ...settings, rememberAcross: v })}
-                  />
-                </section>
-
-                <section className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4" />
-                    <h3 className="text-sm font-semibold">Adaptive Memory</h3>
                     <span className="text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-full bg-foreground/10 text-foreground">
                       Plus
                     </span>
                   </div>
                   {adaptiveMemoryUnlocked ? (
-                    <p className="text-xs text-muted-foreground">
-                      Adaptive Memory is active. KovaGPT continually learns your preferences and
-                      adapts replies.
-                    </p>
+                    <>
+                      <ToggleRow
+                        title="Use saved memory"
+                        hint="When enabled, eligible non-temporary chats sent from this browser can save bounded summaries and use relevant summaries in later chats. Other browsers keep their own setting."
+                        checked={settings.rememberAcross}
+                        onCheckedChange={(value) => {
+                          if (value) allowMemoryWrites(userKey);
+                          else blockMemoryWrites(userKey);
+                          configureMemoryWrites({
+                            principal: userKey,
+                            enabled: value && isSignedIn,
+                          });
+                          onChange({
+                            ...settings,
+                            rememberAcross: value,
+
+                            memoryConsentVersion: value ? SAVED_MEMORY_CONSENT_VERSION : undefined,
+
+                            memoryConsentVersion: value
+                              ? CURRENT_MEMORY_CONSENT_VERSION
+                              : settings.memoryConsentVersion,
+
+                          });
+                        }}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Turning this off stops saved-memory reads and new summary POSTs from chats
+                        sent in this browser. It does not delete summaries already saved to your
+                        account. Temporary Chat never sends profile, custom-instruction, or
+                        personality settings and never reads or writes saved memory.
+                      </p>
+                    </>
                   ) : (
                     <div className="rounded-lg border border-border p-4 flex items-start gap-3">
                       <Lock className="w-4 h-4 mt-0.5 text-muted-foreground shrink-0" />
                       <div className="flex-1 text-sm">
                         <div className="font-medium">Available on Kova Plus and Pro</div>
                         <div className="text-xs text-muted-foreground mt-1">
-                          Adaptive Memory remembers what matters to you across conversations.
+                          Paid plans can save bounded conversation summaries and use relevant ones
+                          in later non-temporary chats.
                         </div>
                         <Link
                           to="/pricing"
@@ -610,18 +858,24 @@ export function SettingsDialog({
                   )}
                 </section>
 
-                <section>
+                <section className="rounded-lg border border-border p-4 space-y-3">
+                  <div>
+                    <div className="text-sm font-medium">Saved cross-chat memory</div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Permanently delete every conversation summary stored for your account. Chats,
+                      drafts, and preferences saved in this browser are not deleted. Memory is
+                      turned off in this browser before deletion so a pending summary cannot
+                      recreate the deleted data.
+                    </p>
+                  </div>
                   <Button
-                    variant="outline"
+                    variant="destructive"
                     size="sm"
-                    onClick={() => {
-                      clearConversations();
-                      onClearAll();
-                      toast.success("All conversation memory cleared.");
-                    }}
+                    onClick={() => setClearMemoryConfirmOpen(true)}
+                    disabled={clearMemoryBusy || !isSignedIn}
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
-                    Clear all conversations
+                    {clearMemoryBusy ? "Deleting…" : "Delete saved memory"}
                   </Button>
                 </section>
               </TabsContent>
@@ -695,12 +949,9 @@ export function SettingsDialog({
                     {user?.primaryEmailAddress?.emailAddress ?? "No email on file"}
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => clerk?.openUserProfile()}>
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Manage email addresses
-                </Button>
                 <p className="text-xs text-muted-foreground">
-                  Verification emails are sent here when you sign in or create an account.
+                  Verification and security emails are sent here. Email-address changes are not
+                  currently available in the app; contact support@kovagpt.com if you need help.
                 </p>
               </TabsContent>
 
@@ -712,15 +963,31 @@ export function SettingsDialog({
                 <div className="rounded-lg border border-border p-4 flex items-center justify-between gap-3">
                   <div>
                     <div className="text-sm font-medium">Current plan</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      You're on the {tier === "free" ? "Free" : tier === "plus" ? "Plus" : "Pro"}{" "}
-                      plan
-                      {subSummary?.trialing ? " (free trial)" : ""}
-                      {subSummary?.status === "past_due" ? " - payment past due" : ""}
-                      {subSummary?.status === "unpaid" ? " - payment failed" : ""}
-                      {subSummary?.status === "incomplete" ? " - awaiting first payment" : ""}.
-                    </div>
-                    {subSummary?.currentPeriodEnd && (
+                    {subscriptionLoading ? (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Checking billing status…
+                      </div>
+                    ) : subscriptionError ? (
+                      <div className="text-xs text-destructive mt-1">
+                        Billing details unavailable.
+                      </div>
+                    ) : displayedSubscriptionTier ? (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        You're on the{" "}
+                        {displayedSubscriptionTier === "free"
+                          ? "Free"
+                          : displayedSubscriptionTier === "plus"
+                            ? "Plus"
+                            : "Pro"}{" "}
+                        plan
+                        {inheritedSubscription ? " through Family Sharing" : ""}
+                        {subSummary?.trialing ? " (free trial)" : ""}
+                        {subSummary?.status === "past_due" ? " - payment past due" : ""}
+                        {subSummary?.status === "unpaid" ? " - payment failed" : ""}
+                        {subSummary?.status === "incomplete" ? " - awaiting first payment" : ""}.
+                      </div>
+                    ) : null}
+                    {subSummary?.currentPeriodEnd && !inheritedSubscription && (
                       <div className="text-[11px] text-muted-foreground mt-1">
                         {subSummary.trialing
                           ? `Trial ends ${new Date(subSummary.currentPeriodEnd).toLocaleDateString()} - billing starts then unless you cancel.`
@@ -730,14 +997,18 @@ export function SettingsDialog({
                       </div>
                     )}
                   </div>
-                  <Link
-                    to="/pricing"
-                    onClick={() => onOpenChange(false)}
-                    className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition whitespace-nowrap"
-                  >
-                    <Sparkles className="w-4 h-4" />{" "}
-                    {tier === "free" ? "Start free month" : "Change plan"}
-                  </Link>
+                  {!subscriptionLoading &&
+                    !subscriptionError &&
+                    displayedSubscriptionTier === "free" &&
+                    !subSummary?.hasBillingAccount && (
+                      <Link
+                        to="/pricing"
+                        onClick={() => onOpenChange(false)}
+                        className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition whitespace-nowrap"
+                      >
+                        <Sparkles className="w-4 h-4" /> View plans
+                      </Link>
+                    )}
                 </div>
 
                 <div className="rounded-lg border border-border p-4 space-y-3">
@@ -787,48 +1058,78 @@ export function SettingsDialog({
                   )}
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleManageBilling}
-                    disabled={portalLoading || !subSummary?.hasBillingAccount}
-                    title={
-                      !subSummary?.hasBillingAccount
-                        ? "Start a subscription to manage billing"
-                        : undefined
-                    }
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleManageBilling}
+                      disabled={
+                        portalLoading ||
+                        subscriptionLoading ||
+                        !!subscriptionError ||
+                        !subSummary?.hasBillingAccount ||
+                        inheritedSubscription
+                      }
+                      aria-describedby="billing-management-status"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      {portalLoading ? "Opening…" : "Manage subscription"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRestore}
+                      disabled={subscriptionLoading || portalLoading}
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      {subscriptionLoading ? "Checking…" : "Refresh billing status"}
+                    </Button>
+                  </div>
+                  <p
+                    id="billing-management-status"
+                    role={subscriptionError ? "alert" : undefined}
+                    className={`text-xs ${subscriptionError ? "text-destructive" : "text-muted-foreground"}`}
                   >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    {portalLoading ? "Opening…" : "Manage subscription"}
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handleRestore}>
-                    <RefreshCw className="w-4 h-4 mr-2" /> Restore purchases
-                  </Button>
-                </div>
-
-                <div className="rounded-lg border border-border p-4 space-y-2">
-                  <div className="text-sm font-medium">Cancel subscription</div>
-                  <p className="text-xs text-muted-foreground">
-                    You can cancel anytime from the billing portal above. After canceling, you'll
-                    keep access to your current plan until the end of the billing period.
+                    {subscriptionError
+                      ? subscriptionError
+                      : subscriptionLoading
+                        ? "Checking the billing account linked to this KovaGPT account."
+                        : inheritedSubscription
+                          ? "This shared plan is managed by the Family Sharing owner."
+                          : subSummary?.hasBillingAccount
+                            ? "Manage payment methods, invoices, cancellation, and plan changes in the Stripe billing portal."
+                            : "No Stripe billing account is linked to this KovaGPT account."}
                   </p>
                 </div>
+
+                {subSummary?.hasBillingAccount &&
+                  !inheritedSubscription &&
+                  displayedSubscriptionTier !== "free" && (
+                    <div className="rounded-lg border border-border p-4 space-y-2">
+                      <div className="text-sm font-medium">Cancel subscription</div>
+                      <p className="text-xs text-muted-foreground">
+                        You can cancel from the Stripe billing portal above. After canceling, you'll
+                        keep access to your current plan until the end of the billing period.
+                      </p>
+                    </div>
+                  )}
 
                 <div className="rounded-lg border border-border p-4 space-y-2">
                   <div className="text-sm font-medium">Account and data deletion</div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    If you want to delete your KovaGPT account or request deletion of your data,
-                    contact{" "}
+                    Use Data controls to request self-service account deletion. KovaGPT verifies
+                    billing first, cancels active subscriptions, disconnects stored credentials, and
+                    then deletes the sign-in account and associated database records. For help or a
+                    specific privacy request, contact{" "}
                     <a
                       href="mailto:support@kovagpt.com"
                       className="underline hover:text-foreground"
                     >
                       support@kovagpt.com
                     </a>{" "}
-                    from the email connected to your account. Please include "Account Deletion
-                    Request" in the subject line. After receiving your request, we may ask for
-                    confirmation to make sure the request is coming from the correct account owner.
+                    from the email connected to your account. Some billing, security, and backup
+                    records may be retained when required by law or operational policy.
                   </p>
                 </div>
 
@@ -897,7 +1198,7 @@ export function SettingsDialog({
                           onClick={() => setMode(v)}
                           className={`flex flex-col items-center justify-center gap-2 rounded-xl border px-4 py-5 text-sm font-medium transition ${
                             active
-                              ? "border-foreground bg-accent text-foreground shadow-sm"
+                              ? "border-foreground bg-accent text-foreground"
                               : "border-border hover:bg-accent/60 text-muted-foreground"
                           }`}
                         >
@@ -906,54 +1207,6 @@ export function SettingsDialog({
                         </button>
                       );
                     })}
-                  </div>
-                </section>
-                <section className="space-y-3">
-                  <h3 className="text-sm font-semibold">Action button color</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Color for the send and other primary action buttons. Default is KovaGPT blue.
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={settings.buttonColor ?? "#2563eb"}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        onChange({ ...settings, buttonColor: v });
-                        try {
-                          localStorage.setItem("kova-action-color", v);
-                          window.dispatchEvent(new CustomEvent("kova-action-color", { detail: v }));
-                        } catch {
-                          /* ignore */
-                        }
-                      }}
-                      className="h-10 w-16 rounded-md border border-border bg-transparent cursor-pointer"
-                      aria-label="Pick action button color"
-                    />
-                    <div className="flex flex-wrap gap-2">
-                      {["#2563eb", "#10a37f", "#7c3aed", "#ef4444", "#f59e0b", "#0a0a0a"].map(
-                        (c) => (
-                          <button
-                            key={c}
-                            type="button"
-                            onClick={() => {
-                              onChange({ ...settings, buttonColor: c });
-                              try {
-                                localStorage.setItem("kova-action-color", c);
-                                window.dispatchEvent(
-                                  new CustomEvent("kova-action-color", { detail: c }),
-                                );
-                              } catch {
-                                /* ignore */
-                              }
-                            }}
-                            className="w-8 h-8 rounded-full border border-border ring-offset-2 ring-offset-background hover:ring-2 hover:ring-foreground/30 transition"
-                            style={{ backgroundColor: c }}
-                            aria-label={`Use ${c}`}
-                          />
-                        ),
-                      )}
-                    </div>
                   </div>
                 </section>
               </TabsContent>
@@ -1009,7 +1262,7 @@ export function SettingsDialog({
                     Customize shortcuts for common actions. Click a combo to record a new one.
                   </p>
                 </div>
-                <ShortcutsEditor />
+                <ShortcutsEditor userKey={userKey} principalResolved={isLoaded} />
               </TabsContent>
 
               {/* LOCATION */}
@@ -1022,7 +1275,7 @@ export function SettingsDialog({
                     required.
                   </p>
                 </div>
-                <LocationPanel />
+                <LocationPanel userKey={userKey} principalResolved={isLoaded} />
               </TabsContent>
 
               {/* SAFETY & SECURITY */}
@@ -1045,24 +1298,40 @@ export function SettingsDialog({
               {/* DATA CONTROL */}
               <TabsContent value="data" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
                 <h3 className="text-sm font-semibold">Data controls</h3>
-                <ToggleRow
-                  title="Improve the model for everyone"
-                  hint="Allow KovaGPT to use your conversations to improve quality. Turn off to opt out."
-                  checked={!(settings.trainingOptOut ?? false)}
-                  onCheckedChange={(v) => onChange({ ...settings, trainingOptOut: !v })}
-                />
+                <ArchivedChatsPanel userKey={userKey} />
+                <div
+                  role="note"
+                  className="rounded-lg border border-border bg-muted/30 p-4 space-y-2"
+                >
+                  <div className="text-sm font-medium">Model training</div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    The removed model-improvement switch changed only a browser-local value; it was
+                    not wired to an account-level or AI-provider training control. No toggle is
+                    shown until a real remote control exists. See the{" "}
+                    <Link
+                      to="/privacy"
+                      onClick={() => onOpenChange(false)}
+                      className="underline underline-offset-2 hover:text-foreground"
+                    >
+                      Privacy Policy
+                    </Link>{" "}
+                    for how provider processing is described.
+                  </p>
+                </div>
                 <SecurityRow
                   title="Export your data"
-                  body="Download a copy of your account data right now."
+                  body="Download chats, archived chats, and preferences stored on this device. Cloud account records are not included."
                   actionLabel="Download"
                   onAction={() => {
                     try {
                       const payload = {
+                        format: "kovagpt-device-export",
+                        version: DEVICE_EXPORT_VERSION,
                         exportedAt: new Date().toISOString(),
+                        scope: "this-device",
                         settings,
-                        conversations: JSON.parse(
-                          localStorage.getItem("nova-gpt-conversations-v2") || "[]",
-                        ),
+                        conversations: loadConversations(userKey),
+                        archivedConversations: loadArchivedConversations(userKey),
                       };
                       const blob = new Blob([JSON.stringify(payload, null, 2)], {
                         type: "application/json",
@@ -1081,19 +1350,53 @@ export function SettingsDialog({
                     }
                   }}
                 />
+                <input
+                  ref={importFileRef}
+                  type="file"
+                  accept="application/json,.json"
+                  className="sr-only"
+                  aria-label="Choose KovaGPT export"
+                  onChange={async (event) => {
+                    const file = event.currentTarget.files?.[0];
+                    event.currentTarget.value = "";
+                    if (!file) return;
+                    try {
+                      const imported = parseDeviceDataExport(await file.text());
+                      const conversations = mergeConversations(
+                        loadConversations(userKey),
+                        imported.conversations,
+                      );
+                      const archived = mergeConversations(
+                        loadArchivedConversations(userKey),
+                        imported.archivedConversations,
+                      );
+                      saveConversations(userKey, conversations);
+                      saveArchivedConversations(userKey, archived);
+                      window.dispatchEvent(new Event("kova:conversations-imported"));
+                      toast.success(
+                        `Imported ${imported.conversations.length + imported.archivedConversations.length} chats.`,
+                      );
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error ? error.message : "Could not import data.",
+                      );
+                    }
+                  }}
+                />
+                <SecurityRow
+                  title="Import chat history"
+                  body="Merge active and archived chats from a KovaGPT device-data export. Existing newer chats are kept."
+                  actionLabel="Choose file"
+                  onAction={() => importFileRef.current?.click()}
+                />
                 <SecurityRow
                   title="Delete account"
-                  body="Permanently delete your account and all data."
+                  body="Cancel active subscriptions, disconnect stored credentials, and delete your sign-in account and associated cloud records. Legally required billing, security, and backup records may be retained."
                   actionLabel="Delete account"
                   danger
                   onAction={() => {
-                    // User is already signed in when this dialog is open (SignInGate above).
-                    // Open the account management surface directly.
-                    try {
-                      clerk?.openUserProfile();
-                    } catch {
-                      toast.error("Could not open account settings.");
-                    }
+                    setDeleteConfirmation("");
+                    setDeleteAccountOpen(true);
                   }}
                 />
               </TabsContent>
@@ -1101,23 +1404,38 @@ export function SettingsDialog({
               {/* STORAGE */}
               <TabsContent value="storage" className="overflow-y-auto px-7 pb-8 space-y-4 py-5">
                 <StorageDashboard signedIn={loggedIn} />
-                <div className="rounded-2xl border border-border bg-card/60 backdrop-blur-sm p-5 space-y-3">
+                <div className="rounded-xl border border-border bg-card/60 p-5 space-y-3">
                   <h3 className="text-sm font-semibold">Local device data</h3>
                   <p className="text-xs text-muted-foreground">
-                    Clears cached chats, drafts, and preferences stored on this device. Cloud data
-                    is not affected.
+                    Resets chats, drafts, handoffs, work data, and account preferences stored for
+                    this KovaGPT profile on this browser. Ownerless private data, including
+                    transitional values from older versions, is also removed so another profile
+                    cannot receive it. Other profiles' scoped data, device-wide display preferences,
+                    and cloud data are preserved.
                   </p>
                   <Button
                     variant="destructive"
                     size="sm"
                     onClick={() => {
-                      clearConversations();
+                      const result = clearLocalBrowserData();
+                      if (!result.resolved) {
+                        toast.error("Account data is still loading. Try again in a moment.");
+                        return;
+                      }
+                      dispatchPrincipalBrowserStorageCleared(userKey);
+                      onChange(DEFAULT_SETTINGS);
                       onClearAll();
-                      toast.success("Local storage cleared.");
+                      const failureCount =
+                        result.local.failures.length + result.session.failures.length;
+                      if (failureCount > 0) {
+                        toast.warning("Some local data could not be reset. Reload and try again.");
+                      } else {
+                        toast.success("This profile's local browser data was reset.");
+                      }
                     }}
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
-                    Clear local storage
+                    Reset this profile's local data
                   </Button>
                 </div>
               </TabsContent>
@@ -1204,6 +1522,71 @@ export function SettingsDialog({
         onOpenChange={setLogoutConfirmOpen}
         onConfirm={handleLogout}
       />
+      <AlertDialog
+        open={clearMemoryConfirmOpen}
+        onOpenChange={(next) => {
+          if (!clearMemoryBusy) setClearMemoryConfirmOpen(next);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete saved cross-chat memory?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Memory will first be turned off in this browser and any summary already in progress
+              will finish before deletion runs. This permanently deletes every conversation summary
+              stored for your account. Browser-saved chats are not deleted. This action cannot be
+              undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={clearMemoryBusy}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={handleClearSavedMemory}
+              disabled={clearMemoryBusy}
+            >
+              {clearMemoryBusy ? "Deleting…" : "Delete saved memory"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog
+        open={deleteAccountOpen}
+        onOpenChange={(next) => {
+          if (deleteAccountBusy) return;
+          setDeleteAccountOpen(next);
+          if (!next) setDeleteConfirmation("");
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete your account permanently?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This cancels active subscriptions, disconnects stored credentials, and deletes your
+              sign-in account and associated cloud records. Legally required billing, security, and
+              backup records may be retained. This action cannot be undone. Type DELETE to continue.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            value={deleteConfirmation}
+            onChange={(event) => setDeleteConfirmation(event.target.value)}
+            placeholder="Type DELETE"
+            aria-label="Type DELETE to confirm"
+            autoComplete="off"
+            disabled={deleteAccountBusy}
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteAccountBusy}>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteAccount}
+              disabled={deleteConfirmation !== "DELETE" || deleteAccountBusy}
+            >
+              {deleteAccountBusy ? "Deleting…" : "Delete account"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
@@ -1436,40 +1819,55 @@ function ToggleRow({
 
 type LibItem = import("@/lib/library.functions").LibraryItem;
 
-function WorkspaceDefaults() {
-  const [defaults, setDefaults] = useState(() => {
-    if (typeof window === "undefined")
-      return {
-        project: "Balanced",
-        work: "Review before completion",
-        prompt: "General",
-        research: "Balanced sources",
-        artifact: "Edit",
-      };
-    try {
-      return (
-        JSON.parse(localStorage.getItem("kova-workspace-defaults-v1") ?? "null") ?? {
-          project: "Balanced",
-          work: "Review before completion",
-          prompt: "General",
-          research: "Balanced sources",
-          artifact: "Edit",
-        }
-      );
-    } catch {
-      return {
-        project: "Balanced",
-        work: "Review before completion",
-        prompt: "General",
-        research: "Balanced sources",
-        artifact: "Edit",
-      };
+type WorkspaceDefaultValues = {
+  project: string;
+  work: string;
+  prompt: string;
+  research: string;
+  artifact: string;
+};
+
+const DEFAULT_WORKSPACE_DEFAULTS: WorkspaceDefaultValues = {
+  project: "Balanced",
+  work: "Review before completion",
+  prompt: "General",
+  research: "Balanced sources",
+  artifact: "Edit",
+};
+
+function WorkspaceDefaults({
+  userKey,
+  principalResolved,
+}: {
+  userKey: string | null;
+  principalResolved: boolean;
+}) {
+  const [defaults, setDefaults] = useState<WorkspaceDefaultValues>(DEFAULT_WORKSPACE_DEFAULTS);
+
+  useEffect(() => {
+    if (!principalResolved) {
+      setDefaults(DEFAULT_WORKSPACE_DEFAULTS);
+      return;
     }
-  });
+    const stored = loadPrincipalStoredRecord(WORKSPACE_DEFAULTS_KEY_BASE, userKey, {
+      migrateLegacyGuest: userKey === null,
+    });
+    setDefaults(
+      stored
+        ? ({ ...DEFAULT_WORKSPACE_DEFAULTS, ...stored } as WorkspaceDefaultValues)
+        : DEFAULT_WORKSPACE_DEFAULTS,
+    );
+  }, [principalResolved, userKey]);
+
   const update = (key: string, value: string) => {
     const next = { ...defaults, [key]: value };
     setDefaults(next);
-    localStorage.setItem("kova-workspace-defaults-v1", JSON.stringify(next));
+    if (!principalResolved) return;
+    try {
+      savePrincipalStoredRecord(WORKSPACE_DEFAULTS_KEY_BASE, userKey, next);
+    } catch {
+      /* ignore */
+    }
   };
   const fields = [
     ["project", "Project defaults", ["Balanced", "Concise instructions", "Detailed instructions"]],
@@ -1612,12 +2010,14 @@ function LibraryPanel() {
   );
   const [mine, setMine] = useState<import("@/lib/shared-chats.functions").SharedChatSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [viewing, setViewing] = useState<LibItem | null>(null);
 
   const load = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const [lib, inbox, mineShares] = await Promise.all([
         (await import("@/lib/library.functions")).listMyLibrary(),
@@ -1629,6 +2029,7 @@ function LibraryPanel() {
       setMine(mineShares);
     } catch (e) {
       console.error(e);
+      setLoadError(e instanceof Error ? e.message : "Library data could not be loaded.");
     } finally {
       setLoading(false);
     }
@@ -1713,7 +2114,18 @@ function LibraryPanel() {
           </Select>
         </div>
 
-        {filtered.length === 0 ? (
+        {loadError ? (
+          <div
+            role="alert"
+            className="rounded-lg border border-destructive/30 bg-destructive/5 p-4"
+          >
+            <p className="text-sm font-medium text-destructive">Library data is unavailable</p>
+            <p className="mt-1 text-xs text-muted-foreground">{loadError}</p>
+            <Button size="sm" variant="outline" onClick={load} className="mt-3">
+              <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Retry
+            </Button>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
             {loading
               ? "Loading…"
@@ -1751,7 +2163,7 @@ function LibraryPanel() {
                         await navigator.clipboard.writeText(it.content_text ?? "");
                         toast.success("Copied.");
                       }}
-                      className="p-1.5 rounded hover:bg-accent transition active:scale-95"
+                      className="p-1.5 rounded hover:bg-accent transition"
                       title="Copy"
                     >
                       <Check className="w-3.5 h-3.5" />
@@ -1759,7 +2171,7 @@ function LibraryPanel() {
                   )}
                   <button
                     onClick={() => remove(it.id)}
-                    className="p-1.5 rounded hover:bg-accent transition active:scale-95"
+                    className="p-1.5 rounded hover:bg-accent transition"
                     title="Delete"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -1835,129 +2247,174 @@ function SignedOutSettings({
   onChange,
   setMode,
   onSignIn,
+  onClose,
 }: {
   settings: Settings;
   onChange: (s: Settings) => void;
   setMode: (m: ThemeMode) => void;
   onSignIn: () => void;
+  onClose: () => void;
 }) {
+  const [section, setSection] = useState<"general" | "data">("general");
+  void onChange;
+
   return (
-    <div className="overflow-y-auto max-h-[78vh] bg-background">
-      {/* Hero sign-in card */}
-      <div className="px-6 pt-8 pb-2">
-        <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-gradient-to-b from-muted/40 to-background p-7 text-center">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-foreground text-background flex items-center justify-center shadow-sm mb-4">
-            <Sparkles className="w-6 h-6" />
-          </div>
-          <h2 className="text-[19px] font-semibold tracking-tight font-display">
-            Sign in to KovaGPT
-          </h2>
-          <p className="text-[13px] text-muted-foreground mt-2 leading-relaxed max-w-sm mx-auto">
-            Sync your chats, memory, and connected apps across every device.
-          </p>
-          <div className="mt-5">
-            <Button
-              onClick={onSignIn}
-              className="rounded-full px-6 h-10 text-sm font-medium shadow-sm"
-            >
-              Sign in
-            </Button>
-          </div>
-          <p className="text-[11px] text-muted-foreground/80 mt-4">
-            Guest preferences below are saved on this device only.
-          </p>
-        </div>
-      </div>
+    <div className="flex max-h-[78vh] min-h-0 flex-1 flex-col overflow-hidden bg-background md:flex-row">
+      <nav
+        aria-label="Settings sections"
+        className="flex shrink-0 gap-1 overflow-x-auto border-b border-border p-2 md:w-56 md:flex-col md:overflow-visible md:border-b-0 md:border-r md:p-3"
+      >
+        {(
+          [
+            ["general", "General", Cog],
+            ["data", "Data controls", Database],
+          ] as const
+        ).map(([value, label, Icon]) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setSection(value)}
+            aria-current={section === value}
+            className={`flex shrink-0 items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
+              section === value
+                ? "bg-accent text-foreground font-medium"
+                : "text-muted-foreground hover:bg-accent/60"
+            }`}
+          >
+            <Icon className="h-4 w-4 shrink-0" />
+            <span>{label}</span>
+          </button>
+        ))}
+      </nav>
 
-      <div className="px-6 py-6 space-y-8">
-        {/* Appearance */}
-        <section>
-          <h3 className="text-[11px] uppercase tracking-[0.08em] font-medium text-muted-foreground px-1 mb-2.5">
-            Appearance
-          </h3>
-          <div className="rounded-2xl border border-border/60 bg-card/40 p-2">
-            <div className="grid grid-cols-3 gap-1">
-              {(["system", "light", "dark"] as ThemeMode[]).map((m) => {
-                const active = settings.mode === m;
-                const Icon = m === "system" ? Monitor : m === "light" ? Sun : Moon;
-                return (
-                  <button
-                    key={m}
-                    onClick={() => setMode(m)}
-                    className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[13px] capitalize transition ${
-                      active
-                        ? "bg-background text-foreground shadow-sm font-medium"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span>{m}</span>
-                  </button>
-                );
-              })}
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+        {section === "general" ? (
+          <div className="divide-y divide-border">
+            <div className="flex items-center justify-between gap-4 py-4 first:pt-0">
+              <span className="text-sm">Appearance</span>
+              <div className="w-44">
+                <Select value={settings.mode ?? "system"} onValueChange={(v) => setMode(v as ThemeMode)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="system">System</SelectItem>
+                    <SelectItem value="light">Light</SelectItem>
+                    <SelectItem value="dark">Dark</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-4 py-4">
+              <span className="text-sm">Language</span>
+              <div className="w-44">
+                <GuestLanguageSelect />
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-4 py-4">
+              <div className="min-w-0">
+                <div className="text-sm">Account</div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Sign in to sync chats, memory, and settings across devices.
+                </p>
+              </div>
+              <Button onClick={onSignIn} className="h-9 rounded-full px-5 text-sm">
+                Sign in
+              </Button>
             </div>
           </div>
-        </section>
-
-        {/* Language */}
-        <section>
-          <h3 className="text-[11px] uppercase tracking-[0.08em] font-medium text-muted-foreground px-1 mb-2.5">
-            Language
-          </h3>
-          <div className="rounded-2xl border border-border/60 bg-card/40 p-3">
-            <GuestLanguageSelect />
-            <p className="text-[12px] text-muted-foreground mt-2.5 px-0.5">
-              KovaGPT replies in the language you write in.
-            </p>
-          </div>
-        </section>
-
-        {/* Privacy */}
-        <section>
-          <h3 className="text-[11px] uppercase tracking-[0.08em] font-medium text-muted-foreground px-1 mb-2.5">
-            Privacy
-          </h3>
-          <div className="rounded-2xl border border-border/60 bg-card/40 divide-y divide-border/60 overflow-hidden">
-            <div className="px-4 py-3.5">
-              <ToggleRow
-                title="Help improve Kova"
-                hint="Allow your content to help improve Kova's models."
-                checked={settings.trainingOptOut !== true}
-                onCheckedChange={(v) => onChange({ ...settings, trainingOptOut: !v })}
-              />
-            </div>
-            <div className="px-4 py-3.5">
-              <GuestToggleRow
-                storageKey="kova-guest-campaign-measurement"
-                title="Campaign measurement"
-                hint="Help Kova measure marketing performance."
-              />
-            </div>
-            <div className="px-4 py-3.5">
-              <GuestToggleRow
-                storageKey="kova-guest-personalized-marketing"
-                title="Personalized marketing"
-                hint="Personalize marketing on third party platforms."
-              />
-            </div>
-            <div className="px-4 py-3.5">
-              <GuestToggleRow
-                storageKey="kova-guest-ad-personalization"
-                title="Ad personalization"
-                hint="Use recent activity to make ads more relevant."
-              />
-            </div>
-            <div className="px-4 py-3.5">
-              <GuestToggleRow
-                storageKey="kova-guest-past-chat-relevance"
-                title="Past chat relevance"
-                hint="Use past chats to improve ad relevance. Chats are never shared with advertisers."
-              />
+        ) : (
+          <div className="space-y-5">
+            <ArchivedChatsPanel userKey={null} />
+            <div className="rounded-xl border border-border/60 bg-card/40 p-4">
+              <div className="text-sm font-medium">Guest data stays on this device</div>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                Signed out chats and preferences are stored in this browser session only and are
+                cleared when the tab closes. Read the{" "}
+                <Link
+                  to="/privacy"
+                  onClick={onClose}
+                  className="underline underline-offset-2 hover:text-foreground"
+                >
+                  Privacy Policy
+                </Link>{" "}
+                for the data-processing terms that apply.
+              </p>
             </div>
           </div>
-        </section>
+        )}
       </div>
     </div>
+  );
+}
+
+function ArchivedChatsPanel({ userKey }: { userKey: string | null }) {
+  const [revision, setRevision] = useState(0);
+  const archived = loadArchivedConversations(userKey);
+
+  return (
+    <section
+      className="rounded-xl border border-border/70 bg-card/60 p-4"
+      aria-label="Archived chats"
+    >
+      <div className="mb-3">
+        <h4 className="text-sm font-medium">Archived chats</h4>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Review or restore conversations you moved out of your sidebar.
+        </p>
+      </div>
+      <div className="space-y-1" key={revision}>
+        {archived.length ? (
+          archived.map((chat) => (
+            <div
+              key={chat.id}
+              className="flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-accent/60"
+            >
+              <span className="min-w-0 flex-1 truncate text-sm">{chat.title}</span>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="rounded-full"
+                onClick={() => {
+                  saveConversations(
+                    userKey,
+                    mergeConversations(loadConversations(userKey), [chat]),
+                  );
+                  saveArchivedConversations(
+                    userKey,
+                    loadArchivedConversations(userKey).filter((item) => item.id !== chat.id),
+                  );
+                  setRevision((value) => value + 1);
+                  window.dispatchEvent(new Event("kova:conversations-imported"));
+                  toast.success("Chat restored");
+                }}
+              >
+                Restore
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive"
+                aria-label={`Delete archived chat ${chat.title}`}
+                onClick={() => {
+                  if (!window.confirm(`Permanently delete "${chat.title}"?`)) return;
+                  saveArchivedConversations(
+                    userKey,
+                    loadArchivedConversations(userKey).filter((item) => item.id !== chat.id),
+                  );
+                  setRevision((value) => value + 1);
+                  toast.success("Archived chat deleted");
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))
+        ) : (
+          <p className="px-3 py-2 text-sm text-muted-foreground">No archived chats</p>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -2042,40 +2499,6 @@ function GuestLanguageSelect() {
   );
 }
 
-function GuestToggleRow({
-  storageKey,
-  title,
-  hint,
-}: {
-  storageKey: string;
-  title: string;
-  hint: string;
-}) {
-  const [checked, setChecked] = useState(false);
-  useEffect(() => {
-    try {
-      setChecked(localStorage.getItem(storageKey) === "1");
-    } catch {
-      /* noop */
-    }
-  }, [storageKey]);
-  return (
-    <ToggleRow
-      title={title}
-      hint={hint}
-      checked={checked}
-      onCheckedChange={(v) => {
-        setChecked(v);
-        try {
-          localStorage.setItem(storageKey, v ? "1" : "0");
-        } catch {
-          /* noop */
-        }
-      }}
-    />
-  );
-}
-
 // ---------- Family-safe audience + PIN ----------
 
 type SafeAudience = "myself" | "child" | "none";
@@ -2094,13 +2517,21 @@ function FamilySafeAudience() {
     }
   };
   const opts: { v: SafeAudience; label: string; hint: string }[] = [
-    { v: "myself", label: "Myself", hint: "I'm using Family-safe mode for me." },
+    {
+      v: "myself",
+      label: "Myself",
+      hint: "I'm using Family-safe mode for me.",
+    },
     {
       v: "child",
       label: "My child",
       hint: "A child uses this device - enable a PIN below to lock changes.",
     },
-    { v: "none", label: "None of the above", hint: "Don't apply Family-safe defaults." },
+    {
+      v: "none",
+      label: "None of the above",
+      hint: "Don't apply Family-safe defaults.",
+    },
   ];
   return (
     <div className="space-y-2">
@@ -2327,25 +2758,58 @@ function FamilyPinPanel() {
 
 // ---------- Keyboard shortcuts editor ----------
 
-function ShortcutsEditor() {
+function ShortcutsEditor({
+  userKey,
+  principalResolved,
+}: {
+  userKey: string | null;
+  principalResolved: boolean;
+}) {
   // Lazy-load lib to keep imports colocated at usage.
+  const principal = principalResolved ? browserStoragePrincipal(userKey) : null;
+  const principalRef = useRef(principal);
+  principalRef.current = principal;
   const [list, setList] = useState<import("@/lib/shortcuts").Shortcut[]>([]);
+  const [listPrincipal, setListPrincipal] = useState<string | null>(null);
   const [recordingId, setRecordingId] = useState<string | null>(null);
+  const ready = principal !== null && listPrincipal === principal;
+  const visibleList = ready ? list : [];
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const mod = await import("@/lib/shortcuts");
-      if (!cancelled) setList(mod.loadShortcuts());
+      if (!cancelled) {
+        setList(principal ? mod.loadShortcuts(userKey) : []);
+        setListPrincipal(principal);
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [principal, userKey]);
+
+  useEffect(() => {
+    if (!principalResolved || !principal) return;
+    const reset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      setList([]);
+      setListPrincipal(null);
+      setRecordingId(null);
+      void import("@/lib/shortcuts").then((mod) => {
+        if (principalRef.current !== principal) return;
+        setList(mod.DEFAULT_SHORTCUTS);
+        setListPrincipal(principal);
+      });
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+    return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+  }, [principal, principalResolved, userKey]);
 
   useEffect(() => {
     if (!recordingId) return;
     const onKey = async (e: KeyboardEvent) => {
+      if (!ready) return;
       e.preventDefault();
       e.stopPropagation();
       // Ignore lone modifiers.
@@ -2357,10 +2821,12 @@ function ShortcutsEditor() {
       const key = e.key.length === 1 ? e.key.toUpperCase() : e.key;
       parts.push(key);
       const combo = parts.join("+");
+      const actionPrincipal = principal;
       const mod = await import("@/lib/shortcuts");
-      const next = list.map((s) => (s.id === recordingId ? { ...s, combo } : s));
+      if (!actionPrincipal || principalRef.current !== actionPrincipal) return;
+      const next = visibleList.map((s) => (s.id === recordingId ? { ...s, combo } : s));
       setList(next);
-      mod.saveShortcuts(next);
+      mod.saveShortcuts(userKey, next);
       setRecordingId(null);
     };
     window.addEventListener("keydown", onKey, { capture: true });
@@ -2368,11 +2834,12 @@ function ShortcutsEditor() {
       window.removeEventListener("keydown", onKey, {
         capture: true,
       } as unknown as EventListenerOptions);
-  }, [recordingId, list]);
+  }, [recordingId, ready, userKey, visibleList]);
 
   const reset = async () => {
     const mod = await import("@/lib/shortcuts");
-    mod.resetShortcuts();
+    if (!ready) return;
+    mod.resetShortcuts(userKey);
     setList(mod.DEFAULT_SHORTCUTS);
     toast.success("Shortcuts reset");
   };
@@ -2380,7 +2847,7 @@ function ShortcutsEditor() {
   return (
     <div className="space-y-2">
       <div className="rounded-lg border border-border divide-y divide-border">
-        {list.map((s) => (
+        {visibleList.map((s) => (
           <ShortcutRow
             key={s.id}
             id={s.id}
@@ -2462,23 +2929,42 @@ type StoredLocation = {
   savedAt?: number;
 };
 
-function LocationPanel() {
+function LocationPanel({
+  userKey,
+  principalResolved,
+}: {
+  userKey: string | null;
+  principalResolved: boolean;
+}) {
   const [loc, setLoc] = useState<StoredLocation>({ enabled: false });
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem("kova-location");
-      if (raw) setLoc(JSON.parse(raw));
-    } catch {
-      /* ignore */
+    if (!principalResolved) {
+      setLoc({ enabled: false });
+      return;
     }
-  }, []);
+    const stored = loadPrincipalStoredRecord(LOCATION_KEY_BASE, userKey, {
+      migrateLegacyGuest: userKey === null,
+    });
+    setLoc(
+      stored && typeof stored.enabled === "boolean"
+        ? {
+            enabled: stored.enabled,
+            lat: typeof stored.lat === "number" ? stored.lat : undefined,
+            lon: typeof stored.lon === "number" ? stored.lon : undefined,
+            label: typeof stored.label === "string" ? stored.label : undefined,
+            savedAt: typeof stored.savedAt === "number" ? stored.savedAt : undefined,
+          }
+        : { enabled: false },
+    );
+  }, [principalResolved, userKey]);
 
   const persist = (next: StoredLocation) => {
     setLoc(next);
+    if (!principalResolved) return;
     try {
-      localStorage.setItem("kova-location", JSON.stringify(next));
+      savePrincipalStoredRecord(LOCATION_KEY_BASE, userKey, next);
     } catch {
       /* ignore */
     }

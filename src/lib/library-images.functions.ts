@@ -127,7 +127,7 @@ const SaveImageSchema = z.object({
 
 export const saveImageToLibrary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => SaveImageSchema.parse(input))
+  .validator((input: unknown) => SaveImageSchema.parse(input))
   .handler(async ({ data, context }): Promise<{ id: string }> => {
     const payload = data.imageUrl.startsWith("data:")
       ? decodeDataUrl(data.imageUrl)
@@ -180,7 +180,7 @@ export const saveImageToLibrary = createServerFn({ method: "POST" })
 
 export const getLibraryImageUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<{ url: string }> => {
     const { data: row, error } = await context.supabase
       .from("user_library_items")
@@ -200,7 +200,7 @@ export const getLibraryImageUrl = createServerFn({ method: "POST" })
 
 export const deleteLibraryImage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     const { data: row } = await context.supabase
       .from("user_library_items")

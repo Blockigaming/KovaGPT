@@ -5,39 +5,7 @@ import { Clock, MapPin, Copy, Check } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { ClockWidget } from "./ClockWidget";
 import { MapWidget } from "./MapWidget";
-
-type ChipKind = "time" | "location";
-
-// Narrow detector: only trip on SHORT responses that clearly answer
-// "what time is it" or "where am I". News / general answers must NOT match.
-export function detectInfoChip(text: string): ChipKind | null {
-  if (!text) return null;
-  const trimmed = text.trim();
-  if (trimmed.length > 220) return null;
-  const lower = trimmed.toLowerCase();
-
-  // Reject news / topical content outright.
-  if (
-    /\b(news|headline|breaking|report|announced|according to|reuters|associated press|study|research shows)\b/i.test(
-      lower,
-    )
-  ) {
-    return null;
-  }
-
-  // Time: must contain a clock-like time AND a strong time cue.
-  const clockTime = /\b\d{1,2}:\d{2}\s*(?:am|pm)?\b/i;
-  const timeCue =
-    /(current time|the time is|it(?:'s| is)\s+(?:currently\s+|now\s+)?\d{1,2}:\d{2}|right now it(?:'s| is)|local time)/i;
-  if (clockTime.test(trimmed) && timeCue.test(lower)) return "time";
-
-  // Location: strong first-person location cue.
-  const locationCue =
-    /(you (?:are|'re) (?:currently )?(?:in|located in|near)\b|your (?:approximate )?location is|based on your (?:saved |shared )?location|you appear to be in)/i;
-  if (locationCue.test(lower)) return "location";
-
-  return null;
-}
+import type { ChipKind } from "./info-chip-utils";
 
 export function InfoChip({
   kind,

@@ -13,17 +13,20 @@ import {
   Share2,
   Pencil,
   RefreshCw,
-  ThumbsUp,
-  ThumbsDown,
   GitBranch,
   Globe,
   Mail,
+  FileText,
+
+  ThumbsUp,
+  ThumbsDown,
+
 } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileBottomSheet } from "./MobileBottomSheet";
 import { useLayout } from "@/hooks/use-mobile";
 import type { Message } from "@/lib/chat-store";
-import { ChatChart, extractCharts } from "./ChatChart";
+import { extractCharts } from "./chat-chart-utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,11 +38,25 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { saveToLibrary } from "@/lib/library.functions";
 import { useUser } from "@/components/auth/ClerkSafe";
-import { ArtifactEditor, detectArtifactKind, extractCodeBlocks } from "./ArtifactEditor";
+import { detectArtifactKind, extractCodeBlocks } from "./artifact-utils";
 import { ToolConfirmCard } from "./ToolConfirmCard";
 import type { PendingConfirm } from "@/lib/chat-store";
-import { LongResponseCard, shouldWrapAsDocument } from "./LongResponseCard";
-import { InfoChip, detectInfoChip } from "./InfoChip";
+import { InfoChip } from "./InfoChip";
+import { detectInfoChip } from "./info-chip-utils";
+import {
+  browserStoragePrincipal,
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+  principalScopedStorageKey,
+  safeBrowserStorage,
+} from "@/lib/principal-browser-storage.mjs";
+
+const ChatChart = lazy(() =>
+  import("./ChatChart").then(({ ChatChart }) => ({ default: ChatChart })),
+);
+const ArtifactEditor = lazy(() =>
+  import("./ArtifactEditor").then(({ ArtifactEditor }) => ({ default: ArtifactEditor })),
+);
 
 function MarkdownCode({ className, children }: React.ComponentProps<"code">) {
   const language = /language-([\w-]+)/.exec(className ?? "")?.[1];
@@ -86,14 +103,12 @@ const markdownComponents = {
   ),
 };
 
-// Strip numbered citation markers like [1], [2], [3] that web-search-augmented
-// answers sometimes still inject, and normalize en/em dashes to a hyphen
-// so the assistant never shows them in the UI.
+// Preserve the model's markdown exactly enough for source links, citation
+// markers, lists, and typography to survive rendering. ReactMarkdown handles
+// escaping; this normalization only makes streamed Windows line endings
+// deterministic.
 function cleanAssistantText(text: string): string {
-  return text
-    .replace(/\s?\[\d+\](?:\[\d+\])*/g, "")
-    .replace(/\s?\[\d+(?:\s*,\s*\d+)+\]/g, "")
-    .replace(/[\u2013\u2014]/g, "-");
+  return text.replace(/\r\n?/g, "\n");
 }
 
 // Detect email-like assistant output and extract subject + body so the
@@ -165,32 +180,13 @@ export async function openEmailCompose(
   window.open(url, "_blank", "noopener,noreferrer");
 }
 
-// Rotating idle statuses cycled while the assistant is streaming with no
-// tool activity, so users see progression rather than a static "Thinking".
-const IDLE_STATUSES = [
-  "Thinking",
-  "Planning response",
-  "Reasoning",
-  "Analyzing",
-  "Writing draft",
-  "Formatting",
-  "Finishing response",
-];
-
 // Short status label shown while the assistant is streaming but has no text yet.
 // Derives from the latest running/last activity tool, so users see
 // "Searching", "Reading Files", "Interacting with Gmail", etc.
 function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store").Activity[] }) {
   const last = activities && activities.length > 0 ? activities[activities.length - 1] : null;
   const tool = (last?.tool ?? "").toLowerCase();
-  const [idleIdx, setIdleIdx] = useState(0);
-  useEffect(() => {
-    if (tool) return;
-    const t = setInterval(() => setIdleIdx((i) => (i + 1) % IDLE_STATUSES.length), 2200);
-    return () => clearInterval(t);
-  }, [tool]);
-
-  let label = IDLE_STATUSES[idleIdx];
+  let label = "Thinking";
   if (tool) {
     if (tool.includes("image")) label = "Creating Image";
     else if (tool.includes("gmail") || tool.includes("mail")) label = "Checking Gmail";
@@ -204,17 +200,9 @@ function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store
     else label = last?.label ?? "Working";
   }
   return (
-    <div className="flex items-center gap-2 py-1" aria-live="polite">
-      <span
-        key={label}
-        className="text-sm font-medium bg-clip-text text-transparent animate-in fade-in duration-300"
-        style={{
-          backgroundImage:
-            "linear-gradient(90deg, var(--color-muted-foreground) 0%, var(--color-foreground) 50%, var(--color-muted-foreground) 100%)",
-          backgroundSize: "200% 100%",
-          animation: "shimmer 1.8s linear infinite",
-        }}
-      >
+    <div className="kova-thinking-indicator flex items-center gap-2 py-1" aria-live="polite">
+      <span className="h-1.5 w-1.5 rounded-full bg-foreground" aria-hidden="true" />
+      <span key={label} className="text-sm font-medium text-muted-foreground">
         {label}…
       </span>
     </div>
@@ -229,6 +217,8 @@ function ChatMessageInner({
   onBranch,
   onEdit,
   onUpdatePendingConfirm,
+  userKey,
+  principalResolved,
 }: {
   message: Message;
   streaming?: boolean;
@@ -237,28 +227,31 @@ function ChatMessageInner({
   onBranch?: () => void;
   onEdit?: () => void;
   onUpdatePendingConfirm?: (messageId: string, next: PendingConfirm) => void;
+  userKey: string | null;
+  principalResolved: boolean;
 }) {
-  const feedbackKey = `kova-feedback:${message.id}`;
-  const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
+  const principal = principalResolved ? browserStoragePrincipal(userKey) : null;
+  const principalRef = useRef(principal);
+  principalRef.current = principal;
+  const lifecycleGenerationRef = useRef(0);
   useEffect(() => {
-    try {
-      const v = localStorage.getItem(feedbackKey);
-      if (v === "up" || v === "down") setFeedback(v);
-    } catch {
-      /* ignore */
-    }
-  }, [feedbackKey]);
-  const persistFeedback = (next: "up" | "down" | null) => {
-    setFeedback(next);
-    try {
-      if (next) localStorage.setItem(feedbackKey, next);
-      else localStorage.removeItem(feedbackKey);
-    } catch {
-      /* ignore */
-    }
-  };
+    lifecycleGenerationRef.current += 1;
+  }, [principal]);
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
+  const feedbackKey = message.id ? `kova-message-feedback:${message.id}` : null;
+  const [feedback, setFeedback] = useState<"up" | "down" | null>(() => {
+    if (!feedbackKey) return null;
+    const stored = safeBrowserStorage("localStorage")?.getItem(feedbackKey);
+    return stored === "up" || stored === "down" ? stored : null;
+  });
+  const persistFeedback = (next: "up" | "down" | null) => {
+    setFeedback(next);
+    if (!feedbackKey) return;
+    const localStorage = safeBrowserStorage("localStorage");
+    if (next && localStorage) localStorage.setItem(feedbackKey, next);
+    else localStorage?.removeItem(feedbackKey);
+  };
   const { isMobile } = useLayout();
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const pressTimer = useRef<number | null>(null);
@@ -292,6 +285,22 @@ function ChatMessageInner({
 
   const saveFn = useServerFn(saveToLibrary);
 
+  useEffect(() => {
+    if (!principalResolved || !principal) return;
+    const reset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      lifecycleGenerationRef.current += 1;
+      setSaving(false);
+      setSaved(false);
+      setCopied(false);
+      setEditorOpen(false);
+      setMobileSheetOpen(false);
+      cancelLongPress();
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+    return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+  }, [cancelLongPress, principal, principalResolved, userKey]);
+
   const artifactKind = useMemo(
     () => (isUser ? null : detectArtifactKind(message.content || "")),
     [isUser, message.content],
@@ -321,10 +330,21 @@ function ChatMessageInner({
     // ClerkSafe sign-in prompt is no longer shown here.
 
     // Duplicate-safe: stable per-message id stored in localStorage avoids re-saves.
-    const dedupKey = "kovagpt:savedMessageIds";
+    const dedupKey = principalResolved
+      ? principalScopedStorageKey("kovagpt-saved-message-ids", userKey)
+      : null;
+    if (!principal || !dedupKey) {
+      toast.error("Your account is still loading. Try again.");
+      return;
+    }
+    const requestGeneration = lifecycleGenerationRef.current;
+    const requestPrincipal = principal;
+    const isCurrent = () =>
+      requestGeneration === lifecycleGenerationRef.current &&
+      requestPrincipal === principalRef.current;
     let savedIds: string[];
     try {
-      savedIds = JSON.parse(localStorage.getItem(dedupKey) || "[]");
+      savedIds = JSON.parse(safeBrowserStorage("localStorage")?.getItem(dedupKey) || "[]");
     } catch {
       savedIds = [];
     }
@@ -358,24 +378,32 @@ function ChatMessageInner({
         await saveFn({ data: payload });
       } else {
         const { saveGuestItem } = await import("@/lib/guest-library");
+        if (!isCurrent()) return;
         saveGuestItem(payload);
       }
+
+      if (!isCurrent()) return;
 
       if (message.id) {
         try {
           savedIds.push(message.id);
-          localStorage.setItem(dedupKey, JSON.stringify(savedIds.slice(-500)));
+          safeBrowserStorage("localStorage")?.setItem(
+            dedupKey,
+            JSON.stringify(savedIds.slice(-500)),
+          );
         } catch {
           /* ignore */
         }
       }
       setSaved(true);
       toast.success("Saved to Library");
-      setTimeout(() => setSaved(false), 2000);
+      setTimeout(() => {
+        if (isCurrent()) setSaved(false);
+      }, 2000);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not save");
+      if (isCurrent()) toast.error(e instanceof Error ? e.message : "Could not save");
     } finally {
-      setSaving(false);
+      if (isCurrent()) setSaving(false);
     }
   };
 
@@ -383,12 +411,13 @@ function ChatMessageInner({
     <article
       id={`message-${message.id}`}
       data-message-id={message.id}
-      className="group w-full animate-fade-in px-3 py-3 text-[15px] leading-[1.65] sm:px-5 lg:px-10 lg:py-4 lg:text-[16px] lg:leading-[1.7]"
+      data-message-role={message.role}
+      className="kova-message group w-full px-3 py-3 text-[15px] leading-7 sm:px-5 lg:px-10 lg:py-4 lg:text-base"
       aria-label={isUser ? "Your message" : "KovaGPT response"}
     >
       {isUser ? (
-        <div className="mx-auto flex max-w-[48rem] justify-end [[data-sidebar=closed]_&]:max-w-[52rem]">
-          <div className="flex min-w-0 max-w-[88%] flex-col items-end sm:max-w-[78%] lg:max-w-[72%]">
+        <div className="kova-message-inner mx-auto flex max-w-[48rem] justify-end">
+          <div className="flex min-w-0 max-w-[85%] flex-col items-end sm:max-w-[75%]">
             {message.attachments && message.attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2 justify-end">
                 {message.attachments
@@ -402,30 +431,66 @@ function ChatMessageInner({
                           ? `User-uploaded image: ${message.content.slice(0, 120)}`
                           : "User-uploaded image attached to message"
                       }
-                      className="max-h-64 rounded-2xl border border-border"
+                      className="max-h-64 rounded-lg border border-border"
                     />
+                  ))}
+                {message.attachments
+                  .filter((attachment) => attachment.kind !== "image")
+                  .map((attachment) => (
+                    <span
+                      key={
+                        attachment.kind === "library_file"
+                          ? attachment.libraryItemId
+                          : `${attachment.name}:${attachment.size ?? 0}`
+                      }
+                      className="inline-flex min-h-10 max-w-full items-center gap-2 rounded-lg border border-border/70 bg-muted/55 px-3 py-2 text-xs text-foreground"
+                      title={attachment.name}
+                    >
+                      <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="max-w-48 truncate">{attachment.name}</span>
+                      <span className="shrink-0 text-[10px] uppercase text-muted-foreground">
+                        {attachment.kind === "library_file" ? "Library" : "Attached"}
+                      </span>
+                    </span>
                   ))}
               </div>
             )}
             {message.content && (
-              <div className="prose-chat whitespace-pre-wrap break-words rounded-[1.15rem] rounded-br-[.35rem] bg-[var(--user-bubble)] px-4 py-2.5 text-foreground shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--foreground)_3%,transparent)]">
+              <div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-[1.75rem] bg-[var(--user-bubble)] px-4 py-2.5 text-foreground">
                 {message.content}
               </div>
             )}
-            {onBranch && (
-              <button
-                type="button"
-                onClick={onBranch}
-                className="mt-1.5 inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-muted-foreground opacity-100 hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:opacity-0 lg:group-hover:opacity-100 lg:focus-visible:opacity-100"
-                aria-label="Branch from this message in a new chat"
-              >
-                <GitBranch className="h-3.5 w-3.5" /> Branch
-              </button>
+
+            {(onEdit || onBranch) && (
+              <div className="mt-1 flex min-h-9 items-center opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
+                {onEdit && (
+                  <button
+                    type="button"
+                    onClick={onEdit}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label="Edit message"
+                    title="Edit message"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                )}
+                {onBranch && (
+                  <button
+                    type="button"
+                    onClick={onBranch}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label="Branch from this message in a new chat"
+                    title="Branch in new chat"
+                  >
+                    <GitBranch className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
       ) : (
-        <div className="mx-auto flex max-w-[48rem] animate-fade-up items-start justify-start [[data-sidebar=closed]_&]:max-w-[52rem]">
+        <div className="kova-message-inner kova-assistant-message mx-auto flex max-w-[48rem] items-start justify-start">
           <div
             className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text"
             onTouchStart={startLongPress}
@@ -501,7 +566,9 @@ function ChatMessageInner({
                     <div className="space-y-2">
                       {parts.map((p, i) =>
                         p.kind === "chart" ? (
-                          <ChatChart key={i} spec={p.spec} />
+                          <Suspense key={i} fallback={null}>
+                            <ChatChart spec={p.spec} />
+                          </Suspense>
                         ) : p.value.trim() ? (
                           <ReactMarkdown
                             key={i}
@@ -519,9 +586,6 @@ function ChatMessageInner({
                     </ReactMarkdown>
                   );
                   if (artifactKind || streaming) return md;
-                  if (shouldWrapAsDocument(cleaned)) {
-                    return <LongResponseCard content={cleaned}>{md}</LongResponseCard>;
-                  }
                   const chip = detectInfoChip(cleaned);
                   if (chip)
                     return (
@@ -537,14 +601,14 @@ function ChatMessageInner({
           </div>
         </div>
       )}
-      <div className="mx-auto max-w-[48rem] [[data-sidebar=closed]_&]:max-w-[52rem]">
+      <div className="kova-message-inner mx-auto max-w-[48rem]">
         <div className={isUser ? "flex justify-end" : "flex justify-start"}>
           {!streaming && !isUser && message.content && (
-            <div className="kova-message-actions mt-1 transition-opacity lg:opacity-60 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
-              {/* Visible: Copy, Thumbs up, Thumbs down, Share */}
+            <div className="kova-message-actions mt-1 max-w-full overflow-x-auto">
+              {/* Visible: Copy, Share */}
               <button
                 onClick={copy}
-                className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
+                className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground transition-colors duration-100 hover:bg-accent hover:text-foreground"
                 title={copied ? "Copied" : "Copy"}
                 aria-label={copied ? "Copied" : "Copy"}
               >
@@ -554,40 +618,49 @@ function ChatMessageInner({
                   <Copy className="w-4 h-4" />
                 )}
               </button>
+
               <button
+                type="button"
                 onClick={() => {
-                  const next = feedback === "up" ? null : "up";
-                  persistFeedback(next);
-                  if (next) toast.success("Thanks for the feedback");
+                  persistFeedback(feedback === "up" ? null : "up");
+                  toast.success("Rating saved on this device");
                 }}
-                className={`inline-flex items-center justify-center p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95 ${
-                  feedback === "up"
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                 title="Good response"
                 aria-label="Good response"
                 aria-pressed={feedback === "up"}
               >
-                <ThumbsUp className={`w-4 h-4 ${feedback === "up" ? "fill-current" : ""}`} />
+                <ThumbsUp
+                  className={`h-4 w-4 ${feedback === "up" ? "fill-current text-foreground" : ""}`}
+                />
               </button>
               <button
+                type="button"
                 onClick={() => {
-                  const next = feedback === "down" ? null : "down";
-                  persistFeedback(next);
-                  if (next) toast.success("Thanks, we'll improve");
+                  persistFeedback(feedback === "down" ? null : "down");
+                  toast.success("Rating saved on this device");
                 }}
-                className={`inline-flex items-center justify-center p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95 ${
-                  feedback === "down"
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                 title="Bad response"
                 aria-label="Bad response"
                 aria-pressed={feedback === "down"}
               >
-                <ThumbsDown className={`w-4 h-4 ${feedback === "down" ? "fill-current" : ""}`} />
+                <ThumbsDown
+                  className={`h-4 w-4 ${feedback === "down" ? "fill-current text-foreground" : ""}`}
+                />
               </button>
+              {onRetry ? (
+                <button
+                  type="button"
+                  onClick={onRetry}
+                  className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                  title="Retry response"
+                  aria-label="Retry response"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </button>
+              ) : null}
+
               <button
                 onClick={async () => {
                   const text = message.content;
@@ -606,7 +679,7 @@ function ChatMessageInner({
                     toast.error("Couldn't share");
                   }
                 }}
-                className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
+                className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                 title="Share"
                 aria-label="Share"
               >
@@ -650,11 +723,35 @@ function ChatMessageInner({
                 </DropdownMenu>
               )}
 
+              {artifactKind && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditorMode(artifactKind === "code" ? "preview" : "edit");
+                    setEditorOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-accent px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:bg-accent/80"
+                  aria-label={
+                    artifactKind === "code" ? "Open code full screen" : "Open writing full screen"
+                  }
+                  title={
+                    artifactKind === "code" ? "Open code full screen" : "Open writing full screen"
+                  }
+                >
+                  {artifactKind === "code" ? (
+                    <Code2 className="h-3.5 w-3.5" />
+                  ) : (
+                    <FileEdit className="h-3.5 w-3.5" />
+                  )}
+                  {artifactKind === "code" ? "Open code" : "Open writing"}
+                </button>
+              )}
+
               {/* Everything else lives behind the 3-dot menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
+                    className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                     title="More actions"
                     aria-label="More actions"
                   >
@@ -664,99 +761,45 @@ function ChatMessageInner({
                 <DropdownMenuContent align="start" className="w-52">
                   <DropdownMenuItem
                     onClick={() => {
-                      if (onEdit) onEdit();
-                      else toast.message("Edit your previous message above");
-                    }}
-                  >
-                    <Pencil className="w-4 h-4 mr-2" /> Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      if (onRetry) onRetry();
-                      else toast.message("Retry available on the latest response");
-                    }}
-                  >
-                    <RefreshCw className="w-4 h-4 mr-2" /> Retry
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      if (onBranch) onBranch();
-                      else toast.message("Branching coming to this chat");
-                    }}
-                  >
-                    <GitBranch className="w-4 h-4 mr-2" /> Branch in new chat
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      const q = encodeURIComponent(message.content.slice(0, 300));
-                      window.open(
-                        `https://www.google.com/search?q=${q}`,
-                        "_blank",
-                        "noopener,noreferrer",
+                      const sourceActivity = message.activities?.find((activity) =>
+                        /search|source|web/i.test(activity.tool + activity.label),
                       );
+                      if (sourceActivity) toast.message(sourceActivity.label);
+                      else toast.message("No linked sources for this response");
                     }}
                   >
-                    <Globe className="w-4 h-4 mr-2" /> Search the web
+                    <Globe className="mr-2 h-4 w-4" /> View sources
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={saveItem} disabled={saving}>
-                    <Bookmark className={`w-4 h-4 mr-2 ${saved ? "fill-current" : ""}`} />
-                    {saved ? "Saved" : saving ? "Saving…" : "Save to Library"}
+                  <DropdownMenuItem onClick={onBranch} disabled={!onBranch}>
+                    <GitBranch className="mr-2 h-4 w-4" /> Branch into new chat
                   </DropdownMenuItem>
+
                   {artifactKind && (
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setEditorMode("edit");
-                        setEditorOpen(true);
-                      }}
-                    >
-                      {artifactKind === "writing" ? (
-                        <FileEdit className="w-4 h-4 mr-2" />
-                      ) : (
-                        <Code2 className="w-4 h-4 mr-2" />
-                      )}
-                      {artifactKind === "website"
-                        ? "Open website full screen"
-                        : artifactKind === "code"
-                          ? "Open code full screen"
-                          : "Open writing full screen"}
-                    </DropdownMenuItem>
-                  )}
-                  {artifactKind === "website" && (
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setEditorMode("preview");
-                        setEditorOpen(true);
-                      }}
-                    >
-                      <Eye className="w-4 h-4 mr-2" /> Preview website
-                    </DropdownMenuItem>
-                  )}
-                  {onFollowUp && (
                     <>
-                      <DropdownMenuSeparator />
-                      {[
-                        { label: "Continue", prompt: "Continue from where you left off." },
-                        {
-                          label: "Shorter",
-                          prompt:
-                            "Rewrite your last response to be shorter, keeping the key points.",
-                        },
-                        {
-                          label: "Longer",
-                          prompt: "Expand your last response with more detail and examples.",
-                        },
-                        {
-                          label: "Improve",
-                          prompt: "Improve the wording and clarity of your last response.",
-                        },
-                      ].map((a) => (
-                        <DropdownMenuItem key={a.label} onClick={() => onFollowUp(a.prompt)}>
-                          {a.label}
-                        </DropdownMenuItem>
-                      ))}
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setEditorMode("edit");
+                          setEditorOpen(true);
+                        }}
+                      >
+                        {artifactKind === "code" ? (
+                          <Code2 className="mr-2 h-4 w-4" />
+                        ) : (
+                          <FileEdit className="mr-2 h-4 w-4" />
+                        )}
+                        {artifactKind === "code" ? "Open code full screen" : "Open writing full screen"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setEditorMode("preview");
+                          setEditorOpen(true);
+                        }}
+                      >
+                        <Eye className="mr-2 h-4 w-4" /> Preview in workspace
+                      </DropdownMenuItem>
                     </>
                   )}
+
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -764,14 +807,16 @@ function ChatMessageInner({
         </div>
       </div>
       {artifactKind && (
-        <ArtifactEditor
-          open={editorOpen}
-          onClose={() => setEditorOpen(false)}
-          initialContent={editorContent}
-          kind={artifactKind}
-          onImprove={onFollowUp}
-          initialMode={editorMode}
-        />
+        <Suspense fallback={null}>
+          <ArtifactEditor
+            open={editorOpen}
+            onClose={() => setEditorOpen(false)}
+            initialContent={editorContent}
+            kind={artifactKind}
+            onImprove={onFollowUp}
+            initialMode={editorMode}
+          />
+        </Suspense>
       )}
       {!isUser && message.content && (
         <MobileBottomSheet
@@ -786,22 +831,6 @@ function ChatMessageInner({
                 icon: Copy,
                 onClick: () => {
                   copy();
-                  setMobileSheetOpen(false);
-                },
-              },
-              {
-                label: feedback === "up" ? "Remove good rating" : "Good response",
-                icon: ThumbsUp,
-                onClick: () => {
-                  persistFeedback(feedback === "up" ? null : "up");
-                  setMobileSheetOpen(false);
-                },
-              },
-              {
-                label: feedback === "down" ? "Remove bad rating" : "Bad response",
-                icon: ThumbsDown,
-                onClick: () => {
-                  persistFeedback(feedback === "down" ? null : "down");
                   setMobileSheetOpen(false);
                 },
               },

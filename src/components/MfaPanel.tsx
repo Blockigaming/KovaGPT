@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ShieldCheck, KeyRound, LogOut, Loader2, Copy, Check } from "lucide-react";
+import { ShieldCheck, KeyRound, LogOut, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,8 +9,8 @@ type Factor = { id: string; friendly_name?: string | null; status: string };
 
 /**
  * Real MFA UI using Supabase auth.mfa. Handles TOTP enroll, verify, unenroll,
- * plus a "sign out other sessions" action. Backup codes are generated
- * locally as one-time recovery hints; store them somewhere safe.
+ * plus a "sign out other sessions" action. Recovery codes are intentionally
+ * not displayed because Supabase TOTP does not issue server-verifiable codes.
  */
 export function MfaPanel() {
   const [factors, setFactors] = useState<Factor[]>([]);
@@ -23,17 +23,22 @@ export function MfaPanel() {
   }>(null);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
-  const [backup, setBackup] = useState<string[] | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
-      const { data } = await supabase.auth.mfa.listFactors();
+      const { data, error } = await supabase.auth.mfa.listFactors();
+      if (error) throw error;
       const all = [...(data?.totp ?? [])] as Factor[];
       setFactors(all);
-    } catch {
+    } catch (error) {
       setFactors([]);
+      console.error("[mfa] factor load failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      setLoadError("Security settings could not be loaded. Please try again.");
     }
     setLoading(false);
   };
@@ -45,7 +50,9 @@ export function MfaPanel() {
   async function startEnroll() {
     setBusy(true);
     try {
-      const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp" });
+      const { data, error } = await supabase.auth.mfa.enroll({
+        factorType: "totp",
+      });
       if (error) throw error;
       setEnrolling({
         factorId: data.id,
@@ -53,8 +60,11 @@ export function MfaPanel() {
         secret: data.totp.secret,
         uri: data.totp.uri,
       });
-    } catch (e: unknown) {
-      toast.error((e as Error).message || "Couldn't start enrollment");
+    } catch (error) {
+      console.error("[mfa] enrollment failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      toast.error("Authenticator setup could not start. Please try again.");
     }
     setBusy(false);
   }
@@ -73,20 +83,15 @@ export function MfaPanel() {
         code: code.trim(),
       });
       if (error) throw error;
-      const codes = Array.from(
-        { length: 10 },
-        () =>
-          Math.random().toString(36).slice(2, 6).toUpperCase() +
-          "-" +
-          Math.random().toString(36).slice(2, 6).toUpperCase(),
-      );
-      setBackup(codes);
       setEnrolling(null);
       setCode("");
       toast.success("Two-factor authentication enabled");
       load();
-    } catch (e: unknown) {
-      toast.error((e as Error).message || "Verification failed");
+    } catch (error) {
+      console.error("[mfa] enrollment verification failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      toast.error("That code was not accepted. Check your authenticator and try again.");
     }
     setBusy(false);
   }
@@ -98,8 +103,11 @@ export function MfaPanel() {
       if (error) throw error;
       toast.success("Two-factor removed");
       load();
-    } catch (e: unknown) {
-      toast.error((e as Error).message || "Couldn't remove factor");
+    } catch (error) {
+      console.error("[mfa] factor removal failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      toast.error("The authenticator could not be removed. Please try again.");
     }
     setBusy(false);
   }
@@ -110,17 +118,13 @@ export function MfaPanel() {
       const { error } = await supabase.auth.signOut({ scope: "others" });
       if (error) throw error;
       toast.success("Signed out on other devices");
-    } catch (e: unknown) {
-      toast.error((e as Error).message || "Couldn't sign out other sessions");
+    } catch (error) {
+      console.error("[mfa] remote session sign-out failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      toast.error("Other sessions could not be signed out. Please try again.");
     }
     setBusy(false);
-  }
-
-  function copyBackup() {
-    if (!backup) return;
-    navigator.clipboard.writeText(backup.join("\n"));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
   }
 
   return (
@@ -137,6 +141,19 @@ export function MfaPanel() {
 
         {loading ? (
           <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+        ) : loadError ? (
+          <div
+            role="alert"
+            className="rounded-lg border border-destructive/30 bg-destructive/5 p-3"
+          >
+            <div className="flex items-start gap-2 text-sm text-destructive">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{loadError}</span>
+            </div>
+            <Button variant="outline" size="sm" onClick={load} className="mt-3">
+              <RefreshCw className="mr-2 h-3.5 w-3.5" /> Retry
+            </Button>
+          </div>
         ) : factors.filter((f) => f.status === "verified").length > 0 ? (
           <div className="space-y-2">
             {factors
@@ -183,12 +200,14 @@ export function MfaPanel() {
             <Input
               placeholder="123 456"
               value={code}
-              onChange={(e) => setCode(e.target.value)}
-              maxLength={8}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
               className="tracking-widest text-center"
             />
             <div className="flex gap-2">
-              <Button onClick={verify} disabled={busy || code.length < 6} className="flex-1">
+              <Button onClick={verify} disabled={busy || code.length !== 6} className="flex-1">
                 {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Verify & enable"}
               </Button>
               <Button
@@ -209,30 +228,6 @@ export function MfaPanel() {
             <KeyRound className="w-4 h-4 mr-2" />
             Set up authenticator app
           </Button>
-        )}
-
-        {backup && (
-          <div className="mt-4 rounded-lg border border-primary/40 bg-primary/5 p-3 text-xs space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-medium text-foreground">Save your backup codes</span>
-              <Button variant="ghost" size="sm" onClick={copyBackup}>
-                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              </Button>
-            </div>
-            <p className="text-muted-foreground">
-              Store these somewhere safe. Each can be used once to sign in if you lose your device.
-            </p>
-            <div className="grid grid-cols-2 gap-1 font-mono text-[11px]">
-              {backup.map((c) => (
-                <div key={c} className="rounded bg-background px-2 py-1 border border-border">
-                  {c}
-                </div>
-              ))}
-            </div>
-            <Button variant="outline" size="sm" onClick={() => setBackup(null)} className="w-full">
-              I've saved them
-            </Button>
-          </div>
         )}
       </div>
 

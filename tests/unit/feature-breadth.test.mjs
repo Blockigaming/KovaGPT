@@ -28,19 +28,28 @@ test("conversation branching records origin and truncates at a selected message"
 
 test("conversation outline derives only real prompts and headings", () => {
   const outline = read("src/components/ConversationOutline.tsx");
-  assert.match(outline, /message\.role === "user"/);
-  assert.match(outline, /match\(\/\^#\{1,3\}/);
+  const outlineUtils = read("src/components/conversation-outline-utils.ts");
+  assert.match(outlineUtils, /message\.role === "user"/);
+  assert.match(outlineUtils, /match\(\/\^#\{1,3\}/);
   assert.match(outline, /IntersectionObserver/);
   assert.match(outline, /Conversation outline/);
 });
 
 test("structured charts support inspection, switching, and export without code execution", () => {
   const chart = read("src/components/ChatChart.tsx");
+  const chartUtils = read("src/components/chat-chart-utils.ts");
   for (const type of ["bar", "line", "pie", "donut", "scatter"])
-    assert.match(chart, new RegExp(`\\"${type}\\"`));
+    assert.match(chartUtils, new RegExp(`\\"${type}\\"`));
   assert.match(chart, /chartToCsv/);
   assert.match(chart, /<table/);
   assert.doesNotMatch(chart, /eval\(|dangerouslySetInnerHTML/);
+});
+
+test("heavy chart and artifact workspaces are loaded only when a response needs them", () => {
+  const message = read("src/components/ChatMessage.tsx");
+  assert.match(message, /lazy\(\(\) =>\s*import\("\.\/ChatChart"\)/);
+  assert.match(message, /import\("\.\/ArtifactEditor"\)/);
+  assert.match(message, /<Suspense/);
 });
 
 test("eligible assistant outputs expose the existing full-screen Artifact workspace", () => {

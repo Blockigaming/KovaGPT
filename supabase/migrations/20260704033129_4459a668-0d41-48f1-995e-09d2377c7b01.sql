@@ -1,4 +1,3 @@
-
 -- Per-user Google OAuth tokens
 CREATE TABLE public.google_oauth_tokens (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -11,13 +10,8 @@ CREATE TABLE public.google_oauth_tokens (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-GRANT SELECT, DELETE ON public.google_oauth_tokens TO authenticated;
 GRANT ALL ON public.google_oauth_tokens TO service_role;
 ALTER TABLE public.google_oauth_tokens ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "own tokens select" ON public.google_oauth_tokens
-  FOR SELECT TO authenticated USING (auth.uid() = user_id);
-CREATE POLICY "own tokens delete" ON public.google_oauth_tokens
-  FOR DELETE TO authenticated USING (auth.uid() = user_id);
 CREATE TRIGGER google_oauth_tokens_touch BEFORE UPDATE ON public.google_oauth_tokens
   FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
 

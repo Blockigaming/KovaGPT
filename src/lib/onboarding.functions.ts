@@ -14,7 +14,7 @@ export const getOnboarding = createServerFn({ method: "GET" })
 
 export const saveOnboarding = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { primary_use: string; response_style: string }) => ({
+  .validator((d: { primary_use: string; response_style: string }) => ({
     primary_use: String(d.primary_use ?? "").slice(0, 100),
     response_style: String(d.response_style ?? "balanced").slice(0, 40),
   }))

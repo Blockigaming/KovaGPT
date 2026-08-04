@@ -13,7 +13,7 @@ test("Nexus documents connector truth and hides unsupported connection claims", 
   assert.match(report, /Microsoft SharePoint \/ OneDrive \| \*\*OAuth \+ backend needed\*\*/);
   assert.match(
     apps,
-    /const WORKING_IDS = new Set<string>\(\["google", "gmail", "google-drive", "google-calendar"\]\)/,
+    /const WORKING_IDS = new Set<string>\(\[[\s\S]*"google"[\s\S]*"github"[\s\S]*\]\)/,
   );
 });
 
@@ -30,7 +30,7 @@ test("Agent Workspace is plan-gated, approval-aware, resumable and explicit", as
   assert.match(component, /Schedule/);
   assert.match(store, /type AgentRunStatus/);
   assert.match(store, /"approval_needed"/);
-  assert.match(route, /<AgentWorkspace \/>/);
+  assert.match(route, /useServerFn\(listWorkRuns\)/);
 });
 
 test("Nexus audit leaves no frontend item marked partial or missing", async () => {

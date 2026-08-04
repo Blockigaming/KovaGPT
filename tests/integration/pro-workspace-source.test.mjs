@@ -3,14 +3,30 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 const read = (path) => readFileSync(path, "utf8");
 
-test("Unified Recents aggregates authorized workspace sources and local chats", () => {
+
+test("Library and workspace intelligence aggregate authorized sources and local chats", () => {
   const fn = read("src/lib/workspace.functions.ts"),
-    route = read("src/routes/recents.tsx");
+    library = read("src/routes/library.tsx"),
+    dashboard = read("src/components/WorkspaceIntelligence.tsx");
   for (const table of ["projects", "user_library_items", "scheduled_tasks", "deep_research_runs"])
     assert.match(fn, new RegExp(`\\"${table}\\"`));
-  assert.match(route, /loadConversations/);
-  assert.match(route, /Recent work types/);
-  assert.match(route, /kova-recent-pins/);
+  assert.match(dashboard, /listWorkspaceIntelligence/);
+  assert.match(library, /loadConversations/);
+  assert.match(library, /loadWorkTasks/);
+  assert.match(library, /Selected Library actions/);
+
+test("workspace sources remain authorized while chat history stays searchable in the shell", () => {
+  const fn = read("src/lib/workspace.functions.ts"),
+    home = read("src/routes/index.tsx"),
+    sidebar = read("src/components/Sidebar.tsx"),
+    palette = read("src/components/CommandPalette.tsx");
+  for (const table of ["projects", "user_library_items", "scheduled_tasks", "deep_research_runs"])
+    assert.match(fn, new RegExp(`\\"${table}\\"`));
+  assert.match(home, /loadConversations/);
+  assert.match(sidebar, /searchConversations/);
+  assert.match(sidebar, /Recent chats/);
+  assert.match(palette, /searchConversations/);
+
 });
 test("Memory Center supports real edit delete merge and source explanations", () => {
   const route = read("src/routes/memory.tsx"),
@@ -32,15 +48,16 @@ test("Context Packs are owner scoped, persisted, and attach to chat", () => {
   assert.match(route, /Use in new chat/);
   assert.match(chat, /kova-active-context-pack/);
 });
-test("Work mode is durable, approval-gated, and never claims background work", () => {
+test("Work preserves durable history and denial-only controls without background claims", () => {
   const route = read("src/routes/work.tsx"),
-    store = read("src/lib/work-store.ts");
-  assert.match(store, /localStorage\.setItem/);
-  assert.match(route, /Approval gate/);
-  assert.match(route, /Approve step/);
+    functions = read("src/lib/work.functions.ts");
+  assert.match(functions, /requireSupabaseAuth/);
+  assert.match(route, /Agent execution is unavailable/);
+  assert.match(route, /decideApproval/);
+  assert.match(route, /decision: "denied"/);
   assert.match(route, /Deliverables/);
-  assert.match(route, /does not\s+claim background execution/);
-  assert.match(route, /Continue in chat/);
+  assert.match(route, /controlWorkRun/);
+  assert.doesNotMatch(route, /Waiting for worker|Approval required|decision: "approved"/);
 });
 test("Files and Apps expose truthful professional workflows", () => {
   const files = read("src/routes/files.tsx"),

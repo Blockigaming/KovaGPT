@@ -2,21 +2,24 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { saveToLibrary } from "@/lib/library.functions";
+import { saveImageToLibrary } from "@/lib/library-images.functions";
 import {
   PanelLeft,
   ArrowUp,
+  Paperclip,
+  ChevronLeft,
+  ChevronRight,
   Loader2,
   Download,
   Trash2,
-  Paperclip,
   Sparkles,
-  X as XIcon,
   Bookmark,
   RefreshCw,
+  Copy,
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { SettingsDialog } from "@/components/SettingsDialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 import { LoginPromptDialog } from "@/components/LoginPromptDialog";
 import { LimitReachedDialog } from "@/components/LimitReachedDialog";
@@ -30,7 +33,7 @@ export const Route = createFileRoute("/images")({
   component: ImagesPage,
   head: () => ({
     meta: [
-      { title: "AI Image Generation | KovaGPT" },
+      { title: "KovaGPT Images" },
       {
         name: "description",
         content:
@@ -253,13 +256,22 @@ const PRESETS: Preset[] = [
 ];
 
 type HistoryItem = { id: string; prompt: string; imageUrl: string; createdAt: number };
-const HISTORY_KEY_PREFIX = "novagpt-image-history-";
+const HISTORY_KEY_PREFIX = "kovagpt:v2:image-history:";
+const LEGACY_HISTORY_KEY_PREFIX = "novagpt-image-history-";
 const HISTORY_LIMIT = 60;
 
 function loadHistory(userKey: string | null): HistoryItem[] {
   if (!userKey || typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(HISTORY_KEY_PREFIX + userKey);
+    let raw = localStorage.getItem(HISTORY_KEY_PREFIX + userKey);
+    if (!raw) {
+      const legacyKey = LEGACY_HISTORY_KEY_PREFIX + userKey;
+      raw = localStorage.getItem(legacyKey);
+      if (raw) {
+        localStorage.setItem(HISTORY_KEY_PREFIX + userKey, raw);
+        localStorage.removeItem(legacyKey);
+      }
+    }
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -281,13 +293,16 @@ function saveHistory(userKey: string | null, items: HistoryItem[]) {
 
 function ImagesPage() {
   const navigate = useNavigate();
-  const { isSignedIn, user } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
   const userKey = (user as { id?: string } | null)?.id ?? null;
-  const [settings, setSettings] = useNovaSettings(userKey);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [settings, setSettings] = useNovaSettings(userKey, isLoaded);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
+  const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
   const openSettings = (tab?: string) => {
+    settingsReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setSettingsTab(tab);
     setSettingsOpen(true);
   };
@@ -309,28 +324,45 @@ function ImagesPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [lightbox, setLightbox] = useState<HistoryItem | null>(null);
   const [savingImage, setSavingImage] = useState(false);
-  const saveImage = useServerFn(saveToLibrary);
+  const saveImage = useServerFn(saveImageToLibrary);
   const submittingRef = useRef(false);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const generationRef = useRef(0);
+  const generationControllerRef = useRef<AbortController | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const promptFileRef = useRef<HTMLInputElement>(null);
+  const presetsRef = useRef<HTMLDivElement>(null);
+  const scrollPresets = (direction: 1 | -1) => {
+    const el = presetsRef.current;
+    if (!el) return;
+    el.scrollBy({ left: direction * Math.max(320, el.clientWidth * 0.8), behavior: "smooth" });
+  };
+  const lightboxInitialFocusRef = useRef<HTMLButtonElement>(null);
+  const lightboxReturnFocusRef = useRef<HTMLElement | null>(null);
+  const lightboxReturnToPromptRef = useRef(false);
 
   useEffect(() => {
-    if (!lightbox) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setLightbox(null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [lightbox]);
-
-  useEffect(() => {
-    if (isSignedIn && userKey) setHistory(loadHistory(userKey));
-    else setHistory([]);
-  }, [isSignedIn, userKey]);
+    generationRef.current += 1;
+    generationControllerRef.current?.abort();
+    generationControllerRef.current = null;
+    submittingRef.current = false;
+    setLoading(false);
+    setPrompt("");
+    setError(null);
+    setResult(null);
+    setResultPrompt("");
+    setLightbox(null);
+    setSavingImage(false);
+    setLoginOpen(false);
+    setLimitOpen(false);
+    setLimitMessage(undefined);
+    setHistory(isLoaded && isSignedIn && userKey ? loadHistory(userKey) : []);
+    return () => generationControllerRef.current?.abort();
+  }, [isLoaded, isSignedIn, userKey]);
 
   function addToHistory(p: string, imageUrl: string) {
     if (!isSignedIn || !userKey) return;
     const item: HistoryItem = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      id: crypto.randomUUID(),
       prompt: p,
       imageUrl,
       createdAt: Date.now(),
@@ -359,10 +391,8 @@ function ImagesPage() {
       await saveImage({
         data: {
           title: item.prompt.slice(0, 100) || "Generated image",
-          item_type: "image",
-          source: "images",
-          content_text: item.prompt,
-          file_url: item.imageUrl,
+          prompt: item.prompt,
+          imageUrl: item.imageUrl,
         },
       });
       toast.success("Saved to Library");
@@ -370,6 +400,45 @@ function ImagesPage() {
       toast.error(error instanceof Error ? error.message : "Could not save image");
     } finally {
       setSavingImage(false);
+    }
+  }
+
+  async function copyGeneratedImage(imageUrl: string) {
+    try {
+      if (typeof ClipboardItem === "undefined" || !navigator.clipboard?.write) {
+        throw new Error("Image copying is not supported by this browser");
+      }
+      const response = await fetch(imageUrl);
+      if (!response.ok) throw new Error("Could not read the generated image");
+      const source = await response.blob();
+      const blob =
+        source.type === "image/png"
+          ? source
+          : await new Promise<Blob>((resolve, reject) => {
+              const image = new Image();
+              const objectUrl = URL.createObjectURL(source);
+              image.onload = () => {
+                const canvas = document.createElement("canvas");
+                canvas.width = image.naturalWidth;
+                canvas.height = image.naturalHeight;
+                canvas.getContext("2d")?.drawImage(image, 0, 0);
+                URL.revokeObjectURL(objectUrl);
+                canvas.toBlob(
+                  (converted) =>
+                    converted ? resolve(converted) : reject(new Error("Could not convert image")),
+                  "image/png",
+                );
+              };
+              image.onerror = () => {
+                URL.revokeObjectURL(objectUrl);
+                reject(new Error("Could not decode image"));
+              };
+              image.src = objectUrl;
+            });
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      toast.success("Image copied");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not copy image");
     }
   }
 
@@ -381,33 +450,55 @@ function ImagesPage() {
       return;
     }
     submittingRef.current = true;
+    const generation = ++generationRef.current;
+    const controller = new AbortController();
+    generationControllerRef.current?.abort();
+    generationControllerRef.current = controller;
     setError(null);
-    setResult(null);
     setLoading(true);
     try {
       const res = await authFetch("/api/generate-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: trimmed }),
+        signal: controller.signal,
       });
-      const data = await res.json();
+      const contentType = res.headers.get("content-type")?.toLowerCase() ?? "";
+      if (!contentType.includes("application/json")) {
+        throw new Error("Image service returned an invalid response");
+      }
+      const data = (await res.json()) as { error?: unknown; imageUrl?: unknown };
+      if (generation !== generationRef.current || controller.signal.aborted) return;
       if (!res.ok) {
-        const msg = data?.error || "Failed to generate image";
+        const msg = typeof data.error === "string" ? data.error : "Failed to generate image";
         if (res.status === 429 && /limit/i.test(msg)) {
           setLimitMessage(msg);
           setLimitOpen(true);
         }
         throw new Error(msg);
       }
+      const isSupportedImageUrl =
+        typeof data.imageUrl === "string" &&
+        (/^https?:\/\//i.test(data.imageUrl) ||
+          /^data:image\/(?:png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/i.test(
+            data.imageUrl,
+          ));
+      if (!isSupportedImageUrl) {
+        throw new Error("Image service returned an invalid image");
+      }
       setResult(data.imageUrl);
       setResultPrompt(trimmed);
       addToHistory(trimmed, data.imageUrl);
       setPrompt("");
     } catch (e) {
+      if (controller.signal.aborted || generation !== generationRef.current) return;
       setError(e instanceof Error ? e.message : "Failed to generate image");
     } finally {
-      setLoading(false);
-      submittingRef.current = false;
+      if (generation === generationRef.current) {
+        setLoading(false);
+        submittingRef.current = false;
+        generationControllerRef.current = null;
+      }
     }
   }
 
@@ -417,7 +508,7 @@ function ImagesPage() {
   };
 
   return (
-    <div className="flex h-dvh w-full bg-background text-foreground">
+    <div className="kova-app-shell kova-images-shell flex h-dvh w-full bg-background text-foreground">
       <Sidebar
         conversations={[]}
         activeId={null}
@@ -430,9 +521,15 @@ function ImagesPage() {
         onOpenHelp={openHelp}
       />
 
+
+      <main className="kova-images-main flex min-w-0 flex-1 flex-col">
+        <header className="kova-images-topbar kova-topbar flex h-14 shrink-0 items-center px-3">
+          {!sidebarOpen && !isSignedIn && (
+
       <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 flex items-center px-3 border-b border-border shrink-0">
+        <header className="h-14 flex items-center px-3 shrink-0">
           {!sidebarOpen && (
+
             <button
               onClick={() => setSidebarOpen((v) => !v)}
               className="p-2 rounded-lg hover:bg-accent transition mr-1"
@@ -441,19 +538,18 @@ function ImagesPage() {
               <PanelLeft className="w-5 h-5" />
             </button>
           )}
-          <h1 className="text-lg font-semibold tracking-tight">Images</h1>
           <div className="ml-auto flex items-center gap-2">
             {isSignedIn ? (
               <UserButton />
             ) : (
               <>
                 <SignInButton mode="modal">
-                  <button className="text-sm font-medium px-4 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition">
+                  <button className="text-sm font-semibold px-4 py-1.5 rounded-full bg-foreground text-background hover:opacity-90 transition">
                     Log in
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full bg-neutral-200 text-neutral-900 hover:bg-neutral-300 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700 transition whitespace-nowrap">
+                  <button className="text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full bg-muted text-foreground hover:bg-accent transition whitespace-nowrap">
                     Sign up for free
                   </button>
                 </SignUpButton>
@@ -462,33 +558,121 @@ function ImagesPage() {
           </div>
         </header>
 
+
+        <div className="kova-images-scroll flex-1 overflow-y-auto">
+          <div className="kova-images-page kova-page mx-auto max-w-6xl px-4 pb-40 pt-6 sm:px-6">
+
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-40">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-2 pb-24">
+            <h1 className="text-[34px] sm:text-[40px] font-semibold tracking-tight">Images</h1>
+
+            {/* Prompt */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                generate(prompt);
+              }}
+              className="mt-5"
+            >
+              <div className="kova-composer flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2">
+                <button
+                  type="button"
+                  onClick={() => promptFileRef.current?.click()}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                  aria-label="Attach a reference image"
+                >
+                  <Paperclip className="h-[18px] w-[18px]" />
+                </button>
+                <input
+                  ref={promptFileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={() => {
+                    toast.message("Describe the image you want and Kova will create it.");
+                  }}
+                />
+                <input
+                  ref={inputRef}
+                  value={prompt}
+                  aria-label="Describe a new image"
+                  maxLength={2000}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="Describe a new image"
+                  spellCheck={false}
+                  autoComplete="off"
+                  className="min-w-0 flex-1 border-0 bg-transparent text-[16px] outline-none placeholder:text-muted-foreground focus:outline-none focus:ring-0"
+                />
+                <button
+                  type="submit"
+                  disabled={!prompt.trim() || loading}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground text-background transition hover:opacity-90 disabled:opacity-30"
+                  aria-label="Generate"
+                >
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowUp className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </form>
+
+
             {/* Create an image */}
-            <section>
-              <h2 className="text-[22px] font-semibold tracking-tight mb-3">Create an image</h2>
-              <div className="-mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto scrollbar-none">
+            <section className="mt-10">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="text-[22px] font-semibold tracking-tight">Create an image</h2>
+                <div className="hidden items-center gap-2 sm:flex">
+                  <button
+                    type="button"
+                    onClick={() => scrollPresets(-1)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                    aria-label="Scroll styles left"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollPresets(1)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                    aria-label="Scroll styles right"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <div
+                ref={presetsRef}
+                className="-mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto scroll-smooth scrollbar-none"
+              >
                 <div className="flex gap-3 pb-2 min-w-max">
                   {PRESETS.map((p) => (
                     <button
                       key={p.label}
                       type="button"
                       onClick={() => applyPreset(p)}
-                      className="group flex flex-col items-start w-[128px] shrink-0 focus:outline-none"
+
+                      className="kova-image-preset group flex w-[128px] shrink-0 flex-col items-start focus:outline-none"
                     >
-                      <div className="relative w-[128px] h-[176px] rounded-2xl overflow-hidden ring-1 ring-border/60 bg-muted transition-transform duration-200 group-hover:scale-[1.03] group-hover:ring-foreground/30">
+                      <div className="kova-image-preset-preview relative h-[176px] w-[128px] overflow-hidden rounded-2xl bg-muted ring-1 ring-border/60">
+
+                      className="group flex flex-col items-start w-[160px] shrink-0 focus:outline-none"
+                    >
+                      <div className="relative w-[160px] h-[160px] rounded-2xl overflow-hidden ring-1 ring-border/60 bg-muted">
+
                         <img
                           src={p.image}
                           alt={p.label}
                           loading="lazy"
                           width={512}
-                          height={704}
-                          className="absolute inset-0 w-full h-full object-cover"
+                          height={512}
+                          className="absolute inset-0 w-full h-full object-cover transition duration-200 group-hover:scale-[1.02]"
                         />
+                        <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-3 pb-2 pt-8 text-left text-sm font-medium text-white">
+                          {p.label}
+                        </span>
                       </div>
-                      <span className="mt-2 text-sm text-foreground/90 group-hover:text-foreground text-center w-full">
-                        {p.label}
-                      </span>
                     </button>
                   ))}
                 </div>
@@ -499,7 +683,7 @@ function ImagesPage() {
             {(loading || result || error) && (
               <section className="mt-8">
                 {loading && !result && (
-                  <div className="max-w-md mx-auto aspect-square rounded-3xl overflow-hidden relative ring-1 ring-border bg-gradient-to-br from-fuchsia-500/20 via-violet-500/20 to-cyan-500/20">
+                  <div className="max-w-md mx-auto aspect-square rounded-2xl overflow-hidden relative ring-1 ring-border bg-gradient-to-br from-fuchsia-500/20 via-violet-500/20 to-cyan-500/20">
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(280_90%_60%/0.35),transparent_55%),radial-gradient(circle_at_70%_80%,hsl(190_90%_55%/0.35),transparent_55%),radial-gradient(circle_at_50%_50%,hsl(320_90%_60%/0.25),transparent_60%)] animate-[imgAura_6s_ease-in-out_infinite]" />
                     <div
                       className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent animate-[shimmer_1.8s_infinite]"
@@ -527,12 +711,7 @@ function ImagesPage() {
                         <div className="absolute inset-0 rounded-full border-2 border-white/40 border-t-white animate-spin" />
                         <Sparkles className="absolute inset-0 m-auto w-6 h-6 text-white animate-pulse" />
                       </div>
-                      <div className="text-sm font-medium tracking-wide">
-                        Painting your image...
-                      </div>
-                      <div className="text-[11px] uppercase tracking-[0.2em] opacity-70">
-                        Mixing colors · Adding light · Sharpening details
-                      </div>
+                      <div className="text-sm font-medium tracking-wide">Generating image…</div>
                     </div>
                   </div>
                 )}
@@ -542,7 +721,7 @@ function ImagesPage() {
                       src={result}
                       alt={resultPrompt || "Generated image"}
                       decoding="async"
-                      className="w-full rounded-3xl ring-1 ring-border"
+                      className="w-full rounded-2xl ring-1 ring-border"
                     />
                     <div className="flex justify-center mt-3 gap-2 flex-wrap">
                       <button
@@ -562,7 +741,14 @@ function ImagesPage() {
                         disabled={loading}
                         className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full border border-border hover:bg-accent transition disabled:opacity-50"
                       >
-                        <RefreshCw className="h-4 w-4" /> Create variation
+                        <RefreshCw className="h-4 w-4" /> Generate again
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => copyGeneratedImage(result)}
+                        className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full border border-border hover:bg-accent transition"
+                      >
+                        <Copy className="h-4 w-4" /> Copy image
                       </button>
                       <a
                         href={result}
@@ -587,68 +773,67 @@ function ImagesPage() {
                     <Sparkles className="w-5 h-5 text-muted-foreground" />
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Nothing here yet. Pick a style above or describe an image below.
+                    Nothing here yet. Pick a style or describe an image above.
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3">
                   {history.map((h) => (
-                    <button
+                    <article
                       key={h.id}
-                      type="button"
-                      onClick={() => setLightbox(h)}
-                      className="group relative aspect-square rounded-2xl overflow-hidden bg-muted ring-1 ring-border focus:outline-none focus-visible:ring-2 focus-visible:ring-foreground/60 text-left"
-                      aria-label={`Open image: ${h.prompt}`}
+                      className="group relative aspect-square overflow-hidden rounded-2xl bg-muted ring-1 ring-border"
                     >
-                      <img
-                        src={h.imageUrl}
-                        alt={h.prompt}
-                        loading="lazy"
-                        decoding="async"
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                      />
-                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-gradient-to-t from-black/85 via-black/25 to-transparent flex flex-col justify-end p-2 gap-1.5">
-                        <p className="text-[11px] text-white line-clamp-2" title={h.prompt}>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          lightboxReturnFocusRef.current = event.currentTarget;
+                          setLightbox(h);
+                        }}
+                        className="absolute inset-0 w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-foreground/60"
+                        aria-label={`Open image: ${h.prompt}`}
+                      >
+                        <img
+                          src={h.imageUrl}
+                          alt={h.prompt}
+                          loading="lazy"
+                          decoding="async"
+                          className="absolute inset-0 h-full w-full object-cover "
+                        />
+                      </button>
+                      <div className="pointer-events-none absolute inset-0 flex flex-col justify-end gap-1.5 bg-gradient-to-t from-black/85 via-black/25 to-transparent p-2 opacity-100 transition md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+                        <p className="line-clamp-2 text-[11px] text-white" title={h.prompt}>
                           {h.prompt}
                         </p>
-                        <div
-                          className="flex items-center gap-1"
-                          onClick={(e) => e.stopPropagation()}
-                        >
+                        <div className="pointer-events-auto relative z-10 flex items-center gap-1">
                           <button
                             type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
+                            onClick={() => {
                               setPrompt(h.prompt);
                               inputRef.current?.focus();
                             }}
-                            className="flex-1 text-[11px] px-2 py-1 rounded-full bg-white text-black font-medium hover:opacity-90"
+                            className="min-h-11 flex-1 rounded-full bg-white px-2 text-[11px] font-medium text-black hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                           >
                             Reuse
                           </button>
                           <a
-                            onClick={(e) => e.stopPropagation()}
                             href={h.imageUrl}
                             download={`kovagpt-${h.id}.png`}
-                            className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white"
+                            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                             aria-label="Download"
                           >
-                            <Download className="w-3.5 h-3.5" />
+                            <Download className="h-3.5 w-3.5" />
                           </a>
                           <button
                             type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeFromHistory(h.id);
-                            }}
-                            className="w-7 h-7 rounded-full bg-white/15 hover:bg-destructive flex items-center justify-center text-white"
+                            onClick={() => removeFromHistory(h.id)}
+                            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white hover:bg-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                             aria-label="Remove"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       </div>
-                    </button>
+                    </article>
                   ))}
                 </div>
               )}
@@ -657,7 +842,7 @@ function ImagesPage() {
         </div>
 
         {/* Bottom composer */}
-        <div className="sticky bottom-0 border-t border-border/60 bg-gradient-to-t from-background via-background to-background/80 backdrop-blur">
+        <div className="kova-images-composer-dock sticky bottom-0">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -665,20 +850,15 @@ function ImagesPage() {
             }}
             className="max-w-3xl mx-auto px-4 sm:px-6 py-3"
           >
-            <div className="flex items-end gap-2 rounded-3xl border border-border bg-card shadow-sm px-3 py-2.5">
-              <button
-                type="button"
-                aria-label="Attach"
-                className="p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-accent transition shrink-0"
-              >
-                <Paperclip className="w-5 h-5" />
-              </button>
+            <div className="kova-images-composer flex items-end gap-2 rounded-2xl border border-border bg-card px-3 py-2.5">
               <textarea
                 ref={inputRef}
                 value={prompt}
+                aria-label="Describe the image to generate"
+                maxLength={2000}
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
+                  if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                     e.preventDefault();
                     generate(prompt);
                   }
@@ -694,7 +874,7 @@ function ImagesPage() {
               <button
                 type="submit"
                 disabled={!prompt.trim() || loading}
-                className="w-9 h-9 rounded-full bg-foreground text-background flex items-center justify-center disabled:opacity-30 hover:opacity-90 transition shrink-0"
+                className="w-11 h-11 rounded-full bg-foreground text-background flex items-center justify-center disabled:opacity-30 hover:opacity-90 transition shrink-0"
                 aria-label="Generate"
               >
                 {loading ? (
@@ -706,6 +886,7 @@ function ImagesPage() {
             </div>
           </form>
         </div>
+
       </main>
 
       <SettingsDialog
@@ -714,12 +895,10 @@ function ImagesPage() {
         settings={settings}
         onChange={setSettings}
         initialTab={settingsTab}
+        returnFocusTarget={settingsReturnFocusRef.current}
         onClearAll={() => {
           try {
-            for (const k of Object.keys(localStorage)) {
-              if (k.startsWith("novagpt-image-history-") || k.startsWith("nova-gpt-conversations"))
-                localStorage.removeItem(k);
-            }
+            if (userKey) localStorage.removeItem(HISTORY_KEY_PREFIX + userKey);
           } catch {
             /* ignore */
           }
@@ -741,82 +920,92 @@ function ImagesPage() {
         resetsAt={getUsage().resetsAt}
       />
 
-      {lightbox && (
-        <div
-          className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 sm:p-8 animate-in fade-in duration-150"
-          onClick={() => setLightbox(null)}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Image preview"
-        >
-          <button
-            onClick={() => setLightbox(null)}
-            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"
-            aria-label="Close"
+      <Dialog
+        open={Boolean(lightbox)}
+        onOpenChange={(open) => {
+          if (!open) setLightbox(null);
+        }}
+      >
+        {lightbox && (
+          <DialogContent
+            constrainToViewport={false}
+            data-image-lightbox
+            className="image-lightbox left-0 right-0 top-0 bottom-0 h-dvh w-screen max-h-none max-w-none translate-x-0 translate-y-0 overflow-y-auto rounded-none border-0 bg-black/85 p-4 pb-4 text-white shadow-none  sm:inset-0 sm:h-dvh sm:w-screen sm:max-h-none sm:max-w-none sm:translate-x-0 sm:translate-y-0 sm:rounded-none sm:border-0 sm:p-8 sm:pb-8"
+            onOpenAutoFocus={(event) => {
+              event.preventDefault();
+              lightboxInitialFocusRef.current?.focus();
+            }}
+            onCloseAutoFocus={(event) => {
+              event.preventDefault();
+              const prior = lightboxReturnFocusRef.current;
+              const target =
+                lightboxReturnToPromptRef.current || !prior?.isConnected ? inputRef.current : prior;
+              lightboxReturnToPromptRef.current = false;
+              lightboxReturnFocusRef.current = null;
+              target?.focus();
+            }}
           >
-            <XIcon className="w-5 h-5" />
-          </button>
-          <div
-            className="relative max-w-4xl w-full flex flex-col items-center gap-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <img
-              src={lightbox.imageUrl}
-              alt={lightbox.prompt}
-              decoding="async"
-              className="max-h-[75dvh] w-auto max-w-full rounded-2xl shadow-2xl object-contain"
-            />
-            <p className="text-sm text-white/85 text-center max-w-2xl px-4 line-clamp-3">
-              {lightbox.prompt}
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <button
-                onClick={() => {
-                  setPrompt(lightbox.prompt);
-                  setLightbox(null);
-                  inputRef.current?.focus();
-                }}
-                className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white text-black font-medium hover:opacity-90 transition"
-              >
-                <Sparkles className="w-4 h-4" /> Reuse prompt
-              </button>
-              <button
-                onClick={() => {
-                  const item = lightbox;
-                  setLightbox(null);
-                  void generate(item.prompt);
-                }}
-                className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
-              >
-                <RefreshCw className="h-4 w-4" /> Create variation
-              </button>
-              <button
-                onClick={() => saveGeneratedImage(lightbox)}
-                disabled={savingImage}
-                className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition disabled:opacity-50"
-              >
-                <Bookmark className="h-4 w-4" /> Save
-              </button>
-              <a
-                href={lightbox.imageUrl}
-                download={`kovagpt-${lightbox.id}.png`}
-                className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
-              >
-                <Download className="w-4 h-4" /> Download
-              </a>
-              <button
-                onClick={() => {
-                  removeFromHistory(lightbox.id);
-                  setLightbox(null);
-                }}
-                className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-destructive text-white transition"
-              >
-                <Trash2 className="w-4 h-4" /> Remove
-              </button>
+            <DialogTitle className="sr-only">Image preview</DialogTitle>
+            <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col items-center justify-center gap-4">
+              <img
+                src={lightbox.imageUrl}
+                alt={lightbox.prompt}
+                decoding="async"
+                className="max-h-[75dvh] w-auto max-w-full rounded-2xl shadow-lg object-contain"
+              />
+              <DialogDescription className="max-w-2xl px-4 text-center text-sm text-white/85 line-clamp-3">
+                {lightbox.prompt}
+              </DialogDescription>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <button
+                  ref={lightboxInitialFocusRef}
+                  onClick={() => {
+                    lightboxReturnToPromptRef.current = true;
+                    setPrompt(lightbox.prompt);
+                    setLightbox(null);
+                  }}
+                  className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white text-black font-medium hover:opacity-90 transition"
+                >
+                  <Sparkles className="w-4 h-4" /> Reuse prompt
+                </button>
+                <button
+                  onClick={() => {
+                    const item = lightbox;
+                    setLightbox(null);
+                    void generate(item.prompt);
+                  }}
+                  className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
+                >
+                  <RefreshCw className="h-4 w-4" /> Generate again
+                </button>
+                <button
+                  onClick={() => saveGeneratedImage(lightbox)}
+                  disabled={savingImage}
+                  className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition disabled:opacity-50"
+                >
+                  <Bookmark className="h-4 w-4" /> Save
+                </button>
+                <a
+                  href={lightbox.imageUrl}
+                  download={`kovagpt-${lightbox.id}.png`}
+                  className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
+                >
+                  <Download className="w-4 h-4" /> Download
+                </a>
+                <button
+                  onClick={() => {
+                    removeFromHistory(lightbox.id);
+                    setLightbox(null);
+                  }}
+                  className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full bg-white/10 hover:bg-destructive text-white transition"
+                >
+                  <Trash2 className="w-4 h-4" /> Remove
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </DialogContent>
+        )}
+      </Dialog>
     </div>
   );
 }
