@@ -11,7 +11,6 @@ import { TimersWidget } from "@/components/TimersWidget";
 import { AppErrorBoundary, OfflineBanner } from "@/components/states";
 import { MobileTopBar } from "@/components/MobileTopBar";
 import { installShortcutListener } from "@/lib/shortcuts";
-import { PanelLeft } from "lucide-react";
 import { useUser } from "@/components/auth/ClerkSafe";
 import {
   type Conversation,
@@ -182,7 +181,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div
-      className="relative flex h-[100dvh] w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
+      className="kova-app-shell relative flex h-[100dvh] w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
       onTouchStart={(e) => {
         const t = e.touches[0];
         if (t && t.clientX < 24 && window.innerWidth < 1024) {
@@ -219,25 +218,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         onOpenHelp={openHelp}
       />
 
-      <div className="flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">
+      <div className="kova-workspace-main min-w-0 flex-1 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">
         <OfflineBanner />
         <MobileTopBar onOpenSidebar={() => setSidebarOpen(true)} onNewChat={handleNew} />
-        {!sidebarOpen && (
-          <button
-            onClick={() => {
-              setSidebarOpen(true);
-              window.requestAnimationFrame(() => {
-                document
-                  .querySelector<HTMLElement>('[aria-label="Collapse sidebar"]')
-                  ?.focus({ preventScroll: true });
-              });
-            }}
-            className="hidden lg:flex fixed top-3 left-3 z-30 p-2 rounded-md bg-background/90 border border-border hover:bg-accent transition shadow-sm items-center justify-center"
-            aria-label="Open sidebar"
-          >
-            <PanelLeft className="w-4 h-4" />
-          </button>
-        )}
         <AppErrorBoundary>{children}</AppErrorBoundary>
       </div>
 
