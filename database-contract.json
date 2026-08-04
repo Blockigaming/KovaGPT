@@ -143,6 +143,7 @@
     "is_family_member",
     "is_project_member",
     "kovagpt_schema_health",
+    "kovagpt_schema_health",
     "lease_agent_job",
     "lease_agent_job",
     "match_project_chunks",
@@ -163,6 +164,8 @@
     "set_feedback_submission_updated_at",
     "settle_interrupted_agent_job",
     "settle_interrupted_agent_job",
+
+    "submit_operational_events",
 
     "submit_operational_events",
 
@@ -699,6 +702,7 @@
     "execute on function public.heartbeat_agent_job(uuid, text, integer) to service_role",
     "execute on function public.heartbeat_agent_job(uuid,text,integer) to service_role",
     "execute on function public.kovagpt_schema_health() to service_role",
+    "execute on function public.kovagpt_schema_health() to service_role",
     "execute on function public.lease_agent_job(text, integer) to service_role",
     "execute on function public.lease_agent_job(text,integer) to service_role",
     "execute on function public.match_project_chunks(uuid, vector, int) to authenticated",
@@ -711,6 +715,7 @@
     "execute on function public.save_writing_document(uuid,text,text,integer,text) to authenticated",
     "execute on function public.settle_interrupted_agent_job(uuid, text) to service_role",
     "execute on function public.settle_interrupted_agent_job(uuid,text) to service_role",
+    "execute on function public.submit_operational_events(jsonb) to authenticated",
     "execute on function public.submit_operational_events(jsonb) to authenticated",
     "execute on function public.update_agent_definition(uuid,integer,text,text,uuid,text[],boolean,text) to authenticated",
     "explicitly so edge functions can reach the table via PostgREST.\nGRANT ALL ON public.email_send_log TO service_role",
@@ -789,6 +794,7 @@
     "all on function public.settle_interrupted_agent_job(uuid, text)\n  from public, anon, authenticated",
     "all on function public.settle_interrupted_agent_job(uuid,text) from public, anon, authenticated",
     "all on function public.submit_operational_events(jsonb) from public, anon",
+    "all on function public.submit_operational_events(jsonb) from public, anon",
     "all on function public.update_agent_definition(uuid,integer,text,text,uuid,text[],boolean,text) from public, anon",
     "all on public.agent_definitions, public.agent_definition_versions from anon",
     "all on public.ai_usage_events from public,anon,authenticated",
@@ -802,11 +808,16 @@
     "all on public.writing_documents, public.writing_document_versions from anon",
     "anon EXECUTE on internal SECURITY DEFINER helpers.\nREVOKE EXECUTE ON FUNCTION public.is_project_member(uuid, uuid) FROM anon, PUBLIC",
     "execute on function public.has_active_subscription(uuid, text) from public, anon, authenticated",
+    "execute on function public.kovagpt_schema_health() from public,anon,authenticated",
     "execute on function public.kovagpt_schema_health() from public,anon,authenticated"
   ],
+
+  "sha256": "73008303d904964341b7bfb20782e540091823b1fd34397ccb614913cb9ce6e3"
+
 
   "sha256": "f801d6580dcbc97e2371592c7f4cee95b94038efea7d73716c5565a3586aeb39"
 
   "sha256": "741abb3603f5f05d7855e80cff4c18ecd6288d5a3f5466e4c1f9d029896e87e0"
+
 
 }
