@@ -31,6 +31,7 @@ import {
   imageGenerations,
   imageModel,
   missingAiProviderResponse,
+  supportsChatCompletionsReasoning,
 } from "@/lib/ai/provider.server";
 import { NEWS_TRIGGER, runWebSearch, shouldRunWebSearch } from "@/lib/ai/search.server";
 import { runDeepResearch, type ResearchProgressEvent } from "@/lib/ai/deep-research.server";
@@ -39,8 +40,7 @@ import { selectModelForMode, mapProviderError } from "@/lib/ai/registry.server";
 import { formatMemoryBlock, selectRelevantMemories, type KovaMemory } from "@/lib/ai/memory.server";
 
 type ChatContentPart =
-  | { type: "text"; text: string }
-  | { type: "image_url"; image_url: { url: string } };
+  { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
 
 type ChainableQueryLike = {
   select: (columns: string) => ChainableQueryLike;
@@ -859,7 +859,12 @@ export const Route = createFileRoute("/api/chat")({
             // reason mode  -  reasoning adds significant latency.
             // Legacy Kova versions (<3.5) never use extended reasoning:
             // they are intentionally "slightly less smart" than 3.5.
-            if (m.reasoning && m.id === "high" && !IS_LEGACY_KOVA) {
+            if (
+              m.reasoning &&
+              m.id === "high" &&
+              !IS_LEGACY_KOVA &&
+              supportsChatCompletionsReasoning(model)
+            ) {
               body.reasoning = { effort: m.reasoning };
             }
             if (IS_LEGACY_KOVA) {
