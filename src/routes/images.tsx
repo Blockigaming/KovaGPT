@@ -752,7 +752,7 @@ function ImagesPage() {
                     <Sparkles className="w-5 h-5 text-muted-foreground" />
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Nothing here yet. Pick a style above or describe an image below.
+                    Nothing here yet. Pick a style or describe an image above.
                   </p>
                 </div>
               ) : (
