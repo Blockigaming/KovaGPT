@@ -47,6 +47,13 @@ export type ProviderConfig = {
   configured: boolean;
 };
 
+
+const DEFAULT_CHAT_MODEL = "gpt-4o-mini";
+const DEFAULT_FAST_MODEL = "gpt-4o-mini";
+const DEFAULT_DEEP_MODEL = "gpt-4o";
+const DEFAULT_IMAGE_MODEL = "gpt-image-1";
+const DEFAULT_EMBEDDING_MODEL = "openai/text-embedding-3-small";
+
 const OPENAI_API_BASE_URL = "https://api.openai.com/v1";
 const LOVABLE_GATEWAY_BASE_URL = "https://ai.gateway.lovable.dev/v1";
 
@@ -158,6 +165,11 @@ function parseCapabilities(value: string | undefined): ProviderCapability[] {
   return configured.length ? Array.from(new Set(configured)) : DEFAULT_CAPABILITIES;
 }
 
+
+function baseUrl() {
+  return (env("OPENAI_BASE_URL") ?? "https://api.openai.com/v1").replace(/\/$/, "");
+}
+
 export function getAiProviderConfig(): ProviderConfig {
   return {
     provider: "openai",
@@ -169,11 +181,21 @@ export function getAiProviderConfig(): ProviderConfig {
     embeddingModel: env("KOVA_EMBEDDING_MODEL") ?? "text-embedding-3-small",
     timeoutMs: parseTimeout(env("KOVA_AI_TIMEOUT_MS")),
     capabilities: parseCapabilities(env("KOVA_AI_CAPABILITIES")),
+
+    configured: Boolean(env("OPENAI_API_KEY")),
+
     configured: Boolean(env("LOVABLE_API_KEY") ?? env("OPENAI_API_KEY")),
+
   };
 }
 
 export function validateAiProviderConfig(): ProviderErrorEnvelope | null {
+
+  if (env("OPENAI_API_KEY")) return null;
+  return {
+    error: "AI provider is not configured. Set OPENAI_API_KEY on the server.",
+    code: "missing_openai_api_key",
+
   let generationEnabled: boolean;
   try {
     generationEnabled = getAiRuntimeConfig().generationEnabled;
@@ -197,6 +219,7 @@ export function validateAiProviderConfig(): ProviderErrorEnvelope | null {
   return {
     error: "KovaGPT is temporarily unavailable. Please try again later.",
     code: "provider_unavailable",
+
     retryable: false,
     status: 503,
   };
@@ -243,11 +266,18 @@ export function missingAiProviderResponse(fallback?: JsonObject): Response | nul
   );
 }
 
+function headers() {
+  const apiKey = env("OPENAI_API_KEY");
+  if (!apiKey) throw new AiProviderError(validateAiProviderConfig()!);
+  return {
+    Authorization: `Bearer ${apiKey}`,
+
 function headers(): Record<string, string> {
   const key = env("LOVABLE_API_KEY") ?? env("OPENAI_API_KEY");
   if (!key) throw new AiProviderError(validateAiProviderConfig()!);
   return {
     Authorization: `Bearer ${key}`,
+
     "Content-Type": "application/json",
   };
 }

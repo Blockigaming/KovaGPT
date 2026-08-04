@@ -19,7 +19,7 @@ export default defineConfig({
       "npm run preview -- --host 127.0.0.1 --port 8080",
     ].join(" && "),
     url: "http://127.0.0.1:8080",
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: true,
     timeout: 120_000,
   },
   use: {
