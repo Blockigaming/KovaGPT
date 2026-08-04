@@ -8,9 +8,9 @@ import {
   HelpCircle,
   ImageIcon,
   LifeBuoy,
-  MessageSquare,
   MoreHorizontal,
   PanelLeft,
+  Pencil,
   Pin,
   PinOff,
   Search,
@@ -50,6 +50,7 @@ export function Sidebar({
   onSelect,
   onNew,
   onDelete,
+  onRename,
   onShare,
   onDuplicate,
   onArchive,
@@ -64,6 +65,7 @@ export function Sidebar({
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
+  onRename?: (id: string, title: string) => void;
   onShare?: (id: string) => void;
   onDuplicate?: (id: string) => void;
   onArchive?: (id: string) => void;
@@ -79,6 +81,8 @@ export function Sidebar({
   const lastFocusedRef = useRef<HTMLElement | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
 
   const showSignedIn = isLoaded && isSignedIn;
   const showSignedOut = isLoaded && !isSignedIn;
@@ -179,7 +183,19 @@ export function Sidebar({
   const pinned = filtered
     .filter((c) => c.pinned)
     .sort((a, b) => (b.pinnedAt ?? 0) - (a.pinnedAt ?? 0));
-  const recents = filtered.filter((c) => !c.pinned);
+  const recents = filtered.filter((c) => !c.pinned).sort((a, b) => b.updatedAt - a.updatedAt);
+
+  const beginRename = (conversation: Conversation) => {
+    setRenamingId(conversation.id);
+    setRenameDraft(conversation.title);
+  };
+
+  const finishRename = (conversation: Conversation) => {
+    const title = renameDraft.trim();
+    if (title && title !== conversation.title) onRename?.(conversation.id, title);
+    setRenamingId(null);
+    setRenameDraft("");
+  };
 
   const renderRow = (c: Conversation) => (
     <div
@@ -188,20 +204,51 @@ export function Sidebar({
         activeId === c.id ? "bg-sidebar-active" : "hover:bg-sidebar-hover/60"
       }`}
     >
-      <button
-        type="button"
-        className="flex min-w-0 flex-1 items-center gap-1.5 rounded px-1 py-1.5 text-left focus-visible:ring-2 focus-visible:ring-ring"
-        onClick={() => {
-          onSelect(c.id);
-          closeAfterMobileNavigation();
-        }}
-        aria-label={`Open chat ${c.title}`}
-        aria-current={activeId === c.id ? "page" : undefined}
-        title={c.title}
-      >
-        {c.pinned ? <Pin className="h-3 w-3 shrink-0 fill-current text-muted-foreground" /> : null}
-        <span className="min-w-0 flex-1 truncate">{c.title}</span>
-      </button>
+      {renamingId === c.id ? (
+        <form
+          className="min-w-0 flex-1"
+          onSubmit={(event) => {
+            event.preventDefault();
+            finishRename(c);
+          }}
+        >
+          <input
+            autoFocus
+            value={renameDraft}
+            onChange={(event) => setRenameDraft(event.target.value)}
+            onBlur={() => finishRename(c)}
+            onKeyDown={(event) => {
+              if (event.key !== "Escape") return;
+              event.preventDefault();
+              setRenamingId(null);
+              setRenameDraft("");
+            }}
+            aria-label={`Rename ${c.title}`}
+            className="h-8 w-full rounded-md border border-ring bg-background px-2 text-sm outline-none ring-2 ring-ring/20"
+            maxLength={120}
+          />
+          <button type="submit" className="sr-only">
+            Save name
+          </button>
+        </form>
+      ) : (
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-center gap-1.5 rounded px-1 py-1.5 text-left focus-visible:ring-2 focus-visible:ring-ring"
+          onClick={() => {
+            onSelect(c.id);
+            closeAfterMobileNavigation();
+          }}
+          aria-label={`Open chat ${c.title}`}
+          aria-current={activeId === c.id ? "page" : undefined}
+          title={c.title}
+        >
+          {c.pinned ? (
+            <Pin className="h-3 w-3 shrink-0 fill-current text-muted-foreground" />
+          ) : null}
+          <span className="min-w-0 flex-1 truncate">{c.title}</span>
+        </button>
+      )}
       {!collapsed ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -214,6 +261,11 @@ export function Sidebar({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44" onClick={(e) => e.stopPropagation()}>
+            {onRename ? (
+              <DropdownMenuItem onClick={() => beginRename(c)}>
+                <Pencil className="mr-2 h-4 w-4" /> Rename
+              </DropdownMenuItem>
+            ) : null}
             {onTogglePin ? (
               <DropdownMenuItem onClick={() => onTogglePin(c.id)}>
                 {c.pinned ? <PinOff className="mr-2 h-4 w-4" /> : <Pin className="mr-2 h-4 w-4" />}
@@ -291,25 +343,6 @@ export function Sidebar({
           >
             <Search className="h-[18px] w-[18px]" />
           </button>
-          <Link
-            to="/projects"
-            className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="Projects"
-            title="Projects"
-          >
-            <FolderKanban className="h-[18px] w-[18px]" />
-          </Link>
-          {conversations[0] ? (
-            <button
-              type="button"
-              onClick={() => onSelect(conversations[0].id)}
-              className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label={`Open chat ${conversations[0].title}`}
-              title={conversations[0].title}
-            >
-              <MessageSquare className="h-[18px] w-[18px]" />
-            </button>
-          ) : null}
           <div className="mt-auto flex flex-col items-center gap-1">
             <button
               type="button"
