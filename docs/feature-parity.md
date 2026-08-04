@@ -51,6 +51,10 @@ Last audited: **2026-07-29**. This matrix describes the checked repository and l
 
 ## Latest functional reliability pass
 
+- Local text/code/CSV files are now first-class attachments with previews, removal, bounded content, server validation, model context, and device export/import preservation instead of being pasted into the prompt.
+- Library attachments now resolve owner-scoped extracted content for the model; when extraction is unavailable, the model receives an explicit instruction not to claim it read the file.
+- Generated images now expose a real clipboard-copy action, and their loading state describes only the provider request actually in progress.
+
 - Editing a user prompt now replaces that turn and all later replies instead of appending a duplicate; image and Library attachments remain attached.
 - Regenerating the latest answer preserves the original prompt attachments without duplicating the user turn.
 - Delete and archive actions now provide working undo recovery, while the archive manager supports explicit bulk deletion.

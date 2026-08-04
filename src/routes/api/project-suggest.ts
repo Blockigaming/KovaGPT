@@ -1,5 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { chatCompletions, chatModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
+import {
+  AiProviderError,
+  chatCompletions,
+  utilityModel,
+  missingAiProviderResponse,
+  providerErrorFromResponse,
+  providerErrorResponse,
+} from "@/lib/ai/provider.server";
 import {
   assertFeatureEnabled,
   assertNotBanned,
@@ -8,6 +15,8 @@ import {
   requireUser,
 } from "@/lib/api-auth.server";
 import { DAILY_CHAT_LIMIT_BY_TIER } from "@/lib/modes";
+import { modelForRole } from "@/lib/ai/model-router.server";
+import { UTILITY_MAX_OUTPUT_TOKENS } from "@/lib/ai/model-config.mjs";
 
 // Per-IP sliding window rate limit; keeps this public AI endpoint from
 // becoming an unlimited free LLM call. Lower cap than /api/title since
@@ -74,7 +83,10 @@ export const Route = createFileRoute("/api/project-suggest")({
           const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[tier]);
           if (quota) return quota;
           const upstream = await chatCompletions({
-            model: chatModel("fast"),
+
+            model: modelForRole("UTILITY"),
+            max_completion_tokens: UTILITY_MAX_OUTPUT_TOKENS,
+
             messages: [
               {
                 role: "system",
@@ -85,7 +97,7 @@ export const Route = createFileRoute("/api/project-suggest")({
             ],
           });
           if (!upstream.ok) {
-            return Response.json({ error: "Suggestion provider unavailable." }, { status: 502 });
+            return providerErrorResponse(await providerErrorFromResponse(upstream));
           }
           const data = await upstream.json();
           const providerText = (data.choices?.[0]?.message?.content ?? "")
@@ -105,16 +117,23 @@ export const Route = createFileRoute("/api/project-suggest")({
             .trim()
             .slice(0, 300);
           if (!name) {
-            return Response.json(
-              { error: "Suggestion provider returned an invalid response." },
-              { status: 502 },
+            return providerErrorResponse(
+              new AiProviderError({
+                error: "KovaGPT couldn't complete that request. Please try again.",
+                code: "provider_bad_response",
+                retryable: false,
+                status: 502,
+              }),
             );
           }
           return new Response(JSON.stringify({ name, description }), {
             headers: { "Content-Type": "application/json" },
           });
         } catch {
-          return Response.json({ error: "Suggestion service unavailable." }, { status: 503 });
+          return Response.json(
+            { error: "Suggestion service unavailable." },
+            { status: 503, headers: { "Cache-Control": "no-store" } },
+          );
         }
       },
     },

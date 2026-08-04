@@ -59,7 +59,7 @@ export const getMyFamily = createServerFn({ method: "POST" })
 
 export const createFamilyGroup = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) =>
+  .validator((i: unknown) =>
     z.object({ name: z.string().trim().min(1).max(60).default("My Family") }).parse(i),
   )
   .handler(async ({ data, context }) => {
@@ -85,7 +85,7 @@ export const createFamilyGroup = createServerFn({ method: "POST" })
 
 export const createFamilyInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ email: z.string().email().optional() }).parse(i))
+  .validator((i: unknown) => z.object({ email: z.string().email().optional() }).parse(i))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: group, error: gErr } = await supabase
@@ -108,7 +108,7 @@ export const createFamilyInvite = createServerFn({ method: "POST" })
 
 export const acceptFamilyInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ token: z.string().min(8) }).parse(i))
+  .validator((i: unknown) => z.object({ token: z.string().min(8) }).parse(i))
   .handler(async ({ data, context }) => {
     const { userId } = context;
 
@@ -158,7 +158,7 @@ export const acceptFamilyInvite = createServerFn({ method: "POST" })
 
 export const removeFamilyMember = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ memberUserId: z.string().uuid() }).parse(i))
+  .validator((i: unknown) => z.object({ memberUserId: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { data: group } = await supabase
@@ -193,7 +193,7 @@ export const leaveFamily = createServerFn({ method: "POST" })
 
 export const revokeFamilyInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ inviteId: z.string().uuid() }).parse(i))
+  .validator((i: unknown) => z.object({ inviteId: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { error } = await supabase.from("family_invites").delete().eq("id", data.inviteId);

@@ -21,7 +21,7 @@ test("notification UI loads server truth and exposes search, filters, read, and 
     "Mark all read",
     "Delete",
     "Connectors",
-    "Scheduled tasks",
+    "Task history",
   ])
     assert.ok(route.includes(contract), contract);
 });

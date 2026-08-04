@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const read = (path) => readFileSync(path, "utf8");
@@ -61,4 +61,163 @@ test("image generation validates n before quota and supports exactly one image",
   for (const value of ["0", "1", "4", "negative", "string", "missing"]) {
     assert.ok(value.length > 0, `documented n case: ${value}`);
   }
+});
+
+test("sitemap excludes private and noindex workflows", () => {
+  const sitemapPolicy = read("src/lib/seo-policy.mjs");
+  for (const path of [
+    "/checkout/return",
+    "/summary",
+    "/audit-log",
+    "/projects",
+    "/scheduled-tasks",
+    "/write",
+    "/apps",
+    "/library",
+    "/reset-password",
+    "/unsubscribe",
+  ]) {
+    assert.equal(
+      sitemapPolicy.includes('{ path: "' + path + '",'),
+      false,
+      path + " must not be advertised in the public sitemap",
+    );
+  }
+  for (const path of ["/", "/pricing", "/study-assistant", "/privacy"]) {
+    assert.equal(
+      sitemapPolicy.includes('{ path: "' + path + '",'),
+      true,
+      path + " should remain in the public sitemap",
+    );
+  }
+});
+
+test("study assistant only promises upload formats supported by the composer", () => {
+  const study = read("src/routes/study-assistant.tsx");
+  const composer = read("src/components/ChatInput.tsx");
+  assert.doesNotMatch(study, /upload PDFs?/i);
+  assert.match(study, /Paste text or upload images of your notes/i);
+  assert.match(composer, /f\.type\.startsWith\("image\/"\)/);
+  assert.match(composer, /f\.type\.startsWith\("text\/"\)/);
+});
+
+test("email previews and From display use KovaGPT production branding", () => {
+  const transactional = read("src/routes/lovable/email/transactional/send.ts");
+  const authPreview = read("src/routes/lovable/email/auth/preview.ts");
+  assert.match(transactional, /const SITE_NAME = "KovaGPT";/);
+  assert.doesNotMatch(transactional, /nova-aigpt/i);
+  assert.match(authPreview, /const SITE_NAME = "KovaGPT";/);
+  assert.match(authPreview, /const SAMPLE_PROJECT_URL = "https:\/\/kovagpt\.com";/);
+  assert.doesNotMatch(authPreview, /kovagpt\.kovagpt\.com/i);
+});
+
+test("model selectors only advertise backed intelligence modes", () => {
+  const desktop = read("src/components/ModelSelector.tsx");
+  const responsive = read("src/components/ResponsiveModelSelector.tsx");
+  const chat = read("src/routes/api/chat.ts");
+  const shell = read("src/routes/index.tsx");
+
+  for (const selector of [desktop, responsive]) {
+    assert.match(selector, /modesForTier\(userTier\)/);
+    assert.doesNotMatch(selector, /KOVA_VERSIONS|kova-version|KovaGPT version|Kova 3\.[345]/);
+  }
+  assert.doesNotMatch(shell, /kovaVersion|kova-version/);
+  assert.doesNotMatch(
+    chat,
+    /kovaVersion|KOVA_VERSION|IS_LEGACY_KOVA|previous-generation model|Math\.random\(\) \* 4000/,
+  );
+  assert.match(chat, /if \(m\.reasoning\)/);
+  assert.equal(existsSync("src/lib/kova-version.ts"), false);
+});
+
+test("upload quotas follow the signed-in tier and reject invalid sizes before charging", () => {
+  const composer = read("src/components/ChatInput.tsx");
+  const limits = read("src/lib/limits.ts");
+  const modes = read("src/lib/modes.ts");
+
+  assert.match(composer, /const uploadLimit = DAILY_UPLOAD_LIMIT_BY_TIER\[userTier\]/);
+  assert.equal((composer.match(/tryUseUpload\(uploadLimit\)/g) ?? []).length, 2);
+  assert.doesNotMatch(composer, /getUsage\(\)|u\.uploads >= DAILY_UPLOAD_LIMIT/);
+  assert.match(limits, /tryUseUpload\(limit = DAILY_UPLOAD_LIMIT\)/);
+  assert.match(limits, /u\.uploads >= normalizedLimit/);
+  assert.match(modes, /free: 3,\s*plus: 50,\s*pro: 200,/);
+
+  const imageSize = composer.indexOf("f.size > MAX_IMAGE_FILE_BYTES");
+  const imageCharge = composer.indexOf("tryUseUpload(uploadLimit)");
+  const textSize = composer.indexOf("f.size > MAX_TEXT_FILE_BYTES");
+  const textCharge = composer.indexOf("tryUseUpload(uploadLimit)", imageCharge + 1);
+  assert.ok(imageSize > -1 && imageSize < imageCharge);
+  assert.ok(textSize > -1 && textSize < textCharge);
+});
+
+test("scheduled task surfaces stay truthful while the runner is disabled", () => {
+  const server = read("src/lib/scheduled-tasks.functions.ts");
+  const route = read("src/routes/scheduled-tasks.tsx");
+  const sidebar = read("src/components/Sidebar.tsx");
+  const palette = read("src/components/CommandPalette.tsx");
+  const capabilities = read("src/platform/capabilities.ts");
+  const capabilityRegistry = read("src/lib/capability-registry.ts");
+  const help = read("src/routes/help.tsx");
+  const study = read("src/routes/study-assistant.tsx");
+  const product = read("src/lib/product-completeness.server.ts");
+  const notifications = read("src/routes/notifications.tsx");
+  const parity = read("docs/chatgpt-feature-parity.md");
+
+  assert.match(server, /scheduledExecutionAvailable = false/);
+  assert.match(route, /Scheduled Tasks Status/);
+  assert.match(route, /Upgrading will not enable scheduled/);
+  assert.doesNotMatch(route, /Schedule KovaGPT to do something for you later/);
+  assert.match(sidebar, /Scheduled tasks status/);
+  assert.match(palette, /Scheduled Tasks status/);
+  assert.match(capabilities, /label: "Scheduled Tasks status"/);
+  assert.match(
+    capabilityRegistry,
+    /Background scheduled execution is unavailable in this deployment/,
+  );
+  assert.match(capabilityRegistry, /Previously saved task records can still be managed/);
+  assert.doesNotMatch(help, /image generation, scheduled tasks/);
+  assert.doesNotMatch(study, /scheduled reminders/i);
+  assert.match(product, /title: "Scheduled execution unavailable"/);
+  assert.doesNotMatch(
+    product,
+    /Schedule recurring work|Create reminders, summaries, or recurring searches|label: "Create Scheduled Task"/,
+  );
+  assert.match(notifications, /historical task notifications/);
+  assert.match(parity, /Scheduled Tasks\s+\| Intentionally unavailable/);
+  assert.doesNotMatch(parity, /scheduled task route and server runner/);
+});
+
+test("billing checkout and entitlements use exact supported plan keys", () => {
+  const plans = read("src/lib/billing-plans.ts");
+  const checkout = read("src/utils/payments.functions.ts");
+  const apiAuth = read("src/lib/api-auth.server.ts");
+  const clientTier = read("src/hooks/useTier.ts");
+  const webhook = read("src/routes/api/public/payments/webhook.ts");
+
+  assert.match(plans, /plus_monthly:[\s\S]*tier: "plus"[\s\S]*trialPeriodDays: 30/);
+  assert.match(plans, /pro_monthly:[\s\S]*tier: "pro"[\s\S]*trialPeriodDays: 0/);
+  assert.match(plans, /export const BILLING_ENV = "live" as const/);
+  assert.match(plans, /Object\.prototype\.hasOwnProperty\.call\(BILLING_PLANS, value\)/);
+  assert.doesNotMatch(plans, /toLowerCase|includes\(["'](?:plus|pro)/);
+
+  assert.ok(
+    checkout.indexOf("resolveBillingPlan(data.priceId)") < checkout.indexOf("stripe.prices.list"),
+  );
+  assert.match(checkout, /data\.quantity !== undefined && data\.quantity !== 1/);
+  assert.match(checkout, /lookup_keys: \[plan\.lookupKey\]/);
+  assert.match(checkout, /active: true/);
+  assert.match(checkout, /stripePrice\.lookup_key !== plan\.lookupKey/);
+  assert.match(checkout, /stripePrice\.type !== "recurring"/);
+  assert.match(checkout, /trial_period_days: plan\.trialPeriodDays/);
+
+  for (const source of [checkout, apiAuth, clientTier]) {
+    assert.doesNotMatch(source, /\.includes\(["'](?:plus|pro)["']\)/);
+  }
+  assert.match(apiAuth, /tierForLookupKey\(row\.price_id\)/);
+  assert.match(apiAuth, /\.eq\("environment", BILLING_ENV\)/);
+  assert.match(clientTier, /tierForLookupKey\(row\.price_id\)/);
+  assert.match(clientTier, /\.eq\("environment", BILLING_ENV\)/);
+  assert.match(webhook, /for \(const candidate of candidates\)/);
+  assert.match(webhook, /resolveBillingPlan\(candidate\)/);
+  assert.doesNotMatch(webhook, /lookup_key \|\|.*lovable_external_id \|\|.*price\?\.id/);
 });

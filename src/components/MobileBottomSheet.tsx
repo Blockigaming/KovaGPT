@@ -110,8 +110,7 @@ export function MobileBottomSheet({
   };
 
   const transform = dragY > 0 ? `translateY(${dragY}px)` : undefined;
-  const transition =
-    reduceMotion || dragY > 0 ? "none" : "transform 180ms cubic-bezier(0.2, 0, 0, 1)";
+  const transition = reduceMotion || dragY > 0 ? "none" : "transform 160ms ease-out";
 
   const sheet = (
     <div
@@ -125,13 +124,13 @@ export function MobileBottomSheet({
       <div
         aria-hidden="true"
         onClick={() => onOpenChange(false)}
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in-0 duration-200"
+        className="absolute inset-0 bg-black/50 animate-in fade-in-0 duration-150"
       />
       <div
         ref={sheetRef}
         tabIndex={-1}
         style={{ transform, transition, paddingBottom: "env(safe-area-inset-bottom)" }}
-        className="absolute inset-x-0 bottom-0 flex max-h-[min(88dvh,44rem)] flex-col overflow-hidden rounded-t-[var(--kova-radius-panel)] border-t border-border/80 bg-popover/96 text-popover-foreground shadow-[var(--shadow-floating)] backdrop-blur-xl animate-in slide-in-from-bottom duration-[var(--motion-menu)]"
+        className="absolute inset-x-0 bottom-0 flex max-h-[min(88dvh,44rem)] flex-col overflow-hidden rounded-t-2xl border-t border-border bg-popover text-popover-foreground shadow-lg animate-in slide-in-from-bottom duration-150"
       >
         <div
           className="flex shrink-0 touch-none justify-center pb-2 pt-2.5 cursor-grab active:cursor-grabbing"

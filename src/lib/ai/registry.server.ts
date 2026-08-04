@@ -1,5 +1,6 @@
 import { getAiProviderConfig, type JsonObject } from "@/lib/ai/provider.server";
 import type { ModeId } from "@/lib/modes";
+import { modelForPolicy, type ModelPolicy, type ModelTier } from "@/lib/ai/model-catalog.server";
 
 export type ProviderCapability =
   | "chat"
@@ -161,6 +162,21 @@ export function getProviderRegistry(): ProviderModelDefinition[] {
     },
     {
       providerId: "openai_compatible",
+      modelId: modelForPolicy("thinking").id,
+      displayName: "Kova Thinking",
+      capabilities: ["chat", "stream", "tools", "structured_output", "vision"],
+      intendedUse: ["advanced_chat"],
+      speedClass: "deep",
+      costClass: "high",
+      contextWindowTokens: 128_000,
+      fallbackAllowed: false,
+      streaming: true,
+      tools: true,
+      vision: true,
+      structuredOutput: true,
+    },
+    {
+      providerId: "openai_compatible",
       modelId: cfg.deepModel,
       displayName: "Kova Thinking",
       capabilities: ["chat", "stream", "tools", "structured_output", "vision", "deep_research"],
@@ -221,7 +237,7 @@ export function selectModelForCapabilities(
   if (!cfg.configured) {
     throw new KovaProviderError(
       "PROVIDER_NOT_CONFIGURED",
-      "AI provider is not configured for this feature.",
+      "KovaGPT is temporarily unavailable. Please try again later.",
       { status: 503 },
     );
   }
@@ -240,7 +256,7 @@ export function selectModelForCapabilities(
   if (!fallback) {
     throw new KovaProviderError(
       "CAPABILITY_UNSUPPORTED",
-      `No configured model supports ${requiredCapabilities.join(", ")}.`,
+      "This KovaGPT capability is unavailable.",
       {
         status: 501,
         capability: requiredCapabilities[0],
@@ -257,7 +273,12 @@ export function selectModelForCapabilities(
 
 export function selectModelForMode(
   mode: ModeId | "deep_research" | "image",
-  options: { hasImages?: boolean; needsTools?: boolean; needsSearch?: boolean } = {},
+  options: {
+    hasImages?: boolean;
+    needsTools?: boolean;
+    needsSearch?: boolean;
+    plan?: ModelTier;
+  } = {},
 ): ProviderSelection {
   if (mode === "image")
     return selectModelForCapabilities(undefined, ["image_generation"], "image_generation");
@@ -267,38 +288,81 @@ export function selectModelForMode(
       ["chat", "stream", "deep_research"],
       "deep_research",
     );
-  const cfg = getAiProviderConfig();
   const required: ProviderCapability[] = ["chat", "stream"];
   if (options.needsTools) required.push("tools");
   if (options.hasImages) required.push("vision");
   if (options.needsSearch) required.push("search");
-  const preferred =
-    mode === "instant" ? cfg.fastModel : mode === "high" ? cfg.deepModel : cfg.chatModel;
+  const policy: ModelPolicy =
+    mode === "instant"
+      ? "instant"
+      : mode === "thinking"
+        ? "thinking"
+        : ["high", "extra_high", "pro"].includes(mode)
+          ? "deep"
+          : "normal";
+  let selectedPolicy = policy;
+  let preferredModel = modelForPolicy(selectedPolicy);
+  if (options.plan && !preferredModel.tiers.includes(options.plan)) {
+    selectedPolicy =
+      options.plan === "pro" ? selectedPolicy : options.plan === "plus" ? "thinking" : "instant";
+    preferredModel = modelForPolicy(selectedPolicy);
+    if (!preferredModel.tiers.includes(options.plan)) preferredModel = modelForPolicy("instant");
+  }
+  const preferred = preferredModel.id;
   return selectModelForCapabilities(
     preferred,
     required,
-    mode === "high" ? "advanced_chat" : "normal_chat",
+    ["thinking", "high", "extra_high", "pro"].includes(mode) ? "advanced_chat" : "normal_chat",
   );
 }
 
 export function mapProviderError(error: unknown): KovaProviderError {
   if (error instanceof KovaProviderError) return error;
-  if (error instanceof DOMException && error.name === "AbortError") {
-    return new KovaProviderError("PROVIDER_TIMEOUT", "The provider timed out. Please retry.", {
-      status: 504,
-      retryable: true,
+  if (
+    error instanceof Error &&
+    error.name === "AiProviderError" &&
+    "code" in error &&
+    "status" in error &&
+    "retryable" in error
+  ) {
+    const source = error as Error & {
+      code: string;
+      status: number;
+      retryable: boolean;
+    };
+    const code: ProviderErrorCode =
+      source.code === "provider_timeout"
+        ? "PROVIDER_TIMEOUT"
+        : source.code === "provider_rate_limited"
+          ? "PROVIDER_RATE_LIMIT"
+          : source.code === "provider_bad_response"
+            ? "INVALID_PROVIDER_RESPONSE"
+            : "PROVIDER_UNAVAILABLE";
+    return new KovaProviderError(code, source.message, {
+      status: source.status,
+      retryable: source.retryable,
     });
+  }
+  if (error instanceof DOMException && error.name === "AbortError") {
+    return new KovaProviderError(
+      "PROVIDER_TIMEOUT",
+      "KovaGPT took too long to respond. Please try again.",
+      {
+        status: 504,
+        retryable: true,
+      },
+    );
   }
   if (error instanceof Error && /rate/i.test(error.message)) {
     return new KovaProviderError(
       "PROVIDER_RATE_LIMIT",
-      "The provider is rate limited. Please retry shortly.",
+      "KovaGPT is busy right now. Please try again shortly.",
       { status: 429, retryable: true },
     );
   }
   return new KovaProviderError(
     "PROVIDER_UNAVAILABLE",
-    "The provider is temporarily unavailable. Please retry.",
+    "KovaGPT is temporarily unavailable. Please try again later.",
     { status: 502, retryable: true },
   );
 }

@@ -13,6 +13,11 @@ import {
 } from "@/lib/timers";
 import { Timer as TimerIcon, X, Plus, Bell } from "lucide-react";
 import { toast } from "sonner";
+import {
+  browserStoragePrincipal,
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+} from "@/lib/principal-browser-storage.mjs";
 
 function beep() {
   try {
@@ -46,17 +51,35 @@ function notify(label: string) {
   }
 }
 
-export function TimersWidget() {
+export function TimersWidget({
+  userKey,
+  principalResolved,
+}: {
+  userKey: string | null;
+  principalResolved: boolean;
+}) {
+  const principal = principalResolved ? browserStoragePrincipal(userKey) : null;
   const [items, setItems] = useState<TimerItem[]>([]);
+  const [itemsPrincipal, setItemsPrincipal] = useState<string | null>(null);
+  const ready = principal !== null && itemsPrincipal === principal;
+  const visibleItems = ready ? items : [];
   const [now, setNow] = useState(Date.now());
   const [open, setOpen] = useState(false);
   const [minutes, setMinutes] = useState(5);
 
-  const refresh = useCallback(() => setItems(listTimers()), []);
+  const refresh = useCallback(() => {
+    if (!principalResolved || !principal) {
+      setItems([]);
+      setItemsPrincipal(null);
+      return;
+    }
+    setItems(listTimers(userKey));
+    setItemsPrincipal(principal);
+  }, [principal, principalResolved, userKey]);
 
   useEffect(() => {
     refresh();
-    const unsub = subscribeTimers(refresh);
+    const unsub = subscribeTimers(principalResolved ? userKey : undefined, refresh);
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => {
       unsub();
@@ -64,19 +87,32 @@ export function TimersWidget() {
     };
   }, [refresh]);
 
+  useEffect(() => {
+    if (!principalResolved || !principal) return;
+    const reset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      setItems([]);
+      setItemsPrincipal(principal);
+      setOpen(false);
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+    return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+  }, [principal, principalResolved, userKey]);
+
   // Fire any timers that have hit their fireAt (guard against re-firing).
   useEffect(() => {
-    for (const t of items) {
+    if (!ready) return;
+    for (const t of visibleItems) {
       if (!t.fired && t.fireAt <= now) {
-        markFired(t.id);
+        markFired(userKey, t.id);
         beep();
         notify(t.label);
         toast.success(`${t.label} - done`, { duration: 6000 });
       }
     }
-  }, [items, now]);
+  }, [now, ready, userKey, visibleItems]);
 
-  const active = items.filter((t) => !t.fired);
+  const active = visibleItems.filter((t) => !t.fired);
   const nextItem = active[0];
 
   const requestNotifPerm = () => {
@@ -85,7 +121,7 @@ export function TimersWidget() {
     }
   };
 
-  if (items.length === 0 && !open) {
+  if (visibleItems.length === 0 && !open) {
     return null;
   }
 
@@ -105,11 +141,11 @@ export function TimersWidget() {
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
-          {items.length === 0 && (
+          {visibleItems.length === 0 && (
             <div className="text-xs text-muted-foreground px-1 py-2">No timers yet.</div>
           )}
           <ul className="max-h-56 overflow-y-auto space-y-1">
-            {items.map((t) => {
+            {visibleItems.map((t) => {
               const remaining = t.fireAt - now;
               const done = t.fired || remaining <= 0;
               return (
@@ -126,7 +162,7 @@ export function TimersWidget() {
                     </div>
                   </div>
                   <button
-                    onClick={() => removeTimer(t.id)}
+                    onClick={() => ready && removeTimer(userKey, t.id)}
                     className="p-1 rounded hover:bg-background/60"
                     aria-label="Cancel"
                   >
@@ -149,7 +185,8 @@ export function TimersWidget() {
             <span className="text-xs text-muted-foreground">min</span>
             <button
               onClick={() => {
-                addTimer(minutes * 60 * 1000, `${minutes} min timer`);
+                if (!ready) return;
+                addTimer(userKey, minutes * 60 * 1000, `${minutes} min timer`);
                 requestNotifPerm();
               }}
               className="ml-auto text-xs px-3 py-1 rounded-full bg-foreground text-background hover:opacity-90 inline-flex items-center gap-1"
