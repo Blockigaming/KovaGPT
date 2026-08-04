@@ -12,6 +12,19 @@ export class PricingUnavailableError extends Error {
 
 const roundUp = (value, increment) => Math.ceil((value - Number.EPSILON) / increment) * increment;
 
+const requireFiniteNonnegative = (value, code) => {
+  if (!Number.isFinite(value) || value < 0) throw new RangeError(code);
+  return value;
+};
+
+const toInstant = (value, code) => {
+  const instant = new Date(value).getTime();
+  if (!Number.isFinite(instant)) throw new PricingUnavailableError(code);
+  return instant;
+};
+
+const normalizeEmergencyScope = (scopeType, scopeId) => `${scopeType}:${scopeId ?? ""}`;
+
 export function selectActivePrices(records, { provider, model, at = new Date(), currency }) {
   const instant = new Date(at).getTime();
   const matches = records.filter(
@@ -54,16 +67,45 @@ export function quoteRequest({
   emergencyControls = [],
   at = new Date(),
 }) {
-  if (!pricingVersion?.id || pricingVersion.status !== "approved") {
+  if (!pricingVersion?.id || !["approved", "emergency"].includes(pricingVersion.status)) {
     throw new PricingUnavailableError("pricing_version_unapproved");
+  }
+  const instant = toInstant(at, "pricing_version_window_invalid");
+  if (
+    pricingVersion.effectiveAt &&
+    toInstant(pricingVersion.effectiveAt, "pricing_version_window_invalid") > instant
+  ) {
+    throw new PricingUnavailableError("pricing_version_not_effective");
+  }
+  if (
+    pricingVersion.expiresAt &&
+    toInstant(pricingVersion.expiresAt, "pricing_version_window_invalid") <= instant
+  ) {
+    throw new PricingUnavailableError("pricing_version_expired");
   }
   if (riskBufferPercentage < 0 || riskBufferPercentage > 1)
     throw new RangeError("risk_buffer_invalid");
-  const blocked = emergencyControls.find(
-    (control) =>
-      control.active &&
-      ["global", provider, upstreamModel, usage.capability].includes(control.scopeKey),
-  );
+  const marginFloor = pricingVersion.marginFloor ?? MARGIN_FLOOR;
+  if (!Number.isFinite(marginFloor) || marginFloor < MARGIN_FLOOR || marginFloor >= 1) {
+    throw new PricingUnavailableError("pricing_margin_floor_invalid");
+  }
+  const requestScopes = new Set([
+    normalizeEmergencyScope("global", "global"),
+    normalizeEmergencyScope("provider", provider),
+    normalizeEmergencyScope("model", upstreamModel),
+    normalizeEmergencyScope("capability", usage.capability),
+    normalizeEmergencyScope("plan", usage.planId),
+    normalizeEmergencyScope("organization", usage.organizationId),
+    normalizeEmergencyScope("project", usage.projectId),
+    normalizeEmergencyScope("key", usage.apiKeyId),
+  ]);
+  const blocked = emergencyControls.find((control) => {
+    if (!control.active) return false;
+    if (control.scopeType) {
+      return requestScopes.has(normalizeEmergencyScope(control.scopeType, control.scopeId));
+    }
+    return ["global", provider, upstreamModel, usage.capability].includes(control.scopeKey);
+  });
   if (blocked)
     throw new PricingUnavailableError("paid_capability_disabled", { controlId: blocked.id });
 
@@ -79,18 +121,27 @@ export function quoteRequest({
   }
   const upstreamCost = Object.values(upstreamBreakdown).reduce((sum, value) => sum + value, 0);
   const fixedCosts = Object.entries(allowances.fixed ?? {}).reduce(
-    (sum, [, value]) => sum + value,
+    (sum, [name, value]) =>
+      sum + requireFiniteNonnegative(value, `invalid_fixed_allowance:${name}`),
     0,
   );
   const percentageCosts = Object.entries(allowances.percentages ?? {}).reduce(
-    (sum, [, percentage]) => sum + upstreamCost * percentage,
+    (sum, [name, percentage]) =>
+      sum +
+      upstreamCost * requireFiniteNonnegative(percentage, `invalid_percentage_allowance:${name}`),
     0,
   );
-  const collectionRate = allowances.collectionPercentage ?? 0;
-  const collectionFixed = allowances.collectionFixed ?? 0;
+  const collectionRate = requireFiniteNonnegative(
+    allowances.collectionPercentage ?? 0,
+    "invalid_collection_percentage",
+  );
+  const collectionFixed = requireFiniteNonnegative(
+    allowances.collectionFixed ?? 0,
+    "invalid_collection_fixed",
+  );
   const preCollectionCost = upstreamCost + fixedCosts + percentageCosts;
-  // Solve charge >= (non-collection cost + fixed fee + charge*collection rate) / .5.
-  const denominator = MARGIN_FLOOR - collectionRate;
+  // Solve (charge - non-collection cost - fixed fee - charge*collection rate) / charge >= margin floor.
+  const denominator = 1 - marginFloor - collectionRate;
   if (denominator <= 0) throw new PricingUnavailableError("collection_cost_exceeds_margin_budget");
   const baseMinimumPrice = (preCollectionCost + collectionFixed) / denominator;
   const riskBufferAmount = baseMinimumPrice * riskBufferPercentage;
@@ -102,12 +153,14 @@ export function quoteRequest({
   let customerCharge = roundUp(Math.max(0, normalCharge - requestedDiscount), roundingIncrement);
   const projectedCollectionCost = collectionFixed + customerCharge * collectionRate;
   const totalVariableCost = preCollectionCost + projectedCollectionCost;
-  const marginMinimum = totalVariableCost / MARGIN_FLOOR;
+  const marginMinimum = totalVariableCost / (1 - marginFloor);
   let promotionalSubsidy = 0;
   if (customerCharge + Number.EPSILON < marginMinimum) {
     if (
       !promotion?.administratorAuthorized ||
       !promotion.budgetId ||
+      !Number.isFinite(promotion.availableBudget) ||
+      promotion.availableBudget < 0 ||
       promotion.availableBudget < marginMinimum - customerCharge
     ) {
       throw new PricingUnavailableError("promotion_below_margin_floor");
@@ -116,7 +169,7 @@ export function quoteRequest({
   }
   const effectiveRevenue = customerCharge + promotionalSubsidy;
   const grossMarginPercentage = (effectiveRevenue - totalVariableCost) / effectiveRevenue;
-  if (grossMarginPercentage + Number.EPSILON < MARGIN_FLOOR) {
+  if (grossMarginPercentage + Number.EPSILON < marginFloor) {
     throw new PricingUnavailableError("margin_floor_not_met");
   }
   return Object.freeze({
@@ -134,6 +187,7 @@ export function quoteRequest({
     promotionalSubsidy,
     roundingDifference: customerCharge - Math.max(0, normalCharge - requestedDiscount),
     projectedGrossProfit: effectiveRevenue - totalVariableCost,
+    marginFloor,
     projectedGrossMarginPercentage: grossMarginPercentage,
   });
 }
@@ -144,12 +198,20 @@ export function reconcileCharge({
   actualAllowances = {},
   cause = "usage_variance",
 }) {
-  const other = Object.values(actualAllowances).reduce((sum, value) => sum + value, 0);
+  if (!Number.isFinite(actualUpstreamCost) || actualUpstreamCost < 0) {
+    throw new PricingUnavailableError("actual_upstream_cost_invalid");
+  }
+  const other = Object.entries(actualAllowances).reduce(
+    (sum, [name, value]) =>
+      sum + requireFiniteNonnegative(value, `invalid_actual_allowance:${name}`),
+    0,
+  );
   const actualTotalVariableCost = actualUpstreamCost + other;
   const revenue = quote.customerCharge + quote.promotionalSubsidy;
   const grossProfit = revenue - actualTotalVariableCost;
   const grossMarginPercentage = revenue > 0 ? grossProfit / revenue : Number.NEGATIVE_INFINITY;
-  const belowFloor = grossMarginPercentage < MARGIN_FLOOR;
+  const marginFloor = quote.marginFloor ?? MARGIN_FLOOR;
+  const belowFloor = grossMarginPercentage < marginFloor;
   return {
     finalCustomerCharge: quote.customerCharge,
     finalUpstreamCost: actualUpstreamCost,
