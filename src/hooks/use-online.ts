@@ -7,7 +7,7 @@ export function useOnline() {
     let debounce: ReturnType<typeof setTimeout> | undefined;
     async function probe(): Promise<boolean> {
       try {
-        const response = await fetch("/favicon.svg", {
+        const response = await fetch("/favicon.png", {
           method: "HEAD",
           cache: "no-store",
           signal: AbortSignal.timeout(4_000),

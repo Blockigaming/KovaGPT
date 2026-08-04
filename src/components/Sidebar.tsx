@@ -8,7 +8,6 @@ import {
   HelpCircle,
   ImageIcon,
   LifeBuoy,
-  MessageSquare,
   MoreHorizontal,
   PanelLeft,
   Pin,
@@ -267,11 +266,11 @@ export function Sidebar({
           <button
             type="button"
             onClick={onToggle}
-            className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
+            className="mb-1 flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="Open sidebar"
             title="Open sidebar"
           >
-            <PanelLeft className="h-[18px] w-[18px]" />
+            <NovaLogo mark className="h-[22px] w-[22px] text-foreground" />
           </button>
           <button
             type="button"
@@ -292,34 +291,14 @@ export function Sidebar({
             <Search className="h-[18px] w-[18px]" />
           </button>
           <Link
-            to="/projects"
-            className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="Projects"
-            title="Projects"
+            to="/images"
+            className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring aria-[current=page]:bg-sidebar-hover"
+            aria-label="Images"
+            title="Images"
           >
-            <FolderKanban className="h-[18px] w-[18px]" />
+            <ImageIcon className="h-[18px] w-[18px]" />
           </Link>
-          {conversations[0] ? (
-            <button
-              type="button"
-              onClick={() => onSelect(conversations[0].id)}
-              className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label={`Open chat ${conversations[0].title}`}
-              title={conversations[0].title}
-            >
-              <MessageSquare className="h-[18px] w-[18px]" />
-            </button>
-          ) : null}
           <div className="mt-auto flex flex-col items-center gap-1">
-            <button
-              type="button"
-              onClick={() => onOpenSettings("general")}
-              className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label="Settings"
-              title="Settings"
-            >
-              <SettingsIcon className="h-[18px] w-[18px]" />
-            </button>
             <div onClick={(e) => e.stopPropagation()}>
               <UserButton />
             </div>
@@ -597,7 +576,7 @@ export function Sidebar({
                       files.
                     </p>
                     <SignInButton mode="modal">
-                      <button className="mt-4 flex min-h-10 w-full items-center justify-center rounded-full border border-border bg-transparent px-4 text-sm font-medium transition hover:bg-sidebar-hover">
+                      <button className="mt-4 flex min-h-10 w-full items-center justify-center rounded-full border border-transparent bg-muted px-4 text-sm font-medium text-foreground transition hover:bg-accent">
                         Log in
                       </button>
                     </SignInButton>

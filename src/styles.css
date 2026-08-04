@@ -1783,8 +1783,9 @@ body {
   }
 
   .kova-composer:focus-within {
-    border-color: color-mix(in oklab, var(--foreground) 14%, transparent) !important;
-    box-shadow: 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent) !important;
+    border-color: color-mix(in oklab, var(--foreground) 7%, transparent) !important;
+    outline: none !important;
+    box-shadow: none !important;
   }
 
   .kova-composer.is-streaming {
@@ -1805,7 +1806,7 @@ body {
 
 
   .kova-composer-leading {
-    padding-left: var(--composer-inset);
+    padding-left: calc((var(--composer-height) - var(--composer-control)) / 2);
   }
 
   .kova-composer-trailing {
