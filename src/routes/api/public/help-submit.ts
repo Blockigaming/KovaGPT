@@ -31,6 +31,30 @@ function randomToken(): string {
     .join("");
 }
 
+async function unsubscribeTokenFor(
+  supabase: SupabaseClient<Database>,
+  email: string,
+): Promise<string> {
+  const normalized = email.trim().toLowerCase();
+  const { data: existing } = await supabase
+    .from("email_unsubscribe_tokens")
+    .select("token")
+    .eq("email", normalized)
+    .maybeSingle();
+  if (existing?.token) return existing.token;
+  const token = `${randomToken()}${randomToken()}`;
+  await supabase
+    .from("email_unsubscribe_tokens")
+    .upsert({ token, email: normalized }, { onConflict: "email", ignoreDuplicates: true });
+  const { data: stored } = await supabase
+    .from("email_unsubscribe_tokens")
+    .select("token")
+    .eq("email", normalized)
+    .maybeSingle();
+  if (!stored?.token) throw new Error("Failed to prepare unsubscribe token");
+  return stored.token;
+}
+
 async function enqueueFixedRecipient(args: {
   supabase: SupabaseClient<Database>;
   templateName: string;
@@ -51,6 +75,9 @@ async function enqueueFixedRecipient(args: {
   const subject = typeof entry.subject === "function" ? entry.subject(args.data) : entry.subject;
   const recipient = entry.to.trim().toLowerCase();
   const messageId = randomToken();
+  // The email API rejects transactional sends without an unsubscribe token,
+  // so the internal support recipient needs one too.
+  const unsubscribeToken = await unsubscribeTokenFor(args.supabase, recipient);
   await args.supabase.from("email_send_log").insert({
     message_id: messageId,
     template_name: args.templateName,
@@ -70,11 +97,13 @@ async function enqueueFixedRecipient(args: {
       purpose: "transactional",
       label: args.templateName,
       idempotency_key: args.idempotencyKey,
+      unsubscribe_token: unsubscribeToken,
       queued_at: new Date().toISOString(),
     },
   });
   if (error) throw new Error(error.message);
 }
+
 
 // Simple in-memory IP rate limiter: max 5 submissions per hour per IP.
 // In-memory state is per-worker-instance, so this is a best-effort guard
