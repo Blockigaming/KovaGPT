@@ -17,8 +17,10 @@ import {
   Globe,
   Mail,
   FileText,
+
   ThumbsUp,
   ThumbsDown,
+
 } from "lucide-react";
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileBottomSheet } from "./MobileBottomSheet";
@@ -771,6 +773,33 @@ function ChatMessageInner({
                   <DropdownMenuItem onClick={onBranch} disabled={!onBranch}>
                     <GitBranch className="mr-2 h-4 w-4" /> Branch into new chat
                   </DropdownMenuItem>
+
+                  {artifactKind && (
+                    <>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setEditorMode("edit");
+                          setEditorOpen(true);
+                        }}
+                      >
+                        {artifactKind === "code" ? (
+                          <Code2 className="mr-2 h-4 w-4" />
+                        ) : (
+                          <FileEdit className="mr-2 h-4 w-4" />
+                        )}
+                        {artifactKind === "code" ? "Open code full screen" : "Open writing full screen"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setEditorMode("preview");
+                          setEditorOpen(true);
+                        }}
+                      >
+                        <Eye className="mr-2 h-4 w-4" /> Preview in workspace
+                      </DropdownMenuItem>
+                    </>
+                  )}
+
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
