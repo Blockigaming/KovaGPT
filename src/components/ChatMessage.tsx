@@ -17,7 +17,6 @@ import {
   Globe,
   Mail,
   FileText,
-  Volume2,
   ThumbsUp,
   ThumbsDown,
 
@@ -416,11 +415,12 @@ function ChatMessageInner({
     <article
       id={`message-${message.id}`}
       data-message-id={message.id}
+      data-message-role={message.role}
       className="kova-message group w-full px-3 py-3 text-[15px] leading-7 sm:px-5 lg:px-10 lg:py-4 lg:text-base"
       aria-label={isUser ? "Your message" : "KovaGPT response"}
     >
       {isUser ? (
-        <div className="mx-auto flex max-w-[48rem] justify-end">
+        <div className="kova-message-inner mx-auto flex max-w-[48rem] justify-end">
           <div className="flex min-w-0 max-w-[85%] flex-col items-end sm:max-w-[75%]">
             {message.attachments && message.attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2 justify-end">
@@ -495,7 +495,7 @@ function ChatMessageInner({
           </div>
         </div>
       ) : (
-        <div className="kova-assistant-message mx-auto flex max-w-[48rem] items-start justify-start">
+        <div className="kova-message-inner kova-assistant-message mx-auto flex max-w-[48rem] items-start justify-start">
           <div
             className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text"
             onTouchStart={startLongPress}
@@ -606,7 +606,7 @@ function ChatMessageInner({
           </div>
         </div>
       )}
-      <div className="mx-auto max-w-[48rem]">
+      <div className="kova-message-inner mx-auto max-w-[48rem]">
         <div className={isUser ? "flex justify-end" : "flex justify-start"}>
           {!streaming && !isUser && message.content && (
             <div className="kova-message-actions mt-1 max-w-full overflow-x-auto">
@@ -623,6 +623,42 @@ function ChatMessageInner({
                   <Copy className="w-4 h-4" />
                 )}
               </button>
+
+              <button
+                type="button"
+                onClick={() => persistFeedback(feedback === "up" ? null : "up")}
+                className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                title="Good response"
+                aria-label="Good response"
+                aria-pressed={feedback === "up"}
+              >
+                <ThumbsUp
+                  className={`h-4 w-4 ${feedback === "up" ? "fill-current text-foreground" : ""}`}
+                />
+              </button>
+              <button
+                type="button"
+                onClick={() => persistFeedback(feedback === "down" ? null : "down")}
+                className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                title="Bad response"
+                aria-label="Bad response"
+                aria-pressed={feedback === "down"}
+              >
+                <ThumbsDown
+                  className={`h-4 w-4 ${feedback === "down" ? "fill-current text-foreground" : ""}`}
+                />
+              </button>
+              {onRetry ? (
+                <button
+                  type="button"
+                  onClick={onRetry}
+                  className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                  title="Retry response"
+                  aria-label="Retry response"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </button>
+              ) : null}
 
               <button
                 onClick={async () => {
@@ -642,7 +678,7 @@ function ChatMessageInner({
                     toast.error("Couldn't share");
                   }
                 }}
-                className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
+                className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                 title="Share"
                 aria-label="Share"
               >
@@ -714,7 +750,7 @@ function ChatMessageInner({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
+                    className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                     title="More actions"
                     aria-label="More actions"
                   >
@@ -735,14 +771,6 @@ function ChatMessageInner({
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={onBranch} disabled={!onBranch}>
                     <GitBranch className="mr-2 h-4 w-4" /> Branch into new chat
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      window.speechSynthesis.cancel();
-                      window.speechSynthesis.speak(new SpeechSynthesisUtterance(message.content));
-                    }}
-                  >
-                    <Volume2 className="mr-2 h-4 w-4" /> Read aloud
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
