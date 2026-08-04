@@ -1,9 +1,26 @@
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
 import { DEFAULT_SETTINGS, type Settings } from "@/components/SettingsDialog";
-import { loadStoredSettings, saveStoredSettings, settingsKey } from "@/lib/settings-storage";
+import {
+  CURRENT_MEMORY_CONSENT_VERSION,
+  loadStoredSettings,
+  saveStoredSettings,
+  settingsKey,
+} from "@/lib/settings-storage";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 
 export { settingsKey } from "@/lib/settings-storage";
+
+function normalizeLoadedSettings(stored: Record<string, unknown> | null): Settings {
+  const loaded = stored
+    ? ({ ...DEFAULT_SETTINGS, ...stored } as Settings)
+    : { ...DEFAULT_SETTINGS, mode: loadThemeMode() };
+
+  if (loaded.rememberAcross && loaded.memoryConsentVersion !== CURRENT_MEMORY_CONSENT_VERSION) {
+    return { ...loaded, rememberAcross: false };
+  }
+
+  return loaded;
+}
 
 export function loadSettings(
   userKey: string | null,
@@ -11,9 +28,7 @@ export function loadSettings(
 ): Settings {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
   const stored = loadStoredSettings(userKey, { migrateLegacyGuest });
-  return stored
-    ? ({ ...DEFAULT_SETTINGS, ...stored } as Settings)
-    : { ...DEFAULT_SETTINGS, mode: loadThemeMode() };
+  return normalizeLoadedSettings(stored);
 }
 
 /**
