@@ -152,7 +152,7 @@ export function Sidebar({
   const labelClass = collapsed ? "sr-only lg:sr-only" : "truncate";
   const iconOnly = collapsed ? "justify-center px-0" : "gap-3 px-2.5";
   const navItemClass = (active: boolean) =>
-    `relative flex h-9 items-center rounded-lg py-1 text-sm transition-colors duration-100 ${iconOnly} ${
+    `kova-nav-row relative flex h-9 items-center rounded-lg py-1 text-sm transition-colors duration-100 ${iconOnly} ${
       active
         ? "bg-sidebar-active text-foreground font-medium"
         : "text-sidebar-foreground hover:bg-sidebar-hover"
@@ -261,7 +261,7 @@ export function Sidebar({
 
       {collapsed && showSignedIn ? (
         <div
-          className="hidden h-[100dvh] w-[52px] shrink-0 flex-col items-center gap-1 border-r border-border/60 bg-sidebar pb-[max(.625rem,var(--safe-bottom))] pt-[max(.5rem,var(--safe-top))] lg:flex"
+          className="kova-sidebar-rail hidden h-[100dvh] w-[52px] shrink-0 flex-col items-center gap-1 border-r border-border/60 bg-sidebar pb-[max(.625rem,var(--safe-bottom))] pt-[max(.5rem,var(--safe-top))] lg:flex"
           aria-label="Collapsed navigation"
         >
           <button
@@ -336,6 +336,7 @@ export function Sidebar({
             "--sidebar-expanded": `${EXPANDED_WIDTH}px`,
           } as React.CSSProperties
         }
+        data-state={collapsed ? "collapsed" : "expanded"}
         className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-border/60 bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 ease-[var(--ease-spring)] lg:w-[var(--sidebar-expanded)] ${
           collapsed ? "lg:!w-0 lg:border-r-0" : ""
         } max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,320px)] max-lg:shadow-lg ${
@@ -348,22 +349,11 @@ export function Sidebar({
         role={open && isMobileViewport() ? "dialog" : "navigation"}
       >
         <div className="flex h-full min-w-[var(--sidebar-expanded)] flex-col overflow-hidden">
-          <div className="relative z-20 flex min-h-[52px] items-center gap-1 bg-sidebar px-2.5 pt-[var(--safe-top)]">
+          <div className="kova-sidebar-header relative z-20 flex min-h-[52px] items-center gap-1 bg-sidebar px-2.5 pt-[var(--safe-top)]">
             <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
               <NovaLogo className="h-6 w-6 rounded-md" />
               <span className="truncate text-base font-semibold tracking-tight">KovaGPT</span>
             </div>
-
-            {showSignedOut ? (
-              <Link
-                to="/library"
-                className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:flex"
-                aria-label="Search"
-                title="Search"
-              >
-                <Search className="h-[18px] w-[18px]" />
-              </Link>
-            ) : null}
 
             <button
               onClick={onToggle}
@@ -412,7 +402,7 @@ export function Sidebar({
             </div>
           ) : null}
 
-          <div className="flex flex-col gap-0.5 px-2 pt-2">
+          <div className="kova-sidebar-primary flex flex-col gap-0.5 px-2 pt-2">
             <button
               onClick={() => {
                 onNew();
@@ -443,7 +433,7 @@ export function Sidebar({
             {showSignedIn && (tier === "plus" || tier === "pro")
               ? renderNavLink(
                   "/scheduled-tasks",
-                  "Scheduled tasks status",
+                  "Tasks",
                   Calendar,
                   isOn("/scheduled-tasks"),
                 )
@@ -454,7 +444,7 @@ export function Sidebar({
           </div>
 
           <div
-            className="relative mt-2 min-h-0 flex-1 overflow-y-auto pb-4"
+            className="kova-sidebar-history relative mt-2 min-h-0 flex-1 overflow-y-auto pb-4"
             role="group"
             aria-label="Chats"
           >
@@ -514,7 +504,7 @@ export function Sidebar({
           </div>
 
           <div
-            className={`mt-auto border-t border-border/60 bg-sidebar p-2.5 pb-[max(.625rem,var(--safe-bottom))] ${collapsed ? "lg:px-2" : ""}`}
+            className={`kova-sidebar-footer mt-auto border-t border-border/60 bg-sidebar p-2.5 pb-[max(.625rem,var(--safe-bottom))] ${collapsed ? "lg:px-2" : ""}`}
           >
             {!isLoaded ? null : showSignedIn ? (
               <div className={`flex items-center gap-2 ${collapsed ? "lg:flex-col" : ""}`}>
