@@ -39,7 +39,24 @@ import {
   type ResearchAuthorizationClient,
 } from "@/lib/research-persistence-authorization.server.mjs";
 import { activityToSseDelta, createToolActivityEvent } from "@/lib/ai/activity.server";
+
 import { selectModelForMode, mapProviderError } from "@/lib/ai/registry.server";
+import {
+  acquireGeneration,
+  finalizeGeneration,
+  hashGuestIp,
+  renewGenerationLease,
+} from "@/lib/ai/accounting.server";
+import {
+  estimateMaximumCostUsd,
+  modelForPolicy,
+  OPENAI_TEXT_MODELS,
+} from "@/lib/ai/model-catalog.server";
+import { getAiRuntimeConfig } from "@/lib/ai/config.server";
+import { estimateProviderInput } from "@/lib/ai/token-estimator.server";
+
+import { routeAiModel } from "@/lib/ai/model-router.server";
+
 import { formatMemoryBlock, selectRelevantMemories, type KovaMemory } from "@/lib/ai/memory.server";
 import {
   CHAT_BODY_LIMIT_BYTES,
@@ -57,8 +74,7 @@ import {
 } from "@/lib/provider-response.server.mjs";
 
 type ChatContentPart =
-  | { type: "text"; text: string }
-  | { type: "image_url"; image_url: { url: string } };
+  { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
 
 type ToolCall = {
   id: string;
@@ -76,9 +92,7 @@ type ToolResultMsg = {
   content: string;
 };
 type ChatMsg =
-  | { role: string; content: unknown; [key: string]: unknown }
-  | AssistantMsg
-  | ToolResultMsg;
+  { role: string; content: unknown; [key: string]: unknown } | AssistantMsg | ToolResultMsg;
 
 type ChainableQueryLike = {
   select: (columns: string) => ChainableQueryLike;
@@ -164,6 +178,54 @@ function sseEvent(obj: Record<string, unknown>) {
 
 function sseDone() {
   return `data: [DONE]\n\n`;
+}
+
+type ReportedUsage = {
+  input: number;
+  cachedInput: number;
+  output: number;
+  reasoning: number;
+};
+
+function reportedUsageFromSse(buffer: string): ReportedUsage | null {
+  let result: ReportedUsage | null = null;
+  for (const frame of buffer.split("\n\n")) {
+    const data = frame
+      .split("\n")
+      .find((line) => line.startsWith("data:"))
+      ?.slice(5)
+      .trim();
+    if (!data || data === "[DONE]") continue;
+    try {
+      const parsed = JSON.parse(data) as Record<string, unknown>;
+      const usage = parsed.usage as Record<string, unknown> | undefined;
+      if (!usage) continue;
+      const inputDetails = usage.input_tokens_details as Record<string, unknown> | undefined;
+      const outputDetails = usage.output_tokens_details as Record<string, unknown> | undefined;
+      result = {
+        input: Number(usage.prompt_tokens ?? 0),
+        cachedInput: Number(inputDetails?.cached_tokens ?? 0),
+        output: Number(usage.completion_tokens ?? 0),
+        reasoning: Number(outputDetails?.reasoning_tokens ?? 0),
+      };
+    } catch {
+      // Provider framing validation handles malformed events separately.
+    }
+  }
+  return result;
+}
+
+function reportedUsageFromChatJson(value: Record<string, unknown>): ReportedUsage | null {
+  const usage = value.usage as Record<string, unknown> | undefined;
+  if (!usage) return null;
+  const inputDetails = usage.prompt_tokens_details as Record<string, unknown> | undefined;
+  const outputDetails = usage.completion_tokens_details as Record<string, unknown> | undefined;
+  return {
+    input: Number(usage.prompt_tokens ?? usage.input_tokens ?? 0),
+    cachedInput: Number(inputDetails?.cached_tokens ?? 0),
+    output: Number(usage.completion_tokens ?? usage.output_tokens ?? 0),
+    reasoning: Number(outputDetails?.reasoning_tokens ?? 0),
+  };
 }
 
 function parseToolHopResponse(
@@ -450,8 +512,8 @@ export const Route = createFileRoute("/api/chat")({
             const auth = await optionalUser(request);
             if (auth instanceof Response) return auth;
 
+            const clientKey = !auth ? resolveAnonymousClientKey(request.headers) : "";
             if (!auth) {
-              const clientKey = resolveAnonymousClientKey(request.headers);
               if (chatAnonymousRateLimiter.isLimited(clientKey)) {
                 return new Response(
                   JSON.stringify({
@@ -605,7 +667,7 @@ export const Route = createFileRoute("/api/chat")({
                 const quota = await enforceQuota(auth, "images", imgLimit);
                 if (quota) return quota;
               }
-              return handleImageRequest(lastText, logContext);
+              // Defer the provider call until after usage acquisition below.
             }
 
             // Anonymous chat is allowed; signed-in users get per-user daily quotas + maintenance check.
@@ -697,22 +759,7 @@ export const Route = createFileRoute("/api/chat")({
             const hasAttachments = totalAttachments > 0;
             const hasImages = currentAttachments.some((attachment) => attachment.kind === "image");
 
-            if (clientTool === "deep_research" && lastText && !hasAttachments) {
-              return handleDeepResearchRequest(lastText, {
-                signal: request.signal,
-                logContext,
-                persistence: auth
-                  ? {
-                      supabase:
-                        auth.supabaseAdmin as unknown as import("@/lib/ai/deep-research.server").ResearchPersistence["supabase"],
-                      userId: auth.userId,
-                      chatId: authorizedResearchReferences?.chatId,
-                      projectId: authorizedResearchReferences?.projectId,
-                      temporary: Boolean(temporary),
-                    }
-                  : undefined,
-              });
-            }
+            // Defer Deep Research provider work until after usage acquisition below.
 
             // COST: only send the last ~12 turns to the model. Adaptive memory +
             // cross-chat summaries (below) carry forward standing rules and
@@ -774,20 +821,30 @@ export const Route = createFileRoute("/api/chat")({
               }),
             );
 
-            // Model routing:
-            // - instant: fastest available (Gemini flash-lite) for snappy replies.
-            // - medium:  balanced quality/speed (Gemini 3.1 Pro preview).
-            // - high:    smartest available (GPT-5.5 Pro extended reasoning).
-            const selectedModel = selectModelForMode(m.id, {
-              hasImages,
-              needsTools: m.id !== "instant",
-              needsSearch: false,
-            });
-            const model = selectedModel.model.modelId;
-
-            // INTENTIONAL-DEFERRED(routing): per-request classification can be added
-            // and an explicit "Improve answer" client action that re-runs with a
-            // stronger model only on demand.
+            // Centralized server-side model routing. The client can pick a mode
+            // but never a model: the router resolves a logical role
+            // (DEFAULT_CHAT / ADVANCED_REASONING / PREMIUM_REASONING) to a
+            // concrete model id, always choosing the cheapest capable option.
+            const routeDecision = routeAiModel(
+              {
+                task: clientTool === "deep_research" ? "deep_research" : "chat",
+                mode: m.id,
+                tier: callerTier,
+                deepMode: m.id === "pro" || clientTool === "deep_research",
+                hasImages,
+                needsTools: m.id !== "instant" && Boolean(auth),
+                text: lastText ?? "",
+                contextChars: transformed.reduce(
+                  (total, msg) =>
+                    total + (typeof msg.content === "string" ? msg.content.length : 0),
+                  0,
+                ),
+                attachmentCount: totalAttachments,
+                historyTurns: transformed.length,
+              },
+              { requestId },
+            );
+            const model = routeDecision.modelId;
 
             // Live web data is on for everyone by default. Users can still opt
             // out in settings except for explicit/time-sensitive search asks.
@@ -973,6 +1030,17 @@ export const Route = createFileRoute("/api/chat")({
             const body: Record<string, unknown> = {
               model,
               stream: true,
+              // A client cannot override this value: it is derived only from
+              // the server-authorized mode and entitlement above.
+              max_completion_tokens: modelForPolicy(
+                m.id === "instant"
+                  ? "instant"
+                  : m.id === "thinking"
+                    ? "thinking"
+                    : ["high", "extra_high", "pro"].includes(m.id)
+                      ? "deep"
+                      : "normal",
+              ).outputCeiling,
               messages: [
                 {
                   role: "system",
@@ -999,6 +1067,10 @@ export const Route = createFileRoute("/api/chat")({
                 ...transformed,
               ],
             };
+            // Cost control: cap output length per mode from the router config.
+            if (routeDecision.maxOutputTokens > 0) {
+              body.max_completion_tokens = routeDecision.maxOutputTokens;
+            }
             // Only enable reasoning when the user explicitly chose a backed
             // reasoning mode. Every visible selector option maps to this real behavior.
             if (m.reasoning) {
@@ -1023,7 +1095,135 @@ export const Route = createFileRoute("/api/chat")({
                 : [];
             const enableTools = availableTools.length > 0;
 
+            const catalogModel = OPENAI_TEXT_MODELS.find((entry) => entry.id === model);
+            if (catalogModel && !catalogModel.tiers.includes(auth ? callerTier : "guest")) {
+              return Response.json(
+                { error: "This model is not available for your plan." },
+                { status: 403 },
+              );
+            }
+            if (!catalogModel) {
+              return Response.json(
+                { error: "AI model configuration is unavailable." },
+                { status: 503 },
+              );
+            }
+            const inputEstimate = estimateProviderInput({
+              messages: body.messages,
+              tools: availableTools,
+            });
+            const outputCeiling = Number(body.max_completion_tokens);
+            const maximumProviderCalls = enableTools ? 9 : 1;
+            const estimatedCost =
+              estimateMaximumCostUsd(catalogModel, inputEstimate.tokens, outputCeiling) *
+              maximumProviderCalls;
+            let runtimeConfig;
+            try {
+              runtimeConfig = getAiRuntimeConfig();
+            } catch {
+              return Response.json(
+                { error: "AI runtime configuration is unavailable." },
+                { status: 503 },
+              );
+            }
+            if (estimatedCost > runtimeConfig.maxCostUsdPerRequest) {
+              return Response.json(
+                {
+                  error: "This request exceeds KovaGPT's safe generation budget.",
+                  code: "request_budget",
+                },
+                { status: 413 },
+              );
+            }
+            const idempotencyKey = request.headers.get("idempotency-key");
+            if (!idempotencyKey || !/^[A-Za-z0-9:_-]{8,200}$/.test(idempotencyKey)) {
+              return Response.json(
+                { error: "A valid generation identifier is required." },
+                { status: 400 },
+              );
+            }
+            let usageEventId: string;
+            try {
+              const acquisition = await acquireGeneration({
+                requestId,
+                idempotencyKey,
+                userId: auth?.userId ?? null,
+                guestIpHash: clientKey ? await hashGuestIp(clientKey) : null,
+                conversationId: chatId,
+                mode: m.id,
+                plan: auth ? callerTier : "guest",
+                premium: ["thinking", "high", "extra_high", "pro"].includes(m.id),
+                model: catalogModel,
+                estimatedInputTokens: inputEstimate.tokens,
+                reservedTokens: (inputEstimate.tokens + outputCeiling) * maximumProviderCalls,
+                estimatedCostUsd: estimatedCost,
+                contextTrimmed: messages.length > HISTORY_TURNS,
+              });
+              if ("rejection" in acquisition) {
+                const duplicate = acquisition.rejection === "duplicate";
+                return Response.json(
+                  {
+                    error: duplicate
+                      ? "This generation request is already running."
+                      : "Generation quota reached. Please try again later.",
+                    code: acquisition.rejection,
+                  },
+                  { status: duplicate ? 409 : 429 },
+                );
+              }
+              usageEventId = acquisition.eventId;
+            } catch {
+              return Response.json(
+                { error: "Usage authorization is temporarily unavailable." },
+                { status: 503 },
+              );
+            }
+
+            if (isImageRequest && auth) {
+              await finalizeGeneration({
+                eventId: usageEventId,
+                status: "completed",
+                model: catalogModel,
+                inputTokens: inputEstimate.tokens,
+                outputTokens: outputCeiling,
+                latencyMs: Date.now() - startedAt,
+                toolCalls: 0,
+              }).catch(() => undefined);
+              return handleImageRequest(lastText, logContext);
+            }
+
+            if (clientTool === "deep_research" && lastText && !hasAttachments) {
+              await finalizeGeneration({
+                eventId: usageEventId,
+                status: "completed",
+                model: catalogModel,
+                inputTokens: inputEstimate.tokens,
+                outputTokens: outputCeiling,
+                latencyMs: Date.now() - startedAt,
+                toolCalls: 0,
+              }).catch(() => undefined);
+              return handleDeepResearchRequest(lastText, {
+                signal: request.signal,
+                logContext,
+                persistence: auth
+                  ? {
+                      supabase:
+                        auth.supabaseAdmin as unknown as import("@/lib/ai/deep-research.server").ResearchPersistence["supabase"],
+                      userId: auth.userId,
+                      chatId: authorizedResearchReferences?.chatId,
+                      projectId: authorizedResearchReferences?.projectId,
+                      temporary: Boolean(temporary),
+                    }
+                  : undefined,
+              });
+            }
+
             const workingMessages: ChatMsg[] = [...(body.messages as unknown as ChatMsg[])];
+            let providerCalls = 0;
+            let observedInputTokens = 0;
+            let observedCachedInputTokens = 0;
+            let observedOutputTokens = 0;
+            let observedReasoningTokens = 0;
             const activityEvents: Array<{
               tool: string;
               label: string;
@@ -1031,9 +1231,9 @@ export const Route = createFileRoute("/api/chat")({
             }> = [];
 
             if (enableTools) {
-              const MAX_TOOL_HOPS = 8;
+              const MAX_TOOL_HOPS = 3;
               const MAX_TOOL_CALLS_TOTAL = 16;
-              const PER_HOP_TIMEOUT_MS = 25_000;
+              const PER_HOP_TIMEOUT_MS = 12_000;
               let totalToolCalls = 0;
               let toolsWereUsed = false;
               let hopFailed = false;
@@ -1065,6 +1265,8 @@ export const Route = createFileRoute("/api/chat")({
                 });
                 let hopRes: Response;
                 try {
+                  providerCalls += 1;
+                  await renewGenerationLease(usageEventId).catch(() => undefined);
                   hopRes = await chatCompletions(
                     {
                       model,
@@ -1102,9 +1304,15 @@ export const Route = createFileRoute("/api/chat")({
                 }
                 let parsedHop: ReturnType<typeof parseToolHopResponse>;
                 try {
-                  parsedHop = parseToolHopResponse(
-                    await readProviderJsonObject(hopRes, MAX_TOOL_HOP_RESPONSE_BYTES),
-                  );
+                  const hopJson = await readProviderJsonObject(hopRes, MAX_TOOL_HOP_RESPONSE_BYTES);
+                  const hopUsage = reportedUsageFromChatJson(hopJson);
+                  if (hopUsage) {
+                    observedInputTokens += hopUsage.input;
+                    observedCachedInputTokens += hopUsage.cachedInput;
+                    observedOutputTokens += hopUsage.output;
+                    observedReasoningTokens += hopUsage.reasoning;
+                  }
+                  parsedHop = parseToolHopResponse(hopJson);
                 } catch {
                   parsedHop = null;
                 }
@@ -1157,6 +1365,18 @@ export const Route = createFileRoute("/api/chat")({
                         controller.enqueue(enc.encode(sseDone()));
                         controller.close();
                       },
+                    });
+                    await finalizeGeneration({
+                      eventId: usageEventId,
+                      status: "completed",
+                      model: catalogModel,
+                      inputTokens: observedInputTokens || inputEstimate.tokens * providerCalls,
+                      cachedInputTokens: observedCachedInputTokens,
+                      outputTokens:
+                        observedOutputTokens || estimateProviderInput(msg.content).tokens,
+                      reasoningTokens: observedReasoningTokens,
+                      latencyMs: Date.now() - startedAt,
+                      toolCalls: activityEvents.length,
                     });
                     return new Response(stream, {
                       headers: {
@@ -1303,10 +1523,21 @@ export const Route = createFileRoute("/api/chat")({
             const hasStreamedActivity = activityCount > 0 || pendingCount > 0;
             let upstream: Response;
             try {
+              providerCalls += 1;
+              await renewGenerationLease(usageEventId).catch(() => undefined);
               upstream = await chatCompletions(finalBody, {
                 signal: request.signal,
               });
             } catch {
+              await finalizeGeneration({
+                eventId: usageEventId,
+                status: request.signal.aborted ? "client_disconnected" : "provider_failed",
+                model: catalogModel,
+                inputTokens: observedInputTokens || inputEstimate.tokens * providerCalls,
+                latencyMs: Date.now() - startedAt,
+                toolCalls: activityEvents.length,
+                error: request.signal.aborted ? "client_disconnected" : "provider_network_error",
+              }).catch(() => undefined);
               if (request.signal?.aborted) return new Response(null, { status: 499 });
               logSafeFailure("error", "[chat] final provider request failed", logContext, {
                 status: 502,
@@ -1332,6 +1563,15 @@ export const Route = createFileRoute("/api/chat")({
                     ? "Image provider quota exhausted."
                     : "AI service is temporarily unavailable. Please try again.";
               const status = upstream.status === 429 ? 429 : upstream.status === 402 ? 402 : 502;
+              await finalizeGeneration({
+                eventId: usageEventId,
+                status: "provider_rejected",
+                model: catalogModel,
+                inputTokens: 0,
+                latencyMs: Date.now() - startedAt,
+                toolCalls: activityEvents.length,
+                error: `provider_http_${upstream.status}`,
+              }).catch(() => undefined);
               void upstream.body?.cancel().catch(() => undefined);
               logSafeFailure("error", "[chat] final provider rejected request", logContext, {
                 status: upstream.status,
@@ -1407,6 +1647,15 @@ export const Route = createFileRoute("/api/chat")({
                 request.signal,
               );
             } catch {
+              await finalizeGeneration({
+                eventId: usageEventId,
+                status: request.signal.aborted ? "client_disconnected" : "provider_failed",
+                model: catalogModel,
+                inputTokens: observedInputTokens || inputEstimate.tokens * providerCalls,
+                latencyMs: Date.now() - startedAt,
+                toolCalls: activityEvents.length,
+                error: request.signal.aborted ? "client_disconnected" : "invalid_provider_stream",
+              }).catch(() => undefined);
               if (request.signal?.aborted) return new Response(null, { status: 499 });
               logSafeFailure("error", "[chat] final provider response rejected", logContext, {
                 status: 502,
@@ -1440,6 +1689,46 @@ export const Route = createFileRoute("/api/chat")({
               ).__pending ?? [];
             const enc = new TextEncoder();
             const upstreamReader = boundedUpstreamBody.getReader();
+            let usageBuffer = "";
+            let usageFinalized = false;
+            const finalizeUsage = async (
+              status:
+                | "completed"
+                | "aborted"
+                | "provider_failed"
+                | "client_disconnected"
+                | "accounting_failed",
+              error?: string,
+            ) => {
+              if (usageFinalized) return;
+              usageFinalized = true;
+              const reported = reportedUsageFromSse(usageBuffer);
+              const outputFallback = estimateProviderInput(
+                [...usageBuffer.matchAll(/"content":"((?:\\.|[^"\\])*)"/g)]
+                  .map((match) => match[1])
+                  .join(""),
+              ).tokens;
+              try {
+                await finalizeGeneration({
+                  eventId: usageEventId,
+                  status,
+                  model: catalogModel,
+                  inputTokens: observedInputTokens + (reported?.input ?? inputEstimate.tokens),
+                  cachedInputTokens: observedCachedInputTokens + (reported?.cachedInput ?? 0),
+                  outputTokens: observedOutputTokens + (reported?.output ?? outputFallback),
+                  reasoningTokens: observedReasoningTokens + (reported?.reasoning ?? 0),
+                  latencyMs: Date.now() - startedAt,
+                  toolCalls: activityEvents.length,
+                  error,
+                });
+              } catch {
+                logSafeFailure("error", "[chat] usage finalization failed", logContext, {
+                  status: 503,
+                  category: "server",
+                  code: "accounting_finalize_failed",
+                });
+              }
+            };
             const stream = new ReadableStream({
               async start(controller) {
                 for (const a of activityEvents) {
@@ -1471,9 +1760,15 @@ export const Route = createFileRoute("/api/chat")({
                   while (true) {
                     const { done, value } = await upstreamReader.read();
                     if (done) break;
+                    usageBuffer += new TextDecoder().decode(value, { stream: true });
                     controller.enqueue(value);
                   }
+                  await finalizeUsage(request.signal.aborted ? "aborted" : "completed");
                 } catch {
+                  await finalizeUsage(
+                    request.signal.aborted ? "client_disconnected" : "provider_failed",
+                    request.signal.aborted ? "client_disconnected" : "stream_terminated",
+                  );
                   if (!request.signal?.aborted) {
                     logSafeFailure("error", "[chat] final provider stream stopped", logContext, {
                       status: 502,
@@ -1498,6 +1793,7 @@ export const Route = createFileRoute("/api/chat")({
               },
               async cancel(reason) {
                 await upstreamReader.cancel(reason).catch(() => undefined);
+                await finalizeUsage("client_disconnected", "client_disconnected");
               },
             });
 

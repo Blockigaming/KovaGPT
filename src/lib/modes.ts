@@ -1,4 +1,13 @@
-export type ModeId = "instant" | "medium" | "thinking" | "high" | "extra_high" | "pro";
+export type ModeId =
+  | "instant"
+  | "medium"
+  | "thinking"
+  | "high"
+  | "extra_high"
+  | "pro"
+  | "kova_5_5"
+  | "kova_5_4"
+  | "kova_o3";
 
 export type Tier = "free" | "plus" | "pro";
 
@@ -116,13 +125,50 @@ Mode: Thinking. Think carefully and thoroughly before answering.
     reasoning: "high",
     systemPrompt: `${BASE_SYSTEM}\n\nMode: Pro. Use maximum available context and reasoning. Anticipate useful follow-through, check the result, and produce a polished, comprehensive answer.`,
   },
+  {
+    id: "kova_5_5",
+    label: "Kova 5.5",
+    description: "Previous generation Kova. Balanced and dependable.",
+    tier: "free",
+    systemPrompt: BASE_SYSTEM,
+  },
+  {
+    id: "kova_5_4",
+    label: "Kova 5.4",
+    description: "Older generation Kova kept for consistency with past work.",
+    tier: "free",
+    systemPrompt: BASE_SYSTEM,
+  },
+  {
+    id: "kova_o3",
+    label: "Kova o3",
+    description: "The oldest available Kova generation.",
+    tier: "free",
+    systemPrompt: BASE_SYSTEM,
+  },
 ];
+
+export type VersionGroup = {
+  id: string;
+  label: string;
+  modes: Mode[];
+};
+
+/** Version families shown in the model picker. 5.6 is current and multi mode. */
+export function versionGroupsForTier(tier: Tier): VersionGroup[] {
+  return [
+    { id: "5.6", label: "Kova 5.6", modes: modesForTier(tier) },
+    { id: "5.5", label: "Kova 5.5", modes: [getMode("kova_5_5")] },
+    { id: "5.4", label: "Kova 5.4", modes: [getMode("kova_5_4")] },
+    { id: "o3", label: "Kova o3", modes: [getMode("kova_o3")] },
+  ];
+}
 
 // Legacy IDs from older localStorage payloads map safely to the new modes.
 const LEGACY_ALIAS: Record<string, ModeId> = {
-  default: "medium",
+  default: "instant",
   fast: "instant",
-  auto: "medium",
+  auto: "instant",
   creative: "thinking",
   precise: "thinking",
   code: "thinking",
@@ -145,11 +191,11 @@ export function modesForTier(tier: Tier): Mode[] {
 }
 
 export function getMode(id: string | null | undefined): Mode {
-  if (!id) return MODES[1];
+  if (!id) return MODES[0];
   const direct = MODES.find((m) => m.id === id);
   if (direct) return direct;
   const alias = LEGACY_ALIAS[id];
-  return MODES.find((m) => m.id === alias) ?? MODES[1];
+  return MODES.find((m) => m.id === alias) ?? MODES[0];
 }
 
 export const STORAGE_LIMITS_BYTES: Record<Tier, number> = {

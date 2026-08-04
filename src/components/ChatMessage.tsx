@@ -13,12 +13,14 @@ import {
   Share2,
   Pencil,
   RefreshCw,
-  ThumbsUp,
-  ThumbsDown,
   GitBranch,
   Globe,
   Mail,
   FileText,
+
+  ThumbsUp,
+  ThumbsDown,
+
 } from "lucide-react";
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileBottomSheet } from "./MobileBottomSheet";
@@ -232,48 +234,24 @@ function ChatMessageInner({
   const principalRef = useRef(principal);
   principalRef.current = principal;
   const lifecycleGenerationRef = useRef(0);
-  const feedbackKey = principalResolved
-    ? principalScopedStorageKey("kova-message-feedback", userKey)
-    : null;
-  const messageFeedbackKey = feedbackKey
-    ? `${feedbackKey}:${encodeURIComponent(message.id)}`
-    : null;
-  const [feedbackState, setFeedbackState] = useState<{
-    principal: string | null;
-    value: "up" | "down" | null;
-  }>({ principal: null, value: null });
-  const feedback = feedbackState.principal === principal ? feedbackState.value : null;
   useEffect(() => {
     lifecycleGenerationRef.current += 1;
   }, [principal]);
-  useEffect(() => {
-    if (!principal || !messageFeedbackKey) {
-      setFeedbackState({ principal: null, value: null });
-      return;
-    }
-    try {
-      const v = safeBrowserStorage("localStorage")?.getItem(messageFeedbackKey);
-      setFeedbackState({
-        principal,
-        value: v === "up" || v === "down" ? v : null,
-      });
-    } catch {
-      setFeedbackState({ principal, value: null });
-    }
-  }, [messageFeedbackKey, principal]);
-  const persistFeedback = (next: "up" | "down" | null) => {
-    if (!principal || !messageFeedbackKey || feedbackState.principal !== principal) return;
-    setFeedbackState({ principal, value: next });
-    try {
-      const storage = safeBrowserStorage("localStorage");
-      if (next) storage?.setItem(messageFeedbackKey, next);
-      else storage?.removeItem(messageFeedbackKey);
-    } catch {
-      /* ignore */
-    }
-  };
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
+  const feedbackKey = message.id ? `kova-message-feedback:${message.id}` : null;
+  const [feedback, setFeedback] = useState<"up" | "down" | null>(() => {
+    if (!feedbackKey) return null;
+    const stored = safeBrowserStorage("localStorage")?.getItem(feedbackKey);
+    return stored === "up" || stored === "down" ? stored : null;
+  });
+  const persistFeedback = (next: "up" | "down" | null) => {
+    setFeedback(next);
+    if (!feedbackKey) return;
+    const localStorage = safeBrowserStorage("localStorage");
+    if (next && localStorage) localStorage.setItem(feedbackKey, next);
+    else localStorage?.removeItem(feedbackKey);
+  };
   const { isMobile } = useLayout();
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const pressTimer = useRef<number | null>(null);
@@ -312,7 +290,6 @@ function ChatMessageInner({
     const reset = (event: Event) => {
       if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
       lifecycleGenerationRef.current += 1;
-      setFeedbackState({ principal: null, value: null });
       setSaving(false);
       setSaved(false);
       setCopied(false);
@@ -434,12 +411,13 @@ function ChatMessageInner({
     <article
       id={`message-${message.id}`}
       data-message-id={message.id}
-      className="kova-message group w-full animate-fade-in px-3 py-3 text-[15px] leading-[1.65] sm:px-5 lg:px-10 lg:py-4 lg:text-[16px] lg:leading-[1.7]"
+      data-message-role={message.role}
+      className="kova-message group w-full px-3 py-3 text-[15px] leading-7 sm:px-5 lg:px-10 lg:py-4 lg:text-base"
       aria-label={isUser ? "Your message" : "KovaGPT response"}
     >
       {isUser ? (
-        <div className="mx-auto flex max-w-[48rem] justify-end">
-          <div className="flex min-w-0 max-w-[88%] flex-col items-end sm:max-w-[78%] lg:max-w-[76%]">
+        <div className="kova-message-inner mx-auto flex max-w-[48rem] justify-end">
+          <div className="flex min-w-0 max-w-[85%] flex-col items-end sm:max-w-[75%]">
             {message.attachments && message.attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2 justify-end">
                 {message.attachments
@@ -478,10 +456,11 @@ function ChatMessageInner({
               </div>
             )}
             {message.content && (
-              <div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-lg border border-border/60 bg-[var(--user-bubble)] px-3.5 py-2.5 text-foreground">
+              <div className="kova-user-message prose-chat whitespace-pre-wrap break-words rounded-[1.75rem] bg-[var(--user-bubble)] px-4 py-2.5 text-foreground">
                 {message.content}
               </div>
             )}
+
             {(onEdit || onBranch) && (
               <div className="mt-1 flex min-h-9 items-center opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
                 {onEdit && (
@@ -511,7 +490,7 @@ function ChatMessageInner({
           </div>
         </div>
       ) : (
-        <div className="kova-assistant-message mx-auto flex max-w-[48rem] animate-fade-up items-start justify-start">
+        <div className="kova-message-inner kova-assistant-message mx-auto flex max-w-[48rem] items-start justify-start">
           <div
             className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text"
             onTouchStart={startLongPress}
@@ -622,14 +601,14 @@ function ChatMessageInner({
           </div>
         </div>
       )}
-      <div className="mx-auto max-w-[48rem]">
+      <div className="kova-message-inner mx-auto max-w-[48rem]">
         <div className={isUser ? "flex justify-end" : "flex justify-start"}>
           {!streaming && !isUser && message.content && (
-            <div className="kova-message-actions mt-1 max-w-full overflow-x-auto transition-opacity lg:opacity-60 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
-              {/* Visible: Copy, Thumbs up, Thumbs down, Share */}
+            <div className="kova-message-actions mt-1 max-w-full overflow-x-auto">
+              {/* Visible: Copy, Share */}
               <button
                 onClick={copy}
-                className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
+                className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground transition-colors duration-100 hover:bg-accent hover:text-foreground"
                 title={copied ? "Copied" : "Copy"}
                 aria-label={copied ? "Copied" : "Copy"}
               >
@@ -639,40 +618,49 @@ function ChatMessageInner({
                   <Copy className="w-4 h-4" />
                 )}
               </button>
+
               <button
+                type="button"
                 onClick={() => {
-                  const next = feedback === "up" ? null : "up";
-                  persistFeedback(next);
-                  if (next) toast.success("Rating saved on this device");
+                  persistFeedback(feedback === "up" ? null : "up");
+                  toast.success("Rating saved on this device");
                 }}
-                className={`inline-flex items-center justify-center p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95 ${
-                  feedback === "up"
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                 title="Good response"
                 aria-label="Good response"
                 aria-pressed={feedback === "up"}
               >
-                <ThumbsUp className={`w-4 h-4 ${feedback === "up" ? "fill-current" : ""}`} />
+                <ThumbsUp
+                  className={`h-4 w-4 ${feedback === "up" ? "fill-current text-foreground" : ""}`}
+                />
               </button>
               <button
+                type="button"
                 onClick={() => {
-                  const next = feedback === "down" ? null : "down";
-                  persistFeedback(next);
-                  if (next) toast.success("Rating saved on this device");
+                  persistFeedback(feedback === "down" ? null : "down");
+                  toast.success("Rating saved on this device");
                 }}
-                className={`inline-flex items-center justify-center p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95 ${
-                  feedback === "down"
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                 title="Bad response"
                 aria-label="Bad response"
                 aria-pressed={feedback === "down"}
               >
-                <ThumbsDown className={`w-4 h-4 ${feedback === "down" ? "fill-current" : ""}`} />
+                <ThumbsDown
+                  className={`h-4 w-4 ${feedback === "down" ? "fill-current text-foreground" : ""}`}
+                />
               </button>
+              {onRetry ? (
+                <button
+                  type="button"
+                  onClick={onRetry}
+                  className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                  title="Retry response"
+                  aria-label="Retry response"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </button>
+              ) : null}
+
               <button
                 onClick={async () => {
                   const text = message.content;
@@ -691,7 +679,7 @@ function ChatMessageInner({
                     toast.error("Couldn't share");
                   }
                 }}
-                className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
+                className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                 title="Share"
                 aria-label="Share"
               >
@@ -735,11 +723,35 @@ function ChatMessageInner({
                 </DropdownMenu>
               )}
 
+              {artifactKind && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditorMode(artifactKind === "code" ? "preview" : "edit");
+                    setEditorOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-accent px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:bg-accent/80"
+                  aria-label={
+                    artifactKind === "code" ? "Open code full screen" : "Open writing full screen"
+                  }
+                  title={
+                    artifactKind === "code" ? "Open code full screen" : "Open writing full screen"
+                  }
+                >
+                  {artifactKind === "code" ? (
+                    <Code2 className="h-3.5 w-3.5" />
+                  ) : (
+                    <FileEdit className="h-3.5 w-3.5" />
+                  )}
+                  {artifactKind === "code" ? "Open code" : "Open writing"}
+                </button>
+              )}
+
               {/* Everything else lives behind the 3-dot menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
+                    className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                     title="More actions"
                     aria-label="More actions"
                   >
@@ -747,92 +759,47 @@ function ChatMessageInner({
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-52">
-                  {onEdit ? (
-                    <DropdownMenuItem onClick={onEdit}>
-                      <Pencil className="w-4 h-4 mr-2" /> Edit
-                    </DropdownMenuItem>
-                  ) : null}
-                  {onRetry ? (
-                    <DropdownMenuItem onClick={onRetry}>
-                      <RefreshCw className="w-4 h-4 mr-2" /> Retry
-                    </DropdownMenuItem>
-                  ) : null}
-                  {onBranch ? (
-                    <DropdownMenuItem onClick={onBranch}>
-                      <GitBranch className="w-4 h-4 mr-2" /> Branch in new chat
-                    </DropdownMenuItem>
-                  ) : null}
                   <DropdownMenuItem
                     onClick={() => {
-                      const q = encodeURIComponent(message.content.slice(0, 300));
-                      window.open(
-                        `https://www.google.com/search?q=${q}`,
-                        "_blank",
-                        "noopener,noreferrer",
+                      const sourceActivity = message.activities?.find((activity) =>
+                        /search|source|web/i.test(activity.tool + activity.label),
                       );
+                      if (sourceActivity) toast.message(sourceActivity.label);
+                      else toast.message("No linked sources for this response");
                     }}
                   >
-                    <Globe className="w-4 h-4 mr-2" /> Search the web
+                    <Globe className="mr-2 h-4 w-4" /> View sources
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={saveItem} disabled={saving}>
-                    <Bookmark className={`w-4 h-4 mr-2 ${saved ? "fill-current" : ""}`} />
-                    {saved ? "Saved" : saving ? "Saving…" : "Save to Library"}
+                  <DropdownMenuItem onClick={onBranch} disabled={!onBranch}>
+                    <GitBranch className="mr-2 h-4 w-4" /> Branch into new chat
                   </DropdownMenuItem>
+
                   {artifactKind && (
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setEditorMode("edit");
-                        setEditorOpen(true);
-                      }}
-                    >
-                      {artifactKind === "writing" ? (
-                        <FileEdit className="w-4 h-4 mr-2" />
-                      ) : (
-                        <Code2 className="w-4 h-4 mr-2" />
-                      )}
-                      {artifactKind === "website"
-                        ? "Open website full screen"
-                        : artifactKind === "code"
-                          ? "Open code full screen"
-                          : "Open writing full screen"}
-                    </DropdownMenuItem>
-                  )}
-                  {artifactKind === "website" && (
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setEditorMode("preview");
-                        setEditorOpen(true);
-                      }}
-                    >
-                      <Eye className="w-4 h-4 mr-2" /> Preview website
-                    </DropdownMenuItem>
-                  )}
-                  {onFollowUp && (
                     <>
-                      <DropdownMenuSeparator />
-                      {[
-                        { label: "Continue", prompt: "Continue from where you left off." },
-                        {
-                          label: "Shorter",
-                          prompt:
-                            "Rewrite your last response to be shorter, keeping the key points.",
-                        },
-                        {
-                          label: "Longer",
-                          prompt: "Expand your last response with more detail and examples.",
-                        },
-                        {
-                          label: "Improve",
-                          prompt: "Improve the wording and clarity of your last response.",
-                        },
-                      ].map((a) => (
-                        <DropdownMenuItem key={a.label} onClick={() => onFollowUp(a.prompt)}>
-                          {a.label}
-                        </DropdownMenuItem>
-                      ))}
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setEditorMode("edit");
+                          setEditorOpen(true);
+                        }}
+                      >
+                        {artifactKind === "code" ? (
+                          <Code2 className="mr-2 h-4 w-4" />
+                        ) : (
+                          <FileEdit className="mr-2 h-4 w-4" />
+                        )}
+                        {artifactKind === "code" ? "Open code full screen" : "Open writing full screen"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setEditorMode("preview");
+                          setEditorOpen(true);
+                        }}
+                      >
+                        <Eye className="mr-2 h-4 w-4" /> Preview in workspace
+                      </DropdownMenuItem>
                     </>
                   )}
+
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -864,22 +831,6 @@ function ChatMessageInner({
                 icon: Copy,
                 onClick: () => {
                   copy();
-                  setMobileSheetOpen(false);
-                },
-              },
-              {
-                label: feedback === "up" ? "Remove good rating" : "Good response",
-                icon: ThumbsUp,
-                onClick: () => {
-                  persistFeedback(feedback === "up" ? null : "up");
-                  setMobileSheetOpen(false);
-                },
-              },
-              {
-                label: feedback === "down" ? "Remove bad rating" : "Bad response",
-                icon: ThumbsDown,
-                onClick: () => {
-                  persistFeedback(feedback === "down" ? null : "down");
                   setMobileSheetOpen(false);
                 },
               },

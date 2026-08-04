@@ -60,7 +60,7 @@ import { capabilityState, useReadiness } from "@/lib/readiness-client";
 export const Route = createFileRoute("/omega")({
   component: OmegaPage,
   head: () => ({
-    meta: [{ title: "Omega Control Center | KovaGPT" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: "KovaGPT Control" }, { name: "robots", content: "noindex" }],
   }),
 });
 type Tab =

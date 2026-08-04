@@ -152,7 +152,7 @@ test("chat payload normalization preserves valid clients and strips unexpected f
         ],
       },
     ],
-    mode: "medium",
+    mode: "instant",
     user: {
       name: "Ada",
       responseLength: "short",

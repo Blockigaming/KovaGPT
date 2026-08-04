@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   AiProviderError,
   chatCompletions,
-  chatModel,
+  utilityModel,
   missingAiProviderResponse,
   providerErrorFromResponse,
   providerErrorResponse,
@@ -15,6 +15,8 @@ import {
   requireUser,
 } from "@/lib/api-auth.server";
 import { DAILY_CHAT_LIMIT_BY_TIER } from "@/lib/modes";
+import { modelForRole } from "@/lib/ai/model-router.server";
+import { UTILITY_MAX_OUTPUT_TOKENS } from "@/lib/ai/model-config.mjs";
 
 // Per-IP sliding window rate limit; keeps this public AI endpoint from
 // becoming an unlimited free LLM call. Lower cap than /api/title since
@@ -81,7 +83,10 @@ export const Route = createFileRoute("/api/project-suggest")({
           const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[tier]);
           if (quota) return quota;
           const upstream = await chatCompletions({
-            model: chatModel("fast"),
+
+            model: modelForRole("UTILITY"),
+            max_completion_tokens: UTILITY_MAX_OUTPUT_TOKENS,
+
             messages: [
               {
                 role: "system",

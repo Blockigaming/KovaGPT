@@ -2,7 +2,11 @@
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
   "count": 63,
+
   "latest": "20260803123100_schema_contract_marker.sql",
+
+  "latest": "20260803130000_ai_usage_accounting.sql",
+
   "migrations": [
     {
       "order": 1,
@@ -1291,6 +1295,7 @@
     },
     {
       "order": 63,
+
       "filename": "20260803123100_schema_contract_marker.sql",
       "timestamp": "20260803123100",
       "sha256": "888d18a0bfd614333f3c97e285e156df7fb97edd0c3eb5eb0c5810227c90bf22",
@@ -1302,6 +1307,25 @@
       "rls": [],
       "policies": [],
       "indexes": []
+
+      "filename": "20260803130000_ai_usage_accounting.sql",
+      "timestamp": "20260803130000",
+      "sha256": "bff734c01ddeabda56038b7da43e416f1fe9480ad2fd0a2bf80e6f72624e6538",
+      "tables": ["ai_usage_events"],
+      "functions": ["acquire_ai_generation", "finalize_ai_generation"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["ai_usage_events"],
+      "policies": ["Users inspect own AI usage"],
+      "indexes": [
+        "ai_usage_events_user_created_idx",
+        "ai_usage_events_guest_created_idx",
+        "ai_usage_events_active_lease_idx",
+        "ai_usage_events_user_idempotency_idx",
+        "ai_usage_events_guest_idempotency_idx"
+      ]
+
     }
   ]
 }

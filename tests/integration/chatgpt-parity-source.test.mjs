@@ -55,7 +55,7 @@ test("composer actions, message editing, and markdown stay reachable and lossles
   assert.match(chatInput, /COMPOSER_TOOLS\.map/);
   assert.match(chatInput, /onToolSelect\?\.\(next\)/);
   assert.equal((route.match(/selectedTool=\{selectedTool\}/g) ?? []).length, 2);
-  assert.match(chatInput, /kova-send-button[^"\n]*bg-foreground text-background/);
+  assert.match(chatInput, /kova-send-button is-enabled/);
   assert.match(chatMessage, /return text\.replace\(\/\\r\\n\?\/g, "\\n"\);/);
   assert.doesNotMatch(chatMessage, /LongResponseCard|shouldWrapAsDocument/);
   assert.match(route, /setInput\(m\.content\);/);

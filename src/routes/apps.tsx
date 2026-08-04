@@ -99,7 +99,7 @@ export const Route = createFileRoute("/apps")({
   component: AppsPage,
   head: () => ({
     meta: [
-      { title: "Apps | KovaGPT" },
+      { title: "KovaGPT Apps" },
       {
         name: "description",
         content: "Connect KovaGPT to supported Google, Drive, Gmail, and Calendar services.",
@@ -237,8 +237,7 @@ function AppCard({
   onDetails: () => void;
   onUseInChat: () => void;
 }) {
-  const baseBtn =
-    "text-xs px-3 py-1.5 rounded-full transition active:scale-[0.97] shrink-0 font-medium";
+  const baseBtn = "text-xs px-3 py-1.5 rounded-full transition-colors shrink-0 font-medium";
 
   let action: React.ReactNode;
   if (!configured) {
@@ -345,7 +344,7 @@ function GitHubManager() {
   if (!data)
     return (
       <div
-        className="h-28 animate-pulse rounded-2xl bg-muted"
+        className="h-28 animate-pulse rounded-xl bg-muted"
         role="status"
         aria-label="Loading GitHub"
       />

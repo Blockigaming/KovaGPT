@@ -42,7 +42,7 @@ import { calculateCriticalPath, dagLayout } from "@/lib/work-graph.mjs";
 export const Route = createFileRoute("/work")({
   component: WorkRoute,
   head: () => ({
-    meta: [{ title: "Work | KovaGPT" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: "KovaGPT Work" }, { name: "robots", content: "noindex" }],
   }),
 });
 const terminal = new Set(["completed", "failed", "cancelled"]);

@@ -5,7 +5,7 @@ import { LegalArticle } from "@/components/LegalArticle";
 export const Route = createFileRoute("/contact-support")({
   head: () => ({
     meta: [
-      { title: "Contact Support - KovaGPT" },
+      { title: "KovaGPT Support" },
       {
         name: "description",
         content: "Get help with KovaGPT - billing, bugs, feature requests, and account questions.",

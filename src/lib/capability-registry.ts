@@ -87,6 +87,10 @@ const MODE_PUBLIC_COPY: Record<ModeId, string> = {
   high: "Plus response instructions emphasizing verification and completeness.",
   extra_high: "Pro response instructions emphasizing alternatives and detail.",
   pro: "Pro response instructions emphasizing polished, comprehensive answers.",
+  kova_5_5: "Previous generation Kova with balanced response instructions.",
+  kova_5_4: "Older generation Kova kept for consistency with past work.",
+  kova_o3: "Oldest available Kova generation.",
+
 };
 
 const modes: readonly PublishedMode[] = MODES.map((mode) => ({
@@ -113,12 +117,32 @@ function formatStorage(bytes: number): string {
 }
 
 function planFeatures(tier: Tier): readonly string[] {
+  const allowance = {
+    free: {
+      chat: "Small message allowance",
+      image: "Small image generation allowance",
+      upload: "Small file and image upload allowance",
+      storage: "Small published storage allowance",
+    },
+    plus: {
+      chat: "Higher message allowance",
+      image: "Higher image generation allowance",
+      upload: "Higher file and image upload allowance",
+      storage: "Higher published storage allowance",
+    },
+    pro: {
+      chat: "Highest message allowance",
+      image: "Highest image generation allowance",
+      upload: "Highest file and image upload allowance",
+      storage: "Highest published storage allowance",
+    },
+  }[tier];
   const features = [
     `${modesByTier[tier].map((mode) => mode.label).join(", ")} modes`,
-    `${DAILY_CHAT_LIMIT_BY_TIER[tier].toLocaleString("en-US")} chat messages per day`,
-    `${DAILY_IMAGE_LIMIT_BY_TIER[tier].toLocaleString("en-US")} image generations per day`,
-    `${DAILY_UPLOAD_LIMIT_BY_TIER[tier].toLocaleString("en-US")} uploads per day`,
-    `${formatStorage(STORAGE_LIMITS_BYTES[tier])} published storage allowance`,
+    allowance.chat,
+    allowance.image,
+    allowance.upload,
+    allowance.storage,
     "Search and image generation when their configured providers are available",
   ];
   if (tier === "plus" || tier === "pro") {
@@ -126,6 +150,7 @@ function planFeatures(tier: Tier): readonly string[] {
   }
   return features;
 }
+
 
 export const CAPABILITY_REGISTRY = Object.freeze({
   voiceScope: "excluded",
