@@ -73,69 +73,10 @@ async function moveToDlq(
   });
   if (error) {
     console.error("Failed to move message to DLQ", { queue, msg_id: msg.msg_id, reason, error });
-
-import { sendLovableEmail } from '@lovable.dev/email-js'
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { createFileRoute } from '@tanstack/react-router'
-
-const MAX_RETRIES = 5
-const DEFAULT_BATCH_SIZE = 10
-const DEFAULT_SEND_DELAY_MS = 200
-const DEFAULT_AUTH_TTL_MINUTES = 15
-const DEFAULT_TRANSACTIONAL_TTL_MINUTES = 60
-
-// Check if an error is a rate-limit (429) response.
-// Uses EmailAPIError.status when available (email-js >=0.x with structured errors),
-// falls back to parsing the error message for older versions.
-function isRateLimited(error: unknown): boolean {
-  if (error && typeof error === 'object' && 'status' in error) {
-    return (error as { status: number }).status === 429
-  }
-  return error instanceof Error && error.message.includes('429')
-}
-
-// Check if an error is a forbidden (403) response. Retrying won't help.
-// Move straight to DLQ.
-function isForbidden(error: unknown): boolean {
-  if (error && typeof error === 'object' && 'status' in error) {
-    return (error as { status: number }).status === 403
-  }
-  return error instanceof Error && error.message.includes('403')
-}
-
-// Extract Retry-After seconds from a structured EmailAPIError, or default to 60s.
-function getRetryAfterSeconds(error: unknown): number {
-  if (error && typeof error === 'object' && 'retryAfterSeconds' in error) {
-    return (error as { retryAfterSeconds: number | null }).retryAfterSeconds ?? 60
-  }
-  return 60
-}
-
-async function moveToDlq(
-  supabase: SupabaseClient<any, any>,
-  queue: string,
-  msg: { msg_id: number; message: Record<string, unknown> },
-  reason: string
-): Promise<void> {
-  const payload = msg.message
-  await supabase.from('email_send_log').insert({
-    message_id: payload.message_id,
-    template_name: (payload.label || queue) as string,
-    recipient_email: payload.to,
-    status: 'dlq',
-    error_message: reason,
-  })
-  const { error } = await supabase.rpc('move_to_dlq', {
-    source_queue: queue,
-    dlq_name: `${queue}_dlq`,
-    message_id: msg.msg_id,
-    payload,
-  })
-  if (error) {
-    console.error('Failed to move message to DLQ', { queue, msg_id: msg.msg_id, reason, error })
-
   }
 }
+
+
 
 export const Route = createFileRoute("/lovable/email/queue/process")({
   server: {
