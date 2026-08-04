@@ -615,6 +615,10 @@ function KovaGPT() {
   }, [activeMessageCount, latestMessageContent, isStreaming]);
 
   useEffect(() => {
+    configureMemoryWrites({ principal: userKey, enabled: false });
+  }, [userKey]);
+
+  useEffect(() => {
     if (!settingsReady) return;
     if (userKey && !settings.rememberAcross) blockMemoryWrites(userKey);
     configureMemoryWrites({
