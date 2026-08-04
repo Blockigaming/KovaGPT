@@ -19,7 +19,6 @@ import {
   FileText,
   ThumbsUp,
   ThumbsDown,
-
 } from "lucide-react";
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileBottomSheet } from "./MobileBottomSheet";
@@ -282,12 +281,7 @@ function ChatMessageInner({
   const [editorMode, setEditorMode] = useState<"edit" | "preview">("edit");
   const { isSignedIn } = useUser();
 
-
-
-
-
   const saveFn = useServerFn(saveToLibrary);
-
 
   useEffect(() => {
     if (!principalResolved || !principal) return;
@@ -464,7 +458,6 @@ function ChatMessageInner({
                 {message.content}
               </div>
             )}
-
 
             {(onEdit || onBranch) && (
               <div className="mt-1 flex min-h-9 items-center opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
