@@ -1343,6 +1343,15 @@ function KovaGPT() {
         onSelect={setActiveId}
         onNew={newChat}
         onDelete={deleteChat}
+        onRename={(id, title) => {
+          setConversations((previous) =>
+            previous.map((conversation) =>
+              conversation.id === id
+                ? { ...conversation, title, updatedAt: Date.now() }
+                : conversation,
+            ),
+          );
+        }}
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
@@ -1588,7 +1597,7 @@ function KovaGPT() {
                   mode={mode}
                   onModeChange={setMode}
                   userTier={tier}
-                  canChangeAgent
+                  canChangeAgent={false}
                   onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
                   placeholder="Ask anything"
                   onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
@@ -1892,7 +1901,7 @@ function KovaGPT() {
                 mode={mode}
                 onModeChange={setMode}
                 userTier={tier}
-                canChangeAgent
+                canChangeAgent={false}
                 onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
                 placeholder="Ask anything"
                 onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
@@ -1903,9 +1912,6 @@ function KovaGPT() {
                 recentLibraryError={recentLibraryError}
                 onRecentLibraryRetry={loadRecentLibraryFiles}
               />
-              <p className="kova-disclaimer mt-2 select-none text-center text-[11px] leading-4 text-muted-foreground/80">
-                KovaGPT can make mistakes. Check important info.
-              </p>
             </div>
           </>
         )}
