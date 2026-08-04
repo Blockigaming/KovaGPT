@@ -637,58 +637,75 @@ export function ChatInput({
     window.requestAnimationFrame(() => ref.current?.focus());
   };
 
-  const renderComposerActions = (mobile: boolean) => (
-    <>
-      {onToolSelect ? (
-        <div className="mt-1 border-t border-border/70 pt-1" aria-label="Tools">
-          <div className="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Tools
-          </div>
-          {COMPOSER_TOOLS.map((tool) => {
-            const Icon = tool.icon;
-            const active = selectedTool === tool.id;
-
-            return (
-              <button
-                key={tool.id}
-                type="button"
-                aria-pressed={active}
-                disabled={disabled || isStreaming}
-                onClick={() => chooseTool(tool)}
-                className={`kova-tool-button flex w-full items-center gap-3 rounded-xl text-left text-sm transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50 ${
-                  mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5"
-                } ${active ? "bg-accent text-foreground" : ""}`}
-              >
-                <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <span>{tool.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
-
-      {onPromptShortcut && !value.trim() ? (
-        <div className="mt-1 border-t border-border/70 pt-1" aria-label="Prompt starters">
-          <div className="px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Prompt starters
-          </div>
-          {PROMPT_SHORTCUTS.map((shortcut) => (
+  const renderComposerActions = (mobile: boolean) => {
+    const rowClass = `flex w-full items-center gap-3 rounded-xl text-left transition-colors duration-150 hover:bg-accent active:bg-accent disabled:cursor-not-allowed disabled:opacity-50 outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
+      mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5 text-sm"
+    }`;
+    const iconClass = mobile ? "h-5 w-5 shrink-0 text-muted-foreground" : "h-4 w-4 shrink-0 text-muted-foreground";
+    return (
+      <>
+        {COMPOSER_TOOLS.filter((tool) => tool.id === "web_search").map((tool) => {
+          const Icon = tool.icon;
+          const active = selectedTool === tool.id;
+          return (
             <button
-              key={shortcut.label}
+              key={tool.id}
               type="button"
-              onClick={() => choosePromptShortcut(shortcut.label, shortcut.prompt)}
-              className={`flex w-full items-center gap-3 rounded-xl text-left text-sm transition hover:bg-accent ${
-                mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5"
-              }`}
+              aria-pressed={active}
+              disabled={disabled || isStreaming}
+              onClick={() => chooseTool(tool)}
+              className={`kova-tool-button ${rowClass} ${active ? "bg-accent text-foreground" : ""}`}
             >
-              <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span>{shortcut.label}</span>
+              <Icon className={iconClass} />
+              <span>{tool.label}</span>
             </button>
-          ))}
-        </div>
-      ) : null}
-    </>
-  );
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => {
+            setPlusOpen(false);
+            fileRef.current?.click();
+          }}
+          className={rowClass}
+        >
+          <ImageIcon className={iconClass} />
+          <span>Add photos and files</span>
+        </button>
+        {mobile ? (
+          <button
+            type="button"
+            onClick={() => {
+              setPlusOpen(false);
+              cameraRef.current?.click();
+            }}
+            className={rowClass}
+          >
+            <Camera className={iconClass} />
+            <span>Camera</span>
+          </button>
+        ) : null}
+        {COMPOSER_TOOLS.filter((tool) => tool.id === "image").map((tool) => {
+          const Icon = tool.icon;
+          const active = selectedTool === tool.id;
+          return (
+            <button
+              key={tool.id}
+              type="button"
+              aria-pressed={active}
+              disabled={disabled || isStreaming}
+              onClick={() => chooseTool(tool)}
+              className={`kova-tool-button ${rowClass} ${active ? "bg-accent text-foreground" : ""}`}
+            >
+              <Icon className={iconClass} />
+              <span>{tool.label}</span>
+            </button>
+          );
+        })}
+      </>
+    );
+  };
+
 
   return (
     <div
