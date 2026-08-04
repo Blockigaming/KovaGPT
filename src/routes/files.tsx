@@ -14,7 +14,7 @@ import {
 } from "@/lib/workspace-handoffs";
 export const Route = createFileRoute("/files")({
   component: FilesPage,
-  head: () => ({ meta: [{ title: "Files | KovaGPT" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "KovaGPT Files" }, { name: "robots", content: "noindex" }] }),
 });
 function size(n: number | null) {
   if (!n) return "Size unavailable";

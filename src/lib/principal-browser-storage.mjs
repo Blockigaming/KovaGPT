@@ -49,7 +49,6 @@ export const DEVICE_PREFERENCE_KEYS = Object.freeze([
   "kova-theme-mode",
   "kova-sidebar-open",
   "kova-library-view",
-  "kova-action-color",
 ]);
 
 // Older and not-yet-scoped feature paths wrote these private values without a

@@ -29,6 +29,29 @@ test("empty workspace remains contained and composer focus is deliberate", async
   expect(focused.borderColor).not.toBe("rgba(0, 0, 0, 0)");
   expect(focused.shadow).not.toBe("none");
 
+  if (page.viewportSize()!.width >= 1024) {
+    const metrics = await composer.evaluate((element) => {
+      const bounds = (selector: string) =>
+        element.querySelector(selector)?.getBoundingClientRect() ?? null;
+      const shell = element.getBoundingClientRect();
+      return {
+        shell: { width: shell.width, height: shell.height },
+        row: bounds(".kova-composer-row"),
+        input: bounds(".kova-composer-input"),
+        plus: bounds(".kova-attach-button"),
+        send: bounds(".kova-send-button"),
+      };
+    });
+    expect(metrics.shell).toEqual({ width: 768, height: 58 });
+    expect(metrics.row?.height).toBe(56);
+    expect(metrics.input?.height).toBe(54);
+    expect(metrics.plus?.width).toBe(36);
+    expect(metrics.plus?.height).toBe(36);
+    expect(metrics.send?.width).toBe(36);
+    expect(metrics.send?.height).toBe(36);
+    expect(metrics.plus?.y).toBe(metrics.send?.y);
+  }
+
   const overflow = await page.evaluate(() => ({
     client: document.documentElement.clientWidth,
     scroll: document.documentElement.scrollWidth,

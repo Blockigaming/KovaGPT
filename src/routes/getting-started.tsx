@@ -4,7 +4,7 @@ import { PublicFooter } from "@/components/PublicFooter";
 export const Route = createFileRoute("/getting-started")({
   head: () => ({
     meta: [
-      { title: "Getting Started with KovaGPT" },
+      { title: "KovaGPT Onboarding" },
       {
         name: "description",
         content:

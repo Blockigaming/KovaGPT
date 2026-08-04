@@ -33,4 +33,5 @@ test("Images starts closed, has no dead attachment control, and isolates generat
   assert.doesNotMatch(source, /Create variation/);
   assert.match(source, /aria-label="Describe the image to generate"/);
   assert.match(source, /nativeEvent\.isComposing/);
+  assert.ok(source.includes("data:image\\/(?:png|jpeg|jpg|webp|gif);base64"));
 });

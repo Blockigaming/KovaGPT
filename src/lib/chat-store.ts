@@ -74,6 +74,35 @@ function scopedKey(base: string, userKey: ChatStorageUserKey): string {
   return `${base}:${chatStoragePrincipal(userKey)}`;
 }
 
+/**
+ * Guest data is session-only: it survives navigation inside the open tab, but a
+ * refresh or a fresh tab starts clean. Signed-in data is untouched.
+ */
+function purgeGuestStorageOnFreshLoad() {
+  if (typeof window === "undefined") return;
+  try {
+    const guestSuffix = ":guest";
+    const doomed: string[] = [];
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (!key) continue;
+      if (key.includes(guestSuffix)) doomed.push(key);
+    }
+    for (const key of [
+      ...doomed,
+      LEGACY_CONVERSATIONS_KEY,
+      LEGACY_ARCHIVED_KEY,
+      LEGACY_PENDING_ACTIVE_KEY,
+    ])
+      localStorage.removeItem(key);
+  } catch {
+    // Storage unavailable: nothing to purge.
+  }
+}
+
+purgeGuestStorageOnFreshLoad();
+
+
 function readWithGuestLegacyMigration(
   userKey: ChatStorageUserKey,
   key: string,

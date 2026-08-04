@@ -32,7 +32,7 @@ export const Route = createFileRoute("/library")({
   component: LibraryPage,
   head: () => ({
     meta: [
-      { title: "Library | KovaGPT" },
+      { title: "KovaGPT Library" },
       { name: "description", content: "Your saved chats, files, and generated images in KovaGPT." },
       { name: "robots", content: "noindex" },
     ],
@@ -158,41 +158,37 @@ function LibraryPage() {
       loadGenerationRef.current === generation && principalRef.current === principal;
     setLoadError(null);
     const localItems: LibItem[] = [
-      ...loadConversations(userKey).map(
-        (chat): LibItem => ({
-          id: `chat:${chat.id}`,
-          title: chat.title,
-          item_type: "chat_artifact",
-          source: "chat",
-          content_text: chat.messages
-            .map((message) => `${message.role}: ${message.content}`)
-            .join("\n\n"),
-          file_url: null,
-          file_name: null,
-          file_type: "application/x-kova-chat",
-          file_size: null,
-          created_at: new Date(chat.updatedAt).toISOString(),
-        }),
-      ),
-      ...loadWorkTasks(userKey).map(
-        (task): LibItem => ({
-          id: `work:${task.id}`,
-          title: task.objective,
-          item_type: "other",
-          source: "other",
-          content_text: [
-            task.context,
-            ...task.steps.map((step) => `${step.done ? "✓" : "○"} ${step.text}`),
-          ]
-            .filter(Boolean)
-            .join("\n"),
-          file_url: null,
-          file_name: null,
-          file_type: "application/x-kova-work",
-          file_size: null,
-          created_at: new Date(task.updatedAt).toISOString(),
-        }),
-      ),
+      ...loadConversations(userKey).map((chat): LibItem => ({
+        id: `chat:${chat.id}`,
+        title: chat.title,
+        item_type: "chat_artifact",
+        source: "chat",
+        content_text: chat.messages
+          .map((message) => `${message.role}: ${message.content}`)
+          .join("\n\n"),
+        file_url: null,
+        file_name: null,
+        file_type: "application/x-kova-chat",
+        file_size: null,
+        created_at: new Date(chat.updatedAt).toISOString(),
+      })),
+      ...loadWorkTasks(userKey).map((task): LibItem => ({
+        id: `work:${task.id}`,
+        title: task.objective,
+        item_type: "other",
+        source: "other",
+        content_text: [
+          task.context,
+          ...task.steps.map((step) => `${step.done ? "✓" : "○"} ${step.text}`),
+        ]
+          .filter(Boolean)
+          .join("\n"),
+        file_url: null,
+        file_name: null,
+        file_type: "application/x-kova-work",
+        file_size: null,
+        created_at: new Date(task.updatedAt).toISOString(),
+      })),
     ];
     if (!isSignedIn) {
       if (isCurrent()) {
@@ -566,7 +562,7 @@ function LibraryPage() {
         data-library-item={item.item_type}
       >
         {!workspaceReference ? (
-          <label className="absolute z-10 m-3 grid h-9 w-9 place-items-center rounded-lg bg-background/85 shadow-sm">
+          <label className="absolute z-10 m-3 grid h-9 w-9 place-items-center rounded-lg bg-background/85">
             <span className="sr-only">Select {item.title}</span>
             <input
               type="checkbox"
@@ -588,7 +584,7 @@ function LibraryPage() {
               src={item.file_url!}
               alt={item.title}
               loading="lazy"
-              className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+              className="h-full w-full object-cover "
             />
           </div>
         ) : (
@@ -805,7 +801,7 @@ function LibraryPage() {
             onClick={() => setPreviewItem(null)}
           >
             <section
-              className="kova-glass max-h-[90dvh] w-full overflow-hidden rounded-t-2xl sm:max-w-3xl sm:rounded-2xl"
+              className="kova-glass max-h-[90dvh] w-full overflow-hidden rounded-t-2xl sm:max-w-3xl sm:rounded-xl"
               onClick={(event) => event.stopPropagation()}
             >
               <header className="flex items-center gap-3 border-b border-border p-4">

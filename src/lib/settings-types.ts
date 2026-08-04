@@ -28,7 +28,6 @@ export type Settings = {
   language?: string;
   showTimestamps?: boolean;
   theme?: ThemeColors;
-  buttonColor?: string;
 };
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -47,5 +46,4 @@ export const DEFAULT_SETTINGS: Settings = {
   parentalMode: false,
   trainingOptOut: false,
   theme: DEFAULT_THEME,
-  buttonColor: "#2563eb",
 };

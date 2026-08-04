@@ -3,7 +3,7 @@ import type { Page } from "playwright";
 import { audit, MemoryAuditSink } from "./audit";
 import { BrowserArtifactStore } from "./artifacts";
 import { runtimeError } from "./errors";
-import { authorizeNavigation, requirePermission } from "./permissions";
+import { authorizeNavigationRequest, requirePermission } from "./permissions";
 import { BrowserSessionManager } from "./session-manager";
 import type {
   AuditSink,
@@ -105,7 +105,7 @@ export class BrowserRuntime {
     timeoutMs = 30_000,
   ) {
     const session = this.sessions.get(sessionId, ownerId);
-    const url = authorizeNavigation(session.descriptor.permissions, rawUrl);
+    const url = await authorizeNavigationRequest(session.descriptor.permissions, rawUrl);
     const tab = this.tab(session, tabId);
     try {
       await tab.page.goto(url.href, { waitUntil: "domcontentloaded", timeout: timeoutMs });

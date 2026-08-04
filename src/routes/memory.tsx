@@ -17,7 +17,7 @@ import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 export const Route = createFileRoute("/memory")({
   component: MemoryPage,
   head: () => ({
-    meta: [{ title: "Memory Center | KovaGPT" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: "KovaGPT Memory" }, { name: "robots", content: "noindex" }],
   }),
 });
 function MemoryPage() {

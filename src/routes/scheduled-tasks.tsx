@@ -41,7 +41,7 @@ export const Route = createFileRoute("/scheduled-tasks")({
   component: ScheduledTasksPage,
   head: () => ({
     meta: [
-      { title: "Scheduled Tasks Status - KovaGPT" },
+      { title: "KovaGPT Tasks" },
       {
         name: "description",
         content:

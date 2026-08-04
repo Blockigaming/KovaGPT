@@ -18,7 +18,7 @@ import {
 export const Route = createFileRoute("/write")({
   head: () => ({
     meta: [
-      { title: "Writing Workspace | KovaGPT" },
+      { title: "KovaGPT Writing" },
       {
         name: "description",
         content:

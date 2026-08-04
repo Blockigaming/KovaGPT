@@ -13,7 +13,7 @@ import { chatStoragePrincipal, loadConversations, savePendingActive } from "@/li
 export const Route = createFileRoute("/knowledge-graph")({
   component: KnowledgeGraph,
   head: () => ({
-    meta: [{ title: "Knowledge Graph | KovaGPT" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: "KovaGPT Graph" }, { name: "robots", content: "noindex" }],
   }),
 });
 const colors = {
