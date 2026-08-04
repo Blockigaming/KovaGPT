@@ -251,8 +251,9 @@ function KovaGPT() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (tempChat) {
-      lastLoadedDraftRef.current = null;
-      setInput("");
+      // Temporary chat disables local draft persistence, but the current
+      // composer remains memory-only so toggling privacy mode never discards
+      // an unsent prompt.
       return;
     }
     if (!principalReady) return;
@@ -1612,6 +1613,61 @@ function KovaGPT() {
                   recentLibraryError={recentLibraryError}
                   onRecentLibraryRetry={loadRecentLibraryFiles}
                 />
+
+                <div className="kova-capability-grid mx-auto mt-3 hidden max-w-[48rem] grid-cols-3 gap-1.5 lg:grid">
+                  {assistantCapabilities.map((p) => {
+                    const Icon = p.icon;
+                    return (
+                      <button
+                        key={p.label}
+                        type="button"
+                        onClick={() => setInput((v) => (v.trim() ? v : p.prompt))}
+                        className="kova-capability-card inline-flex min-h-10 items-center gap-2 rounded-md border border-border/70 bg-transparent px-3 text-left text-[13px] font-medium text-foreground transition hover:border-foreground/20 hover:bg-accent"
+                      >
+                        <Icon className="h-4 w-4 text-muted-foreground" />
+                        <span>{p.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="kova-mobile-starters mt-3 grid grid-cols-2 gap-2 lg:hidden">
+                  {[
+                    {
+                      label: "Summarize a file",
+                      hint: "PDF or doc to key points",
+                      prompt:
+                        "Summarize the attached file into the key points, decisions, and action items.",
+                    },
+                    {
+                      label: "Research a topic",
+                      hint: "Briefing with sources",
+                      prompt: "Research this topic and give me a concise briefing with sources: ",
+                    },
+                    {
+                      label: "Improve my writing",
+                      hint: "Clearer and tighter",
+                      prompt:
+                        "Improve the clarity and tone of this text without changing its meaning:\n\n",
+                    },
+                    {
+                      label: "Debug my code",
+                      hint: "Find and fix the bug",
+                      prompt:
+                        "Here's my code and the error I'm seeing. Explain what's wrong and give a corrected version.\n\n",
+                    },
+                  ].map((p) => (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => setInput((v) => (v ? v : p.prompt))}
+                      className="kova-starter-card min-w-0 text-left px-3.5 py-3 rounded-lg border border-border bg-card/70 active:bg-accent/60 transition-colors"
+                    >
+                      <div className="text-[15px] font-medium text-foreground">{p.label}</div>
+                      <div className="text-[12.5px] text-muted-foreground mt-0.5">{p.hint}</div>
+                    </button>
+                  ))}
+                </div>
+
               </div>
               <div
                 className="kova-starter-actions no-scrollbar mx-auto mt-4 grid w-full max-w-[48rem] grid-cols-2 gap-2 lg:grid-cols-4"
@@ -1654,6 +1710,7 @@ function KovaGPT() {
                   <ListChecks className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                   <span>Make a plan</span>
                 </button>
+
               </div>
             </div>
             {!isLoaded || isSignedIn ? null : (
