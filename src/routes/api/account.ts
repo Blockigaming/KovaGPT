@@ -70,9 +70,10 @@ async function saveDeletionProgress(
   authAdmin: AuthAdmin,
   userId: string,
   progress: DeletionProgress,
+  options: { banUser?: boolean } = {},
 ) {
   const { error } = await authAdmin.updateUserById(userId, {
-    ban_duration: ACCOUNT_DELETION_BAN_DURATION,
+    ...(options.banUser ? { ban_duration: ACCOUNT_DELETION_BAN_DURATION } : {}),
     app_metadata: {
       account_deletion: progress,
     },
@@ -185,12 +186,12 @@ export const Route = createFileRoute("/api/account")({
           }
         }
         deletionProgress.billingComplete = true;
-        await saveDeletionProgress(authAdmin, auth.userId, deletionProgress);
+        await saveDeletionProgress(authAdmin, auth.userId, deletionProgress, { banUser: true });
 
         try {
           await disconnectGoogle(auth.userId);
           deletionProgress.googleDisconnected = true;
-          await saveDeletionProgress(authAdmin, auth.userId, deletionProgress);
+          await saveDeletionProgress(authAdmin, auth.userId, deletionProgress, { banUser: true });
         } catch (error) {
           console.error("[account-delete] Google revocation failed", {
             error: error instanceof Error ? error.name : "unknown_error",
@@ -198,11 +199,11 @@ export const Route = createFileRoute("/api/account")({
         }
 
         deletionProgress.authDeleteAttemptedAt = new Date().toISOString();
-        await saveDeletionProgress(authAdmin, auth.userId, deletionProgress);
+        await saveDeletionProgress(authAdmin, auth.userId, deletionProgress, { banUser: true });
         const { error: deleteError } = await auth.supabaseAdmin.auth.admin.deleteUser(auth.userId);
         if (deleteError) {
           deletionProgress.authDeleteFailedAt = new Date().toISOString();
-          await saveDeletionProgress(authAdmin, auth.userId, deletionProgress);
+          await saveDeletionProgress(authAdmin, auth.userId, deletionProgress, { banUser: true });
           console.error("[account-delete] auth deletion failed", { code: deleteError.code });
           return Response.json(
             {

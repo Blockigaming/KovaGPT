@@ -19,6 +19,8 @@ test("device chat portability is versioned, bounded, validated and includes arch
 
 test("temporary chat never persists an unsent draft", () => {
   assert.match(chat, /if \(tempChat\) return;/);
+  assert.match(chat, /lastLoadedDraftRef\.current = null/);
+  assert.match(chat, /skipNextDraftSaveRef\.current = true/);
   assert.match(chat, /localStorage\.removeItem\(`kova-draft:/);
   assert.match(chat, /Temporary chat enabled/);
 });
