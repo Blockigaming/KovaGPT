@@ -1,5 +1,8 @@
 import {
   ArrowUp,
+  Atom,
+  Paperclip,
+  Telescope,
   Square,
   Plus,
   X,
