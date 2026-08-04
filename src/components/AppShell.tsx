@@ -1,4 +1,3 @@
-import { PanelLeft } from "lucide-react";
 import { lazy, Suspense, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Sidebar } from "@/components/Sidebar";
@@ -12,6 +11,7 @@ import { TimersWidget } from "@/components/TimersWidget";
 import { AppErrorBoundary, OfflineBanner } from "@/components/states";
 import { MobileTopBar } from "@/components/MobileTopBar";
 import { installShortcutListener } from "@/lib/shortcuts";
+import { PanelLeft } from "lucide-react";
 import { useUser } from "@/components/auth/ClerkSafe";
 import {
   type Conversation,
@@ -182,7 +182,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div
-      className="kova-app-shell relative flex h-[100dvh] w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
+      className="relative flex h-[100dvh] w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
       onTouchStart={(e) => {
         const t = e.touches[0];
         if (t && t.clientX < 24 && window.innerWidth < 768) {
@@ -219,30 +219,25 @@ export function AppShell({ children }: { children: ReactNode }) {
         onOpenHelp={openHelp}
       />
 
-      <div className="kova-workspace-main min-w-0 flex flex-1 flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">
+      <div className="kova-main-scroll flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">
         <OfflineBanner />
-
         <MobileTopBar onOpenSidebar={() => setSidebarOpen(true)} onNewChat={handleNew} />
-
         {!sidebarOpen && (
           <button
-            type="button"
             onClick={() => {
               setSidebarOpen(true);
-
               window.requestAnimationFrame(() => {
                 document
                   .querySelector<HTMLElement>('[aria-label="Collapse sidebar"]')
                   ?.focus({ preventScroll: true });
               });
             }}
-            className="fixed left-3 top-2 z-30 hidden h-10 w-10 items-center justify-center rounded-md bg-background/90 transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:flex"
+            className="hidden lg:flex fixed top-2 left-3 z-30 h-10 w-10 rounded-md bg-background/90 hover:bg-accent transition items-center justify-center focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="Open sidebar"
           >
-            <PanelLeft className="h-4 w-4" aria-hidden="true" />
+            <PanelLeft className="w-4 h-4" />
           </button>
         )}
-
         <AppErrorBoundary>{children}</AppErrorBoundary>
       </div>
 

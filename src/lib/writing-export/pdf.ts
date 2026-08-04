@@ -1,18 +1,11 @@
 import { parseDocumentBlocks, safeDocumentFilename, downloadBytes } from "./common";
-
-const PAGE_WIDTH = 595;
-const PAGE_HEIGHT = 842;
-const TOP_MARGIN = 790;
-const LINES_PER_PAGE = 52;
-
 const ascii = (s: string) =>
   s
     .normalize("NFKD")
     .replace(/[^\x20-\x7e]/g, "?")
     .replace(/[()\\]/g, "\\$&");
-
-function buildLines(title: string, markdown: string) {
-  return [
+export async function createDocumentPdf(title: string, markdown: string) {
+  const lines = [
     title,
     "",
     ...parseDocumentBlocks(markdown).flatMap((b) => {
@@ -24,34 +17,16 @@ function buildLines(title: string, markdown: string) {
       return [...out, ""];
     }),
   ].slice(0, 3000);
-}
-
-function pageStream(lines: string[]) {
-  let content = `BT /F1 11 Tf 50 ${TOP_MARGIN} Td 14 TL `;
+  let content = "BT /F1 11 Tf 50 790 Td 14 TL ";
   for (const line of lines) content += `(${ascii(line)}) Tj T* `;
-  return `${content}ET`;
-}
-
-export async function createDocumentPdf(title: string, markdown: string) {
-  const lines = buildLines(title, markdown);
-  const pages = Math.max(1, Math.ceil(lines.length / LINES_PER_PAGE));
-  const fontObjectId = 3 + pages * 2;
-  const pageObjectIds = Array.from({ length: pages }, (_, index) => 3 + index * 2);
-  const contentObjectIds = Array.from({ length: pages }, (_, index) => 4 + index * 2);
+  content += "ET";
   const objects = [
     `<< /Type /Catalog /Pages 2 0 R >>`,
-    `<< /Type /Pages /Kids [${pageObjectIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pages} >>`,
+    `<< /Type /Pages /Kids [3 0 R] /Count 1 >>`,
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>`,
+    `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>`,
+    `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
   ];
-
-  for (let index = 0; index < pages; index++) {
-    const content = pageStream(lines.slice(index * LINES_PER_PAGE, (index + 1) * LINES_PER_PAGE));
-    objects.push(
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PAGE_WIDTH} ${PAGE_HEIGHT}] /Resources << /Font << /F1 ${fontObjectId} 0 R >> >> /Contents ${contentObjectIds[index]} 0 R >>`,
-      `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
-    );
-  }
-
-  objects.push(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>`);
   let body = "%PDF-1.4\n";
   const offsets = [0];
   objects.forEach((o, i) => {

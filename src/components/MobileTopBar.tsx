@@ -34,7 +34,7 @@ export function MobileTopBar({
   const showAuth = isLoaded && clerkEnabled && !isSignedIn;
   return (
     <header className="kova-topbar sticky top-0 z-30 lg:hidden">
-      <div className="kova-topbar-inner grid min-h-14 grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] items-center gap-1 px-1">
+      <div className="kova-topbar-inner grid h-14 grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] items-center gap-1 px-1">
         <button
           type="button"
           onClick={onOpenSidebar}
@@ -58,6 +58,7 @@ export function MobileTopBar({
                 {title || "KovaGPT"}
               </span>
             </div>
+
           )}
         </div>
         {showAuth ? (

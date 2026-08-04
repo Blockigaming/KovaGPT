@@ -5,44 +5,13 @@ import {
   Suspense,
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type SetStateAction,
 } from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
-import {
-  ArrowDown,
-  BarChart3,
-  Check,
-  Download,
-  FileText,
-  ImageIcon,
-  ListChecks,
-  MessageSquareDashed,
-  PanelLeft,
-  Search,
-  Share2,
-} from "lucide-react";
-
-const assistantCapabilities = [
-  {
-    label: "Summarize a file",
-    icon: FileText,
-    prompt: "Summarize the attached file into the key points, decisions, and action items.",
-  },
-  {
-    label: "Research a topic",
-    icon: Search,
-    prompt: "Research this topic and give me a concise briefing with sources: ",
-  },
-  {
-    label: "Make a plan",
-    icon: ListChecks,
-    prompt: "Help me build a step by step plan for: ",
-  },
-] as const;
+import { PanelLeft, Search, MessageSquareDashed, Check, Share2, Download } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 
 import { ChatMessage } from "@/components/ChatMessage";
@@ -270,9 +239,8 @@ function KovaGPT() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (tempChat) {
-      // Temporary chat disables local draft persistence, but the current
-      // composer remains memory-only so toggling privacy mode never discards
-      // an unsent prompt.
+      lastLoadedDraftRef.current = null;
+      setInput("");
       return;
     }
     if (!principalReady) return;
@@ -633,10 +601,6 @@ function KovaGPT() {
       setShowJumpToLatest(true);
     }
   }, [activeMessageCount, latestMessageContent, isStreaming]);
-
-  useLayoutEffect(() => {
-    configureMemoryWrites({ principal: userKey, enabled: false });
-  }, [userKey]);
 
   useEffect(() => {
     if (!settingsReady) return;
@@ -1313,21 +1277,10 @@ function KovaGPT() {
   }, []);
 
   // Image generation removed; can be reintroduced when user explicitly asks.
-  const startWithSuggestion = (prompt: string, tool: ComposerToolId | null = null) => {
-    if (!input.trim()) {
-      setSelectedTool(tool);
-      setInput(prompt);
-    }
-    window.requestAnimationFrame(() =>
-      document
-        .querySelector<HTMLTextAreaElement>('textarea[aria-label="Message KovaGPT"]')
-        ?.focus(),
-    );
-  };
 
   return (
     <div
-      className="kova-app-shell flex h-screen w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
+      className="flex h-screen w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
       style={{ height: "100dvh" }}
     >
       {/* Mobile edge-swipe zone: swipe right from the left edge to open the sidebar. */}
@@ -1367,15 +1320,6 @@ function KovaGPT() {
         onSelect={setActiveId}
         onNew={newChat}
         onDelete={deleteChat}
-        onRename={(id, title) => {
-          setConversations((previous) =>
-            previous.map((conversation) =>
-              conversation.id === id
-                ? { ...conversation, title, updatedAt: Date.now() }
-                : conversation,
-            ),
-          );
-        }}
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
@@ -1439,7 +1383,7 @@ function KovaGPT() {
       />
 
       <main
-        className="kova-chat-main flex min-w-0 flex-1 flex-col bg-background"
+        className="flex min-w-0 flex-1 flex-col bg-background"
         data-sidebar={sidebarOpen ? "open" : "closed"}
       >
         <MobileTopBar
@@ -1452,11 +1396,8 @@ function KovaGPT() {
           temporaryChat={tempChat}
           onTemporaryChatChange={setTemporaryChatEnabled}
         />
-        <header className="kova-desktop-topbar kova-topbar relative hidden h-[52px] items-center gap-1 px-3 lg:flex">
-          <div
-            hidden={sidebarOpen || Boolean(isSignedIn)}
-            className="flex items-center gap-1 mr-2 shrink-0"
-          >
+        <header className="kova-topbar relative hidden h-[52px] items-center gap-1 px-3 lg:flex">
+          <div hidden={sidebarOpen || Boolean(isSignedIn)} className="flex items-center gap-1 mr-2 shrink-0">
             <button
               onClick={() => {
                 setSidebarOpen(true);
@@ -1561,13 +1502,13 @@ function KovaGPT() {
             ) : (
               <>
                 <SignInButton mode="modal">
-                  <button className="text-sm font-semibold px-4 h-9 rounded-full bg-foreground text-background hover:opacity-90 active:scale-[0.98] transition">
+                  <button className="text-sm font-medium px-4 h-9 rounded-full text-foreground hover:bg-accent transition">
                     Log in
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button className="text-sm font-medium px-4 h-9 rounded-full bg-muted text-foreground hover:bg-accent active:scale-[0.98] transition whitespace-nowrap">
-                    Sign up for free
+                  <button className="text-sm font-semibold px-4 h-9 rounded-full bg-foreground text-background hover:opacity-90 active:scale-[0.98] transition whitespace-nowrap">
+                    Sign up
                   </button>
                 </SignUpButton>
               </>
@@ -1576,7 +1517,7 @@ function KovaGPT() {
         </header>
 
         {tempChat && (
-          <div className="kova-temporary-banner mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-3xl items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm shadow-sm">
+          <div className="mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-3xl items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm shadow-sm">
             <div className="flex min-w-0 items-center gap-2">
               <MessageSquareDashed className="h-4 w-4 shrink-0 text-muted-foreground" />
               <span>
@@ -1596,7 +1537,7 @@ function KovaGPT() {
 
         {!active || active.messages.length === 0 ? (
           <section
-            className="kova-empty-chat kova-empty-chat-surface flex flex-1 flex-col overflow-y-auto"
+            className="kova-empty-chat flex flex-1 flex-col overflow-y-auto px-3 lg:px-6"
             aria-labelledby="chat-greeting"
           >
             <div className="flex w-full flex-1 flex-col items-center justify-center py-6 lg:py-10">
@@ -1609,7 +1550,7 @@ function KovaGPT() {
                 </h1>
               </div>
 
-              <div className="kova-empty-composer mx-auto w-full max-w-[48rem]">
+              <div className="mx-auto w-full max-w-[48rem] px-1 sm:px-2">
                 <ChatInput
                   value={principalReady ? input : ""}
                   onChange={setInput}
@@ -1621,7 +1562,7 @@ function KovaGPT() {
                   mode={mode}
                   onModeChange={setMode}
                   userTier={tier}
-                  canChangeAgent={false}
+                  canChangeAgent
                   onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
                   placeholder="Ask anything"
                   onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
@@ -1632,104 +1573,6 @@ function KovaGPT() {
                   recentLibraryError={recentLibraryError}
                   onRecentLibraryRetry={loadRecentLibraryFiles}
                 />
-
-                <div className="kova-capability-grid mx-auto mt-3 hidden max-w-[48rem] grid-cols-3 gap-1.5 lg:grid">
-                  {assistantCapabilities.map((p) => {
-                    const Icon = p.icon;
-                    return (
-                      <button
-                        key={p.label}
-                        type="button"
-                        onClick={() => setInput((v) => (v.trim() ? v : p.prompt))}
-                        className="kova-capability-card inline-flex min-h-10 items-center gap-2 rounded-md border border-border/70 bg-transparent px-3 text-left text-[13px] font-medium text-foreground transition hover:border-foreground/20 hover:bg-accent"
-                      >
-                        <Icon className="h-4 w-4 text-muted-foreground" />
-                        <span>{p.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="kova-mobile-starters mt-3 grid grid-cols-2 gap-2 lg:hidden">
-                  {[
-                    {
-                      label: "Summarize a file",
-                      hint: "PDF or doc to key points",
-                      prompt:
-                        "Summarize the attached file into the key points, decisions, and action items.",
-                    },
-                    {
-                      label: "Research a topic",
-                      hint: "Briefing with sources",
-                      prompt: "Research this topic and give me a concise briefing with sources: ",
-                    },
-                    {
-                      label: "Improve my writing",
-                      hint: "Clearer and tighter",
-                      prompt:
-                        "Improve the clarity and tone of this text without changing its meaning:\n\n",
-                    },
-                    {
-                      label: "Debug my code",
-                      hint: "Find and fix the bug",
-                      prompt:
-                        "Here's my code and the error I'm seeing. Explain what's wrong and give a corrected version.\n\n",
-                    },
-                  ].map((p) => (
-                    <button
-                      key={p.label}
-                      type="button"
-                      onClick={() => setInput((v) => (v ? v : p.prompt))}
-                      className="kova-starter-card min-w-0 text-left px-3.5 py-3 rounded-lg border border-border bg-card/70 active:bg-accent/60 transition-colors"
-                    >
-                      <div className="text-[15px] font-medium text-foreground">{p.label}</div>
-                      <div className="text-[12.5px] text-muted-foreground mt-0.5">{p.hint}</div>
-                    </button>
-                  ))}
-                </div>
-
-              </div>
-              <div
-                className="kova-starter-actions no-scrollbar mx-auto mt-4 grid w-full max-w-[48rem] grid-cols-2 gap-2 lg:grid-cols-4"
-                aria-label="Start with a suggestion"
-              >
-                <button
-                  type="button"
-                  className="kova-starter-action"
-                  onClick={() => startWithSuggestion("Create an image of ", "image")}
-                >
-                  <ImageIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                  <span>Create image</span>
-                </button>
-                <button
-                  type="button"
-                  className="kova-starter-action"
-                  onClick={() => startWithSuggestion("Help me write ")}
-                >
-                  <FileText className="h-4 w-4 text-violet-600 dark:text-violet-400" />
-                  <span>Help me write</span>
-                </button>
-                <button
-                  type="button"
-                  className="kova-starter-action"
-                  onClick={() =>
-                    startWithSuggestion(
-                      "Analyze this data and explain the key insights: ",
-                      "data_analysis",
-                    )
-                  }
-                >
-                  <BarChart3 className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-                  <span>Analyze data</span>
-                </button>
-                <button
-                  type="button"
-                  className="kova-starter-action"
-                  onClick={() => startWithSuggestion("Create a practical step-by-step plan for ")}
-                >
-                  <ListChecks className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                  <span>Make a plan</span>
-                </button>
-
               </div>
             </div>
             {!isLoaded || isSignedIn ? null : (
@@ -1754,12 +1597,11 @@ function KovaGPT() {
             <div
               ref={scrollRef}
               onScroll={updateNearBottom}
-              data-chat-transcript
               className="kova-conversation-scroll flex-1 overflow-y-auto overscroll-contain scroll-smooth pb-14 pt-5 lg:pb-20 lg:pt-8"
               aria-label="Conversation"
             >
               {active.branchOrigin && (
-                <div className="kova-content-column kova-inline-notice mx-auto mb-5 flex w-[calc(100%-2rem)] max-w-[48rem] items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/45 px-3 py-2 text-sm">
+                <div className="mx-auto mb-5 flex w-[calc(100%-2rem)] max-w-[48rem] items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/45 px-3 py-2 text-sm">
                   <div className="min-w-0">
                     <span className="font-medium">Branched conversation</span>
                     <span className="ml-1 text-muted-foreground">
@@ -1943,17 +1785,16 @@ function KovaGPT() {
                   el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
                   setShowJumpToLatest(false);
                 }}
-                className="kova-jump-latest rounded-full border border-border bg-card shadow-lg hover:bg-accent"
+                className="fixed bottom-28 left-1/2 z-20 -translate-x-1/2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium shadow-lg hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
                 aria-label="Jump to latest message"
               >
-                <ArrowDown className="h-4 w-4" />
-                <span className="sr-only">Jump to latest</span>
+                Jump to latest
               </button>
             )}
-            <div className="kova-conversation-composer lg:pb-2 lg:pt-2">
+            <div className="lg:pb-2 lg:pt-2">
               {editingMessage?.conversationId === active.id && (
                 <div
-                  className="kova-content-column kova-editing-banner mx-auto mb-2 flex w-full max-w-[48rem] items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-sm"
+                  className="mx-auto mb-2 flex w-full max-w-[48rem] items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-sm"
                   role="status"
                 >
                   <span className="min-w-0 truncate">Editing a previous prompt</span>
@@ -1981,7 +1822,7 @@ function KovaGPT() {
                 mode={mode}
                 onModeChange={setMode}
                 userTier={tier}
-                canChangeAgent={false}
+                canChangeAgent
                 onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
                 placeholder="Ask anything"
                 onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
@@ -1992,6 +1833,9 @@ function KovaGPT() {
                 recentLibraryError={recentLibraryError}
                 onRecentLibraryRetry={loadRecentLibraryFiles}
               />
+              <p className="kova-disclaimer mt-2 select-none text-center text-[11px] leading-4 text-muted-foreground/80">
+                KovaGPT can make mistakes. Check important info.
+              </p>
             </div>
           </>
         )}

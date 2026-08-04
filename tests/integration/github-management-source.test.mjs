@@ -23,8 +23,8 @@ test("installation refresh cannot claim another owner's global App installations
   assert.ok(server.includes("listGitHubAppInstallations"));
   assert.ok(server.includes('installation.account?.type === "User"'));
   assert.ok(server.includes("Number(account.github_user_id)"));
-  assert.ok(server.includes("https://api.github.com/user/installations?per_page=100"));
-  assert.ok(server.includes("userInstallations.has(installationId)"));
+  assert.ok(server.includes("/user/memberships/orgs/"));
+  assert.ok(server.includes('access.state === "active" && access.role === "admin"'));
   assert.ok(server.includes("decryptSecret(account.token_ciphertext)"));
   assert.ok(server.includes('onConflict: "owner_id,id"'));
   assert.ok(migration.includes("github_installations(id bigint not null"));

@@ -107,9 +107,6 @@ function chunkText(text: string): string[] {
 }
 
 async function embedBatch(inputs: string[]): Promise<number[][]> {
-
-  if (!process.env.OPENAI_API_KEY) throw new Error("Missing OPENAI_API_KEY");
-
   const resp = await embeddings({ model: embeddingModel(), input: inputs, dimensions: EMBED_DIMS });
   if (!resp.ok) throw await providerErrorFromResponse(resp);
   const json = (await resp.json()) as { data?: Array<{ index: number; embedding: number[] }> };

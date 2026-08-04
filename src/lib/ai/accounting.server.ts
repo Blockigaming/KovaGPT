@@ -107,14 +107,6 @@ export async function acquireGeneration(input: {
   return row.event_id ? { eventId: row.event_id } : { rejection: row.decision };
 }
 
-export async function renewGenerationLease(eventId: string): Promise<void> {
-  const { data, error } = await client().rpc("renew_ai_generation_lease", {
-    p_event_id: eventId,
-    p_lease_seconds: getAiRuntimeConfig().leaseSeconds,
-  });
-  if (error || data !== true) throw new Error("ai_accounting_renew_failed");
-}
-
 export async function finalizeGeneration(input: {
   eventId: string;
   status: TerminalStatus;

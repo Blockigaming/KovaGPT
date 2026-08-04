@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
-
 import { controlAgentTeamRun, createAgentTeamRun, getAgentTeamRuns } from "@/agents/team.server";
 import { validateTaskGraph } from "@/agents/team";
 import {
@@ -41,7 +40,6 @@ function agentRequestError(error: unknown, fallback: string, fallbackStatus = 40
   );
 }
 
-
 export const Route = createFileRoute("/api/agents/teams")({
   server: {
     handlers: {
@@ -65,7 +63,6 @@ export const Route = createFileRoute("/api/agents/teams")({
       POST: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
-
         let body: ReturnType<typeof parseAgentTeamCreatePayload>;
         try {
           body = parseAgentTeamCreatePayload(
@@ -106,7 +103,6 @@ export const Route = createFileRoute("/api/agents/teams")({
                   : 400;
           return agentRequestError(null, safeMessage, status);
         }
-
       },
       PATCH: async ({ request }) => {
         const auth = await requireUser(request);

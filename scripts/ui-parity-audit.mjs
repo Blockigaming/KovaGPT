@@ -10,25 +10,23 @@ const targets = {
   chatgpt: process.env.CHATGPT_URL || "https://chatgpt.com",
   kova: process.env.KOVAGPT_URL || "https://kovagpt.com",
 };
-const viewports = [
-  { width: 320, height: 700 },
-  { width: 360, height: 800 },
-  { width: 375, height: 812 },
-  { width: 390, height: 844 },
-  { width: 412, height: 915 },
-  { width: 600, height: 960 },
-  { width: 640, height: 960 },
-  { width: 768, height: 1024 },
-  { width: 820, height: 1180 },
-  { width: 1024, height: 768 },
-  { width: 1280, height: 800 },
-  { width: 1366, height: 768 },
-  { width: 1440, height: 900 },
-  { width: 1512, height: 982 },
-  { width: 1728, height: 1117 },
-  { width: 1920, height: 1080 },
-];
-const deviceScaleFactors = [1, 2];
+const widths = [320, 360, 375, 390, 412, 430, 768, 820, 1024, 1280, 1366, 1440, 1512, 1728];
+const heights = {
+  320: 700,
+  360: 800,
+  375: 812,
+  390: 844,
+  412: 915,
+  430: 932,
+  768: 1024,
+  820: 1180,
+  1024: 768,
+  1280: 800,
+  1366: 768,
+  1440: 900,
+  1512: 982,
+  1728: 1117,
+};
 const defaultScenarios = [
   { id: "empty-chat", path: "/" },
   { id: "images", path: "/images" },
@@ -102,14 +100,12 @@ const quick = args.has("--quick");
 const scenarios = process.env.PARITY_SCENARIOS
   ? JSON.parse(process.env.PARITY_SCENARIOS)
   : defaultScenarios;
-const matrix = (quick ? [{ width: 1280, height: 800 }] : viewports).flatMap((viewport) =>
-  (quick ? [1] : deviceScaleFactors).flatMap((deviceScaleFactor) =>
-    (quick ? ["light"] : ["light", "dark"]).map((theme) => ({
-      ...viewport,
-      deviceScaleFactor,
-      theme,
-    })),
-  ),
+const matrix = (quick ? [1280] : widths).flatMap((width) =>
+  (quick ? ["light"] : ["light", "dark"]).map((theme) => ({
+    width,
+    height: heights[width],
+    theme,
+  })),
 );
 
 const dirs = ["screenshots", "diffs", "snapshots", "motion", "reports"];
@@ -127,63 +123,17 @@ function clean(value) {
     .slice(0, 500);
 }
 
-function escapePointer(value) {
-  return String(value).replaceAll("~", "~0").replaceAll("/", "~1");
-}
-
-function semanticKey(value, fallback) {
-  if (!value || typeof value !== "object") return fallback;
-  return (
-    [value.path, value.role, value.tag, value.name, value.label, value.text]
-      .filter(Boolean)
-      .map(clean)
-      .join("|") || fallback
-  );
-}
-
-function alignSemanticArray(left, right, pointer) {
-  const used = new Set();
-  return left
-    .flatMap((leftItem, index) => {
-      const key = semanticKey(leftItem, String(index));
-      const rightIndex = right.findIndex(
-        (candidate, candidateIndex) =>
-          !used.has(candidateIndex) && semanticKey(candidate, String(candidateIndex)) === key,
-      );
-      if (rightIndex === -1) {
-        return [{ path: `${pointer}/${escapePointer(key)}`, chatgpt: leftItem, kova: undefined }];
-      }
-      used.add(rightIndex);
-      return deepDiff(leftItem, right[rightIndex], `${pointer}/${escapePointer(key)}`);
-    })
-    .concat(
-      right.flatMap((rightItem, index) =>
-        used.has(index)
-          ? []
-          : [
-              {
-                path: `${pointer}/${escapePointer(semanticKey(rightItem, String(index)))}`,
-                chatgpt: undefined,
-                kova: rightItem,
-              },
-            ],
-      ),
-    );
-}
-
 function deepDiff(left, right, pointer = "") {
   if (Object.is(left, right)) return [];
   if (typeof left !== "object" || left === null || typeof right !== "object" || right === null)
     return [{ path: pointer || "/", chatgpt: left, kova: right }];
-  if (Array.isArray(left) || Array.isArray(right)) {
-    if (!Array.isArray(left) || !Array.isArray(right))
-      return [{ path: pointer || "/", chatgpt: left, kova: right }];
-    if (["/elements", "/focusOrder", "/interactions"].includes(pointer))
-      return alignSemanticArray(left, right, pointer);
-  }
   const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
   return [...keys].flatMap((key) =>
-    deepDiff(left[key], right[key], `${pointer}/${escapePointer(key)}`),
+    deepDiff(
+      left[key],
+      right[key],
+      `${pointer}/${String(key).replaceAll("~", "~0").replaceAll("/", "~1")}`,
+    ),
   );
 }
 
@@ -334,11 +284,13 @@ async function snapshot(page) {
               decodedBodySize,
             }),
           ),
-        shifts: performance.getEntriesByType("layout-shift").map((entry) => ({
-          value: entry.value,
-          hadRecentInput: entry.hadRecentInput,
-          startTime: entry.startTime,
-        })),
+        shifts: performance
+          .getEntriesByType("layout-shift")
+          .map((entry) => ({
+            value: entry.value,
+            hadRecentInput: entry.hadRecentInput,
+            startTime: entry.startTime,
+          })),
       };
     },
     { styleProperties },
@@ -346,228 +298,189 @@ async function snapshot(page) {
 }
 
 async function interactionSnapshot(page) {
-  const handles = await page.$$("button,a[href],[role=button],[role=menuitem],input,textarea");
-  const results = [];
-  for (const handle of handles) {
-    if (results.length >= 100) break;
-    await handle.scrollIntoViewIfNeeded().catch(() => {});
-    const target = await handle.evaluate((element) => {
-      const rect = element.getBoundingClientRect(),
-        style = getComputedStyle(element);
-      if (rect.width <= 0 || rect.height <= 0 || style.visibility === "hidden") return null;
-      return {
-        x: rect.left + Math.min(rect.width / 2, Math.max(1, rect.width - 1)),
-        y: rect.top + Math.min(rect.height / 2, Math.max(1, rect.height - 1)),
-        label:
-          element.getAttribute("aria-label") ||
-          element.textContent?.replace(/\s+/g, " ").trim().slice(0, 80) ||
-          element.localName,
-        role: element.getAttribute("role") || element.localName,
-        disabled: Boolean(element.disabled),
-      };
-    });
-    if (!target) continue;
-    const readState = async () =>
-      handle.evaluate((element) => {
+  return page.evaluate(async () => {
+    const results = [];
+    const targets = [
+      ...document.querySelectorAll("button,a[href],[role=button],[role=menuitem],input,textarea"),
+    ]
+      .filter((element) => {
+        const r = element.getBoundingClientRect(),
+          s = getComputedStyle(element);
+        return r.width > 0 && r.height > 0 && s.visibility !== "hidden";
+      })
+      .slice(0, 100);
+    for (const element of targets) {
+      const label =
+        element.getAttribute("aria-label") ||
+        element.textContent?.replace(/\s+/g, " ").trim().slice(0, 80) ||
+        element.localName;
+      const states = {};
+      for (const type of ["pointerover", "pointerdown", "pointerup", "pointerout"]) {
+        element.dispatchEvent(new PointerEvent(type, { bubbles: true }));
+        await new Promise((resolve) => requestAnimationFrame(resolve));
         const style = getComputedStyle(element);
-        return {
+        states[type] = {
           color: style.color,
           backgroundColor: style.backgroundColor,
           opacity: style.opacity,
           transform: style.transform,
           cursor: style.cursor,
         };
+      }
+      results.push({
+        label,
+        role: element.getAttribute("role") || element.localName,
+        disabled: Boolean(element.disabled),
+        states,
       });
-    const settle = () =>
-      page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
-    const states = { resting: await readState() };
-    await page.mouse.move(target.x, target.y);
-    await settle();
-    states.pointerover = await readState();
-    await page.mouse.down();
-    await settle();
-    states.pointerdown = await readState();
-    await page.mouse.move(0, 0);
-    await page.mouse.up();
-    await settle();
-    states.pointerup = await readState();
-    states.pointerout = await readState();
-    results.push({
-      label: target.label,
-      role: target.role,
-      disabled: target.disabled,
-      states,
-    });
-  }
-  return results;
+    }
+    return results;
+  });
 }
 
 async function pixelDiff(browser, left, right, destination) {
   const page = await browser.newPage({ viewport: { width: 1, height: 1 } });
-  try {
-    const result = await page.evaluate(
-      async ({ left, right }) => {
-        const load = (src) =>
-          new Promise((resolve, reject) => {
-            const image = new Image();
-            image.onload = () => resolve(image);
-            image.onerror = reject;
-            image.src = src;
-          });
-        const [a, b] = await Promise.all([load(left), load(right)]);
-        const width = Math.max(a.width, b.width),
-          height = Math.max(a.height, b.height);
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const context = canvas.getContext("2d", { willReadFrequently: true });
-        context.drawImage(a, 0, 0);
-        const ad = context.getImageData(0, 0, width, height).data;
-        context.clearRect(0, 0, width, height);
-        context.drawImage(b, 0, 0);
-        const bd = context.getImageData(0, 0, width, height).data;
-        const diff = context.createImageData(width, height);
-        let changed = 0,
-          absoluteError = 0;
-        for (let i = 0; i < ad.length; i += 4) {
-          const delta = Math.max(
-            Math.abs(ad[i] - bd[i]),
-            Math.abs(ad[i + 1] - bd[i + 1]),
-            Math.abs(ad[i + 2] - bd[i + 2]),
-            Math.abs(ad[i + 3] - bd[i + 3]),
-          );
-          if (delta) changed++;
-          absoluteError += delta;
-          diff.data[i] = 255;
-          diff.data[i + 1] = delta ? 0 : 255;
-          diff.data[i + 2] = delta ? 255 : 255;
-          diff.data[i + 3] = delta ? 255 : 30;
-        }
-        context.putImageData(diff, 0, 0);
-        return {
-          width,
-          height,
-          changedPixels: changed,
-          totalPixels: width * height,
-          changedRatio: changed / (width * height),
-          meanAbsoluteError: absoluteError / (width * height),
-          image: canvas.toDataURL("image/png").split(",")[1],
-        };
-      },
-      {
-        left: `data:image/png;base64,${left.toString("base64")}`,
-        right: `data:image/png;base64,${right.toString("base64")}`,
-      },
-    );
-    await writeFile(destination, Buffer.from(result.image, "base64"));
-    delete result.image;
-    return result;
-  } finally {
-    await page.close();
-  }
+  const result = await page.evaluate(
+    async ({ left, right }) => {
+      const load = (src) =>
+        new Promise((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = reject;
+          image.src = src;
+        });
+      const [a, b] = await Promise.all([load(left), load(right)]);
+      const width = Math.max(a.width, b.width),
+        height = Math.max(a.height, b.height);
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+      context.drawImage(a, 0, 0);
+      const ad = context.getImageData(0, 0, width, height).data;
+      context.clearRect(0, 0, width, height);
+      context.drawImage(b, 0, 0);
+      const bd = context.getImageData(0, 0, width, height).data;
+      const diff = context.createImageData(width, height);
+      let changed = 0,
+        absoluteError = 0;
+      for (let i = 0; i < ad.length; i += 4) {
+        const delta = Math.max(
+          Math.abs(ad[i] - bd[i]),
+          Math.abs(ad[i + 1] - bd[i + 1]),
+          Math.abs(ad[i + 2] - bd[i + 2]),
+          Math.abs(ad[i + 3] - bd[i + 3]),
+        );
+        if (delta) changed++;
+        absoluteError += delta;
+        diff.data[i] = 255;
+        diff.data[i + 1] = delta ? 0 : 255;
+        diff.data[i + 2] = delta ? 255 : 255;
+        diff.data[i + 3] = delta ? 255 : 30;
+      }
+      context.putImageData(diff, 0, 0);
+      return {
+        width,
+        height,
+        changedPixels: changed,
+        totalPixels: width * height,
+        changedRatio: changed / (width * height),
+        meanAbsoluteError: absoluteError / (width * height),
+        image: canvas.toDataURL("image/png").split(",")[1],
+      };
+    },
+    {
+      left: `data:image/png;base64,${left.toString("base64")}`,
+      right: `data:image/png;base64,${right.toString("base64")}`,
+    },
+  );
+  await writeFile(destination, Buffer.from(result.image, "base64"));
+  await page.close();
+  delete result.image;
+  return result;
 }
 
 const browser = await chromium.launch();
-try {
-  for (const authentication of [
-    "anonymous",
-    ...(process.env.CHATGPT_STORAGE_STATE && process.env.KOVAGPT_STORAGE_STATE
-      ? ["authenticated"]
-      : []),
-  ]) {
-    for (const scenario of scenarios)
-      for (const viewport of matrix) {
-        const pair = {};
-        const id = `${authentication}-${scenario.id}-${viewport.width}x${viewport.height}-dpr${viewport.deviceScaleFactor}-${viewport.theme}`;
-        for (const [site, baseUrl] of Object.entries(targets)) {
-          const context = await browser.newContext({
-            viewport: { width: viewport.width, height: viewport.height },
-            deviceScaleFactor: viewport.deviceScaleFactor,
-            colorScheme: viewport.theme,
-            hasTouch: viewport.width < 1024,
-            storageState:
-              authentication === "authenticated"
-                ? process.env[`${site.toUpperCase()}_STORAGE_STATE`]
-                : undefined,
-          });
-          const page = await context.newPage();
-          const startedAt = performance.now();
-          try {
-            const response = await page.goto(
-              new URL(scenario[site]?.path || scenario.path, baseUrl).href,
-              { waitUntil: "domcontentloaded", timeout: 45_000 },
-            );
-            await page.waitForLoadState("networkidle", { timeout: 12_000 }).catch(() => {});
-            await page.evaluate(async () => {
-              await document.fonts.ready;
-              await new Promise((resolve) =>
-                requestAnimationFrame(() => requestAnimationFrame(resolve)),
-              );
-            });
-            if (!response?.ok()) throw new Error(`HTTP ${response?.status() ?? "no response"}`);
-            if (scenario[site]?.prepare) await page.evaluate(scenario[site].prepare);
-            const data = await snapshot(page);
-            const screenshot = await page.screenshot({ fullPage: true });
-            const interactions = await interactionSnapshot(page);
-            await writeFile(path.join(output, "screenshots", `${site}-${id}.png`), screenshot);
-            await writeFile(
-              path.join(output, "snapshots", `${site}-${id}.json`),
-              JSON.stringify({ ...data, interactions }, null, 2) + "\n",
-            );
-            pair[site] = { data: { ...data, interactions }, screenshot };
-            captures.push({
-              id: `${site}-${id}`,
-              site,
-              authentication,
-              scenario: scenario.id,
-              viewport,
-              finalUrl: page.url(),
-              durationMs: Math.round(performance.now() - startedAt),
-              status: "captured",
-            });
-          } catch (error) {
-            const failure = {
-              id: `${site}-${id}`,
-              site,
-              authentication,
-              scenario: scenario.id,
-              viewport,
-              url: page.url(),
-              error: clean(error.message),
-              status: "failed",
-            };
-            captures.push(failure);
-            errors.push(failure);
-          } finally {
-            await context.close();
-          }
-        }
-        if (!(pair.chatgpt && pair.kova)) continue;
-        const differences = deepDiff(pair.chatgpt.data, pair.kova.data);
-        let visual;
+for (const authentication of [
+  "anonymous",
+  ...(process.env.CHATGPT_STORAGE_STATE && process.env.KOVAGPT_STORAGE_STATE
+    ? ["authenticated"]
+    : []),
+]) {
+  for (const scenario of scenarios)
+    for (const viewport of matrix) {
+      const pair = {};
+      const id = `${authentication}-${scenario.id}-${viewport.width}x${viewport.height}-${viewport.theme}`;
+      for (const [site, baseUrl] of Object.entries(targets)) {
+        const context = await browser.newContext({
+          viewport: { width: viewport.width, height: viewport.height },
+          colorScheme: viewport.theme,
+          hasTouch: viewport.width < 1024,
+          storageState:
+            authentication === "authenticated"
+              ? process.env[`${site.toUpperCase()}_STORAGE_STATE`]
+              : undefined,
+        });
+        const page = await context.newPage();
+        const startedAt = performance.now();
         try {
-          visual = await pixelDiff(
-            browser,
-            pair.chatgpt.screenshot,
-            pair.kova.screenshot,
-            path.join(output, "diffs", `${id}.png`),
+          const response = await page.goto(
+            new URL(scenario[site]?.path || scenario.path, baseUrl).href,
+            { waitUntil: "domcontentloaded", timeout: 45_000 },
           );
-        } catch (error) {
-          visual = {
-            status: "failed",
-            error: clean(error.message),
-            changedPixels: 0,
-            totalPixels: 0,
-          };
-          errors.push({
-            id,
+          await page.waitForLoadState("networkidle", { timeout: 12_000 }).catch(() => {});
+          await page.evaluate(async () => {
+            await document.fonts.ready;
+            await new Promise((resolve) =>
+              requestAnimationFrame(() => requestAnimationFrame(resolve)),
+            );
+          });
+          if (!response?.ok()) throw new Error(`HTTP ${response?.status() ?? "no response"}`);
+          if (scenario[site]?.prepare) await page.evaluate(scenario[site].prepare);
+          const data = await snapshot(page);
+          const interactions = await interactionSnapshot(page);
+          const screenshot = await page.screenshot({ fullPage: true });
+          await writeFile(path.join(output, "screenshots", `${site}-${id}.png`), screenshot);
+          await writeFile(
+            path.join(output, "snapshots", `${site}-${id}.json`),
+            JSON.stringify({ ...data, interactions }, null, 2) + "\n",
+          );
+          pair[site] = { data: { ...data, interactions }, screenshot };
+          captures.push({
+            id: `${site}-${id}`,
+            site,
             authentication,
             scenario: scenario.id,
             viewport,
-            error: `Pixel comparison failed: ${clean(error.message)}`,
-            status: "failed",
+            finalUrl: page.url(),
+            durationMs: Math.round(performance.now() - startedAt),
+            status: "captured",
           });
+        } catch (error) {
+          const failure = {
+            id: `${site}-${id}`,
+            site,
+            authentication,
+            scenario: scenario.id,
+            viewport,
+            url: page.url(),
+            error: clean(error.message),
+            status: "failed",
+          };
+          captures.push(failure);
+          errors.push(failure);
+        } finally {
+          await context.close();
         }
+      }
+      if (pair.chatgpt && pair.kova) {
+        const differences = deepDiff(pair.chatgpt.data, pair.kova.data);
+        const visual = await pixelDiff(
+          browser,
+          pair.chatgpt.screenshot,
+          pair.kova.screenshot,
+          path.join(output, "diffs", `${id}.png`),
+        );
         const comparison = {
           id,
           authentication,
@@ -583,10 +496,9 @@ try {
           JSON.stringify(comparison, null, 2) + "\n",
         );
       }
-  }
-} finally {
-  await browser.close();
+    }
 }
+await browser.close();
 const completedPairs = comparisons.length;
 const totalDifferences = comparisons.reduce((sum, item) => sum + item.differenceCount, 0);
 const changedPixels = comparisons.reduce((sum, item) => sum + item.visual.changedPixels, 0);

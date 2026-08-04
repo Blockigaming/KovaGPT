@@ -37,18 +37,20 @@ export const submitOperationalEvents = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => z.object({ events: z.array(Event).min(1).max(20) }).parse(input))
   .handler(async ({ data, context }) => {
-    const { data: accepted, error } = await (
+    const { error } = await (
       context.supabase as unknown as {
-        rpc: (name: string, args: unknown) => Promise<{ data: number | null; error: unknown }>;
+        from: (name: string) => { insert: (rows: unknown[]) => Promise<{ error: unknown }> };
       }
-    ).rpc("submit_operational_events", {
-      p_events: data.events.map((event) => ({
-        event_name: event.eventName,
-        occurred_at: event.occurredAt,
-        metadata: event.metadata,
-      })),
-    });
-    if (error || accepted !== data.events.length)
-      throw new Error("Operational analytics are unavailable.");
-    return { accepted };
+    )
+      .from("operational_events")
+      .insert(
+        data.events.map((event) => ({
+          owner_id: context.userId,
+          event_name: event.eventName,
+          occurred_at: event.occurredAt,
+          metadata: event.metadata,
+        })),
+      );
+    if (error) throw new Error("Operational analytics are unavailable.");
+    return { accepted: data.events.length };
   });

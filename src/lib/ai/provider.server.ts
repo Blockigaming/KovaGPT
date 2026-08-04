@@ -6,6 +6,7 @@ import { maximumServerOutputForModel, modelForPolicy } from "@/lib/ai/model-cata
 
 import { DEFAULT_MODELS } from "./model-config.mjs";
 
+
 export type JsonObject = Record<string, unknown>;
 
 export type ProviderCapability =
@@ -23,7 +24,10 @@ export type ProviderCapability =
   | "realtime_voice";
 
 export type ProviderErrorCode =
-  "provider_timeout" | "provider_rate_limited" | "provider_unavailable" | "provider_bad_response";
+  | "provider_timeout"
+  | "provider_rate_limited"
+  | "provider_unavailable"
+  | "provider_bad_response";
 
 export type ProviderErrorEnvelope = {
   error: string;
@@ -46,13 +50,6 @@ export type ProviderConfig = {
   capabilities: ProviderCapability[];
   configured: boolean;
 };
-
-
-const DEFAULT_CHAT_MODEL = "gpt-4o-mini";
-const DEFAULT_FAST_MODEL = "gpt-4o-mini";
-const DEFAULT_DEEP_MODEL = "gpt-4o";
-const DEFAULT_IMAGE_MODEL = "gpt-image-1";
-const DEFAULT_EMBEDDING_MODEL = "openai/text-embedding-3-small";
 
 const OPENAI_API_BASE_URL = "https://api.openai.com/v1";
 const LOVABLE_GATEWAY_BASE_URL = "https://ai.gateway.lovable.dev/v1";
@@ -165,11 +162,6 @@ function parseCapabilities(value: string | undefined): ProviderCapability[] {
   return configured.length ? Array.from(new Set(configured)) : DEFAULT_CAPABILITIES;
 }
 
-
-function baseUrl() {
-  return (env("OPENAI_BASE_URL") ?? "https://api.openai.com/v1").replace(/\/$/, "");
-}
-
 export function getAiProviderConfig(): ProviderConfig {
   return {
     provider: "openai",
@@ -181,7 +173,6 @@ export function getAiProviderConfig(): ProviderConfig {
     embeddingModel: env("KOVA_EMBEDDING_MODEL") ?? "text-embedding-3-small",
     timeoutMs: parseTimeout(env("KOVA_AI_TIMEOUT_MS")),
     capabilities: parseCapabilities(env("KOVA_AI_CAPABILITIES")),
-
     configured: Boolean(env("LOVABLE_API_KEY") ?? env("OPENAI_API_KEY")),
   };
 }
@@ -210,7 +201,6 @@ export function validateAiProviderConfig(): ProviderErrorEnvelope | null {
   return {
     error: "KovaGPT is temporarily unavailable. Please try again later.",
     code: "provider_unavailable",
-
     retryable: false,
     status: 503,
   };
@@ -262,7 +252,6 @@ function headers(): Record<string, string> {
   if (!key) throw new AiProviderError(validateAiProviderConfig()!);
   return {
     Authorization: `Bearer ${key}`,
-
     "Content-Type": "application/json",
   };
 }
@@ -272,14 +261,6 @@ export function chatModel(kind: ProviderModelKind = "balanced") {
   if (kind === "fast") return config.fastModel;
   if (kind === "deep") return config.deepModel;
   return config.chatModel;
-}
-
-
-export function supportsChatCompletionsReasoning(model: string): boolean {
-  const normalized = model.trim().toLowerCase();
-  if (!normalized) return false;
-  if (normalized.startsWith("gpt-4o")) return false;
-  return /^(o[134]|gpt-5)(?:-|$)/.test(normalized);
 }
 
 export function utilityModel() {
@@ -479,7 +460,7 @@ function toResponsesRequest(body: JsonObject): JsonObject {
   };
   const serverOutputCeiling = maximumServerOutputForModel(String(body.model ?? ""));
   if (instructions.length) request.instructions = instructions.join("\n\n");
-  if (Array.isArray(body.tools)) request.tools = body.tools.map(toResponsesTool).filter(Boolean);
+  if (Array.isArray(body.tools)) request.tools = body.tools;
   if (body.tool_choice !== undefined) request.tool_choice = body.tool_choice;
   if (typeof body.max_tokens === "number")
     request.max_output_tokens = Math.min(body.max_tokens, serverOutputCeiling);
@@ -494,22 +475,6 @@ function toResponsesRequest(body: JsonObject): JsonObject {
       : { effort: "low", summary: "auto" };
   request.store = false;
   return request;
-}
-
-function toResponsesTool(raw: unknown): unknown {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const tool = raw as Record<string, unknown>;
-  if (tool.type !== "function") return tool;
-  const fn = tool.function as Record<string, unknown> | undefined;
-  if (fn && typeof fn === "object") {
-    return {
-      type: "function",
-      name: fn.name,
-      description: fn.description,
-      parameters: fn.parameters,
-    };
-  }
-  return tool;
 }
 
 function normalizeResponsesContent(message: Record<string, unknown>): unknown {

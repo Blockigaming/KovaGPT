@@ -1,6 +1,7 @@
 const required = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"];
 const groups = [
   ["SUPABASE_PUBLISHABLE_KEY", "SUPABASE_ANON_KEY"],
+  ["CLERK_SECRET_KEY", "VITE_CLERK_PUBLISHABLE_KEY"],
   ["KOVA_PUBLIC_URL", "APP_URL", "SITE_URL"],
 ];
 const missing = [

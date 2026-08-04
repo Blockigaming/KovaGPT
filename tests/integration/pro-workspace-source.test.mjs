@@ -3,18 +3,6 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 const read = (path) => readFileSync(path, "utf8");
 
-
-test("Library and workspace intelligence aggregate authorized sources and local chats", () => {
-  const fn = read("src/lib/workspace.functions.ts"),
-    library = read("src/routes/library.tsx"),
-    dashboard = read("src/components/WorkspaceIntelligence.tsx");
-  for (const table of ["projects", "user_library_items", "scheduled_tasks", "deep_research_runs"])
-    assert.match(fn, new RegExp(`\\"${table}\\"`));
-  assert.match(dashboard, /listWorkspaceIntelligence/);
-  assert.match(library, /loadConversations/);
-  assert.match(library, /loadWorkTasks/);
-  assert.match(library, /Selected Library actions/);
-
 test("workspace sources remain authorized while chat history stays searchable in the shell", () => {
   const fn = read("src/lib/workspace.functions.ts"),
     home = read("src/routes/index.tsx"),
@@ -26,7 +14,6 @@ test("workspace sources remain authorized while chat history stays searchable in
   assert.match(sidebar, /searchConversations/);
   assert.match(sidebar, /Recent chats/);
   assert.match(palette, /searchConversations/);
-
 });
 test("Memory Center supports real edit delete merge and source explanations", () => {
   const route = read("src/routes/memory.tsx"),

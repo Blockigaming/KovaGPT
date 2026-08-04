@@ -11,8 +11,7 @@ atomic Worker artifact replacements: HTML and its hashed assets come from the sa
 HTML at deploy time if a CDN cache rule is added; never purge immutable hashed assets. KovaGPT does
 not register a service worker, so no application cache can retain deleted chunks.
 
-Google Cloud must authorize the project's Supabase Auth callback URL in production (the
-callback shown in Supabase Auth provider settings), not the application callback directly. Supabase
-Site URL remains `https://kovagpt.com`; only Supabase's additional redirect allowlist should include
-`https://kovagpt.com/~oauth/callback`. Preview and local environments use their own origin plus the
-same application callback path in Supabase's redirect allowlist.
+Google OAuth must allow exactly `https://kovagpt.com/~oauth/callback` in production. Supabase Site
+URL remains `https://kovagpt.com`; its additional redirect URL and Google's authorized callback
+must match the callback exactly. Preview and local environments use their own origin plus the same
+callback path.

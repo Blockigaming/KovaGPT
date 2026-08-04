@@ -13,27 +13,22 @@ test("shared interaction styles cover composer, menus, motion, and narrow phones
   assert.match(styles, /\[role="menuitem"\]:focus-visible/);
   assert.match(styles, /@media \(max-width: 359px\)/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
-
-  assert.match(styles, /\.kova-mobile-starters/);
-  assert.match(styles, /\.kova-capability-card/);
-
   assert.match(home, /What can I help with\?/);
   assert.match(home, /placement="topbar"/);
   assert.match(composer, /COMPOSER_TOOLS/);
   assert.match(composer, /PROMPT_SHORTCUTS/);
-
 });
 
 test("core chat surfaces use shared workspace primitives", () => {
   for (const className of ["kova-message", "kova-user-message", "kova-assistant-message"]) {
-    assert.match(message + styles, new RegExp(className));
+    assert.match(message, new RegExp(className));
   }
   for (const className of ["kova-attach-button", "kova-tool-button", "kova-send-button"]) {
-    assert.match(composer + styles, new RegExp(className));
+    assert.match(composer, new RegExp(className));
   }
   assert.match(sidebar, /kova-sidebar/);
-  assert.match(sidebar + styles, /kova-chat-row/);
-  assert.match(sidebar + styles, /kova-new-chat/);
+  assert.match(sidebar, /kova-chat-row/);
+  assert.match(sidebar, /kova-new-chat/);
   assert.match(styles, /overflow-anchor: auto/);
 });
 

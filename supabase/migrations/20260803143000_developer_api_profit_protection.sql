@@ -52,7 +52,7 @@ create table public.developer_api_requests (
   accepted_public_price jsonb not null, estimated_customer_charge numeric(20,8) not null,
   maximum_reserved_charge numeric(20,8) not null, final_customer_charge numeric(20,8),
   estimated_upstream_cost numeric(20,8) not null, final_upstream_cost numeric(20,8),
-  total_variable_cost numeric(20,8), gross_profit numeric(20,8), gross_margin_percentage numeric(20,8),
+  total_variable_cost numeric(20,8), gross_profit numeric(20,8), gross_margin_percentage numeric(8,7),
   risk_buffer_amount numeric(20,8) not null, promotional_subsidy numeric(20,8) not null default 0,
   promotional_budget_id uuid, currency text not null, rounding_difference numeric(20,8) not null,
   usage_limits jsonb not null, authoritative_usage jsonb, cost_breakdown jsonb not null,
@@ -78,14 +78,7 @@ declare remaining numeric;
 begin
   if p_amount<=0 then raise exception 'invalid_reservation'; end if;
   perform pg_advisory_xact_lock(hashtextextended(p_account::text,0));
-  if exists(
-    select 1 from developer_credit_ledger
-    where request_id=p_request and entry_type='reserve' and account_id=p_account
-      and amount=-p_amount and metadata->>'request_key'=p_request_key
-  ) then return true; end if;
-  if exists(select 1 from developer_credit_ledger where request_id=p_request and entry_type='reserve') then
-    raise exception 'reservation_idempotency_mismatch';
-  end if;
+  if exists(select 1 from developer_credit_ledger where request_id=p_request and entry_type='reserve') then return true; end if;
   update developer_credit_accounts set available_amount=available_amount-p_amount,reserved_amount=reserved_amount+p_amount
    where id=p_account and suspended_at is null and available_amount>=p_amount returning available_amount into remaining;
   if not found then return false; end if;
@@ -98,8 +91,7 @@ alter table public.api_emergency_controls enable row level security; alter table
 alter table public.developer_credit_ledger enable row level security; alter table public.developer_api_requests enable row level security;
 alter table public.credit_purchases enable row level security;
 revoke all on public.upstream_price_registry,public.api_pricing_versions,public.api_emergency_controls,public.developer_credit_accounts,public.developer_credit_ledger,public.developer_api_requests,public.credit_purchases from public,anon,authenticated;
-grant all on public.upstream_price_registry,public.api_pricing_versions,public.api_emergency_controls,public.developer_credit_accounts,public.developer_api_requests,public.credit_purchases to service_role;
-grant select,insert on public.developer_credit_ledger to service_role;
+grant all on public.upstream_price_registry,public.api_pricing_versions,public.api_emergency_controls,public.developer_credit_accounts,public.developer_credit_ledger,public.developer_api_requests,public.credit_purchases to service_role;
 revoke all on function public.reserve_developer_api_credit(uuid,text,uuid,numeric) from public,anon,authenticated;
 grant execute on function public.reserve_developer_api_credit(uuid,text,uuid,numeric) to service_role;
 

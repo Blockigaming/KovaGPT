@@ -253,7 +253,6 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     });
     providerRevoked = response.ok;
   }
-
   const { error: deletionRequestError } = await db.from("integration_deletion_requests").insert({
     owner_id: ownerId,
     linked_account_id: account.id,
@@ -284,8 +283,6 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
   if (credentialDeletionError || !purgedAccount) throw new Error("linked_account_purge_failed");
 
   const { error: auditError } = await db.from("integration_audit_events").insert({
-
-
     owner_id: ownerId,
     linked_account_id: account.id,
     provider_id: provider.id,
@@ -293,14 +290,12 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     result: providerRevoked ? "success" : "failure",
     safe_summary: `Disconnected ${provider.name} account`,
   });
-
   if (auditError) {
     console.error("[oauth-disconnect] audit insert failed", {
       providerId: provider.id,
       ownerId,
     });
   }
-
   return { providerRevoked };
 }
 

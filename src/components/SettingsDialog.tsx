@@ -115,7 +115,6 @@ import { useUser, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, DEFAULT_THEME, type ThemeColors, type ThemeMode } from "@/lib/theme";
 import { authFetch } from "@/lib/auth-fetch";
-import { CURRENT_MEMORY_CONSENT_VERSION } from "@/lib/settings-storage";
 
 export type Mood = "neutral" | "friendly" | "professional" | "concise";
 
@@ -127,7 +126,6 @@ export type Settings = {
   mood: Mood;
   responseLength: "short" | "medium" | "long";
   rememberAcross: boolean;
-  memoryConsentVersion?: number;
   webSearch: boolean;
   sendOnEnter: boolean;
   mode: ThemeMode;
@@ -152,8 +150,6 @@ export type Settings = {
   showTimestamps?: boolean;
   theme?: ThemeColors;
 };
-
-export const SAVED_MEMORY_CONSENT_VERSION = 1;
 
 export const DEFAULT_SETTINGS: Settings = {
   displayName: "",
@@ -817,13 +813,7 @@ export function SettingsDialog({
                             principal: userKey,
                             enabled: value && isSignedIn,
                           });
-                          onChange({
-                            ...settings,
-                            rememberAcross: value,
-                            memoryConsentVersion: value
-                              ? CURRENT_MEMORY_CONSENT_VERSION
-                              : settings.memoryConsentVersion,
-                          });
+                          onChange({ ...settings, rememberAcross: value });
                         }}
                       />
                       <p className="text-xs text-muted-foreground">

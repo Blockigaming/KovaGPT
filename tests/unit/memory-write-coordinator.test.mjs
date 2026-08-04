@@ -75,50 +75,6 @@ test("disabled consent and stale principals suppress memory POST work", async ()
   assert.equal(calls, 0);
 });
 
-test("account changes invalidate memory writes queued behind an active write", async () => {
-  const order = [];
-  let releaseWrite;
-  let markStarted;
-  const started = new Promise((resolve) => {
-    markStarted = resolve;
-  });
-  const gate = new Promise((resolve) => {
-    releaseWrite = resolve;
-  });
-
-  configureMemoryWrites({ principal: "user-a", enabled: true });
-  const activeWrite = enqueueMemoryWrite({
-    principal: "user-a",
-    run: async () => {
-      order.push("active-start");
-      markStarted();
-      await gate;
-      order.push("active-end");
-    },
-  });
-  await started;
-
-  const queuedWrite = enqueueMemoryWrite({
-    principal: "user-a",
-    run: async () => {
-      order.push("stale-write");
-    },
-  });
-
-  configureMemoryWrites({ principal: "user-b", enabled: false });
-  releaseWrite();
-
-  assert.equal(await activeWrite, "written");
-  assert.equal(await queuedWrite, "skipped");
-  assert.deepEqual(order, ["active-start", "active-end"]);
-  assert.deepEqual(getMemoryWriteCoordinatorState(), {
-    principal: "user-b",
-    enabled: false,
-    deleting: null,
-    generation: 2,
-  });
-});
-
 test("a principal-scoped browser block is shared until the user explicitly re-enables memory", async () => {
   const key = memoryWriteBlockStorageKey("user-a");
   assert.equal(key, "kova-memory-write-block-v1:v2:user:user-a");

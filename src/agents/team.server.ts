@@ -27,33 +27,6 @@ export async function createAgentTeamRun(
   if (!input.objective.trim() || input.objective.length > 4000)
     throw new Error("invalid_objective");
   const db = raw(caller);
-  const { data: existingRun } = await db
-    .from("agent_runs")
-    .select("id,status,entitlement,created_at")
-    .eq("owner_id", caller.userId)
-    .eq("idempotency_key", input.idempotencyKey)
-    .maybeSingle();
-  if (existingRun)
-    return existingRun as unknown as {
-      id: string;
-      status: string;
-      entitlement: string;
-      created_at: string;
-    };
-  const { count } = await db
-    .from("agent_runs")
-    .select("id", { count: "exact", head: true })
-    .eq("owner_id", caller.userId)
-    .in("status", [
-      "queued",
-      "leased",
-      "planning",
-      "running",
-      "approval_needed",
-      "paused",
-      "retry_wait",
-    ]);
-  if ((count ?? 0) >= limits.concurrency) throw new Error("agent_concurrency_limit");
   const { data: run, error } = await db
     .from("agent_runs")
     .upsert(
@@ -194,8 +167,27 @@ export async function controlAgentTeamRun(
     .eq("owner_id", caller.userId)
     .maybeSingle();
   if (!run) throw new Error("agent_run_not_found");
-  if (["pause", "resume", "retry", "approve"].includes(command))
-    throw new Error("browser_agent_unavailable");
+  if (command === "pause") {
+    await db
+      .from("agent_runs")
+      .update({ status: "paused" })
+      .eq("id", runId)
+      .eq("owner_id", caller.userId);
+    await db
+      .from("agent_run_tasks")
+      .update({ status: "waiting", lease_owner: null, lease_expires_at: null })
+      .eq("run_id", runId)
+      .eq("owner_id", caller.userId)
+      .in("status", ["queued", "leased"]);
+  }
+  if (command === "resume") {
+    await db
+      .from("agent_runs")
+      .update({ status: "queued" })
+      .eq("id", runId)
+      .eq("owner_id", caller.userId);
+    await releaseReadyTasks(db, caller.userId, runId);
+  }
   if (command === "cancel") {
     await db
       .from("agent_runs")
@@ -209,14 +201,32 @@ export async function controlAgentTeamRun(
       .eq("owner_id", caller.userId)
       .not("status", "in", "(completed,cancelled)");
   }
-  if (command === "deny") {
+  if (command === "retry") {
+    await db
+      .from("agent_run_tasks")
+      .update({
+        status: "queued",
+        available_at: new Date().toISOString(),
+        lease_owner: null,
+        lease_expires_at: null,
+      })
+      .eq("run_id", runId)
+      .eq("owner_id", caller.userId)
+      .eq("status", "failed");
+    await db
+      .from("agent_runs")
+      .update({ status: "queued" })
+      .eq("id", runId)
+      .eq("owner_id", caller.userId);
+  }
+  if (command === "approve" || command === "deny") {
     if (!taskId) throw new Error("task_id_required");
-    const status = "cancelled";
+    const status = command === "approve" ? "completed" : "cancelled";
     const { data: task } = await db
       .from("agent_run_tasks")
       .update({
         status,
-        progress: 90,
+        progress: command === "approve" ? 100 : 90,
         completed_at: new Date().toISOString(),
       })
       .eq("id", taskId)
@@ -226,11 +236,32 @@ export async function controlAgentTeamRun(
       .select("id")
       .maybeSingle();
     if (!task) throw new Error("approval_not_pending");
-    await db
-      .from("agent_runs")
-      .update({ status: "paused" })
-      .eq("id", runId)
-      .eq("owner_id", caller.userId);
+    if (command === "deny")
+      await db
+        .from("agent_runs")
+        .update({ status: "paused" })
+        .eq("id", runId)
+        .eq("owner_id", caller.userId);
+    else {
+      await db
+        .from("agent_runs")
+        .update({ status: "running" })
+        .eq("id", runId)
+        .eq("owner_id", caller.userId);
+      await releaseReadyTasks(db, caller.userId, runId);
+      const { count } = await db
+        .from("agent_run_tasks")
+        .select("id", { count: "exact", head: true })
+        .eq("run_id", runId)
+        .eq("owner_id", caller.userId)
+        .not("status", "in", "(completed,cancelled)");
+      if ((count ?? 0) === 0)
+        await db
+          .from("agent_runs")
+          .update({ status: "completed", updated_at: new Date().toISOString() })
+          .eq("id", runId)
+          .eq("owner_id", caller.userId);
+    }
   }
   await db.from("agent_run_events").insert({
     run_id: runId,

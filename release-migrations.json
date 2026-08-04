@@ -2,11 +2,7 @@
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
   "count": 63,
-
-  "latest": "20260803123100_schema_contract_marker.sql",
-
   "latest": "20260803130000_ai_usage_accounting.sql",
-
   "migrations": [
     {
       "order": 1,
@@ -1182,14 +1178,18 @@
       "order": 55,
       "filename": "20260802132000_operational_analytics.sql",
       "timestamp": "20260802132000",
-      "sha256": "07c2018ad39116ed51997b9aceaedb4909a9d4d1c80f5fe024904c93529ddbcf",
+      "sha256": "1ef8b9bedcf9ca87c668e2a6bfe0c29d988c5e50343d41f6cd733912774a9f47",
       "tables": ["operational_events"],
-      "functions": ["submit_operational_events"],
-      "destructive": true,
-      "dataBackfill": true,
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
       "reversible": false,
       "rls": ["operational_events"],
-      "policies": ["Owners read operational events", "Owners delete operational events"],
+      "policies": [
+        "Owners read operational events",
+        "Owners insert operational events",
+        "Owners delete operational events"
+      ],
       "indexes": ["operational_events_owner_time_idx", "operational_events_expiry_idx"]
     },
     {
@@ -1241,11 +1241,11 @@
       "order": 59,
       "filename": "20260803120000_schema_contract_health.sql",
       "timestamp": "20260803120000",
-      "sha256": "8177697de9e5e047688347947c59dc68fe36d0e3e966df065444c0b3816ab946",
+      "sha256": "a610689dddc6c269c3a009c296c2e2f20a493b09195dd2c64b31c1eb9b5f09aa",
       "tables": ["kova_schema_contract"],
       "functions": ["kovagpt_schema_health"],
       "destructive": false,
-      "dataBackfill": false,
+      "dataBackfill": true,
       "reversible": false,
       "rls": ["kova_schema_contract"],
       "policies": [],
@@ -1295,19 +1295,6 @@
     },
     {
       "order": 63,
-
-      "filename": "20260803123100_schema_contract_marker.sql",
-      "timestamp": "20260803123100",
-      "sha256": "888d18a0bfd614333f3c97e285e156df7fb97edd0c3eb5eb0c5810227c90bf22",
-      "tables": [],
-      "functions": [],
-      "destructive": false,
-      "dataBackfill": true,
-      "reversible": false,
-      "rls": [],
-      "policies": [],
-      "indexes": []
-
       "filename": "20260803130000_ai_usage_accounting.sql",
       "timestamp": "20260803130000",
       "sha256": "bff734c01ddeabda56038b7da43e416f1fe9480ad2fd0a2bf80e6f72624e6538",
@@ -1325,7 +1312,6 @@
         "ai_usage_events_user_idempotency_idx",
         "ai_usage_events_guest_idempotency_idx"
       ]
-
     }
   ]
 }

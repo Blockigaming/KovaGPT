@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -39,7 +38,6 @@ export function AuthDialog({
   const [forgotOpen, setForgotOpen] = useState(false);
   const [emailTouched, setEmailTouched] = useState(false);
   const submittingRef = useRef(false);
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (!open) return;
@@ -73,11 +71,7 @@ export function AuthDialog({
       toast.error("Please enter a valid email address.");
       return;
     }
-    onOpenChange(false);
-    void navigate({
-      to: "/auth",
-      search: { email: email.trim().toLowerCase(), mode },
-    });
+    setStep("password");
   };
 
   const handleAuth = async (e: React.FormEvent) => {

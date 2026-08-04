@@ -11,7 +11,7 @@ const collect = (regex, index = 1) =>
     .sort();
 const contract = {
   schemaVersion: 1,
-  marker: "20260803123000-v1",
+  marker: "20260803120000-v1",
   migrationCount: files.length,
   tables: collect(/create\s+table(?:\s+if\s+not\s+exists)?\s+(?:public\.)?([\w"]+)/gi),
   functions: collect(/create\s+(?:or\s+replace\s+)?function\s+(?:public\.)?([\w"]+)/gi),

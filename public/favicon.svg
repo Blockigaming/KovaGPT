@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 886 886" role="img" aria-labelledby="kova-title kova-description">
+  <title id="kova-title">KovaGPT logo</title>
+  <desc id="kova-description">A black four-point compass star inside an open circular ring on a white rounded square.</desc>
+  <defs>
+    <linearGradient id="star" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#343641"/>
+      <stop offset="0.52" stop-color="#101116"/>
+      <stop offset="1" stop-color="#30323d"/>
+    </linearGradient>
+    <filter id="tile-shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#747783" flood-opacity=".22"/>
+    </filter>
+    <filter id="mark-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#202127" flood-opacity=".2"/>
+    </filter>
+  </defs>
+  <rect x="44" y="43" width="798" height="782" rx="120" fill="#fcfcfe" stroke="#fff" stroke-width="3" filter="url(#tile-shadow)"/>
+  <g fill="none" stroke="#242630" stroke-width="20" stroke-linecap="round">
+    <path d="M228 552A246 246 0 0 1 642 300"/>
+    <path d="M658 329A246 246 0 0 1 249 584"/>
+  </g>
+  <path d="M442 226C459 321 470 368 504 393C529 411 574 421 642 438C575 455 530 466 504 484C471 509 459 556 441 650C423 556 411 509 378 484C353 466 309 455 243 438C309 421 353 410 378 392C411 367 423 320 442 226Z" fill="url(#star)" filter="url(#mark-shadow)"/>
+  <path d="M442 348C449 395 452 421 465 428C475 433 495 436 529 440C496 444 475 447 465 452C452 460 449 485 442 530C435 485 432 460 419 452C409 447 388 444 356 440C389 436 409 433 419 428C432 421 435 395 442 348Z" fill="#fff"/>
+</svg>

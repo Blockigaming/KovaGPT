@@ -23,16 +23,10 @@ const capability = (configured: boolean, optional = true): Capability => ({
   optional,
 });
 
-function statusForCapabilities(
-  capabilities: Record<string, Capability>,
-): ReadinessReport["status"] {
-  const required = Object.values(capabilities).filter((entry) => !entry.optional);
-  return required.every((entry) => entry.state === "ready") ? "ready" : "unavailable";
-}
-
 export function structuralReadiness(): ReadinessReport {
   const capabilities: Record<string, Capability> = {
     productionUrl: capability(any("KOVA_PUBLIC_URL", "APP_URL", "SITE_URL"), false),
+    clerk: capability(any("CLERK_SECRET_KEY", "VITE_CLERK_PUBLISHABLE_KEY"), false),
     supabase: capability(
       present("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY") &&
         any("SUPABASE_PUBLISHABLE_KEY", "SUPABASE_ANON_KEY"),
@@ -54,8 +48,10 @@ export function structuralReadiness(): ReadinessReport {
     storage: capability(present("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY")),
     migrations: { state: "migration-required", optional: false },
   };
+  const required = Object.values(capabilities).filter((entry) => !entry.optional);
+  const unavailable = required.some((entry) => entry.state === "misconfigured");
   return {
-    status: statusForCapabilities(capabilities),
+    status: unavailable ? "unavailable" : "degraded",
     checkedAt: new Date().toISOString(),
     capabilities,
   };
@@ -85,12 +81,12 @@ export async function runtimeReadiness(timeoutMs = 1500): Promise<ReadinessRepor
         ? response.status === 404
           ? "migration-required"
           : "degraded"
-        : contract?.version !== "20260803123000-v1" || !contract.ready
+        : contract?.version !== "20260803120000-v1" || !contract.ready
           ? "schema-drift"
           : "ready",
       optional: false,
     };
-    report.status = statusForCapabilities(report.capabilities);
+    report.status = report.capabilities.migrations.state === "ready" ? "ready" : "unavailable";
   } catch {
     report.capabilities.supabase.state = controller.signal.aborted
       ? "database-timeout"

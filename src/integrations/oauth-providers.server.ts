@@ -6,7 +6,6 @@ export type OAuthProviderId =
   | "linear"
   | "dropbox"
   | "box";
-
 export type OAuthProviderAdapter = {
   id: OAuthProviderId;
   name: string;

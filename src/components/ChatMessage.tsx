@@ -17,7 +17,7 @@ import {
   Globe,
   Mail,
   FileText,
-
+  Volume2,
   ThumbsUp,
   ThumbsDown,
 
@@ -248,9 +248,9 @@ function ChatMessageInner({
   const persistFeedback = (next: "up" | "down" | null) => {
     setFeedback(next);
     if (!feedbackKey) return;
-    const localStorage = safeBrowserStorage("localStorage");
-    if (next && localStorage) localStorage.setItem(feedbackKey, next);
-    else localStorage?.removeItem(feedbackKey);
+    const storage = safeBrowserStorage("localStorage");
+    if (next) storage?.setItem(feedbackKey, next);
+    else storage?.removeItem(feedbackKey);
   };
   const { isMobile } = useLayout();
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
@@ -283,7 +283,12 @@ function ChatMessageInner({
   const [editorMode, setEditorMode] = useState<"edit" | "preview">("edit");
   const { isSignedIn } = useUser();
 
+
+
+
+
   const saveFn = useServerFn(saveToLibrary);
+
 
   useEffect(() => {
     if (!principalResolved || !principal) return;
@@ -411,12 +416,11 @@ function ChatMessageInner({
     <article
       id={`message-${message.id}`}
       data-message-id={message.id}
-      data-message-role={message.role}
       className="kova-message group w-full px-3 py-3 text-[15px] leading-7 sm:px-5 lg:px-10 lg:py-4 lg:text-base"
       aria-label={isUser ? "Your message" : "KovaGPT response"}
     >
       {isUser ? (
-        <div className="kova-message-inner mx-auto flex max-w-[48rem] justify-end">
+        <div className="mx-auto flex max-w-[48rem] justify-end">
           <div className="flex min-w-0 max-w-[85%] flex-col items-end sm:max-w-[75%]">
             {message.attachments && message.attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2 justify-end">
@@ -461,6 +465,7 @@ function ChatMessageInner({
               </div>
             )}
 
+
             {(onEdit || onBranch) && (
               <div className="mt-1 flex min-h-9 items-center opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
                 {onEdit && (
@@ -490,7 +495,7 @@ function ChatMessageInner({
           </div>
         </div>
       ) : (
-        <div className="kova-message-inner kova-assistant-message mx-auto flex max-w-[48rem] items-start justify-start">
+        <div className="kova-assistant-message mx-auto flex max-w-[48rem] items-start justify-start">
           <div
             className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text"
             onTouchStart={startLongPress}
@@ -601,14 +606,14 @@ function ChatMessageInner({
           </div>
         </div>
       )}
-      <div className="kova-message-inner mx-auto max-w-[48rem]">
+      <div className="mx-auto max-w-[48rem]">
         <div className={isUser ? "flex justify-end" : "flex justify-start"}>
           {!streaming && !isUser && message.content && (
             <div className="kova-message-actions mt-1 max-w-full overflow-x-auto">
               {/* Visible: Copy, Share */}
               <button
                 onClick={copy}
-                className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground transition-colors duration-100 hover:bg-accent hover:text-foreground"
+                className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-accent transition-colors duration-100"
                 title={copied ? "Copied" : "Copy"}
                 aria-label={copied ? "Copied" : "Copy"}
               >
@@ -618,48 +623,6 @@ function ChatMessageInner({
                   <Copy className="w-4 h-4" />
                 )}
               </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  persistFeedback(feedback === "up" ? null : "up");
-                  toast.success("Rating saved on this device");
-                }}
-                className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-                title="Good response"
-                aria-label="Good response"
-                aria-pressed={feedback === "up"}
-              >
-                <ThumbsUp
-                  className={`h-4 w-4 ${feedback === "up" ? "fill-current text-foreground" : ""}`}
-                />
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  persistFeedback(feedback === "down" ? null : "down");
-                  toast.success("Rating saved on this device");
-                }}
-                className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-                title="Bad response"
-                aria-label="Bad response"
-                aria-pressed={feedback === "down"}
-              >
-                <ThumbsDown
-                  className={`h-4 w-4 ${feedback === "down" ? "fill-current text-foreground" : ""}`}
-                />
-              </button>
-              {onRetry ? (
-                <button
-                  type="button"
-                  onClick={onRetry}
-                  className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-                  title="Retry response"
-                  aria-label="Retry response"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </button>
-              ) : null}
 
               <button
                 onClick={async () => {
@@ -679,7 +642,7 @@ function ChatMessageInner({
                     toast.error("Couldn't share");
                   }
                 }}
-                className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
                 title="Share"
                 aria-label="Share"
               >
@@ -751,7 +714,7 @@ function ChatMessageInner({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                    className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-md hover:bg-accent transition-all hover:scale-[1.08] active:scale-95"
                     title="More actions"
                     aria-label="More actions"
                   >
@@ -773,33 +736,14 @@ function ChatMessageInner({
                   <DropdownMenuItem onClick={onBranch} disabled={!onBranch}>
                     <GitBranch className="mr-2 h-4 w-4" /> Branch into new chat
                   </DropdownMenuItem>
-
-                  {artifactKind && (
-                    <>
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setEditorMode("edit");
-                          setEditorOpen(true);
-                        }}
-                      >
-                        {artifactKind === "code" ? (
-                          <Code2 className="mr-2 h-4 w-4" />
-                        ) : (
-                          <FileEdit className="mr-2 h-4 w-4" />
-                        )}
-                        {artifactKind === "code" ? "Open code full screen" : "Open writing full screen"}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setEditorMode("preview");
-                          setEditorOpen(true);
-                        }}
-                      >
-                        <Eye className="mr-2 h-4 w-4" /> Preview in workspace
-                      </DropdownMenuItem>
-                    </>
-                  )}
-
+                  <DropdownMenuItem
+                    onClick={() => {
+                      window.speechSynthesis.cancel();
+                      window.speechSynthesis.speak(new SpeechSynthesisUtterance(message.content));
+                    }}
+                  >
+                    <Volume2 className="mr-2 h-4 w-4" /> Read aloud
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

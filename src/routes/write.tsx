@@ -32,11 +32,16 @@ export const Route = createFileRoute("/write")({
 
 const STORAGE_KEY_BASE = "kova-write-draft";
 const TITLE_KEY_BASE = "kova-write-title";
-const LEGACY_DRAFT_KEYS = ["kova.write.draft.v1"] as const;
-const LEGACY_TITLE_KEYS = ["kova.write.title.v1"] as const;
 
 type Action =
-  "improve" | "expand" | "shorten" | "grammar" | "continue" | "tone" | "outline" | "custom";
+  | "improve"
+  | "expand"
+  | "shorten"
+  | "grammar"
+  | "continue"
+  | "tone"
+  | "outline"
+  | "custom";
 
 function countWords(t: string) {
   const m = t.trim().match(/\S+/g);
@@ -88,20 +93,8 @@ function WritePage() {
     if (!principal || !draftKey || !titleKey) return;
     try {
       const storage = safeBrowserStorage("localStorage");
-      let t = storage?.getItem(draftKey);
-      let ti = storage?.getItem(titleKey);
-      if ((!t || !ti) && userKey) {
-        const legacyDraft = LEGACY_DRAFT_KEYS.map((key) => storage?.getItem(key)).find(Boolean);
-        const legacyTitle = LEGACY_TITLE_KEYS.map((key) => storage?.getItem(key)).find(Boolean);
-        if (!t && legacyDraft) {
-          t = legacyDraft;
-          storage?.setItem(draftKey, legacyDraft);
-        }
-        if (!ti && legacyTitle) {
-          ti = legacyTitle;
-          storage?.setItem(titleKey, legacyTitle);
-        }
-      }
+      const t = storage?.getItem(draftKey);
+      const ti = storage?.getItem(titleKey);
       if (generation !== storageGenerationRef.current) return;
       if (t) setText(t);
       if (ti) setTitle(ti);

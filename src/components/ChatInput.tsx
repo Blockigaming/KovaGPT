@@ -1,8 +1,5 @@
 import {
   ArrowUp,
-  Atom,
-  Paperclip,
-  Telescope,
   Square,
   Plus,
   X,
@@ -11,14 +8,15 @@ import {
   Globe,
   FileText,
   Camera,
+  Search,
   Sparkles,
+  Brain,
   AlertCircle,
   RotateCcw,
   type LucideIcon,
 } from "lucide-react";
 
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
-import { ModelSelector } from "@/components/ModelSelector";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { useLayout } from "@/hooks/use-mobile";
 import { useSharedSendOnEnter } from "@/lib/composer-preferences";
@@ -26,6 +24,7 @@ import { useSharedSendOnEnter } from "@/lib/composer-preferences";
 import { useEffect, useRef, useState } from "react";
 import { tryUseUpload } from "@/lib/limits";
 import { toast } from "sonner";
+import { ResponsiveModelSelector as ModelSelector } from "@/components/ResponsiveModelSelector";
 import { DAILY_UPLOAD_LIMIT_BY_TIER, type ModeId, type Tier } from "@/lib/modes";
 import { shouldSubmitComposerOnEnter } from "@/lib/composer-keyboard.mjs";
 
@@ -66,6 +65,7 @@ const COMPOSER_TOOLS: readonly ComposerAction[] = [
   { id: "image", label: "Create Image", icon: ImagePlus },
 ];
 
+
 const PROMPT_SHORTCUTS = [
   { label: "Brainstorm ideas", prompt: "Help me brainstorm ideas about " },
   { label: "Make a plan", prompt: "Create a practical step-by-step plan for " },
@@ -86,8 +86,6 @@ export function ChatInput({
   onSubmit,
   onStop,
   isStreaming,
-  mode,
-  onModeChange,
 
   sendOnEnter,
 
@@ -95,6 +93,8 @@ export function ChatInput({
   showAddMenu = true,
   attachments,
   onAttachmentsChange,
+  mode,
+  onModeChange,
   userTier = "free",
   canChangeAgent = true,
   onUploadLimit,
@@ -159,10 +159,8 @@ export function ChatInput({
   const [uploadAnnouncement, setUploadAnnouncement] = useState("");
   const [recentQuery, setRecentQuery] = useState("");
 
-  const [isDragActive, setIsDragActive] = useState(false);
-
   useEffect(() => {
-    if (!plusOpen || isMobileLayout) return;
+    if (!plusOpen) return;
     const onDoc = (e: MouseEvent) => {
       const target = e.target as Node;
       if (!plusWrapRef.current?.contains(target)) setPlusOpen(false);
@@ -179,7 +177,7 @@ export function ChatInput({
       document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onEsc);
     };
-  }, [isMobileLayout, plusOpen]);
+  }, [plusOpen]);
 
   useEffect(() => {
     const el = ref.current;
@@ -428,7 +426,6 @@ export function ChatInput({
   };
 
   const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
-    setIsDragActive(false);
     const files = Array.from(e.dataTransfer.files || []);
     if (files.length === 0) return;
     e.preventDefault();
@@ -437,18 +434,7 @@ export function ChatInput({
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    if (!disabled && showAddMenu && e.dataTransfer.types.includes("Files")) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "copy";
-      setIsDragActive(true);
-    }
-  };
-
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    const nextTarget = e.relatedTarget;
-    if (!(nextTarget instanceof Node) || !e.currentTarget.contains(nextTarget)) {
-      setIsDragActive(false);
-    }
+    if (!disabled && showAddMenu && e.dataTransfer.types.includes("Files")) e.preventDefault();
   };
 
   const attachLibraryFile = (item: RecentLibraryFile) => {
@@ -587,158 +573,81 @@ export function ChatInput({
     const rowClass = `flex w-full items-center gap-3 rounded-xl text-left transition-colors duration-150 hover:bg-accent active:bg-accent disabled:cursor-not-allowed disabled:opacity-50 outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
       mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5 text-sm"
     }`;
-    const iconClass = mobile
-      ? "h-5 w-5 shrink-0 text-muted-foreground"
-      : "h-4 w-4 shrink-0 text-muted-foreground";
-
-    const webSearchTool = COMPOSER_TOOLS.find((tool) => tool.id === "web_search");
-    const imageTool = COMPOSER_TOOLS.find((tool) => tool.id === "image");
-    const deepResearchTool = COMPOSER_TOOLS.find((tool) => tool.id === "deep_research");
-
-    const addPhotosRow = (
-      <button
-        type="button"
-        onClick={() => {
-          setPlusOpen(false);
-          fileRef.current?.click();
-        }}
-        className={rowClass}
-      >
-        <Paperclip className={iconClass} />
-        <span>{user ? "Add photos and files" : "Add photos"}</span>
-      </button>
-    );
-
-    const cameraRow = mobile ? (
-      <button
-        type="button"
-        onClick={() => {
-          setPlusOpen(false);
-          cameraRef.current?.click();
-        }}
-        className={rowClass}
-      >
-        <Camera className={iconClass} />
-        <span>Camera</span>
-      </button>
-    ) : null;
-
-    const toolRow = (tool: ComposerAction) => {
-      const Icon = tool.icon;
-      const active = selectedTool === tool.id;
-      return (
-        <button
-          key={tool.id}
-          type="button"
-          aria-pressed={active}
-          disabled={disabled || isStreaming}
-          onClick={() => chooseTool(tool)}
-          className={`kova-tool-button ${rowClass} ${active ? "bg-accent text-foreground" : ""}`}
-        >
-          <Icon className={iconClass} />
-          <span>{tool.label}</span>
-        </button>
-      );
-    };
-
-    const suggestionRows = (
-      <>
-        <div className="mx-2 my-1 border-t border-border/70" aria-hidden="true" />
-        <div
-          className="px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
-          aria-hidden="true"
-        >
-          Suggestions
-        </div>
-        {PROMPT_SHORTCUTS.map((shortcut) => (
-          <button
-            key={shortcut.label}
-            type="button"
-            disabled={disabled || isStreaming}
-            onClick={() => choosePromptShortcut(shortcut.label, shortcut.prompt)}
-            className={rowClass}
-          >
-            <Sparkles className={iconClass} />
-            <span>{shortcut.label}</span>
-          </button>
-        ))}
-        {user ? renderRecentLibraryFiles() : null}
-      </>
-    );
-
-    if (!user) {
-      const lockedRow = (
-        key: string,
-        Icon: React.ComponentType<{ className?: string }>,
-        label: string,
-      ) => (
-        <div
-          key={key}
-          aria-disabled="true"
-          className={`${rowClass} cursor-not-allowed text-muted-foreground hover:bg-transparent active:bg-transparent`}
-        >
-          <Icon className={`${iconClass} opacity-70`} />
-          <span className="opacity-70">{label}</span>
-        </div>
-      );
-
-      return (
-        <>
-          <div
-            className="px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
-            aria-hidden="true"
-          >
-            Tools
-          </div>
-          {addPhotosRow}
-          {cameraRow}
-          {webSearchTool ? toolRow({ ...webSearchTool, label: "Web search" }) : null}
-          <p className={`pb-1 pt-3 text-sm text-muted-foreground ${mobile ? "px-4" : "px-3"}`}>
-            Log in to use...
-          </p>
-          {lockedRow("locked-deep-research", deepResearchTool?.icon ?? Telescope, "Deep research")}
-          {lockedRow("locked-image", imageTool?.icon ?? ImageIcon, "Create image")}
-          {lockedRow("locked-model", Atom, "Kova-5.5")}
-          {suggestionRows}
-        </>
-      );
-    }
-
+    const iconClass = mobile ? "h-5 w-5 shrink-0 text-muted-foreground" : "h-4 w-4 shrink-0 text-muted-foreground";
     return (
       <>
-        <div
-          className="px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
-          aria-hidden="true"
+        {COMPOSER_TOOLS.filter((tool) => tool.id === "web_search").map((tool) => {
+          const Icon = tool.icon;
+          const active = selectedTool === tool.id;
+          return (
+            <button
+              key={tool.id}
+              type="button"
+              aria-pressed={active}
+              disabled={disabled || isStreaming}
+              onClick={() => chooseTool(tool)}
+              className={`kova-tool-button ${rowClass} ${active ? "bg-accent text-foreground" : ""}`}
+            >
+              <Icon className={iconClass} />
+              <span>{tool.label}</span>
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => {
+            setPlusOpen(false);
+            fileRef.current?.click();
+          }}
+          className={rowClass}
         >
-          Tools
-        </div>
-        {webSearchTool ? toolRow(webSearchTool) : null}
-        {addPhotosRow}
-        {cameraRow}
-        {imageTool ? toolRow(imageTool) : null}
-        {suggestionRows}
+          <ImageIcon className={iconClass} />
+          <span>Add photos and files</span>
+        </button>
+        {mobile ? (
+          <button
+            type="button"
+            onClick={() => {
+              setPlusOpen(false);
+              cameraRef.current?.click();
+            }}
+            className={rowClass}
+          >
+            <Camera className={iconClass} />
+            <span>Camera</span>
+          </button>
+        ) : null}
+        {COMPOSER_TOOLS.filter((tool) => tool.id === "image").map((tool) => {
+          const Icon = tool.icon;
+          const active = selectedTool === tool.id;
+          return (
+            <button
+              key={tool.id}
+              type="button"
+              aria-pressed={active}
+              disabled={disabled || isStreaming}
+              onClick={() => chooseTool(tool)}
+              className={`kova-tool-button ${rowClass} ${active ? "bg-accent text-foreground" : ""}`}
+            >
+              <Icon className={iconClass} />
+              <span>{tool.label}</span>
+            </button>
+          );
+        })}
       </>
     );
   };
 
+
   return (
     <div
-      className="kova-composer-dock relative w-full pb-[max(.75rem,var(--safe-bottom))] pt-2 transition-[padding] duration-150"
+      className="w-full px-2.5 pb-[max(.75rem,var(--safe-bottom))] pt-2 transition-[padding] duration-150 sm:px-0"
       style={isMobileLayout && kbOffset > 0 ? { paddingBottom: `${kbOffset + 8}px` } : undefined}
       onPaste={handlePaste}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
     >
-      <div className="kova-composer-frame relative mx-auto max-w-[48rem]">
-        {isDragActive ? (
-          <div
-            className="pointer-events-none absolute inset-0 z-20 grid place-items-center rounded-[var(--composer-radius)] border-2 border-dashed border-foreground/35 bg-background/90 text-sm font-medium text-foreground shadow-sm backdrop-blur-sm"
-            role="status"
-          >
-            Drop files to attach
-          </div>
-        ) : null}
+      <div className="mx-auto max-w-[48rem]">
         <div className={`kova-composer overflow-visible ${isStreaming ? "is-streaming" : ""}`}>
           {attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 p-3 pb-0" aria-label="Attachments">
@@ -816,6 +725,7 @@ export function ChatInput({
           {showAddMenu && selectedToolOption && ActiveToolIcon && onToolSelect ? (
             <div className="flex px-3 pt-2">
               <button
+                ref={plusTriggerRef}
                 type="button"
                 disabled={disabled || isStreaming}
                 onClick={() => chooseTool(selectedToolOption)}
@@ -865,7 +775,6 @@ export function ChatInput({
                 onChange={onFileChange}
               />
               <button
-                ref={plusTriggerRef}
                 type="button"
                 onClick={() => setPlusOpen((v) => !v)}
                 disabled={disabled || isStreaming}
@@ -897,6 +806,7 @@ export function ChatInput({
                 <div className="flex max-h-[70vh] flex-col gap-1 overflow-y-auto p-1">
                   {renderComposerActions(true)}
                 </div>
+
               </MobileBottomSheet>
             )}
 
@@ -962,7 +872,7 @@ export function ChatInput({
                   disabled
                   className="kova-composer-button kova-send-button flex items-center justify-center rounded-full"
                   aria-label="Send"
-                  title={disabled ? "Reconnect to send" : "Type a message to send"}
+                  title={disabled ? "Messaging is unavailable" : "Type a message to send"}
                 >
                   <ArrowUp className="kova-send-icon" strokeWidth={2.5} />
                 </button>
@@ -970,9 +880,6 @@ export function ChatInput({
             </div>
           </div>
         </div>
-        <p className="kova-disclaimer mt-2 select-none text-center text-[11px] leading-4 text-muted-foreground/80">
-          KovaGPT can make mistakes. Check important information.
-        </p>
       </div>
     </div>
   );

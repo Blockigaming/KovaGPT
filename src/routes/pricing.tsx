@@ -300,7 +300,7 @@ function PlanCard({
 }: CardProps) {
   return (
     <div
-      className={`kova-plan-card ${enterprise ? "kova-plan-card-enterprise" : ""} relative flex flex-col rounded-xl border p-6 shadow-none ${
+      className={`kova-plan-card relative flex flex-col rounded-xl border p-6 shadow-none ${
         enterprise
           ? "border-foreground/30 bg-card"
           : highlight
@@ -323,11 +323,9 @@ function PlanCard({
         ) : null}
         <h2 className="text-xl font-semibold">{name}</h2>
       </div>
-      <div className="mb-2 flex min-h-[3.25rem] flex-col justify-end">
-        <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-          <span className="text-4xl font-bold leading-none">{price}</span>
-          <span className="text-sm leading-5 text-muted-foreground">{period}</span>
-        </div>
+      <div className="flex items-baseline gap-1 mb-2">
+        <span className="text-4xl font-bold">{price}</span>
+        <span className="text-muted-foreground text-sm">{period}</span>
       </div>
       <p className="mb-6 text-sm text-muted-foreground">
         {description}
@@ -335,10 +333,12 @@ function PlanCard({
       <button
         onClick={onCta}
         disabled={ctaDisabled}
-        className={`mb-6 w-full rounded-full border py-2.5 text-sm font-medium transition ${
+        className={`mb-6 w-full rounded-full py-2.5 text-sm font-medium transition ${
           enterprise
-            ? "border-foreground/40 hover:bg-accent"
-            : "border-border hover:bg-accent"
+            ? "border border-foreground/40 hover:bg-accent"
+            : highlight
+              ? "bg-foreground text-background hover:opacity-90"
+              : "border border-border hover:bg-accent"
         } ${ctaDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
       >
         {cta}

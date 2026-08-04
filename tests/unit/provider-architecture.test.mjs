@@ -62,12 +62,3 @@ test("AI provider environment knobs are documented without values that look like
   assert.doesNotMatch(env, /OPENAI_API_KEY=sk-/);
   assert.doesNotMatch(env, /^OPENAI_BASE_URL=/m);
 });
-
-test("chat route only sends reasoning payloads to compatible Chat Completions models", () => {
-  const provider = read("src/lib/ai/provider.server.ts");
-  const chat = read("src/routes/api/chat.ts");
-  assert.match(provider, /function supportsChatCompletionsReasoning/);
-  assert.match(provider, /startsWith\("gpt-4o"\)\) return false/);
-  assert.match(provider, /\^\(o\[134\]\|gpt-5\)/);
-  assert.match(chat, /supportsChatCompletionsReasoning\(model\)/);
-});
