@@ -14,6 +14,10 @@ test("account deletion is authenticated, explicit, billing-safe, and server exec
   assert.match(account, /requireUser\(request\)/);
   assert.match(account, /confirmation !== "DELETE"/);
   assert.match(account, /subscriptions\.cancel/);
+  assert.match(account, /deleteOwnedStorageObjects\(auth\.supabaseAdmin, auth\.userId\)/);
+  assert.match(account, /library-images/);
+  assert.match(account, /project-files/);
+  assert.match(account, /agent-evidence/);
   assert.match(account, /auth\.admin\.deleteUser\(auth\.userId\)/);
   assert.match(account, /account was not deleted/);
   assert.match(settings, /authFetch\("\/api\/account"/);

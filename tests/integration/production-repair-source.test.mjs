@@ -11,6 +11,12 @@ const githubWebhook = await readFile("src/routes/api/github/webhook.ts", "utf8")
 const home = await readFile("src/routes/index.tsx", "utf8");
 
 test("AI routes reject untrusted message and attachment shapes", () => {
+
+  assert.match(chat, /valid system, user, or assistant role/);
+  assert.match(chat, /attachments must be an array/);
+  assert.match(chat, /supported image data URL/);
+  assert.match(chat, /Invalid Library attachment metadata/);
+
   assert.match(chat, /readChatRequest\(request, CHAT_BODY_LIMIT_BYTES\)/);
   assert.match(chatIngress, /valid user or assistant role/);
   assert.match(
@@ -21,6 +27,7 @@ test("AI routes reject untrusted message and attachment shapes", () => {
   assert.match(chatIngress, /invalid_image_attachment/);
   assert.match(chatIngress, /optionalUuid\(value\.libraryItemId, "library_item_id"\)/);
   assert.match(chatIngress, /invalid_library_attachment/);
+
 });
 
 test("mobile navigation is not covered by redundant floating actions", () => {

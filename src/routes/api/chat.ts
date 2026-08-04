@@ -546,7 +546,93 @@ export const Route = createFileRoute("/api/chat")({
               !temporary && personality
                 ? `\n\n--- User personality preferences ---\n${personality}\n--- End personality ---`
                 : "";
+
+            })();
+
+            // Hard caps on message volume and per-message size. Anonymous
+            // callers and signed-in callers both run through this; signed-in
+            // callers also have a daily quota enforced below.
+            const MAX_MESSAGES = 100;
+            const MAX_MESSAGE_CHARS = 32 * 1024; // 32 KB per text message
+            const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024; // 5 MB per image data URL
+            if (!Array.isArray(messages) || messages.length === 0) {
+              return new Response(
+                JSON.stringify({ error: "messages must be a non-empty array." }),
+                { status: 400, headers: { "Content-Type": "application/json" } },
+              );
+            }
+            if (messages.length > MAX_MESSAGES) {
+              return new Response(
+                JSON.stringify({ error: `Too many messages (max ${MAX_MESSAGES}).` }),
+                { status: 413, headers: { "Content-Type": "application/json" } },
+              );
+            }
+            for (const m of messages) {
+              if (
+                !m ||
+                typeof m !== "object" ||
+                !["system", "user", "assistant"].includes(m.role)
+              ) {
+                return Response.json(
+                  { error: "Each message must have a valid system, user, or assistant role." },
+                  { status: 400 },
+                );
+              }
+              if (typeof m.content !== "string") {
+                return Response.json(
+                  { error: "Each message must contain text content." },
+                  { status: 400 },
+                );
+              }
+              if (m.content.length > MAX_MESSAGE_CHARS) {
+                return new Response(
+                  JSON.stringify({ error: "A message exceeds the maximum allowed length." }),
+                  { status: 413, headers: { "Content-Type": "application/json" } },
+                );
+              }
+              if (m.attachments !== undefined && !Array.isArray(m.attachments)) {
+                return Response.json({ error: "attachments must be an array." }, { status: 400 });
+              }
+              if (m.attachments) {
+                for (const a of m.attachments) {
+                  if (!a || typeof a !== "object" || !["image", "library_file"].includes(a.kind)) {
+                    return Response.json({ error: "Invalid attachment." }, { status: 400 });
+                  }
+                  if (a.kind === "library_file") {
+                    if (
+                      typeof a.libraryItemId !== "string" ||
+                      !/^[0-9a-f-]{36}$/i.test(a.libraryItemId) ||
+                      typeof a.name !== "string" ||
+                      a.name.length > 255
+                    ) {
+                      return Response.json(
+                        { error: "Invalid Library attachment metadata." },
+                        { status: 400 },
+                      );
+                    }
+                    continue;
+                  }
+                  if (
+                    typeof a.dataUrl !== "string" ||
+                    !/^data:image\/(?:png|jpe?g|webp|gif);base64,/i.test(a.dataUrl)
+                  ) {
+                    return Response.json(
+                      { error: "Image attachments must use a supported image data URL." },
+                      { status: 400 },
+                    );
+                  }
+                  if (a.dataUrl.length > MAX_ATTACHMENT_BYTES) {
+                    return new Response(
+                      JSON.stringify({ error: "An attachment exceeds the 5 MB limit." }),
+                      { status: 413, headers: { "Content-Type": "application/json" } },
+                    );
+                  }
+                }
+              }
+            }
+
             const MAX_TEXT_ATTACHMENT_CHARS = 256 * 1024;
+
 
             const lastUser = [...messages].reverse().find((m) => m.role === "user");
             const currentAttachments = lastUser?.attachments ?? [];
