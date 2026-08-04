@@ -55,7 +55,6 @@ jobs:
           KOVA_GATE_UNAUTHENTICATED_SMOKE: passed
           KOVA_GATE_AUTHENTICATED_CRUD: passed
           KOVA_GATE_OWNER_ISOLATION: passed
-          KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS: "${{ env.KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS }}"
           KOVA_GATE_STAGING_E2E: passed
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
