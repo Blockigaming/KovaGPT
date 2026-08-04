@@ -248,18 +248,27 @@ function KovaGPT() {
   // Draft persistence: keep an unsent message per conversation so users don't
   // lose typing when switching chats.
   const lastLoadedDraftRef = useRef<string | null>(null);
+  const skipNextDraftSaveRef = useRef(false);
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (tempChat) {
       // Temporary chat disables local draft persistence, but the current
       // composer remains memory-only so toggling privacy mode never discards
-      // an unsent prompt.
+      // an unsent prompt. Clear the loaded marker so disabling temporary chat
+      // reloads the stored draft instead of saving temporary text.
+      lastLoadedDraftRef.current = null;
       return;
     }
+
+    if (lastLoadedDraftRef.current === activeId) return;
+    lastLoadedDraftRef.current = activeId;
+    skipNextDraftSaveRef.current = true;
+
     if (!principalReady) return;
     const key = draftStorageKey(userKey, activeId);
     if (lastLoadedDraftRef.current === key) return;
     lastLoadedDraftRef.current = key;
+
     try {
       setInput(loadDraft(userKey, activeId));
     } catch {
@@ -268,9 +277,19 @@ function KovaGPT() {
   }, [activeId, principalReady, tempChat, userKey]);
   useEffect(() => {
     if (typeof window === "undefined") return;
+
+    if (tempChat) return;
+    if (skipNextDraftSaveRef.current) {
+      skipNextDraftSaveRef.current = false;
+      return;
+    }
+    if (lastLoadedDraftRef.current !== activeId) return;
+    const key = `kova-draft:${activeId ?? "__new__"}`;
+
     if (tempChat || !principalReady) return;
     const key = draftStorageKey(userKey, activeId);
     if (lastLoadedDraftRef.current !== key) return;
+
     try {
       saveDraft(userKey, activeId, input);
     } catch {
