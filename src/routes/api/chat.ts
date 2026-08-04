@@ -440,9 +440,13 @@ export const Route = createFileRoute("/api/chat")({
               );
             }
             for (const m of messages) {
-              if (!m || typeof m !== "object" || !["user", "assistant"].includes(m.role)) {
+              if (
+                !m ||
+                typeof m !== "object" ||
+                !["system", "user", "assistant"].includes(m.role)
+              ) {
                 return Response.json(
-                  { error: "Each message must have a valid user or assistant role." },
+                  { error: "Each message must have a valid system, user, or assistant role." },
                   { status: 400 },
                 );
               }

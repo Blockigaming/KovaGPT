@@ -10,7 +10,7 @@ const githubWebhook = await readFile("src/routes/api/github/webhook.ts", "utf8")
 const home = await readFile("src/routes/index.tsx", "utf8");
 
 test("AI routes reject untrusted message and attachment shapes", () => {
-  assert.match(chat, /valid user or assistant role/);
+  assert.match(chat, /valid system, user, or assistant role/);
   assert.match(chat, /attachments must be an array/);
   assert.match(chat, /supported image data URL/);
   assert.match(chat, /Invalid Library attachment metadata/);
