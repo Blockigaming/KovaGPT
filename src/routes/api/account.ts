@@ -295,11 +295,6 @@ export const Route = createFileRoute("/api/account")({
                 pending: true,
               },
               { status: 202 },
-
-            return jsonError(
-              "Your subscription could not be canceled, so your account was not deleted. Manage billing or contact support.",
-              502,
-
             );
           }
         }
