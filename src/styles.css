@@ -1792,13 +1792,16 @@ body {
 
   .kova-composer-row {
     min-height: var(--composer-height);
+    align-items: center;
   }
 
   .kova-composer-leading,
   .kova-composer-trailing {
     gap: var(--composer-unit);
-    padding-bottom: var(--composer-inset);
+    align-self: center !important;
+    padding-bottom: 0;
   }
+
 
   .kova-composer-leading {
     padding-left: var(--composer-inset);
