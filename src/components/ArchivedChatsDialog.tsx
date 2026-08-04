@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { ArchiveRestore, Search, Trash2, X } from "lucide-react";
 import {
+  chatStoragePrincipal,
   loadArchivedConversations,
   removeArchivedConversation,
   saveArchivedConversations,
   type Conversation,
 } from "@/lib/chat-store";
 import { searchConversations } from "@/lib/conversation-search";
+import { useUser } from "@/components/auth/ClerkSafe";
 
 export function ArchivedChatsDialog({
   open,
@@ -17,17 +19,29 @@ export function ArchivedChatsDialog({
   onClose: () => void;
   onRestore: (conversation: Conversation) => void;
 }) {
-  const [items, setItems] = useState<Conversation[]>([]);
+  const { isLoaded, user } = useUser();
+  const userKey = user?.id ?? null;
+  const principal = isLoaded ? chatStoragePrincipal(userKey) : null;
+  const [archiveState, setArchiveState] = useState<{
+    principal: string | null;
+    items: Conversation[];
+  }>({ principal: null, items: [] });
+  const items =
+    principal !== null && archiveState.principal === principal ? archiveState.items : [];
   const [query, setQuery] = useState("");
   useEffect(() => {
     if (!open) return;
-    setItems(loadArchivedConversations());
+    if (!isLoaded || principal === null) {
+      setArchiveState({ principal: null, items: [] });
+      return;
+    }
+    setArchiveState({ principal, items: loadArchivedConversations(userKey) });
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, onClose]);
+  }, [isLoaded, onClose, open, principal, userKey]);
   if (!open) return null;
   const visible = query.trim()
     ? searchConversations(items, query).map((result) => result.conversation)
@@ -65,8 +79,8 @@ export function ArchivedChatsDialog({
               onClick={() => {
                 if (!window.confirm(`Permanently delete all ${items.length} archived chats?`))
                   return;
-                saveArchivedConversations([]);
-                setItems([]);
+                saveArchivedConversations(userKey, []);
+                setArchiveState({ principal, items: [] });
               }}
             >
               Delete all archived
@@ -95,9 +109,16 @@ export function ArchivedChatsDialog({
               </span>
               <button
                 onClick={() => {
-                  removeArchivedConversation(chat.id);
+                  removeArchivedConversation(userKey, chat.id);
                   onRestore(chat);
-                  setItems((all) => all.filter((item) => item.id !== chat.id));
+                  setArchiveState((current) =>
+                    current.principal === principal
+                      ? {
+                          principal,
+                          items: current.items.filter((item) => item.id !== chat.id),
+                        }
+                      : current,
+                  );
                 }}
                 className="p-2"
                 aria-label={`Restore ${chat.title}`}
@@ -107,8 +128,15 @@ export function ArchivedChatsDialog({
               </button>
               <button
                 onClick={() => {
-                  removeArchivedConversation(chat.id);
-                  setItems((all) => all.filter((item) => item.id !== chat.id));
+                  removeArchivedConversation(userKey, chat.id);
+                  setArchiveState((current) =>
+                    current.principal === principal
+                      ? {
+                          principal,
+                          items: current.items.filter((item) => item.id !== chat.id),
+                        }
+                      : current,
+                  );
                 }}
                 className="p-2 text-destructive"
                 aria-label={`Permanently delete ${chat.title}`}

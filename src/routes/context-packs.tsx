@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Boxes, Plus, Search, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { useUser } from "@/components/auth/ClerkSafe";
-import { loadConversations } from "@/lib/chat-store";
+import { chatStoragePrincipal, loadConversations } from "@/lib/chat-store";
 import { listMyLibrary, type LibraryItem } from "@/lib/library.functions";
 import { listProjects, type ProjectSummary } from "@/lib/projects.functions";
 import {
@@ -14,6 +14,11 @@ import {
   type ResearchTemplate,
 } from "@/lib/professional.functions";
 import { loadWorkTasks } from "@/lib/work-store";
+import {
+  consumePrincipalHandoff,
+  safeBrowserStorage,
+  writePrincipalHandoff,
+} from "@/lib/principal-browser-storage.mjs";
 import type { WorkspaceHandoff } from "@/lib/workspace-handoffs";
 import {
   createContextPack,
@@ -27,7 +32,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/context-packs")({
   component: ContextPacksPage,
   head: () => ({
-    meta: [{ title: "Context Packs | KovaGPT" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: "KovaGPT Context" }, { name: "robots", content: "noindex" }],
   }),
 });
 type Candidate = {
@@ -38,7 +43,9 @@ type Candidate = {
   content: string;
 };
 function ContextPacksPage() {
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const userKey = user?.id ?? null;
+  const principal = isLoaded ? chatStoragePrincipal(userKey) : null;
   const navigate = useNavigate();
   const listPacks = useServerFn(listContextPacks),
     create = useServerFn(createContextPack),
@@ -62,30 +69,42 @@ function ContextPacksPage() {
     [description, setDescription] = useState(""),
     [query, setQuery] = useState(""),
     [selected, setSelected] = useState<string[]>([]);
+  const [dataPrincipal, setDataPrincipal] = useState<string | null>(null);
+  const dataReady = principal !== null && dataPrincipal === principal;
   useEffect(() => {
-    if (!isLoaded) return;
+    if (!isLoaded || principal === null) {
+      setDataPrincipal(null);
+      setLoading(true);
+      return;
+    }
+    setDataPrincipal(null);
+    setPacks([]);
+    setLibrary([]);
+    setProjects([]);
+    setMemories([]);
+    setPrompts([]);
+    setResearch([]);
+    setPending([]);
+    setSelected([]);
+    setError(null);
     if (!isSignedIn) {
+      setDataPrincipal(principal);
       setLoading(false);
       return;
     }
-    try {
-      const raw =
-        sessionStorage.getItem("kova-context-candidates") ??
-        localStorage.getItem("kova-context-candidates") ??
-        localStorage.getItem("kova-context-candidate");
-      if (raw) {
-        const parsed = JSON.parse(raw) as WorkspaceHandoff | WorkspaceHandoff[];
-        const candidates = Array.isArray(parsed) ? parsed : [parsed];
-        setPending(candidates);
-        setSelected(candidates.map((candidate) => `${candidate.type}:${candidate.id}`));
-        sessionStorage.removeItem("kova-context-candidates");
-        localStorage.removeItem("kova-context-candidates");
-        localStorage.removeItem("kova-context-candidate");
-      }
-    } catch {
-      sessionStorage.removeItem("kova-context-candidates");
-      localStorage.removeItem("kova-context-candidates");
-      localStorage.removeItem("kova-context-candidate");
+    let cancelled = false;
+    setLoading(true);
+    const handoff = consumePrincipalHandoff<WorkspaceHandoff | WorkspaceHandoff[]>(
+      safeBrowserStorage("sessionStorage"),
+      "kova-context-candidates",
+      userKey,
+    );
+    if (handoff.ok) {
+      const candidates = Array.isArray(handoff.value) ? handoff.value : [handoff.value];
+      setPending(candidates);
+      setSelected(candidates.map((candidate) => `${candidate.type}:${candidate.id}`));
+    } else if (handoff.reason !== "missing") {
+      toast.error("Saved context candidates could not be attached.");
     }
     Promise.all([
       listPacks({}),
@@ -96,15 +115,26 @@ function ContextPacksPage() {
       getResearch({}),
     ])
       .then(([p, l, pr, memory, promptItems, researchItems]) => {
+        if (cancelled) return;
         setPacks(p);
         setLibrary(l);
         setProjects(pr);
         setMemories(memory);
         setPrompts(promptItems);
         setResearch(researchItems);
+        setDataPrincipal(principal);
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Context could not be loaded"))
-      .finally(() => setLoading(false));
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e instanceof Error ? e.message : "Context could not be loaded");
+        setDataPrincipal(principal);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [
     isLoaded,
     isSignedIn,
@@ -114,85 +144,80 @@ function ContextPacksPage() {
     getMemories,
     getPrompts,
     getResearch,
+    principal,
   ]);
-  const candidates = useMemo<Candidate[]>(
-    () =>
-      [
-        ...loadConversations().map((c) => ({
-          key: `chat:${c.id}`,
-          type: "chat" as const,
-          id: c.id,
-          title: c.title,
-          content: c.messages
-            .map((m) => `${m.role}: ${m.content}`)
-            .join("\n")
-            .slice(0, 12000),
-        })),
-        ...pending.map((candidate) => ({
-          key: `${candidate.type}:${candidate.id}`,
-          ...candidate,
-          content: candidate.content.slice(0, 12000),
-        })),
-        ...library.map((item) => ({
-          key: `library:${item.id}`,
-          type: (item.item_type === "image"
-            ? "image"
-            : ["document", "code", "website_draft", "chat_artifact"].includes(item.item_type)
-              ? "artifact"
-              : item.item_type === "upload"
-                ? "file"
-                : "library") as Candidate["type"],
-          id: item.id,
-          title: item.title,
-          content: (item.content_text ?? item.file_name ?? item.title).slice(0, 12000),
-        })),
-        ...memories.map((memory) => ({
-          key: `memory:${memory.id}`,
-          type: "memory" as const,
-          id: memory.id,
-          title: memory.title,
-          content: memory.content.slice(0, 12000),
-        })),
-        ...projects.map((p) => ({
-          key: `project:${p.id}`,
-          type: "project" as const,
-          id: p.id,
-          title: p.name,
-          content: [p.description, p.instructions_preview]
-            .filter(Boolean)
-            .join("\n")
-            .slice(0, 12000),
-        })),
-        ...prompts.map((prompt) => ({
-          key: `prompt:${prompt.id}`,
-          type: "prompt" as const,
-          id: prompt.id,
-          title: prompt.name,
-          content: prompt.body.slice(0, 12000),
-        })),
-        ...research.map((template) => ({
-          key: `research:${template.id}`,
-          type: "research" as const,
-          id: template.id,
-          title: template.name,
-          content: template.steps.map((step, index) => `${index + 1}. ${step}`).join("\n"),
-        })),
-        ...loadWorkTasks().map((task) => ({
-          key: `work:${task.id}`,
-          type: "work" as const,
-          id: task.id,
-          title: task.objective,
-          content:
-            `${task.context}\n${task.steps.map((step) => `- [${step.done ? "x" : " "}] ${step.text}`).join("\n")}`.slice(
-              0,
-              12000,
-            ),
-        })),
-      ].filter((item) =>
-        `${item.title} ${item.content}`.toLowerCase().includes(query.toLowerCase()),
-      ),
-    [library, memories, pending, projects, prompts, query, research],
-  );
+  const candidates = useMemo<Candidate[]>(() => {
+    if (!dataReady) return [];
+    return [
+      ...loadConversations(userKey).map((c) => ({
+        key: `chat:${c.id}`,
+        type: "chat" as const,
+        id: c.id,
+        title: c.title,
+        content: c.messages
+          .map((m) => `${m.role}: ${m.content}`)
+          .join("\n")
+          .slice(0, 12000),
+      })),
+      ...pending.map((candidate) => ({
+        key: `${candidate.type}:${candidate.id}`,
+        ...candidate,
+        content: candidate.content.slice(0, 12000),
+      })),
+      ...library.map((item) => ({
+        key: `library:${item.id}`,
+        type: (item.item_type === "image"
+          ? "image"
+          : ["document", "code", "website_draft", "chat_artifact"].includes(item.item_type)
+            ? "artifact"
+            : item.item_type === "upload"
+              ? "file"
+              : "library") as Candidate["type"],
+        id: item.id,
+        title: item.title,
+        content: (item.content_text ?? item.file_name ?? item.title).slice(0, 12000),
+      })),
+      ...memories.map((memory) => ({
+        key: `memory:${memory.id}`,
+        type: "memory" as const,
+        id: memory.id,
+        title: memory.title,
+        content: memory.content.slice(0, 12000),
+      })),
+      ...projects.map((p) => ({
+        key: `project:${p.id}`,
+        type: "project" as const,
+        id: p.id,
+        title: p.name,
+        content: [p.description, p.instructions_preview].filter(Boolean).join("\n").slice(0, 12000),
+      })),
+      ...prompts.map((prompt) => ({
+        key: `prompt:${prompt.id}`,
+        type: "prompt" as const,
+        id: prompt.id,
+        title: prompt.name,
+        content: prompt.body.slice(0, 12000),
+      })),
+      ...research.map((template) => ({
+        key: `research:${template.id}`,
+        type: "research" as const,
+        id: template.id,
+        title: template.name,
+        content: template.steps.map((step, index) => `${index + 1}. ${step}`).join("\n"),
+      })),
+      ...loadWorkTasks(userKey).map((task) => ({
+        key: `work:${task.id}`,
+        type: "work" as const,
+        id: task.id,
+        title: task.objective,
+        content:
+          `${task.context}\n${task.steps.map((step) => `- [${step.done ? "x" : " "}] ${step.text}`).join("\n")}`.slice(
+            0,
+            12000,
+          ),
+      })),
+    ].filter((item) => `${item.title} ${item.content}`.toLowerCase().includes(query.toLowerCase()));
+  }, [dataReady, library, memories, pending, projects, prompts, query, research, userKey]);
   const submit = async () => {
     const items = candidates
       .filter((item) => selected.includes(item.key))
@@ -213,7 +238,16 @@ function ContextPacksPage() {
     }
   };
   const attachPack = (pack: ContextPack) => {
-    sessionStorage.setItem("kova-active-context-pack", JSON.stringify(pack));
+    const handoff = writePrincipalHandoff(
+      safeBrowserStorage("sessionStorage"),
+      "kova-active-context-pack",
+      isLoaded ? userKey : undefined,
+      pack,
+    );
+    if (!handoff.ok) {
+      toast.error("Context pack could not be prepared. Reload and try again.");
+      return;
+    }
     toast.success("Context pack attached to a new chat");
     navigate({ to: "/" });
   };
@@ -233,7 +267,7 @@ function ContextPacksPage() {
           <div className="mt-6 rounded-2xl border p-8 text-center">
             Sign in to create reusable context packs.
           </div>
-        ) : loading ? (
+        ) : !dataReady || loading ? (
           <div className="mt-6 h-40 animate-pulse rounded-2xl bg-muted" />
         ) : error ? (
           <div role="alert" className="mt-6 rounded-xl border border-destructive/40 p-4">
@@ -336,9 +370,11 @@ function ContextPacksPage() {
                         </button>
                         <button
                           onClick={() => {
-                            localStorage.setItem(
+                            const handoff = writePrincipalHandoff(
+                              safeBrowserStorage("sessionStorage"),
                               "kova-work-draft",
-                              JSON.stringify({
+                              isLoaded ? userKey : undefined,
+                              {
                                 objective: `Work with ${pack.name}`,
                                 context: pack.items
                                   .map((item) => `${item.title}: ${item.content}`)
@@ -348,8 +384,14 @@ function ContextPacksPage() {
                                   "Complete the objective",
                                   "Review and record deliverables",
                                 ],
-                              }),
+                              },
                             );
+                            if (!handoff.ok) {
+                              toast.error(
+                                "Work context could not be prepared. Reload and try again.",
+                              );
+                              return;
+                            }
                             navigate({ to: "/work" });
                           }}
                           className="min-h-10 rounded-lg border px-3 text-sm hover:bg-accent"
@@ -358,15 +400,23 @@ function ContextPacksPage() {
                         </button>
                         <button
                           onClick={() => {
-                            localStorage.setItem(
+                            const handoff = writePrincipalHandoff(
+                              safeBrowserStorage("sessionStorage"),
                               "kova-research-draft",
-                              JSON.stringify({
+                              isLoaded ? userKey : undefined,
+                              {
                                 question: `Research with ${pack.name}`,
                                 context: pack.items
                                   .map((item) => `${item.title}: ${item.content}`)
                                   .join("\n\n"),
-                              }),
+                              },
                             );
+                            if (!handoff.ok) {
+                              toast.error(
+                                "Research context could not be prepared. Reload and try again.",
+                              );
+                              return;
+                            }
                             navigate({ to: "/research-planner" });
                           }}
                           className="min-h-10 rounded-lg border px-3 text-sm hover:bg-accent"
