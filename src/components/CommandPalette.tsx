@@ -401,7 +401,7 @@ export function CommandPalette({
     <div
       ref={dialogRef}
       data-kova-shell-overlay=""
-      className="fixed inset-0 z-[70] flex items-start justify-center bg-black/50 px-[max(.75rem,var(--safe-left),var(--safe-right))] pb-[var(--safe-bottom)] pt-[max(12vh,var(--safe-top))]"
+      className="kova-command-palette fixed inset-0 z-[70] flex items-start justify-center bg-black/50 px-[max(.75rem,var(--safe-left),var(--safe-right))] pb-[var(--safe-bottom)] pt-[max(12vh,var(--safe-top))]"
       role="dialog"
       aria-modal="true"
       aria-label="Search chats and actions"
@@ -450,8 +450,8 @@ export function CommandPalette({
         }
       }}
     >
-      <div className="w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-xl animate-in fade-in duration-100">
-        <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+      <div className="kova-command-palette-surface w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-xl animate-in fade-in duration-100">
+        <div className="kova-command-palette-search flex items-center gap-3 border-b border-border px-4 py-3">
           <Search className="h-5 w-5 text-muted-foreground" />
           <input
             ref={searchInputRef}
@@ -479,7 +479,7 @@ export function CommandPalette({
           id="command-palette-results"
           role="listbox"
           aria-label="Command palette results"
-          className="max-h-[60vh] overflow-y-auto p-2"
+          className="kova-command-palette-results max-h-[60vh] overflow-y-auto p-2"
         >
           <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">Actions</div>
           <button
