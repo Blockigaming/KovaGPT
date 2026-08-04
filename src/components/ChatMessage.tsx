@@ -246,9 +246,9 @@ function ChatMessageInner({
   const persistFeedback = (next: "up" | "down" | null) => {
     setFeedback(next);
     if (!feedbackKey) return;
-    const storage = safeBrowserStorage("localStorage");
-    if (next) storage?.setItem(feedbackKey, next);
-    else storage?.removeItem(feedbackKey);
+    const localStorage = safeBrowserStorage("localStorage");
+    if (next && localStorage) localStorage.setItem(feedbackKey, next);
+    else localStorage?.removeItem(feedbackKey);
   };
   const { isMobile } = useLayout();
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
@@ -619,7 +619,10 @@ function ChatMessageInner({
 
               <button
                 type="button"
-                onClick={() => persistFeedback(feedback === "up" ? null : "up")}
+                onClick={() => {
+                  persistFeedback(feedback === "up" ? null : "up");
+                  toast.success("Rating saved on this device");
+                }}
                 className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                 title="Good response"
                 aria-label="Good response"
@@ -631,7 +634,10 @@ function ChatMessageInner({
               </button>
               <button
                 type="button"
-                onClick={() => persistFeedback(feedback === "down" ? null : "down")}
+                onClick={() => {
+                  persistFeedback(feedback === "down" ? null : "down");
+                  toast.success("Rating saved on this device");
+                }}
                 className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                 title="Bad response"
                 aria-label="Bad response"
