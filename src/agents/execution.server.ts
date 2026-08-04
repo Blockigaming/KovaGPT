@@ -3,7 +3,12 @@ import { BILLING_ENV, tierForLookupKey } from "@/lib/billing-plans";
 import { createClient } from "@supabase/supabase-js";
 
 import { resolveAgentEntitlement } from "./entitlement-policy.mjs";
+
+import type { BrowserAction, BrowserPolicy } from "./policy";
+import { validateBrowserAction } from "./policy";
+
 import type { BrowserAction } from "./policy";
+
 
 export type AgentEntitlement = "plus" | "pro" | "business" | "enterprise";
 export const AGENT_LIMITS: Record<
