@@ -53,13 +53,102 @@ export type Conversation = {
   };
 };
 
-const KEY = "nova-gpt-conversations-v2";
-const ARCHIVED_KEY = "kovagpt:archived";
+export type ChatStorageUserKey = string | null;
 
-export function loadConversations(): Conversation[] {
+const CONVERSATIONS_KEY_BASE = "nova-gpt-conversations-v3";
+const ARCHIVED_KEY_BASE = "kovagpt:archived:v2";
+const DRAFT_KEY_BASE = "kova-draft-v2";
+const PENDING_ACTIVE_KEY_BASE = "nova-gpt-pending-active:v2";
+
+const LEGACY_CONVERSATIONS_KEY = "nova-gpt-conversations-v2";
+const LEGACY_ARCHIVED_KEY = "kovagpt:archived";
+const LEGACY_DRAFT_KEY_BASE = "kova-draft";
+const LEGACY_PENDING_ACTIVE_KEY = "nova-gpt-pending-active";
+
+/** A stable browser-storage namespace. Signed-in and guest data never share one key. */
+export function chatStoragePrincipal(userKey: ChatStorageUserKey): string {
+  return userKey ? `user:${encodeURIComponent(userKey)}` : "guest";
+}
+
+function scopedKey(base: string, userKey: ChatStorageUserKey): string {
+  return `${base}:${chatStoragePrincipal(userKey)}`;
+}
+
+/**
+ * Guest data is session-only: it survives navigation inside the open tab, but a
+ * refresh or a fresh tab starts clean. Signed-in data is untouched.
+ */
+function purgeGuestStorageOnFreshLoad() {
+  if (typeof window === "undefined") return;
+  try {
+    const guestSuffix = ":guest";
+    const doomed: string[] = [];
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (!key) continue;
+      if (key.includes(guestSuffix)) doomed.push(key);
+    }
+    for (const key of [
+      ...doomed,
+      LEGACY_CONVERSATIONS_KEY,
+      LEGACY_ARCHIVED_KEY,
+      LEGACY_PENDING_ACTIVE_KEY,
+    ])
+      localStorage.removeItem(key);
+  } catch {
+    // Storage unavailable: nothing to purge.
+  }
+}
+
+purgeGuestStorageOnFreshLoad();
+
+
+function readWithGuestLegacyMigration(
+  userKey: ChatStorageUserKey,
+  key: string,
+  legacyKey: string,
+): string | null {
+  const current = localStorage.getItem(key);
+  if (current !== null || userKey !== null) return current;
+
+  const legacy = localStorage.getItem(legacyKey);
+  if (legacy === null) return null;
+  try {
+    localStorage.setItem(key, legacy);
+    localStorage.removeItem(legacyKey);
+  } catch {
+    // The legacy guest value remains readable for this load if storage is full.
+  }
+  return legacy;
+}
+
+export function conversationStorageKey(userKey: ChatStorageUserKey): string {
+  return scopedKey(CONVERSATIONS_KEY_BASE, userKey);
+}
+
+export function archivedConversationStorageKey(userKey: ChatStorageUserKey): string {
+  return scopedKey(ARCHIVED_KEY_BASE, userKey);
+}
+
+export function draftStorageKey(
+  userKey: ChatStorageUserKey,
+  conversationId: string | null,
+): string {
+  return `${scopedKey(DRAFT_KEY_BASE, userKey)}:${conversationId ?? "__new__"}`;
+}
+
+export function pendingActiveStorageKey(userKey: ChatStorageUserKey): string {
+  return scopedKey(PENDING_ACTIVE_KEY_BASE, userKey);
+}
+
+export function loadConversations(userKey: ChatStorageUserKey): Conversation[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = readWithGuestLegacyMigration(
+      userKey,
+      conversationStorageKey(userKey),
+      LEGACY_CONVERSATIONS_KEY,
+    );
     if (!raw) return [];
     return JSON.parse(raw) as Conversation[];
   } catch {
@@ -67,43 +156,138 @@ export function loadConversations(): Conversation[] {
   }
 }
 
-export function saveConversations(convs: Conversation[]) {
+export function saveConversations(userKey: ChatStorageUserKey, convs: Conversation[]) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(KEY, JSON.stringify(convs));
+  localStorage.setItem(conversationStorageKey(userKey), JSON.stringify(convs));
+  if (userKey === null) localStorage.removeItem(LEGACY_CONVERSATIONS_KEY);
 }
 
-export function clearConversations() {
+export function clearConversations(userKey: ChatStorageUserKey) {
   if (typeof window === "undefined") return;
-  localStorage.removeItem(KEY);
+  localStorage.removeItem(conversationStorageKey(userKey));
+  if (userKey === null) localStorage.removeItem(LEGACY_CONVERSATIONS_KEY);
 }
 
-export function loadArchivedConversations(): Conversation[] {
+export function loadArchivedConversations(userKey: ChatStorageUserKey): Conversation[] {
   if (typeof window === "undefined") return [];
   try {
-    return JSON.parse(localStorage.getItem(ARCHIVED_KEY) ?? "[]") as Conversation[];
+    const raw = readWithGuestLegacyMigration(
+      userKey,
+      archivedConversationStorageKey(userKey),
+      LEGACY_ARCHIVED_KEY,
+    );
+    return JSON.parse(raw ?? "[]") as Conversation[];
   } catch {
     return [];
   }
 }
 
-export function archiveConversation(conversation: Conversation) {
+export function archiveConversation(userKey: ChatStorageUserKey, conversation: Conversation) {
   const next = [
     conversation,
-    ...loadArchivedConversations().filter((item) => item.id !== conversation.id),
+    ...loadArchivedConversations(userKey).filter((item) => item.id !== conversation.id),
   ].slice(0, 200);
-  localStorage.setItem(ARCHIVED_KEY, JSON.stringify(next));
+  saveArchivedConversations(userKey, next);
 }
 
-export function saveArchivedConversations(conversations: Conversation[]) {
+export function saveArchivedConversations(
+  userKey: ChatStorageUserKey,
+  conversations: Conversation[],
+) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(ARCHIVED_KEY, JSON.stringify(conversations.slice(0, 500)));
+  localStorage.setItem(
+    archivedConversationStorageKey(userKey),
+    JSON.stringify(conversations.slice(0, 500)),
+  );
+  if (userKey === null) localStorage.removeItem(LEGACY_ARCHIVED_KEY);
 }
 
-export function removeArchivedConversation(id: string) {
-  localStorage.setItem(
-    ARCHIVED_KEY,
-    JSON.stringify(loadArchivedConversations().filter((item) => item.id !== id)),
+export function removeArchivedConversation(userKey: ChatStorageUserKey, id: string) {
+  saveArchivedConversations(
+    userKey,
+    loadArchivedConversations(userKey).filter((item) => item.id !== id),
   );
+}
+
+export function loadDraft(userKey: ChatStorageUserKey, conversationId: string | null): string {
+  if (typeof window === "undefined") return "";
+  const legacyKey = `${LEGACY_DRAFT_KEY_BASE}:${conversationId ?? "__new__"}`;
+  return (
+    readWithGuestLegacyMigration(userKey, draftStorageKey(userKey, conversationId), legacyKey) ?? ""
+  );
+}
+
+export function saveDraft(
+  userKey: ChatStorageUserKey,
+  conversationId: string | null,
+  value: string,
+) {
+  if (typeof window === "undefined") return;
+  const key = draftStorageKey(userKey, conversationId);
+  const legacyKey = `${LEGACY_DRAFT_KEY_BASE}:${conversationId ?? "__new__"}`;
+  if (value) localStorage.setItem(key, value);
+  else localStorage.removeItem(key);
+  if (userKey === null) localStorage.removeItem(legacyKey);
+}
+
+export function clearDraft(userKey: ChatStorageUserKey, conversationId: string | null) {
+  saveDraft(userKey, conversationId, "");
+}
+
+export function loadPendingActive(userKey: ChatStorageUserKey): string | null {
+  if (typeof window === "undefined") return null;
+  return readWithGuestLegacyMigration(
+    userKey,
+    pendingActiveStorageKey(userKey),
+    LEGACY_PENDING_ACTIVE_KEY,
+  );
+}
+
+export function savePendingActive(userKey: ChatStorageUserKey, conversationId: string) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(pendingActiveStorageKey(userKey), conversationId);
+  if (userKey === null) localStorage.removeItem(LEGACY_PENDING_ACTIVE_KEY);
+}
+
+export function clearPendingActive(userKey: ChatStorageUserKey) {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(pendingActiveStorageKey(userKey));
+  if (userKey === null) localStorage.removeItem(LEGACY_PENDING_ACTIVE_KEY);
+}
+
+/** Clear all chat-related browser data owned by exactly one principal. */
+export function clearPrincipalChatStorage(userKey: ChatStorageUserKey) {
+  if (typeof window === "undefined") return;
+  const removeKey = (key: string) => {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // Continue clearing the remaining current-principal keys.
+    }
+  };
+
+  removeKey(conversationStorageKey(userKey));
+  removeKey(archivedConversationStorageKey(userKey));
+  removeKey(pendingActiveStorageKey(userKey));
+
+  const draftPrefix = `${scopedKey(DRAFT_KEY_BASE, userKey)}:`;
+  const removable: string[] = [];
+  try {
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (key?.startsWith(draftPrefix)) removable.push(key);
+      if (userKey === null && key?.startsWith(`${LEGACY_DRAFT_KEY_BASE}:`)) removable.push(key);
+    }
+  } catch {
+    // Browser storage enumeration can be disabled independently of rendering.
+  }
+  for (const key of removable) removeKey(key);
+
+  if (userKey === null) {
+    removeKey(LEGACY_CONVERSATIONS_KEY);
+    removeKey(LEGACY_ARCHIVED_KEY);
+    removeKey(LEGACY_PENDING_ACTIVE_KEY);
+  }
 }
 
 export function newId() {

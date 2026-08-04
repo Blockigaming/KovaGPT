@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { waitForKovaHydration } from "./hydration";
+
 const projects = new Set(["phone-390x844", "desktop-1440x900"]);
 
 test.beforeEach(({ page }, testInfo) => {
@@ -9,11 +11,13 @@ test.beforeEach(({ page }, testInfo) => {
 
 test("connected apps and scheduled tasks expose truthful signed-out states", async ({ page }) => {
   await page.goto("/apps", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
   await expect(page.getByRole("heading", { name: "Your KovaGPT workspace" })).toBeVisible();
   await expect(page.getByText("Sign in to connect apps.")).toBeVisible();
   await expect(page.getByText(/connected/i).first()).toBeVisible();
 
   await page.goto("/scheduled-tasks", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
   await expect(page.getByRole("heading", { name: "Scheduled Tasks" })).toBeVisible();
   await expect(page.getByText("Sign in to review task history")).toBeVisible();
   await expect(
@@ -32,14 +36,8 @@ test("the built preview serves its safe health endpoint", async ({ request }) =>
   expect(response.headers()["cache-control"]).toBe("no-store");
 
   const body = await response.json();
-  expect(body).toMatchObject({ ok: true, app: "KovaGPT" });
-
-  const diagnosticKeys: string[] = [];
-  JSON.stringify(body, (key, value) => {
-    if (key) diagnosticKeys.push(key);
-    return value;
-  });
-  expect(diagnosticKeys.join("\n")).not.toMatch(
-    /service[_-]?role|private[_-]?key|api[_-]?key|client[_-]?secret|access[_-]?token|refresh[_-]?token/i,
+  expect(body).toEqual({ ok: true, app: "KovaGPT" });
+  expect(JSON.stringify(body)).not.toMatch(
+    /secret|token|credential|private|service[_-]?role|api[_-]?key|commit|branch/i,
   );
 });

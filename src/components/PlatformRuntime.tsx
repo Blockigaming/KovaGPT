@@ -24,6 +24,22 @@ export function PlatformRuntime() {
     });
     return () => cancelAnimationFrame(frame);
   }, [location.pathname]);
+  useEffect(() => {
+    const unsubscribe = platformEvents.subscribe((event) => {
+      void import("@/lib/operational-analytics").then((module) =>
+        module.queueOperationalEvent(event),
+      );
+    });
+    const flush = () => {
+      void import("@/lib/operational-analytics").then((module) => module.flushOperationalEvents());
+    };
+    window.addEventListener("pagehide", flush);
+    return () => {
+      unsubscribe();
+      window.removeEventListener("pagehide", flush);
+      flush();
+    };
+  }, []);
   return DeveloperConsole ? (
     <Suspense fallback={null}>
       <DeveloperConsole />

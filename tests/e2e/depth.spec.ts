@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 
+import { waitForKovaHydration } from "./hydration";
+
 /**
  * Depth tests: signed-out gating, theme handling, request-id contract.
  * These extend the responsive smoke suite with product invariants.
@@ -8,6 +10,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Signed-out gating", () => {
   test("/projects renders either the workspace or the sign-in prompt", async ({ page }) => {
     await page.goto("/projects");
+    await waitForKovaHydration(page);
     // Whichever branch resolves, one of these strings must appear somewhere.
     const anyMatch = page.getByText(/sign in to use projects|^projects$/i).first();
     await expect(anyMatch).toBeVisible({ timeout: 8000 });
@@ -15,6 +18,7 @@ test.describe("Signed-out gating", () => {
 
   test("/ homepage renders without an auth wall", async ({ page }) => {
     await page.goto("/");
+    await waitForKovaHydration(page);
     // No redirect off "/"; some KovaGPT branded element must be visible.
     await expect(page).toHaveURL(/\/$/);
     await expect(page.locator("body")).toBeVisible();
@@ -29,6 +33,7 @@ const seedGuestTheme = async (page: import("@playwright/test").Page, mode: "dark
     document.documentElement.classList.toggle("dark", selectedMode === "dark");
   }, mode);
   await page.goto("/");
+  await waitForKovaHydration(page);
 };
 
 test.describe("Theme handling", () => {
@@ -40,6 +45,7 @@ test.describe("Theme handling", () => {
     for (const path of directRoutes) {
       if (path === "/") await page.reload();
       else await page.goto(path);
+      await waitForKovaHydration(page);
       await expect
         .poll(() => page.evaluate(() => document.documentElement.classList.contains("dark")))
         .toBe(true);
@@ -52,6 +58,7 @@ test.describe("Theme handling", () => {
     for (const path of directRoutes) {
       if (path === "/") await page.reload();
       else await page.goto(path);
+      await waitForKovaHydration(page);
       await expect
         .poll(() => page.evaluate(() => document.documentElement.classList.contains("dark")))
         .toBe(false);

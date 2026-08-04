@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 
 const supabaseClient = await readFile("src/integrations/supabase/client.ts", "utf8");
 const clerkSafe = await readFile("src/components/auth/ClerkSafe.tsx", "utf8");
+const authMiddleware = await readFile("src/integrations/supabase/auth-middleware.ts", "utf8");
 const rootRoute = await readFile("src/routes/__root.tsx", "utf8");
 const workflow = await readFile(".github/workflows/ci.yml", "utf8");
 const packageJson = await readFile("package.json", "utf8");
@@ -16,6 +17,16 @@ test("Supabase browser config is feature-scoped and cannot crash public boot", (
   assert.match(clerkSafe, /Supabase auth unavailable/);
   assert.match(clerkSafe, /setIsLoaded\(true\)/);
   assert.match(clerkSafe, /getSupabaseClientConfigStatus/);
+});
+
+test("anonymous server functions fail closed before reading Supabase configuration", () => {
+  const credentialCheck = authMiddleware.indexOf('request.headers.get("authorization")');
+  const configurationRead = authMiddleware.indexOf("process.env.SUPABASE_URL");
+  assert.ok(credentialCheck >= 0);
+  assert.ok(configurationRead > credentialCheck);
+  assert.match(authMiddleware, /failAuthentication\(401, "Unauthorized"\)/);
+  assert.match(authMiddleware, /"Cache-Control": "no-store"/);
+  assert.doesNotMatch(authMiddleware, /Missing Supabase environment variable\(s\)/);
 });
 
 test("root route has a safe branded error boundary with retry and home actions", () => {

@@ -45,9 +45,8 @@ test("Send on Enter is shared, reactive, and applied across main and project cha
     "opening Settings must not write a stale DEFAULT_SETTINGS value into the shared store",
   );
 
-  assert.match(project, /useSharedSendOnEnter\(user\?\.id \?\? null\)/);
-  assert.match(project, /shouldSubmitComposerOnEnter/);
-  assert.match(project, /isMobileLayout: !isDesktop/);
+  assert.match(project, /<ChatInput/);
+  assert.doesNotMatch(project, /useSharedSendOnEnter|shouldSubmitComposerOnEnter|<Textarea/);
   assert.doesNotMatch(project, /e\.key === "Enter" && !e\.shiftKey/);
 });
 

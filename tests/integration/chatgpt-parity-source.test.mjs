@@ -32,13 +32,18 @@ const [
 
 test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
   assert.match(route, /const greeting = "What can I help with\?";/);
-  assert.match(route, /KovaGPT can make mistakes\. Check important info\./);
+  assert.match(chatInput, /KovaGPT can make mistakes\. Check important information\./);
   assert.doesNotMatch(route, /ConversationOutline/);
   assert.equal((route.match(/canChangeAgent=\{false\}/g) ?? []).length, 2);
   assert.match(route, /<ResponsiveModelSelector[\s\S]{0,240}placement="topbar"/);
   assert.match(mobileTopBar, /<ResponsiveModelSelector[\s\S]{0,240}placement="topbar"/);
   assert.match(modelSelector, /placement\?: "composer" \| "topbar"/);
-  assert.match(responsiveSelector, /placement=\{placement\}/);
+  assert.match(responsiveSelector, /placement\?: "composer" \| "topbar"/);
+  assert.equal((responsiveSelector.match(/data-testid="model-selector-trigger"/g) ?? []).length, 1);
+  assert.match(responsiveSelector, /const useSheet = !isDesktop \|\| interaction === "touch"/);
+  assert.match(responsiveSelector, /<MobileBottomSheet/);
+  assert.match(responsiveSelector, /role="dialog"\s+aria-label="Choose model"/);
+  assert.doesNotMatch(responsiveSelector, /return\s*\(\s*<ModelSelector/);
 });
 
 test("composer actions, message editing, and markdown stay reachable and lossless", () => {
@@ -50,7 +55,7 @@ test("composer actions, message editing, and markdown stay reachable and lossles
   assert.match(chatInput, /COMPOSER_TOOLS\.map/);
   assert.match(chatInput, /onToolSelect\?\.\(next\)/);
   assert.equal((route.match(/selectedTool=\{selectedTool\}/g) ?? []).length, 2);
-  assert.match(chatInput, /kova-send-button[^"\n]*bg-foreground text-background/);
+  assert.match(chatInput, /kova-send-button is-enabled/);
   assert.match(chatMessage, /return text\.replace\(\/\\r\\n\?\/g, "\\n"\);/);
   assert.doesNotMatch(chatMessage, /LongResponseCard|shouldWrapAsDocument/);
   assert.match(route, /setInput\(m\.content\);/);
@@ -65,7 +70,9 @@ test("sending snapshots history and serializes automatic retries", () => {
   const optimisticUpdate = route.indexOf("setConversations((prev) => {", snapshot);
   assert.ok(snapshot >= 0 && optimisticUpdate > snapshot);
   assert.match(route, /\|\| inFlightRef\.current\) return;/);
-  assert.match(route, /const payloadMessages = \[\.\.\.priorMessages, userMsg\]/);
+  assert.match(route, /const payloadMessages = \[\s*\.\.\.priorMessages\.map/);
+  assert.match(route, /attachments: userMsg\.attachments/);
+  assert.doesNotMatch(route, /\[\.\.\.priorMessages, userMsg\]\.map/);
   assert.match(route, /inFlightRef\.current = true;/);
   assert.match(route, /inFlightRef\.current = false;/);
   assert.match(route, /retryTimerRef\.current = window\.setTimeout/);

@@ -7,7 +7,7 @@ import {
   requireUser,
   type AuthedCaller,
 } from "@/lib/api-auth.server";
-import { chatCompletions, chatModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
+import { chatCompletions, utilityModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
 import {
   assertDatabaseSuccess,
   BodyReadError,
@@ -16,6 +16,9 @@ import {
   persistMemorySafely,
   readUtf8BodyBounded,
 } from "@/lib/endpoint-reliability.mjs";
+import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
+import { modelForRole } from "@/lib/ai/model-router.server";
+import { UTILITY_MAX_OUTPUT_TOKENS } from "@/lib/ai/model-config.mjs";
 
 const MEMORY_LIMITS = {
   plus: { returned: 12, stored: 250 },
@@ -68,7 +71,10 @@ async function summarize(messages: Array<{ role: "user" | "assistant"; content: 
     .map((message) => `${message.role === "user" ? "User" : "KovaGPT"}: ${message.content}`)
     .join("\n");
   const response = await chatCompletions({
-    model: chatModel("fast"),
+
+    model: modelForRole("UTILITY"),
+    max_completion_tokens: UTILITY_MAX_OUTPUT_TOKENS,
+
     messages: [
       {
         role: "system",
@@ -118,12 +124,18 @@ export const Route = createFileRoute("/api/memory")({
       },
 
       POST: async ({ request }) => {
+        if (isCrossSiteMutation(request)) {
+          return jsonError("Cross-site memory changes are not allowed.", 403);
+        }
         const caller = await identifyMemoryCaller(request);
         if (caller instanceof Response) return caller;
         // This endpoint is called automatically after conversation updates. Free
         // accounts have always received a silent no-op and the client relies on it.
         if (caller.tier === "free") {
-          return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
+          return new Response(null, {
+            status: 204,
+            headers: { "Cache-Control": "no-store" },
+          });
         }
         const authorized = await authorizePaidMemory(caller);
         if (authorized instanceof Response) return authorized;
@@ -167,7 +179,9 @@ export const Route = createFileRoute("/api/memory")({
           const memoryCap = MEMORY_LIMITS.plus.stored;
           await persistMemorySafely({
             upsert: async () =>
-              await tbl(authorized.auth).upsert(row, { onConflict: "user_id,chat_id" }),
+              await tbl(authorized.auth).upsert(row, {
+                onConflict: "user_id,chat_id",
+              }),
             listOverflow:
               authorized.tier === "plus"
                 ? async () =>
@@ -195,6 +209,9 @@ export const Route = createFileRoute("/api/memory")({
       },
 
       DELETE: async ({ request }) => {
+        if (isCrossSiteMutation(request)) {
+          return jsonError("Cross-site memory changes are not allowed.", 403);
+        }
         // Deleting personal memory remains available after a downgrade or ban.
         // Subscription and maintenance gates must never block privacy cleanup.
         const caller = await identifyMemoryCaller(request);

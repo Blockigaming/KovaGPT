@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 
+import { waitForKovaHydration } from "./hydration";
+
 /**
  * Model selector adaptive-rendering test.
  * On touch/phone/tablet layouts the selector opens a bottom sheet; on
@@ -9,6 +11,7 @@ test("model selector opens (bottom sheet on touch, popover on desktop)", async (
   page,
 }, testInfo) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
 
   const viewport = page.viewportSize();
   const width = viewport?.width ?? 0;

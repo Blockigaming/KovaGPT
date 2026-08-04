@@ -22,7 +22,12 @@ import {
   Pin,
   ArrowRight,
 } from "lucide-react";
-import { loadConversations, type Conversation } from "@/lib/chat-store";
+import {
+  chatStoragePrincipal,
+  loadConversations,
+  savePendingActive,
+  type Conversation,
+} from "@/lib/chat-store";
 import { safeNavigationUrl } from "@/lib/safe-url";
 import {
   getSummaryProjects,
@@ -33,11 +38,17 @@ import {
   getGmailSummary,
   getCalendarSummary,
 } from "@/lib/summary.functions";
+import {
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+  principalScopedStorageKey,
+  safeBrowserStorage,
+} from "@/lib/principal-browser-storage.mjs";
 
 export const Route = createFileRoute("/summary")({
   head: () => ({
     meta: [
-      { title: "Summary - KovaGPT" },
+      { title: "KovaGPT Summary" },
       {
         name: "description",
         content:
@@ -49,8 +60,10 @@ export const Route = createFileRoute("/summary")({
   component: SummaryPage,
 });
 
+const EMPTY_CONVERSATIONS: Conversation[] = [];
+
 // -------- Dismissible sections --------
-const DISMISS_KEY = "kova-summary-dismissed-v1";
+const DISMISS_KEY_BASE = "kova-summary-dismissed";
 type SectionId =
   | "continue"
   | "pinned"
@@ -66,17 +79,18 @@ type SectionId =
   | "library"
   | "weather";
 
-function loadDismissed(): SectionId[] {
-  if (typeof window === "undefined") return [];
+function loadDismissed(key: string | null): SectionId[] {
+  if (!key) return [];
   try {
-    return JSON.parse(localStorage.getItem(DISMISS_KEY) ?? "[]");
+    return JSON.parse(safeBrowserStorage("localStorage")?.getItem(key) ?? "[]");
   } catch {
     return [];
   }
 }
-function saveDismissed(v: SectionId[]) {
+function saveDismissed(key: string | null, v: SectionId[]) {
+  if (!key) return;
   try {
-    localStorage.setItem(DISMISS_KEY, JSON.stringify(v));
+    safeBrowserStorage("localStorage")?.setItem(key, JSON.stringify(v));
   } catch {
     /* ignore */
   }
@@ -115,13 +129,19 @@ const WMO: Record<number, string> = {
   82: "Heavy showers",
   95: "Thunderstorm",
 };
-function useWeather(enabled: boolean) {
+function useWeather(enabled: boolean, scope: string | null) {
   const [state, setState] = useState<{
     status: "idle" | "loading" | "ok" | "denied" | "error";
     data: Weather | null;
   }>({ status: "idle", data: null });
   useEffect(() => {
-    if (!enabled || typeof window === "undefined" || !("geolocation" in navigator)) return;
+    let current = true;
+    if (!enabled || typeof window === "undefined" || !("geolocation" in navigator)) {
+      setState({ status: "idle", data: null });
+      return () => {
+        current = false;
+      };
+    }
     setState({ status: "loading", data: null });
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
@@ -132,6 +152,7 @@ function useWeather(enabled: boolean) {
           );
           if (!r.ok) throw new Error("weather");
           const j = await r.json();
+          if (!current) return;
           const code = j.current?.weather_code ?? 0;
           setState({
             status: "ok",
@@ -143,13 +164,18 @@ function useWeather(enabled: boolean) {
             },
           });
         } catch {
-          setState({ status: "error", data: null });
+          if (current) setState({ status: "error", data: null });
         }
       },
-      () => setState({ status: "denied", data: null }),
+      () => {
+        if (current) setState({ status: "denied", data: null });
+      },
       { timeout: 6000, maximumAge: 15 * 60_000 },
     );
-  }, [enabled]);
+    return () => {
+      current = false;
+    };
+  }, [enabled, scope]);
   return state;
 }
 
@@ -209,32 +235,52 @@ function fmtDate(iso: string | null) {
 
 function SummaryPage() {
   const { user, isSignedIn, isLoaded } = useUser();
+  const userKey = user?.id ?? null;
+  const principal = isLoaded ? chatStoragePrincipal(userKey) : null;
+  const dismissKey = isLoaded ? principalScopedStorageKey(DISMISS_KEY_BASE, userKey) : null;
+  const weatherKey = isLoaded ? principalScopedStorageKey("kova-weather-opt-in", userKey) : null;
   const navigate = useNavigate();
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) navigate({ to: "/" });
   }, [isLoaded, isSignedIn, navigate]);
 
-  const [dismissed, setDismissed] = useState<SectionId[]>(() => loadDismissed());
-  const isHidden = (id: SectionId) => dismissed.includes(id);
+  const [dismissed, setDismissed] = useState<SectionId[]>([]);
+  const [preferencesPrincipal, setPreferencesPrincipal] = useState<string | null>(null);
+  const preferencesReady = principal !== null && preferencesPrincipal === principal;
+  const visibleDismissed = preferencesReady ? dismissed : [];
+  const isHidden = (id: SectionId) => visibleDismissed.includes(id);
   const hide = (id: SectionId) => {
-    const next = Array.from(new Set([...dismissed, id]));
+    if (!preferencesReady) return;
+    const next = Array.from(new Set([...visibleDismissed, id]));
     setDismissed(next);
-    saveDismissed(next);
+    saveDismissed(dismissKey, next);
   };
   const restore = () => {
+    if (!preferencesReady) return;
     setDismissed([]);
-    saveDismissed([]);
+    saveDismissed(dismissKey, []);
   };
 
   const firstName = (user?.firstName ?? user?.fullName?.split(" ")[0] ?? null) as string | null;
   const greeting = useGreeting(firstName);
 
   // Local chats
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversationState, setConversationState] = useState<{
+    principal: string | null;
+    items: Conversation[];
+  }>({ principal: null, items: [] });
+  const conversations =
+    principal !== null && conversationState.principal === principal
+      ? conversationState.items
+      : EMPTY_CONVERSATIONS;
   useEffect(() => {
-    setConversations(loadConversations());
-  }, []);
+    if (!isLoaded || !isSignedIn || principal === null) {
+      setConversationState({ principal: null, items: [] });
+      return;
+    }
+    setConversationState({ principal, items: loadConversations(userKey) });
+  }, [isLoaded, isSignedIn, principal, userKey]);
   const pinned = conversations.filter((c) => c.pinned).slice(0, 4);
   const continueChats = conversations
     .filter((c) => !c.pinned)
@@ -242,33 +288,33 @@ function SummaryPage() {
     .slice(0, 4);
 
   // Server data (independent queries)
-  const enabled = !!isSignedIn;
+  const enabled = isLoaded && !!isSignedIn && !!userKey;
   const qProjects = useQuery({
-    queryKey: ["summary", "projects"],
+    queryKey: ["summary", "projects", userKey],
     queryFn: () => getSummaryProjects(),
     enabled,
     staleTime: 30_000,
   });
   const qImages = useQuery({
-    queryKey: ["summary", "images"],
+    queryKey: ["summary", "images", userKey],
     queryFn: () => getSummaryImages(),
     enabled,
     staleTime: 30_000,
   });
   const qFiles = useQuery({
-    queryKey: ["summary", "files"],
+    queryKey: ["summary", "files", userKey],
     queryFn: () => getSummaryFiles(),
     enabled,
     staleTime: 30_000,
   });
   const qTasks = useQuery({
-    queryKey: ["summary", "tasks"],
+    queryKey: ["summary", "tasks", userKey],
     queryFn: () => getSummaryTasks(),
     enabled,
     staleTime: 30_000,
   });
   const qGoogle = useQuery({
-    queryKey: ["summary", "google"],
+    queryKey: ["summary", "google", userKey],
     queryFn: () => getGoogleStatus(),
     enabled,
     staleTime: 60_000,
@@ -280,28 +326,52 @@ function SummaryPage() {
     !!qGoogle.data?.connected && qGoogle.data.scopes.some((s) => s.includes("calendar"));
 
   const qGmail = useQuery({
-    queryKey: ["summary", "gmail"],
+    queryKey: ["summary", "gmail", userKey],
     queryFn: () => getGmailSummary(),
     enabled: enabled && hasGmail,
     staleTime: 60_000,
   });
   const qCal = useQuery({
-    queryKey: ["summary", "cal"],
+    queryKey: ["summary", "cal", userKey],
     queryFn: () => getCalendarSummary(),
     enabled: enabled && hasCal,
     staleTime: 60_000,
   });
 
   // Weather (opt-in via localStorage flag; user grants location permission on button click)
-  const [weatherEnabled, setWeatherEnabled] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("kova-weather-opt-in") === "1";
-  });
-  const weather = useWeather(weatherEnabled);
+  const [weatherEnabled, setWeatherEnabled] = useState(false);
+  const visibleWeatherEnabled = preferencesReady ? weatherEnabled : false;
+  const weather = useWeather(visibleWeatherEnabled, principal);
   const enableWeather = () => {
+    if (!preferencesReady || !weatherKey) return;
     setWeatherEnabled(true);
-    localStorage.setItem("kova-weather-opt-in", "1");
+    safeBrowserStorage("localStorage")?.setItem(weatherKey, "1");
   };
+
+  useEffect(() => {
+    if (!principal || !dismissKey || !weatherKey) {
+      setDismissed([]);
+      setWeatherEnabled(false);
+      setPreferencesPrincipal(null);
+      return;
+    }
+    setDismissed(loadDismissed(dismissKey));
+    setWeatherEnabled(safeBrowserStorage("localStorage")?.getItem(weatherKey) === "1");
+    setPreferencesPrincipal(principal);
+  }, [dismissKey, principal, weatherKey]);
+
+  useEffect(() => {
+    if (!isLoaded || !principal) return;
+    const reset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      setDismissed([]);
+      setWeatherEnabled(false);
+      setPreferencesPrincipal(principal);
+      setConversationState({ principal, items: [] });
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+    return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+  }, [isLoaded, principal, userKey]);
 
   // Suggested actions - derived from real state
   const suggestions: Array<{ label: string; to: string; hint: string }> = [];
@@ -369,7 +439,6 @@ function SummaryPage() {
                   { label: "New image", icon: ImageIcon, to: "/images" },
                   { label: "New project", icon: FolderKanban, to: "/projects" },
                   { label: "Library", icon: FolderOpen, to: "/library" },
-                  { label: "Apps", icon: Link2, to: "/apps" },
                   { label: "Scheduled", icon: Clock, to: "/scheduled-tasks" },
                 ].map((a) => (
                   <Link
@@ -401,7 +470,7 @@ function SummaryPage() {
                       <button
                         onClick={() => {
                           try {
-                            localStorage.setItem("nova-gpt-pending-active", c.id);
+                            savePendingActive(userKey, c.id);
                           } catch {
                             /* ignore */
                           }
@@ -430,7 +499,7 @@ function SummaryPage() {
                     <button
                       onClick={() => {
                         try {
-                          localStorage.setItem("nova-gpt-pending-active", c.id);
+                          savePendingActive(userKey, c.id);
                         } catch {
                           /* ignore */
                         }
@@ -784,7 +853,7 @@ function SummaryPage() {
 
           {!isHidden("weather") && (
             <Section id="weather" title="Weather" icon={CloudSun} onDismiss={hide}>
-              {!weatherEnabled ? (
+              {!visibleWeatherEnabled ? (
                 <div className="text-sm text-muted-foreground">
                   <p className="mb-2">
                     Show local weather using your device location. Nothing is stored.
@@ -809,14 +878,15 @@ function SummaryPage() {
           )}
         </div>
 
-        {dismissed.length > 0 && (
+        {visibleDismissed.length > 0 && (
           <div className="mt-8 flex justify-center">
             <button
               onClick={restore}
               className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              Restore {dismissed.length} hidden section{dismissed.length === 1 ? "" : "s"}
+              Restore {visibleDismissed.length} hidden section
+              {visibleDismissed.length === 1 ? "" : "s"}
             </button>
           </div>
         )}

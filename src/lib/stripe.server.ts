@@ -35,7 +35,7 @@ export function getStripeErrorMessage(error: unknown): string {
 export async function verifyWebhook(
   req: Request,
   env: StripeEnv,
-): Promise<{ id?: string; type: string; data: { object: unknown } }> {
+): Promise<{ id?: string; created?: number; type: string; data: { object: unknown } }> {
   const signature = req.headers.get("stripe-signature");
   const maxBodyBytes = 2 * 1024 * 1024;
   const contentLength = Number(req.headers.get("content-length") ?? "0");

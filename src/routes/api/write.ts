@@ -1,7 +1,13 @@
 // Non-streaming text transformation endpoint for the Writing workspace.
 // Accepts { text, action, instructions?, tone? } and returns { text }.
 import { createFileRoute } from "@tanstack/react-router";
-import { chatCompletions, chatModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
+import {
+  chatCompletions,
+  chatModel,
+  missingAiProviderResponse,
+  providerErrorFromResponse,
+  providerErrorResponse,
+} from "@/lib/ai/provider.server";
 import {
   requireUser,
   assertNotBanned,
@@ -10,9 +16,17 @@ import {
   getCallerTier,
 } from "@/lib/api-auth.server";
 import { DAILY_CHAT_LIMIT_BY_TIER } from "@/lib/modes";
+import { modelForRole } from "@/lib/ai/model-router.server";
 
 type Action =
-  "improve" | "expand" | "shorten" | "grammar" | "continue" | "tone" | "outline" | "custom";
+  | "improve"
+  | "expand"
+  | "shorten"
+  | "grammar"
+  | "continue"
+  | "tone"
+  | "outline"
+  | "custom";
 
 type Body = {
   text?: string;
@@ -113,28 +127,28 @@ export const Route = createFileRoute("/api/write")({
         const quota = await enforceQuota(auth, "chats", DAILY_CHAT_LIMIT_BY_TIER[tier]);
         if (quota) return quota;
 
-        const upstream = await chatCompletions({
-          model: chatModel("balanced"),
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are a precise writing assistant. Return only the requested text with no commentary, no headings like 'Here is', and no code fences unless the source used them.",
-            },
-            {
-              role: "user",
-              content: `${instruction}\n\n---\n${text}`,
-            },
-          ],
-        });
+        let upstream: Response;
+        try {
+          upstream = await chatCompletions({
+            model: modelForRole("DEFAULT_CHAT"),
+            messages: [
+              {
+                role: "system",
+                content:
+                  "You are a precise writing assistant. Return only the requested text with no commentary, no headings like 'Here is', and no code fences unless the source used them.",
+              },
+              {
+                role: "user",
+                content: `${instruction}\n\n---\n${text}`,
+              },
+            ],
+          });
+        } catch (error) {
+          return providerErrorResponse(error);
+        }
 
         if (!upstream.ok) {
-          const errBody = await upstream.text();
-          console.error(`[write] gateway ${upstream.status}: ${errBody}`);
-          return Response.json(
-            { error: `ai_failed_${upstream.status}` },
-            { status: upstream.status === 429 ? 429 : 502 },
-          );
+          return providerErrorResponse(await providerErrorFromResponse(upstream));
         }
 
         const json = (await upstream.json()) as {

@@ -1,11 +1,7 @@
-import "./lib/error-capture";
-
-import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { rejectCrossSiteRequest } from "./lib/http-security.server";
 
 import { withRuntimeBindings } from "./lib/runtime-env.server";
-
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -35,8 +31,7 @@ function hardenResponse(response: Response): Response {
     "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
     "Cross-Origin-Resource-Policy": "same-origin",
     "Origin-Agent-Cluster": "?1",
-    "Permissions-Policy":
-      "camera=(), geolocation=(self), microphone=(), payment=(self), usb=()",
+    "Permissions-Policy": "camera=(), geolocation=(self), microphone=(), payment=(self), usb=()",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
     "X-Content-Type-Options": "nosniff",
@@ -57,9 +52,13 @@ let serverEntryPromise: Promise<ServerEntry> | undefined;
 
 async function getServerEntry(): Promise<ServerEntry> {
   if (!serverEntryPromise) {
-    serverEntryPromise = import("@tanstack/react-start/server-entry").then(
+    const pending = import("@tanstack/react-start/server-entry").then(
       (m) => (m as { default?: ServerEntry }).default ?? (m as unknown as ServerEntry),
     );
+    serverEntryPromise = pending;
+    void pending.catch(() => {
+      if (serverEntryPromise === pending) serverEntryPromise = undefined;
+    });
   }
   return serverEntryPromise;
 }
@@ -108,7 +107,7 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
     return response;
   }
 
-  console.error(consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`));
+  console.error("[server] unhandled SSR response", { status: response.status });
   return brandedErrorResponse();
 }
 
@@ -124,12 +123,12 @@ export default {
         return hardenResponse(Response.json({ error: "Request too large" }, { status: 413 }));
       }
       const handler = await getServerEntry();
-      const response = await withRuntimeBindings(env, () =>
-        handler.fetch(request, env, ctx),
-      );
+      const response = await withRuntimeBindings(env, () => handler.fetch(request, env, ctx));
       return hardenResponse(await normalizeCatastrophicSsrResponse(response));
     } catch (error) {
-      console.error(error);
+      console.error("[server] request failed", {
+        name: error instanceof Error ? error.name : "UnknownError",
+      });
       return hardenResponse(brandedErrorResponse());
     }
   },

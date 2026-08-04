@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { waitForKovaHydration } from "./hydration";
+
 function watchForHydrationErrors(page: import("@playwright/test").Page) {
   const messages: string[] = [];
   page.on("console", (message) => {
@@ -16,6 +18,7 @@ function watchForHydrationErrors(page: import("@playwright/test").Page) {
 test("the public comparison page is indexable, stable, and KovaGPT-branded", async ({ page }) => {
   const hydrationErrors = watchForHydrationErrors(page);
   const response = await page.goto("/chatgpt-alternative", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
 
   expect(response?.headers()["x-robots-tag"]).toBe("index, follow");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /index,\s*follow/u);
@@ -36,6 +39,7 @@ test("private workspace pages are not indexable or followable", async ({ page })
 test("not-found responses remain noindex across SSR and hydration", async ({ page }) => {
   const hydrationErrors = watchForHydrationErrors(page);
   const response = await page.goto("/__kova_missing_page__", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
 
   expect(response?.status()).toBe(404);
   expect(response?.headers()["x-robots-tag"]).toBe("noindex, nofollow");

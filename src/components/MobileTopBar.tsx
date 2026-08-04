@@ -1,5 +1,4 @@
 import { Menu, MessageSquareDashed, SquarePen } from "lucide-react";
-import { NovaLogo } from "@/components/NovaLogo";
 import { useUser, SignInButton, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { ResponsiveModelSelector } from "@/components/ResponsiveModelSelector";
 import type { ModeId, Tier } from "@/lib/modes";
@@ -35,7 +34,7 @@ export function MobileTopBar({
   const showAuth = isLoaded && clerkEnabled && !isSignedIn;
   return (
     <header className="kova-topbar sticky top-0 z-30 lg:hidden">
-      <div className="kova-topbar-inner grid min-h-14 grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] items-center gap-1">
+      <div className="kova-topbar-inner grid min-h-14 grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] items-center gap-1 px-1">
         <button
           type="button"
           onClick={onOpenSidebar}
@@ -54,9 +53,8 @@ export function MobileTopBar({
               compact
             />
           ) : (
-            <div className="flex min-w-0 items-center justify-center gap-2">
-              <NovaLogo className="w-5 h-5 shrink-0" />
-              <span className="font-display font-semibold tracking-tight text-[15px] truncate">
+            <div className="flex min-w-0 items-center justify-center">
+              <span className="font-display font-semibold tracking-tight text-base truncate">
                 {title || "KovaGPT"}
               </span>
             </div>

@@ -6,12 +6,19 @@ import { useUser, useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 import { EnterpriseContactDialog } from "@/components/EnterpriseContactDialog";
 import { PublicFooter } from "@/components/PublicFooter";
+import { CAPABILITY_REGISTRY } from "@/lib/capability-registry";
+
+const PRICING_TIERS = ["free", "plus", "pro"] as const;
+
+function displayPrice(monthlyPriceUsd: number): string {
+  return monthlyPriceUsd === 0 ? "$0" : `$${monthlyPriceUsd}`;
+}
 
 export const Route = createFileRoute("/pricing")({
   component: PricingPage,
   head: () => ({
     meta: [
-      { title: "Pricing - KovaGPT Plus & Pro plans" },
+      { title: "KovaGPT Billing" },
       {
         name: "description",
         content:
@@ -30,7 +37,10 @@ export const Route = createFileRoute("/pricing")({
       { property: "og:image:height", content: "630" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Pricing - KovaGPT Plus & Pro plans" },
-      { name: "twitter:description", content: "Compare KovaGPT Free, Plus, and Pro plans." },
+      {
+        name: "twitter:description",
+        content: "Compare KovaGPT Free, Plus, and Pro plans.",
+      },
       { name: "twitter:image", content: "https://kovagpt.com/og/pricing.jpg" },
     ],
     links: [{ rel: "canonical", href: "https://kovagpt.com/pricing" }],
@@ -39,49 +49,22 @@ export const Route = createFileRoute("/pricing")({
         type: "application/ld+json",
         children: JSON.stringify({
           "@context": "https://schema.org",
-          "@graph": [
-            {
+          "@graph": PRICING_TIERS.map((tier) => {
+            const plan = CAPABILITY_REGISTRY.plans[tier];
+            return {
               "@type": "Product",
-              name: "KovaGPT Free",
-              description: "Free plan with Auto mode, live web search, and image generation.",
+              name: `KovaGPT ${plan.name}`,
+              description: plan.description,
               brand: { "@type": "Brand", name: "KovaGPT" },
               offers: {
                 "@type": "Offer",
-                price: "0",
+                price: String(plan.monthlyPriceUsd),
                 priceCurrency: "USD",
                 url: "https://kovagpt.com/pricing",
                 availability: "https://schema.org/InStock",
               },
-            },
-            {
-              "@type": "Product",
-              name: "KovaGPT Plus",
-              description:
-                "Plus plan with Creative, Precise, Code, and Study modes plus higher usage.",
-              brand: { "@type": "Brand", name: "KovaGPT" },
-              offers: {
-                "@type": "Offer",
-                price: "16",
-                priceCurrency: "USD",
-                url: "https://kovagpt.com/pricing",
-                availability: "https://schema.org/InStock",
-              },
-            },
-            {
-              "@type": "Product",
-              name: "KovaGPT Pro",
-              description:
-                "Pro plan with Reasoning, Research, Writer Pro, and Tutor Pro modes and top usage limits.",
-              brand: { "@type": "Brand", name: "KovaGPT" },
-              offers: {
-                "@type": "Offer",
-                price: "89",
-                priceCurrency: "USD",
-                url: "https://kovagpt.com/pricing",
-                availability: "https://schema.org/InStock",
-              },
-            },
-          ],
+            };
+          }),
         }),
       },
       {
@@ -95,7 +78,7 @@ export const Route = createFileRoute("/pricing")({
               name: "Can I cancel anytime?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "Yes. You can cancel from your account settings. Canceling stops future renewals.",
+                text: "Open Billing in Settings to see the available subscription-management options and their effective dates.",
               },
             },
             {
@@ -119,7 +102,7 @@ export const Route = createFileRoute("/pricing")({
               name: "Do unused credits roll over?",
               acceptedAnswer: {
                 "@type": "Answer",
-                text: "Unused usage does not roll over unless stated otherwise.",
+                text: "Published daily allowances reset rather than rolling over.",
               },
             },
           ],
@@ -171,98 +154,70 @@ function PricingPage() {
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">Upgrade your plan</h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Choose the plan that fits how you work. Cancel anytime.
+            Choose the plan that fits how you work. Provider-dependent features require their
+            services to be configured and available.
           </p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           <PlanCard
             icon={Sparkles}
-            name="Free"
-            price="$0"
+            name={CAPABILITY_REGISTRY.plans.free.name}
+            price={displayPrice(CAPABILITY_REGISTRY.plans.free.monthlyPriceUsd)}
             period="forever"
-            description="Get started with KovaGPT."
-            cta="Current plan"
+            description={CAPABILITY_REGISTRY.plans.free.description}
+            cta="Free plan"
             ctaDisabled
-            features={[
-              "Access to KovaGPT",
-              "Basic Mode",
-              "Limited image generations",
-              "File & image uploads (daily limit)",
-              "Conversation history saved when signed in",
-            ]}
+            features={CAPABILITY_REGISTRY.plans.free.features}
           />
 
           <PlanCard
             icon={Zap}
-            name="Plus"
-            price="$16"
+            name={CAPABILITY_REGISTRY.plans.plus.name}
+            price={displayPrice(CAPABILITY_REGISTRY.plans.plus.monthlyPriceUsd)}
             period="/ month"
-            description="Free for your first month, then $16/month. Cancel anytime."
-            cta="Start free month"
+            description={`Eligible first-time subscribers may receive a ${CAPABILITY_REGISTRY.plans.plus.trialPeriodDays}-day trial. Checkout confirms eligibility and price before purchase.`}
+            cta="Start Plus"
             highlight
-            onCta={() => startCheckout("plus_monthly")}
-            features={[
-              "First month free - cancel anytime",
-              "Everything in Free",
-              "Auto Mode (adapts to your unlocked modes)",
-              "Higher daily usage limits",
-              "More image generations than Free",
-              "More daily file uploads",
-              "Creative, Precise, Code & Study modes",
-              "Faster response times",
-              "Priority access during peak hours",
-            ]}
+            onCta={() => startCheckout(CAPABILITY_REGISTRY.plans.plus.lookupKey!)}
+            features={CAPABILITY_REGISTRY.plans.plus.features}
           />
 
           <PlanCard
             icon={Crown}
-            name="Pro"
-            price="$89"
+            name={CAPABILITY_REGISTRY.plans.pro.name}
+            price={displayPrice(CAPABILITY_REGISTRY.plans.pro.monthlyPriceUsd)}
             period="/ month"
-            description="Maximum capability with exclusive Pro modes."
+            description={CAPABILITY_REGISTRY.plans.pro.description}
             cta="Upgrade to Pro"
-            onCta={() => startCheckout("pro_monthly")}
-            features={[
-              "Everything in Plus",
-              "Highest KovaGPT usage limits",
-              "Reasoning, Research, Writer Pro & Tutor Pro modes",
-              "Generate emails, websites & components",
-              "Longer context for big documents",
-              "Early access to new features",
-            ]}
+            onCta={() => startCheckout(CAPABILITY_REGISTRY.plans.pro.lookupKey!)}
+            features={CAPABILITY_REGISTRY.plans.pro.features}
           />
 
           <PlanCard
             icon={Building2}
-            name="Enterprise"
-            price="Custom"
+            name={CAPABILITY_REGISTRY.enterprise.name}
+            price={CAPABILITY_REGISTRY.enterprise.priceLabel}
             period="annual agreement"
-            description="Secure AI for organizations that need governance, support, and predictable scale."
+            description={CAPABILITY_REGISTRY.enterprise.description}
             cta="Contact sales"
             enterprise
             onCta={() => setEnterpriseOpen(true)}
-            features={[
-              "Everything in Pro",
-              "Centralized workspace and consolidated billing",
-              "SAML SSO, role controls, and audit logs",
-              "Custom retention and data governance",
-              "Priority onboarding and support SLA",
-              "Volume-based usage and invoicing",
-            ]}
+            features={CAPABILITY_REGISTRY.enterprise.features}
           />
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-10">
-          Secured by Stripe. Cancel anytime from your account. Enterprise plans are billed manually.
+          Stripe hosts checkout. Confirm the price, trial eligibility, renewal date, and available
+          payment methods before purchase.
         </p>
       </main>
 
       <EnterpriseContactDialog open={enterpriseOpen} onOpenChange={setEnterpriseOpen} />
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center overflow-y-auto py-10 px-4">
-          <div className="relative w-full max-w-2xl bg-background rounded-2xl border border-border overflow-hidden">
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-start justify-center overflow-y-auto py-10 px-4">
+          <div className="relative w-full max-w-2xl bg-background rounded-xl border border-border overflow-hidden">
             <button
               onClick={closeCheckout}
               className="absolute top-3 right-3 z-10 p-2 rounded-full bg-background/80 border border-border hover:bg-accent transition"
@@ -275,35 +230,37 @@ function PricingPage() {
         </div>
       )}
       <p className="mx-auto max-w-5xl px-6 mt-10 text-xs text-muted-foreground">
-        Exact usage limits may vary by plan and feature. You can view your current limits from your
-        account when signed in.
+        Published daily allowances are listed above. Provider outages, maintenance, and account
+        eligibility can still limit a feature.
       </p>
 
       <section className="mx-auto max-w-5xl px-6 mt-16">
         <h2 className="text-2xl font-semibold mb-6 text-left">Pricing FAQ</h2>
         <div className="grid gap-5 text-sm sm:grid-cols-2">
-          <div className="rounded-2xl border border-border bg-card/50 p-5">
+          <div className="rounded-xl border border-border bg-card/50 p-5">
             <h3 className="font-medium mb-1">Can I cancel anytime?</h3>
             <p className="text-muted-foreground">
-              Yes. You can cancel from your account settings. Canceling stops future renewals.
+              Open Billing in Settings to see the options available for your subscription and when a
+              change takes effect.
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/50 p-5">
+          <div className="rounded-xl border border-border bg-card/50 p-5">
             <h3 className="font-medium mb-1">What happens if I hit my limit?</h3>
             <p className="text-muted-foreground">
               You can wait until your limit resets or upgrade to a higher plan for more usage.
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/50 p-5">
+          <div className="rounded-xl border border-border bg-card/50 p-5">
             <h3 className="font-medium mb-1">Can I switch plans?</h3>
             <p className="text-muted-foreground">
-              Yes. Manage your subscription from your account settings at any time.
+              Available plan changes appear in Billing. Review the portal or checkout confirmation
+              for timing and price before accepting.
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/50 p-5">
+          <div className="rounded-xl border border-border bg-card/50 p-5">
             <h3 className="font-medium mb-1">Do unused credits roll over?</h3>
             <p className="text-muted-foreground">
-              Unused usage does not roll over unless stated otherwise.
+              Published daily allowances reset rather than rolling over.
             </p>
           </div>
         </div>
@@ -321,7 +278,7 @@ type CardProps = {
   period: string;
   description: string;
   cta: string;
-  features: string[];
+  features: readonly string[];
   highlight?: boolean;
   enterprise?: boolean;
   ctaDisabled?: boolean;
@@ -343,11 +300,11 @@ function PlanCard({
 }: CardProps) {
   return (
     <div
-      className={`kova-plan-card relative flex flex-col rounded-[24px] border p-6 shadow-[0_1px_2px_rgb(0_0_0/.04)] ${
+      className={`kova-plan-card ${enterprise ? "kova-plan-card-enterprise" : ""} relative flex flex-col rounded-xl border p-6 shadow-none ${
         enterprise
-          ? "border-foreground/20 bg-foreground text-background"
+          ? "border-foreground/30 bg-card"
           : highlight
-            ? "border-[var(--kova-blue)] bg-card"
+            ? "border-foreground bg-card"
             : "border-border bg-card/50"
       }`}
     >
@@ -359,29 +316,29 @@ function PlanCard({
       <div className="mb-3 flex items-center gap-2.5">
         {Icon ? (
           <span
-            className={`grid h-9 w-9 place-items-center rounded-xl ${enterprise ? "bg-background/15" : "bg-muted"}`}
+            className={`grid h-9 w-9 place-items-center rounded-xl bg-muted`}
           >
             <Icon className="h-4 w-4" />
           </span>
         ) : null}
         <h2 className="text-xl font-semibold">{name}</h2>
       </div>
-      <div className="flex items-baseline gap-1 mb-2">
-        <span className="text-4xl font-bold">{price}</span>
-        <span className="text-muted-foreground text-sm">{period}</span>
+      <div className="mb-2 flex min-h-[3.25rem] flex-col justify-end">
+        <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+          <span className="text-4xl font-bold leading-none">{price}</span>
+          <span className="text-sm leading-5 text-muted-foreground">{period}</span>
+        </div>
       </div>
-      <p className={`mb-6 text-sm ${enterprise ? "text-background/70" : "text-muted-foreground"}`}>
+      <p className="mb-6 text-sm text-muted-foreground">
         {description}
       </p>
       <button
         onClick={onCta}
         disabled={ctaDisabled}
-        className={`mb-6 w-full rounded-full py-2.5 text-sm font-medium transition ${
+        className={`mb-6 w-full rounded-full border py-2.5 text-sm font-medium transition ${
           enterprise
-            ? "bg-background text-foreground hover:bg-background/90"
-            : highlight
-              ? "bg-foreground text-background hover:opacity-90"
-              : "border border-border hover:bg-accent"
+            ? "border-foreground/40 hover:bg-accent"
+            : "border-border hover:bg-accent"
         } ${ctaDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
       >
         {cta}
