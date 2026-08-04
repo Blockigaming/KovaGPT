@@ -494,7 +494,7 @@ function ImagesPage() {
   };
 
   return (
-    <div className="flex h-dvh w-full bg-background text-foreground">
+    <div className="kova-app-shell kova-images-shell flex h-dvh w-full bg-background text-foreground">
       <Sidebar
         conversations={[]}
         activeId={null}
@@ -507,8 +507,8 @@ function ImagesPage() {
         onOpenHelp={openHelp}
       />
 
-      <main className="flex-1 flex flex-col min-w-0">
-        <header className="h-14 flex items-center px-3 border-b border-border shrink-0">
+      <main className="kova-images-main flex min-w-0 flex-1 flex-col">
+        <header className="kova-images-topbar kova-topbar flex h-14 shrink-0 items-center px-3">
           {!sidebarOpen && (
             <button
               onClick={() => setSidebarOpen((v) => !v)}
@@ -539,8 +539,8 @@ function ImagesPage() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-40">
+        <div className="kova-images-scroll flex-1 overflow-y-auto">
+          <div className="kova-images-page kova-page mx-auto max-w-6xl px-4 pb-40 pt-6 sm:px-6">
             {/* Create an image */}
             <section>
               <h2 className="text-[22px] font-semibold tracking-tight mb-3">Create an image</h2>
@@ -551,9 +551,9 @@ function ImagesPage() {
                       key={p.label}
                       type="button"
                       onClick={() => applyPreset(p)}
-                      className="group flex flex-col items-start w-[128px] shrink-0 focus:outline-none"
+                      className="kova-image-preset group flex w-[128px] shrink-0 flex-col items-start focus:outline-none"
                     >
-                      <div className="relative w-[128px] h-[176px] rounded-2xl overflow-hidden ring-1 ring-border/60 bg-muted ">
+                      <div className="kova-image-preset-preview relative h-[176px] w-[128px] overflow-hidden rounded-2xl bg-muted ring-1 ring-border/60">
                         <img
                           src={p.image}
                           alt={p.label}
@@ -735,7 +735,7 @@ function ImagesPage() {
         </div>
 
         {/* Bottom composer */}
-        <div className="sticky bottom-0 border-t border-border/60 bg-gradient-to-t from-background via-background to-background/80 backdrop-blur">
+        <div className="kova-images-composer-dock sticky bottom-0">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -743,7 +743,7 @@ function ImagesPage() {
             }}
             className="max-w-3xl mx-auto px-4 sm:px-6 py-3"
           >
-            <div className="flex items-end gap-2 rounded-2xl border border-border bg-card px-3 py-2.5">
+            <div className="kova-images-composer flex items-end gap-2 rounded-2xl border border-border bg-card px-3 py-2.5">
               <textarea
                 ref={inputRef}
                 value={prompt}
