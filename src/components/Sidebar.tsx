@@ -155,14 +155,9 @@ export function Sidebar({
   const labelClass = collapsed ? "sr-only" : "truncate";
   const iconOnly = collapsed ? "justify-center px-0" : "gap-2.5 px-2.5";
   const navItemClass = (active: boolean) =>
-  const navItemClass = (active: boolean) =>
     `kova-nav-row relative flex h-[38px] items-center rounded-lg py-1 text-sm transition-colors duration-100 ${iconOnly} ${
       active
         ? "bg-sidebar-active font-medium text-foreground"
-        : "text-sidebar-foreground hover:bg-sidebar-hover"
-    }`;
-      active
-        ? "bg-sidebar-active text-foreground font-medium"
         : "text-sidebar-foreground hover:bg-sidebar-hover"
     }`;
 
@@ -316,11 +311,7 @@ export function Sidebar({
 
       {collapsed && showSignedIn ? (
         <div
-
-          className="kova-sidebar-rail hidden h-[100dvh] w-[52px] shrink-0 flex-col items-center gap-1 border-r border-border/60 bg-sidebar pb-[max(.625rem,var(--safe-bottom))] pt-[max(.5rem,var(--safe-top))] lg:flex"
-
-          className="kova-collapsed-sidebar hidden h-[100dvh] w-16 shrink-0 flex-col items-center gap-1 border-r border-border/60 bg-sidebar pb-[max(.625rem,var(--safe-bottom))] pt-[max(.5rem,var(--safe-top))] md:flex"
-
+          className="kova-sidebar-rail kova-collapsed-sidebar hidden h-[100dvh] w-[52px] shrink-0 flex-col items-center gap-1 border-r border-border/60 bg-sidebar pb-[max(.625rem,var(--safe-bottom))] pt-[max(.5rem,var(--safe-top))] lg:flex"
           aria-label="Collapsed navigation"
         >
           <button
@@ -381,12 +372,6 @@ export function Sidebar({
           collapsed ? "lg:!w-0 lg:border-r-0" : ""
         } max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,320px)] max-lg:shadow-lg ${
           open ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"
-
-        className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-border/60 bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 ease-[var(--ease-spring)] md:w-[var(--sidebar-expanded)] ${
-          collapsed ? "md:hidden" : ""
-        } max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:w-[min(86vw,320px)] max-md:shadow-lg ${
-          open ? "max-md:translate-x-0" : "max-md:-translate-x-full"
-
         }`}
         aria-label="Primary navigation"
         aria-modal={open && isMobileViewport() ? true : undefined}
@@ -401,7 +386,6 @@ export function Sidebar({
               <span className="truncate text-base font-semibold tracking-tight">KovaGPT</span>
             </div>
 
-
             {showSignedOut ? (
               <Link
                 to="/library"
@@ -412,7 +396,6 @@ export function Sidebar({
                 <Search className="h-[18px] w-[18px]" />
               </Link>
             ) : null}
-
 
             <button
               onClick={onToggle}
@@ -554,11 +537,7 @@ export function Sidebar({
           </div>
 
           <div
-
             className={`kova-sidebar-footer mt-auto border-t border-border/60 bg-sidebar p-2.5 pb-[max(.625rem,var(--safe-bottom))] ${collapsed ? "lg:px-2" : ""}`}
-
-            className={`mt-auto border-t border-border/60 bg-sidebar p-2.5 pb-[max(.625rem,var(--safe-bottom))] ${collapsed ? "md:px-2" : ""}`}
-
           >
             {!isLoaded ? null : showSignedIn ? (
               <div className={`flex items-center gap-2 ${collapsed ? "md:flex-col" : ""}`}>

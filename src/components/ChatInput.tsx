@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
+import { ModelSelector } from "@/components/ModelSelector";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { useLayout } from "@/hooks/use-mobile";
 import { useSharedSendOnEnter } from "@/lib/composer-preferences";
@@ -52,12 +53,7 @@ export type RecentLibraryFile = {
   projectName?: string | null;
 };
 export type ComposerToolId =
-  | "web_search"
-  | "deep_research"
-  | "image"
-  | "study"
-  | "data_analysis"
-  | "file_analysis";
+  "web_search" | "deep_research" | "image" | "study" | "data_analysis" | "file_analysis";
 
 type ComposerAction = {
   id: ComposerToolId;
@@ -90,6 +86,8 @@ export function ChatInput({
   onSubmit,
   onStop,
   isStreaming,
+  mode,
+  onModeChange,
 
   sendOnEnter,
 
@@ -98,6 +96,7 @@ export function ChatInput({
   attachments,
   onAttachmentsChange,
   userTier = "free",
+  canChangeAgent = true,
   onUploadLimit,
   placeholder,
   onPromptShortcut,
@@ -588,37 +587,10 @@ export function ChatInput({
     const rowClass = `flex w-full items-center gap-3 rounded-xl text-left transition-colors duration-150 hover:bg-accent active:bg-accent disabled:cursor-not-allowed disabled:opacity-50 outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
       mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5 text-sm"
     }`;
-
     const iconClass = mobile
       ? "h-5 w-5 shrink-0 text-muted-foreground"
       : "h-4 w-4 shrink-0 text-muted-foreground";
-    return (
-      <>
-        <div
-          className="px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
-          aria-hidden="true"
-        >
-          Tools
-        </div>
-        {COMPOSER_TOOLS.map((tool) => {
-          const Icon = tool.icon;
-          const active = selectedTool === tool.id;
-          return (
-            <button
-              key={tool.id}
-              type="button"
-              aria-pressed={active}
-              disabled={disabled || isStreaming}
-              onClick={() => chooseTool(tool)}
-              className={`kova-tool-button ${rowClass} ${active ? "bg-accent text-foreground" : ""}`}
-            >
-              <Icon className={iconClass} />
-              <span>{tool.label}</span>
-            </button>
-          );
-        })}
 
-    const iconClass = mobile ? "h-5 w-5 shrink-0 text-muted-foreground" : "h-4 w-4 shrink-0 text-muted-foreground";
     const webSearchTool = COMPOSER_TOOLS.find((tool) => tool.id === "web_search");
     const imageTool = COMPOSER_TOOLS.find((tool) => tool.id === "image");
     const deepResearchTool = COMPOSER_TOOLS.find((tool) => tool.id === "deep_research");
@@ -655,7 +627,6 @@ export function ChatInput({
       const Icon = tool.icon;
       const active = selectedTool === tool.id;
       return (
-
         <button
           key={tool.id}
           type="button"
@@ -670,34 +641,8 @@ export function ChatInput({
       );
     };
 
-    if (!user) {
-      const lockedRow = (
-        key: string,
-        Icon: React.ComponentType<{ className?: string }>,
-        label: string,
-      ) => (
-        <div
-          key={key}
-          aria-disabled="true"
-          className={`${rowClass} cursor-not-allowed text-muted-foreground hover:bg-transparent active:bg-transparent`}
-        >
-          <Icon className={`${iconClass} opacity-70`} />
-          <span className="opacity-70">{label}</span>
-        </div>
-      );
-      return (
-        <>
-          {addPhotosRow}
-          {cameraRow}
-          {webSearchTool ? toolRow({ ...webSearchTool, label: "Web search" }) : null}
-          <p
-            className={`pt-3 pb-1 text-sm text-muted-foreground ${mobile ? "px-4" : "px-3"}`}
-          >
-
-            <Camera className={iconClass} />
-            <span>Camera</span>
-          </button>
-        ) : null}
+    const suggestionRows = (
+      <>
         <div className="mx-2 my-1 border-t border-border/70" aria-hidden="true" />
         <div
           className="px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
@@ -718,23 +663,60 @@ export function ChatInput({
           </button>
         ))}
         {user ? renderRecentLibraryFiles() : null}
+      </>
+    );
 
+    if (!user) {
+      const lockedRow = (
+        key: string,
+        Icon: React.ComponentType<{ className?: string }>,
+        label: string,
+      ) => (
+        <div
+          key={key}
+          aria-disabled="true"
+          className={`${rowClass} cursor-not-allowed text-muted-foreground hover:bg-transparent active:bg-transparent`}
+        >
+          <Icon className={`${iconClass} opacity-70`} />
+          <span className="opacity-70">{label}</span>
+        </div>
+      );
+
+      return (
+        <>
+          <div
+            className="px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+            aria-hidden="true"
+          >
+            Tools
+          </div>
+          {addPhotosRow}
+          {cameraRow}
+          {webSearchTool ? toolRow({ ...webSearchTool, label: "Web search" }) : null}
+          <p className={`pb-1 pt-3 text-sm text-muted-foreground ${mobile ? "px-4" : "px-3"}`}>
             Log in to use...
           </p>
           {lockedRow("locked-deep-research", deepResearchTool?.icon ?? Telescope, "Deep research")}
           {lockedRow("locked-image", imageTool?.icon ?? ImageIcon, "Create image")}
           {lockedRow("locked-model", Atom, "Kova-5.5")}
+          {suggestionRows}
         </>
       );
     }
 
     return (
       <>
+        <div
+          className="px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+          aria-hidden="true"
+        >
+          Tools
+        </div>
         {webSearchTool ? toolRow(webSearchTool) : null}
         {addPhotosRow}
         {cameraRow}
         {imageTool ? toolRow(imageTool) : null}
-
+        {suggestionRows}
       </>
     );
   };
@@ -945,13 +927,11 @@ export function ChatInput({
               }
             />
             <div className="kova-composer-trailing flex self-end items-center">
-
               {canChangeAgent && mode && onModeChange && (
                 <div className="flex items-center">
                   <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
                 </div>
               )}
-
 
               {isStreaming ? (
                 <button
