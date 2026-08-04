@@ -15,7 +15,6 @@ const isLovableSandbox = Boolean(
 // Lovable Cloud runs the public TanStack Start Vite stack directly. Keep the
 // Start plugin ahead of React and avoid the legacy private Lovable adapter;
 // this is also the supported Nitro/h3-v2 production configuration.
-export default defineConfig({
 
 const useNodeBrowserPreview = process.env.KOVA_BROWSER_PREVIEW === "node";
 const buildSha = process.env.KOVA_BUILD_SHA || process.env.GITHUB_SHA || "unknown";
