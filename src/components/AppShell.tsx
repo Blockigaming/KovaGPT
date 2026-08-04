@@ -1,7 +1,8 @@
-import { lazy, Suspense, useEffect, useState, useCallback, type ReactNode } from "react";
+
+import { PanelLeft } from "lucide-react";
+import { lazy, Suspense, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Sidebar } from "@/components/Sidebar";
-import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog })),
 );
@@ -10,11 +11,22 @@ const OnboardingDialog = lazy(() =>
 );
 import { TimersWidget } from "@/components/TimersWidget";
 import { AppErrorBoundary, OfflineBanner } from "@/components/states";
-import { MobileFabs } from "@/components/MobileFabs";
 import { MobileTopBar } from "@/components/MobileTopBar";
 import { installShortcutListener } from "@/lib/shortcuts";
-import { PanelLeft } from "lucide-react";
-import { type Conversation, loadConversations, saveConversations } from "@/lib/chat-store";
+import { useUser } from "@/components/auth/ClerkSafe";
+import {
+  type Conversation,
+  chatStoragePrincipal,
+  clearPendingActive,
+  loadConversations,
+  saveConversations,
+  savePendingActive,
+} from "@/lib/chat-store";
+import { useNovaSettings } from "@/lib/use-nova-settings";
+import {
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+} from "@/lib/principal-browser-storage.mjs";
 
 /**
  * Shared shell that renders the chat Sidebar alongside any page (e.g. /apps,
@@ -22,12 +34,20 @@ import { type Conversation, loadConversations, saveConversations } from "@/lib/c
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const { isLoaded, user } = useUser();
+  const userKey = user?.id ?? null;
+  const storagePrincipal = chatStoragePrincipal(userKey);
+  const [conversationState, setConversationState] = useState<{
+    principal: string | null;
+    items: Conversation[];
+  }>({ principal: null, items: [] });
+  const principalReady = isLoaded && conversationState.principal === storagePrincipal;
+  const conversations = principalReady ? conversationState.items : [];
   // Default closed to avoid a flash-of-open sidebar during SSR/hydration on
   // narrow viewports; on desktop we restore the persisted user preference.
   const [sidebarOpen, setSidebarOpen] = useState(false);
   useEffect(() => {
-    if (typeof window === "undefined" || window.innerWidth < 1024) return;
+    if (typeof window === "undefined" || window.innerWidth < 768) return;
     let saved: string | null = null;
     try {
       saved = localStorage.getItem("kova-sidebar-open");
@@ -37,7 +57,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     setSidebarOpen(saved === null ? true : saved === "1");
   }, []);
   useEffect(() => {
-    if (typeof window === "undefined" || window.innerWidth < 1024) return;
+    if (typeof window === "undefined" || window.innerWidth < 768) return;
     try {
       localStorage.setItem("kova-sidebar-open", sidebarOpen ? "1" : "0");
     } catch {
@@ -46,61 +66,99 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [sidebarOpen]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
+  const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
   const openHelp = useCallback(() => {
     navigate({ to: "/help" as never });
   }, [navigate]);
-  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useNovaSettings(userKey, isLoaded);
 
   useEffect(() => {
-    setConversations(loadConversations());
-  }, []);
-
-  useEffect(() => {
-    return installShortcutListener({
-      "new-chat": () => {
-        try {
-          localStorage.removeItem("nova-gpt-pending-active");
-        } catch {
-          /* ignore */
-        }
-        navigate({ to: "/" });
-      },
-      search: () => {
-        window.dispatchEvent(new CustomEvent("kova-open-search"));
-      },
-      "open-projects": () => {
-        navigate({ to: "/projects" as never });
-      },
-      "open-library": () => {
-        navigate({ to: "/library" });
-      },
-      "open-settings": () => {
-        setSettingsTab(undefined);
-        setSettingsOpen(true);
-      },
-      "generate-image": () => {
-        navigate({ to: "/images" });
-      },
-      "toggle-sidebar": () => {
-        setSidebarOpen((v) => !v);
-      },
-      "focus-input": () => {
-        const el = document.querySelector<HTMLTextAreaElement>(
-          'textarea, [contenteditable="true"]',
-        );
-        el?.focus();
-      },
+    if (!isLoaded) {
+      setConversationState({ principal: null, items: [] });
+      setSettingsOpen(false);
+      return;
+    }
+    setSettingsOpen(false);
+    setConversationState({
+      principal: storagePrincipal,
+      items: loadConversations(userKey),
     });
-  }, [navigate]);
+  }, [isLoaded, storagePrincipal, userKey]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    const reset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      setConversationState({ principal: null, items: [] });
+      setSettingsOpen(false);
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+    return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+  }, [isLoaded, userKey]);
+
+  useEffect(() => {
+    return installShortcutListener(
+      {
+        "new-chat": () => {
+          try {
+            clearPendingActive(userKey);
+          } catch {
+            /* ignore */
+          }
+          navigate({ to: "/" });
+        },
+        search: () => {
+          window.dispatchEvent(new CustomEvent("kova-open-search"));
+        },
+        "open-projects": () => {
+          navigate({ to: "/projects" as never });
+        },
+        "open-library": () => {
+          navigate({ to: "/library" });
+        },
+        "open-settings": () => {
+          settingsReturnFocusRef.current =
+            document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          setSettingsTab(undefined);
+          setSettingsOpen(true);
+        },
+        "generate-image": () => {
+          navigate({ to: "/images" });
+        },
+        "toggle-sidebar": () => {
+          setSidebarOpen((v) => !v);
+        },
+        "focus-input": () => {
+          const el = document.querySelector<HTMLTextAreaElement>(
+            'textarea, [contenteditable="true"]',
+          );
+          el?.focus();
+        },
+      },
+      isLoaded ? userKey : undefined,
+    );
+  }, [isLoaded, navigate, userKey]);
 
   const openSettings = useCallback((tab?: string) => {
+    settingsReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setSettingsTab(tab);
     setSettingsOpen(true);
   }, []);
 
+  useEffect(() => {
+    const handleOpenSettings = (event: Event) => {
+      const tab = (event as CustomEvent<{ tab?: string }>).detail?.tab;
+      openSettings(tab);
+    };
+    window.addEventListener("kova-open-settings", handleOpenSettings);
+    return () => window.removeEventListener("kova-open-settings", handleOpenSettings);
+  }, [openSettings]);
+
   const goToConversation = (id: string) => {
+    if (!principalReady) return;
     try {
-      localStorage.setItem("nova-gpt-pending-active", id);
+      savePendingActive(userKey, id);
     } catch {
       /* ignore */
     }
@@ -109,7 +167,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const handleNew = () => {
     try {
-      localStorage.removeItem("nova-gpt-pending-active");
+      clearPendingActive(userKey);
     } catch {
       /* ignore */
     }
@@ -117,17 +175,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   const handleDelete = (id: string) => {
+    if (!principalReady) return;
     const next = conversations.filter((c) => c.id !== id);
-    setConversations(next);
-    saveConversations(next);
+    setConversationState({ principal: storagePrincipal, items: next });
+    saveConversations(userKey, next);
   };
 
   return (
     <div
-      className="relative flex h-[100dvh] w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
+      className="kova-app-shell relative flex h-[100dvh] w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
       onTouchStart={(e) => {
         const t = e.touches[0];
-        if (t && t.clientX < 24 && window.innerWidth < 1024) {
+        if (t && t.clientX < 24 && window.innerWidth < 768) {
           (e.currentTarget as HTMLDivElement).dataset.swipeStart = String(t.clientX);
           (e.currentTarget as HTMLDivElement).dataset.swipeY = String(t.clientY);
         }
@@ -149,8 +208,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         delete (e.currentTarget as HTMLDivElement).dataset.swipeStart;
       }}
     >
-      {/* Animated brand mesh background - sits behind everything, no pointer events. */}
-      <div aria-hidden="true" className="kova-bg" />
       <Sidebar
         conversations={conversations}
         activeId={null}
@@ -163,25 +220,37 @@ export function AppShell({ children }: { children: ReactNode }) {
         onOpenHelp={openHelp}
       />
 
-      <div className="flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">
+      <div className="kova-workspace-main min-w-0 flex flex-1 flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">
         <OfflineBanner />
-        <MobileTopBar onOpenSidebar={() => setSidebarOpen(true)} onNewChat={handleNew} />
+
+        <MobileTopBar
+          onOpenSidebar={() => setSidebarOpen(true)}
+          onNewChat={handleNew}
+        />
+
         {!sidebarOpen && (
           <button
-            onClick={() => setSidebarOpen(true)}
-            className="hidden lg:flex fixed top-3 left-3 z-30 p-2 rounded-md bg-background/90 border border-border hover:bg-accent transition shadow-sm items-center justify-center"
+            type="button"
+            onClick={() => {
+              setSidebarOpen(true);
+
+              window.requestAnimationFrame(() => {
+                document
+                  .querySelector<HTMLElement>('[aria-label="Collapse sidebar"]')
+                  ?.focus({ preventScroll: true });
+              });
+            }}
+            className="fixed left-3 top-2 z-30 hidden h-10 w-10 items-center justify-center rounded-md bg-background/90 transition hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:flex"
             aria-label="Open sidebar"
           >
-            <PanelLeft className="w-4 h-4" />
+            <PanelLeft className="h-4 w-4" aria-hidden="true" />
           </button>
         )}
+
         <AppErrorBoundary>{children}</AppErrorBoundary>
       </div>
-
-      {/* Mobile/tablet floating actions: bottom-left New Chat + Settings.
-          Replaces the previous bottom tab bar so the phone/tablet UX feels
-          native — thumb-reachable, unobtrusive, no fixed chrome strip. */}
-      <MobileFabs onNewChat={handleNew} onOpenSettings={() => openSettings()} />
+        <AppErrorBoundary>{children}</AppErrorBoundary>
+      </div>
 
       <Suspense fallback={null}>
         {settingsOpen && (
@@ -189,14 +258,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             open={settingsOpen}
             onOpenChange={setSettingsOpen}
             settings={settings}
+            returnFocusTarget={settingsReturnFocusRef.current}
             onChange={setSettings}
             onClearAll={() => {
-              try {
-                localStorage.removeItem("nova-gpt-conversations-v2");
-              } catch {
-                /* ignore */
-              }
-              setConversations([]);
+              setConversationState({ principal: storagePrincipal, items: [] });
             }}
             onOpenHelp={openHelp}
             initialTab={settingsTab}
@@ -204,7 +269,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
         <OnboardingDialog />
       </Suspense>
-      <TimersWidget />
+      <TimersWidget userKey={userKey} principalResolved={isLoaded} />
     </div>
   );
 }

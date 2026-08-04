@@ -49,7 +49,8 @@ test("deep research exposes the full observable lifecycle and source-state track
   ]) {
     assert.match(research, new RegExp(`\\b${token}\\b`), `research should include ${token}`);
   }
-  assert.match(research, /Do not invent citations or URLs/);
+  assert.match(research, /Markdown links whose labels name the source/);
+  assert.match(research, /Do not invent citations, sources, or URLs/);
 });
 
 test("tool activity stream is typed, safe, accessible-ready, and excludes secrets", () => {

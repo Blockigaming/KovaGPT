@@ -17,11 +17,10 @@ test("package metadata does not depend on private Lovable packages", () => {
   }
 });
 
-test("runtime source has no Lovable AI gateway or API key dependency", () => {
+test("direct AI integration has no Lovable gateway or configurable endpoint escape hatch", () => {
   const files = [
     "package.json",
     "vite.config.ts",
-    "src/lib/ai/provider.server.ts",
     "src/routes/api/chat.ts",
     "src/routes/api/generate-image.ts",
     "src/routes/api/memory.ts",
@@ -32,9 +31,13 @@ test("runtime source has no Lovable AI gateway or API key dependency", () => {
   ];
   const forbidden = [
     /@lovable\.dev/i,
-    /LOVABLE_API_KEY/,
     /ai\.gateway\.lovable\.dev/,
     /connector-gateway\.lovable\.dev/,
+    /LOVABLE_API_KEY/i,
+    /LOVABLE_AI_BASE_URL/i,
+    /Lovable-API-Key/i,
+    /OPENAI_BASE_URL/,
+    /AI_PROVIDER_(?:URL|API_KEY)/,
   ];
   for (const file of files) {
     const text = read(file);
@@ -42,9 +45,17 @@ test("runtime source has no Lovable AI gateway or API key dependency", () => {
       assert.equal(pattern.test(text), false, `${file} contains ${pattern}`);
     }
   }
+  const provider = read("src/lib/ai/provider.server.ts");
+  const env = read(".env.example");
+  assert.match(provider, /OPENAI_API_KEY/);
+  assert.match(provider, /provider: "openai"/);
+  assert.match(provider, /https:\/\/api\.openai\.com\/v1/);
+  assert.match(provider, /redirect: "error"/);
+  assert.doesNotMatch(provider, /VITE_.*(?:LOVABLE|OPENAI).*API_KEY/);
+  assert.doesNotMatch(env, /^OPENAI_BASE_URL=/m);
 });
 
-test("direct provider env example contains no secret values", () => {
+test("direct provider env example contains no secret values or duplicate settings", () => {
   const env = read(".env.example");
   assert.match(env, /^OPENAI_API_KEY=$/m);
   assert.match(env, /^FIRECRAWL_API_KEY=$/m);
@@ -54,6 +65,9 @@ test("direct provider env example contains no secret values", () => {
     false,
     "example env should not contain publishable third-party sample secrets",
   );
+
+  const names = [...env.matchAll(/^([A-Z][A-Z0-9_]*)=/gm)].map((match) => match[1]);
+  assert.deepEqual(names, [...new Set(names)], "example env should define each setting once");
 });
 
 test("stale Bun lockfile is absent after npm lockfile was selected", () => {

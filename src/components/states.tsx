@@ -1,6 +1,7 @@
-import { Component, useEffect, useState, type ReactNode } from "react";
+import { Component, type ReactNode } from "react";
 import { AlertCircle, WifiOff, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useOnline } from "@/hooks/use-online";
 
 /* ---------- Online / offline ----------
    Hardened against false positives:
@@ -10,53 +11,6 @@ import { Button } from "@/components/ui/button";
    - Debounces the transition so a 1-2s hiccup doesn't push layout down.
    - Auto-clears on the `online` event and on a successful probe.
 */
-export function useOnline() {
-  const [online, setOnline] = useState(true);
-  useEffect(() => {
-    let cancelled = false;
-    let debounce: ReturnType<typeof setTimeout> | undefined;
-
-    async function probe(): Promise<boolean> {
-      try {
-        const res = await fetch("/favicon.svg", {
-          method: "HEAD",
-          cache: "no-store",
-          signal: AbortSignal.timeout(4000),
-        });
-        return res.ok || res.status < 500;
-      } catch {
-        return false;
-      }
-    }
-
-    const off = () => {
-      clearTimeout(debounce);
-      debounce = setTimeout(async () => {
-        const alive = await probe();
-        if (!cancelled) setOnline(alive);
-      }, 1500);
-    };
-    const on = () => {
-      clearTimeout(debounce);
-      if (!cancelled) setOnline(true);
-    };
-
-    if (typeof navigator !== "undefined" && navigator.onLine === false) {
-      off();
-    }
-
-    window.addEventListener("online", on);
-    window.addEventListener("offline", off);
-    return () => {
-      cancelled = true;
-      clearTimeout(debounce);
-      window.removeEventListener("online", on);
-      window.removeEventListener("offline", off);
-    };
-  }, []);
-  return online;
-}
-
 export function OfflineBanner() {
   const online = useOnline();
   if (online) return null;
@@ -74,14 +28,14 @@ export function OfflineBanner() {
 
 /* ---------- Skeletons ---------- */
 export function SkeletonLine({ className = "" }: { className?: string }) {
-  return <div className={`h-3 rounded bg-muted animate-pulse ${className}`} />;
+  return <div className={`kova-skeleton h-3 overflow-hidden rounded bg-muted ${className}`} />;
 }
 
 export function SkeletonCard() {
   return (
     <div className="rounded-xl border border-border bg-card p-4 space-y-3">
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
+        <div className="kova-skeleton h-8 w-8 overflow-hidden rounded-full bg-muted" />
         <SkeletonLine className="w-1/3" />
       </div>
       <SkeletonLine className="w-full" />
@@ -113,7 +67,7 @@ export function SkeletonList({ rows = 6 }: { rows?: number }) {
           key={i}
           className="rounded-lg border border-border bg-card p-3 flex items-center gap-3"
         >
-          <div className="w-9 h-9 rounded-md bg-muted animate-pulse" />
+          <div className="kova-skeleton h-9 w-9 overflow-hidden rounded-md bg-muted" />
           <div className="flex-1 space-y-2">
             <SkeletonLine className="w-1/3" />
             <SkeletonLine className="w-2/3" />
@@ -139,7 +93,7 @@ export function EmptyState({
   tip?: string;
 }) {
   return (
-    <div className="w-full rounded-2xl border border-dashed border-border bg-muted/10 p-10 text-center">
+    <div className="kova-empty-state w-full rounded-xl border border-dashed border-border bg-muted/10 p-6 text-center sm:p-10">
       {Icon && (
         <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
           <Icon className="w-5 h-5 text-muted-foreground" />
@@ -199,7 +153,7 @@ export class AppErrorBoundary extends Component<
     return { error };
   }
   componentDidCatch(error: Error) {
-    console.error("[AppErrorBoundary]", error);
+    if (import.meta.env.DEV) console.error("[AppErrorBoundary]", error);
   }
   reset = () => this.setState({ error: null });
   render() {

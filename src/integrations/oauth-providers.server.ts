@@ -1,5 +1,11 @@
 export type OAuthProviderId =
-  "microsoft" | "github" | "slack" | "notion" | "linear" | "dropbox" | "box";
+  | "microsoft"
+  | "github"
+  | "slack"
+  | "notion"
+  | "linear"
+  | "dropbox"
+  | "box";
 export type OAuthProviderAdapter = {
   id: OAuthProviderId;
   name: string;

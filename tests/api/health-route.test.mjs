@@ -5,10 +5,15 @@ import assert from "node:assert/strict";
 const route = await readFile("src/routes/api/health.ts", "utf8");
 const diagnostics = await readFile("src/lib/config/diagnostics.server.ts", "utf8");
 
-test("health route exposes only safe diagnostic booleans and missing names", () => {
+test("health route exposes only the public KovaGPT liveness contract", () => {
   assert.match(route, /createFileRoute\("\/api\/health"\)/);
-  assert.match(route, /safeDiagnostics\(\)/);
+  assert.match(route, /\{ ok: true, app: "KovaGPT" \}/);
   assert.match(route, /Cache-Control/);
+  assert.match(route, /no-store/);
+  assert.doesNotMatch(
+    route,
+    /safeDiagnostics|diagnostics\.server|missing|configured|bootRequirements|migrationState|commit|branch/i,
+  );
   assert.doesNotMatch(route, /supabaseAdmin|createClient|OPENAI_API_KEY|SUPABASE_SERVICE_ROLE_KEY/);
 });
 

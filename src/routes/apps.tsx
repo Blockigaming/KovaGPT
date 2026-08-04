@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import {
   CONNECTOR_CATALOG,
@@ -13,11 +13,21 @@ import {
   Loader2,
   Sparkles,
   ShieldAlert,
-  Plug,
+  PanelsTopLeft,
   AlertCircle,
   X,
   LogIn,
+  Github,
 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  getGitHubManagement,
+  refreshGitHubInstallations,
+  updateGitHubRepositoryGrants,
+  disconnectGitHub,
+  type GitHubManagement,
+} from "@/lib/github.functions";
+import { authFetch } from "@/lib/auth-fetch";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -27,19 +37,37 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AppShell } from "@/components/AppShell";
+import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { toast } from "sonner";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
+import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
 import {
   getGoogleStatus,
   startGoogleConnect,
   disconnectGoogleAccount,
   type GoogleStatus,
 } from "@/lib/google-client";
+import {
+  browserStoragePrincipal,
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+  principalScopedStorageKey,
+  safeBrowserStorage,
+  writePrincipalHandoff,
+} from "@/lib/principal-browser-storage.mjs";
 
 const GOOGLE_IDS = new Set(["google", "gmail", "google-drive", "google-calendar"]);
 
 // Apps that are actually wired up end-to-end today. Non-working connectors are
 // intentionally hidden so navigation never exposes fake or decorative controls.
-const WORKING_IDS = new Set<string>(["google", "gmail", "google-drive", "google-calendar"]);
+const WORKING_IDS = new Set<string>([
+  "google",
+  "gmail",
+  "google-drive",
+  "google-calendar",
+  "github",
+]);
 
 const CONFIGURED_CONNECTORS = WORKING_IDS;
 
@@ -71,7 +99,7 @@ export const Route = createFileRoute("/apps")({
   component: AppsPage,
   head: () => ({
     meta: [
-      { title: "Apps | KovaGPT" },
+      { title: "KovaGPT Apps" },
       {
         name: "description",
         content: "Connect KovaGPT to supported Google, Drive, Gmail, and Calendar services.",
@@ -209,8 +237,7 @@ function AppCard({
   onDetails: () => void;
   onUseInChat: () => void;
 }) {
-  const baseBtn =
-    "text-xs px-3 py-1.5 rounded-full transition active:scale-[0.97] shrink-0 font-medium";
+  const baseBtn = "text-xs px-3 py-1.5 rounded-full transition-colors shrink-0 font-medium";
 
   let action: React.ReactNode;
   if (!configured) {
@@ -269,7 +296,7 @@ function AppCard({
   }
 
   return (
-    <li className="rounded-xl border border-border bg-card p-4 flex items-start gap-3 hover:border-foreground/20 transition h-full">
+    <li className="kova-card kova-connector-card rounded-xl border border-border bg-card p-4 flex items-start gap-3 hover:border-foreground/20 transition h-full">
       <AppLogo domain={item.domain} label={item.label} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
@@ -293,8 +320,268 @@ function AppCard({
   );
 }
 
+function GitHubManager() {
+  const load = useServerFn(getGitHubManagement),
+    refresh = useServerFn(refreshGitHubInstallations),
+    grants = useServerFn(updateGitHubRepositoryGrants),
+    disconnect = useServerFn(disconnectGitHub);
+  const [data, setData] = useState<GitHubManagement | null>(null),
+    [busy, setBusy] = useState(false),
+    [search, setSearch] = useState(""),
+    [selected, setSelected] = useState<number[]>([]);
+  const reload = useCallback(
+    () =>
+      load()
+        .then(setData)
+        .catch(() => toast.error("GitHub status unavailable")),
+    [load],
+  );
+  const [revokeOpen, setRevokeOpen] = useState(false);
+  const [disconnectOpen, setDisconnectOpen] = useState(false);
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+  if (!data)
+    return (
+      <div
+        className="h-28 animate-pulse rounded-xl bg-muted"
+        role="status"
+        aria-label="Loading GitHub"
+      />
+    );
+  const repos = data.repositories.filter((repo) => repo.full_name.includes(search.toLowerCase()));
+  async function connect() {
+    const response = await authFetch("/api/github/auth");
+    const result = await response.json();
+    if (result.url) location.assign(result.url);
+    else toast.error(result.error ?? "GitHub is unavailable");
+  }
+  async function update(granted: boolean) {
+    if (!granted) {
+      setRevokeOpen(true);
+      return;
+    }
+    await applyGrantUpdate(true);
+  }
+  async function applyGrantUpdate(granted: boolean) {
+    setBusy(true);
+    try {
+      await grants({
+        data: {
+          repositoryIds: selected,
+          granted,
+          confirmed: true,
+        },
+      });
+      setSelected([]);
+      await reload();
+    } catch {
+      toast.error("Repository access could not be updated");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <section className="kova-card p-5" aria-labelledby="github-manager">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex gap-3">
+          <Github className="h-9 w-9" />
+          <div>
+            <h2 id="github-manager" className="font-semibold">
+              GitHub
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {data.configured ? data.health.replaceAll("_", " ") : "Credentials not configured"}
+            </p>
+          </div>
+        </div>
+        {!data.configured ? (
+          <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs">
+            Operator setup required
+          </span>
+        ) : !data.accounts.length ? (
+          <button
+            className="rounded-full bg-foreground px-4 py-2 text-sm text-background"
+            onClick={() => void connect()}
+          >
+            Connect GitHub
+          </button>
+        ) : (
+          <div className="flex gap-2">
+            <button
+              className="rounded-full border px-3 py-2 text-sm"
+              onClick={() => void refresh().then(reload)}
+            >
+              Refresh installations
+            </button>
+            <button
+              className="rounded-full border px-3 py-2 text-sm text-destructive"
+              onClick={() => setDisconnectOpen(true)}
+            >
+              Disconnect
+            </button>
+          </div>
+        )}
+      </div>
+      {data.accounts.map((account) => (
+        <div
+          key={account.id}
+          className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-muted/40 p-3"
+        >
+          {account.avatar_url && (
+            <img src={account.avatar_url} alt="" className="h-10 w-10 rounded-full" />
+          )}
+          <div>
+            <p className="font-medium">@{account.login}</p>
+            <p className="text-xs text-muted-foreground">
+              {account.auth_type} · {account.status} · ID {account.github_user_id}
+            </p>
+          </div>
+          <div className="ml-auto text-right text-xs text-muted-foreground">
+            <p>
+              Rate limit {account.rate_remaining ?? "—"} / {account.rate_limit ?? "—"}
+            </p>
+            <p>
+              Health{" "}
+              {account.last_health_at
+                ? new Date(account.last_health_at).toLocaleString()
+                : "not checked"}
+            </p>
+          </div>
+        </div>
+      ))}
+      <ConfirmActionDialog
+        open={revokeOpen}
+        onOpenChange={setRevokeOpen}
+        title="Remove repository access?"
+        description="Coding Agents will immediately lose access to the selected repositories."
+        confirmLabel="Remove access"
+        destructive
+        onConfirm={() => {
+          setRevokeOpen(false);
+          void applyGrantUpdate(false);
+        }}
+      />
+      <Dialog open={disconnectOpen} onOpenChange={setDisconnectOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Disconnect GitHub?</DialogTitle>
+            <DialogDescription>
+              Repository access will be revoked. Choose whether synchronized metadata should also be
+              removed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button variant="outline" onClick={() => setDisconnectOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDisconnectOpen(false);
+                void disconnect({
+                  data: { accountId: data.accounts[0].id, removeData: false },
+                }).then(reload);
+              }}
+            >
+              Disconnect only
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setDisconnectOpen(false);
+                void disconnect({
+                  data: { accountId: data.accounts[0].id, removeData: true },
+                }).then(reload);
+              }}
+            >
+              Disconnect and remove data
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {data.installations.length > 0 && (
+        <div className="mt-4">
+          <h3 className="text-sm font-medium">Installations</h3>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {data.installations.map((item) => (
+              <span key={item.id} className="rounded-full border px-3 py-1 text-xs">
+                {item.organization_login ?? "Personal"} · {item.repository_selection}
+                {item.suspended_at ? " · suspended" : ""}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      {data.repositories.length > 0 && (
+        <div className="mt-4">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              className="min-h-10 flex-1 rounded-xl border px-3"
+              placeholder="Search GitHub repositories"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+            <button
+              disabled={!selected.length || busy}
+              onClick={() => void update(true)}
+              className="rounded-full border px-3 text-sm"
+            >
+              Grant selected
+            </button>
+            <button
+              disabled={!selected.length || busy}
+              onClick={() => void update(false)}
+              className="rounded-full border px-3 text-sm text-destructive"
+            >
+              Remove selected
+            </button>
+          </div>
+          <ul className="mt-3 max-h-80 divide-y overflow-y-auto rounded-xl border">
+            {repos.map((repo) => (
+              <li key={repo.id} className="flex min-h-12 items-center gap-3 p-3">
+                <input
+                  type="checkbox"
+                  aria-label={`Select ${repo.full_name}`}
+                  checked={selected.includes(repo.id)}
+                  onChange={() =>
+                    setSelected((current) =>
+                      current.includes(repo.id)
+                        ? current.filter((id) => id !== repo.id)
+                        : [...current, repo.id],
+                    )
+                  }
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{repo.full_name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {repo.visibility} · {repo.default_branch} ·{" "}
+                    {repo.archived ? "archived" : "active"}
+                  </p>
+                </div>
+                <span
+                  className={`rounded-full px-2 py-1 text-xs ${repo.explicitly_granted ? "bg-emerald-500/10 text-emerald-600" : "bg-muted"}`}
+                >
+                  {repo.explicitly_granted ? "Granted" : "Available"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function AppsPage() {
-  const { isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const userKey = user?.id ?? null;
+  const principal = isLoaded ? browserStoragePrincipal(userKey) : null;
+  const activityKey = isLoaded ? principalScopedStorageKey("kova-app-activity", userKey) : null;
+  const principalRef = useRef(principal);
+  principalRef.current = principal;
+  const generationRef = useRef(0);
+  const [lifecycleVersion, setLifecycleVersion] = useState(0);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<ConnectorCategory | "All">("All");
   const [connecting, setConnecting] = useState<Record<string, true>>({});
@@ -303,46 +590,92 @@ function AppsPage() {
   const [googleLoading, setGoogleLoading] = useState(true);
   const [selectedApp, setSelectedApp] = useState<ConnectorItem | null>(null);
   const [activity, setActivity] = useState<{ app: string; action: string; at: string }[]>([]);
+  const [activityPrincipal, setActivityPrincipal] = useState<string | null>(null);
+  const activityReady = principal !== null && activityPrincipal === principal;
+  const visibleActivity = activityReady ? activity : [];
+  const visibleGoogleStatus = activityReady ? googleStatus : null;
+  const visibleGoogleLoading = activityReady ? googleLoading : true;
+  const visibleSelectedApp = activityReady ? selectedApp : null;
 
   useEffect(() => {
+    generationRef.current += 1;
+    setQuery("");
+    setCategory("All");
+    setActivity([]);
+    setActivityPrincipal(null);
+    setGoogleStatus(null);
+    setGoogleLoading(true);
+    setSelectedApp(null);
+    setConnecting({});
+    setFailed({});
+    if (!principal || !activityKey) return;
     try {
-      setActivity(JSON.parse(localStorage.getItem("kova-app-activity-v1") ?? "[]"));
+      setActivity(JSON.parse(safeBrowserStorage("localStorage")?.getItem(activityKey) ?? "[]"));
     } catch {
       setActivity([]);
     }
-  }, []);
+    setActivityPrincipal(principal);
+  }, [activityKey, principal]);
+
+  useEffect(() => {
+    if (!isLoaded || !principal) return;
+    const reset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      generationRef.current += 1;
+      setActivity([]);
+      setActivityPrincipal(principal);
+      setGoogleStatus(null);
+      setGoogleLoading(true);
+      setSelectedApp(null);
+      setConnecting({});
+      setFailed({});
+      setQuery("");
+      setCategory("All");
+      setLifecycleVersion((value) => value + 1);
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+    return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+  }, [isLoaded, principal, userKey]);
 
   const recordActivity = (app: string, action: string) => {
+    if (!activityReady || !activityKey) return;
     setActivity((current) => {
       const next = [{ app, action, at: new Date().toISOString() }, ...current].slice(0, 50);
-      localStorage.setItem("kova-app-activity-v1", JSON.stringify(next));
+      safeBrowserStorage("localStorage")?.setItem(activityKey, JSON.stringify(next));
       return next;
     });
   };
 
   const refreshGoogle = useCallback(async () => {
+    if (!isLoaded || !principal) return;
+    const generation = generationRef.current;
+    const requestPrincipal = principal;
     try {
       const s = await getGoogleStatus();
+      if (generation !== generationRef.current || principalRef.current !== requestPrincipal) return;
       setGoogleStatus(s);
     } catch {
-      setGoogleStatus({ connected: false });
+      if (generation !== generationRef.current || principalRef.current !== requestPrincipal) return;
+      setGoogleStatus({ connected: false, state: "temporarily_unavailable" });
     } finally {
-      setGoogleLoading(false);
+      if (generation === generationRef.current && principalRef.current === requestPrincipal) {
+        setGoogleLoading(false);
+      }
     }
-  }, []);
+  }, [isLoaded, principal]);
 
   useEffect(() => {
     if (!isSignedIn) {
       setGoogleLoading(false);
-      setGoogleStatus({ connected: false });
+      setGoogleStatus({ connected: false, state: "disconnected" });
       return;
     }
     refreshGoogle();
-  }, [isSignedIn, refreshGoogle]);
+  }, [isSignedIn, lifecycleVersion, refreshGoogle]);
 
   // Handle OAuth return params (?google_connected=1 or ?google_error=...)
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !activityReady || !isSignedIn) return;
     const params = new URLSearchParams(window.location.search);
     const ok = params.get("google_connected");
     const err = params.get("google_error");
@@ -367,16 +700,21 @@ function AppsPage() {
       const url = window.location.pathname + (params.toString() ? `?${params}` : "");
       window.history.replaceState({}, "", url);
     }
-  }, [refreshGoogle]);
+  }, [activityReady, isSignedIn, refreshGoogle]);
 
   const isGoogleId = (id: string) => GOOGLE_IDS.has(id);
 
   const handleConnect = async (item: ConnectorItem) => {
+    if (!activityReady || !principal) return;
+    const generation = generationRef.current;
+    const requestPrincipal = principal;
     if (isGoogleId(item.id)) {
       setConnecting((c) => ({ ...c, [item.id]: true }));
       try {
         await startGoogleConnect();
       } catch (e) {
+        if (generation !== generationRef.current || principalRef.current !== requestPrincipal)
+          return;
         setConnecting((c) => {
           const n = { ...c };
           delete n[item.id];
@@ -391,14 +729,20 @@ function AppsPage() {
   };
 
   const handleDisconnect = async (item: ConnectorItem) => {
+    if (!activityReady || !principal) return;
+    const generation = generationRef.current;
+    const requestPrincipal = principal;
+    const isCurrent = () =>
+      generation === generationRef.current && principalRef.current === requestPrincipal;
     if (isGoogleId(item.id)) {
       try {
         await disconnectGoogleAccount();
-        setGoogleStatus({ connected: false });
+        if (!isCurrent()) return;
+        setGoogleStatus({ connected: false, state: "disconnected" });
         recordActivity(item.label, "Disconnected");
         toast("Google account disconnected");
       } catch {
-        toast.error("Could not disconnect Google. Try again.");
+        if (isCurrent()) toast.error("Could not disconnect Google. Try again.");
       }
       return;
     }
@@ -406,25 +750,27 @@ function AppsPage() {
   };
 
   const isGoogleConnected = (id: string): boolean => {
-    if (!googleStatus?.connected) return false;
+    if (!visibleGoogleStatus?.connected) return false;
     if (id === "google") return true;
-    if (id === "gmail") return !!googleStatus.has?.gmail;
-    if (id === "google-calendar") return !!googleStatus.has?.calendar;
-    if (id === "google-drive") return !!googleStatus.has?.drive;
+    if (id === "gmail") return !!visibleGoogleStatus.has?.gmail;
+    if (id === "google-calendar") return !!visibleGoogleStatus.has?.calendar;
+    if (id === "google-drive") return !!visibleGoogleStatus.has?.drive;
     return false;
   };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return CONNECTOR_CATALOG.filter((c) => WORKING_IDS.has(c.id)).filter((c) => {
-      if (category !== "All" && c.category !== category) return false;
-      if (!q) return true;
-      return (
-        c.label.toLowerCase().includes(q) ||
-        c.description.toLowerCase().includes(q) ||
-        c.category.toLowerCase().includes(q)
-      );
-    });
+    return CONNECTOR_CATALOG.filter((c) => WORKING_IDS.has(c.id) && c.id !== "github").filter(
+      (c) => {
+        if (category !== "All" && c.category !== category) return false;
+        if (!q) return true;
+        return (
+          c.label.toLowerCase().includes(q) ||
+          c.description.toLowerCase().includes(q) ||
+          c.category.toLowerCase().includes(q)
+        );
+      },
+    );
   }, [query, category]);
 
   const isConnected = (id: string) => isGoogleId(id) && isGoogleConnected(id);
@@ -435,10 +781,15 @@ function AppsPage() {
   const stateOf = (id: string): ConnState => {
     if (!isSignedIn) return "idle";
     if (isGoogleId(id)) {
-      if (googleLoading) return "idle";
-      if (connecting[id]) return "connecting";
-      if (failed[id]) return "failed";
-      return isGoogleConnected(id) ? "connected" : "idle";
+      if (visibleGoogleLoading) return "syncing";
+      if (activityReady && connecting[id]) return "connecting";
+      if (activityReady && failed[id]) return "failed";
+      if (visibleGoogleStatus?.state === "temporarily_unavailable")
+        return "temporarily_unavailable";
+      if (visibleGoogleStatus?.state === "reauthorization_required") return "reauthorize";
+      if (isGoogleConnected(id)) return "connected";
+      if (visibleGoogleStatus?.connected) return "permission_incomplete";
+      return "idle";
     }
     return "temporarily_unavailable";
   };
@@ -457,10 +808,16 @@ function AppsPage() {
           onRetry={() => handleConnect(item)}
           onDetails={() => setSelectedApp(item)}
           onUseInChat={() => {
-            sessionStorage.setItem(
+            const handoff = writePrincipalHandoff(
+              safeBrowserStorage("sessionStorage"),
               "kova-app-chat-context",
+              isLoaded ? userKey : undefined,
               `Use my connected ${item.label} account for this request when relevant: `,
             );
+            if (!handoff.ok) {
+              toast.error("App context could not be prepared. Reload and try again.");
+              return;
+            }
             window.location.href = "/";
           }}
         />
@@ -500,34 +857,51 @@ function AppsPage() {
 
   return (
     <AppShell>
-      <main className="max-w-5xl mx-auto w-full px-4 py-8 space-y-8">
-        <Dialog open={!!selectedApp} onOpenChange={(open) => !open && setSelectedApp(null)}>
+      <main className="kova-page kova-secondary-page max-w-5xl space-y-8">
+        <Dialog open={!!visibleSelectedApp} onOpenChange={(open) => !open && setSelectedApp(null)}>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
-              <DialogTitle>{selectedApp?.label}</DialogTitle>
-              <DialogDescription>{selectedApp?.description}</DialogDescription>
+              <DialogTitle>{visibleSelectedApp?.label}</DialogTitle>
+              <DialogDescription>{visibleSelectedApp?.description}</DialogDescription>
             </DialogHeader>
-            {selectedApp && (
+            {visibleSelectedApp && (
               <div className="space-y-4 text-sm">
                 <section className="rounded-xl border p-3">
                   <h3 className="font-medium">Capabilities and permissions</h3>
                   <p className="mt-1 text-muted-foreground">
-                    {selectedApp.id === "gmail"
+                    {visibleSelectedApp.id === "gmail"
                       ? "Read message context. Sending email always requires explicit confirmation."
-                      : selectedApp.id === "google-calendar"
+                      : visibleSelectedApp.id === "google-calendar"
                         ? "Read calendars and propose events. Creating an event requires explicit confirmation."
-                        : selectedApp.id === "google-drive"
+                        : visibleSelectedApp.id === "google-drive"
                           ? "Search and read files covered by the Drive scopes you granted."
                           : "Manage the Google connection shared by supported Google apps."}
                   </p>
+                  {isGoogleId(visibleSelectedApp.id) && visibleGoogleStatus?.email ? (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Connected as {visibleGoogleStatus.email}. Only permissions granted by Google
+                      are available in chat.
+                    </p>
+                  ) : null}
+                  {isGoogleId(visibleSelectedApp.id) &&
+                  visibleGoogleStatus?.state === "reauthorization_required" ? (
+                    <button
+                      type="button"
+                      className="mt-3 min-h-11 rounded-lg bg-foreground px-4 text-sm font-medium text-background"
+                      onClick={() => void handleConnect(visibleSelectedApp)}
+                    >
+                      Reconnect Google
+                    </button>
+                  ) : null}
                 </section>
                 <section>
                   <h3 className="font-medium">Recent activity</h3>
-                  {activity.filter((entry) => [selectedApp.label, "Google"].includes(entry.app))
-                    .length ? (
+                  {visibleActivity.filter((entry) =>
+                    [visibleSelectedApp.label, "Google"].includes(entry.app),
+                  ).length ? (
                     <ul className="mt-2 space-y-2">
-                      {activity
-                        .filter((entry) => [selectedApp.label, "Google"].includes(entry.app))
+                      {visibleActivity
+                        .filter((entry) => [visibleSelectedApp.label, "Google"].includes(entry.app))
                         .slice(0, 5)
                         .map((entry, index) => (
                           <li key={`${entry.at}:${index}`} className="rounded-lg bg-muted/60 p-2">
@@ -543,17 +917,11 @@ function AppsPage() {
             )}
           </DialogContent>
         </Dialog>
-        <header className="space-y-3">
-          <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">
-            <Link2 className="w-3.5 h-3.5" /> Apps
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Your KovaGPT workspace</h1>
-          <p className="text-sm text-muted-foreground max-w-2xl">
-            Link Google once to enable Gmail, Calendar, and Drive capabilities according to the
-            scopes you grant. KovaGPT never stores connector tokens in browser storage, and write
-            actions require confirmation.
-          </p>
-        </header>
+        <WorkspacePageHeader
+          icon={PanelsTopLeft}
+          title="Your KovaGPT workspace"
+          description="Connect supported services with explicit permissions. Tokens stay server-side and consequential write actions require confirmation."
+        />
 
         <div className="space-y-3">
           <div className="relative max-w-md">
@@ -595,8 +963,10 @@ function AppsPage() {
           </div>
         )}
 
+        {isSignedIn && <GitHubManager />}
+
         {filtered.length === 0 ? (
-          <div className="rounded-xl border border-border p-10 text-center">
+          <div className="kova-empty-state">
             <Search className="w-5 h-5 mx-auto text-muted-foreground mb-2" />
             <p className="text-sm font-medium">No apps match your filters</p>
             <p className="text-xs text-muted-foreground mt-1">Try a different name or category.</p>

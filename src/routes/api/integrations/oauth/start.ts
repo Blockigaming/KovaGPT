@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 import { beginOAuth } from "@/integrations/oauth-lifecycle.server";
 import { OAUTH_PROVIDERS, type OAuthProviderId } from "@/integrations/oauth-providers.server";
+import { INTEGRATION_OAUTH_COOKIE, serializeOauthCookie } from "@/lib/oauth-security.server";
 
 export const Route = createFileRoute("/api/integrations/oauth/start")({
   server: {
@@ -17,15 +18,20 @@ export const Route = createFileRoute("/api/integrations/oauth/start")({
         if (!body?.provider || !(body.provider in OAUTH_PROVIDERS))
           return Response.json({ error: "unsupported_provider" }, { status: 400 });
         try {
-          return Response.json(
-            await beginOAuth({
-              ownerId: auth.userId,
-              providerId: body.provider as OAuthProviderId,
-              request,
-              optionalScopes: body.optionalScopes,
-              returnPath: body.returnPath,
-            }),
-          );
+          const browserNonce = crypto.randomUUID();
+          const result = await beginOAuth({
+            ownerId: auth.userId,
+            providerId: body.provider as OAuthProviderId,
+            request,
+            browserNonce,
+            optionalScopes: body.optionalScopes,
+            returnPath: body.returnPath,
+          });
+          return Response.json(result, {
+            headers: {
+              "Set-Cookie": serializeOauthCookie(INTEGRATION_OAUTH_COOKIE, browserNonce),
+            },
+          });
         } catch (error) {
           const code = error instanceof Error ? error.message : "oauth_start_failed";
           return Response.json(

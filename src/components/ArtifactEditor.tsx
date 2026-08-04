@@ -23,8 +23,7 @@ import { saveToLibrary } from "@/lib/library.functions";
 import { useUser, useClerkSafe } from "@/components/auth/ClerkSafe";
 import { addToContextPack, continueInResearch, openInWork } from "@/lib/workspace-handoffs";
 import { RealtimeReadiness } from "@/components/RealtimeReadiness";
-
-export type ArtifactKind = "writing" | "code" | "website";
+import { buildPreviewDoc, type ArtifactKind } from "./artifact-utils";
 
 type SessionVersion = { id: number; content: string; savedAt: number; label: string };
 
@@ -42,83 +41,6 @@ function documentOutline(value: string, isCode: boolean) {
     })
     .filter((item): item is { line: number; label: string; depth: number } => Boolean(item))
     .slice(0, 80);
-}
-
-// Split an editor value back into pieces using the "// --- Block N ---"
-// markers that ChatMessage injects when joining multiple code blocks.
-function splitEditorBlocks(value: string): string[] {
-  const parts = value
-    .split(/\n?\/\/ --- Block \d+ ---\n?/g)
-    .map((p) => p.trim())
-    .filter(Boolean);
-  return parts.length > 0 ? parts : [value];
-}
-
-function looksLikeCss(piece: string): boolean {
-  const t = piece.trim();
-  if (t.startsWith("<")) return false;
-  return /[^{}]+\{[^}]*[a-z-]+\s*:\s*[^}]+\}/i.test(t) && !/<[a-z!/]/i.test(t);
-}
-
-function stripUnsafe(html: string): string {
-  return html
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<script\b[^>]*\/?>/gi, "")
-    .replace(/\son[a-z]+\s*=\s*"[^"]*"/gi, "")
-    .replace(/\son[a-z]+\s*=\s*'[^']*'/gi, "")
-    .replace(/\son[a-z]+\s*=\s*[^\s>]+/gi, "")
-    .replace(/javascript:/gi, "blocked:");
-}
-
-export function buildPreviewDoc(value: string): { doc: string; hadScripts: boolean } {
-  const blocks = splitEditorBlocks(value);
-  const cssParts: string[] = [];
-  const htmlParts: string[] = [];
-  for (const b of blocks) {
-    if (looksLikeCss(b)) cssParts.push(b);
-    else htmlParts.push(b);
-  }
-  const rawHtml = htmlParts.join("\n").trim();
-  const hadScripts = /<script\b|\son[a-z]+\s*=|javascript:/i.test(rawHtml);
-  const sanitized = stripUnsafe(rawHtml);
-  const css = cssParts.join("\n\n");
-  const styleTag = css ? `<style>${css}</style>` : "";
-  const hasFullDoc = /<html[\s>]/i.test(sanitized) || /<!doctype/i.test(sanitized);
-  let doc: string;
-  if (hasFullDoc) {
-    if (styleTag && /<head[\s>]/i.test(sanitized)) {
-      doc = sanitized.replace(/<\/head>/i, `${styleTag}</head>`);
-    } else if (styleTag) {
-      doc = sanitized.replace(/<html[^>]*>/i, (m) => `${m}<head>${styleTag}</head>`);
-    } else {
-      doc = sanitized;
-    }
-  } else {
-    doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base target="_blank">${styleTag}</head><body>${sanitized}</body></html>`;
-  }
-  return { doc, hadScripts };
-}
-
-export function extractCodeBlocks(text: string): string[] {
-  const blocks: string[] = [];
-  const re = /```[a-zA-Z0-9_-]*\n([\s\S]*?)```/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) blocks.push(m[1].replace(/\s+$/, ""));
-  return blocks;
-}
-
-export function detectArtifactKind(text: string): ArtifactKind | null {
-  const blocks = extractCodeBlocks(text);
-  if (blocks.length > 0) {
-    const all = blocks.join("\n").toLowerCase();
-    const looksWebsite =
-      /<html|<!doctype|<body|<head|<div[\s>]|<section|<main|className=|class=/.test(all) ||
-      /export\s+default\s+function\s+\w+\s*\(/.test(all);
-    return looksWebsite ? "website" : "code";
-  }
-  // long-form prose
-  if (text.length >= 600 || text.split(/\n+/).length >= 8) return "writing";
-  return null;
 }
 
 export function ArtifactEditor({
@@ -181,12 +103,13 @@ export function ArtifactEditor({
       }
       setCopied(false);
       setSaved(false);
-      let preferred = "";
+      let preferred: string | undefined;
+
       try {
         preferred =
           JSON.parse(localStorage.getItem("kova-workspace-defaults-v1") ?? "{}").artifact ?? "";
       } catch {
-        preferred = "";
+        /* Invalid local preferences fall back to the requested initial mode. */
       }
       setMode(preferred === "Preview" && kind === "website" ? "preview" : initialMode);
       setSplitView(preferred === "Split view" && kind === "website");
@@ -197,7 +120,7 @@ export function ArtifactEditor({
         { id: Date.now(), content: initialContent, savedAt: Date.now(), label: "Original" },
       ]);
     }
-  }, [open, initialContent, initialMode, canTruncate]);
+  }, [open, initialContent, initialMode, canTruncate, kind]);
 
   useEffect(() => {
     if (!open) return;

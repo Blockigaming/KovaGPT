@@ -153,7 +153,7 @@ const MemoryChange = z.object({
 });
 export const updateMemoryRecord = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => MemoryChange.parse(input))
+  .validator((input: unknown) => MemoryChange.parse(input))
   .handler(async ({ data, context }) => {
     const target = data.source === "conversation" ? "chat_memories" : "project_memory";
     const values =
@@ -170,7 +170,7 @@ export const updateMemoryRecord = createServerFn({ method: "POST" })
   });
 export const deleteMemoryRecord = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) =>
+  .validator((input: unknown) =>
     z.object({ id: z.string().uuid(), source: z.enum(["conversation", "project"]) }).parse(input),
   )
   .handler(async ({ data, context }) => {
@@ -226,7 +226,7 @@ export const listContextPacks = createServerFn({ method: "GET" })
   });
 export const createContextPack = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => PackInput.parse(input))
+  .validator((input: unknown) => PackInput.parse(input))
   .handler(async ({ data, context }): Promise<ContextPack> => {
     const { data: row, error } = await table(context.supabase, "context_packs")
       .insert({ ...data, user_id: context.userId })
@@ -237,7 +237,7 @@ export const createContextPack = createServerFn({ method: "POST" })
   });
 export const deleteContextPack = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { error } = await table(context.supabase, "context_packs")
       .delete()
