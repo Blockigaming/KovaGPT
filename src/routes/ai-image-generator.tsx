@@ -1,31 +1,32 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { SeoLanding, seoLandingHead } from "@/components/SeoLanding";
+import { SeoLanding } from "@/components/SeoLanding";
+import { seoLandingHead } from "@/components/seo-landing-head";
 
 const faq = [
   {
     q: "Can I use the images commercially?",
-    a: "Yes. Images generated on paid plans are yours to use in commercial projects - websites, marketing, products, social media, and print.",
+    a: "KovaGPT does not guarantee that an output is clear of third-party rights or suitable for a particular commercial use. Review the Terms, the applicable provider terms, and the output itself; get legal advice when rights matter.",
   },
   {
     q: "What styles can KovaGPT generate?",
-    a: "Photorealistic, illustration, 3D render, anime, watercolor, oil painting, product photography, cinematic, isometric, pixel art, logo mark, minimalist - describe the style and KovaGPT delivers.",
+    a: "You can request photographic, illustrated, 3D, watercolor, pixel-art, minimalist, and other looks. The configured image provider decides the result and may not follow every style instruction exactly.",
   },
   {
     q: "Can I generate transparent PNGs or logos?",
-    a: "Yes. Ask for a transparent background and KovaGPT produces PNGs suitable for logos, icons, stickers, and overlays.",
+    a: "The current Images page does not expose output-format or transparency controls. You can describe a transparent background in the prompt, but the provider may render it as visible pixels rather than true alpha transparency. Inspect the downloaded file before using it as a logo or production asset.",
   },
   {
     q: "How fast is it?",
-    a: "Images generate in seconds - usually 5 to 15 depending on complexity and current load.",
+    a: "Generation time varies with provider load, settings, and network conditions. A request can time out or fail, so KovaGPT does not promise a fixed completion time.",
   },
 ];
 
 export const Route = createFileRoute("/ai-image-generator")({
   head: () =>
     seoLandingHead({
-      title: "AI Image Generator - Text to Image in Seconds | KovaGPT",
+      title: "AI Image Generator - Text to Image | KovaGPT",
       description:
-        "Generate high-quality images from text prompts with KovaGPT. Photorealistic, illustration, 3D, product shots, logos - commercial-safe, fast, and easy to iterate.",
+        "Request AI-generated images from text prompts with KovaGPT, choose from prompt presets, and save selected results when the image provider is available.",
       path: "/ai-image-generator",
       ogImage: "/og/images.jpg",
       faq,
@@ -36,19 +37,19 @@ export const Route = createFileRoute("/ai-image-generator")({
 function Page() {
   return (
     <SeoLanding
-      h1="AI Image Generator: Text to Image in Seconds"
-      intro="Describe what you want and KovaGPT delivers a finished image - product shots, avatars, wallpapers, illustrations, marketing graphics, logos, storyboards. Iterate in natural language: change the style, swap the background, adjust the lighting, no design software required."
+      h1="AI Image Generator: Text to Image"
+      intro="Describe the image you want and KovaGPT sends the request to the configured image provider. You can use a prompt preset, download a result, or save a selected image to Library. Availability and output quality depend on your account, quota, and the provider."
       benefits={[
-        "Photorealistic, illustration, 3D render, anime, or minimalist styles",
-        "Transparent PNGs for logos, icons, and stickers",
-        "Iterate in plain English - 'make it warmer', 'change the background to a beach'",
-        "Commercial-use rights on paid plans",
-        "Save every image to your personal library",
-        "Prompt help built in - KovaGPT can improve your prompt for you",
+        "Request photographic, illustrated, 3D, watercolor, pixel-art, or minimalist looks",
+        "Use prompt presets as a starting point",
+        "Submit one text prompt per request using the current provider defaults",
+        "Create a new variation by reusing or changing the prompt",
+        "Download results or save selected images to Library",
+        "See an error message when quota or provider availability blocks a request",
       ]}
       details={[
-        "Traditional image tools ask you to master a UI. KovaGPT asks you to describe what you want. Say 'a matte-black wireless earbud on a cream studio background, soft rim light, 45-degree angle' and you get exactly that - then refine it with follow-up prompts instead of restarting.",
-        "It's the fastest way to produce visuals for social posts, landing pages, product mockups, blog headers, avatars, and brand assets. Everything you generate lands in your library, so you can revisit, reuse, and remix.",
+        "Describe the subject, composition, lighting, palette, and intended format. More specific prompts can make intent clearer, but the provider can still omit or reinterpret details.",
+        "A generated variation is a new provider request. The current endpoint does not guarantee pixel-level editing of the original image. Save or download a result you want to keep, and review rights, accuracy, and suitability before publishing it.",
       ]}
       prompts={[
         "A minimalist logo mark for a coffee brand called Ember, transparent background",

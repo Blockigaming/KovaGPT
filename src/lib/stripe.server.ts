@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { timingSafeEqualText } from "@/lib/http-security.server";
 
 const getEnv = (key: string): string => {
   const value = process.env[key];
@@ -34,9 +35,13 @@ export function getStripeErrorMessage(error: unknown): string {
 export async function verifyWebhook(
   req: Request,
   env: StripeEnv,
-): Promise<{ id?: string; type: string; data: { object: unknown } }> {
+): Promise<{ id?: string; created?: number; type: string; data: { object: unknown } }> {
   const signature = req.headers.get("stripe-signature");
+  const maxBodyBytes = 2 * 1024 * 1024;
+  const contentLength = Number(req.headers.get("content-length") ?? "0");
+  if (contentLength > maxBodyBytes) throw new Error("Webhook payload too large");
   const body = await req.text();
+  if (body.length > maxBodyBytes) throw new Error("Webhook payload too large");
   const secret =
     env === "sandbox"
       ? getEnv("PAYMENTS_SANDBOX_WEBHOOK_SECRET")
@@ -72,7 +77,7 @@ export async function verifyWebhook(
   );
   const expected = Buffer.from(new Uint8Array(signed)).toString("hex");
 
-  if (!v1Signatures.includes(expected)) {
+  if (!v1Signatures.some((candidate) => timingSafeEqualText(candidate, expected))) {
     throw new Error("Invalid webhook signature");
   }
 

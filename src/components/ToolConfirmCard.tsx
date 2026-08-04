@@ -22,7 +22,8 @@ export function ToolConfirmCard({
   const meta = TOOL_LABEL[confirm.tool] ?? { label: confirm.tool, Icon: AlertCircle };
   const Icon = meta.Icon;
   const preview = confirm.argsPreview as Record<string, unknown>;
-  const isTerminal = confirm.status !== "pending";
+  const reconnectRetry = confirm.status === "failed" && /reconnect/i.test(confirm.resultText ?? "");
+  const isTerminal = confirm.status !== "pending" && !reconnectRetry;
 
   const decide = async (decision: "confirm" | "cancel") => {
     if (busy || isTerminal) return;
@@ -150,11 +151,13 @@ export function ToolConfirmCard({
             ) : (
               <Check className="h-3 w-3" />
             )}
-            {confirm.tool === "calendar_delete_event"
-              ? "Delete"
-              : confirm.tool === "gmail_send"
-                ? "Send"
-                : "Confirm"}
+            {reconnectRetry
+              ? "Retry"
+              : confirm.tool === "calendar_delete_event"
+                ? "Delete"
+                : confirm.tool === "gmail_send"
+                  ? "Send"
+                  : "Confirm"}
           </button>
           <button
             onClick={() => decide("cancel")}

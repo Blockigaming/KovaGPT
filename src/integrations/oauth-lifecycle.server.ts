@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { decryptCredential, encryptCredential, sha256 } from "./credential-vault.server";
 import { OAUTH_PROVIDERS, type OAuthProviderId } from "./oauth-providers.server";
+import { normalizeOAuthReturnPath } from "@/lib/oauth-security.server";
 
 const admin = () =>
   createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
@@ -17,6 +18,7 @@ export async function beginOAuth(input: {
   ownerId: string;
   providerId: OAuthProviderId;
   request: Request;
+  browserNonce: string;
   optionalScopes?: string[];
   returnPath?: string;
 }) {
@@ -26,7 +28,6 @@ export async function beginOAuth(input: {
     throw new Error("provider_not_configured");
   const state = random();
   const verifier = provider.usesPkce ? random(48) : undefined;
-  const nonce = random();
   const scopes = [
     ...new Set([
       ...provider.requiredScopes,
@@ -41,9 +42,9 @@ export async function beginOAuth(input: {
       provider_id: provider.id,
       state_hash: await sha256(state),
       pkce_verifier_ciphertext: verifier ? await encryptCredential(verifier) : null,
-      nonce_hash: await sha256(nonce),
+      nonce_hash: await sha256(input.browserNonce),
       requested_scopes: scopes,
-      return_path: input.returnPath?.startsWith("/") ? input.returnPath : "/apps",
+      return_path: normalizeOAuthReturnPath(input.returnPath),
       expires_at: new Date(Date.now() + 10 * 60_000).toISOString(),
     });
   if (error) throw new Error("oauth_state_store_failed");
@@ -83,6 +84,7 @@ export async function completeOAuth(input: {
   code: string;
   state: string;
   request: Request;
+  browserNonce: string;
 }) {
   const provider = OAUTH_PROVIDERS[input.providerId];
   const db = admin();
@@ -95,6 +97,9 @@ export async function completeOAuth(input: {
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
   if (!record) throw new Error("invalid_or_expired_oauth_state");
+  if (record.nonce_hash !== (await sha256(input.browserNonce))) {
+    throw new Error("invalid_oauth_browser_binding");
+  }
   const consumed = await db
     .from("integration_oauth_states")
     .update({ consumed_at: new Date().toISOString() })
@@ -174,6 +179,7 @@ export async function completeOAuth(input: {
     purpose: "Connect provider services to KovaGPT",
     decision: "granted",
   });
+
   await db.from("integration_audit_events").insert({
     owner_id: record.owner_id,
     linked_account_id: account.id,
@@ -195,45 +201,74 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     .maybeSingle();
   if (!account) throw new Error("linked_account_not_found");
   const provider = OAUTH_PROVIDERS[account.provider_id as OAuthProviderId];
-  const token = account.refresh_token_ciphertext
-    ? await decryptCredential(account.refresh_token_ciphertext)
-    : await decryptCredential(account.access_token_ciphertext);
-  let providerRevoked = !provider.revocationEndpoint;
-  if (provider.revocationEndpoint) {
-    const endpoint = provider.revocationEndpoint.replace(
-      "{client_id}",
-      process.env[provider.clientIdEnv] ?? "",
-    );
+  if (!provider) throw new Error("unsupported_linked_account_provider");
+  const clientId = process.env[provider.clientIdEnv];
+  const clientSecret = process.env[provider.clientSecretEnv];
+  const revocationCiphertext =
+    provider.id === "github"
+      ? account.access_token_ciphertext
+      : (account.refresh_token_ciphertext ?? account.access_token_ciphertext);
+  let token: string | null = null;
+  try {
+    token = await decryptCredential(revocationCiphertext);
+  } catch {
+    console.error("[oauth-disconnect] revocation credential unavailable", {
+      providerId: provider.id,
+      ownerId,
+    });
+  }
+
+  // Only a confirmed provider response counts as remote revocation. Providers
+  // without an implemented endpoint remain pending even though local
+  // credentials are still destroyed below.
+  let providerRevoked = false;
+  const canAttemptRevocation =
+    Boolean(provider.revocationEndpoint && token) &&
+    (provider.id !== "github" || Boolean(clientId && clientSecret));
+  if (provider.revocationEndpoint && token && canAttemptRevocation) {
+    const endpoint = provider.revocationEndpoint.replace("{client_id}", clientId ?? "");
+    const githubAuthorization =
+      provider.id === "github"
+        ? `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`
+        : null;
     const response = await fetch(endpoint, {
       method: provider.id === "github" ? "DELETE" : "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-        Accept: "application/json",
+        Authorization: githubAuthorization ?? `Bearer ${token}`,
+        "Content-Type":
+          provider.id === "github" ? "application/json" : "application/x-www-form-urlencoded",
+        Accept: provider.id === "github" ? "application/vnd.github+json" : "application/json",
+        ...(provider.id === "github" ? { "X-GitHub-Api-Version": "2022-11-28" } : {}),
       },
       body:
-        provider.id === "box"
-          ? new URLSearchParams({
-              token,
-              client_id: process.env[provider.clientIdEnv]!,
-              client_secret: process.env[provider.clientSecretEnv]!,
-            })
-          : undefined,
+        provider.id === "github"
+          ? JSON.stringify({ access_token: token })
+          : provider.id === "box"
+            ? new URLSearchParams({
+                token,
+                client_id: clientId!,
+                client_secret: clientSecret!,
+              })
+            : undefined,
     });
     providerRevoked = response.ok;
   }
-  await db.from("integration_deletion_requests").insert({
+  const { error: deletionRequestError } = await db.from("integration_deletion_requests").insert({
     owner_id: ownerId,
     linked_account_id: account.id,
     status: providerRevoked ? "provider_revoked" : "pending",
   });
-  await db
+  if (deletionRequestError) throw new Error("linked_account_deletion_request_failed");
+
+  const { error: syncCancellationError } = await db
     .from("integration_sync_jobs")
     .update({ status: "cancelled" })
     .eq("owner_id", ownerId)
     .eq("linked_account_id", account.id)
     .in("status", ["queued", "leased", "running", "retry_wait"]);
-  await db
+  if (syncCancellationError) throw new Error("linked_account_sync_cancellation_failed");
+
+  const { data: purgedAccount, error: credentialDeletionError } = await db
     .from("integration_linked_accounts")
     .update({
       status: "revoked",
@@ -242,8 +277,12 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
       deleted_at: new Date().toISOString(),
     })
     .eq("id", account.id)
-    .eq("owner_id", ownerId);
-  await db.from("integration_audit_events").insert({
+    .eq("owner_id", ownerId)
+    .select("id")
+    .maybeSingle();
+  if (credentialDeletionError || !purgedAccount) throw new Error("linked_account_purge_failed");
+
+  const { error: auditError } = await db.from("integration_audit_events").insert({
     owner_id: ownerId,
     linked_account_id: account.id,
     provider_id: provider.id,
@@ -251,5 +290,32 @@ export async function disconnectOAuth(ownerId: string, accountId: string) {
     result: providerRevoked ? "success" : "failure",
     safe_summary: `Disconnected ${provider.name} account`,
   });
+  if (auditError) {
+    console.error("[oauth-disconnect] audit insert failed", {
+      providerId: provider.id,
+      ownerId,
+    });
+  }
   return { providerRevoked };
+}
+
+export async function disconnectAllOAuth(ownerId: string) {
+  const db = admin();
+  const { data: accounts, error } = await db
+    .from("integration_linked_accounts")
+    .select("id")
+    .eq("owner_id", ownerId)
+    .is("deleted_at", null);
+  if (error) throw new Error("linked_account_enumeration_failed");
+
+  const failures: string[] = [];
+  for (const account of accounts ?? []) {
+    try {
+      await disconnectOAuth(ownerId, account.id);
+    } catch {
+      failures.push(account.id);
+    }
+  }
+  if (failures.length) throw new Error("linked_account_disconnect_failed");
+  return { disconnected: accounts?.length ?? 0 };
 }

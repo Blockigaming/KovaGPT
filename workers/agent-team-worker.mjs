@@ -1,3 +1,4 @@
+
 import { chromium } from "playwright";
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
@@ -450,3 +451,8 @@ while (true) {
   if (task) await execute(task);
   else await sleep(1500);
 }
+
+throw new Error(
+  "The legacy agent_runs specialist worker is disabled. KovaGPT agent execution is unavailable.",
+);
+

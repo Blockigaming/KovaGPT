@@ -7,11 +7,18 @@ import { AppShell } from "@/components/AppShell";
 import { authFetch } from "@/lib/auth-fetch";
 import { saveToLibrary } from "@/lib/library.functions";
 import { useUser, useClerkSafe } from "@/components/auth/ClerkSafe";
+import {
+  browserStoragePrincipal,
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+  principalScopedStorageKey,
+  safeBrowserStorage,
+} from "@/lib/principal-browser-storage.mjs";
 
 export const Route = createFileRoute("/write")({
   head: () => ({
     meta: [
-      { title: "Writing Workspace | KovaGPT" },
+      { title: "KovaGPT Writing" },
       {
         name: "description",
         content:
@@ -23,8 +30,8 @@ export const Route = createFileRoute("/write")({
   component: WritePage,
 });
 
-const STORAGE_KEY = "kova.write.draft.v1";
-const TITLE_KEY = "kova.write.title.v1";
+const STORAGE_KEY_BASE = "kova-write-draft";
+const TITLE_KEY_BASE = "kova-write-title";
 
 type Action =
   | "improve"
@@ -52,38 +59,98 @@ function WritePage() {
   const [tone, setTone] = useState("professional");
   const [custom, setCustom] = useState("");
   const [undoStack, setUndoStack] = useState<string[]>([]);
+  const [dirty, setDirty] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const { isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const userKey = user?.id ?? null;
+  const principal = isLoaded ? browserStoragePrincipal(userKey) : null;
+  const draftKey = isLoaded ? principalScopedStorageKey(STORAGE_KEY_BASE, userKey) : null;
+  const titleKey = isLoaded ? principalScopedStorageKey(TITLE_KEY_BASE, userKey) : null;
+  const storageGenerationRef = useRef(0);
+  const principalRef = useRef(principal);
+  principalRef.current = principal;
+  const [documentPrincipal, setDocumentPrincipal] = useState<string | null>(null);
+  const documentReady = principal !== null && documentPrincipal === principal;
   const clerk = useClerkSafe();
   const saveFn = useServerFn(saveToLibrary);
 
   // Load draft
   useEffect(() => {
+    const generation = storageGenerationRef.current + 1;
+    storageGenerationRef.current = generation;
+    setText("");
+    setTitle("Untitled document");
+    setUndoStack([]);
+    setBusy(null);
+    setSaving(false);
+    setSaved(false);
+    setCopied(false);
+    setSelection({ start: 0, end: 0 });
+    setTone("professional");
+    setCustom("");
+    setDirty(false);
+    setDocumentPrincipal(null);
+    if (!principal || !draftKey || !titleKey) return;
     try {
-      const t = localStorage.getItem(STORAGE_KEY);
-      const ti = localStorage.getItem(TITLE_KEY);
+      const storage = safeBrowserStorage("localStorage");
+      const t = storage?.getItem(draftKey);
+      const ti = storage?.getItem(titleKey);
+      if (generation !== storageGenerationRef.current) return;
       if (t) setText(t);
       if (ti) setTitle(ti);
     } catch {
       // Ignore unavailable storage during draft restoration.
     }
-  }, []);
+    if (generation === storageGenerationRef.current) setDocumentPrincipal(principal);
+  }, [draftKey, principal, titleKey]);
+
+  useEffect(() => {
+    if (!isLoaded || !principal) return;
+    const reset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      storageGenerationRef.current += 1;
+      setText("");
+      setTitle("Untitled document");
+      setUndoStack([]);
+      setBusy(null);
+      setSaving(false);
+      setSaved(false);
+      setCopied(false);
+      setSelection({ start: 0, end: 0 });
+      setTone("professional");
+      setCustom("");
+      setDirty(false);
+      setDocumentPrincipal(principal);
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+    return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+  }, [isLoaded, principal, userKey]);
 
   // Autosave to localStorage
   useEffect(() => {
+    if (!documentReady || !dirty || !draftKey || !titleKey) return;
+    const generation = storageGenerationRef.current;
+    const requestPrincipal = principal;
     const id = setTimeout(() => {
+      if (generation !== storageGenerationRef.current || requestPrincipal !== principalRef.current)
+        return;
       try {
-        localStorage.setItem(STORAGE_KEY, text);
-        localStorage.setItem(TITLE_KEY, title);
+        const storage = safeBrowserStorage("localStorage");
+        if (!storage) return;
+        storage.setItem(draftKey, text);
+        storage.setItem(titleKey, title);
+        setDirty(false);
       } catch {
         // Ignore unavailable storage during draft persistence.
       }
     }, 400);
     return () => clearTimeout(id);
-  }, [text, title]);
+  }, [dirty, documentReady, draftKey, principal, text, title, titleKey]);
 
-  const words = useMemo(() => countWords(text), [text]);
-  const chars = text.length;
+  const visibleText = documentReady ? text : "";
+  const visibleTitle = documentReady ? title : "Untitled document";
+  const words = useMemo(() => countWords(visibleText), [visibleText]);
+  const chars = visibleText.length;
   const readMin = Math.max(1, Math.round(words / 220));
 
   const captureSelection = () => {
@@ -98,6 +165,7 @@ function WritePage() {
 
   const applyResult = (result: string, action: Action) => {
     pushUndo(text);
+    setDirty(true);
     if (action === "continue") {
       setText((prev) => (prev.endsWith("\n") ? prev + result : prev + "\n\n" + result));
       return;
@@ -112,16 +180,22 @@ function WritePage() {
   };
 
   const undo = () => {
+    if (!documentReady) return;
     setUndoStack((s) => {
       if (s.length === 0) return s;
       const prev = s[s.length - 1];
       setText(prev);
+      setDirty(true);
       return s.slice(0, -1);
     });
   };
 
   const run = async (action: Action) => {
-    if (busy) return;
+    if (busy || !documentReady) return;
+    const generation = storageGenerationRef.current;
+    const requestPrincipal = principal;
+    const isCurrent = () =>
+      generation === storageGenerationRef.current && requestPrincipal === principalRef.current;
     const { start, end } = selection;
     const selected = end > start ? text.slice(start, end) : "";
     const source = selected && selected.length >= 4 ? selected : text;
@@ -142,6 +216,7 @@ function WritePage() {
         }),
       });
       const json = (await res.json().catch(() => ({}))) as { text?: string; error?: string };
+      if (!isCurrent()) return;
       if (!res.ok || typeof json.text !== "string") {
         toast.error(json.error === "no_api_key" ? "AI is not configured" : "AI request failed");
         return;
@@ -149,20 +224,33 @@ function WritePage() {
       applyResult(json.text, action);
       toast.success("Updated");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Network error");
+      if (isCurrent()) toast.error(e instanceof Error ? e.message : "Network error");
     } finally {
-      setBusy(null);
+      if (isCurrent()) setBusy(null);
     }
   };
 
   const copy = async () => {
+    if (!documentReady) return;
+    const generation = storageGenerationRef.current;
+    const requestPrincipal = principal;
     await navigator.clipboard.writeText(text);
+    if (generation !== storageGenerationRef.current || requestPrincipal !== principalRef.current)
+      return;
     setCopied(true);
     toast.success("Copied");
-    setTimeout(() => setCopied(false), 1500);
+    setTimeout(() => {
+      if (
+        generation === storageGenerationRef.current &&
+        requestPrincipal === principalRef.current
+      ) {
+        setCopied(false);
+      }
+    }, 1500);
   };
 
   const download = () => {
+    if (!documentReady) return;
     const blob = new Blob([`# ${title}\n\n${text}`], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -173,13 +261,16 @@ function WritePage() {
   };
 
   const clearAll = () => {
+    if (!documentReady) return;
     if (!text.trim()) return;
     if (!confirm("Clear the document? This cannot be undone.")) return;
     pushUndo(text);
     setText("");
+    setDirty(true);
   };
 
   const save = async () => {
+    if (!documentReady) return;
     if (!isSignedIn) {
       clerk?.openSignIn();
       return;
@@ -189,6 +280,10 @@ function WritePage() {
       return;
     }
     setSaving(true);
+    const generation = storageGenerationRef.current;
+    const requestPrincipal = principal;
+    const isCurrent = () =>
+      generation === storageGenerationRef.current && requestPrincipal === principalRef.current;
     try {
       await saveFn({
         data: {
@@ -198,13 +293,16 @@ function WritePage() {
           content_text: text.slice(0, 100_000),
         },
       });
+      if (!isCurrent()) return;
       setSaved(true);
       toast.success("Saved to Library");
-      setTimeout(() => setSaved(false), 2000);
+      setTimeout(() => {
+        if (isCurrent()) setSaved(false);
+      }, 2000);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not save");
+      if (isCurrent()) toast.error(e instanceof Error ? e.message : "Could not save");
     } finally {
-      setSaving(false);
+      if (isCurrent()) setSaving(false);
     }
   };
 
@@ -228,8 +326,12 @@ function WritePage() {
       <div className="mx-auto flex h-full w-full max-w-4xl flex-col px-4 py-6 sm:px-8 sm:py-10">
         <div className="mb-4 flex items-center justify-between gap-3">
           <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            value={visibleTitle}
+            onChange={(e) => {
+              if (!documentReady) return;
+              setTitle(e.target.value);
+              setDirty(true);
+            }}
             className="min-w-0 flex-1 bg-transparent text-2xl font-semibold outline-none placeholder:text-muted-foreground sm:text-3xl"
             placeholder="Untitled document"
             aria-label="Document title"
@@ -308,8 +410,12 @@ function WritePage() {
 
         <textarea
           ref={textareaRef}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
+          value={visibleText}
+          onChange={(e) => {
+            if (!documentReady) return;
+            setText(e.target.value);
+            setDirty(true);
+          }}
           onSelect={captureSelection}
           onKeyUp={captureSelection}
           onMouseUp={captureSelection}

@@ -11,6 +11,7 @@ import {
 import type { ProjectMember } from "@/lib/projects.functions";
 import { toast } from "sonner";
 import { RealtimeReadiness } from "@/components/RealtimeReadiness";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 export function ProjectCollaboration({
   projectId,
   members,
@@ -31,7 +32,9 @@ export function ProjectCollaboration({
     [anchor, setAnchor] = useState("General"),
     [mentions, setMentions] = useState<string[]>([]),
     [sending, setSending] = useState(false),
-    [onlyMentions, setOnlyMentions] = useState(false);
+    [onlyMentions, setOnlyMentions] = useState(false),
+    [deletingComment, setDeletingComment] = useState<ProjectComment | null>(null),
+    [deletePending, setDeletePending] = useState(false);
   const userId = (user as { id?: string } | null)?.id;
   useEffect(() => {
     setLoading(true);
@@ -200,17 +203,7 @@ export function ProjectCollaboration({
                 {(comment.author_id === userId || role === "owner") && (
                   <button
                     aria-label="Delete comment"
-                    onClick={async () => {
-                      if (!confirm("Delete this comment?")) return;
-                      try {
-                        await remove({ data: { id: comment.id } });
-                        setComments((all) => all.filter((value) => value.id !== comment.id));
-                      } catch (e) {
-                        toast.error(
-                          e instanceof Error ? e.message : "Comment could not be deleted",
-                        );
-                      }
-                    }}
+                    onClick={() => setDeletingComment(comment)}
                     className="grid min-h-10 min-w-10 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -221,6 +214,29 @@ export function ProjectCollaboration({
           ))}
         </ul>
       )}
+      <ConfirmActionDialog
+        open={Boolean(deletingComment)}
+        onOpenChange={(open) => !open && !deletePending && setDeletingComment(null)}
+        title="Delete project comment?"
+        description="This comment will be permanently removed for every project member."
+        confirmLabel={deletePending ? "Deleting…" : "Delete comment"}
+        destructive
+        disabled={deletePending}
+        onConfirm={async () => {
+          if (!deletingComment || deletePending) return;
+          setDeletePending(true);
+          try {
+            await remove({ data: { id: deletingComment.id } });
+            setComments((all) => all.filter((value) => value.id !== deletingComment.id));
+            setDeletingComment(null);
+            toast.success("Comment deleted");
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Comment could not be deleted");
+          } finally {
+            setDeletePending(false);
+          }
+        }}
+      />
     </section>
   );
 }
