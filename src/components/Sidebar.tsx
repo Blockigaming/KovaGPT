@@ -405,7 +405,7 @@ export function Sidebar({
                 onNew();
                 closeAfterMobileNavigation();
               }}
-              className={navItemClass(false)}
+              className={`${navItemClass(false)} kova-new-chat`}
               aria-label="New chat"
               title="New chat"
             >
