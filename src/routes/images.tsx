@@ -6,6 +6,9 @@ import { saveToLibrary } from "@/lib/library.functions";
 import {
   PanelLeft,
   ArrowUp,
+  Paperclip,
+  ChevronLeft,
+  ChevronRight,
   Loader2,
   Download,
   Trash2,
@@ -325,7 +328,14 @@ function ImagesPage() {
   const submittingRef = useRef(false);
   const generationRef = useRef(0);
   const generationControllerRef = useRef<AbortController | null>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const promptFileRef = useRef<HTMLInputElement>(null);
+  const presetsRef = useRef<HTMLDivElement>(null);
+  const scrollPresets = (direction: 1 | -1) => {
+    const el = presetsRef.current;
+    if (!el) return;
+    el.scrollBy({ left: direction * Math.max(320, el.clientWidth * 0.8), behavior: "smooth" });
+  };
   const lightboxInitialFocusRef = useRef<HTMLButtonElement>(null);
   const lightboxReturnFocusRef = useRef<HTMLElement | null>(null);
   const lightboxReturnToPromptRef = useRef(false);
@@ -810,51 +820,6 @@ function ImagesPage() {
           </div>
         </div>
 
-        {/* Bottom composer */}
-        <div className="sticky bottom-0 border-t border-border/60 bg-gradient-to-t from-background via-background to-background/80 backdrop-blur">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              generate(prompt);
-            }}
-            className="max-w-3xl mx-auto px-4 sm:px-6 py-3"
-          >
-            <div className="flex items-end gap-2 rounded-2xl border border-border bg-card px-3 py-2.5">
-              <textarea
-                ref={inputRef}
-                value={prompt}
-                aria-label="Describe the image to generate"
-                maxLength={2000}
-                onChange={(e) => setPrompt(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-                    e.preventDefault();
-                    generate(prompt);
-                  }
-                }}
-                rows={1}
-                placeholder="Describe an image"
-                spellCheck={false}
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
-                className="flex-1 bg-transparent outline-none border-0 focus:ring-0 focus:outline-none text-[15px] placeholder:text-muted-foreground resize-none py-1.5 max-h-40"
-              />
-              <button
-                type="submit"
-                disabled={!prompt.trim() || loading}
-                className="w-11 h-11 rounded-full bg-foreground text-background flex items-center justify-center disabled:opacity-30 hover:opacity-90 transition shrink-0"
-                aria-label="Generate"
-              >
-                {loading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <ArrowUp className="w-4 h-4" />
-                )}
-              </button>
-            </div>
-          </form>
-        </div>
       </main>
 
       <SettingsDialog
