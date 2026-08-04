@@ -124,7 +124,14 @@ test("blocks unsafe schemes, private networks, and non-allow-listed origins", as
     permissions: { grants: ["navigate"], allowedOrigins: ["https://example.com"] },
   });
   const tab = await runtime.createTab(session.id, "owner-a");
-  for (const url of ["file:///etc/passwd", "http://127.0.0.1/admin", "https://example.org/"]) {
+  for (const url of [
+    "file:///etc/passwd",
+    "http://127.0.0.1/admin",
+    "http://[fe90::1]/admin",
+    "http://[fea0::1]/admin",
+    "http://[febf::1]/admin",
+    "https://example.org/",
+  ]) {
     await expect(runtime.openUrl(session.id, "owner-a", tab.id, url)).rejects.toBeInstanceOf(
       BrowserRuntimeError,
     );

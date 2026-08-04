@@ -5,6 +5,11 @@ import { runtimeError } from "./errors";
 
 const PRIVATE_IPV4 = /^(10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/;
 
+function isIpv6LinkLocalAddress(address: string) {
+  const firstHextet = Number.parseInt(address.split(":", 1)[0], 16);
+  return firstHextet >= 0xfe80 && firstHextet <= 0xfebf;
+}
+
 function isPrivateIpAddress(address: string) {
   const normalized = address.toLowerCase().replace(/%.+$/, "");
   if (isIP(normalized) === 4) return PRIVATE_IPV4.test(normalized) || normalized === "0.0.0.0";
@@ -13,7 +18,7 @@ function isPrivateIpAddress(address: string) {
   return (
     normalized === "::" ||
     normalized === "::1" ||
-    normalized.startsWith("fe80:") ||
+    isIpv6LinkLocalAddress(normalized) ||
     /^(fc|fd)/i.test(compact) ||
     normalized.startsWith("::ffff:127.") ||
     normalized.startsWith("::ffff:10.") ||
