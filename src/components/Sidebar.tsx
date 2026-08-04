@@ -2,12 +2,12 @@ import {
   Archive,
   Calendar,
   Copy as CopyIcon,
+  CreditCard,
   FolderKanban,
   FolderOpen,
   HelpCircle,
   ImageIcon,
   LifeBuoy,
-  MessageSquare,
   MoreHorizontal,
   PanelLeft,
   Pin,
@@ -40,7 +40,7 @@ import { searchConversations } from "@/lib/conversation-search";
 const EXPANDED_WIDTH = 260;
 
 function isMobileViewport() {
-  return typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
+  return typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches;
 }
 
 export function Sidebar({
@@ -148,10 +148,10 @@ export function Sidebar({
     if (open && isMobileViewport()) onToggle();
   };
 
-  const labelClass = collapsed ? "sr-only" : "truncate";
-  const iconOnly = collapsed ? "justify-center px-0" : "gap-2.5 px-2.5";
+  const labelClass = collapsed ? "sr-only lg:sr-only" : "truncate";
+  const iconOnly = collapsed ? "justify-center px-0" : "gap-3 px-2.5";
   const navItemClass = (active: boolean) =>
-    `kova-nav-row relative flex h-[38px] items-center rounded-lg py-1 text-sm transition-colors duration-100 ${iconOnly} ${
+    `relative flex h-9 items-center rounded-lg py-1 text-sm transition-colors duration-100 ${iconOnly} ${
       active
         ? "bg-sidebar-active text-foreground font-medium"
         : "text-sidebar-foreground hover:bg-sidebar-hover"
@@ -253,24 +253,24 @@ export function Sidebar({
         <button
           type="button"
           onClick={onToggle}
-          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
           aria-label="Close navigation menu"
         />
       ) : null}
 
       {collapsed && showSignedIn ? (
         <div
-          className="kova-collapsed-sidebar hidden h-[100dvh] w-16 shrink-0 flex-col items-center gap-1 border-r border-border/60 bg-sidebar pb-[max(.625rem,var(--safe-bottom))] pt-[max(.5rem,var(--safe-top))] md:flex"
+          className="hidden h-[100dvh] w-[52px] shrink-0 flex-col items-center gap-1 border-r border-border/60 bg-sidebar pb-[max(.625rem,var(--safe-bottom))] pt-[max(.5rem,var(--safe-top))] lg:flex"
           aria-label="Collapsed navigation"
         >
           <button
             type="button"
             onClick={onToggle}
-            className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
+            className="mb-1 flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="Open sidebar"
             title="Open sidebar"
           >
-            <PanelLeft className="h-[18px] w-[18px]" />
+            <NovaLogo mark className="h-[22px] w-[22px] text-foreground" />
           </button>
           <button
             type="button"
@@ -291,34 +291,14 @@ export function Sidebar({
             <Search className="h-[18px] w-[18px]" />
           </button>
           <Link
-            to="/projects"
-            className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label="Projects"
-            title="Projects"
+            to="/images"
+            className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring aria-[current=page]:bg-sidebar-hover"
+            aria-label="Images"
+            title="Images"
           >
-            <FolderKanban className="h-[18px] w-[18px]" />
+            <ImageIcon className="h-[18px] w-[18px]" />
           </Link>
-          {conversations[0] ? (
-            <button
-              type="button"
-              onClick={() => onSelect(conversations[0].id)}
-              className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label={`Open chat ${conversations[0].title}`}
-              title={conversations[0].title}
-            >
-              <MessageSquare className="h-[18px] w-[18px]" />
-            </button>
-          ) : null}
           <div className="mt-auto flex flex-col items-center gap-1">
-            <button
-              type="button"
-              onClick={() => onOpenSettings("general")}
-              className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label="Settings"
-              title="Settings"
-            >
-              <SettingsIcon className="h-[18px] w-[18px]" />
-            </button>
             <div onClick={(e) => e.stopPropagation()}>
               <UserButton />
             </div>
@@ -335,10 +315,10 @@ export function Sidebar({
             "--sidebar-expanded": `${EXPANDED_WIDTH}px`,
           } as React.CSSProperties
         }
-        className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-border/60 bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 ease-[var(--ease-spring)] md:w-[var(--sidebar-expanded)] ${
-          collapsed ? "md:hidden" : ""
-        } max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:w-[min(86vw,320px)] max-md:shadow-lg ${
-          open ? "max-md:translate-x-0" : "max-md:-translate-x-full"
+        className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-border/60 bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 ease-[var(--ease-spring)] lg:w-[var(--sidebar-expanded)] ${
+          collapsed ? "lg:!w-0 lg:border-r-0" : ""
+        } max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,320px)] max-lg:shadow-lg ${
+          open ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"
         }`}
         aria-label="Primary navigation"
         aria-modal={open && isMobileViewport() ? true : undefined}
@@ -356,7 +336,7 @@ export function Sidebar({
             {showSignedOut ? (
               <Link
                 to="/library"
-                className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring md:flex"
+                className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:flex"
                 aria-label="Search"
                 title="Search"
               >
@@ -366,7 +346,7 @@ export function Sidebar({
 
             <button
               onClick={onToggle}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
               aria-label="Close navigation"
               title="Close navigation"
             >
@@ -381,7 +361,7 @@ export function Sidebar({
                     ?.focus({ preventScroll: true });
                 });
               }}
-              className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring md:flex"
+              className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:flex"
               aria-label="Collapse sidebar"
               title="Collapse sidebar"
             >
@@ -447,6 +427,9 @@ export function Sidebar({
                   isOn("/scheduled-tasks"),
                 )
               : null}
+            {showSignedIn && tier !== "plus" && tier !== "pro"
+              ? renderNavLink("/pricing", "Subscriptions", CreditCard, isOn("/pricing"))
+              : null}
           </div>
 
           <div
@@ -510,10 +493,10 @@ export function Sidebar({
           </div>
 
           <div
-            className={`mt-auto border-t border-border/60 bg-sidebar p-2.5 pb-[max(.625rem,var(--safe-bottom))] ${collapsed ? "md:px-2" : ""}`}
+            className={`mt-auto border-t border-border/60 bg-sidebar p-2.5 pb-[max(.625rem,var(--safe-bottom))] ${collapsed ? "lg:px-2" : ""}`}
           >
             {!isLoaded ? null : showSignedIn ? (
-              <div className={`flex items-center gap-2 ${collapsed ? "md:flex-col" : ""}`}>
+              <div className={`flex items-center gap-2 ${collapsed ? "lg:flex-col" : ""}`}>
                 <button
                   onClick={() => {
                     onOpenSettings("general");
@@ -593,7 +576,7 @@ export function Sidebar({
                       files.
                     </p>
                     <SignInButton mode="modal">
-                      <button className="mt-4 flex min-h-10 w-full items-center justify-center rounded-full border border-border bg-transparent px-4 text-sm font-medium transition hover:bg-sidebar-hover">
+                      <button className="mt-4 flex min-h-10 w-full items-center justify-center rounded-full border border-transparent bg-muted px-4 text-sm font-medium text-foreground transition hover:bg-accent">
                         Log in
                       </button>
                     </SignInButton>

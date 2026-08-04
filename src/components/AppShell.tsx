@@ -46,7 +46,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   // narrow viewports; on desktop we restore the persisted user preference.
   const [sidebarOpen, setSidebarOpen] = useState(false);
   useEffect(() => {
-    if (typeof window === "undefined" || window.innerWidth < 768) return;
+    if (typeof window === "undefined" || window.innerWidth < 1024) return;
     let saved: string | null = null;
     try {
       saved = localStorage.getItem("kova-sidebar-open");
@@ -56,7 +56,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     setSidebarOpen(saved === null ? true : saved === "1");
   }, []);
   useEffect(() => {
-    if (typeof window === "undefined" || window.innerWidth < 768) return;
+    if (typeof window === "undefined" || window.innerWidth < 1024) return;
     try {
       localStorage.setItem("kova-sidebar-open", sidebarOpen ? "1" : "0");
     } catch {
@@ -185,7 +185,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       className="relative flex h-[100dvh] w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
       onTouchStart={(e) => {
         const t = e.touches[0];
-        if (t && t.clientX < 24 && window.innerWidth < 768) {
+        if (t && t.clientX < 24 && window.innerWidth < 1024) {
           (e.currentTarget as HTMLDivElement).dataset.swipeStart = String(t.clientX);
           (e.currentTarget as HTMLDivElement).dataset.swipeY = String(t.clientY);
         }
@@ -219,7 +219,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         onOpenHelp={openHelp}
       />
 
-      <div className="kova-main-scroll flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">
+      <div className="flex-1 min-w-0 flex flex-col overflow-y-auto pb-[env(safe-area-inset-bottom)]">
         <OfflineBanner />
         <MobileTopBar onOpenSidebar={() => setSidebarOpen(true)} onNewChat={handleNew} />
         {!sidebarOpen && (
@@ -232,7 +232,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   ?.focus({ preventScroll: true });
               });
             }}
-            className="hidden lg:flex fixed top-2 left-3 z-30 h-10 w-10 rounded-md bg-background/90 hover:bg-accent transition items-center justify-center focus-visible:ring-2 focus-visible:ring-ring"
+            className="hidden lg:flex fixed top-3 left-3 z-30 p-2 rounded-md bg-background/90 border border-border hover:bg-accent transition shadow-sm items-center justify-center"
             aria-label="Open sidebar"
           >
             <PanelLeft className="w-4 h-4" />

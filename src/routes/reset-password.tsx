@@ -58,6 +58,15 @@ function ResetPassword() {
     };
     const params = new URLSearchParams(window.location.search);
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    // Supabase may consume the recovery URL (and fire PASSWORD_RECOVERY) before
+    // this listener attaches. Treat a recovery-shaped landing URL as proof the
+    // visitor arrived from a reset email.
+    const arrivedFromResetLink =
+      params.get("type") === "recovery" ||
+      hash.get("type") === "recovery" ||
+      params.has("code") ||
+      params.has("token_hash") ||
+      hash.has("access_token");
     if (params.get("error") || hash.get("error")) {
       clearPasswordRecoveryFlow();
       finish(false);
@@ -68,14 +77,19 @@ function ResetPassword() {
         finish(true);
         return;
       }
-      if (session && hasRecentPasswordRecoveryFlow(session.user.id)) {
+      if (session && (arrivedFromResetLink || hasRecentPasswordRecoveryFlow(session.user.id))) {
+        if (arrivedFromResetLink) markPasswordRecoveryFlow(session.user.id);
         finish(true);
       }
     });
     const check = async () => {
       const { data, error: sessionError } = await supabase.auth.getSession();
       if (cancelled) return;
-      if (data.session && hasRecentPasswordRecoveryFlow(data.session.user.id)) {
+      if (
+        data.session &&
+        (arrivedFromResetLink || hasRecentPasswordRecoveryFlow(data.session.user.id))
+      ) {
+        if (arrivedFromResetLink) markPasswordRecoveryFlow(data.session.user.id);
         finish(true);
       } else if (sessionError) {
         clearPasswordRecoveryFlow();

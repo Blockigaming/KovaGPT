@@ -1,5 +1,8 @@
 import {
   ArrowUp,
+  Atom,
+  Paperclip,
+  Telescope,
   Square,
   Plus,
   X,
@@ -13,6 +16,7 @@ import {
   Brain,
   AlertCircle,
   RotateCcw,
+  Mic,
   type LucideIcon,
 } from "lucide-react";
 
@@ -158,6 +162,76 @@ export function ChatInput({
   const composingRef = useRef(false);
   const [uploadAnnouncement, setUploadAnnouncement] = useState("");
   const [recentQuery, setRecentQuery] = useState("");
+  const [dictating, setDictating] = useState(false);
+  const recognitionRef = useRef<{ stop: () => void } | null>(null);
+  const dictationBaseRef = useRef("");
+
+  useEffect(() => () => recognitionRef.current?.stop(), []);
+
+  const toggleDictation = async () => {
+    if (dictating) {
+      recognitionRef.current?.stop();
+      recognitionRef.current = null;
+      setDictating(false);
+      return;
+    }
+    const w = window as unknown as {
+      SpeechRecognition?: new () => never;
+      webkitSpeechRecognition?: new () => never;
+    };
+    const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+    if (!Ctor) {
+      toast.error("Dictation is not supported in this browser. Try Chrome or Safari.");
+      return;
+    }
+
+    const recognition = new Ctor() as unknown as {
+      continuous: boolean;
+      interimResults: boolean;
+      lang: string;
+      start: () => void;
+      stop: () => void;
+      onresult: (event: {
+        resultIndex: number;
+        results: ArrayLike<{ 0: { transcript: string } }>;
+      }) => void;
+      onerror: (event: { error?: string }) => void;
+      onend: () => void;
+    };
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = navigator.language || "en-US";
+    dictationBaseRef.current = value ? `${value.replace(/\s+$/, "")} ` : "";
+    recognition.onresult = (event) => {
+      let transcript = "";
+      for (let i = 0; i < event.results.length; i += 1)
+        transcript += event.results[i][0].transcript;
+      onChange(`${dictationBaseRef.current}${transcript.trimStart()}`);
+    };
+    recognition.onerror = (event) => {
+      setDictating(false);
+      recognitionRef.current = null;
+      const code = event?.error;
+      if (code === "not-allowed" || code === "service-not-allowed")
+        toast.error("Microphone permission was not granted. Open KovaGPT in its own tab and retry.");
+      else if (code === "no-speech") toast.error("No speech detected. Try dictating again.");
+      else if (code === "network") toast.error("Dictation needs a network connection.");
+      else if (code && code !== "aborted") toast.error("Dictation stopped unexpectedly.");
+    };
+    recognition.onend = () => {
+      setDictating(false);
+      recognitionRef.current = null;
+    };
+    try {
+      recognition.start();
+    } catch {
+      toast.error("Dictation could not start. Try again in a moment.");
+      return;
+    }
+    recognitionRef.current = recognition;
+    setDictating(true);
+  };
+
 
   useEffect(() => {
     if (!plusOpen) return;
@@ -574,66 +648,94 @@ export function ChatInput({
       mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5 text-sm"
     }`;
     const iconClass = mobile ? "h-5 w-5 shrink-0 text-muted-foreground" : "h-4 w-4 shrink-0 text-muted-foreground";
+    const webSearchTool = COMPOSER_TOOLS.find((tool) => tool.id === "web_search");
+    const imageTool = COMPOSER_TOOLS.find((tool) => tool.id === "image");
+    const deepResearchTool = COMPOSER_TOOLS.find((tool) => tool.id === "deep_research");
+
+    const addPhotosRow = (
+      <button
+        type="button"
+        onClick={() => {
+          setPlusOpen(false);
+          fileRef.current?.click();
+        }}
+        className={rowClass}
+      >
+        <Paperclip className={iconClass} />
+        <span>{user ? "Add photos and files" : "Add photos"}</span>
+      </button>
+    );
+
+    const cameraRow = mobile ? (
+      <button
+        type="button"
+        onClick={() => {
+          setPlusOpen(false);
+          cameraRef.current?.click();
+        }}
+        className={rowClass}
+      >
+        <Camera className={iconClass} />
+        <span>Camera</span>
+      </button>
+    ) : null;
+
+    const toolRow = (tool: ComposerAction) => {
+      const Icon = tool.icon;
+      const active = selectedTool === tool.id;
+      return (
+        <button
+          key={tool.id}
+          type="button"
+          aria-pressed={active}
+          disabled={disabled || isStreaming}
+          onClick={() => chooseTool(tool)}
+          className={`kova-tool-button ${rowClass} ${active ? "bg-accent text-foreground" : ""}`}
+        >
+          <Icon className={iconClass} />
+          <span>{tool.label}</span>
+        </button>
+      );
+    };
+
+    if (!user) {
+      const lockedRow = (
+        key: string,
+        Icon: React.ComponentType<{ className?: string }>,
+        label: string,
+      ) => (
+        <div
+          key={key}
+          aria-disabled="true"
+          className={`${rowClass} cursor-not-allowed text-muted-foreground hover:bg-transparent active:bg-transparent`}
+        >
+          <Icon className={`${iconClass} opacity-70`} />
+          <span className="opacity-70">{label}</span>
+        </div>
+      );
+      return (
+        <>
+          {addPhotosRow}
+          {cameraRow}
+          {webSearchTool ? toolRow({ ...webSearchTool, label: "Web search" }) : null}
+          <p
+            className={`pt-3 pb-1 text-sm text-muted-foreground ${mobile ? "px-4" : "px-3"}`}
+          >
+            Log in to use...
+          </p>
+          {lockedRow("locked-deep-research", deepResearchTool?.icon ?? Telescope, "Deep research")}
+          {lockedRow("locked-image", imageTool?.icon ?? ImageIcon, "Create image")}
+          {lockedRow("locked-model", Atom, "Kova-5.5")}
+        </>
+      );
+    }
+
     return (
       <>
-        {COMPOSER_TOOLS.filter((tool) => tool.id === "web_search").map((tool) => {
-          const Icon = tool.icon;
-          const active = selectedTool === tool.id;
-          return (
-            <button
-              key={tool.id}
-              type="button"
-              aria-pressed={active}
-              disabled={disabled || isStreaming}
-              onClick={() => chooseTool(tool)}
-              className={`kova-tool-button ${rowClass} ${active ? "bg-accent text-foreground" : ""}`}
-            >
-              <Icon className={iconClass} />
-              <span>{tool.label}</span>
-            </button>
-          );
-        })}
-        <button
-          type="button"
-          onClick={() => {
-            setPlusOpen(false);
-            fileRef.current?.click();
-          }}
-          className={rowClass}
-        >
-          <ImageIcon className={iconClass} />
-          <span>Add photos and files</span>
-        </button>
-        {mobile ? (
-          <button
-            type="button"
-            onClick={() => {
-              setPlusOpen(false);
-              cameraRef.current?.click();
-            }}
-            className={rowClass}
-          >
-            <Camera className={iconClass} />
-            <span>Camera</span>
-          </button>
-        ) : null}
-        {COMPOSER_TOOLS.filter((tool) => tool.id === "image").map((tool) => {
-          const Icon = tool.icon;
-          const active = selectedTool === tool.id;
-          return (
-            <button
-              key={tool.id}
-              type="button"
-              aria-pressed={active}
-              disabled={disabled || isStreaming}
-              onClick={() => chooseTool(tool)}
-              className={`kova-tool-button ${rowClass} ${active ? "bg-accent text-foreground" : ""}`}
-            >
-              <Icon className={iconClass} />
-              <span>{tool.label}</span>
-            </button>
-          );
-        })}
+        {webSearchTool ? toolRow(webSearchTool) : null}
+        {addPhotosRow}
+        {cameraRow}
+        {imageTool ? toolRow(imageTool) : null}
       </>
     );
   };
@@ -654,7 +756,7 @@ export function ChatInput({
               {attachments.map((a, i) => (
                 <div
                   key={`${a.name}:${a.size ?? i}:${i}`}
-                  className="kova-attachment-card relative overflow-hidden border border-border/70 bg-muted/45 shadow-sm"
+                  className="relative min-h-16 w-24 overflow-hidden rounded-xl border border-border/70 bg-muted/45 shadow-sm"
                 >
                   {a.kind === "library_file" ? (
                     <div className="flex h-16 w-full flex-col items-center justify-center gap-1 text-muted-foreground">
@@ -822,7 +924,7 @@ export function ChatInput({
               onCompositionEnd={() => {
                 composingRef.current = false;
               }}
-              placeholder={placeholder ?? "Message KovaGPT"}
+              placeholder={placeholder ?? "Ask anything"}
               rows={1}
               spellCheck
               autoComplete="off"
@@ -842,13 +944,26 @@ export function ChatInput({
                   <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
                 </div>
               )}
+              <button
+                type="button"
+                onClick={toggleDictation}
+                disabled={disabled}
+                className={`kova-composer-button flex items-center justify-center rounded-full ${
+                  dictating ? "text-destructive" : "text-foreground/70 hover:text-foreground"
+                }`}
+                aria-label={dictating ? "Stop dictation" : "Dictate message"}
+                aria-pressed={dictating}
+                title={dictating ? "Stop dictation" : "Dictate"}
+              >
+                <Mic className="h-[18px] w-[18px]" strokeWidth={2} />
+              </button>
 
               {isStreaming ? (
                 <button
                   type="button"
                   onClick={onStop}
                   className="kova-composer-button kova-send-button is-enabled flex items-center justify-center rounded-full"
-                  aria-label="Stop generating"
+                  aria-label="Stop"
                 >
                   <Square className="h-3.5 w-3.5 fill-current" />
                 </button>
