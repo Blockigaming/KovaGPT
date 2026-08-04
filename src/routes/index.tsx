@@ -5,6 +5,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -510,7 +511,7 @@ function KovaGPT() {
     }
   }, [activeMessageCount, latestMessageContent, isStreaming]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     configureMemoryWrites({ principal: userKey, enabled: false });
   }, [userKey]);
 
