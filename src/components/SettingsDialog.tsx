@@ -121,6 +121,7 @@ export type Settings = {
   mood: Mood;
   responseLength: "short" | "medium" | "long";
   rememberAcross: boolean;
+  memoryConsentVersion?: number;
   webSearch: boolean;
   sendOnEnter: boolean;
   mode: ThemeMode;
@@ -146,6 +147,8 @@ export type Settings = {
   theme?: ThemeColors;
   buttonColor?: string;
 };
+
+export const SAVED_MEMORY_CONSENT_VERSION = 1;
 
 export const DEFAULT_SETTINGS: Settings = {
   displayName: "",
@@ -761,7 +764,11 @@ export function SettingsDialog({
                             principal: userKey,
                             enabled: value && isSignedIn,
                           });
-                          onChange({ ...settings, rememberAcross: value });
+                          onChange({
+                            ...settings,
+                            rememberAcross: value,
+                            memoryConsentVersion: value ? SAVED_MEMORY_CONSENT_VERSION : undefined,
+                          });
                         }}
                       />
                       <p className="text-xs text-muted-foreground">
