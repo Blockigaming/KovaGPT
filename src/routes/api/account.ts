@@ -87,14 +87,8 @@ async function deleteOwnedStorageObjects(supabaseAdmin: AdminClient, userId: str
   }
 
   await removeStoragePaths(supabaseAdmin, PROJECT_FILES_BUCKET, projectFilePaths);
+}
 
-import { disconnectAllGitHub } from "@/lib/github-oauth.server";
-import { disconnectAllOAuth } from "@/integrations/oauth-lifecycle.server";
-import { disconnectAllFinance } from "@/finances/plaid.server";
-import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
-import { BodyReadError, readUtf8BodyBounded } from "@/lib/endpoint-reliability.mjs";
-
-const TERMINAL_SUBSCRIPTION_STATES = new Set(["canceled", "incomplete_expired"]);
 
 const ACCOUNT_DELETION_BAN_DURATION = "876000h";
 
