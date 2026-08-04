@@ -35,6 +35,10 @@ function validateMessage(value: unknown): value is Message {
           !/^data:image\/(png|jpeg|webp|gif);base64,/.test(attachment.dataUrl)
         )
           return false;
+      } else if (attachment.kind === "text_file") {
+        if (typeof attachment.name !== "string" || attachment.name.length > 500) return false;
+        if (typeof attachment.content !== "string" || attachment.content.length > 256 * 1024)
+          return false;
       } else if (attachment.kind === "library_file") {
         if (typeof attachment.libraryItemId !== "string" || attachment.libraryItemId.length > 200)
           return false;
@@ -55,7 +59,22 @@ function validateConversation(value: unknown): value is Conversation {
   if (!value.messages.every(validateMessage)) return false;
   if (typeof value.createdAt !== "number" || !Number.isFinite(value.createdAt)) return false;
   if (typeof value.updatedAt !== "number" || !Number.isFinite(value.updatedAt)) return false;
-  if (!(["instant", "medium", "high"] as unknown[]).includes(value.mode)) return false;
+  if (
+    !([
+      "instant",
+      "medium",
+      "thinking",
+      "high",
+      "extra_high",
+      "pro",
+      "kova_5_5",
+      "kova_5_4",
+      "kova_o3",
+    ] as unknown[]).includes(
+      value.mode,
+    )
+  )
+    return false;
   return true;
 }
 

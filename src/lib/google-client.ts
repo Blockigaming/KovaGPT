@@ -3,26 +3,47 @@ import { authFetch } from "@/lib/auth-fetch";
 
 export type GoogleStatus = {
   connected: boolean;
+  state:
+    | "connected"
+    | "disconnected"
+    | "reauthorization_required"
+    | "permission_incomplete"
+    | "temporarily_unavailable";
   email?: string | null;
   scopes?: string[];
-  has?: { gmail: boolean; calendar: boolean; drive: boolean };
+  has?: {
+    gmail: boolean;
+    gmailWrite: boolean;
+    calendar: boolean;
+    calendarWrite: boolean;
+    drive: boolean;
+  };
 };
 
 export async function getGoogleStatus(): Promise<GoogleStatus> {
   const r = await authFetch("/api/google/status");
-  if (!r.ok) return { connected: false };
-  return r.json();
+  const result = (await r.json().catch(() => null)) as GoogleStatus | null;
+  if (result) return result;
+  return { connected: false, state: "temporarily_unavailable" };
 }
 
 export async function startGoogleConnect(): Promise<void> {
   const r = await authFetch("/api/google/auth");
-  if (!r.ok) throw new Error("Could not start Google connection");
-  const { url } = (await r.json()) as { url: string };
+  const result = (await r.json().catch(() => ({}))) as { url?: string; error?: string };
+  if (!r.ok || !result.url) {
+    throw new Error(
+      r.status === 503
+        ? "Google connection is not configured for this deployment."
+        : result.error || "Could not start Google connection.",
+    );
+  }
+  const { url } = result as { url: string };
   window.location.href = url;
 }
 
 export async function disconnectGoogleAccount(): Promise<void> {
-  await authFetch("/api/google/disconnect", { method: "POST" });
+  const response = await authFetch("/api/google/disconnect", { method: "POST" });
+  if (!response.ok) throw new Error("Could not disconnect Google.");
 }
 
 async function post<T>(path: string, body: unknown): Promise<T> {

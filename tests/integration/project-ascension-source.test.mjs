@@ -31,16 +31,18 @@ test("conversation search covers content and useful operators", async () => {
 });
 
 test("archived conversations can be discovered, restored, and permanently removed", async () => {
-  const [dialog, store, sidebar, chat] = await Promise.all([
-    read("src/components/ArchivedChatsDialog.tsx"),
+  const [settings, store, chat] = await Promise.all([
+    read("src/components/SettingsDialog.tsx"),
     read("src/lib/chat-store.ts"),
-    read("src/components/Sidebar.tsx"),
     read("src/routes/index.tsx"),
   ]);
-  assert.match(dialog, /Restore/);
-  assert.match(dialog, /Permanently delete/);
+  assert.match(settings, /aria-label="Archived chats"/);
+  assert.match(settings, /loadArchivedConversations/);
+  assert.match(settings, /saveArchivedConversations/);
+  assert.match(settings, /Restore/);
+  assert.match(settings, /Delete archived chat/);
   assert.match(store, /loadArchivedConversations/);
   assert.match(store, /removeArchivedConversation/);
-  assert.match(sidebar, /Archived chats/);
   assert.match(chat, /archiveConversation/);
+  assert.match(chat, /Undo/);
 });

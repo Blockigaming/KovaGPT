@@ -24,23 +24,34 @@ test("Apollo exposes every specialist and ten real workflow templates", async ()
   assert.match(team, /depends on missing task/);
 });
 
-test("agent teams are server gated, dependency aware, parallel and controllable", async () => {
+test("agent teams are server gated, dependency aware, unavailable, and safely controllable", async () => {
   const server = await read("src/agents/team.server.ts");
   assert.match(server, /getAgentEntitlement/);
   assert.match(server, /entitlement === "plus" \? 4/);
   assert.match(server, /parallelism: limits\.concurrency/);
-  assert.match(server, /releaseReadyTasks/);
-  for (const command of ["pause", "resume", "cancel", "retry", "approve", "deny"])
-    assert.match(server, new RegExp(`"${command}"`));
+  assert.match(server, /browser_agent_unavailable/);
+  assert.match(server, /\["pause", "resume", "retry", "approve"\]/);
+  for (const command of ["cancel", "deny"]) assert.match(server, new RegExp(`"${command}"`));
 });
 
-test("specialist worker uses real browser and model output without fabricated events", async () => {
+test("legacy specialist worker fails closed without browser or model execution", async () => {
   const worker = await read("workers/agent-team-worker.mjs");
-  assert.match(worker, /chromium\.launch/);
-  assert.match(worker, /chat\/completions/);
-  assert.match(worker, /agent_run_tasks/);
-  assert.match(worker, /dependencies\.every/);
-  assert.match(worker, /approval_needed/);
-  assert.match(worker, /createHash\("sha256"\)/);
-  assert.match(worker, /Do not fabricate execution/);
+  assert.match(worker, /legacy agent_runs specialist worker is disabled/);
+  assert.match(worker, /agent execution is unavailable/);
+  assert.doesNotMatch(worker, /chromium\.launch|chat\/completions|agent_run_tasks/);
+});
+
+test("agent team creation fails closed while worker execution is disabled", async () => {
+  const [api, workspace] = await Promise.all([
+    read("src/routes/api/agents/teams.ts"),
+    read("src/components/AgentTeamWorkspace.tsx"),
+  ]);
+  assert.doesNotMatch(api, /createAgentTeamRun/);
+  assert.match(api, /browser_agent_unavailable/);
+  assert.match(api, /status: 503/);
+  assert.match(api, /Retry-After/);
+  assert.match(workspace, /EXECUTION_DISABLED_MESSAGE/);
+  assert.match(workspace, /Agent teams unavailable/);
+  assert.match(workspace, /Approval disabled/);
+  assert.doesNotMatch(workspace, /Retry failed/);
 });

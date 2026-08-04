@@ -9,7 +9,7 @@ import type { Database } from "@/integrations/supabase/types";
 const SITE_NAME = "KovaGPT";
 const SENDER_DOMAIN = "notify.kovagpt.com";
 const FROM_DOMAIN = "kovagpt.com";
-const SUPPORT_INBOX = "help@kovagpt.com";
+const MAX_BODY_BYTES = 32 * 1024;
 
 const BodySchema = z.object({
   name: z.string().trim().max(120).optional().default(""),
@@ -31,10 +31,33 @@ function randomToken(): string {
     .join("");
 }
 
-async function enqueue(args: {
+async function unsubscribeTokenFor(
+  supabase: SupabaseClient<Database>,
+  email: string,
+): Promise<string> {
+  const normalized = email.trim().toLowerCase();
+  const { data: existing } = await supabase
+    .from("email_unsubscribe_tokens")
+    .select("token")
+    .eq("email", normalized)
+    .maybeSingle();
+  if (existing?.token) return existing.token;
+  const token = `${randomToken()}${randomToken()}`;
+  await supabase
+    .from("email_unsubscribe_tokens")
+    .upsert({ token, email: normalized }, { onConflict: "email", ignoreDuplicates: true });
+  const { data: stored } = await supabase
+    .from("email_unsubscribe_tokens")
+    .select("token")
+    .eq("email", normalized)
+    .maybeSingle();
+  if (!stored?.token) throw new Error("Failed to prepare unsubscribe token");
+  return stored.token;
+}
+
+async function enqueueFixedRecipient(args: {
   supabase: SupabaseClient<Database>;
   templateName: string;
-  to: string;
   data: Record<string, unknown>;
   idempotencyKey: string;
 }) {
@@ -43,12 +66,18 @@ async function enqueue(args: {
   }
   const entry = TEMPLATES[args.templateName];
   if (!entry) throw new Error(`Unknown template ${args.templateName}`);
+  if (!entry.to) {
+    throw new Error("Public support email templates must define a fixed recipient");
+  }
   const element = React.createElement(entry.component, args.data);
   const html = await render(element);
   const plainText = await render(element, { plainText: true });
   const subject = typeof entry.subject === "function" ? entry.subject(args.data) : entry.subject;
-  const recipient = (entry.to ?? args.to).toLowerCase();
+  const recipient = entry.to.trim().toLowerCase();
   const messageId = randomToken();
+  // The email API rejects transactional sends without an unsubscribe token,
+  // so the internal support recipient needs one too.
+  const unsubscribeToken = await unsubscribeTokenFor(args.supabase, recipient);
   await args.supabase.from("email_send_log").insert({
     message_id: messageId,
     template_name: args.templateName,
@@ -68,11 +97,13 @@ async function enqueue(args: {
       purpose: "transactional",
       label: args.templateName,
       idempotency_key: args.idempotencyKey,
+      unsubscribe_token: unsubscribeToken,
       queued_at: new Date().toISOString(),
     },
   });
   if (error) throw new Error(error.message);
 }
+
 
 // Simple in-memory IP rate limiter: max 5 submissions per hour per IP.
 // In-memory state is per-worker-instance, so this is a best-effort guard
@@ -127,9 +158,19 @@ export const Route = createFileRoute("/api/public/help-submit")({
           );
         }
 
+        const contentLength = Number(request.headers.get("content-length") ?? "0");
+        if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
+          return Response.json({ error: "Request too large" }, { status: 413 });
+        }
+
+        const rawText = await request.text();
+        if (new TextEncoder().encode(rawText).byteLength > MAX_BODY_BYTES) {
+          return Response.json({ error: "Request too large" }, { status: 413 });
+        }
+
         let raw: unknown;
         try {
-          raw = await request.json();
+          raw = JSON.parse(rawText);
         } catch {
           return Response.json({ error: "Invalid JSON" }, { status: 400 });
         }
@@ -146,33 +187,16 @@ export const Route = createFileRoute("/api/public/help-submit")({
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
         const idem = randomToken();
 
-        // Suppression check: never autoreply to bounced/complained/unsubscribed addresses.
-        const recipientEmail = body.email.toLowerCase();
-        const { data: suppressed } = await supabase
-          .from("suppressed_emails")
-          .select("email")
-          .eq("email", recipientEmail)
-          .maybeSingle();
-
         try {
-          // 1) Notify support inbox (always - support needs to see the message)
-          await enqueue({
+          // Public submissions may send only to the template's fixed internal
+          // recipient. The submitted address stays in the notification so
+          // support can reply manually, but it is never an outbound target.
+          await enqueueFixedRecipient({
             supabase,
             templateName: "help-contact-notification",
-            to: SUPPORT_INBOX,
             data: body,
             idempotencyKey: `help-notify-${idem}`,
           });
-          // 2) Auto-reply to the user, unless their address is suppressed.
-          if (!suppressed) {
-            await enqueue({
-              supabase,
-              templateName: "help-contact-autoreply",
-              to: body.email,
-              data: { name: body.name, topic: body.topic, variant: body.variant },
-              idempotencyKey: `help-autoreply-${idem}`,
-            });
-          }
         } catch (err) {
           console.error("help-submit enqueue failed", err);
           return Response.json(

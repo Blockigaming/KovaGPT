@@ -1,5 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
+const usePrebuiltPreview = process.env.PLAYWRIGHT_PREBUILT === "1";
+
 /**
  * Playwright config for KovaGPT responsive smoke and visual checks.
  * PLAYWRIGHT_BASE_URL can override the conventional local preview-server URL.
@@ -12,7 +14,10 @@ export default defineConfig({
   retries: 0,
   reporter: [["list"]],
   webServer: {
-    command: "npm run build && npm run preview -- --host 127.0.0.1 --port 8080",
+    command: [
+      ...(usePrebuiltPreview ? [] : ["npm run build"]),
+      "npm run preview -- --host 127.0.0.1 --port 8080",
+    ].join(" && "),
     url: "http://127.0.0.1:8080",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

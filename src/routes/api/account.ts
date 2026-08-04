@@ -2,8 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 import { createStripeClient, type StripeEnv } from "@/lib/stripe.server";
 import { disconnectGoogle } from "@/lib/google-oauth.server";
+import { disconnectAllGitHub } from "@/lib/github-oauth.server";
+import { disconnectAllOAuth } from "@/integrations/oauth-lifecycle.server";
+import { disconnectAllFinance } from "@/finances/plaid.server";
+import { isCrossSiteMutation } from "@/lib/auth-security.mjs";
+import { BodyReadError, readUtf8BodyBounded } from "@/lib/endpoint-reliability.mjs";
 
 const TERMINAL_SUBSCRIPTION_STATES = new Set(["canceled", "incomplete_expired"]);
+
 const ACCOUNT_DELETION_BAN_DURATION = "876000h";
 
 type DeletionProgress = {
@@ -83,34 +89,56 @@ async function saveDeletionProgress(
     return false;
   }
   return true;
+
+const MAX_DELETE_BODY_BYTES = 1_024;
+
+function jsonError(error: string, status: number) {
+  return Response.json({ error }, { status, headers: { "Cache-Control": "no-store" } });
+
 }
 
 export const Route = createFileRoute("/api/account")({
   server: {
     handlers: {
       DELETE: async ({ request }) => {
+        if (isCrossSiteMutation(request)) {
+          return jsonError("Cross-site account changes are not allowed.", 403);
+        }
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
 
-        const contentLength = Number(request.headers.get("content-length") ?? "0");
-        if (contentLength > 1_024) {
-          return Response.json({ error: "Request too large." }, { status: 413 });
+        const mediaType = request.headers
+          .get("content-type")
+          ?.split(";", 1)[0]
+          ?.trim()
+          .toLowerCase();
+        if (mediaType !== "application/json") {
+          return jsonError("Content-Type must be application/json.", 415);
         }
-        const raw = await request.text();
-        if (raw.length > 1_024) {
-          return Response.json({ error: "Request too large." }, { status: 413 });
-        }
-        let confirmation: unknown;
+        let raw: string;
         try {
-          confirmation = (JSON.parse(raw) as { confirmation?: unknown }).confirmation;
-        } catch {
-          return Response.json({ error: "Invalid JSON." }, { status: 400 });
+          raw = await readUtf8BodyBounded(request, MAX_DELETE_BODY_BYTES);
+        } catch (error) {
+          if (error instanceof BodyReadError) {
+            return jsonError(
+              error.status === 413 ? "Request too large." : "Invalid request body.",
+              error.status,
+            );
+          }
+          return jsonError("Invalid request body.", 400);
         }
+        let body: unknown;
+        try {
+          body = JSON.parse(raw);
+        } catch {
+          return jsonError("Invalid JSON.", 400);
+        }
+        const confirmation =
+          body && typeof body === "object" && !Array.isArray(body)
+            ? (body as { confirmation?: unknown }).confirmation
+            : undefined;
         if (confirmation !== "DELETE") {
-          return Response.json(
-            { error: "Type DELETE to confirm account deletion." },
-            { status: 400 },
-          );
+          return jsonError("Type DELETE to confirm account deletion.", 400);
         }
 
         const authAdmin = auth.supabaseAdmin.auth.admin as AuthAdmin;
@@ -140,10 +168,14 @@ export const Route = createFileRoute("/api/account")({
           .select("stripe_subscription_id, status, environment")
           .eq("user_id", auth.userId);
         if (subscriptionError) {
+
           return Response.json(
             { error: "Billing status could not be verified. Account deletion is pending." },
             { status: 503 },
           );
+
+          return jsonError("Billing status could not be verified. Please try again.", 503);
+
         }
         for (const subscription of subscriptions ?? []) {
           if (TERMINAL_SUBSCRIPTION_STATES.has(subscription.status)) continue;
@@ -175,6 +207,7 @@ export const Route = createFileRoute("/api/account")({
               environment,
               error: error instanceof Error ? error.name : "unknown_error",
             });
+
             return Response.json(
               {
                 error:
@@ -182,6 +215,11 @@ export const Route = createFileRoute("/api/account")({
                 pending: true,
               },
               { status: 202 },
+
+            return jsonError(
+              "Your subscription could not be canceled, so your account was not deleted. Manage billing or contact support.",
+              502,
+
             );
           }
         }
@@ -189,19 +227,60 @@ export const Route = createFileRoute("/api/account")({
         await saveDeletionProgress(authAdmin, auth.userId, deletionProgress, { banUser: true });
 
         try {
+          await disconnectAllFinance(auth);
+        } catch (error) {
+          console.error("[account-delete] financial connection removal failed", {
+            error: error instanceof Error ? error.name : "unknown_error",
+          });
+          return jsonError(
+            "Financial connections could not be removed, so your account was not deleted. Please try again or contact support.",
+            502,
+          );
+        }
+
+        try {
           await disconnectGoogle(auth.userId);
           deletionProgress.googleDisconnected = true;
           await saveDeletionProgress(authAdmin, auth.userId, deletionProgress, { banUser: true });
         } catch (error) {
-          console.error("[account-delete] Google revocation failed", {
+          console.error("[account-delete] Google token purge failed", {
             error: error instanceof Error ? error.name : "unknown_error",
           });
+          return jsonError(
+            "Google credentials could not be removed, so your account was not deleted. Please try again.",
+            503,
+          );
+        }
+
+        try {
+          await disconnectAllGitHub(auth.userId);
+        } catch (error) {
+          console.error("[account-delete] GitHub credential purge failed", {
+            error: error instanceof Error ? error.name : "unknown_error",
+          });
+          return jsonError(
+            "GitHub credentials could not be removed, so your account was not deleted. Please try again.",
+            503,
+          );
+        }
+
+        try {
+          await disconnectAllOAuth(auth.userId);
+        } catch (error) {
+          console.error("[account-delete] linked account disconnection failed", {
+            error: error instanceof Error ? error.name : "unknown_error",
+          });
+          return jsonError(
+            "Connected accounts could not be disconnected, so your account was not deleted. Please try again.",
+            503,
+          );
         }
 
         deletionProgress.authDeleteAttemptedAt = new Date().toISOString();
         await saveDeletionProgress(authAdmin, auth.userId, deletionProgress, { banUser: true });
         const { error: deleteError } = await auth.supabaseAdmin.auth.admin.deleteUser(auth.userId);
         if (deleteError) {
+
           deletionProgress.authDeleteFailedAt = new Date().toISOString();
           await saveDeletionProgress(authAdmin, auth.userId, deletionProgress, { banUser: true });
           console.error("[account-delete] auth deletion failed", { code: deleteError.code });
@@ -213,8 +292,17 @@ export const Route = createFileRoute("/api/account")({
             },
             { status: 202 },
           );
+
+          console.error("[account-delete] auth deletion failed", {
+            code: deleteError.code,
+          });
+          return jsonError("Account deletion failed. Your account remains active.", 500);
+
         }
-        return new Response(null, { status: 204 });
+        return new Response(null, {
+          status: 204,
+          headers: { "Cache-Control": "no-store" },
+        });
       },
     },
   },
