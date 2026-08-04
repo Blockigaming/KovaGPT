@@ -1,5 +1,8 @@
 import {
   ArrowUp,
+  Atom,
+  Paperclip,
+  Telescope,
   Square,
   Plus,
   X,
@@ -645,66 +648,94 @@ export function ChatInput({
       mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5 text-sm"
     }`;
     const iconClass = mobile ? "h-5 w-5 shrink-0 text-muted-foreground" : "h-4 w-4 shrink-0 text-muted-foreground";
+    const webSearchTool = COMPOSER_TOOLS.find((tool) => tool.id === "web_search");
+    const imageTool = COMPOSER_TOOLS.find((tool) => tool.id === "image");
+    const deepResearchTool = COMPOSER_TOOLS.find((tool) => tool.id === "deep_research");
+
+    const addPhotosRow = (
+      <button
+        type="button"
+        onClick={() => {
+          setPlusOpen(false);
+          fileRef.current?.click();
+        }}
+        className={rowClass}
+      >
+        <Paperclip className={iconClass} />
+        <span>{user ? "Add photos and files" : "Add photos"}</span>
+      </button>
+    );
+
+    const cameraRow = mobile ? (
+      <button
+        type="button"
+        onClick={() => {
+          setPlusOpen(false);
+          cameraRef.current?.click();
+        }}
+        className={rowClass}
+      >
+        <Camera className={iconClass} />
+        <span>Camera</span>
+      </button>
+    ) : null;
+
+    const toolRow = (tool: ComposerAction) => {
+      const Icon = tool.icon;
+      const active = selectedTool === tool.id;
+      return (
+        <button
+          key={tool.id}
+          type="button"
+          aria-pressed={active}
+          disabled={disabled || isStreaming}
+          onClick={() => chooseTool(tool)}
+          className={`kova-tool-button ${rowClass} ${active ? "bg-accent text-foreground" : ""}`}
+        >
+          <Icon className={iconClass} />
+          <span>{tool.label}</span>
+        </button>
+      );
+    };
+
+    if (!user) {
+      const lockedRow = (
+        key: string,
+        Icon: React.ComponentType<{ className?: string }>,
+        label: string,
+      ) => (
+        <div
+          key={key}
+          aria-disabled="true"
+          className={`${rowClass} cursor-not-allowed text-muted-foreground hover:bg-transparent active:bg-transparent`}
+        >
+          <Icon className={`${iconClass} opacity-70`} />
+          <span className="opacity-70">{label}</span>
+        </div>
+      );
+      return (
+        <>
+          {addPhotosRow}
+          {cameraRow}
+          {webSearchTool ? toolRow({ ...webSearchTool, label: "Web search" }) : null}
+          <p
+            className={`pt-3 pb-1 text-sm text-muted-foreground ${mobile ? "px-4" : "px-3"}`}
+          >
+            Log in to use...
+          </p>
+          {lockedRow("locked-deep-research", deepResearchTool?.icon ?? Telescope, "Deep research")}
+          {lockedRow("locked-image", imageTool?.icon ?? ImageIcon, "Create image")}
+          {lockedRow("locked-model", Atom, "Kova-5.5")}
+        </>
+      );
+    }
+
     return (
       <>
-        {COMPOSER_TOOLS.filter((tool) => tool.id === "web_search").map((tool) => {
-          const Icon = tool.icon;
-          const active = selectedTool === tool.id;
-          return (
-            <button
-              key={tool.id}
-              type="button"
-              aria-pressed={active}
-              disabled={disabled || isStreaming}
-              onClick={() => chooseTool(tool)}
-              className={`kova-tool-button ${rowClass} ${active ? "bg-accent text-foreground" : ""}`}
-            >
-              <Icon className={iconClass} />
-              <span>{tool.label}</span>
-            </button>
-          );
-        })}
-        <button
-          type="button"
-          onClick={() => {
-            setPlusOpen(false);
-            fileRef.current?.click();
-          }}
-          className={rowClass}
-        >
-          <ImageIcon className={iconClass} />
-          <span>Add photos and files</span>
-        </button>
-        {mobile ? (
-          <button
-            type="button"
-            onClick={() => {
-              setPlusOpen(false);
-              cameraRef.current?.click();
-            }}
-            className={rowClass}
-          >
-            <Camera className={iconClass} />
-            <span>Camera</span>
-          </button>
-        ) : null}
-        {COMPOSER_TOOLS.filter((tool) => tool.id === "image").map((tool) => {
-          const Icon = tool.icon;
-          const active = selectedTool === tool.id;
-          return (
-            <button
-              key={tool.id}
-              type="button"
-              aria-pressed={active}
-              disabled={disabled || isStreaming}
-              onClick={() => chooseTool(tool)}
-              className={`kova-tool-button ${rowClass} ${active ? "bg-accent text-foreground" : ""}`}
-            >
-              <Icon className={iconClass} />
-              <span>{tool.label}</span>
-            </button>
-          );
-        })}
+        {webSearchTool ? toolRow(webSearchTool) : null}
+        {addPhotosRow}
+        {cameraRow}
+        {imageTool ? toolRow(imageTool) : null}
       </>
     );
   };
