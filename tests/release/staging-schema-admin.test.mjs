@@ -13,7 +13,7 @@ test("schema contract covers critical database security objects", async () => {
 test("runtime schema readiness uses one versioned bounded RPC and timeout cache", async () => {
   const s = await read("src/lib/readiness.server.ts");
   assert.match(s, /rpc\/kovagpt_schema_health/);
-  assert.match(s, /20260803120000-v1/);
+  assert.match(s, /20260803123000-v1/);
   assert.match(s, /database-timeout/);
   assert.match(s, /expires: Date\.now\(\) \+ 15_000/);
 });
