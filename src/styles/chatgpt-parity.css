@@ -213,7 +213,7 @@
 }
 .kova-card,
 .kova-row,
-.kova-plan-card,
+.kova-plan-card:not(.kova-plan-card-enterprise),
 .kova-connector-card {
   border: 1px solid var(--border) !important;
   border-radius: 12px !important;
@@ -226,7 +226,7 @@
 }
 .kova-card:hover,
 .kova-row:hover,
-.kova-plan-card:hover,
+.kova-plan-card:not(.kova-plan-card-enterprise):hover,
 .kova-connector-card:hover {
   border-color: var(--border) !important;
   transform: none !important;
