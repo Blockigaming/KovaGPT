@@ -221,6 +221,18 @@ try {
       flag: "a",
     });
 }
-if (Object.values(report.workflows).some((w) => w.status === "failed") || report.orphans.length)
-  throw new Error("Authenticated staging smoke failed; inspect bounded report");
-console.log("Authenticated staging smoke completed; skipped workflows remain explicitly skipped.");
+const requiredWorkflowStatuses = Object.entries(report.workflows).filter(
+  ([, workflow]) => workflow.cleanup !== "not-applicable",
+);
+const incompleteWorkflows = requiredWorkflowStatuses.filter(
+  ([, workflow]) => workflow.status !== "passed",
+);
+if (incompleteWorkflows.length || report.orphans.length) {
+  throw new Error(
+    `Authenticated staging smoke failed; incomplete required workflows: ${
+      incompleteWorkflows.map(([name, workflow]) => `${name}:${workflow.status}`).join(", ") ||
+      "none"
+    }`,
+  );
+}
+console.log("Authenticated staging smoke completed; all required workflows passed.");

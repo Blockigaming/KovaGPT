@@ -11,8 +11,9 @@ alter table public.feedback_submissions
   add constraint feedback_submissions_rating_check check (rating in ('up', 'down')) not valid;
 
 -- The application always writes authenticated response feedback. Delete legacy
--- anonymous rows before enforcing the production invariant.
-delete from public.feedback_submissions where owner_id is null;
+-- anonymous or incomplete rows before enforcing the production invariant.
+delete from public.feedback_submissions
+where owner_id is null or message_id is null or rating is null;
 alter table public.feedback_submissions alter column owner_id set not null;
 alter table public.feedback_submissions alter column message_id set not null;
 alter table public.feedback_submissions alter column rating set not null;
