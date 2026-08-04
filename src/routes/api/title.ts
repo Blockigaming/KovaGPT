@@ -1,9 +1,32 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { chatCompletions, chatModel, missingAiProviderResponse } from "@/lib/ai/provider.server";
 
 const RATE_LIMIT_MAX = 30;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
+
+type TitleMessage = { role: "user" | "assistant"; content: string };
+
+function parseMessages(raw: string): TitleMessage[] | null {
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!value || typeof value !== "object") return null;
+  const messages = (value as { messages?: unknown }).messages;
+  if (!Array.isArray(messages) || messages.length === 0 || messages.length > 100) return null;
+  const valid = messages.every(
+    (message) =>
+      message !== null &&
+      typeof message === "object" &&
+      ((message as { role?: unknown }).role === "user" ||
+        (message as { role?: unknown }).role === "assistant") &&
+      typeof (message as { content?: unknown }).content === "string" &&
+      (message as { content: string }).content.length <= 50_000,
+  );
+  return valid ? (messages as TitleMessage[]) : null;
+}
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now();
@@ -48,10 +71,24 @@ export const Route = createFileRoute("/api/title")({
               headers: { "Content-Type": "application/json" },
             });
           }
-          const { messages } = JSON.parse(raw) as {
-            messages: { role: string; content: string }[];
-          };
-          const missingProvider = missingAiProviderResponse({ title: "New chat" });
+          const messages = parseMessages(raw);
+          if (!messages) {
+            return new Response(JSON.stringify({ error: "Invalid messages." }), {
+              status: 400,
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+
+          const provider = await import("@/lib/ai/provider.server");
+          const { chatCompletions, missingAiProviderResponse } = provider;
+          const { modelForRole } = await import("@/lib/ai/model-router.server");
+          const { UTILITY_MAX_OUTPUT_TOKENS } = await import("@/lib/ai/model-config.mjs");
+          const { readUtilityCache, writeUtilityCache } =
+            await import("@/lib/ai/utility-cache.server");
+
+          const missingProvider = missingAiProviderResponse({
+            title: "New chat",
+          });
           if (missingProvider) return missingProvider;
 
           const excerpt = messages
@@ -60,8 +97,18 @@ export const Route = createFileRoute("/api/title")({
             .join("\n")
             .slice(0, 4000);
 
+          const cached = readUtilityCache("chat_title", excerpt);
+          if (cached) {
+            return new Response(JSON.stringify({ title: cached }), {
+              headers: { "Content-Type": "application/json" },
+            });
+          }
+
           const upstream = await chatCompletions({
-            model: chatModel("fast"),
+
+            model: modelForRole("UTILITY"),
+            max_completion_tokens: UTILITY_MAX_OUTPUT_TOKENS,
+
             messages: [
               {
                 role: "system",
@@ -80,6 +127,7 @@ export const Route = createFileRoute("/api/title")({
           const data = await upstream.json();
           let title = (data.choices?.[0]?.message?.content ?? "New chat").trim();
           title = title.replace(/^["']|["']$/g, "").slice(0, 50);
+          writeUtilityCache("chat_title", excerpt, title);
           return new Response(JSON.stringify({ title }), {
             headers: { "Content-Type": "application/json" },
           });

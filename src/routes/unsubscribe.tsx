@@ -12,7 +12,7 @@ export const Route = createFileRoute("/unsubscribe")({
   validateSearch: SearchSchema,
   component: UnsubscribePage,
   head: () => ({
-    meta: [{ title: "Unsubscribe - KovaGPT" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: "KovaGPT Unsubscribe" }, { name: "robots", content: "noindex" }],
   }),
 });
 

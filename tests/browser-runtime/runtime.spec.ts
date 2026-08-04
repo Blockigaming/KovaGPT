@@ -3,7 +3,12 @@ import { createServer, type Server } from "node:http";
 import { mkdtemp, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { BrowserRuntime, BrowserRuntimeError } from "../../src/browser-runtime/index";
+import {
+  BrowserRuntime,
+  BrowserRuntimeError,
+  type AuditEvent,
+  type AuditSink,
+} from "../../src/browser-runtime/index";
 
 let server: Server;
 let origin: string;
@@ -13,6 +18,11 @@ let runtime: BrowserRuntime;
 test.beforeAll(async () => {
   server = createServer((request, response) => {
     const second = request.url === "/second";
+    if (request.url === "/redirect-denied") {
+      response.writeHead(302, { location: "https://example.org/" });
+      response.end();
+      return;
+    }
     response.setHeader("content-type", "text/html");
     response.end(
       `<!doctype html><html><head><title>${second ? "Second" : "Atlas"}</title><link rel="icon" href="/favicon.png"></head><body><main aria-label="Workspace"><h1>${second ? "History" : "Runtime ready"}</h1><button>Safe control</button></main></body></html>`,
@@ -119,4 +129,66 @@ test("blocks unsafe schemes, private networks, and non-allow-listed origins", as
       BrowserRuntimeError,
     );
   }
+});
+
+test("blocks redirected document navigations to non-allow-listed origins", async () => {
+  const session = await runtime.createSession(sessionOptions());
+  const tab = await runtime.createTab(session.id, "owner-a");
+  await expect(
+    runtime.openUrl(session.id, "owner-a", tab.id, `${origin}/redirect-denied`),
+  ).rejects.toBeInstanceOf(Error);
+  expect(runtime.listTabs(session.id, "owner-a")[0].url).toBe("about:blank");
+});
+
+test("checks resolved addresses before allowing public-looking hostnames", async () => {
+  const localhostOrigin = origin.replace("127.0.0.1", "localhost");
+  const session = await runtime.createSession({
+    ownerId: "owner-a",
+    workspaceId: "workspace-a",
+    permissions: { grants: ["navigate"], allowedOrigins: [localhostOrigin] },
+  });
+  const tab = await runtime.createTab(session.id, "owner-a");
+  await expect(
+    runtime.openUrl(session.id, "owner-a", tab.id, localhostOrigin),
+  ).rejects.toMatchObject({
+    code: "private_network_denied",
+  });
+});
+
+test("freezes returned permission policy lists", async () => {
+  const session = await runtime.createSession({
+    ownerId: "owner-a",
+    workspaceId: "workspace-a",
+    permissions: { grants: [], allowedOrigins: [], deniedOrigins: [] },
+  });
+  expect(() => (session.permissions.grants as string[]).push("navigate")).toThrow(TypeError);
+  expect(() => (session.permissions.allowedOrigins as string[]).push(origin)).toThrow(TypeError);
+  const tab = await runtime.createTab(session.id, "owner-a");
+  await expect(runtime.openUrl(session.id, "owner-a", tab.id, origin)).rejects.toMatchObject({
+    code: "permission_denied",
+  });
+});
+
+test("cleans resources even when close audit logging fails", async () => {
+  class FailingCloseAuditSink implements AuditSink {
+    readonly events: AuditEvent[] = [];
+    async append(event: Readonly<AuditEvent>) {
+      if (event.action === "session.closed") throw new Error("audit unavailable");
+      this.events.push(event);
+    }
+    async list(sessionId: string) {
+      return this.events.filter((event) => event.sessionId === sessionId);
+    }
+  }
+  const auditSink = new FailingCloseAuditSink();
+  const isolatedRuntime = new BrowserRuntime({ artifactRoot: root, auditSink });
+  const session = await isolatedRuntime.createSession(sessionOptions());
+  const tab = await isolatedRuntime.createTab(session.id, "owner-a", origin);
+  await isolatedRuntime.screenshot(session.id, "owner-a", tab.id);
+  await expect(isolatedRuntime.closeSession(session.id, "owner-a")).rejects.toThrow(
+    "audit unavailable",
+  );
+  await expect(stat(join(root, session.id))).rejects.toMatchObject({ code: "ENOENT" });
+  expect(() => isolatedRuntime.listTabs(session.id, "owner-a")).toThrow(BrowserRuntimeError);
+  await isolatedRuntime.shutdown();
 });

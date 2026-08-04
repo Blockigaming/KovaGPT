@@ -35,3 +35,14 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Generated screenshots and QA artifacts
+artifacts/
+!artifacts/
+artifacts/*
+!artifacts/ui-parity/
+artifacts/ui-parity/*
+!artifacts/ui-parity/manifest.json
+!artifacts/ui-parity/computed-styles/
+artifacts/ui-parity/computed-styles/*
+!artifacts/ui-parity/computed-styles/comparison.json

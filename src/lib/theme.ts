@@ -23,14 +23,14 @@ export function applyThemeMode(mode: ThemeMode) {
 }
 
 export function loadThemeMode(): ThemeMode {
-  if (typeof window === "undefined") return "dark";
+  if (typeof window === "undefined") return "system";
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw === "light" || raw === "dark" || raw === "system") return raw;
   } catch {
     /* ignore */
   }
-  return "dark";
+  return "system";
 }
 
 // ----- Deprecated, kept for backward compatibility -----

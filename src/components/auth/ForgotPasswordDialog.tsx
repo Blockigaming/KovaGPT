@@ -26,21 +26,24 @@ export function ForgotPasswordDialog({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) {
-      toast.error("Please enter your email.");
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      toast.error("Please enter a valid email address.");
       return;
     }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
       if (error) throw error;
       setSent(true);
       toast.success("Reset link sent. Check your inbox & spam folder.");
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      toast.error(msg);
+      console.error("[KovaAuth] Password reset request failed", {
+        error: err instanceof Error ? err.name : "unknown_error",
+      });
+      toast.error("A reset link could not be requested. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -58,7 +61,7 @@ export function ForgotPasswordDialog({
       }}
     >
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+        <DialogHeader className="text-center">
           <div className="flex justify-center mb-3">
             <div className="w-12 h-12 rounded-2xl bg-foreground text-background flex items-center justify-center">
               <KeyRound className="w-6 h-6" />
@@ -79,7 +82,7 @@ export function ForgotPasswordDialog({
               <div>
                 <p className="font-medium">{email}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  The link expires in 1 hour. Didn't get it? Check spam, then try again.
+                  Reset links expire. If you requested more than one, use the newest link.
                 </p>
               </div>
             </div>
@@ -105,6 +108,7 @@ export function ForgotPasswordDialog({
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                maxLength={320}
                 required
               />
             </div>

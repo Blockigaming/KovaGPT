@@ -87,7 +87,11 @@ export function safeDiagnostics(): SafeDiagnostics {
         oneOf(["SUPABASE_PUBLISHABLE_KEY", "SUPABASE_ANON_KEY"]),
         oneOf(["SUPABASE_SERVICE_ROLE_KEY"]),
       ]),
+
       aiProvider: feature(["OPENAI_API_KEY"]),
+
+      aiProvider: feature(["LOVABLE_API_KEY", "OPENAI_API_KEY"]),
+
       search: feature(["FIRECRAWL_API_KEY"]),
       googleOAuth: feature([
         "GOOGLE_OAUTH_CLIENT_ID",

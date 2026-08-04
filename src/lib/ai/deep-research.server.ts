@@ -2,11 +2,14 @@ import { replaceControlCharacters } from "@/lib/sanitize-text";
 import {
   chatCompletions,
   chatModel,
+  utilityModel,
   providerErrorFromResponse,
   type JsonObject,
 } from "@/lib/ai/provider.server";
 import { createToolActivityEvent, type ToolActivityEvent } from "@/lib/ai/activity.server";
 import { searchWeb, type WebSource } from "@/lib/ai/search.server";
+import { modelForRole } from "@/lib/ai/model-router.server";
+import { UTILITY_MAX_OUTPUT_TOKENS } from "@/lib/ai/model-config.mjs";
 
 export type ResearchStageStatus =
   | "created"
@@ -184,7 +187,10 @@ function parsePlan(raw: string, originalQuery: string): string[] {
 async function makePlan(query: string, signal?: AbortSignal): Promise<string[]> {
   const upstream = await chatCompletions(
     {
-      model: chatModel("fast"),
+
+      model: modelForRole("UTILITY"),
+      max_completion_tokens: UTILITY_MAX_OUTPUT_TOKENS,
+
       messages: [
         {
           role: "system",
@@ -247,12 +253,12 @@ async function writeReport(
 ): Promise<string> {
   const upstream = await chatCompletions(
     {
-      model: chatModel("deep"),
+      model: modelForRole("PREMIUM_REASONING"),
       messages: [
         {
           role: "system",
           content:
-            "Write a structured deep-research report from the provided evidence only. Include concise headings, explicitly note uncertainty, and cite claims with the provided source ids like [src-1]. Do not invent citations or URLs. End with a Sources section listing each cited source id and title.",
+            "Write a structured deep-research report from the provided evidence only. Include concise headings, explicitly note uncertainty, and cite factual claims with Markdown links whose labels name the source and whose URLs exactly match the evidence. Do not invent citations, sources, or URLs. End with a Sources section that lists each cited source id, title, and exact URL as a Markdown link.",
         },
         { role: "user", content: evidencePrompt(query, plan, evidence) },
       ],

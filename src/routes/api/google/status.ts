@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
-import { getGoogleConnection } from "@/lib/google-oauth.server";
+import { getGoogleConnectionHealth } from "@/lib/google-oauth.server";
+import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
 
 export const Route = createFileRoute("/api/google/status")({
   server: {
@@ -8,19 +9,28 @@ export const Route = createFileRoute("/api/google/status")({
       GET: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
-        const conn = await getGoogleConnection(auth.userId);
-        if (!conn) return Response.json({ connected: false });
-        const scopes = (conn.scopes ?? "").split(/\s+/).filter(Boolean);
-        return Response.json({
-          connected: true,
-          email: conn.email,
-          scopes,
-          has: {
-            gmail: scopes.some((s) => s.includes("gmail")),
-            calendar: scopes.some((s) => s.includes("calendar")),
-            drive: scopes.some((s) => s.includes("drive")),
-          },
-        });
+        const limited = enforceGoogleRateLimit(auth.userId, "status", 30);
+        if (limited) return limited;
+        try {
+          return Response.json(await getGoogleConnectionHealth(auth.userId));
+        } catch (error) {
+          console.error("[google status]", error instanceof Error ? error.message : error);
+          return Response.json(
+            {
+              connected: false,
+              state: "temporarily_unavailable",
+              scopes: [],
+              has: {
+                gmail: false,
+                gmailWrite: false,
+                calendar: false,
+                calendarWrite: false,
+                drive: false,
+              },
+            },
+            { status: 503 },
+          );
+        }
       },
     },
   },

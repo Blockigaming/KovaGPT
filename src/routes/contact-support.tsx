@@ -5,7 +5,7 @@ import { LegalArticle } from "@/components/LegalArticle";
 export const Route = createFileRoute("/contact-support")({
   head: () => ({
     meta: [
-      { title: "Contact Support - KovaGPT" },
+      { title: "KovaGPT Support" },
       {
         name: "description",
         content: "Get help with KovaGPT - billing, bugs, feature requests, and account questions.",
@@ -62,11 +62,13 @@ function ContactSupportPage() {
 
         <h2>Account and Data Deletion</h2>
         <p>
-          If you want to delete your KovaGPT account or request deletion of your data, contact{" "}
+          Use the account and item deletion controls in KovaGPT Settings when they are available. If
+          a request is not covered in the product, contact{" "}
           <a href="mailto:support@kovagpt.com">support@kovagpt.com</a> from the email connected to
           your account. Please include "Account Deletion Request" in the subject line. After
           receiving your request, we may ask for confirmation to make sure the request is coming
-          from the correct account owner.
+          from the correct account owner. Some billing, security, legal, backup, or
+          external-provider records can remain as described in the Privacy Policy.
         </p>
 
         <h2>Frequently Asked Questions</h2>

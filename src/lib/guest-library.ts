@@ -46,7 +46,7 @@ export function saveGuestItem(input: GuestSaveInput): LibraryItem {
   const fileUrl =
     input.file_url && input.file_url.length > MAX_DATA_URL_BYTES ? null : (input.file_url ?? null);
   const item: LibraryItem = {
-    id: `guest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: `guest-${crypto.randomUUID()}`,
     title: input.title.slice(0, 200),
     item_type: input.item_type,
     source: input.source,
