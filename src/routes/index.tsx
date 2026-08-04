@@ -1295,7 +1295,9 @@ function KovaGPT() {
       setInput(prompt);
     }
     window.requestAnimationFrame(() =>
-      document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Message KovaGPT"]')?.focus(),
+      document
+        .querySelector<HTMLTextAreaElement>('textarea[aria-label="Message KovaGPT"]')
+        ?.focus(),
     );
   };
 
@@ -1418,7 +1420,10 @@ function KovaGPT() {
           onTemporaryChatChange={setTemporaryChatEnabled}
         />
         <header className="kova-desktop-topbar kova-topbar relative hidden h-[52px] items-center gap-1 px-3 lg:flex">
-          <div hidden={sidebarOpen || Boolean(isSignedIn)} className="flex items-center gap-1 mr-2 shrink-0">
+          <div
+            hidden={sidebarOpen || Boolean(isSignedIn)}
+            className="flex items-center gap-1 mr-2 shrink-0"
+          >
             <button
               onClick={() => {
                 setSidebarOpen(true);
