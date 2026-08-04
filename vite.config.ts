@@ -4,6 +4,10 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
+const isLovableSandbox = Boolean(
+  process.env.DEV_SERVER__PROJECT_PATH || process.env.LOVABLE_SANDBOX,
+);
+
 // Lovable Cloud runs the public TanStack Start Vite stack directly. Keep the
 // Start plugin ahead of React and avoid the legacy private Lovable adapter;
 // this is also the supported Nitro/h3-v2 production configuration.
@@ -14,6 +18,16 @@ export default defineConfig({
     tanstackStart({ server: { entry: "src/server.ts" } }),
     react(),
   ],
+  // Lovable sandbox previews connect through a proxy that expects the dev
+  // server to bind the same endpoint the removed wrapper configured. Keep
+  // local Vite defaults outside the sandbox.
+  server: isLovableSandbox
+    ? {
+        host: "::",
+        port: 8080,
+        strictPort: true,
+      }
+    : undefined,
   // TanStack Start imports its H3 v2 release through the npm alias `h3-v2`,
   // which in turn imports `rou3`. Lovable's runtime only installs declared
   // production package names, so external imports can survive the build but
