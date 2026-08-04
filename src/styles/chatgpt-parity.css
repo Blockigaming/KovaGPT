@@ -1,0 +1,433 @@
+/* ChatGPT parity layer: one quiet, neutral visual language across the product. */
+:root {
+  --parity-sidebar-expanded: 260px;
+  --parity-topbar-height: 52px;
+  --parity-content-max: 48rem;
+  --parity-page-max: 70rem;
+  --parity-composer-gutter: max(0.75rem, env(safe-area-inset-left));
+  --parity-focus: color-mix(in oklab, var(--foreground) 55%, transparent);
+  --parity-motion-fast: 100ms;
+  --parity-motion-standard: 150ms;
+  --parity-radius-control: 0.5rem;
+  --parity-radius-menu: 0.75rem;
+  --parity-shadow-menu: 0 8px 24px rgb(0 0 0 / 12%), 0 1px 2px rgb(0 0 0 / 8%);
+  --parity-shadow-modal: 0 18px 48px rgb(0 0 0 / 18%);
+}
+
+:where(button, a, input, textarea, select, [role="menuitem"], [role="option"]):focus-visible {
+  outline: 2px solid var(--parity-focus);
+  outline-offset: 2px;
+}
+
+/* Shell */
+.kova-sidebar {
+  border-right: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent) !important;
+  background: var(--sidebar) !important;
+  box-shadow: none;
+}
+/* No banded header/footer tints inside the sidebar: one flat surface. */
+.kova-sidebar > * {
+  background-color: transparent !important;
+}
+.kova-sidebar :where(button, a) {
+  letter-spacing: normal;
+}
+.kova-nav-row {
+  min-height: 36px !important;
+  border-radius: 8px !important;
+  gap: 10px !important;
+  font-size: 14px !important;
+  transition:
+    background-color 140ms ease,
+    transform 140ms var(--ease-spring, ease),
+    color 140ms ease !important;
+}
+.kova-nav-row:hover,
+.kova-chat-row:hover {
+  background-color: var(--sidebar-hover) !important;
+  transform: translateX(1px);
+}
+.kova-nav-row:active,
+.kova-chat-row:active {
+  transform: translateX(1px) scale(0.99);
+}
+.kova-chat-row {
+  min-height: 36px !important;
+  border-radius: 8px !important;
+  transition:
+    background-color 140ms ease,
+    transform 140ms var(--ease-spring, ease) !important;
+}
+
+.kova-topbar {
+  min-height: calc(var(--parity-topbar-height) + var(--safe-top)) !important;
+  border: 0 !important;
+  background: var(--background) !important;
+  backdrop-filter: none !important;
+}
+.kova-action {
+  border-radius: 8px !important;
+  transition:
+    background-color 100ms ease,
+    color 100ms ease !important;
+}
+.kova-action:active {
+  transform: none !important;
+}
+
+/* Composer */
+.kova-composer {
+  --composer-height: 48px !important;
+  --composer-control: 36px !important;
+  --composer-inset: 10px !important;
+  border: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent) !important;
+  border-radius: 28px !important;
+  background: var(--surface-composer) !important;
+  box-shadow: none !important;
+  transition:
+    border-color 100ms ease,
+    background-color 100ms ease !important;
+}
+.kova-composer:hover {
+  border-color: color-mix(in oklab, var(--foreground) 8%, transparent) !important;
+}
+.kova-composer:focus-within {
+  outline: 2px solid var(--parity-focus) !important;
+  outline-offset: 2px;
+  border-color: color-mix(in oklab, var(--foreground) 12%, transparent) !important;
+  box-shadow: none !important;
+}
+.kova-composer-button {
+  transition:
+    color 100ms ease,
+    background-color 100ms ease,
+    opacity 100ms ease !important;
+}
+.kova-composer-button:active:not(:disabled) {
+  transform: none !important;
+}
+.kova-attach-icon {
+  transition: none !important;
+}
+.kova-attach-button.is-open .kova-attach-icon {
+  transform: none !important;
+}
+.kova-composer-input {
+  min-height: 46px !important;
+  padding-block: 11px !important;
+  font-size: 16px !important;
+  line-height: 24px !important;
+}
+.kova-composer-input::placeholder {
+  color: color-mix(in oklab, var(--foreground) 48%, transparent) !important;
+}
+.kova-send-button.is-enabled:hover {
+  opacity: 0.82;
+}
+.kova-glass {
+  border: 1px solid var(--border) !important;
+  border-radius: var(--parity-radius-menu) !important;
+  background: var(--popover) !important;
+  box-shadow: var(--parity-shadow-menu) !important;
+  backdrop-filter: none !important;
+}
+
+/* Transcript and markdown */
+.kova-message {
+  margin: 0;
+}
+.kova-user-message {
+  border: 0 !important;
+  border-radius: 24px !important;
+  box-shadow: none !important;
+}
+.kova-message-actions {
+  min-height: 32px !important;
+  gap: 2px !important;
+  opacity: 1 !important;
+  transition: none !important;
+}
+.kova-message-actions button {
+  width: 32px;
+  height: 32px;
+  padding: 6px !important;
+  transform: none !important;
+  transition:
+    background-color 100ms ease,
+    color 100ms ease !important;
+}
+.prose-chat {
+  font-size: 1rem;
+  line-height: 1.75;
+}
+.prose-chat :where(p, ul, ol, pre, table, blockquote) {
+  margin-block: 0 1rem;
+}
+.prose-chat :where(h1, h2, h3) {
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+  margin: 1.5rem 0 0.75rem;
+}
+.prose-chat h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+.prose-chat h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+.prose-chat h3 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+.prose-chat pre {
+  border: 1px solid var(--border);
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+.prose-chat :not(pre) > code {
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 0.875em;
+}
+.prose-chat table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.prose-chat th,
+.prose-chat td {
+  border-bottom: 1px solid var(--border);
+  padding: 0.5rem;
+  text-align: left;
+}
+.prose-chat a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.cursor-blink {
+  animation-duration: 1s !important;
+}
+
+/* Pages and cards */
+.kova-page {
+  max-width: var(--parity-page-max) !important;
+  padding: 24px !important;
+}
+.kova-page-header {
+  margin-bottom: 24px !important;
+}
+.kova-page-title {
+  font-family: inherit !important;
+  font-size: 28px !important;
+  line-height: 36px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.02em !important;
+}
+.kova-page-description {
+  margin-top: 4px !important;
+  font-size: 14px !important;
+  line-height: 20px !important;
+}
+.kova-card,
+.kova-row,
+.kova-plan-card:not(.kova-plan-card-enterprise),
+.kova-connector-card {
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  background: var(--card) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  transition:
+    background-color 100ms ease,
+    border-color 100ms ease !important;
+}
+.kova-card:hover,
+.kova-row:hover,
+.kova-plan-card:not(.kova-plan-card-enterprise):hover,
+.kova-connector-card:hover {
+  border-color: var(--border) !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+.kova-empty-state {
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: var(--muted) !important;
+  padding: 32px !important;
+}
+.hover-elevate,
+.hover-elevate:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+.text-gradient-kova {
+  background: none !important;
+  color: var(--foreground) !important;
+}
+.bg-gradient-kova,
+.bg-gradient-kova-soft {
+  background: var(--foreground) !important;
+}
+.kova-secondary-page :is(input, textarea, select):focus-visible,
+.kova-settings-dialog :is(input, textarea, select):focus-visible,
+.kova-auth-surface :is(input, textarea, select):focus-visible {
+  border-color: var(--parity-focus) !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+.kova-settings-dialog [role="tab"][aria-selected="true"],
+.kova-secondary-page [role="tab"][aria-selected="true"] {
+  box-shadow: none !important;
+  background: var(--accent) !important;
+}
+.kova-auth-surface {
+  border-radius: 12px !important;
+  box-shadow: var(--parity-shadow-modal) !important;
+}
+
+/* Menus, dialogs, sheets and notifications */
+:where([role="menu"], [role="listbox"], .kova-model-menu) {
+  border-radius: var(--parity-radius-menu) !important;
+  box-shadow: var(--parity-shadow-menu) !important;
+}
+:where([role="menuitem"], [role="option"]) {
+  min-height: 36px;
+  border-radius: 8px !important;
+  transition: background-color 100ms ease !important;
+}
+[data-kova-dialog-surface] {
+  border-radius: 12px !important;
+  box-shadow: var(--parity-shadow-modal) !important;
+}
+[data-sonner-toast] {
+  font-size: 14px !important;
+  box-shadow: var(--parity-shadow-menu) !important;
+}
+
+@media (max-width: 1023px) {
+  .kova-page {
+    padding: 16px !important;
+    padding-bottom: max(24px, var(--safe-bottom)) !important;
+  }
+  .kova-message {
+    padding-inline: 16px !important;
+  }
+  .kova-message-actions button {
+    min-width: 40px !important;
+    min-height: 40px !important;
+  }
+  .kova-empty-chat > div:first-child {
+    padding-top: clamp(5rem, 18vh, 8rem) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .kova-composer {
+    border-radius: 24px !important;
+  }
+  .kova-page-title {
+    font-size: 24px !important;
+    line-height: 32px !important;
+  }
+  [data-kova-dialog-surface] {
+    border-radius: 16px 16px 0 0 !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Menu rows: keep only the soft grey highlight, never a hard outline box. */
+:where([role="menu"], [role="listbox"], [role="dialog"], .kova-model-menu, .kova-glass)
+  :where(button, [role="menuitem"], [role="option"]):focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  background: var(--accent) !important;
+}
+:where([role="menuitem"], [role="option"]) {
+  border: 0 !important;
+}
+
+/* Text fields: focus reads as a subtle border shift, never a bright outline box. */
+:where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not(
+      [type="submit"]
+    ),
+  textarea,
+  select
+):focus-visible,
+html :is(input, textarea, select):focus,
+html :is(input, textarea, select):focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: color-mix(in oklab, var(--foreground) 32%, transparent) !important;
+}
+.kova-composer:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Complete application shell sizing and UI reconstruction layer */
+:root {
+  --parity-sidebar-expanded: 260px;
+  --parity-sidebar-collapsed: 64px;
+  --parity-topbar-height: 52px;
+  --parity-mobile-topbar-height: 50px;
+  --parity-conversation-max: 768px;
+  --parity-composer-min: 58px;
+}
+html, body, #root { min-height: 100%; overflow-x: clip; }
+body { font-size: 16px; background: var(--app-background); color: var(--text-primary); }
+svg:not([width]) { width: 18px; height: 18px; }
+.kova-icon-button,
+.kova-composer-button { min-width: 40px; min-height: 40px; }
+.kova-sidebar { width: var(--parity-sidebar-expanded); }
+.kova-sidebar [aria-hidden="true"] svg,
+.kova-sidebar svg { stroke-width: 1.75; }
+.kova-nav-row, .kova-chat-row { height: 38px !important; min-height: 38px !important; padding-inline: 10px !important; gap: 10px !important; border-radius: 8px !important; }
+.kova-chat-row { height: 36px !important; min-height: 36px !important; font-size: 14px !important; }
+.kova-collapsed-sidebar { width: var(--parity-sidebar-collapsed) !important; }
+.kova-collapsed-sidebar button,
+.kova-collapsed-sidebar a { width: 40px; height: 40px; border-radius: 8px; }
+.kova-main-scroll { min-width: 0; width: calc(100vw - var(--parity-sidebar-expanded)); }
+.kova-app-header { height: var(--parity-topbar-height); min-height: var(--parity-topbar-height); }
+.kova-conversation-column { width: min(var(--parity-conversation-max), calc(100% - 40px)); max-width: var(--parity-conversation-max); margin-inline: auto; }
+.kova-empty-chat h1 { font-size: 30px; line-height: 38px; font-weight: 500; letter-spacing: -0.02em; }
+.kova-composer { min-height: var(--parity-composer-min) !important; padding: 0 12px 8px !important; background: var(--composer-background) !important; box-shadow: var(--shadow-floating) !important; }
+.kova-composer-row { min-height: 49px; gap: 4px; }
+.kova-composer-leading, .kova-composer-trailing { padding-bottom: 0; }
+.kova-composer-button { width: 40px; height: 40px; color: var(--text-secondary); }
+.kova-attach-button, .kova-send-button { min-width: 40px; width: 40px; height: 40px; }
+.kova-attach-button svg, .kova-send-button svg { width: 18px; height: 18px; stroke-width: 1.75; }
+.kova-send-button { color: var(--text-muted); }
+.kova-send-button.is-enabled { color: var(--primary-foreground); background: var(--primary); }
+.kova-send-button:disabled { opacity: .42; background: var(--surface-hover); color: var(--text-muted); }
+.kova-composer-input { max-height: 220px !important; overflow-y: auto; padding-top: 13px !important; padding-bottom: 11px !important; }
+.kova-attachment-card { min-height: 48px !important; height: 48px; width: 180px !important; border-radius: 11px !important; display: flex; align-items: center; }
+.kova-user-message { max-width: 80% !important; border-radius: 20px !important; padding: 10px 16px !important; background: var(--user-message-background) !important; line-height: 1.5; overflow-wrap: anywhere; }
+.kova-assistant-message { width: 100%; font-size: 16px; line-height: 1.6; }
+.prose-chat pre { border-radius: 11px !important; overflow-x: auto; background: var(--code-background) !important; color: var(--code-block-fg); }
+.prose-chat table { display: block; max-width: 100%; overflow-x: auto; white-space: nowrap; }
+.prose-chat blockquote { border-left: 2px solid var(--border-strong); padding-left: 14px; color: var(--text-secondary); }
+[role="dialog"] [data-kova-dialog-surface], [data-kova-dialog-surface] { max-width: min(520px, calc(100vw - 32px)); border-radius: 15px !important; padding: 24px; }
+:where([role="menu"], [role="listbox"], .kova-model-menu) { border-radius: 11px !important; }
+:where([role="menuitem"], [role="option"]) { min-height: 38px; font-size: 14px; padding-inline: 11px; }
+@media (max-width: 767px) {
+  .kova-main-scroll { width: 100vw; }
+  .kova-topbar, .kova-app-header { height: var(--parity-mobile-topbar-height) !important; min-height: var(--parity-mobile-topbar-height) !important; }
+  .kova-conversation-column { width: calc(100% - 24px); }
+  .kova-empty-chat h1 { font-size: 26px; line-height: 34px; }
+  .kova-sidebar { width: min(86vw, 320px) !important; }
+  .kova-user-message { max-width: 90% !important; }
+  .kova-composer-button { min-width: 44px; min-height: 44px; }
+}

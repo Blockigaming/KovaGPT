@@ -1,8 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Lock, Sparkles } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useTier, tierRank } from "@/hooks/useTier";
+import {
+  browserStoragePrincipal,
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+  principalScopedStorageKey,
+  safeBrowserStorage,
+} from "@/lib/principal-browser-storage.mjs";
 
 const TRAITS = [
   { key: "kindness", label: "Kindness", hint: "Warmer, softer replies" },
@@ -20,8 +27,8 @@ const TRAITS = [
 type TraitKey = (typeof TRAITS)[number]["key"];
 export type Personality = Record<TraitKey, number>;
 
-const STORAGE_KEY = "kova.personality.v1";
-const AUTO_KEY = "kova.personality.autoAdapt.v1";
+const STORAGE_KEY_BASE = "kova-personality";
+const AUTO_KEY_BASE = "kova-personality-auto-adapt";
 export const DEFAULT_PERSONALITY: Personality = TRAITS.reduce(
   (acc, t) => ({ ...acc, [t.key]: 5 }),
   {} as Personality,
@@ -103,10 +110,11 @@ export const PERSONALITY_PRESETS: {
   },
 ];
 
-export function loadPersonality(): Personality {
-  if (typeof window === "undefined") return DEFAULT_PERSONALITY;
+export function loadPersonality(userKey: string | null | undefined = undefined): Personality {
+  const key = principalScopedStorageKey(STORAGE_KEY_BASE, userKey);
+  if (!key) return DEFAULT_PERSONALITY;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = safeBrowserStorage("localStorage")?.getItem(key);
     if (!raw) return DEFAULT_PERSONALITY;
     return { ...DEFAULT_PERSONALITY, ...JSON.parse(raw) };
   } catch {
@@ -114,22 +122,26 @@ export function loadPersonality(): Personality {
   }
 }
 
-export function loadAutoAdapt(): boolean {
-  if (typeof window === "undefined") return true;
+export function loadAutoAdapt(userKey: string | null | undefined = undefined): boolean {
+  const key = principalScopedStorageKey(AUTO_KEY_BASE, userKey);
+  if (!key) return true;
   try {
-    const raw = localStorage.getItem(AUTO_KEY);
+    const raw = safeBrowserStorage("localStorage")?.getItem(key);
     return raw === null ? true : raw === "1";
   } catch {
     return true;
   }
 }
 
-export function personalityToInstruction(p: Personality): string {
+export function personalityToInstruction(
+  p: Personality,
+  userKey: string | null | undefined = undefined,
+): string {
   const notable = TRAITS.filter((t) => (p[t.key] ?? 5) !== 5).map((t) => {
     const v = p[t.key];
     return `${t.label.toLowerCase()}=${v}/10`;
   });
-  const auto = loadAutoAdapt()
+  const auto = loadAutoAdapt(userKey)
     ? "Auto-adapt: continuously observe how the user writes (length, formality, humor, detail preference) and mirror their style. When they give feedback like 'shorter', 'more casual', 'more detail', apply it for the rest of the conversation."
     : "";
   const traits = notable.length
@@ -138,53 +150,95 @@ export function personalityToInstruction(p: Personality): string {
   return [traits, auto].filter(Boolean).join(" ");
 }
 
-export function PersonalitySliders() {
+export function PersonalitySliders({
+  userKey,
+  principalResolved,
+}: {
+  userKey: string | null;
+  principalResolved: boolean;
+}) {
   const { tier } = useTier();
   const unlocked = tierRank(tier) >= tierRank("plus");
+  const principal = principalResolved ? browserStoragePrincipal(userKey) : null;
+  const storageKey = principalResolved
+    ? principalScopedStorageKey(STORAGE_KEY_BASE, userKey)
+    : null;
+  const autoKey = principalResolved ? principalScopedStorageKey(AUTO_KEY_BASE, userKey) : null;
+  const generationRef = useRef(0);
+  const [loadedPrincipal, setLoadedPrincipal] = useState<string | null>(null);
   const [values, setValues] = useState<Personality>(DEFAULT_PERSONALITY);
   const [autoAdapt, setAutoAdapt] = useState<boolean>(true);
+  const ready = principal !== null && loadedPrincipal === principal;
+  const visibleValues = ready ? values : DEFAULT_PERSONALITY;
+  const visibleAutoAdapt = ready ? autoAdapt : true;
 
   useEffect(() => {
-    setValues(loadPersonality());
-    setAutoAdapt(loadAutoAdapt());
-  }, []);
+    const generation = generationRef.current + 1;
+    generationRef.current = generation;
+    if (!principalResolved || !principal) {
+      setLoadedPrincipal(null);
+      setValues(DEFAULT_PERSONALITY);
+      setAutoAdapt(true);
+      return;
+    }
+    const nextValues = loadPersonality(userKey);
+    const nextAuto = loadAutoAdapt(userKey);
+    if (generationRef.current !== generation) return;
+    setValues(nextValues);
+    setAutoAdapt(nextAuto);
+    setLoadedPrincipal(principal);
+  }, [principal, principalResolved, userKey]);
+
+  useEffect(() => {
+    if (!principalResolved || !principal) return;
+    const reset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      generationRef.current += 1;
+      setValues(DEFAULT_PERSONALITY);
+      setAutoAdapt(true);
+      setLoadedPrincipal(principal);
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+    return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
+  }, [principal, principalResolved, userKey]);
 
   function update(key: TraitKey, v: number) {
-    if (!unlocked) return;
+    if (!unlocked || !ready || !storageKey) return;
     const next = { ...values, [key]: v };
     setValues(next);
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      safeBrowserStorage("localStorage")?.setItem(storageKey, JSON.stringify(next));
     } catch {
       /* ignore */
     }
   }
 
   function applyPreset(preset: Personality) {
-    if (!unlocked) return;
+    if (!unlocked || !ready || !storageKey) return;
     setValues(preset);
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(preset));
+      safeBrowserStorage("localStorage")?.setItem(storageKey, JSON.stringify(preset));
     } catch {
       /* ignore */
     }
   }
 
   function toggleAuto() {
+    if (!ready || !autoKey) return;
     const next = !autoAdapt;
     setAutoAdapt(next);
     try {
-      localStorage.setItem(AUTO_KEY, next ? "1" : "0");
+      safeBrowserStorage("localStorage")?.setItem(autoKey, next ? "1" : "0");
     } catch {
       /* ignore */
     }
   }
 
   function reset() {
-    if (!unlocked) return;
+    if (!unlocked || !ready || !storageKey) return;
     setValues(DEFAULT_PERSONALITY);
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_PERSONALITY));
+      safeBrowserStorage("localStorage")?.setItem(storageKey, JSON.stringify(DEFAULT_PERSONALITY));
     } catch {
       /* ignore */
     }
@@ -227,7 +281,7 @@ export function PersonalitySliders() {
         <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
           <input
             type="checkbox"
-            checked={autoAdapt}
+            checked={visibleAutoAdapt}
             onChange={toggleAuto}
             className="h-3.5 w-3.5 rounded border-border accent-primary"
           />
@@ -250,11 +304,11 @@ export function PersonalitySliders() {
                 <div className="text-muted-foreground">{t.hint}</div>
               </div>
               <span className="tabular-nums text-muted-foreground w-8 text-right">
-                {values[t.key]}
+                {visibleValues[t.key]}
               </span>
             </div>
             <Slider
-              value={[values[t.key]]}
+              value={[visibleValues[t.key]]}
               min={1}
               max={10}
               step={1}

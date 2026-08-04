@@ -26,7 +26,7 @@ export type ProjectComment = {
 };
 export const listProjectComments = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ project_id: z.string().uuid() }).parse(i))
+  .validator((i: unknown) => z.object({ project_id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }): Promise<ProjectComment[]> => {
     const { data: rows, error } = await t(context.supabase, "project_comments")
       .select("id,project_id,author_id,body,anchor,mentions,created_at,updated_at")
@@ -38,7 +38,7 @@ export const listProjectComments = createServerFn({ method: "GET" })
   });
 export const addProjectComment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) =>
+  .validator((i: unknown) =>
     z
       .object({
         project_id: z.string().uuid(),
@@ -67,7 +67,7 @@ export const addProjectComment = createServerFn({ method: "POST" })
   });
 export const deleteProjectComment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
+  .validator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { error } = await t(context.supabase, "project_comments")
       .delete()
@@ -110,7 +110,7 @@ export const listPromptTemplates = createServerFn({ method: "GET" })
   });
 export const savePromptTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => PromptInput.parse(i))
+  .validator((i: unknown) => PromptInput.parse(i))
   .handler(async ({ data, context }): Promise<PromptTemplate> => {
     const { data: row, error } = await t(context.supabase, "prompt_templates")
       .insert({ ...data, user_id: context.userId })
@@ -123,7 +123,7 @@ export const savePromptTemplate = createServerFn({ method: "POST" })
   });
 export const updatePromptTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) =>
+  .validator((i: unknown) =>
     z
       .object({
         id: z.string().uuid(),
@@ -199,7 +199,7 @@ export type PromptEvaluation = {
 };
 export const listPromptHistory = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ prompt_id: z.string().uuid() }).parse(i))
+  .validator((i: unknown) => z.object({ prompt_id: z.string().uuid() }).parse(i))
   .handler(
     async ({
       data,
@@ -229,7 +229,7 @@ export const listPromptHistory = createServerFn({ method: "GET" })
   );
 export const evaluatePrompt = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) =>
+  .validator((i: unknown) =>
     z
       .object({
         prompt_id: z.string().uuid(),
@@ -248,7 +248,7 @@ export const evaluatePrompt = createServerFn({ method: "POST" })
   });
 export const deletePromptTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
+  .validator((i: unknown) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
     const { error } = await t(context.supabase, "prompt_templates")
       .delete()
@@ -284,7 +284,7 @@ export const listResearchTemplates = createServerFn({ method: "GET" })
   });
 export const saveResearchTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => ResearchInput.parse(i))
+  .validator((i: unknown) => ResearchInput.parse(i))
   .handler(async ({ data, context }): Promise<ResearchTemplate> => {
     const { data: row, error } = await t(context.supabase, "research_templates")
       .insert({ ...data, user_id: context.userId })

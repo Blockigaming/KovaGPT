@@ -172,7 +172,7 @@ export const refreshGitHubInstallations = createServerFn({ method: "POST" })
   });
 export const updateGitHubRepositoryGrants = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((value: unknown) =>
+  .validator((value: unknown) =>
     z
       .object({
         repositoryIds: z.array(z.number().int().positive()).max(500),
@@ -217,7 +217,7 @@ export const updateGitHubRepositoryGrants = createServerFn({ method: "POST" })
   });
 export const disconnectGitHub = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((value: unknown) =>
+  .validator((value: unknown) =>
     z.object({ accountId: z.string().uuid(), removeData: z.boolean() }).parse(value),
   )
   .handler(async ({ data, context }) => {

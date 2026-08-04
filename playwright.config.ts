@@ -1,5 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
+const usePrebuiltPreview = process.env.PLAYWRIGHT_PREBUILT === "1";
+
 /**
  * Playwright config for KovaGPT responsive smoke and visual checks.
  * PLAYWRIGHT_BASE_URL can override the conventional local preview-server URL.
@@ -12,7 +14,10 @@ export default defineConfig({
   retries: 0,
   reporter: [["list"]],
   webServer: {
-    command: "npm run build && npm run preview -- --host 127.0.0.1 --port 8080",
+    command: [
+      ...(usePrebuiltPreview ? [] : ["npm run build"]),
+      "npm run preview -- --host 127.0.0.1 --port 8080",
+    ].join(" && "),
     url: "http://127.0.0.1:8080",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
@@ -37,10 +42,18 @@ export default defineConfig({
       use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
     },
     {
+      name: "phone-412x915",
+      use: { viewport: { width: 412, height: 915 }, isMobile: true, hasTouch: true },
+    },
+    {
       name: "phone-430x932",
       use: { viewport: { width: 430, height: 932 }, isMobile: true, hasTouch: true },
     },
     { name: "tablet-768x1024", use: { viewport: { width: 768, height: 1024 }, hasTouch: true } },
+    {
+      name: "phone-landscape-844x390",
+      use: { viewport: { width: 844, height: 390 }, hasTouch: true },
+    },
     { name: "tablet-1024x768", use: { viewport: { width: 1024, height: 768 }, hasTouch: true } },
     { name: "desktop-1280x800", use: { viewport: { width: 1280, height: 800 } } },
     { name: "desktop-1440x900", use: { viewport: { width: 1440, height: 900 } } },

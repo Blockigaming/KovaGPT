@@ -53,7 +53,10 @@ export async function startGitHubOAuth(ownerId: string, origin: string) {
   url.searchParams.set("code_challenge_method", "S256");
   return url.toString();
 }
-export async function completeGitHubOAuth(code: string, state: string) {
+export async function completeGitHubOAuth(code: string, state: string, browserState: string) {
+  if (!browserState || browserState !== state) {
+    throw new Error("Invalid OAuth browser binding");
+  }
   const stateHash = createHash("sha256").update(state).digest("hex");
   const { data, error } = await (supabaseAdmin as any)
     .from("github_oauth_states")
@@ -131,6 +134,75 @@ export async function completeGitHubOAuth(code: string, state: string) {
     .single();
   if (account.error) throw account.error;
   return { ownerId: data.owner_id, ...account.data };
+}
+
+export async function disconnectAllGitHub(ownerId: string) {
+  const { data: accounts, error } = await (supabaseAdmin as any)
+    .from("github_accounts")
+    .select("id, auth_type, token_ciphertext")
+    .eq("owner_id", ownerId);
+  if (error) throw new Error("github_account_enumeration_failed");
+
+  const clientId = process.env.GITHUB_OAUTH_CLIENT_ID;
+  const clientSecret = process.env.GITHUB_OAUTH_CLIENT_SECRET;
+  const failures: string[] = [];
+
+  for (const account of accounts ?? []) {
+    if (
+      account.auth_type === "oauth" &&
+      account.token_ciphertext &&
+      account.token_ciphertext !== "deleted" &&
+      clientId &&
+      clientSecret
+    ) {
+      try {
+        const token = await decryptSecret(account.token_ciphertext);
+        const response = await fetch(
+          `https://api.github.com/applications/${encodeURIComponent(clientId)}/grant`,
+          {
+            method: "DELETE",
+            headers: {
+              Accept: "application/vnd.github+json",
+              Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+              "Content-Type": "application/json",
+              "X-GitHub-Api-Version": "2022-11-28",
+            },
+            body: JSON.stringify({ access_token: token }),
+          },
+        );
+        if (!response.ok) {
+          console.error("[account-delete] GitHub grant revocation pending", {
+            accountId: account.id,
+            status: response.status,
+          });
+        }
+      } catch (error) {
+        console.error("[account-delete] GitHub grant revocation pending", {
+          accountId: account.id,
+          error: error instanceof Error ? error.name : "unknown_error",
+        });
+      }
+    }
+
+    const { data: purgedAccount, error: purgeError } = await (supabaseAdmin as any)
+      .from("github_accounts")
+      .update({
+        status: "revoked",
+        token_ciphertext: "deleted",
+        refresh_token_ciphertext: null,
+        token_expires_at: null,
+        scopes: [],
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", account.id)
+      .eq("owner_id", ownerId)
+      .select("id")
+      .maybeSingle();
+    if (purgeError || !purgedAccount) failures.push(account.id);
+  }
+
+  if (failures.length) throw new Error("github_account_purge_failed");
+  return { disconnected: accounts?.length ?? 0 };
 }
 
 export function createGitHubAppJwt(now = Math.floor(Date.now() / 1000)) {

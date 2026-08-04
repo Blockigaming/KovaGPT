@@ -7,7 +7,7 @@ type Usage = { windowStart: number; images: number; uploads: number };
 
 // Free plan limits.
 export const DAILY_IMAGE_LIMIT = 3;
-export const DAILY_UPLOAD_LIMIT = 2;
+export const DAILY_UPLOAD_LIMIT = 3;
 
 function fresh(): Usage {
   return { windowStart: Date.now(), images: 0, uploads: 0 };
@@ -56,9 +56,10 @@ export function tryUseImage(): boolean {
   return true;
 }
 
-export function tryUseUpload(): boolean {
+export function tryUseUpload(limit = DAILY_UPLOAD_LIMIT): boolean {
+  const normalizedLimit = Number.isFinite(limit) ? Math.max(0, Math.floor(limit)) : 0;
   const u = load();
-  if (u.uploads >= DAILY_UPLOAD_LIMIT) return false;
+  if (u.uploads >= normalizedLimit) return false;
   u.uploads += 1;
   save(u);
   return true;

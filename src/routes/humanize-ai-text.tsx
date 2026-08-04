@@ -1,39 +1,36 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { SeoLanding, seoLandingHead } from "@/components/SeoLanding";
+import { SeoLanding } from "@/components/SeoLanding";
+import { seoLandingHead } from "@/components/seo-landing-head";
 
 const faq = [
   {
     q: "What does 'humanize AI text' mean?",
-    a: "It means rewriting AI-generated writing so it reads like a real person wrote it: varied sentence lengths, natural word choices, personal voice, small imperfections, and no telltale AI patterns like repetitive phrasing, over-hedging, or robotic transitions.",
+    a: "Here it means editing a draft for clarity, specificity, varied pacing, and a voice appropriate to the reader. It does not prove that a human wrote the text.",
   },
   {
-    q: "Can AI detectors really tell the difference?",
-    a: "Detectors like GPTZero, Originality.ai, Turnitin, and Copyleaks look at perplexity (word predictability), burstiness (sentence-length variation), and stylistic fingerprints. They flag text that is too smooth, too uniform, or too formal. Humanized writing scores lower because it varies pacing, uses idioms, and mixes short and long sentences.",
+    q: "Can a rewrite guarantee an AI-detector result?",
+    a: "No. Detectors can be wrong and can change over time. KovaGPT does not promise that rewritten text will receive a particular score or pass a detector.",
   },
   {
-    q: "Is humanizing AI text ethical?",
-    a: "Yes when you use it to polish your own drafts, translate ideas into clearer language, or adapt AI research into your voice. It is not appropriate for classwork, contracts, or anywhere the reader expects original human authorship. Always follow your school or employer's policy.",
+    q: "Will the facts and citations remain correct?",
+    a: "Not automatically. Rewriting can change meaning, numbers, names, quotations, or citation relationships. Compare the revision with the source and independently verify important claims.",
   },
   {
-    q: "What are the biggest AI writing tells?",
-    a: "Overused connectors like 'furthermore', 'in conclusion', and 'it is important to note'; balanced 'on one hand / on the other' phrasing; long uniform sentences; em dashes and en dashes everywhere; vague fillers like 'various', 'numerous', 'a plethora of'; and closing sentences that summarize what you just said.",
+    q: "When is rewriting appropriate?",
+    a: "Use it when you have permission to revise the material and follow the disclosure, authorship, academic, workplace, and client rules that apply to the final use.",
   },
   {
-    q: "How does KovaGPT humanize text?",
-    a: "KovaGPT rewrites for burstiness, swaps AI clichés for natural phrasing, keeps your voice, and never uses en dashes or em dashes. Paste any draft into KovaGPT and ask it to humanize the tone; you can specify casual, professional, academic, or first-person voice.",
-  },
-  {
-    q: "Will humanized text still rank in search results?",
-    a: "Yes. Google's helpful content system rewards original, useful writing regardless of how it was drafted. Humanized text with your expertise, examples, and voice tends to rank better than raw AI output because readers stay on the page longer.",
+    q: "How can I make the result sound more like me?",
+    a: "Provide a short sample you own, describe the intended reader and tone, identify phrases to avoid, and request several alternatives. Treat the result as a draft to edit, not a verified copy of your voice.",
   },
 ];
 
 export const Route = createFileRoute("/humanize-ai-text")({
   head: () =>
     seoLandingHead({
-      title: "How to Humanize AI Text: The Complete 2026 Guide | KovaGPT",
+      title: "How to Revise AI-Assisted Text Responsibly | KovaGPT",
       description:
-        "Learn how to rewrite AI-generated writing so it sounds human, avoids AI detectors, and keeps your voice. Free examples, before/after rewrites, and a natural writing checklist.",
+        "A practical guide to revising AI-assisted drafts for clarity, tone, specificity, and accuracy without detector or authorship guarantees.",
       path: "/humanize-ai-text",
       ogImage: "/og/home.jpg",
       faq,
@@ -44,34 +41,33 @@ export const Route = createFileRoute("/humanize-ai-text")({
 function Page() {
   return (
     <SeoLanding
-      h1="How to Humanize AI Text: The Complete Guide"
-      intro="AI writing has a fingerprint. Long uniform sentences, over-hedged claims, robotic transitions, and endless em dashes give it away to readers and to detectors like GPTZero, Originality.ai, Turnitin, and Copyleaks. This guide walks through every technique for turning stiff AI output into writing that sounds like you, ranks in search, and passes as human, without changing the meaning."
+      h1="How to Revise AI-Assisted Text Responsibly"
+      intro="A useful rewrite should make a draft clearer and more specific while keeping the writer accountable for every claim. KovaGPT can suggest revisions, but it cannot prove human authorship, guarantee a detector result, or promise that meaning and facts stayed unchanged."
       benefits={[
-        "Beat AI detectors by increasing burstiness and perplexity naturally",
-        "Kill the top 20 AI clichés (furthermore, in conclusion, plethora, etc.)",
-        "Match a specific voice: casual, professional, academic, first-person",
-        "Keep your ideas intact while rewriting the surface style",
-        "Never use en dashes or em dashes - a huge AI tell",
-        "Free before / after examples you can copy right now",
+        "State the reader, purpose, and tone before rewriting",
+        "Cut filler and replace vague wording with supported specifics",
+        "Request alternatives for sentences that do not sound like you",
+        "Protect quotations, numbers, names, and citations during review",
+        "Read the revision aloud and edit it in your own judgment",
+        "Follow applicable authorship and AI-disclosure rules",
       ]}
       details={[
-        "The core trick is burstiness. Human writers naturally mix a 3-word sentence with a 27-word one. AI writes at a steady 18 to 22 words per sentence, forever. Break that pattern first: shorten every third sentence to under 10 words. Read it aloud. Where you stumble, cut. Where you race, add a comma or a beat.",
-        "Second, hunt clichés. Search your draft for 'furthermore', 'in conclusion', 'it is important to note', 'delve', 'plethora', 'navigate the complexities', 'in today's fast-paced world', 'on the other hand', 'moreover'. Replace each with something a friend would actually say. 'Furthermore' becomes 'and' or 'plus'. 'It is important to note' becomes 'note that' or nothing at all.",
-        "Third, add specifics. AI hedges because it has no lived experience. You do. Swap 'many studies show' for 'the 2024 Pew study of 3,000 users showed'. Swap 'various tools' for 'Notion and Linear'. Swap 'a range of benefits' for three actual benefits with names.",
-        "Fourth, personality. Contractions (I'm, don't, you'll). Rhetorical questions. A dry aside in parentheses. First-person opinion when appropriate. Small imperfections - starting a sentence with 'And' or 'But'. Detectors reward these; readers do too.",
-        "Fifth, punctuation. Ditch the em dash (—) and en dash (–) entirely. Use commas, parentheses, colons, or full stops instead. This single change drops most detector scores by 10 to 20 percent because dashes are the strongest AI stylistic fingerprint in 2026.",
-        "Finally, verify. Paste into a detector, sure, but also read it aloud. If a sentence sounds like a corporate press release, rewrite it. If your friend wouldn't say it at dinner, rewrite it. Humanized text isn't dumbed down; it's specific, brisk, and unmistakably yours.",
+        "Start by marking the non-negotiable content: facts, quoted language, numbers, legal terms, citations, and the actual conclusion. Ask for a revision around those items, then compare the output line by line. A smoother sentence is not useful if it changes the claim.",
+        "Give concrete style direction. Name the reader, desired level of formality, acceptable length, and words to avoid. A short writing sample you own can help communicate preferences, but the model's result is only an approximation of your voice.",
+        "Remove generic transitions and unsupported intensifiers. Replace phrases such as 'many studies show' with an actual source or delete the claim. Do not ask the model to invent a personal anecdote, credential, source, or lived experience.",
+        "Use sentence-length variation when it improves readability, not to game a detector. AI detectors can misclassify both human and AI-assisted writing, and no rewrite can guarantee a score.",
+        "Finish with a factual pass and a policy pass. Open citations, recalculate important numbers, and confirm that the final use complies with school, workplace, publisher, client, and legal requirements.",
       ]}
       prompts={[
-        "Humanize this paragraph. Vary sentence length, cut every AI cliché, no em or en dashes: [paste text]",
-        "Rewrite this in a casual first-person voice, contractions on, one dry aside allowed: [paste text]",
-        "Take this draft and make it sound like a human wrote it in one sitting. Keep the facts, break the rhythm: [paste text]",
-        "Rewrite for burstiness: at least one sentence under 8 words per paragraph, at least one over 25: [paste text]",
-        "Rewrite as if I'm explaining this to a smart friend over coffee. No jargon unless I define it: [paste text]",
+        "Revise this for a clear, conversational tone. Keep every number, name, quotation, and citation unchanged. Flag anything you cannot preserve confidently: [paste text]",
+        "Give me three alternatives for this paragraph: direct, warm, and formal. Do not add new facts: [paste text]",
+        "Cut filler and reduce this by 25%. List any factual statement you changed: [paste text]",
+        "Compare my draft with the revision and identify changes in meaning or emphasis: [paste both]",
+        "Use this writing sample only as a tone reference. Do not copy phrases or invent personal experiences: [sample and draft]",
       ]}
       ctas={[
-        { label: "Humanize with KovaGPT", to: "/ai-humanizer" },
-        { label: "Try KovaGPT Free", to: "/" },
+        { label: "Revise with KovaGPT", to: "/ai-humanizer" },
+        { label: "Open KovaGPT", to: "/" },
       ]}
       faq={faq}
     />

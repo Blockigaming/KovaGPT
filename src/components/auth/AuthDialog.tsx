@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useNavigate } from "@tanstack/react-router";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Eye, EyeOff, ArrowLeft, Mail, Sparkles } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowLeft, Sparkles } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { ForgotPasswordDialog } from "@/components/auth/ForgotPasswordDialog";
 import { getOAuthRedirectUri, rememberPostAuthRedirect } from "@/lib/oauth-session";
@@ -21,10 +22,12 @@ export function AuthDialog({
   open,
   mode: initialMode,
   onOpenChange,
+  returnFocusTarget,
 }: {
   open: boolean;
   mode: Mode;
   onOpenChange: (open: boolean) => void;
+  returnFocusTarget?: HTMLElement | null;
 }) {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [step, setStep] = useState<Step>("identify");
@@ -36,6 +39,7 @@ export function AuthDialog({
   const [forgotOpen, setForgotOpen] = useState(false);
   const [emailTouched, setEmailTouched] = useState(false);
   const submittingRef = useRef(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!open) return;
@@ -69,7 +73,11 @@ export function AuthDialog({
       toast.error("Please enter a valid email address.");
       return;
     }
-    setStep("password");
+    onOpenChange(false);
+    void navigate({
+      to: "/auth",
+      search: { email: email.trim().toLowerCase(), mode },
+    });
   };
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -81,10 +89,11 @@ export function AuthDialog({
     if (!guard()) return;
     try {
       if (isSignUp) {
+        const normalizedEmail = email.trim().toLowerCase();
         const metadata: Record<string, string> = {};
         if (fullName.trim()) metadata.full_name = fullName.trim();
-        const { data, error } = await supabase.auth.signUp({
-          email,
+        const { error } = await supabase.auth.signUp({
+          email: normalizedEmail,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
@@ -92,42 +101,34 @@ export function AuthDialog({
           },
         });
         if (error) throw error;
-        const isRepeat = !!data.user && (data.user.identities?.length ?? 0) === 0;
-        if (isRepeat) {
-          await supabase.auth.resend({
-            type: "signup",
-            email,
-            options: { emailRedirectTo: `${window.location.origin}/` },
-          });
-          toast.success("Already registered - we resent the verification link.");
-        } else {
-          toast.success("Verification email sent. Check your inbox.");
-        }
+        // Keep duplicate-account behavior indistinguishable to prevent email
+        // enumeration. Supabase decides whether a message should be delivered.
+        toast.success("If this address can be registered, check your inbox to continue.");
         onOpenChange(false);
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const normalizedEmail = email.trim().toLowerCase();
+        const { error } = await supabase.auth.signInWithPassword({
+          email: normalizedEmail,
+          password,
+        });
         if (error) {
-          if (/confirm|not confirmed|email.*verif/i.test(error.message)) {
-            await supabase.auth.resend({
-              type: "signup",
-              email,
-              options: { emailRedirectTo: `${window.location.origin}/` },
-            });
-            toast.error("Please verify your email - we just resent the link.");
-            return;
-          }
-          if (/invalid.*credentials|invalid_grant/i.test(error.message)) {
-            toast.error("That email and password don't match.");
-            return;
-          }
-          throw error;
+          // Do not distinguish unknown, unverified, or incorrect-password
+          // accounts. Different responses turn this form into an email
+          // enumeration oracle.
+          console.error("[KovaAuth] Password authentication was rejected", {
+            error: error.name || "auth_error",
+          });
+          toast.error("That email and password could not be verified.");
+          return;
         }
         toast.success("Welcome back.");
         onOpenChange(false);
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      toast.error(msg);
+      console.error("[KovaAuth] Email authentication failed", {
+        error: err instanceof Error ? err.name : "unknown_error",
+      });
+      toast.error("Authentication could not be completed. Please try again.");
     } finally {
       release();
     }
@@ -142,14 +143,20 @@ export function AuthDialog({
         redirect_uri: getOAuthRedirectUri(),
       });
       if (result.error) {
-        toast.error(result.error instanceof Error ? result.error.message : String(result.error));
+        console.error("[KovaAuth] Google authentication could not start", {
+          error: result.error instanceof Error ? result.error.name : "provider_error",
+        });
+        toast.error("Google sign in could not start. Please try again.");
         release();
         return;
       }
       if (result.redirected) return;
       onOpenChange(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err));
+      console.error("[KovaAuth] Google authentication failed", {
+        error: err instanceof Error ? err.name : "unknown_error",
+      });
+      toast.error("Google sign in could not start. Please try again.");
     } finally {
       release();
     }
@@ -163,14 +170,18 @@ export function AuthDialog({
     }
     if (!guard()) return;
     try {
+      const normalizedEmail = email.trim().toLowerCase();
       const { error } = await supabase.auth.signInWithOtp({
-        email,
+        email: normalizedEmail,
         options: { emailRedirectTo: `${window.location.origin}/` },
       });
       if (error) throw error;
       setStep("magic-sent");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err));
+      console.error("[KovaAuth] Magic-link request failed", {
+        error: err instanceof Error ? err.name : "unknown_error",
+      });
+      toast.error("The sign-in link could not be requested. Please try again.");
     } finally {
       release();
     }
@@ -179,21 +190,32 @@ export function AuthDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[440px] p-0 border-0 bg-transparent shadow-none overflow-visible [&>button.absolute]:hidden">
+        <DialogContent
+          className="sm:max-w-[440px] p-0 border-0 bg-transparent shadow-none overflow-visible [&>button.absolute]:hidden"
+          onCloseAutoFocus={(event) => {
+            if (!returnFocusTarget?.isConnected) return;
+            event.preventDefault();
+            returnFocusTarget.focus();
+          }}
+        >
+          <DialogTitle className="sr-only">
+            {isSignUp ? "Create your account" : "Log in or sign up"}
+          </DialogTitle>
+
           <div
             className={cn(
-              "relative rounded-3xl border border-border/60 bg-card shadow-2xl",
+              "kova-auth-surface relative rounded-xl border border-border/60 bg-card",
               "p-7 sm:p-9",
-              "animate-in fade-in-0 zoom-in-95 duration-300",
+              "animate-in fade-in-0 duration-100",
             )}
           >
             {/* Header */}
             <div className="flex flex-col items-center text-center">
-              <div className="mb-5 animate-in fade-in-0 zoom-in-75 duration-500">
-                <div className="relative w-14 h-14 rounded-2xl bg-foreground/[0.04] ring-1 ring-border flex items-center justify-center transition-transform hover:scale-105">
-                  <NovaLogo className="w-9 h-9 [animation:spin_18s_linear_infinite]" />
-                </div>
+              <div className="mb-5 animate-in fade-in-0 duration-100">
+                <NovaLogo mark className="h-11 w-11 text-foreground" />
               </div>
+
+
               <h1 className="text-[26px] leading-tight font-semibold tracking-tight">
                 {step === "magic-sent"
                   ? "Check your email"
@@ -221,10 +243,11 @@ export function AuthDialog({
                         placeholder="Email address"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        maxLength={320}
                         onBlur={() => setEmailTouched(true)}
                         aria-invalid={emailTouched && !emailValid}
                         className={cn(
-                          "h-14 rounded-2xl text-[15px] px-4",
+                          "h-14 rounded-xl text-[15px] px-4",
                           emailTouched &&
                             !emailValid &&
                             "border-destructive focus-visible:ring-destructive",
@@ -239,7 +262,7 @@ export function AuthDialog({
                     <Button
                       type="submit"
                       disabled={loading || !emailValid}
-                      className="w-full h-14 rounded-2xl text-[15px] font-medium"
+                      className="w-full h-14 rounded-xl text-[15px] font-medium"
                     >
                       Continue
                     </Button>
@@ -260,7 +283,7 @@ export function AuthDialog({
                     type="button"
                     onClick={handleGoogle}
                     disabled={loading}
-                    className="w-full h-14 rounded-2xl border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-3 text-[15px] font-medium disabled:opacity-60"
+                    className="w-full h-14 rounded-xl border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-3 text-[15px] font-medium disabled:opacity-60"
                   >
                     {loading ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
@@ -291,19 +314,16 @@ export function AuthDialog({
                     type="button"
                     onClick={handleMagicLink}
                     disabled={loading || !emailValid}
-                    className="w-full h-14 rounded-2xl border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-3 text-[15px] font-medium disabled:opacity-60"
+                    className="w-full h-14 rounded-xl border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-3 text-[15px] font-medium disabled:opacity-60"
                   >
-                    <Mail className="h-5 w-5" />
                     Email me a sign-in link
+
                   </button>
                 </>
               )}
 
               {step === "password" && (
-                <form
-                  onSubmit={handleAuth}
-                  className="space-y-3 animate-in fade-in-0 slide-in-from-right-2 duration-300"
-                >
+                <form onSubmit={handleAuth} className="space-y-3 animate-in fade-in-0 duration-100">
                   <button
                     type="button"
                     onClick={() => setStep("identify")}
@@ -320,7 +340,7 @@ export function AuthDialog({
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       maxLength={80}
-                      className="h-14 rounded-2xl text-[15px] px-4"
+                      className="h-14 rounded-xl text-[15px] px-4"
                     />
                   )}
 
@@ -333,7 +353,8 @@ export function AuthDialog({
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       minLength={6}
-                      className="h-14 rounded-2xl text-[15px] px-4 pr-12"
+                      maxLength={1024}
+                      className="h-14 rounded-xl text-[15px] px-4 pr-12"
                     />
                     <button
                       type="button"
@@ -360,7 +381,7 @@ export function AuthDialog({
                   <Button
                     type="submit"
                     disabled={loading}
-                    className="w-full h-14 rounded-2xl text-[15px] font-medium"
+                    className="w-full h-14 rounded-xl text-[15px] font-medium"
                   >
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {isSignUp ? "Create account" : "Sign in"}
@@ -370,7 +391,7 @@ export function AuthDialog({
                     type="button"
                     onClick={handleMagicLink}
                     disabled={loading}
-                    className="w-full h-12 rounded-2xl text-sm text-muted-foreground hover:text-foreground transition inline-flex items-center justify-center"
+                    className="w-full h-12 rounded-xl text-sm text-muted-foreground hover:text-foreground transition inline-flex items-center justify-center"
                   >
                     Email me a link instead
                   </button>
@@ -378,11 +399,11 @@ export function AuthDialog({
               )}
 
               {step === "magic-sent" && (
-                <div className="animate-in fade-in-0 duration-300 space-y-3">
+                <div className="animate-in fade-in-0 duration-100 space-y-3">
                   <button
                     type="button"
                     onClick={() => setStep("identify")}
-                    className="w-full h-12 rounded-2xl text-sm text-muted-foreground hover:text-foreground transition inline-flex items-center justify-center gap-2"
+                    className="w-full h-12 rounded-xl text-sm text-muted-foreground hover:text-foreground transition inline-flex items-center justify-center gap-2"
                   >
                     <ArrowLeft className="h-4 w-4" /> Use a different email
                   </button>
@@ -429,7 +450,7 @@ export function AuthDialog({
               type="button"
               onClick={() => onOpenChange(false)}
               aria-label="Close"
-              className="absolute -top-3 -right-3 w-9 h-9 rounded-full bg-background border border-border shadow-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition"
+              className="absolute -top-3 -right-3 w-9 h-9 rounded-full bg-background border border-border shadow-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition"
             >
               <svg
                 width="14"

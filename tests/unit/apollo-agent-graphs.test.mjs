@@ -34,13 +34,9 @@ test("agent teams are server gated, dependency aware, parallel and controllable"
     assert.match(server, new RegExp(`"${command}"`));
 });
 
-test("specialist worker uses real browser and model output without fabricated events", async () => {
+test("legacy specialist worker fails closed without browser or model execution", async () => {
   const worker = await read("workers/agent-team-worker.mjs");
-  assert.match(worker, /chromium\.launch/);
-  assert.match(worker, /chat\/completions/);
-  assert.match(worker, /agent_run_tasks/);
-  assert.match(worker, /dependencies\.every/);
-  assert.match(worker, /approval_needed/);
-  assert.match(worker, /createHash\("sha256"\)/);
-  assert.match(worker, /Do not fabricate execution/);
+  assert.match(worker, /legacy agent_runs specialist worker is disabled/);
+  assert.match(worker, /agent execution is unavailable/);
+  assert.doesNotMatch(worker, /chromium\.launch|chat\/completions|agent_run_tasks/);
 });

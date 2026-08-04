@@ -58,5 +58,8 @@ test("Artifact and Work expansions remain truthful and interactive", () => {
   assert.match(artifact, /Artifact comments/);
   assert.match(work, /listWorkRuns/);
   assert.match(work, /controlWorkRun/);
-  assert.match(work, /Approval required/);
+  assert.match(work, /Agent execution is unavailable/);
+  assert.match(work, /Approval is disabled while execution is unavailable/);
+  assert.match(work, /decision: "denied"/);
+  assert.doesNotMatch(work, /decision: "approved"|>\s*Approve\s*</);
 });

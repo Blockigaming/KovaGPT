@@ -5,7 +5,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { TEMPLATES } from "@/lib/email-templates/registry";
 
 // Configuration baked in at scaffold time
-const SITE_NAME = "nova-aigpt";
+const SITE_NAME = "KovaGPT";
 // SENDER_DOMAIN is the verified sender subdomain FQDN (e.g., "notify.example.com").
 // It MUST match the subdomain delegated to the configured email provider. NEVER use the root domain.
 const SENDER_DOMAIN = "notify.kovagpt.com";

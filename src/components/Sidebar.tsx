@@ -1,40 +1,30 @@
 import {
   Archive,
-  Bell,
-  Boxes,
-  Brain,
-  BriefcaseBusiness,
   Calendar,
-  Clock3,
   Copy as CopyIcon,
-  CreditCard,
   FolderKanban,
   FolderOpen,
-  Files,
-  FlaskConical,
   HelpCircle,
   ImageIcon,
+  LifeBuoy,
   MoreHorizontal,
-  Network,
   PanelLeft,
+  Pencil,
   Pin,
   PinOff,
-  Plug,
-  ScrollText,
   Search,
   Settings as SettingsIcon,
   Share2,
+  Sparkles,
   SquarePen,
   Trash2,
-  Users,
-  Orbit,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
-import { SignInButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
-import { NovaLogo } from "@/components/NovaLogo";
+import { SignInButton, SignUpButton, UserButton, useUser } from "@/components/auth/ClerkSafe";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,16 +32,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { NovaLogo } from "@/components/NovaLogo";
 import { useTier } from "@/hooks/useTier";
 import type { Conversation } from "@/lib/chat-store";
 import { searchConversations } from "@/lib/conversation-search";
 
-const EXPANDED_WIDTH = 280;
-const COLLAPSED_WIDTH = 72;
-const MOBILE_DRAWER_WIDTH = "min(88vw, 340px)";
+const EXPANDED_WIDTH = 260;
 
 function isMobileViewport() {
-  return typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches;
+  return typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
 }
 
 export function Sidebar({
@@ -60,32 +49,30 @@ export function Sidebar({
   onSelect,
   onNew,
   onDelete,
+  onRename,
   onShare,
   onDuplicate,
   onArchive,
   onTogglePin,
-  onAddMembers,
   open,
   onToggle,
   onOpenSettings,
   onOpenHelp,
-  onOpenArchived,
 }: {
   conversations: Conversation[];
   activeId: string | null;
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
+  onRename?: (id: string, title: string) => void;
   onShare?: (id: string) => void;
   onDuplicate?: (id: string) => void;
   onArchive?: (id: string) => void;
   onTogglePin?: (id: string) => void;
-  onAddMembers?: (id: string) => void;
   open: boolean;
   onToggle: () => void;
   onOpenSettings: (tab?: string) => void;
   onOpenHelp: () => void;
-  onOpenArchived?: () => void;
 }) {
   const { user, isSignedIn, isLoaded } = useUser();
   const { tier } = useTier();
@@ -93,12 +80,29 @@ export function Sidebar({
   const lastFocusedRef = useRef<HTMLElement | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
 
   const showSignedIn = isLoaded && isSignedIn;
   const showSignedOut = isLoaded && !isSignedIn;
   const collapsed = !open;
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isOn = (p: string) => pathname === p;
+
+  useEffect(() => {
+    const openSearch = () => {
+      setSearchOpen(true);
+      if (!open) onToggle();
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          document.querySelector<HTMLInputElement>("#sidebar-chat-search")?.focus();
+        });
+      });
+    };
+
+    window.addEventListener("kova-open-search", openSearch);
+    return () => window.removeEventListener("kova-open-search", openSearch);
+  }, [open, onToggle]);
 
   useEffect(() => {
     if (!open || !isMobileViewport()) return;
@@ -148,21 +152,19 @@ export function Sidebar({
     if (open && isMobileViewport()) onToggle();
   };
 
-  const labelClass = collapsed ? "sr-only lg:sr-only" : "truncate";
-  const iconOnly = collapsed ? "justify-center px-0" : "gap-3 px-2.5";
+  const labelClass = collapsed ? "sr-only" : "truncate";
+  const iconOnly = collapsed ? "justify-center px-0" : "gap-2.5 px-2.5";
   const navItemClass = (active: boolean) =>
-    `relative flex min-h-11 items-center rounded-xl py-2 text-[14px] transition-colors duration-150 active:scale-[0.99] ${iconOnly} ${
+  const navItemClass = (active: boolean) =>
+    `kova-nav-row relative flex h-[38px] items-center rounded-lg py-1 text-sm transition-colors duration-100 ${iconOnly} ${
+      active
+        ? "bg-sidebar-active font-medium text-foreground"
+        : "text-sidebar-foreground hover:bg-sidebar-hover"
+    }`;
       active
         ? "bg-sidebar-active text-foreground font-medium"
         : "text-sidebar-foreground hover:bg-sidebar-hover"
     }`;
-  const ActiveBar = ({ on }: { on: boolean }) =>
-    on ? (
-      <span
-        aria-hidden="true"
-        className="absolute left-0 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-r-full bg-foreground/50"
-      />
-    ) : null;
 
   const renderNavLink = (to: string, title: string, Icon: LucideIcon, active = isOn(to)) => (
     <Link
@@ -170,9 +172,9 @@ export function Sidebar({
       className={navItemClass(active)}
       title={title}
       aria-label={collapsed ? title : undefined}
+      aria-current={active ? "page" : undefined}
       onClick={closeAfterMobileNavigation}
     >
-      <ActiveBar on={active} />
       <Icon className="h-[18px] w-[18px] shrink-0" />
       <span className={labelClass}>{title}</span>
     </Link>
@@ -185,67 +187,88 @@ export function Sidebar({
   const pinned = filtered
     .filter((c) => c.pinned)
     .sort((a, b) => (b.pinnedAt ?? 0) - (a.pinnedAt ?? 0));
-  const recents = filtered.filter((c) => !c.pinned);
+  const recents = filtered.filter((c) => !c.pinned).sort((a, b) => b.updatedAt - a.updatedAt);
+
+  const beginRename = (conversation: Conversation) => {
+    setRenamingId(conversation.id);
+    setRenameDraft(conversation.title);
+  };
+
+  const finishRename = (conversation: Conversation) => {
+    const title = renameDraft.trim();
+    if (title && title !== conversation.title) onRename?.(conversation.id, title);
+    setRenamingId(null);
+    setRenameDraft("");
+  };
 
   const renderRow = (c: Conversation) => (
     <div
       key={c.id}
-      className={`group mx-2 my-0.5 flex min-h-10 cursor-pointer items-center gap-1 rounded-xl px-3 py-2 text-[14px] transition ${
-        activeId === c.id ? "bg-sidebar-hover" : "hover:bg-sidebar-hover/60"
-      } ${collapsed ? "lg:justify-center lg:px-0" : ""}`}
-      onClick={() => {
-        onSelect(c.id);
-        closeAfterMobileNavigation();
-      }}
-      role="button"
-      tabIndex={0}
-      aria-label={`Open chat ${c.title}`}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onSelect(c.id);
-          closeAfterMobileNavigation();
-        }
-      }}
-      title={c.title}
+      className={`kova-chat-row group relative mx-2 flex h-9 items-center gap-1 rounded-lg px-1.5 text-sm transition-colors duration-100 ${
+        activeId === c.id ? "bg-sidebar-active" : "hover:bg-sidebar-hover/60"
+      }`}
     >
-      {c.pinned ? (
-        <Pin className="mr-1 h-3 w-3 shrink-0 fill-current text-muted-foreground" />
-      ) : null}
-      <span className={collapsed ? "sr-only" : "min-w-0 flex-1 truncate"}>{c.title}</span>
-      {!collapsed && onTogglePin ? (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onTogglePin(c.id);
+      {renamingId === c.id ? (
+        <form
+          className="min-w-0 flex-1"
+          onSubmit={(event) => {
+            event.preventDefault();
+            finishRename(c);
           }}
-          className={`rounded p-1 transition hover:bg-background/40 active:scale-95 focus-visible:ring-2 focus-visible:ring-ring ${
-            c.pinned
-              ? "opacity-100"
-              : "opacity-100 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100"
-          }`}
-          aria-label={c.pinned ? "Unpin chat" : "Pin chat"}
-          title={c.pinned ? "Unpin chat" : "Pin chat"}
+        >
+          <input
+            autoFocus
+            value={renameDraft}
+            onChange={(event) => setRenameDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== "Escape") return;
+              event.preventDefault();
+              setRenamingId(null);
+              setRenameDraft("");
+            }}
+            aria-label={`Rename ${c.title}`}
+            className="h-8 w-full rounded-md border border-ring bg-background px-2 text-sm outline-none ring-2 ring-ring/20"
+            maxLength={120}
+          />
+          <button type="submit" className="sr-only">
+            Save name
+          </button>
+        </form>
+      ) : (
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 items-center gap-1.5 rounded px-1 py-1.5 text-left focus-visible:ring-2 focus-visible:ring-ring"
+          onClick={() => {
+            onSelect(c.id);
+            closeAfterMobileNavigation();
+          }}
+          aria-label={`Open chat ${c.title}`}
+          aria-current={activeId === c.id ? "page" : undefined}
+          title={c.title}
         >
           {c.pinned ? (
-            <PinOff className="h-3.5 w-3.5 text-muted-foreground" />
-          ) : (
-            <Pin className="h-3.5 w-3.5 text-muted-foreground" />
-          )}
+            <Pin className="h-3 w-3 shrink-0 fill-current text-muted-foreground" />
+          ) : null}
+          <span className="min-w-0 flex-1 truncate">{c.title}</span>
         </button>
-      ) : null}
+      )}
       {!collapsed ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               onClick={(e) => e.stopPropagation()}
-              className="rounded p-1 opacity-100 transition hover:bg-background/40 active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:opacity-70 lg:hover:opacity-100 lg:group-focus-within:opacity-100 lg:data-[state=open]:opacity-100"
+              className="rounded p-1 opacity-100 transition hover:bg-background/40 focus-visible:ring-2 focus-visible:ring-ring lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100 lg:data-[state=open]:opacity-100"
               aria-label="Chat options"
             >
               <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44" onClick={(e) => e.stopPropagation()}>
+            {onRename ? (
+              <DropdownMenuItem onClick={() => beginRename(c)}>
+                <Pencil className="mr-2 h-4 w-4" /> Rename
+              </DropdownMenuItem>
+            ) : null}
             {onTogglePin ? (
               <DropdownMenuItem onClick={() => onTogglePin(c.id)}>
                 {c.pinned ? <PinOff className="mr-2 h-4 w-4" /> : <Pin className="mr-2 h-4 w-4" />}
@@ -255,11 +278,6 @@ export function Sidebar({
             {onShare ? (
               <DropdownMenuItem onClick={() => onShare(c.id)}>
                 <Share2 className="mr-2 h-4 w-4" /> Share
-              </DropdownMenuItem>
-            ) : null}
-            {showSignedIn && onAddMembers ? (
-              <DropdownMenuItem onClick={() => onAddMembers(c.id)}>
-                <Users className="mr-2 h-4 w-4" /> Add members
               </DropdownMenuItem>
             ) : null}
             {onDuplicate ? (
@@ -291,9 +309,63 @@ export function Sidebar({
         <button
           type="button"
           onClick={onToggle}
-          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-[2px] lg:hidden"
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
           aria-label="Close navigation menu"
         />
+      ) : null}
+
+      {collapsed && showSignedIn ? (
+        <div
+
+          className="kova-sidebar-rail hidden h-[100dvh] w-[52px] shrink-0 flex-col items-center gap-1 border-r border-border/60 bg-sidebar pb-[max(.625rem,var(--safe-bottom))] pt-[max(.5rem,var(--safe-top))] lg:flex"
+
+          className="kova-collapsed-sidebar hidden h-[100dvh] w-16 shrink-0 flex-col items-center gap-1 border-r border-border/60 bg-sidebar pb-[max(.625rem,var(--safe-bottom))] pt-[max(.5rem,var(--safe-top))] md:flex"
+
+          aria-label="Collapsed navigation"
+        >
+          <button
+            type="button"
+            onClick={onToggle}
+            className="mb-1 flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Open sidebar"
+            title="Open sidebar"
+          >
+            <NovaLogo mark className="h-[22px] w-[22px] text-foreground" />
+          </button>
+          <button
+            type="button"
+            onClick={onNew}
+            className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="New chat"
+            title="New chat"
+          >
+            <SquarePen className="h-[18px] w-[18px]" />
+          </button>
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new Event("kova-open-search"))}
+            className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label="Search chats"
+            title="Search chats"
+          >
+            <Search className="h-[18px] w-[18px]" />
+          </button>
+
+          <Link
+            to="/images"
+            className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring aria-[current=page]:bg-sidebar-hover"
+            aria-label="Images"
+            title="Images"
+          >
+            <ImageIcon className="h-[18px] w-[18px]" />
+          </Link>
+
+          <div className="mt-auto flex flex-col items-center gap-1">
+            <div onClick={(e) => e.stopPropagation()}>
+              <UserButton />
+            </div>
+          </div>
+        </div>
       ) : null}
 
       <aside
@@ -301,66 +373,79 @@ export function Sidebar({
         style={
           {
             "--sidebar-expanded": `${EXPANDED_WIDTH}px`,
-            "--sidebar-collapsed": `${COLLAPSED_WIDTH}px`,
-            "--mobile-sidebar-width": open ? MOBILE_DRAWER_WIDTH : "0px",
           } as React.CSSProperties
         }
-        className={`relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-border/60 bg-sidebar/95 text-sidebar-foreground transition-[width,transform] duration-200 ease-[var(--ease-spring)] lg:w-[var(--sidebar-expanded)] ${
-          collapsed ? "lg:!w-[var(--sidebar-collapsed)]" : ""
-        } max-lg:kova-glass max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[var(--mobile-sidebar-width)] max-lg:rounded-r-xl max-lg:shadow-2xl`}
+
+        data-state={collapsed ? "collapsed" : "expanded"}
+        className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-border/60 bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 ease-[var(--ease-spring)] lg:w-[var(--sidebar-expanded)] ${
+          collapsed ? "lg:!w-0 lg:border-r-0" : ""
+        } max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-[min(88vw,320px)] max-lg:shadow-lg ${
+          open ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"
+
+        className={`kova-sidebar relative z-40 flex h-[100dvh] shrink-0 flex-col overflow-hidden border-r border-border/60 bg-sidebar text-sidebar-foreground transition-[width,transform] duration-200 ease-[var(--ease-spring)] md:w-[var(--sidebar-expanded)] ${
+          collapsed ? "md:hidden" : ""
+        } max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:w-[min(86vw,320px)] max-md:shadow-lg ${
+          open ? "max-md:translate-x-0" : "max-md:-translate-x-full"
+
+        }`}
         aria-label="Primary navigation"
         aria-modal={open && isMobileViewport() ? true : undefined}
+        aria-hidden={collapsed ? true : undefined}
+        inert={collapsed ? true : undefined}
         role={open && isMobileViewport() ? "dialog" : "navigation"}
       >
-        <div className="flex h-full min-w-[var(--sidebar-collapsed)] flex-col overflow-hidden">
-          <div
-            className={`relative z-20 flex min-h-[52px] items-center bg-sidebar/90 px-2.5 pt-[var(--safe-top)] ${collapsed ? "lg:justify-center" : "gap-2"}`}
-          >
-            <div
-              className={`flex min-w-0 flex-1 items-center gap-2 ${collapsed ? "lg:flex-none" : ""}`}
-            >
-              <span className="inline-flex shrink-0 rounded-full dark:bg-black dark:p-[2px] dark:ring-1 dark:ring-black">
-                <NovaLogo className="h-7 w-7" animated />
-              </span>
-              <span
-                className={
-                  collapsed
-                    ? "sr-only"
-                    : "truncate font-display text-[17px] font-semibold tracking-tight"
-                }
-              >
-                KovaGPT
-              </span>
+        <div className="flex h-full min-w-[var(--sidebar-expanded)] flex-col overflow-hidden">
+          <div className="kova-sidebar-header relative z-20 flex min-h-[52px] items-center gap-1 bg-sidebar px-2.5 pt-[var(--safe-top)]">
+            <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
+              <NovaLogo className="h-6 w-6 rounded-md" />
+              <span className="truncate text-base font-semibold tracking-tight">KovaGPT</span>
             </div>
-            <div
-              className={`ml-auto flex shrink-0 items-center gap-1 ${collapsed ? "lg:ml-0" : ""}`}
-            >
-              <button
-                onClick={() => setSearchOpen((v) => !v)}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label="Search chats"
-                title="Search chats"
+
+
+            {showSignedOut ? (
+              <Link
+                to="/library"
+                className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring md:flex"
+                aria-label="Search"
+                title="Search"
               >
                 <Search className="h-[18px] w-[18px]" />
-              </button>
-              <button
-                onClick={onToggle}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
-                title={open ? "Collapse sidebar" : "Expand sidebar"}
-              >
-                <PanelLeft className="h-[18px] w-[18px]" />
-              </button>
-            </div>
+              </Link>
+            ) : null}
+
+
+            <button
+              onClick={onToggle}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+              aria-label="Close navigation"
+              title="Close navigation"
+            >
+              <X className="h-[18px] w-[18px]" />
+            </button>
+            <button
+              onClick={() => {
+                onToggle();
+                window.requestAnimationFrame(() => {
+                  document
+                    .querySelector<HTMLElement>('[aria-label="Open sidebar"]')
+                    ?.focus({ preventScroll: true });
+                });
+              }}
+              className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring md:flex"
+              aria-label="Collapse sidebar"
+              title="Collapse sidebar"
+            >
+              <PanelLeft className="h-[17px] w-[17px]" />
+            </button>
           </div>
 
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 top-0 z-10 h-20 bg-gradient-to-b from-sidebar via-sidebar/90 to-transparent"
+            className="pointer-events-none absolute inset-x-0 top-0 z-10 h-px bg-border"
           />
 
           {searchOpen && !collapsed ? (
-            <div className="px-3 pb-2">
+            <div className="px-2 pb-1 pt-2">
               <label className="sr-only" htmlFor="sidebar-chat-search">
                 Search chats
               </label>
@@ -370,86 +455,61 @@ export function Sidebar({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search titles, messages, or operators…"
-                className="h-11 w-full rounded-xl bg-sidebar-hover/60 px-3 text-sm outline-none transition focus:bg-sidebar-hover focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-10 w-full rounded-lg border border-border/60 bg-background px-3 text-sm outline-none transition focus:border-ring focus-visible:ring-2 focus-visible:ring-ring"
               />
             </div>
           ) : null}
 
-          <div className="flex flex-col gap-0.5 px-2 pt-2">
+          <div className="kova-sidebar-primary flex flex-col gap-0.5 px-2 pt-2">
             <button
               onClick={() => {
                 onNew();
                 closeAfterMobileNavigation();
               }}
-              className={`kova-nav-row ${iconOnly}`}
+              className={`${navItemClass(false)} kova-new-chat`}
               aria-label="New chat"
               title="New chat"
             >
               <SquarePen className="h-[18px] w-[18px] shrink-0" />
               <span className={labelClass}>New chat</span>
             </button>
-            <button
-              type="button"
-              onClick={() => setSearchOpen((v) => !v)}
-              className={`kova-nav-row ${iconOnly}`}
-              aria-label="Search chats"
-              title="Search chats"
-            >
-              <Search className="h-[18px] w-[18px] shrink-0" />
-              <span className={labelClass}>Search</span>
-            </button>
-            {onOpenArchived ? (
+            {showSignedIn ? (
               <button
                 type="button"
-                onClick={onOpenArchived}
-                className={`kova-nav-row ${iconOnly}`}
-                aria-label="Archived chats"
-                title="Archived chats"
+                onClick={() => setSearchOpen((v) => !v)}
+                className={navItemClass(false)}
+                aria-label="Search chats"
+                title="Search chats"
               >
-                <Archive className="h-[18px] w-[18px] shrink-0" />
-                <span className={labelClass}>Archived chats</span>
+                <Search className="h-[18px] w-[18px] shrink-0" />
+                <span className={labelClass}>Search</span>
               </button>
             ) : null}
             {showSignedIn ? renderNavLink("/projects", "Projects", FolderKanban) : null}
-            {renderNavLink("/recents", "Recents", Clock3)}
-            {showSignedIn ? renderNavLink("/work", "Work", BriefcaseBusiness) : null}
-            {showSignedIn ? renderNavLink("/notifications", "Notifications", Bell) : null}
-            {showSignedIn ? renderNavLink("/research-planner", "Research", FlaskConical) : null}
-            {showSignedIn ? renderNavLink("/prompt-studio", "Prompt Studio", ScrollText) : null}
-            {showSignedIn ? renderNavLink("/knowledge-graph", "Knowledge Graph", Network) : null}
-            {showSignedIn ? renderNavLink("/omega", "Omega Control Center", Orbit) : null}
-            {renderNavLink("/library", "Library", FolderOpen)}
-            {showSignedIn ? renderNavLink("/files", "Files", Files) : null}
-            {showSignedIn ? renderNavLink("/context-packs", "Context packs", Boxes) : null}
-            {showSignedIn ? renderNavLink("/memory", "Memory", Brain) : null}
+            {showSignedIn ? renderNavLink("/library", "Library", FolderOpen) : null}
             {renderNavLink("/images", "Images", ImageIcon)}
-            {renderNavLink("/apps", "Apps", Plug)}
             {showSignedIn && (tier === "plus" || tier === "pro")
-              ? renderNavLink(
-                  "/scheduled-tasks",
-                  "Scheduled tasks",
-                  Calendar,
-                  isOn("/scheduled-tasks"),
-                )
-              : null}
-            {tier !== "plus" && tier !== "pro"
-              ? renderNavLink("/pricing", "Subscriptions", CreditCard, isOn("/pricing"))
+              ? renderNavLink("/scheduled-tasks", "Tasks", Calendar, isOn("/scheduled-tasks"))
               : null}
           </div>
 
-          <nav className="relative mt-2 min-h-0 flex-1 overflow-y-auto pb-4" aria-label="Chats">
+          <div
+            className="kova-sidebar-history relative mt-2 min-h-0 flex-1 overflow-y-auto pb-4"
+            role="group"
+            aria-label="Chats"
+          >
             <div
               aria-hidden="true"
               className="pointer-events-none sticky top-0 z-10 h-4 bg-gradient-to-b from-sidebar to-transparent"
             />
-            {!collapsed ? (
+            {!collapsed && showSignedIn ? (
               <>
                 {!isLoaded && conversations.length === 0 ? (
                   <div className="space-y-2 px-3 pt-4" aria-hidden="true">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <div
                         key={i}
-                        className="mx-2 h-8 rounded-xl bg-sidebar-hover/50 animate-pulse"
+                        className="mx-2 h-8 rounded-lg bg-sidebar-hover/50 animate-pulse"
                         style={{ opacity: 1 - i * 0.15 }}
                       />
                     ))}
@@ -479,31 +539,35 @@ export function Sidebar({
                   </>
                 )}
               </>
-            ) : (
+            ) : collapsed ? (
               <div
                 className="px-2 pt-3 text-center text-xs text-muted-foreground"
                 aria-hidden="true"
               >
                 •••
               </div>
-            )}
+            ) : null}
             <div
               aria-hidden="true"
               className="pointer-events-none sticky bottom-0 z-10 h-8 bg-gradient-to-t from-sidebar to-transparent"
             />
-          </nav>
+          </div>
 
           <div
-            className={`mt-auto border-t border-border/60 bg-sidebar/95 p-2.5 pb-[max(.625rem,var(--safe-bottom))] ${collapsed ? "lg:px-2" : ""}`}
+
+            className={`kova-sidebar-footer mt-auto border-t border-border/60 bg-sidebar p-2.5 pb-[max(.625rem,var(--safe-bottom))] ${collapsed ? "lg:px-2" : ""}`}
+
+            className={`mt-auto border-t border-border/60 bg-sidebar p-2.5 pb-[max(.625rem,var(--safe-bottom))] ${collapsed ? "md:px-2" : ""}`}
+
           >
             {!isLoaded ? null : showSignedIn ? (
-              <div className={`flex items-center gap-2 ${collapsed ? "lg:flex-col" : ""}`}>
+              <div className={`flex items-center gap-2 ${collapsed ? "md:flex-col" : ""}`}>
                 <button
                   onClick={() => {
                     onOpenSettings("general");
                     closeAfterMobileNavigation();
                   }}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sidebar-hover transition hover:bg-sidebar-hover/80 active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label="Settings"
                   title="Settings"
                 >
@@ -514,7 +578,7 @@ export function Sidebar({
                     onOpenHelp();
                     closeAfterMobileNavigation();
                   }}
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-sidebar-hover transition hover:bg-sidebar-hover/80 active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label="Help"
                   title="Help"
                 >
@@ -530,21 +594,58 @@ export function Sidebar({
                 ) : null}
               </div>
             ) : showSignedOut ? (
-              <div className="space-y-2">
-                <button
-                  onClick={() => onOpenSettings("general")}
-                  className={`flex min-h-11 w-full items-center rounded-xl py-2 text-sm transition hover:bg-sidebar-hover ${iconOnly}`}
-                  aria-label="Settings"
-                >
-                  <SettingsIcon className="h-4 w-4" />
-                  <span className={labelClass}>Settings</span>
-                </button>
+              <div className={collapsed ? "" : "-mx-2.5 -mb-2.5"}>
+                <div className={`flex flex-col gap-0.5 ${collapsed ? "" : "px-2 pb-2"}`}>
+                  <Link
+                    to="/pricing"
+                    className={navItemClass(isOn("/pricing"))}
+                    aria-label="See plans and pricing"
+                    title="See plans and pricing"
+                    onClick={closeAfterMobileNavigation}
+                  >
+                    <Sparkles className="h-[18px] w-[18px] shrink-0" />
+                    <span className={labelClass}>See plans and pricing</span>
+                  </Link>
+                  <button
+                    onClick={() => {
+                      onOpenSettings("general");
+                      closeAfterMobileNavigation();
+                    }}
+                    className={navItemClass(false)}
+                    aria-label="Settings"
+                    title="Settings"
+                  >
+                    <SettingsIcon className="h-[18px] w-[18px] shrink-0" />
+                    <span className={labelClass}>Settings</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      onOpenHelp();
+                      closeAfterMobileNavigation();
+                    }}
+                    className={navItemClass(false)}
+                    aria-label="Help"
+                    title="Help"
+                  >
+                    <LifeBuoy className="h-[18px] w-[18px] shrink-0" />
+                    <span className={labelClass}>Help</span>
+                  </button>
+                </div>
                 {!collapsed ? (
-                  <SignInButton mode="modal">
-                    <button className="flex min-h-11 w-full items-center justify-center rounded-full bg-foreground px-3 py-2 text-sm font-medium text-background transition hover:opacity-90">
-                      Log in
-                    </button>
-                  </SignInButton>
+                  <div className="border-t border-border/60 px-4 pb-4 pt-4">
+                    <p className="text-[15px] font-semibold text-foreground">
+                      Get responses tailored to you
+                    </p>
+                    <p className="mt-1.5 text-[13px] leading-5 text-muted-foreground">
+                      Log in to get answers based on saved chats, plus create images and upload
+                      files.
+                    </p>
+                    <SignInButton mode="modal">
+                      <button className="mt-4 flex min-h-10 w-full items-center justify-center rounded-full border border-transparent bg-muted px-4 text-sm font-medium text-foreground transition hover:bg-accent">
+                        Log in
+                      </button>
+                    </SignInButton>
+                  </div>
                 ) : null}
               </div>
             ) : null}

@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { verifyGitHubWebhook } from "@/lib/github-connector.mjs";
-/* eslint-disable @typescript-eslint/no-explicit-any -- GitHub webhook payloads are provider-defined and narrowed before use. */
+import { processGitHubDelivery, WebhookProcessingError } from "@/lib/webhook-reliability.mjs";
+
 const supported = new Set([
   "installation",
   "installation_repositories",
@@ -14,14 +15,23 @@ const supported = new Set([
   "check_run",
   "repository",
 ]);
+
 export const Route = createFileRoute("/api/github/webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const body = await request.text(),
-          signature = request.headers.get("x-hub-signature-256") ?? "",
-          delivery = request.headers.get("x-github-delivery") ?? "",
-          event = request.headers.get("x-github-event") ?? "";
+        const contentLength = Number(request.headers.get("content-length") ?? "0");
+        if (contentLength > 2 * 1024 * 1024) {
+          return Response.json({ error: "Webhook payload too large" }, { status: 413 });
+        }
+
+        const body = await request.text();
+        const signature = request.headers.get("x-hub-signature-256") ?? "";
+        const delivery = request.headers.get("x-github-delivery") ?? "";
+        const event = request.headers.get("x-github-event") ?? "";
+        if (body.length > 2 * 1024 * 1024) {
+          return Response.json({ error: "Webhook payload too large" }, { status: 413 });
+        }
         if (
           !delivery ||
           !(await verifyGitHubWebhook({
@@ -29,69 +39,32 @@ export const Route = createFileRoute("/api/github/webhook")({
             signature,
             body,
           }))
-        )
+        ) {
           return Response.json({ error: "Invalid webhook signature" }, { status: 401 });
-        let payload: any;
+        }
+
+        let payload: unknown;
         try {
           payload = JSON.parse(body);
         } catch {
           return Response.json({ error: "Invalid JSON" }, { status: 400 });
         }
-        const installationId = payload.installation?.id ?? null,
-          repositoryId = payload.repository?.id ?? null;
-        const inserted = await (supabaseAdmin as any)
-          .from("github_webhook_deliveries")
-          .insert({
-            delivery_id: delivery,
-            event,
-            installation_id: installationId,
-            repository_id: repositoryId,
-            action: payload.action,
-            status: supported.has(event) ? "received" : "ignored",
-            signature_valid: true,
-          })
-          .select("delivery_id")
-          .single();
-        if (inserted.error) return Response.json({ error: "Duplicate delivery" }, { status: 409 });
+
         try {
-          if (event === "installation" && payload.action === "deleted")
-            await (supabaseAdmin as any)
-              .from("github_installations")
-              .delete()
-              .eq("id", installationId);
-          if (
-            event === "repository" &&
-            ["deleted", "archived", "transferred"].includes(payload.action)
-          ) {
-            let revoke = (supabaseAdmin as any)
-              .from("github_repositories")
-              .update({ explicitly_granted: false, revoked_at: new Date().toISOString() })
-              .eq("id", repositoryId);
-            if (installationId) revoke = revoke.eq("installation_id", installationId);
-            await revoke;
-          }
-          if (repositoryId) {
-            let touched = (supabaseAdmin as any)
-              .from("github_repositories")
-              .update({ last_webhook_at: new Date().toISOString() })
-              .eq("id", repositoryId);
-            if (installationId) touched = touched.eq("installation_id", installationId);
-            await touched;
-          }
-          await (supabaseAdmin as any)
-            .from("github_webhook_deliveries")
-            .update({
-              status: supported.has(event) ? "processed" : "ignored",
-              processed_at: new Date().toISOString(),
-            })
-            .eq("delivery_id", delivery);
-          return Response.json({ accepted: true });
-        } catch {
-          await (supabaseAdmin as any)
-            .from("github_webhook_deliveries")
-            .update({ status: "failed", redacted_error: { code: "processing_failed" } })
-            .eq("delivery_id", delivery);
-          return Response.json({ error: "Webhook processing failed" }, { status: 500 });
+          const result = await processGitHubDelivery({
+            supabase: supabaseAdmin,
+            delivery,
+            event,
+            payload,
+            supported,
+          });
+          return Response.json({ accepted: true, duplicate: result.duplicate });
+        } catch (error) {
+          console.error("GitHub webhook processing failed", error);
+          const status = error instanceof WebhookProcessingError ? error.status : 500;
+          const code =
+            error instanceof WebhookProcessingError ? error.code : "github_processing_failed";
+          return Response.json({ error: code }, { status });
         }
       },
     },

@@ -1,30 +1,57 @@
-# Agent worker operations
+# Agent runtime status
 
-The Helios worker is one runtime for browser and agent-team jobs. Queue leasing is atomic, bounded, retryable, and recovered after lease expiry. Its service-role credential must be injected only into the worker.
+KovaGPT does not currently provide browser or agent-team execution. The historical schemas and
+records remain available for owner-scoped viewing, cancellation, denial, and cleanup, but new jobs
+are rejected and no job can be leased.
 
-## Local development
+This is deliberate fail-closed behavior. The previous entry points used incompatible queues and
+did not provide one end-to-end contract from user request through plan execution, approvals,
+evidence, polling, and results.
+
+## Event schema compatibility
+
+Constellation and Helios use separate event tables:
+
+- `agent_run_events(run_id, kind, safe_payload)` remains unchanged.
+- `agent_job_events(job_id, event_type, payload)` stores historical Helios job events.
+
+The compatibility migration creates the second table without renaming, copying, updating,
+truncating, or deleting existing event rows.
+
+## Fail-closed controls
+
+- The browser-run API returns `browser_agent_unavailable` with HTTP 503.
+- The Work and Agent workspace interfaces show execution as unavailable.
+- New `agent_jobs` inserts are rejected for authenticated and service-role callers.
+- `lease_agent_job` returns no rows.
+- Historical active jobs can be cancelled; paused jobs cannot be resumed.
+- Pending approvals can be denied but cannot be approved into an unavailable runtime.
+- `workers/browser-agent.mjs` and `workers/agent-team-worker.mjs` exit immediately.
+
+## Diagnostic process
+
+`worker/src/index.mjs` is a diagnostic process, not an execution worker. It exposes:
+
+- `/healthz`: HTTP 200 while the process is alive.
+- `/readyz`: HTTP 503 with `execution_enabled: false`.
+
+No Supabase service-role or AI-provider credential should be injected into this process.
 
 ```bash
-npm ci --no-audit --no-fund
-npx supabase start
-npm run db:migrate
-npm run dev
 npm run worker:dev
-curl --fail http://localhost:8788/readyz
+curl --fail http://localhost:8788/healthz
+curl --fail-with-body http://localhost:8788/readyz # expected HTTP 503
 ```
 
-Set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and an `AI_PROVIDER_URL` plus `AI_PROVIDER_API_KEY`. Install Chromium with `npx playwright install --with-deps chromium` when not using Docker.
+The Compose health check intentionally uses `/readyz`, so the disabled runtime cannot be mistaken
+for an execution-ready deployment.
 
-## Container deployment
+## Read-only smoke check
 
-```bash
-docker compose -f docker-compose.agent.yml build agent-worker
-docker compose -f docker-compose.agent.yml up -d agent-worker
-docker compose -f docker-compose.agent.yml exec agent-worker node worker/scripts/health-check.mjs
-```
+Set `AGENT_WORKER_URL`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY`, then run
+`npm run worker:smoke`. It verifies the fail-closed readiness response and both event schemas. It
+does not enqueue a job, call an AI provider, create a user, or modify data.
 
-The image supplies Playwright Chromium and runs as `pwuser`. Configure concurrency, polling, lease duration, identity, memory, and temporary storage with the environment and Compose limits. Kubernetes or other schedulers should probe `/healthz` for liveness and `/readyz` for readiness, send `SIGTERM`, and provide a writable ephemeral `/tmp/kova-agent`.
-
-## Smoke test
-
-With local Supabase and the worker running, set `WORKER_SMOKE_EMAIL` and `WORKER_SMOKE_PASSWORD`, then run `npm run worker:smoke`. It uses only `https://example.com/`, validates the stored screenshot hash and textual result, removes evidence, and verifies a second paused run can be cancelled.
+Browser or team execution must remain unavailable until one runtime has executable tests proving
+queue creation, ownership, bounded inputs and outputs, redirect/network policy, approval
+consumption, evidence storage, cancellation, retry semantics, and truthful client polling.

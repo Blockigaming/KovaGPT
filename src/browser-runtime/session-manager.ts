@@ -3,11 +3,13 @@ import { rm } from "node:fs/promises";
 import { chromium, firefox, webkit } from "playwright";
 import { audit } from "./audit";
 import { runtimeError } from "./errors";
+import { authorizeNavigationRequest } from "./permissions";
 import type {
   AuditSink,
   BrowserEngine,
   CreateSessionOptions,
   EngineProvider,
+  PermissionPolicy,
   RuntimeSession,
 } from "./types";
 import { BrowserArtifactStore } from "./artifacts";
@@ -51,6 +53,19 @@ export class BrowserSessionManager {
         acceptDownloads: false,
         serviceWorkers: "block",
       });
+      const permissions = freezePermissions(options.permissions);
+      await context.route("**/*", async (route) => {
+        const request = route.request();
+        if (request.isNavigationRequest() && request.resourceType() === "document") {
+          try {
+            await authorizeNavigationRequest(permissions, request.url());
+          } catch {
+            await route.abort("blockedbyclient");
+            return;
+          }
+        }
+        await route.continue();
+      });
       const session: RuntimeSession = {
         descriptor: {
           id,
@@ -63,10 +78,7 @@ export class BrowserSessionManager {
           expiresAt: new Date(now + (options.lifetimeMs ?? DEFAULT_LIFETIME_MS)).toISOString(),
           idleTimeoutMs: options.idleTimeoutMs ?? DEFAULT_IDLE_MS,
           lastUsedAt: new Date(now).toISOString(),
-          permissions: Object.freeze({
-            ...options.permissions,
-            grants: [...options.permissions.grants],
-          }),
+          permissions,
         },
         browser,
         context,
@@ -102,10 +114,13 @@ export class BrowserSessionManager {
     if (session.closing) return session.closing;
     session.closing = (async () => {
       this.#sessions.delete(sessionId);
-      await audit(this.auditSink, session, "session.closed", "success", { reason });
-      await Promise.allSettled([session.context.close(), session.browser.close()]);
-      await this.artifacts.removeSession(sessionId);
-      await rm(session.storagePath, { recursive: true, force: true });
+      try {
+        await audit(this.auditSink, session, "session.closed", "success", { reason });
+      } finally {
+        await Promise.allSettled([session.context.close(), session.browser.close()]);
+        await this.artifacts.removeSession(sessionId);
+        await rm(session.storagePath, { recursive: true, force: true });
+      }
     })();
     return session.closing;
   }
@@ -135,4 +150,13 @@ export class BrowserSessionManager {
       now - Date.parse(session.descriptor.lastUsedAt) >= session.descriptor.idleTimeoutMs
     );
   }
+}
+
+function freezePermissions(policy: PermissionPolicy): Readonly<PermissionPolicy> {
+  return Object.freeze({
+    ...policy,
+    grants: Object.freeze([...policy.grants]),
+    allowedOrigins: policy.allowedOrigins ? Object.freeze([...policy.allowedOrigins]) : undefined,
+    deniedOrigins: policy.deniedOrigins ? Object.freeze([...policy.deniedOrigins]) : undefined,
+  });
 }
