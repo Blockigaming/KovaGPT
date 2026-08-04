@@ -1803,7 +1803,6 @@ body {
     padding-bottom: 0;
   }
 
-
   .kova-composer-leading {
     padding-left: var(--composer-inset);
   }
@@ -2039,7 +2038,6 @@ body {
     margin-bottom: 0;
   }
 
-
   .kova-secondary-page :is(input, textarea, select),
   .kova-settings-dialog :is(input, textarea, select),
   .kova-auth-surface :is(input, textarea, select) {
@@ -2230,8 +2228,7 @@ body {
   color-scheme: dark;
   --parity-focus: color-mix(in oklab, #ffffff 72%, transparent);
   --parity-scrim: rgb(0 0 0 / 64%);
-  --parity-shadow-menu:
-    0 12px 36px rgb(0 0 0 / 42%), 0 1px 2px rgb(0 0 0 / 36%);
+  --parity-shadow-menu: 0 12px 36px rgb(0 0 0 / 42%), 0 1px 2px rgb(0 0 0 / 36%);
   --parity-shadow-dialog: 0 24px 72px rgb(0 0 0 / 52%);
 
   --background: #212121;
@@ -2587,19 +2584,11 @@ body :where(button, input, textarea, select) {
 }
 
 .kova-composer:hover {
-  border-color: color-mix(
-    in oklab,
-    var(--foreground) 13%,
-    transparent
-  ) !important;
+  border-color: color-mix(in oklab, var(--foreground) 13%, transparent) !important;
 }
 
 .kova-composer:focus-within {
-  border-color: color-mix(
-    in oklab,
-    var(--foreground) 28%,
-    transparent
-  ) !important;
+  border-color: color-mix(in oklab, var(--foreground) 28%, transparent) !important;
   outline: 2px solid color-mix(in oklab, var(--parity-focus) 54%, transparent) !important;
   outline-offset: 2px !important;
   box-shadow: none !important;
@@ -2986,7 +2975,8 @@ button[aria-label="Stop dictation"] {
   backdrop-filter: none;
 }
 
-.kova-command-palette {
+.kova-command-palette,
+[data-kova-shell-overlay] {
   padding-top: max(12vh, calc(var(--safe-top) + 12px));
   padding-inline: max(12px, var(--safe-left), var(--safe-right));
 }
@@ -3034,11 +3024,7 @@ button[aria-label="Stop dictation"] {
 }
 
 .kova-model-menu.kova-model-menu,
-:where(
-  [role="menu"],
-  [role="listbox"],
-  [data-radix-popper-content-wrapper] > div
-) {
+:where([role="menu"], [role="listbox"], [data-radix-popper-content-wrapper] > div) {
   border: 1px solid var(--border);
   border-radius: var(--parity-radius-md) !important;
   background: var(--popover);
@@ -3218,7 +3204,7 @@ button[aria-label="Stop dictation"] {
 }
 
 @media (min-width: 768px) {
-  .kova-settings-surface.kova-settings-surface {
+  .kova-settings-dialog.kova-settings-dialog {
     width: min(92vw, 896px) !important;
     max-width: 896px !important;
   }
@@ -3321,8 +3307,7 @@ button[aria-label="Stop dictation"] {
 
 .kova-images-composer:focus-within {
   border-color: color-mix(in oklab, var(--foreground) 28%, transparent);
-  box-shadow: 0 0 0 2px
-    color-mix(in oklab, var(--parity-focus) 24%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--parity-focus) 24%, transparent);
 }
 
 /* Loading, error, and offline/recovery surfaces */
@@ -3338,8 +3323,7 @@ button[aria-label="Stop dictation"] {
   background-size: 220% 100%;
 }
 
-:where(.kova-chat-main, .kova-secondary-page, .kova-images-main)
-  [role="alert"] {
+:where(.kova-chat-main, .kova-secondary-page, .kova-images-main) [role="alert"] {
   border: 1px solid color-mix(in oklab, var(--destructive) 35%, var(--border));
   border-radius: var(--parity-radius-md);
   background: color-mix(in oklab, var(--destructive) 7%, var(--background));
@@ -3347,27 +3331,13 @@ button[aria-label="Stop dictation"] {
 }
 
 /* Keyboard focus is visible without introducing bright rings on pointer use. */
-:where(
-  a,
-  button,
-  input,
-  textarea,
-  select,
-  [role="button"],
-  [tabindex]
-):focus-visible {
+:where(a, button, input, textarea, select, [role="button"], [tabindex]):focus-visible {
   outline: 2px solid var(--parity-focus) !important;
   outline-offset: 2px !important;
   box-shadow: none !important;
 }
 
-:where(
-    [role="menu"],
-    [role="listbox"],
-    [role="dialog"],
-    .kova-model-menu,
-    .kova-glass
-  )
+:where([role="menu"], [role="listbox"], [role="dialog"], .kova-model-menu, .kova-glass)
   :where(button, [role="menuitem"], [role="option"]):focus-visible,
 :where([role="menuitem"], [role="option"]):focus-visible {
   outline: none !important;
@@ -3376,17 +3346,13 @@ button[aria-label="Stop dictation"] {
 }
 
 :where(
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
-      [type="button"]
-    ):not([type="submit"]),
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not(
+      [type="submit"]
+    ),
   textarea,
   select
 ):focus-visible {
-  border-color: color-mix(
-    in oklab,
-    var(--foreground) 32%,
-    transparent
-  ) !important;
+  border-color: color-mix(in oklab, var(--foreground) 32%, transparent) !important;
   outline: 2px solid color-mix(in oklab, var(--parity-focus) 54%, transparent) !important;
   outline-offset: 1px !important;
   box-shadow: none !important;
@@ -3493,7 +3459,8 @@ button[aria-label="Stop dictation"] {
     padding-bottom: max(24px, var(--safe-bottom)) !important;
   }
 
-  .kova-command-palette {
+  .kova-command-palette,
+  [data-kova-shell-overlay] {
     align-items: flex-start;
     padding-top: max(8px, var(--safe-top));
   }
@@ -3650,15 +3617,7 @@ button[aria-label="Stop dictation"] {
     border: 1px solid CanvasText !important;
   }
 
-  :where(
-    a,
-    button,
-    input,
-    textarea,
-    select,
-    [role="button"],
-    [tabindex]
-  ):focus-visible {
+  :where(a, button, input, textarea, select, [role="button"], [tabindex]):focus-visible {
     outline: 2px solid Highlight !important;
   }
 }
