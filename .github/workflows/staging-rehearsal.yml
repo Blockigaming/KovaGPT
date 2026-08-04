@@ -13,7 +13,7 @@ jobs:
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run release:db:isolated
-      - run: npm run release:validate && npm run typecheck && npm run lint && npm run build
+      - run: npm run build && npm run release:validate && npm run typecheck && npm run lint
       - run: npm run test:unit && npm run test:integration && npm run test:api && npm run test:a11y && npm run test:visual && npm run test:browser
       - name: Deploy approved staging commit
         run: npx wrangler deploy
@@ -37,6 +37,7 @@ jobs:
           KOVA_STAGING_DISPOSABLE: "1"
           KOVA_STAGING_ACCESS_TOKEN: "${{ secrets.STAGING_ACCESS_TOKEN }}"
           KOVA_STAGING_SECONDARY_TOKEN: "${{ secrets.STAGING_SECONDARY_TOKEN }}"
+          KOVA_STAGING_ADMIN_TOKEN: "${{ secrets.STAGING_ADMIN_TOKEN }}"
           SUPABASE_URL: "${{ secrets.STAGING_SUPABASE_URL }}"
           SUPABASE_PUBLISHABLE_KEY: "${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY }}"
       - run: PLAYWRIGHT_BASE_URL=${{ vars.STAGING_BASE_URL }} npm run test:e2e -- --reporter=line
@@ -54,7 +55,7 @@ jobs:
           KOVA_GATE_UNAUTHENTICATED_SMOKE: passed
           KOVA_GATE_AUTHENTICATED_CRUD: passed
           KOVA_GATE_OWNER_ISOLATION: passed
-          KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS: passed
+          KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS: "${{ env.KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS }}"
           KOVA_GATE_STAGING_E2E: passed
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:

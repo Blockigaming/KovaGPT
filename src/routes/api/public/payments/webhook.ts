@@ -58,6 +58,21 @@ export function billingOutcome(type: string): string {
   return "observed";
 }
 
+function throwIfMutationError(result: { error: unknown }, operation: string) {
+  if (result.error) throw new Error(operation);
+}
+
+function stripeOrderingFields(eventCreated?: number, eventId?: string) {
+  return {
+    last_stripe_event_created_at: eventCreated ? new Date(eventCreated * 1000).toISOString() : null,
+    last_stripe_event_id: eventId ?? null,
+  };
+}
+
+function stripeOrderingPredicate(eventCreated?: number) {
+  return `last_stripe_event_created_at.is.null,last_stripe_event_created_at.lte.${eventCreated ? new Date(eventCreated * 1000).toISOString() : new Date().toISOString()}`;
+}
+
 function priceIdFrom(item: StripeLineItemLike | undefined): string | undefined {
   const candidates = [
     item?.price?.lookup_key,
@@ -90,7 +105,7 @@ async function handleSubscriptionCreated(
     .maybeSingle();
   if (!isStripeEventCurrent(eventCreated, existing?.last_stripe_event_created_at)) return;
 
-  await getSupabase()
+  const result = await getSupabase()
     .from("subscriptions")
     .upsert(
       {
@@ -104,13 +119,11 @@ async function handleSubscriptionCreated(
         current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
         environment: env,
         updated_at: new Date().toISOString(),
-        last_stripe_event_created_at: eventCreated
-          ? new Date(eventCreated * 1000).toISOString()
-          : null,
-        last_stripe_event_id: eventId ?? null,
+        ...stripeOrderingFields(eventCreated, eventId),
       },
       { onConflict: "stripe_subscription_id" },
     );
+  throwIfMutationError(result, "stripe_subscription_upsert_failed");
 }
 
 export function isStripeEventCurrent(
@@ -131,7 +144,7 @@ async function handleSubscriptionUpdated(
   const periodStart = item?.current_period_start ?? subscription.current_period_start;
   const periodEnd = item?.current_period_end ?? subscription.current_period_end;
 
-  await getSupabase()
+  const result = await getSupabase()
     .from("subscriptions")
     .update({
       status: subscription.status ?? "unknown",
@@ -141,16 +154,12 @@ async function handleSubscriptionUpdated(
       current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
       cancel_at_period_end: subscription.cancel_at_period_end || false,
       updated_at: new Date().toISOString(),
-      last_stripe_event_created_at: eventCreated
-        ? new Date(eventCreated * 1000).toISOString()
-        : null,
-      last_stripe_event_id: eventId ?? null,
+      ...stripeOrderingFields(eventCreated, eventId),
     })
     .eq("stripe_subscription_id", subscription.id)
     .eq("environment", env)
-    .or(
-      `last_stripe_event_created_at.is.null,last_stripe_event_created_at.lte.${eventCreated ? new Date(eventCreated * 1000).toISOString() : new Date().toISOString()}`,
-    );
+    .or(stripeOrderingPredicate(eventCreated));
+  throwIfMutationError(result, "stripe_subscription_update_failed");
 }
 
 async function handleSubscriptionDeleted(
@@ -159,21 +168,17 @@ async function handleSubscriptionDeleted(
   eventCreated?: number,
   eventId?: string,
 ) {
-  await getSupabase()
+  const result = await getSupabase()
     .from("subscriptions")
     .update({
       status: "canceled",
       updated_at: new Date().toISOString(),
-      last_stripe_event_created_at: eventCreated
-        ? new Date(eventCreated * 1000).toISOString()
-        : null,
-      last_stripe_event_id: eventId ?? null,
+      ...stripeOrderingFields(eventCreated, eventId),
     })
     .eq("stripe_subscription_id", subscription.id)
     .eq("environment", env)
-    .or(
-      `last_stripe_event_created_at.is.null,last_stripe_event_created_at.lte.${eventCreated ? new Date(eventCreated * 1000).toISOString() : new Date().toISOString()}`,
-    );
+    .or(stripeOrderingPredicate(eventCreated));
+  throwIfMutationError(result, "stripe_subscription_delete_failed");
 }
 
 export async function handleWebhook(
@@ -267,14 +272,17 @@ export async function handleWebhook(
               : event.type === "invoice.payment_action_required"
                 ? "incomplete"
                 : "past_due";
-          await getSupabase()
+          const result = await getSupabase()
             .from("subscriptions")
-            .update({ status, updated_at: new Date().toISOString() })
+            .update({
+              status,
+              updated_at: new Date().toISOString(),
+              ...stripeOrderingFields(eventCreated, eventId),
+            })
             .eq("stripe_subscription_id", invoice.subscription)
             .eq("environment", env)
-            .or(
-              `last_stripe_event_created_at.is.null,last_stripe_event_created_at.lte.${eventCreated ? new Date(eventCreated * 1000).toISOString() : new Date().toISOString()}`,
-            );
+            .or(stripeOrderingPredicate(eventCreated));
+          throwIfMutationError(result, "stripe_invoice_subscription_update_failed");
         }
         break;
       }

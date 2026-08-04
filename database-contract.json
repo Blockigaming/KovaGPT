@@ -1,6 +1,10 @@
 {
   "schemaVersion": 1,
+
+  "marker": "20260803123000-v1",
+
   "marker": "20260803120000-v1",
+
   "migrationCount": 63,
   "tables": [
     "account_audit_entries",
@@ -159,6 +163,9 @@
     "set_feedback_submission_updated_at",
     "settle_interrupted_agent_job",
     "settle_interrupted_agent_job",
+
+    "submit_operational_events",
+
     "touch_updated_at",
     "try_add_storage_bytes",
     "try_increment_daily_usage",
@@ -293,7 +300,6 @@
     "Owners delete response feedback",
     "Owners delete writing versions",
     "Owners insert agent versions",
-    "Owners insert operational events",
     "Owners insert response feedback",
     "Owners insert writing versions",
     "Owners manage agent definitions",
@@ -675,7 +681,9 @@
     "all on public.processed_stripe_events to service_role",
     "all on public.project_file_chunks to service_role",
     "all on public.subscriptions to service_role",
+
     "execute on function public.acquire_ai_generation(text,text,uuid,text,uuid,text,text,boolean,text,bigint,bigint,numeric,boolean,bigint,bigint,integer,integer,integer,integer,integer,timestamptz,timestamptz) to service_role",
+
     "execute on function public.complete_agent_job(uuid, text, jsonb) to service_role",
     "execute on function public.complete_agent_job(uuid,text,jsonb) to service_role",
     "execute on function public.consume_diagnostic_rate_limit(text, text, integer, integer) to service_role",
@@ -703,6 +711,7 @@
     "execute on function public.save_writing_document(uuid,text,text,integer,text) to authenticated",
     "execute on function public.settle_interrupted_agent_job(uuid, text) to service_role",
     "execute on function public.settle_interrupted_agent_job(uuid,text) to service_role",
+    "execute on function public.submit_operational_events(jsonb) to authenticated",
     "execute on function public.update_agent_definition(uuid,integer,text,text,uuid,text[],boolean,text) to authenticated",
     "explicitly so edge functions can reach the table via PostgREST.\nGRANT ALL ON public.email_send_log TO service_role",
     "explicitly so edge functions can reach the table via PostgREST.\nGRANT ALL ON public.email_send_log TO service_role",
@@ -712,7 +721,7 @@
     "select on public.project_file_chunks to authenticated",
     "select on public.subscriptions to authenticated",
     "select, insert, update, delete on public.feedback_submissions to authenticated",
-    "select,insert,delete on public.operational_events to authenticated",
+    "select,delete on public.operational_events to authenticated",
     "select,insert,update,delete on public.agent_definitions, public.agent_definition_versions to authenticated",
     "select,insert,update,delete on public.knowledge_relationships to authenticated",
     "select,insert,update,delete on public.writing_documents, public.writing_document_versions to authenticated"
@@ -753,7 +762,9 @@
     "EXECUTE from public/anon/authenticated.\n-- All of these functions are only invoked by server-side code running as service_role\n-- (email queue dispatch/wake via net.http_post + cron, usage/storage/subscription\n-- checks from createServerFn handlers). They must not be callable directly by\n-- signed-out or signed-in users via the Data API.\n\nREVOKE EXECUTE ON FUNCTION public.read_email_batch(text, integer, integer) FROM PUBLIC, anon, authenticated",
     "SELECT ON public.feature_flags FROM anon",
     "SELECT ON public.google_oauth_tokens FROM authenticated",
+
     "all on function public.acquire_ai_generation(text,text,uuid,text,uuid,text,text,boolean,text,bigint,bigint,numeric,boolean,bigint,bigint,integer,integer,integer,integer,integer,timestamptz,timestamptz) from public,anon,authenticated",
+
     "all on function public.complete_agent_job(uuid, text, jsonb)\n  from public, anon, authenticated",
     "all on function public.complete_agent_job(uuid,text,jsonb) from public, anon, authenticated",
     "all on function public.consume_diagnostic_rate_limit(text, text, integer, integer) from public, anon, authenticated",
@@ -763,7 +774,9 @@
     "all on function public.decide_agent_approval(uuid,text,jsonb) from public, anon",
     "all on function public.fail_agent_job(uuid, text, text)\n  from public, anon, authenticated",
     "all on function public.fail_agent_job(uuid,text,text) from public, anon, authenticated",
+
     "all on function public.finalize_ai_generation(uuid,text,bigint,bigint,bigint,bigint,numeric,integer,jsonb,text) from public,anon,authenticated",
+
     "all on function public.heartbeat_agent_job(uuid, text, integer)\n  from public, anon, authenticated",
     "all on function public.heartbeat_agent_job(uuid,text,integer) from public, anon, authenticated",
     "all on function public.lease_agent_job(text, integer)\n  from public, anon, authenticated",
@@ -775,6 +788,7 @@
     "all on function public.release_agent_lease(uuid,text) from public, anon, authenticated",
     "all on function public.settle_interrupted_agent_job(uuid, text)\n  from public, anon, authenticated",
     "all on function public.settle_interrupted_agent_job(uuid,text) from public, anon, authenticated",
+    "all on function public.submit_operational_events(jsonb) from public, anon",
     "all on function public.update_agent_definition(uuid,integer,text,text,uuid,text[],boolean,text) from public, anon",
     "all on public.agent_definitions, public.agent_definition_versions from anon",
     "all on public.ai_usage_events from public,anon,authenticated",
@@ -790,5 +804,9 @@
     "execute on function public.has_active_subscription(uuid, text) from public, anon, authenticated",
     "execute on function public.kovagpt_schema_health() from public,anon,authenticated"
   ],
+
+  "sha256": "f801d6580dcbc97e2371592c7f4cee95b94038efea7d73716c5565a3586aeb39"
+
   "sha256": "741abb3603f5f05d7855e80cff4c18ecd6288d5a3f5466e4c1f9d029896e87e0"
+
 }
