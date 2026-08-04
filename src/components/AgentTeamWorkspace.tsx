@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Bot, Check, Circle, Loader2, Pause, Play, RotateCcw, Square, Users } from "lucide-react";
+import { Bot, Check, Circle, Loader2, Play, Square, Users } from "lucide-react";
 import { authFetch } from "@/lib/auth-fetch";
 import { useTier } from "@/hooks/useTier";
 import { AGENT_WORKFLOW_TEMPLATES, type AgentRole, type AgentTaskInput } from "@/agents/team";
@@ -43,6 +43,8 @@ const ROLE_LABELS: Record<AgentRole, string> = {
   review: "Review",
 };
 const CONTEXT = ["Projects", "Memory", "Files", "Context Packs", "Research", "Apps", "Library"];
+const EXECUTION_DISABLED_MESSAGE =
+  "Agent team execution is temporarily unavailable. Existing team history remains readable, but new teams cannot be queued until the runtime is restored.";
 
 export function AgentTeamWorkspace() {
   const navigate = useNavigate();
@@ -169,8 +171,8 @@ export function AgentTeamWorkspace() {
             Direct an agent team
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Assign a dependency graph to specialists. Every timeline event and output comes from the
-            server execution service.
+            Assign a dependency graph to specialists. Historical timeline events and outputs are
+            shown from stored server records while execution is disabled.
           </p>
         </div>
         <span className="rounded-full border px-2 py-1 text-xs">Apollo</span>
@@ -188,11 +190,18 @@ export function AgentTeamWorkspace() {
         </div>
       ) : (
         <>
+          <div
+            className="mt-5 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive"
+            role="status"
+          >
+            {EXECUTION_DISABLED_MESSAGE}
+          </div>
           <div className="mt-5 overflow-x-auto">
             <div className="flex min-w-max gap-2" role="list" aria-label="Agent workflow templates">
               {AGENT_WORKFLOW_TEMPLATES.map((item) => (
                 <button
                   key={item.id}
+                  disabled={busy}
                   onClick={() => chooseTemplate(item.id)}
                   className={`w-44 rounded-xl border p-3 text-left ${item.id === templateId ? "bg-accent" : ""}`}
                 >
@@ -207,6 +216,7 @@ export function AgentTeamWorkspace() {
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <textarea
               value={objective}
+              disabled={busy}
               onChange={(event) => setObjective(event.target.value)}
               aria-label="Agent team objective"
               className="min-h-24 rounded-xl border bg-background p-3 sm:col-span-2"
@@ -214,6 +224,7 @@ export function AgentTeamWorkspace() {
             />
             <input
               value={projectId}
+              disabled={busy}
               onChange={(event) => setProjectId(event.target.value)}
               aria-label="Project ID"
               className="h-10 rounded-lg border bg-background px-3"
@@ -228,6 +239,7 @@ export function AgentTeamWorkspace() {
                   <input
                     type="checkbox"
                     checked={context.includes(item)}
+                    disabled={busy}
                     onChange={() =>
                       setContext((all) =>
                         all.includes(item) ? all.filter((value) => value !== item) : [...all, item],
@@ -243,6 +255,7 @@ export function AgentTeamWorkspace() {
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-medium">Task graph</h3>
               <button
+                disabled
                 onClick={() =>
                   setTasks((all) => [
                     ...all,
@@ -265,6 +278,7 @@ export function AgentTeamWorkspace() {
                 <li key={item.key} className="rounded-xl border p-3">
                   <div className="flex gap-2">
                     <select
+                      disabled={busy}
                       aria-label={`Role for ${item.title}`}
                       value={item.role}
                       onChange={(event) =>
@@ -285,6 +299,7 @@ export function AgentTeamWorkspace() {
                       ))}
                     </select>
                     <input
+                      disabled={busy}
                       aria-label={`Title for task ${index + 1}`}
                       value={item.title}
                       onChange={(event) =>
@@ -303,6 +318,7 @@ export function AgentTeamWorkspace() {
                       className="h-9 min-w-0 flex-1 rounded-lg border bg-background px-2 text-sm"
                     />
                     <button
+                      disabled={busy}
                       aria-label={`Remove ${item.title}`}
                       onClick={() =>
                         setTasks((all) =>
@@ -327,6 +343,7 @@ export function AgentTeamWorkspace() {
                         : "Starts immediately"}
                     </span>
                     <select
+                      disabled={busy}
                       aria-label={`Add dependency for ${item.title}`}
                       value=""
                       onChange={(event) => {
@@ -357,6 +374,7 @@ export function AgentTeamWorkspace() {
                     </select>
                     {item.dependencies.map((dependency) => (
                       <button
+                        disabled={busy}
                         key={dependency}
                         onClick={() =>
                           setTasks((all) =>
@@ -381,6 +399,7 @@ export function AgentTeamWorkspace() {
                   </div>
                   <label className="mt-2 flex items-center gap-2 text-xs">
                     <input
+                      disabled={busy}
                       type="checkbox"
                       checked={item.checkpoint ?? false}
                       onChange={() =>
@@ -399,17 +418,15 @@ export function AgentTeamWorkspace() {
           </div>
           <div className="mt-4 flex items-center gap-3">
             <button
-              disabled={busy || !objective.trim() || !tasks.length}
+              disabled
               onClick={create}
               className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-foreground px-4 text-sm text-background disabled:opacity-50"
             >
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-              Launch {tasks.length} specialists
+              Agent teams unavailable
             </button>
             <p className="text-xs text-muted-foreground">
-              {tier === "plus"
-                ? "Sequential execution"
-                : "Parallel execution for independent tasks"}
+              New specialist teams are disabled until runtime support is restored.
             </p>
           </div>
         </>
@@ -430,28 +447,6 @@ export function AgentTeamWorkspace() {
               </p>
             </div>
             <div className="flex gap-1">
-              <button
-                disabled={busy}
-                onClick={() =>
-                  control(activeRun.id, activeRun.status === "paused" ? "resume" : "pause")
-                }
-                className="inline-flex min-h-10 items-center gap-1 rounded-lg border px-3 text-xs"
-              >
-                {activeRun.status === "paused" ? (
-                  <Play className="h-3 w-3" />
-                ) : (
-                  <Pause className="h-3 w-3" />
-                )}
-                {activeRun.status === "paused" ? "Resume" : "Pause"}
-              </button>
-              <button
-                disabled={busy}
-                onClick={() => control(activeRun.id, "retry")}
-                className="inline-flex min-h-10 items-center gap-1 rounded-lg border px-3 text-xs"
-              >
-                <RotateCcw className="h-3 w-3" />
-                Retry failed
-              </button>
               <button
                 disabled={busy}
                 onClick={() => control(activeRun.id, "cancel")}
@@ -535,10 +530,10 @@ export function AgentTeamWorkspace() {
                     {item.status === "approval_needed" && (
                       <div className="mt-3 flex gap-2">
                         <button
-                          onClick={() => control(activeRun.id, "approve", item.id)}
-                          className="min-h-10 rounded-lg bg-foreground px-3 text-xs text-background"
+                          disabled
+                          className="min-h-10 rounded-lg bg-foreground px-3 text-xs text-background disabled:opacity-50"
                         >
-                          Approve checkpoint
+                          Approval disabled
                         </button>
                         <button
                           onClick={() => control(activeRun.id, "deny", item.id)}

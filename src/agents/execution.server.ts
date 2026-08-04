@@ -2,12 +2,9 @@ import type { AuthedCaller } from "@/lib/api-auth.server";
 import { BILLING_ENV, tierForLookupKey } from "@/lib/billing-plans";
 import { createClient } from "@supabase/supabase-js";
 
-import type { BrowserAction } from "./policy";
-
 import { resolveAgentEntitlement } from "./entitlement-policy.mjs";
 import type { BrowserAction, BrowserPolicy } from "./policy";
 import { validateBrowserAction } from "./policy";
-
 
 export type AgentEntitlement = "plus" | "pro" | "business" | "enterprise";
 export const AGENT_LIMITS: Record<
