@@ -126,7 +126,7 @@ test("model selectors only advertise backed intelligence modes", () => {
     chat,
     /kovaVersion|KOVA_VERSION|IS_LEGACY_KOVA|previous-generation model|Math\.random\(\) \* 4000/,
   );
-  assert.match(chat, /if \(m\.reasoning\)/);
+  assert.match(chat, /if \(m\.reasoning && routedRoleSupportsReasoning\)/);
   assert.equal(existsSync("src/lib/kova-version.ts"), false);
 });
 

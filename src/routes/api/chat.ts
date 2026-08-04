@@ -1071,9 +1071,14 @@ export const Route = createFileRoute("/api/chat")({
             if (routeDecision.maxOutputTokens > 0) {
               body.max_completion_tokens = routeDecision.maxOutputTokens;
             }
-            // Only enable reasoning when the user explicitly chose a backed
-            // reasoning mode. Every visible selector option maps to this real behavior.
-            if (m.reasoning) {
+            const routedRoleSupportsReasoning =
+              routeDecision.role === "ADVANCED_REASONING" ||
+              routeDecision.role === "PREMIUM_REASONING";
+            // Only enable reasoning when the visible mode requested it and the
+            // router actually selected a reasoning role. Free-tier thinking
+            // requests are downgraded to DEFAULT_CHAT, whose OpenAI catalog
+            // models reject the Responses reasoning option.
+            if (m.reasoning && routedRoleSupportsReasoning) {
               body.reasoning = { effort: m.reasoning };
             }
 
