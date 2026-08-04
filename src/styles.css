@@ -2343,8 +2343,17 @@ body :where(button, input, textarea, select) {
   min-height: 0;
   flex: 1 1 auto;
   flex-direction: column;
-  overflow: hidden;
   background: var(--background);
+}
+
+.kova-workspace-main {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.kova-chat-main,
+.kova-images-main {
+  overflow: hidden;
 }
 
 .kova-content-column,
