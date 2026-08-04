@@ -1164,7 +1164,6 @@ export const Route = createFileRoute("/api/chat")({
             if (
               m.reasoning &&
               m.id === "high" &&
-              !IS_LEGACY_KOVA &&
               supportsChatCompletionsReasoning(model)
             ) {
               body.reasoning = { effort: m.reasoning };

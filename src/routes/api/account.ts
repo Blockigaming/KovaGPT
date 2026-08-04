@@ -381,12 +381,6 @@ export const Route = createFileRoute("/api/account")({
             },
             { status: 202 },
           );
-
-          console.error("[account-delete] auth deletion failed", {
-            code: deleteError.code,
-          });
-          return jsonError("Account deletion failed. Your account remains active.", 500);
-
         }
         return new Response(null, {
           status: 204,
