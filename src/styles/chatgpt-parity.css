@@ -376,3 +376,58 @@ html :is(input, textarea, select):focus-visible {
   outline: none !important;
   box-shadow: none !important;
 }
+
+/* Complete application shell sizing and UI reconstruction layer */
+:root {
+  --parity-sidebar-expanded: 260px;
+  --parity-sidebar-collapsed: 64px;
+  --parity-topbar-height: 52px;
+  --parity-mobile-topbar-height: 50px;
+  --parity-conversation-max: 768px;
+  --parity-composer-min: 58px;
+}
+html, body, #root { min-height: 100%; overflow-x: clip; }
+body { font-size: 16px; background: var(--app-background); color: var(--text-primary); }
+svg:not([width]) { width: 18px; height: 18px; }
+.kova-icon-button,
+.kova-composer-button { min-width: 40px; min-height: 40px; }
+.kova-sidebar { width: var(--parity-sidebar-expanded); }
+.kova-sidebar [aria-hidden="true"] svg,
+.kova-sidebar svg { stroke-width: 1.75; }
+.kova-nav-row, .kova-chat-row { height: 38px !important; min-height: 38px !important; padding-inline: 10px !important; gap: 10px !important; border-radius: 8px !important; }
+.kova-chat-row { height: 36px !important; min-height: 36px !important; font-size: 14px !important; }
+.kova-collapsed-sidebar { width: var(--parity-sidebar-collapsed) !important; }
+.kova-collapsed-sidebar button,
+.kova-collapsed-sidebar a { width: 40px; height: 40px; border-radius: 8px; }
+.kova-main-scroll { min-width: 0; width: calc(100vw - var(--parity-sidebar-expanded)); }
+.kova-app-header { height: var(--parity-topbar-height); min-height: var(--parity-topbar-height); }
+.kova-conversation-column { width: min(var(--parity-conversation-max), calc(100% - 40px)); max-width: var(--parity-conversation-max); margin-inline: auto; }
+.kova-empty-chat h1 { font-size: 30px; line-height: 38px; font-weight: 500; letter-spacing: -0.02em; }
+.kova-composer { min-height: var(--parity-composer-min) !important; padding: 0 12px 8px !important; background: var(--composer-background) !important; box-shadow: var(--shadow-floating) !important; }
+.kova-composer-row { min-height: 49px; gap: 4px; }
+.kova-composer-leading, .kova-composer-trailing { padding-bottom: 0; }
+.kova-composer-button { width: 40px; height: 40px; color: var(--text-secondary); }
+.kova-attach-button, .kova-send-button { min-width: 40px; width: 40px; height: 40px; }
+.kova-attach-button svg, .kova-send-button svg { width: 18px; height: 18px; stroke-width: 1.75; }
+.kova-send-button { color: var(--text-muted); }
+.kova-send-button.is-enabled { color: var(--primary-foreground); background: var(--primary); }
+.kova-send-button:disabled { opacity: .42; background: var(--surface-hover); color: var(--text-muted); }
+.kova-composer-input { max-height: 220px !important; overflow-y: auto; padding-top: 13px !important; padding-bottom: 11px !important; }
+.kova-attachment-card { min-height: 48px !important; height: 48px; width: 180px !important; border-radius: 11px !important; display: flex; align-items: center; }
+.kova-user-message { max-width: 80% !important; border-radius: 20px !important; padding: 10px 16px !important; background: var(--user-message-background) !important; line-height: 1.5; overflow-wrap: anywhere; }
+.kova-assistant-message { width: 100%; font-size: 16px; line-height: 1.6; }
+.prose-chat pre { border-radius: 11px !important; overflow-x: auto; background: var(--code-background) !important; color: var(--code-block-fg); }
+.prose-chat table { display: block; max-width: 100%; overflow-x: auto; white-space: nowrap; }
+.prose-chat blockquote { border-left: 2px solid var(--border-strong); padding-left: 14px; color: var(--text-secondary); }
+[role="dialog"] [data-kova-dialog-surface], [data-kova-dialog-surface] { max-width: min(520px, calc(100vw - 32px)); border-radius: 15px !important; padding: 24px; }
+:where([role="menu"], [role="listbox"], .kova-model-menu) { border-radius: 11px !important; }
+:where([role="menuitem"], [role="option"]) { min-height: 38px; font-size: 14px; padding-inline: 11px; }
+@media (max-width: 767px) {
+  .kova-main-scroll { width: 100vw; }
+  .kova-topbar, .kova-app-header { height: var(--parity-mobile-topbar-height) !important; min-height: var(--parity-mobile-topbar-height) !important; }
+  .kova-conversation-column { width: calc(100% - 24px); }
+  .kova-empty-chat h1 { font-size: 26px; line-height: 34px; }
+  .kova-sidebar { width: min(86vw, 320px) !important; }
+  .kova-user-message { max-width: 90% !important; }
+  .kova-composer-button { min-width: 44px; min-height: 44px; }
+}
