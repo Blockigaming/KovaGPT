@@ -8,9 +8,7 @@ import {
   Globe,
   FileText,
   Camera,
-  Search,
   Sparkles,
-  Brain,
   AlertCircle,
   RotateCcw,
   type LucideIcon,
@@ -158,6 +156,7 @@ export function ChatInput({
   const composingRef = useRef(false);
   const [uploadAnnouncement, setUploadAnnouncement] = useState("");
   const [recentQuery, setRecentQuery] = useState("");
+  const [isDragActive, setIsDragActive] = useState(false);
   useEffect(() => {
     if (!plusOpen) return;
     const onDoc = (e: MouseEvent) => {
@@ -425,6 +424,7 @@ export function ChatInput({
   };
 
   const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    setIsDragActive(false);
     const files = Array.from(e.dataTransfer.files || []);
     if (files.length === 0) return;
     e.preventDefault();
@@ -433,7 +433,18 @@ export function ChatInput({
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    if (!disabled && showAddMenu && e.dataTransfer.types.includes("Files")) e.preventDefault();
+    if (!disabled && showAddMenu && e.dataTransfer.types.includes("Files")) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+      setIsDragActive(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    const nextTarget = e.relatedTarget;
+    if (!(nextTarget instanceof Node) || !e.currentTarget.contains(nextTarget)) {
+      setIsDragActive(false);
+    }
   };
 
   const attachLibraryFile = (item: RecentLibraryFile) => {
@@ -577,7 +588,13 @@ export function ChatInput({
       : "h-4 w-4 shrink-0 text-muted-foreground";
     return (
       <>
-        {COMPOSER_TOOLS.filter((tool) => tool.id === "web_search").map((tool) => {
+        <div
+          className="px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+          aria-hidden="true"
+        >
+          Tools
+        </div>
+        {COMPOSER_TOOLS.map((tool) => {
           const Icon = tool.icon;
           const active = selectedTool === tool.id;
           return (
@@ -618,36 +635,48 @@ export function ChatInput({
             <span>Camera</span>
           </button>
         ) : null}
-        {COMPOSER_TOOLS.filter((tool) => tool.id === "image").map((tool) => {
-          const Icon = tool.icon;
-          const active = selectedTool === tool.id;
-          return (
-            <button
-              key={tool.id}
-              type="button"
-              aria-pressed={active}
-              disabled={disabled || isStreaming}
-              onClick={() => chooseTool(tool)}
-              className={`kova-tool-button ${rowClass} ${active ? "bg-accent text-foreground" : ""}`}
-            >
-              <Icon className={iconClass} />
-              <span>{tool.label}</span>
-            </button>
-          );
-        })}
+        <div className="mx-2 my-1 border-t border-border/70" aria-hidden="true" />
+        <div
+          className="px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+          aria-hidden="true"
+        >
+          Suggestions
+        </div>
+        {PROMPT_SHORTCUTS.map((shortcut) => (
+          <button
+            key={shortcut.label}
+            type="button"
+            disabled={disabled || isStreaming}
+            onClick={() => choosePromptShortcut(shortcut.label, shortcut.prompt)}
+            className={rowClass}
+          >
+            <Sparkles className={iconClass} />
+            <span>{shortcut.label}</span>
+          </button>
+        ))}
+        {user ? renderRecentLibraryFiles() : null}
       </>
     );
   };
 
   return (
     <div
-      className="kova-composer-dock w-full pb-[max(.75rem,var(--safe-bottom))] pt-2 transition-[padding] duration-150"
+      className="kova-composer-dock relative w-full pb-[max(.75rem,var(--safe-bottom))] pt-2 transition-[padding] duration-150"
       style={isMobileLayout && kbOffset > 0 ? { paddingBottom: `${kbOffset + 8}px` } : undefined}
       onPaste={handlePaste}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
     >
-      <div className="kova-composer-frame mx-auto max-w-[48rem]">
+      <div className="kova-composer-frame relative mx-auto max-w-[48rem]">
+        {isDragActive ? (
+          <div
+            className="pointer-events-none absolute inset-0 z-20 grid place-items-center rounded-[var(--composer-radius)] border-2 border-dashed border-foreground/35 bg-background/90 text-sm font-medium text-foreground shadow-sm backdrop-blur-sm"
+            role="status"
+          >
+            Drop files to attach
+          </div>
+        ) : null}
         <div className={`kova-composer overflow-visible ${isStreaming ? "is-streaming" : ""}`}>
           {attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 p-3 pb-0" aria-label="Attachments">
@@ -725,7 +754,6 @@ export function ChatInput({
           {showAddMenu && selectedToolOption && ActiveToolIcon && onToolSelect ? (
             <div className="flex px-3 pt-2">
               <button
-                ref={plusTriggerRef}
                 type="button"
                 disabled={disabled || isStreaming}
                 onClick={() => chooseTool(selectedToolOption)}
@@ -775,6 +803,7 @@ export function ChatInput({
                 onChange={onFileChange}
               />
               <button
+                ref={plusTriggerRef}
                 type="button"
                 onClick={() => setPlusOpen((v) => !v)}
                 disabled={disabled || isStreaming}
@@ -865,7 +894,7 @@ export function ChatInput({
                   disabled
                   className="kova-composer-button kova-send-button flex items-center justify-center rounded-full"
                   aria-label="Send"
-                  title={disabled ? "Messaging is unavailable" : "Type a message to send"}
+                  title={disabled ? "Reconnect to send" : "Type a message to send"}
                 >
                   <ArrowUp className="kova-send-icon" strokeWidth={2.5} />
                 </button>
@@ -873,6 +902,9 @@ export function ChatInput({
             </div>
           </div>
         </div>
+        <p className="kova-disclaimer mt-2 select-none text-center text-[11px] leading-4 text-muted-foreground/80">
+          KovaGPT can make mistakes. Check important information.
+        </p>
       </div>
     </div>
   );
