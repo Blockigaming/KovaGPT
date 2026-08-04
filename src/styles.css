@@ -2151,3 +2151,1535 @@ body {
     transform: none;
   }
 }
+
+/* ================================================================
+   KovaGPT unified workspace — source-last UI/UX authority
+
+   Append this block to src/styles.css. It intentionally contains no
+   behavior, network, provider, billing, storage, or route changes.
+   Kova branding remains in the product name, logo, and restrained brand
+   accent; the workspace itself uses a quiet neutral hierarchy.
+   ================================================================ */
+
+:root {
+  --parity-sidebar-expanded: 260px;
+  --parity-header-height: 52px;
+  --parity-chat-max: 48rem;
+  --parity-page-max: 70rem;
+  --parity-control: 40px;
+  --parity-touch: 44px;
+  --parity-radius-xs: 6px;
+  --parity-radius-sm: 8px;
+  --parity-radius-md: 12px;
+  --parity-radius-lg: 16px;
+  --parity-focus: color-mix(in oklab, #0d0d0d 72%, transparent);
+  --parity-scrim: rgb(0 0 0 / 48%);
+  --parity-shadow-menu: 0 10px 30px rgb(0 0 0 / 12%), 0 1px 2px rgb(0 0 0 / 8%);
+  --parity-shadow-dialog: 0 24px 64px rgb(0 0 0 / 20%);
+  --parity-ease: cubic-bezier(0.2, 0, 0, 1);
+  --parity-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --parity-fast: 120ms;
+  --parity-standard: 180ms;
+
+  --background: #ffffff;
+  --foreground: #0d0d0d;
+  --card: #ffffff;
+  --card-foreground: #0d0d0d;
+  --popover: #ffffff;
+  --popover-foreground: #0d0d0d;
+  --primary: #0d0d0d;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f4;
+  --secondary-foreground: #0d0d0d;
+  --muted: #f4f4f4;
+  --muted-foreground: #5d5d5d;
+  --accent: #ececec;
+  --accent-foreground: #0d0d0d;
+  --border: rgb(13 13 13 / 10%);
+  --input: rgb(13 13 13 / 12%);
+  --ring: #0d0d0d;
+  --sidebar: #f9f9f9;
+  --sidebar-foreground: #242424;
+  --sidebar-hover: #ececec;
+  --sidebar-active: #e7e7e7;
+  --user-bubble: #f4f4f4;
+  --surface-app: #ffffff;
+  --surface-workspace: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-floating: #ffffff;
+  --surface-secondary: #f4f4f4;
+  --surface-hover: #ececec;
+  --surface-selected: #e7e7e7;
+  --surface-composer: #f4f4f4;
+  --surface-input: #ffffff;
+  --surface-modal: #ffffff;
+  --surface-scrim: var(--parity-scrim);
+  --text-secondary: #424242;
+  --text-disabled: #8f8f8f;
+  --border-subtle: rgb(13 13 13 / 10%);
+  --border-strong: rgb(13 13 13 / 18%);
+  --scrollbar-thumb: rgb(13 13 13 / 16%);
+  --scrollbar-thumb-hover: rgb(13 13 13 / 28%);
+  --code-bg: rgb(13 13 13 / 7%);
+  --code-block-bg: #202123;
+  --code-block-fg: #f7f7f8;
+  --link: #174ea6;
+}
+
+.dark {
+  color-scheme: dark;
+  --parity-focus: color-mix(in oklab, #ffffff 72%, transparent);
+  --parity-scrim: rgb(0 0 0 / 64%);
+  --parity-shadow-menu:
+    0 12px 36px rgb(0 0 0 / 42%), 0 1px 2px rgb(0 0 0 / 36%);
+  --parity-shadow-dialog: 0 24px 72px rgb(0 0 0 / 52%);
+
+  --background: #212121;
+  --foreground: #f7f7f8;
+  --card: #2f2f2f;
+  --card-foreground: #f7f7f8;
+  --popover: #2f2f2f;
+  --popover-foreground: #f7f7f8;
+  --primary: #f7f7f8;
+  --primary-foreground: #212121;
+  --secondary: #2f2f2f;
+  --secondary-foreground: #f7f7f8;
+  --muted: #2f2f2f;
+  --muted-foreground: #b4b4b4;
+  --accent: #3a3a3a;
+  --accent-foreground: #f7f7f8;
+  --border: rgb(255 255 255 / 10%);
+  --input: rgb(255 255 255 / 12%);
+  --ring: #f7f7f8;
+  --sidebar: #171717;
+  --sidebar-foreground: #ececec;
+  --sidebar-hover: #262626;
+  --sidebar-active: #2f2f2f;
+  --user-bubble: #2f2f2f;
+  --surface-app: #212121;
+  --surface-workspace: #212121;
+  --surface-raised: #2f2f2f;
+  --surface-floating: #2f2f2f;
+  --surface-secondary: #2f2f2f;
+  --surface-hover: #3a3a3a;
+  --surface-selected: #424242;
+  --surface-composer: #2f2f2f;
+  --surface-input: #2f2f2f;
+  --surface-modal: #2f2f2f;
+  --surface-scrim: var(--parity-scrim);
+  --text-secondary: #d1d1d1;
+  --text-disabled: #737373;
+  --border-subtle: rgb(255 255 255 / 10%);
+  --border-strong: rgb(255 255 255 / 18%);
+  --scrollbar-thumb: rgb(255 255 255 / 14%);
+  --scrollbar-thumb-hover: rgb(255 255 255 / 25%);
+  --code-bg: rgb(255 255 255 / 10%);
+  --code-block-bg: #171717;
+  --code-block-fg: #f7f7f8;
+  --link: #8ab4f8;
+}
+
+html {
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 16px;
+  text-size-adjust: 100%;
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family:
+    ui-sans-serif,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-kerning: normal;
+  font-synthesis: none;
+  letter-spacing: normal;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+body :where(button, input, textarea, select) {
+  font: inherit;
+}
+
+#root {
+  min-width: 0;
+  height: 100%;
+  isolation: isolate;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--kova-blue) 24%, transparent);
+  color: var(--foreground);
+}
+
+.kova-bg,
+.animate-pulse-slow {
+  display: none !important;
+}
+
+/* Product shell */
+.kova-app-shell,
+.kova-images-shell {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--surface-workspace);
+  color: var(--foreground);
+}
+
+.kova-workspace-main,
+.kova-chat-main,
+.kova-images-main {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--background);
+}
+
+.kova-content-column,
+.kova-message-inner {
+  width: min(100%, var(--parity-chat-max));
+  min-width: 0;
+  margin-inline: auto;
+}
+
+/* Sidebar */
+.kova-sidebar.kova-sidebar {
+  border-right: 0 !important;
+  background: var(--sidebar) !important;
+  box-shadow: none;
+}
+
+.kova-sidebar > * {
+  background: transparent !important;
+}
+
+.kova-sidebar :where(button, a, input) {
+  letter-spacing: normal;
+}
+
+.kova-sidebar :where(a, button):not([aria-label="Chat options"]),
+[aria-label="Collapsed navigation"] :where(a, button) {
+  transition:
+    background-color var(--parity-fast) var(--parity-ease),
+    color var(--parity-fast) var(--parity-ease),
+    opacity var(--parity-fast) var(--parity-ease);
+}
+
+.kova-nav-row.kova-nav-row,
+.kova-chat-row.kova-chat-row {
+  min-height: 36px !important;
+  border-radius: var(--parity-radius-sm) !important;
+  gap: 10px !important;
+  font-size: 14px !important;
+  transform: none;
+}
+
+.kova-sidebar .kova-chat-row {
+  margin-inline: 8px;
+  padding-inline: 6px;
+}
+
+.kova-sidebar .kova-nav-row[aria-current="page"],
+.kova-sidebar .kova-chat-row:has([aria-current="page"]) {
+  background: var(--sidebar-active);
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+.kova-nav-row:hover,
+.kova-chat-row:hover {
+  background-color: var(--sidebar-hover) !important;
+  transform: none;
+}
+
+.kova-sidebar [aria-label="Chat options"] {
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: var(--parity-radius-xs);
+}
+
+.kova-sidebar input[type="search"],
+.kova-sidebar #sidebar-chat-search {
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--parity-radius-sm);
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: none;
+}
+
+[aria-label="Collapsed navigation"] {
+  width: 52px;
+  border-right: 0;
+  background: var(--sidebar);
+}
+
+[aria-label="Collapsed navigation"] :where(a, button) {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--parity-radius-sm);
+}
+
+[aria-label="Close navigation menu"] {
+  background: var(--parity-scrim);
+  backdrop-filter: none;
+}
+
+/* Header */
+.kova-topbar.kova-topbar,
+.kova-desktop-topbar,
+.kova-images-topbar {
+  min-height: calc(var(--parity-header-height) + var(--safe-top)) !important;
+  padding-top: var(--safe-top);
+  border: 0 !important;
+  background: var(--background) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.kova-desktop-topbar,
+.kova-images-topbar {
+  height: calc(var(--parity-header-height) + var(--safe-top));
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.kova-topbar-inner {
+  height: var(--parity-header-height);
+}
+
+.kova-action.kova-action {
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: var(--parity-radius-sm) !important;
+  color: var(--foreground);
+  transform: none;
+}
+
+.kova-model-trigger {
+  max-width: min(100%, 20rem);
+  border-radius: var(--parity-radius-sm);
+  color: var(--foreground);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.kova-model-trigger:hover,
+.kova-model-trigger[aria-expanded="true"] {
+  background: var(--accent);
+}
+
+/* Empty chat */
+.kova-empty-chat {
+  min-width: 0;
+  overscroll-behavior: contain;
+}
+
+.kova-empty-chat > div:first-child {
+  justify-content: center;
+  padding-top: clamp(2rem, 8vh, 5rem) !important;
+  padding-bottom: clamp(2rem, 10vh, 7rem) !important;
+}
+
+.kova-greeting {
+  margin-bottom: 1.5rem;
+}
+
+.kova-greeting h1 {
+  max-width: 42rem;
+  font-family: inherit;
+  font-size: clamp(1.75rem, 1.52rem + 0.8vw, 2rem);
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.kova-empty-composer {
+  width: 100%;
+  max-width: none !important;
+  margin-inline: auto;
+}
+
+.kova-starter-actions {
+  display: grid;
+  width: min(100%, var(--parity-chat-max));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 18px auto 0;
+}
+
+.kova-starter-action,
+.kova-starter-card.kova-starter-card {
+  display: flex;
+  min-width: 0;
+  min-height: 52px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--parity-radius-md);
+  background: transparent;
+  padding: 10px 12px;
+  color: var(--text-secondary);
+  text-align: left;
+  transform: none;
+  box-shadow: none;
+}
+
+.kova-starter-action:hover,
+.kova-starter-card:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+  color: var(--foreground);
+  transform: none;
+}
+
+/* Composer */
+.kova-conversation-composer {
+  position: relative;
+  z-index: 10;
+  flex: 0 0 auto;
+  padding: 4px 0 max(8px, var(--safe-bottom));
+  background: linear-gradient(to bottom, transparent, var(--background) 18px);
+}
+
+.kova-composer-dock {
+  box-sizing: border-box;
+  width: min(100%, calc(var(--parity-chat-max) + 24px));
+  margin-inline: auto;
+  padding: 0 max(12px, var(--safe-right)) 0 max(12px, var(--safe-left)) !important;
+}
+
+.kova-composer-frame {
+  width: 100%;
+  max-width: var(--parity-chat-max);
+  margin-inline: auto;
+}
+
+.kova-composer.kova-composer {
+  --composer-unit: 4px;
+  --composer-height: 56px !important;
+  --composer-control: 36px !important;
+  --composer-inset: 10px !important;
+  --composer-icon: 20px;
+  border: 1px solid color-mix(in oklab, var(--foreground) 9%, transparent) !important;
+  border-radius: 28px !important;
+  background: var(--surface-composer) !important;
+  box-shadow: none !important;
+  transition:
+    border-color var(--parity-fast) var(--parity-ease),
+    box-shadow var(--parity-fast) var(--parity-ease),
+    background-color var(--parity-fast) var(--parity-ease) !important;
+}
+
+.kova-composer:hover {
+  border-color: color-mix(
+    in oklab,
+    var(--foreground) 13%,
+    transparent
+  ) !important;
+}
+
+.kova-composer:focus-within {
+  border-color: color-mix(
+    in oklab,
+    var(--foreground) 28%,
+    transparent
+  ) !important;
+  outline: 2px solid color-mix(in oklab, var(--parity-focus) 54%, transparent) !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important;
+}
+
+.kova-composer-row {
+  min-height: var(--composer-height);
+  align-items: center;
+}
+
+.kova-composer-leading,
+.kova-composer-trailing {
+  align-self: center !important;
+  gap: 2px;
+}
+
+.kova-composer-button {
+  width: var(--composer-control);
+  height: var(--composer-control);
+  flex: 0 0 var(--composer-control);
+  border-radius: 999px;
+  transition:
+    background-color var(--parity-fast) var(--parity-ease),
+    color var(--parity-fast) var(--parity-ease),
+    opacity var(--parity-fast) var(--parity-ease) !important;
+}
+
+.kova-composer-button:active:not(:disabled) {
+  transform: none !important;
+}
+
+.kova-attach-button {
+  color: color-mix(in oklab, var(--foreground) 72%, transparent);
+}
+
+.kova-attach-button:hover,
+.kova-attach-button.is-open {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.kova-attach-icon,
+.kova-attach-button.is-open .kova-attach-icon {
+  transform: none !important;
+  transition: none !important;
+}
+
+.kova-composer-input {
+  min-width: 0;
+  min-height: 54px !important;
+  max-height: min(200px, 35dvh);
+  padding: 15px 8px !important;
+  overflow-y: auto;
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 16px !important;
+  font-weight: 400;
+  line-height: 24px !important;
+  letter-spacing: normal;
+  caret-color: var(--foreground);
+}
+
+.kova-composer-input::placeholder {
+  color: color-mix(in oklab, var(--foreground) 54%, transparent) !important;
+  opacity: 1;
+}
+
+.kova-send-button.kova-send-button {
+  background: color-mix(in oklab, var(--foreground) 9%, transparent);
+  color: color-mix(in oklab, var(--foreground) 42%, transparent);
+  box-shadow: none;
+}
+
+.kova-send-button.is-enabled {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.kova-send-button.is-enabled:hover {
+  opacity: 0.82;
+}
+
+.kova-tool-button {
+  min-height: 32px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.kova-composer [aria-label="Attachments"] > div {
+  border-color: var(--border);
+  border-radius: var(--parity-radius-md);
+  background: var(--surface-raised);
+  box-shadow: none;
+}
+
+.kova-glass.kova-glass {
+  border: 1px solid var(--border) !important;
+  border-radius: var(--parity-radius-md) !important;
+  background: var(--popover) !important;
+  box-shadow: var(--parity-shadow-menu) !important;
+  backdrop-filter: none !important;
+}
+
+.kova-disclaimer {
+  max-width: var(--parity-chat-max);
+  color: color-mix(in oklab, var(--foreground) 52%, transparent);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+/* Product decision: Kova has no voice, dictation, read-aloud, or audio UI. */
+button[aria-label="Dictate message"],
+button[aria-label="Stop dictation"] {
+  display: none;
+}
+
+[role="menuitem"]:has(.lucide-volume-2) {
+  display: none;
+}
+
+/* Conversation transcript */
+.kova-conversation-scroll {
+  min-height: 0;
+  scroll-padding-block: 48px 120px;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+.kova-message.kova-message {
+  margin: 0;
+  padding: 12px 20px !important;
+  contain: layout style;
+}
+
+.kova-message-inner,
+.kova-assistant-message.kova-assistant-message,
+.kova-message > .mx-auto {
+  width: min(100%, var(--parity-chat-max));
+  max-width: var(--parity-chat-max);
+  margin-inline: auto;
+}
+
+.kova-assistant-message {
+  color: var(--foreground);
+}
+
+.kova-user-message.kova-user-message {
+  max-width: min(100%, 42rem);
+  border: 0 !important;
+  border-radius: 20px !important;
+  background: var(--user-bubble);
+  padding: 10px 16px;
+  box-shadow: none !important;
+}
+
+.kova-message-actions.kova-message-actions {
+  min-height: 32px !important;
+  gap: 2px !important;
+  opacity: 1 !important;
+  color: var(--muted-foreground);
+  transition: none !important;
+}
+
+.kova-message-actions .kova-message-action {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  border-radius: var(--parity-radius-sm) !important;
+  padding: 7px !important;
+  color: var(--muted-foreground);
+  transform: none !important;
+  transition:
+    background-color var(--parity-fast) var(--parity-ease),
+    color var(--parity-fast) var(--parity-ease) !important;
+}
+
+.kova-message-actions button:not(.kova-message-action) {
+  width: auto;
+  min-width: 32px;
+  height: auto;
+  min-height: 32px;
+  padding: 6px 10px !important;
+}
+
+.kova-message-actions button:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.kova-thinking-indicator {
+  min-height: 32px;
+  color: var(--muted-foreground);
+}
+
+.kova-thinking-indicator > :first-child {
+  width: 6px;
+  height: 6px;
+  background: var(--foreground);
+}
+
+.kova-temporary-banner {
+  width: calc(100% - 24px);
+  max-width: var(--parity-chat-max);
+  margin: 8px auto 0;
+  border: 1px solid var(--border);
+  border-radius: var(--parity-radius-md);
+  background: var(--surface-secondary);
+  padding: 10px 12px;
+  color: var(--text-secondary);
+  box-shadow: none;
+}
+
+.kova-jump-latest {
+  position: absolute;
+  z-index: 20;
+  bottom: calc(104px + var(--safe-bottom));
+  left: 50%;
+  display: inline-flex;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--popover);
+  padding: 0;
+  color: var(--foreground);
+  font-size: 13px;
+  box-shadow: var(--parity-shadow-menu);
+  transform: translateX(-50%);
+}
+
+/* Assistant typography and rich content */
+.prose-chat.prose-chat {
+  max-width: 100%;
+  color: var(--foreground);
+  font-size: 16px;
+  line-height: 1.75;
+  letter-spacing: normal;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+.prose-chat :where(p, ul, ol, pre, table, blockquote) {
+  margin-block: 0 1rem;
+}
+
+.prose-chat > :last-child {
+  margin-bottom: 0;
+}
+
+.prose-chat :where(h1, h2, h3, h4) {
+  margin: 1.5rem 0 0.75rem;
+  color: var(--foreground);
+  font-family: inherit;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+.prose-chat h1 {
+  font-size: 1.5rem;
+}
+
+.prose-chat h2 {
+  font-size: 1.25rem;
+}
+
+.prose-chat h3 {
+  font-size: 1.0625rem;
+}
+
+.prose-chat :where(ul, ol) {
+  padding-left: 1.45rem;
+}
+
+.prose-chat li {
+  margin-block: 0.25rem;
+  padding-left: 0.15rem;
+}
+
+.prose-chat a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.prose-chat sup a {
+  display: inline-flex;
+  min-width: 18px;
+  min-height: 18px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--accent);
+  padding-inline: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  text-decoration: none;
+}
+
+.prose-chat blockquote {
+  border-left: 2px solid var(--border-strong);
+  padding-left: 14px;
+  color: var(--text-secondary);
+}
+
+.prose-chat code:not(pre code) {
+  border-radius: 4px;
+  background: var(--code-bg);
+  padding: 2px 4px;
+  font-size: 0.875em;
+}
+
+.kova-code-block.kova-code-block,
+.prose-chat pre {
+  overflow: hidden;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--parity-radius-sm) !important;
+  background: var(--code-block-bg);
+  color: var(--code-block-fg);
+  box-shadow: none !important;
+}
+
+.kova-code-toolbar {
+  min-height: 40px;
+  border-bottom: 1px solid rgb(255 255 255 / 10%);
+  padding-inline: 14px 8px;
+  color: #b4b4b4;
+  font-size: 12px;
+}
+
+.kova-code-toolbar button {
+  min-height: 32px;
+  border-radius: var(--parity-radius-xs);
+  padding-inline: 8px;
+}
+
+.kova-table-scroll.kova-table-scroll {
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--parity-radius-sm);
+  box-shadow: none;
+}
+
+.prose-chat table {
+  min-width: 32rem;
+  margin: 0;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.prose-chat th,
+.prose-chat td {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.prose-chat th {
+  background: var(--surface-secondary);
+  font-weight: 600;
+}
+
+.prose-chat img {
+  max-width: min(100%, 560px);
+  border: 1px solid var(--border);
+  border-radius: var(--parity-radius-md);
+  box-shadow: none;
+}
+
+/* Menus, command palette, dialogs, sheets, and toasts */
+.kova-command-palette,
+[data-kova-shell-overlay] {
+  background: var(--parity-scrim);
+  backdrop-filter: none;
+}
+
+.kova-command-palette {
+  padding-top: max(12vh, calc(var(--safe-top) + 12px));
+  padding-inline: max(12px, var(--safe-left), var(--safe-right));
+}
+
+.kova-command-palette-surface,
+[data-kova-shell-overlay] > div {
+  width: min(100%, 640px);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--parity-radius-lg);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: var(--parity-shadow-dialog);
+}
+
+.kova-command-palette-search,
+[data-kova-shell-overlay] > div > div:first-child {
+  min-height: 60px;
+  border-bottom: 1px solid var(--border);
+  padding: 8px 12px 8px 16px;
+}
+
+.kova-command-palette-search input,
+[data-kova-shell-overlay] input[role="combobox"] {
+  height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--foreground);
+  font-size: 16px;
+}
+
+.kova-command-palette-results,
+#command-palette-results {
+  max-height: min(62dvh, 34rem);
+  padding: 8px;
+  overscroll-behavior: contain;
+}
+
+.kova-command-palette-results [role="option"],
+#command-palette-results [role="option"] {
+  min-height: 44px;
+  border: 0 !important;
+  border-radius: var(--parity-radius-sm) !important;
+  padding: 9px 12px;
+}
+
+.kova-model-menu.kova-model-menu,
+:where(
+  [role="menu"],
+  [role="listbox"],
+  [data-radix-popper-content-wrapper] > div
+) {
+  border: 1px solid var(--border);
+  border-radius: var(--parity-radius-md) !important;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: var(--parity-shadow-menu) !important;
+}
+
+:where([role="menuitem"], [role="option"]) {
+  min-height: 36px;
+  border: 0 !important;
+  border-radius: var(--parity-radius-sm) !important;
+}
+
+[data-kova-dialog-surface] {
+  border: 1px solid var(--border);
+  border-radius: var(--parity-radius-lg) !important;
+  background: var(--surface-modal);
+  box-shadow: var(--parity-shadow-dialog) !important;
+}
+
+[data-testid="mobile-bottom-sheet"] > div:first-child {
+  background: var(--parity-scrim);
+}
+
+[data-testid="mobile-bottom-sheet"] > div:last-child {
+  border-color: var(--border);
+  border-radius: 18px 18px 0 0;
+  background: var(--popover);
+  box-shadow: 0 -12px 40px rgb(0 0 0 / 24%);
+}
+
+[data-sonner-toast] {
+  border: 1px solid var(--border);
+  border-radius: var(--parity-radius-md);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  font-size: 14px !important;
+  box-shadow: var(--parity-shadow-menu) !important;
+}
+
+/* Secondary pages */
+.kova-page.kova-page {
+  width: 100%;
+  max-width: var(--parity-page-max) !important;
+  margin-inline: auto;
+  padding: 28px 32px max(40px, var(--safe-bottom)) !important;
+}
+
+.kova-secondary-page {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.kova-page-header.kova-page-header {
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 24px !important;
+}
+
+.kova-page-header-icon {
+  width: 32px;
+  height: 32px;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.kova-page-header-actions {
+  justify-content: flex-end;
+}
+
+.kova-page-title.kova-page-title {
+  font-family: inherit !important;
+  font-size: 28px !important;
+  line-height: 36px !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.025em !important;
+}
+
+.kova-page-description.kova-page-description {
+  max-width: 68ch;
+  margin-top: 4px !important;
+  color: var(--muted-foreground);
+  font-size: 14px !important;
+  line-height: 20px !important;
+}
+
+.kova-toolbar {
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.kova-grid {
+  gap: 12px;
+}
+
+.kova-list {
+  gap: 8px;
+}
+
+.kova-card.kova-card,
+.kova-row.kova-row,
+.kova-plan-card.kova-plan-card,
+.kova-connector-card.kova-connector-card {
+  border: 1px solid var(--border) !important;
+  border-radius: var(--parity-radius-md) !important;
+  background: var(--card) !important;
+  box-shadow: none !important;
+  transform: none !important;
+  transition:
+    background-color var(--parity-fast) var(--parity-ease),
+    border-color var(--parity-fast) var(--parity-ease) !important;
+}
+
+.kova-form-surface {
+  border: 1px solid var(--border);
+  border-radius: var(--parity-radius-md);
+  background: var(--card);
+  box-shadow: none;
+  transform: none;
+  transition:
+    background-color var(--parity-fast) var(--parity-ease),
+    border-color var(--parity-fast) var(--parity-ease);
+}
+
+.kova-card:hover,
+.kova-row:hover,
+.kova-plan-card:hover,
+.kova-connector-card:hover {
+  border-color: var(--border-strong) !important;
+  background: color-mix(in oklab, var(--card) 88%, var(--accent)) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.kova-empty-state.kova-empty-state {
+  border: 1px dashed var(--border-strong) !important;
+  border-radius: var(--parity-radius-md) !important;
+  background: transparent !important;
+  padding: clamp(28px, 5vw, 48px) !important;
+}
+
+.hover-elevate,
+.hover-elevate:hover {
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.text-gradient-kova {
+  background: none !important;
+  color: var(--foreground) !important;
+}
+
+.bg-gradient-kova,
+.bg-gradient-kova-soft {
+  background: var(--foreground) !important;
+}
+
+.kova-select,
+.kova-secondary-page :where(input, textarea, select),
+.kova-settings-dialog :where(input, textarea, select),
+.kova-auth-surface :where(input, textarea, select) {
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--parity-radius-sm);
+  background: var(--surface-input);
+  color: var(--foreground);
+  box-shadow: none;
+}
+
+.kova-settings-dialog.kova-settings-dialog {
+  border: 1px solid var(--border);
+  border-radius: var(--parity-radius-lg) !important;
+  background: var(--background);
+  box-shadow: var(--parity-shadow-dialog) !important;
+}
+
+@media (min-width: 768px) {
+  .kova-settings-surface.kova-settings-surface {
+    width: min(92vw, 896px) !important;
+    max-width: 896px !important;
+  }
+}
+
+.kova-settings-nav.kova-settings-nav {
+  width: 220px;
+  padding: 12px;
+}
+
+.kova-settings-header {
+  min-height: 72px;
+  background: var(--background);
+}
+
+.kova-settings-content {
+  min-width: 0;
+  background: var(--background);
+}
+
+.kova-settings-dialog [role="tablist"] {
+  background: color-mix(in oklab, var(--sidebar) 88%, var(--background));
+}
+
+.kova-settings-dialog [role="tab"] {
+  min-height: 40px;
+  border-radius: var(--parity-radius-sm);
+}
+
+.kova-settings-dialog [role="tab"][aria-selected="true"],
+.kova-secondary-page [role="tab"][aria-selected="true"] {
+  background: var(--accent) !important;
+  box-shadow: none !important;
+  color: var(--foreground);
+}
+
+.kova-auth-surface.kova-auth-surface {
+  border: 1px solid var(--border);
+  border-radius: var(--parity-radius-lg) !important;
+  background: var(--card);
+  box-shadow: var(--parity-shadow-dialog) !important;
+}
+
+/* Images workspace */
+.kova-images-scroll {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.kova-images-page {
+  width: 100%;
+  max-width: var(--parity-page-max);
+  margin-inline: auto;
+  padding: 28px 32px 160px;
+}
+
+.kova-images-page section > h2 {
+  margin-bottom: 16px;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.kova-images-page button.group > div,
+.kova-images-page article {
+  border: 1px solid var(--border);
+  border-radius: var(--parity-radius-md);
+  box-shadow: none;
+}
+
+.kova-images-composer-dock {
+  position: sticky;
+  z-index: 20;
+  bottom: 0;
+  flex: 0 0 auto;
+  border: 0;
+  padding-bottom: max(8px, var(--safe-bottom));
+  background: linear-gradient(to bottom, transparent, var(--background) 22px);
+  backdrop-filter: none;
+}
+
+.kova-images-composer {
+  width: min(100%, var(--parity-chat-max));
+  margin-inline: auto;
+  border: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent);
+  border-radius: 24px;
+  background: var(--surface-composer);
+  box-shadow: none;
+}
+
+.kova-images-composer-dock form {
+  box-sizing: border-box;
+  width: min(100%, calc(var(--parity-chat-max) + 24px));
+  max-width: none;
+  padding-inline: 12px;
+}
+
+.kova-images-composer:focus-within {
+  border-color: color-mix(in oklab, var(--foreground) 28%, transparent);
+  box-shadow: 0 0 0 2px
+    color-mix(in oklab, var(--parity-focus) 24%, transparent);
+}
+
+/* Loading, error, and offline/recovery surfaces */
+.kova-skeleton,
+[data-slot="skeleton"] {
+  border-radius: var(--parity-radius-sm);
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--foreground) 7%, transparent) 20%,
+    color-mix(in oklab, var(--foreground) 12%, transparent) 38%,
+    color-mix(in oklab, var(--foreground) 7%, transparent) 56%
+  );
+  background-size: 220% 100%;
+}
+
+:where(.kova-chat-main, .kova-secondary-page, .kova-images-main)
+  [role="alert"] {
+  border: 1px solid color-mix(in oklab, var(--destructive) 35%, var(--border));
+  border-radius: var(--parity-radius-md);
+  background: color-mix(in oklab, var(--destructive) 7%, var(--background));
+  color: var(--foreground);
+}
+
+/* Keyboard focus is visible without introducing bright rings on pointer use. */
+:where(
+  a,
+  button,
+  input,
+  textarea,
+  select,
+  [role="button"],
+  [tabindex]
+):focus-visible {
+  outline: 2px solid var(--parity-focus) !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important;
+}
+
+:where(
+    [role="menu"],
+    [role="listbox"],
+    [role="dialog"],
+    .kova-model-menu,
+    .kova-glass
+  )
+  :where(button, [role="menuitem"], [role="option"]):focus-visible,
+:where([role="menuitem"], [role="option"]):focus-visible {
+  outline: none !important;
+  background: var(--accent) !important;
+  box-shadow: inset 0 0 0 2px var(--parity-focus) !important;
+}
+
+:where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
+      [type="button"]
+    ):not([type="submit"]),
+  textarea,
+  select
+):focus-visible {
+  border-color: color-mix(
+    in oklab,
+    var(--foreground) 32%,
+    transparent
+  ) !important;
+  outline: 2px solid color-mix(in oklab, var(--parity-focus) 54%, transparent) !important;
+  outline-offset: 1px !important;
+  box-shadow: none !important;
+}
+
+.kova-composer textarea:focus-visible,
+.kova-images-composer textarea:focus-visible {
+  outline: none !important;
+}
+
+/* Responsive behavior */
+@media (max-width: 1023px) {
+  .kova-sidebar.kova-sidebar {
+    width: min(88vw, 320px);
+    border-right: 1px solid var(--border) !important;
+    box-shadow: 12px 0 40px rgb(0 0 0 / 18%);
+  }
+
+  .kova-topbar-inner {
+    padding-right: max(4px, var(--safe-right));
+    padding-left: max(4px, var(--safe-left));
+  }
+
+  .kova-empty-chat > div:first-child {
+    justify-content: flex-start;
+    padding-top: clamp(48px, 14vh, 96px) !important;
+    padding-bottom: 32px !important;
+  }
+
+  .kova-greeting {
+    margin-bottom: 18px;
+  }
+
+  .kova-message.kova-message {
+    padding: 10px max(12px, var(--safe-right)) 10px max(12px, var(--safe-left)) !important;
+  }
+
+  .kova-user-message {
+    max-width: min(88%, 38rem);
+  }
+
+  .kova-message-actions .kova-message-action {
+    width: 44px;
+    min-width: 44px !important;
+    height: 44px;
+    min-height: 44px !important;
+    padding: 12px !important;
+  }
+
+  .kova-message-actions button:not(.kova-message-action) {
+    width: auto;
+    min-width: 44px !important;
+    height: auto;
+    min-height: 44px !important;
+    flex: 0 0 auto !important;
+    padding: 10px 12px !important;
+  }
+
+  .kova-conversation-scroll {
+    scrollbar-gutter: auto;
+    scroll-padding-bottom: calc(112px + var(--safe-bottom));
+  }
+
+  .kova-page.kova-page {
+    padding: 20px max(16px, var(--safe-right)) max(32px, var(--safe-bottom))
+      max(16px, var(--safe-left)) !important;
+  }
+
+  .kova-images-page {
+    padding: 20px max(16px, var(--safe-right)) calc(148px + var(--safe-bottom))
+      max(16px, var(--safe-left));
+  }
+
+  .kova-secondary-page :where(button, a[role="button"]),
+  .kova-settings-dialog :where(button, a[role="button"]),
+  .kova-auth-surface :where(button, a[role="button"]) {
+    min-height: var(--parity-touch);
+  }
+
+  .prose-chat pre,
+  .kova-code-block,
+  .kova-table-scroll {
+    max-width: calc(100vw - max(24px, var(--safe-left) + var(--safe-right)));
+    overscroll-behavior-inline: contain;
+  }
+}
+
+@media (max-width: 767px) {
+  .kova-settings-dialog.kova-settings-dialog {
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-width: none !important;
+    max-height: none !important;
+    padding-top: var(--safe-top) !important;
+    padding-bottom: var(--safe-bottom) !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    transform: none !important;
+  }
+
+  .kova-settings-dialog [role="tabpanel"] {
+    padding: 16px !important;
+    padding-bottom: max(24px, var(--safe-bottom)) !important;
+  }
+
+  .kova-command-palette {
+    align-items: flex-start;
+    padding-top: max(8px, var(--safe-top));
+  }
+
+  .kova-command-palette-surface,
+  [data-kova-shell-overlay] > div {
+    max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 16px);
+    border-radius: var(--parity-radius-lg);
+  }
+
+  .kova-command-palette-results,
+  #command-palette-results {
+    max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 92px);
+  }
+
+  .kova-page-title.kova-page-title {
+    font-size: 24px !important;
+    line-height: 32px !important;
+  }
+}
+
+@media (max-width: 639px) {
+  .kova-starter-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 14px;
+  }
+
+  .kova-greeting h1 {
+    font-size: 28px;
+  }
+
+  .kova-composer.kova-composer {
+    --composer-height: 52px !important;
+    border-radius: 26px !important;
+  }
+
+  .kova-composer-input {
+    min-height: 50px !important;
+    padding-block: 13px !important;
+  }
+
+  .kova-temporary-banner {
+    align-items: flex-start;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 359px) {
+  .kova-starter-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .kova-topbar-inner {
+    grid-template-columns: 52px minmax(0, 1fr) 52px;
+  }
+
+  .kova-greeting h1 {
+    padding-inline: 0;
+    font-size: 26px;
+  }
+
+  .kova-conversation-composer {
+    padding-inline: 8px;
+  }
+
+  .kova-composer.kova-composer {
+    --composer-control: 34px !important;
+    --composer-inset: 6px !important;
+  }
+
+  .kova-model-trigger {
+    padding-inline: 8px;
+  }
+
+  .kova-page.kova-page {
+    padding-inline: 12px !important;
+  }
+
+  .kova-images-page {
+    padding-inline: 12px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .kova-starter-actions {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  .kova-empty-chat > div:first-child {
+    padding-top: 20px !important;
+    padding-bottom: 20px !important;
+  }
+
+  .kova-greeting {
+    margin-bottom: 12px;
+  }
+
+  .kova-starter-actions {
+    display: none;
+  }
+
+  [data-testid="mobile-bottom-sheet"] > div:last-child {
+    max-height: calc(100dvh - var(--safe-top));
+  }
+}
+
+@media (pointer: coarse) {
+  .kova-composer.kova-composer {
+    --composer-control: 44px !important;
+  }
+
+  .kova-sidebar :where(a, button),
+  :where([role="menuitem"], [role="option"]) {
+    min-height: var(--parity-touch);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .kova-glass,
+  .glassy,
+  .kova-topbar,
+  .kova-images-composer-dock {
+    background: var(--background) !important;
+    backdrop-filter: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .kova-thinking-indicator > :first-child {
+    animation: none !important;
+    opacity: 1;
+  }
+}
+
+@media (forced-colors: active) {
+  .kova-composer,
+  .kova-card,
+  .kova-row,
+  .kova-user-message,
+  [data-kova-dialog-surface],
+  [role="menu"],
+  [role="listbox"] {
+    border: 1px solid CanvasText !important;
+  }
+
+  :where(
+    a,
+    button,
+    input,
+    textarea,
+    select,
+    [role="button"],
+    [tabindex]
+  ):focus-visible {
+    outline: 2px solid Highlight !important;
+  }
+}
+
+@media print {
+  .kova-sidebar,
+  [aria-label="Collapsed navigation"],
+  .kova-topbar,
+  .kova-conversation-composer,
+  .kova-message-actions,
+  .kova-disclaimer {
+    display: none !important;
+  }
+
+  body,
+  .kova-app-shell,
+  .kova-chat-main,
+  .kova-conversation-scroll {
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+    color: black !important;
+  }
+}
