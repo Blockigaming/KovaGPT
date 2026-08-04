@@ -41,7 +41,12 @@ import {
 import { activityToSseDelta, createToolActivityEvent } from "@/lib/ai/activity.server";
 
 import { selectModelForMode, mapProviderError } from "@/lib/ai/registry.server";
-import { acquireGeneration, finalizeGeneration, hashGuestIp } from "@/lib/ai/accounting.server";
+import {
+  acquireGeneration,
+  finalizeGeneration,
+  hashGuestIp,
+  renewGenerationLease,
+} from "@/lib/ai/accounting.server";
 import {
   estimateMaximumCostUsd,
   modelForPolicy,
@@ -50,7 +55,6 @@ import {
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
 import { estimateProviderInput } from "@/lib/ai/token-estimator.server";
 
-import { mapProviderError } from "@/lib/ai/registry.server";
 import { routeAiModel } from "@/lib/ai/model-router.server";
 
 import { formatMemoryBlock, selectRelevantMemories, type KovaMemory } from "@/lib/ai/memory.server";
@@ -70,8 +74,7 @@ import {
 } from "@/lib/provider-response.server.mjs";
 
 type ChatContentPart =
-  | { type: "text"; text: string }
-  | { type: "image_url"; image_url: { url: string } };
+  { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
 
 type ToolCall = {
   id: string;
@@ -89,9 +92,7 @@ type ToolResultMsg = {
   content: string;
 };
 type ChatMsg =
-  | { role: string; content: unknown; [key: string]: unknown }
-  | AssistantMsg
-  | ToolResultMsg;
+  { role: string; content: unknown; [key: string]: unknown } | AssistantMsg | ToolResultMsg;
 
 type ChainableQueryLike = {
   select: (columns: string) => ChainableQueryLike;
@@ -212,6 +213,19 @@ function reportedUsageFromSse(buffer: string): ReportedUsage | null {
     }
   }
   return result;
+}
+
+function reportedUsageFromChatJson(value: Record<string, unknown>): ReportedUsage | null {
+  const usage = value.usage as Record<string, unknown> | undefined;
+  if (!usage) return null;
+  const inputDetails = usage.prompt_tokens_details as Record<string, unknown> | undefined;
+  const outputDetails = usage.completion_tokens_details as Record<string, unknown> | undefined;
+  return {
+    input: Number(usage.prompt_tokens ?? usage.input_tokens ?? 0),
+    cachedInput: Number(inputDetails?.cached_tokens ?? 0),
+    output: Number(usage.completion_tokens ?? usage.output_tokens ?? 0),
+    reasoning: Number(outputDetails?.reasoning_tokens ?? 0),
+  };
 }
 
 function parseToolHopResponse(
@@ -653,7 +667,7 @@ export const Route = createFileRoute("/api/chat")({
                 const quota = await enforceQuota(auth, "images", imgLimit);
                 if (quota) return quota;
               }
-              return handleImageRequest(lastText, logContext);
+              // Defer the provider call until after usage acquisition below.
             }
 
             // Anonymous chat is allowed; signed-in users get per-user daily quotas + maintenance check.
@@ -745,22 +759,7 @@ export const Route = createFileRoute("/api/chat")({
             const hasAttachments = totalAttachments > 0;
             const hasImages = currentAttachments.some((attachment) => attachment.kind === "image");
 
-            if (clientTool === "deep_research" && lastText && !hasAttachments) {
-              return handleDeepResearchRequest(lastText, {
-                signal: request.signal,
-                logContext,
-                persistence: auth
-                  ? {
-                      supabase:
-                        auth.supabaseAdmin as unknown as import("@/lib/ai/deep-research.server").ResearchPersistence["supabase"],
-                      userId: auth.userId,
-                      chatId: authorizedResearchReferences?.chatId,
-                      projectId: authorizedResearchReferences?.projectId,
-                      temporary: Boolean(temporary),
-                    }
-                  : undefined,
-              });
-            }
+            // Defer Deep Research provider work until after usage acquisition below.
 
             // COST: only send the last ~12 turns to the model. Adaptive memory +
             // cross-chat summaries (below) carry forward standing rules and
@@ -1097,6 +1096,12 @@ export const Route = createFileRoute("/api/chat")({
             const enableTools = availableTools.length > 0;
 
             const catalogModel = OPENAI_TEXT_MODELS.find((entry) => entry.id === model);
+            if (catalogModel && !catalogModel.tiers.includes(auth ? callerTier : "guest")) {
+              return Response.json(
+                { error: "This model is not available for your plan." },
+                { status: 403 },
+              );
+            }
             if (!catalogModel) {
               return Response.json(
                 { error: "AI model configuration is unavailable." },
@@ -1174,8 +1179,51 @@ export const Route = createFileRoute("/api/chat")({
               );
             }
 
+            if (isImageRequest && auth) {
+              await finalizeGeneration({
+                eventId: usageEventId,
+                status: "completed",
+                model: catalogModel,
+                inputTokens: inputEstimate.tokens,
+                outputTokens: outputCeiling,
+                latencyMs: Date.now() - startedAt,
+                toolCalls: 0,
+              }).catch(() => undefined);
+              return handleImageRequest(lastText, logContext);
+            }
+
+            if (clientTool === "deep_research" && lastText && !hasAttachments) {
+              await finalizeGeneration({
+                eventId: usageEventId,
+                status: "completed",
+                model: catalogModel,
+                inputTokens: inputEstimate.tokens,
+                outputTokens: outputCeiling,
+                latencyMs: Date.now() - startedAt,
+                toolCalls: 0,
+              }).catch(() => undefined);
+              return handleDeepResearchRequest(lastText, {
+                signal: request.signal,
+                logContext,
+                persistence: auth
+                  ? {
+                      supabase:
+                        auth.supabaseAdmin as unknown as import("@/lib/ai/deep-research.server").ResearchPersistence["supabase"],
+                      userId: auth.userId,
+                      chatId: authorizedResearchReferences?.chatId,
+                      projectId: authorizedResearchReferences?.projectId,
+                      temporary: Boolean(temporary),
+                    }
+                  : undefined,
+              });
+            }
+
             const workingMessages: ChatMsg[] = [...(body.messages as unknown as ChatMsg[])];
             let providerCalls = 0;
+            let observedInputTokens = 0;
+            let observedCachedInputTokens = 0;
+            let observedOutputTokens = 0;
+            let observedReasoningTokens = 0;
             const activityEvents: Array<{
               tool: string;
               label: string;
@@ -1218,6 +1266,7 @@ export const Route = createFileRoute("/api/chat")({
                 let hopRes: Response;
                 try {
                   providerCalls += 1;
+                  await renewGenerationLease(usageEventId).catch(() => undefined);
                   hopRes = await chatCompletions(
                     {
                       model,
@@ -1255,9 +1304,15 @@ export const Route = createFileRoute("/api/chat")({
                 }
                 let parsedHop: ReturnType<typeof parseToolHopResponse>;
                 try {
-                  parsedHop = parseToolHopResponse(
-                    await readProviderJsonObject(hopRes, MAX_TOOL_HOP_RESPONSE_BYTES),
-                  );
+                  const hopJson = await readProviderJsonObject(hopRes, MAX_TOOL_HOP_RESPONSE_BYTES);
+                  const hopUsage = reportedUsageFromChatJson(hopJson);
+                  if (hopUsage) {
+                    observedInputTokens += hopUsage.input;
+                    observedCachedInputTokens += hopUsage.cachedInput;
+                    observedOutputTokens += hopUsage.output;
+                    observedReasoningTokens += hopUsage.reasoning;
+                  }
+                  parsedHop = parseToolHopResponse(hopJson);
                 } catch {
                   parsedHop = null;
                 }
@@ -1315,8 +1370,11 @@ export const Route = createFileRoute("/api/chat")({
                       eventId: usageEventId,
                       status: "completed",
                       model: catalogModel,
-                      inputTokens: inputEstimate.tokens * providerCalls,
-                      outputTokens: estimateProviderInput(msg.content).tokens,
+                      inputTokens: observedInputTokens || inputEstimate.tokens * providerCalls,
+                      cachedInputTokens: observedCachedInputTokens,
+                      outputTokens:
+                        observedOutputTokens || estimateProviderInput(msg.content).tokens,
+                      reasoningTokens: observedReasoningTokens,
                       latencyMs: Date.now() - startedAt,
                       toolCalls: activityEvents.length,
                     });
@@ -1466,6 +1524,7 @@ export const Route = createFileRoute("/api/chat")({
             let upstream: Response;
             try {
               providerCalls += 1;
+              await renewGenerationLease(usageEventId).catch(() => undefined);
               upstream = await chatCompletions(finalBody, {
                 signal: request.signal,
               });
@@ -1474,7 +1533,7 @@ export const Route = createFileRoute("/api/chat")({
                 eventId: usageEventId,
                 status: request.signal.aborted ? "client_disconnected" : "provider_failed",
                 model: catalogModel,
-                inputTokens: inputEstimate.tokens * providerCalls,
+                inputTokens: observedInputTokens || inputEstimate.tokens * providerCalls,
                 latencyMs: Date.now() - startedAt,
                 toolCalls: activityEvents.length,
                 error: request.signal.aborted ? "client_disconnected" : "provider_network_error",
@@ -1592,7 +1651,7 @@ export const Route = createFileRoute("/api/chat")({
                 eventId: usageEventId,
                 status: request.signal.aborted ? "client_disconnected" : "provider_failed",
                 model: catalogModel,
-                inputTokens: inputEstimate.tokens * providerCalls,
+                inputTokens: observedInputTokens || inputEstimate.tokens * providerCalls,
                 latencyMs: Date.now() - startedAt,
                 toolCalls: activityEvents.length,
                 error: request.signal.aborted ? "client_disconnected" : "invalid_provider_stream",
@@ -1654,12 +1713,10 @@ export const Route = createFileRoute("/api/chat")({
                   eventId: usageEventId,
                   status,
                   model: catalogModel,
-                  inputTokens:
-                    (reported?.input ?? inputEstimate.tokens) +
-                    inputEstimate.tokens * Math.max(0, providerCalls - 1),
-                  cachedInputTokens: reported?.cachedInput ?? 0,
-                  outputTokens: reported?.output ?? outputFallback,
-                  reasoningTokens: reported?.reasoning ?? 0,
+                  inputTokens: observedInputTokens + (reported?.input ?? inputEstimate.tokens),
+                  cachedInputTokens: observedCachedInputTokens + (reported?.cachedInput ?? 0),
+                  outputTokens: observedOutputTokens + (reported?.output ?? outputFallback),
+                  reasoningTokens: observedReasoningTokens + (reported?.reasoning ?? 0),
                   latencyMs: Date.now() - startedAt,
                   toolCalls: activityEvents.length,
                   error,

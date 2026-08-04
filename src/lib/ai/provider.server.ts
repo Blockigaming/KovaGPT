@@ -6,7 +6,6 @@ import { maximumServerOutputForModel, modelForPolicy } from "@/lib/ai/model-cata
 
 import { DEFAULT_MODELS } from "./model-config.mjs";
 
-
 export type JsonObject = Record<string, unknown>;
 
 export type ProviderCapability =
@@ -24,10 +23,7 @@ export type ProviderCapability =
   | "realtime_voice";
 
 export type ProviderErrorCode =
-  | "provider_timeout"
-  | "provider_rate_limited"
-  | "provider_unavailable"
-  | "provider_bad_response";
+  "provider_timeout" | "provider_rate_limited" | "provider_unavailable" | "provider_bad_response";
 
 export type ProviderErrorEnvelope = {
   error: string;
@@ -419,7 +415,7 @@ function toResponsesRequest(body: JsonObject): JsonObject {
   };
   const serverOutputCeiling = maximumServerOutputForModel(String(body.model ?? ""));
   if (instructions.length) request.instructions = instructions.join("\n\n");
-  if (Array.isArray(body.tools)) request.tools = body.tools;
+  if (Array.isArray(body.tools)) request.tools = body.tools.map(toResponsesTool).filter(Boolean);
   if (body.tool_choice !== undefined) request.tool_choice = body.tool_choice;
   if (typeof body.max_tokens === "number")
     request.max_output_tokens = Math.min(body.max_tokens, serverOutputCeiling);
@@ -428,6 +424,22 @@ function toResponsesRequest(body: JsonObject): JsonObject {
   if (request.max_output_tokens === undefined) request.max_output_tokens = serverOutputCeiling;
   if (body.reasoning && typeof body.reasoning === "object") request.reasoning = body.reasoning;
   return request;
+}
+
+function toResponsesTool(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const tool = raw as Record<string, unknown>;
+  if (tool.type !== "function") return tool;
+  const fn = tool.function as Record<string, unknown> | undefined;
+  if (fn && typeof fn === "object") {
+    return {
+      type: "function",
+      name: fn.name,
+      description: fn.description,
+      parameters: fn.parameters,
+    };
+  }
+  return tool;
 }
 
 function normalizeResponsesContent(message: Record<string, unknown>): unknown {
