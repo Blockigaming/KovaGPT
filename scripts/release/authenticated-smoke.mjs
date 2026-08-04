@@ -16,6 +16,10 @@ if (dry) {
     "artifacts/release/authenticated-smoke.json",
     JSON.stringify(report, null, 2) + "\n",
   );
+  if (process.env.GITHUB_ENV && report.workflows.administratorDiagnostics?.status === "passed")
+    await writeFile(process.env.GITHUB_ENV, "KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS=passed\n", {
+      flag: "a",
+    });
   console.log("Authenticated smoke dry run: refused all network and mutations.");
   process.exit(0);
 }
@@ -25,6 +29,7 @@ const required = [
   "KOVA_STAGING_DISPOSABLE",
   "KOVA_STAGING_ACCESS_TOKEN",
   "KOVA_STAGING_SECONDARY_TOKEN",
+  "KOVA_STAGING_ADMIN_TOKEN",
   "SUPABASE_URL",
   "SUPABASE_PUBLISHABLE_KEY",
 ];
@@ -40,10 +45,12 @@ if (
 report.target = base.hostname;
 const decodeSub = (token) => JSON.parse(Buffer.from(token.split(".")[1], "base64url")).sub;
 const primary = process.env.KOVA_STAGING_ACCESS_TOKEN,
-  secondary = process.env.KOVA_STAGING_SECONDARY_TOKEN;
+  secondary = process.env.KOVA_STAGING_SECONDARY_TOKEN,
+  admin = process.env.KOVA_STAGING_ADMIN_TOKEN;
 const userId = decodeSub(primary);
 if (!userId || userId === decodeSub(secondary))
   throw new Error("Two distinct staging identities are required");
+if (!decodeSub(admin)) throw new Error("A staging administrator identity is required");
 const prefix = `__kova_smoke_${Date.now()}_`,
   url = process.env.SUPABASE_URL,
   key = process.env.SUPABASE_PUBLISHABLE_KEY;
@@ -142,6 +149,16 @@ try {
     },
     { content: "disposable v2", version: 2 },
   );
+  const diagnostics = await fetch(new URL("/api/admin/diagnostics", base), {
+    signal: AbortSignal.timeout(10000),
+    headers: { Authorization: `Bearer ${admin}`, "X-Correlation-Id": randomUUID() },
+  });
+  report.workflows.administratorDiagnostics = {
+    status: diagnostics.ok ? "passed" : "failed",
+    httpStatus: diagnostics.status,
+    cleanup: "not-applicable",
+  };
+  if (!diagnostics.ok) throw new Error("Administrator diagnostics failed");
   await workflow(
     "library",
     "user_library_items",
@@ -199,6 +216,10 @@ try {
     "artifacts/release/authenticated-smoke.json",
     JSON.stringify(report, null, 2) + "\n",
   );
+  if (process.env.GITHUB_ENV && report.workflows.administratorDiagnostics?.status === "passed")
+    await writeFile(process.env.GITHUB_ENV, "KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS=passed\n", {
+      flag: "a",
+    });
 }
 if (Object.values(report.workflows).some((w) => w.status === "failed") || report.orphans.length)
   throw new Error("Authenticated staging smoke failed; inspect bounded report");
