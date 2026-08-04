@@ -70,16 +70,23 @@ const fixedActions: PaletteAction[] = [
   { label: "Toggle appearance", action: "theme", icon: SunMoon },
 ];
 
+// Routes that are internal or retired stay out of workspace search so results
+// never point at pages we no longer surface in navigation.
+const HIDDEN_PALETTE_ROUTES = new Set(["/apps", "/omega"]);
+
 const quickActions: PaletteAction[] = [
   ...fixedActions,
   ...CAPABILITIES.filter(
-    (capability) => !fixedActions.some((action) => action.href === capability.route),
+    (capability) =>
+      !HIDDEN_PALETTE_ROUTES.has(capability.route) &&
+      !fixedActions.some((action) => action.href === capability.route),
   ).map((capability) => ({
     label: `Open ${capability.label}`,
     href: capability.route,
     icon: Boxes,
     keywords: capability.keywords,
   })),
+
   ...extensionRegistry.contributions("command").flatMap((contribution) =>
     contribution.command
       ? [
