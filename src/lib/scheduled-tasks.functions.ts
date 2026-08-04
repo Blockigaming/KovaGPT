@@ -136,7 +136,7 @@ const CreateSchema = z.object({
 
 export const createScheduledTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => CreateSchema.parse(i))
+  .validator((i: unknown) => CreateSchema.parse(i))
   .handler(async ({ data, context }): Promise<ScheduledTask> => {
     if (!scheduledExecutionAvailable) {
       throw new Error(
@@ -192,7 +192,7 @@ const UpdateSchema = z.object({
 
 export const updateScheduledTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => UpdateSchema.parse(i))
+  .validator((i: unknown) => UpdateSchema.parse(i))
   .handler(async ({ data, context }): Promise<ScheduledTask> => {
     await ensurePlusOrAbove(context.supabase, context.userId);
     const patch: Record<string, unknown> = {};
@@ -225,7 +225,7 @@ const DeleteSchema = z.object({ id: z.string().uuid() });
 
 export const deleteScheduledTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i: unknown) => DeleteSchema.parse(i))
+  .validator((i: unknown) => DeleteSchema.parse(i))
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     const { error } = await context.supabase
       .from("scheduled_tasks")

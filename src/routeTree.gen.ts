@@ -16,6 +16,7 @@ import { Route as AiSafetyRouteImport } from './routes/ai-safety'
 import { Route as AiWriterRouteImport } from './routes/ai-writer'
 import { Route as AppsRouteImport } from './routes/apps'
 import { Route as AuditLogRouteImport } from './routes/audit-log'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ChangelogRouteImport } from './routes/changelog'
 import { Route as ChatgptAlternativeRouteImport } from './routes/chatgpt-alternative'
 import { Route as CodeHelperRouteImport } from './routes/code-helper'
@@ -56,9 +57,12 @@ import { Route as ApiAccountRouteImport } from './routes/api/account'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiLivezRouteImport } from './routes/api/livez'
 import { Route as ApiMemoryRouteImport } from './routes/api/memory'
 import { Route as ApiProjectSuggestRouteImport } from './routes/api/project-suggest'
+import { Route as ApiReadyzRouteImport } from './routes/api/readyz'
 import { Route as ApiTitleRouteImport } from './routes/api/title'
+import { Route as ApiVersionRouteImport } from './routes/api/version'
 import { Route as ApiWriteRouteImport } from './routes/api/write'
 import { Route as BlogAiMarketResearchGuideRouteImport } from './routes/blog.ai-market-research-guide'
 import { Route as BlogBestAiAssistantsRouteImport } from './routes/blog.best-ai-assistants'
@@ -69,6 +73,8 @@ import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projec
 import { Route as Char126oauthCallbackRouteImport } from './routes/~oauth.callback'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as ApiAdminAiUsageRouteImport } from './routes/api/admin/ai-usage'
+import { Route as ApiAdminDiagnosticsRouteImport } from './routes/api/admin/diagnostics'
 import { Route as ApiAgentsRunsRouteImport } from './routes/api/agents/runs'
 import { Route as ApiAgentsTeamsRouteImport } from './routes/api/agents/teams'
 import { Route as ApiChatConfirmRouteImport } from './routes/api/chat/confirm'
@@ -133,6 +139,11 @@ const AppsRoute = AppsRouteImport.update({
 const AuditLogRoute = AuditLogRouteImport.update({
   id: '/audit-log',
   path: '/audit-log',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChangelogRoute = ChangelogRouteImport.update({
@@ -337,6 +348,11 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiLivezRoute = ApiLivezRouteImport.update({
+  id: '/api/livez',
+  path: '/api/livez',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMemoryRoute = ApiMemoryRouteImport.update({
   id: '/api/memory',
   path: '/api/memory',
@@ -347,9 +363,19 @@ const ApiProjectSuggestRoute = ApiProjectSuggestRouteImport.update({
   path: '/api/project-suggest',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiReadyzRoute = ApiReadyzRouteImport.update({
+  id: '/api/readyz',
+  path: '/api/readyz',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTitleRoute = ApiTitleRouteImport.update({
   id: '/api/title',
   path: '/api/title',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVersionRoute = ApiVersionRouteImport.update({
+  id: '/api/version',
+  path: '/api/version',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiWriteRoute = ApiWriteRouteImport.update({
@@ -405,6 +431,16 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAdminAiUsageRoute = ApiAdminAiUsageRouteImport.update({
+  id: '/api/admin/ai-usage',
+  path: '/api/admin/ai-usage',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminDiagnosticsRoute = ApiAdminDiagnosticsRouteImport.update({
+  id: '/api/admin/diagnostics',
+  path: '/api/admin/diagnostics',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAgentsRunsRoute = ApiAgentsRunsRouteImport.update({
   id: '/api/agents/runs',
   path: '/api/agents/runs',
@@ -572,6 +608,7 @@ export interface FileRoutesByFullPath {
   '/ai-writer': typeof AiWriterRoute
   '/apps': typeof AppsRoute
   '/audit-log': typeof AuditLogRoute
+  '/auth': typeof AuthRoute
   '/changelog': typeof ChangelogRoute
   '/chatgpt-alternative': typeof ChatgptAlternativeRoute
   '/code-helper': typeof CodeHelperRoute
@@ -612,9 +649,12 @@ export interface FileRoutesByFullPath {
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
+  '/api/readyz': typeof ApiReadyzRoute
   '/api/title': typeof ApiTitleRoute
+  '/api/version': typeof ApiVersionRoute
   '/api/write': typeof ApiWriteRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
   '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
@@ -625,6 +665,8 @@ export interface FileRoutesByFullPath {
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
+  '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
@@ -664,6 +706,7 @@ export interface FileRoutesByTo {
   '/ai-writer': typeof AiWriterRoute
   '/apps': typeof AppsRoute
   '/audit-log': typeof AuditLogRoute
+  '/auth': typeof AuthRoute
   '/changelog': typeof ChangelogRoute
   '/chatgpt-alternative': typeof ChatgptAlternativeRoute
   '/code-helper': typeof CodeHelperRoute
@@ -704,9 +747,12 @@ export interface FileRoutesByTo {
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
+  '/api/readyz': typeof ApiReadyzRoute
   '/api/title': typeof ApiTitleRoute
+  '/api/version': typeof ApiVersionRoute
   '/api/write': typeof ApiWriteRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
   '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
@@ -717,6 +763,8 @@ export interface FileRoutesByTo {
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
+  '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
@@ -757,6 +805,7 @@ export interface FileRoutesById {
   '/ai-writer': typeof AiWriterRoute
   '/apps': typeof AppsRoute
   '/audit-log': typeof AuditLogRoute
+  '/auth': typeof AuthRoute
   '/changelog': typeof ChangelogRoute
   '/chatgpt-alternative': typeof ChatgptAlternativeRoute
   '/code-helper': typeof CodeHelperRoute
@@ -797,9 +846,12 @@ export interface FileRoutesById {
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
   '/api/health': typeof ApiHealthRoute
+  '/api/livez': typeof ApiLivezRoute
   '/api/memory': typeof ApiMemoryRoute
   '/api/project-suggest': typeof ApiProjectSuggestRoute
+  '/api/readyz': typeof ApiReadyzRoute
   '/api/title': typeof ApiTitleRoute
+  '/api/version': typeof ApiVersionRoute
   '/api/write': typeof ApiWriteRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
   '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
@@ -810,6 +862,8 @@ export interface FileRoutesById {
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
+  '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
@@ -851,6 +905,7 @@ export interface FileRouteTypes {
     | '/ai-writer'
     | '/apps'
     | '/audit-log'
+    | '/auth'
     | '/changelog'
     | '/chatgpt-alternative'
     | '/code-helper'
@@ -891,9 +946,12 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/generate-image'
     | '/api/health'
+    | '/api/livez'
     | '/api/memory'
     | '/api/project-suggest'
+    | '/api/readyz'
     | '/api/title'
+    | '/api/version'
     | '/api/write'
     | '/blog/ai-market-research-guide'
     | '/blog/best-ai-assistants'
@@ -904,6 +962,8 @@ export interface FileRouteTypes {
     | '/~oauth/callback'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/admin/ai-usage'
+    | '/api/admin/diagnostics'
     | '/api/agents/runs'
     | '/api/agents/teams'
     | '/api/chat/confirm'
@@ -943,6 +1003,7 @@ export interface FileRouteTypes {
     | '/ai-writer'
     | '/apps'
     | '/audit-log'
+    | '/auth'
     | '/changelog'
     | '/chatgpt-alternative'
     | '/code-helper'
@@ -983,9 +1044,12 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/generate-image'
     | '/api/health'
+    | '/api/livez'
     | '/api/memory'
     | '/api/project-suggest'
+    | '/api/readyz'
     | '/api/title'
+    | '/api/version'
     | '/api/write'
     | '/blog/ai-market-research-guide'
     | '/blog/best-ai-assistants'
@@ -996,6 +1060,8 @@ export interface FileRouteTypes {
     | '/~oauth/callback'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/admin/ai-usage'
+    | '/api/admin/diagnostics'
     | '/api/agents/runs'
     | '/api/agents/teams'
     | '/api/chat/confirm'
@@ -1035,6 +1101,7 @@ export interface FileRouteTypes {
     | '/ai-writer'
     | '/apps'
     | '/audit-log'
+    | '/auth'
     | '/changelog'
     | '/chatgpt-alternative'
     | '/code-helper'
@@ -1075,9 +1142,12 @@ export interface FileRouteTypes {
     | '/api/chat'
     | '/api/generate-image'
     | '/api/health'
+    | '/api/livez'
     | '/api/memory'
     | '/api/project-suggest'
+    | '/api/readyz'
     | '/api/title'
+    | '/api/version'
     | '/api/write'
     | '/blog/ai-market-research-guide'
     | '/blog/best-ai-assistants'
@@ -1088,6 +1158,8 @@ export interface FileRouteTypes {
     | '/~oauth/callback'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/admin/ai-usage'
+    | '/api/admin/diagnostics'
     | '/api/agents/runs'
     | '/api/agents/teams'
     | '/api/chat/confirm'
@@ -1128,6 +1200,7 @@ export interface RootRouteChildren {
   AiWriterRoute: typeof AiWriterRoute
   AppsRoute: typeof AppsRoute
   AuditLogRoute: typeof AuditLogRoute
+  AuthRoute: typeof AuthRoute
   ChangelogRoute: typeof ChangelogRoute
   ChatgptAlternativeRoute: typeof ChatgptAlternativeRoute
   CodeHelperRoute: typeof CodeHelperRoute
@@ -1168,9 +1241,12 @@ export interface RootRouteChildren {
   ApiChatRoute: typeof ApiChatRouteWithChildren
   ApiGenerateImageRoute: typeof ApiGenerateImageRoute
   ApiHealthRoute: typeof ApiHealthRoute
+  ApiLivezRoute: typeof ApiLivezRoute
   ApiMemoryRoute: typeof ApiMemoryRoute
   ApiProjectSuggestRoute: typeof ApiProjectSuggestRoute
+  ApiReadyzRoute: typeof ApiReadyzRoute
   ApiTitleRoute: typeof ApiTitleRoute
+  ApiVersionRoute: typeof ApiVersionRoute
   ApiWriteRoute: typeof ApiWriteRoute
   BlogAiMarketResearchGuideRoute: typeof BlogAiMarketResearchGuideRoute
   BlogBestAiAssistantsRoute: typeof BlogBestAiAssistantsRoute
@@ -1180,6 +1256,8 @@ export interface RootRouteChildren {
   Char126oauthCallbackRoute: typeof Char126oauthCallbackRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiAdminAiUsageRoute: typeof ApiAdminAiUsageRoute
+  ApiAdminDiagnosticsRoute: typeof ApiAdminDiagnosticsRoute
   ApiAgentsRunsRoute: typeof ApiAgentsRunsRoute
   ApiAgentsTeamsRoute: typeof ApiAgentsTeamsRoute
   ApiFinancesExchangeRoute: typeof ApiFinancesExchangeRoute
@@ -1259,6 +1337,13 @@ declare module '@tanstack/react-router' {
       path: '/audit-log'
       fullPath: '/audit-log'
       preLoaderRoute: typeof AuditLogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/changelog': {
@@ -1541,6 +1626,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/livez': {
+      id: '/api/livez'
+      path: '/api/livez'
+      fullPath: '/api/livez'
+      preLoaderRoute: typeof ApiLivezRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/memory': {
       id: '/api/memory'
       path: '/api/memory'
@@ -1555,11 +1647,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiProjectSuggestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/readyz': {
+      id: '/api/readyz'
+      path: '/api/readyz'
+      fullPath: '/api/readyz'
+      preLoaderRoute: typeof ApiReadyzRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/title': {
       id: '/api/title'
       path: '/api/title'
       fullPath: '/api/title'
       preLoaderRoute: typeof ApiTitleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/version': {
+      id: '/api/version'
+      path: '/api/version'
+      fullPath: '/api/version'
+      preLoaderRoute: typeof ApiVersionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/write': {
@@ -1630,6 +1736,20 @@ declare module '@tanstack/react-router' {
       path: '/.mcp/invoke-tool/$tool'
       fullPath: '/.mcp/invoke-tool/$tool'
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/ai-usage': {
+      id: '/api/admin/ai-usage'
+      path: '/api/admin/ai-usage'
+      fullPath: '/api/admin/ai-usage'
+      preLoaderRoute: typeof ApiAdminAiUsageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/diagnostics': {
+      id: '/api/admin/diagnostics'
+      path: '/api/admin/diagnostics'
+      fullPath: '/api/admin/diagnostics'
+      preLoaderRoute: typeof ApiAdminDiagnosticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/agents/runs': {
@@ -1887,6 +2007,7 @@ const rootRouteChildren: RootRouteChildren = {
   AiWriterRoute: AiWriterRoute,
   AppsRoute: AppsRoute,
   AuditLogRoute: AuditLogRoute,
+  AuthRoute: AuthRoute,
   ChangelogRoute: ChangelogRoute,
   ChatgptAlternativeRoute: ChatgptAlternativeRoute,
   CodeHelperRoute: CodeHelperRoute,
@@ -1928,9 +2049,12 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatRoute: ApiChatRouteWithChildren,
   ApiGenerateImageRoute: ApiGenerateImageRoute,
   ApiHealthRoute: ApiHealthRoute,
+  ApiLivezRoute: ApiLivezRoute,
   ApiMemoryRoute: ApiMemoryRoute,
   ApiProjectSuggestRoute: ApiProjectSuggestRoute,
+  ApiReadyzRoute: ApiReadyzRoute,
   ApiTitleRoute: ApiTitleRoute,
+  ApiVersionRoute: ApiVersionRoute,
   ApiWriteRoute: ApiWriteRoute,
   BlogAiMarketResearchGuideRoute: BlogAiMarketResearchGuideRoute,
   BlogBestAiAssistantsRoute: BlogBestAiAssistantsRoute,
@@ -1940,6 +2064,8 @@ const rootRouteChildren: RootRouteChildren = {
   Char126oauthCallbackRoute: Char126oauthCallbackRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiAdminAiUsageRoute: ApiAdminAiUsageRoute,
+  ApiAdminDiagnosticsRoute: ApiAdminDiagnosticsRoute,
   ApiAgentsRunsRoute: ApiAgentsRunsRoute,
   ApiAgentsTeamsRoute: ApiAgentsTeamsRoute,
   ApiFinancesExchangeRoute: ApiFinancesExchangeRoute,

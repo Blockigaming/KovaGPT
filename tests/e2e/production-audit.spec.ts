@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { waitForKovaHydration } from "./hydration";
+
 const routes = [
   "/",
   "/ai-humanizer",
@@ -48,7 +50,7 @@ test("implemented routes render without server errors or horizontal overflow", a
   test.setTimeout(90_000);
   for (const route of routes) {
     const response = await page.goto(route, { waitUntil: "domcontentloaded" });
-    expect(response?.status(), `${route} should not return a server error`).toBeLessThan(500);
+    expect(response?.status(), `${route} should be implemented`).toBeLessThan(400);
     await expect(page.locator("body")).toBeVisible();
     const overflow = await page.evaluate(() => ({
       width: document.documentElement.clientWidth,
@@ -65,6 +67,7 @@ test("guest chat, authentication, command palette, and mobile navigation stay op
 }, testInfo) => {
   test.skip(testInfo.project.name !== "phone-390x844");
   await page.goto("/");
+  await waitForKovaHydration(page);
   await expect(page.getByRole("textbox", { name: /message kovagpt/i })).toBeVisible();
   await page.getByRole("button", { name: /open menu/i }).click();
   await expect(page.getByRole("dialog", { name: /primary navigation/i })).toBeVisible();

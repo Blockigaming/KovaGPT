@@ -9,11 +9,11 @@ import {
   type KnowledgeEdge,
   type KnowledgeNode,
 } from "@/lib/professional.functions";
-import { loadConversations } from "@/lib/chat-store";
+import { chatStoragePrincipal, loadConversations, savePendingActive } from "@/lib/chat-store";
 export const Route = createFileRoute("/knowledge-graph")({
   component: KnowledgeGraph,
   head: () => ({
-    meta: [{ title: "Knowledge Graph | KovaGPT" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: "KovaGPT Graph" }, { name: "robots", content: "noindex" }],
   }),
 });
 const colors = {
@@ -24,12 +24,28 @@ const colors = {
   memory: "#ec4899",
   context: "#22c55e",
 };
+const EMPTY_KNOWLEDGE_NODES: KnowledgeNode[] = [];
+const EMPTY_KNOWLEDGE_EDGES: KnowledgeEdge[] = [];
+
 function KnowledgeGraph() {
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const userKey = user?.id ?? null;
+  const principal = isLoaded ? chatStoragePrincipal(userKey) : null;
   const list = useServerFn(listKnowledgeGraph);
-  const [nodes, setNodes] = useState<KnowledgeNode[]>([]),
-    [edges, setEdges] = useState<KnowledgeEdge[]>([]),
-    [loading, setLoading] = useState(true),
+  const [graphState, setGraphState] = useState<{
+    principal: string | null;
+    nodes: KnowledgeNode[];
+    edges: KnowledgeEdge[];
+  }>({ principal: null, nodes: [], edges: [] });
+  const nodes =
+    principal !== null && graphState.principal === principal
+      ? graphState.nodes
+      : EMPTY_KNOWLEDGE_NODES;
+  const edges =
+    principal !== null && graphState.principal === principal
+      ? graphState.edges
+      : EMPTY_KNOWLEDGE_EDGES;
+  const [loading, setLoading] = useState(true),
     [error, setError] = useState<string | null>(null),
     [query, setQuery] = useState(""),
     [kinds, setKinds] = useState<KnowledgeNode["kind"][]>([
@@ -43,28 +59,44 @@ function KnowledgeGraph() {
     [selected, setSelected] = useState<string | null>(null);
   const [mode, setMode] = useState<"graph" | "timeline">("graph");
   useEffect(() => {
-    if (!isLoaded) return;
-    if (!isSignedIn) {
-      setLoading(false);
+    if (!isLoaded || principal === null) {
+      setGraphState({ principal: null, nodes: [], edges: [] });
+      setLoading(true);
+      setError(null);
       return;
     }
+    if (!isSignedIn) {
+      setGraphState({ principal, nodes: [], edges: [] });
+      setLoading(false);
+      setError(null);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
     list({})
       .then((graph) => {
-        const local = loadConversations().map((chat) => ({
+        if (cancelled) return;
+        const local = loadConversations(userKey).map((chat) => ({
           id: `local-chat:${chat.id}`,
           kind: "chat" as const,
           label: chat.title,
           href: `/?chat=${chat.id}`,
           updatedAt: new Date(chat.updatedAt).toISOString(),
         }));
-        setNodes([...graph.nodes, ...local]);
-        setEdges(graph.edges);
+        setGraphState({ principal, nodes: [...graph.nodes, ...local], edges: graph.edges });
       })
-      .catch((e) =>
-        setError(e instanceof Error ? e.message : "Knowledge graph could not be loaded"),
-      )
-      .finally(() => setLoading(false));
-  }, [isLoaded, isSignedIn, list]);
+      .catch((e) => {
+        if (!cancelled)
+          setError(e instanceof Error ? e.message : "Knowledge graph could not be loaded");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, isSignedIn, list, principal, userKey]);
   const visible = useMemo(
     () =>
       nodes
@@ -324,11 +356,13 @@ function KnowledgeGraph() {
                     to={positions.get(selected)!.href}
                     onClick={() => {
                       const node = positions.get(selected);
-                      if (node?.id.startsWith("local-chat:"))
-                        localStorage.setItem(
-                          "nova-gpt-pending-active",
-                          node.id.replace("local-chat:", ""),
-                        );
+                      if (node?.id.startsWith("local-chat:")) {
+                        try {
+                          savePendingActive(userKey, node.id.replace("local-chat:", ""));
+                        } catch {
+                          // Navigation still works when browser storage is unavailable.
+                        }
+                      }
                     }}
                     className="mt-4 inline-flex min-h-10 items-center rounded-lg bg-foreground px-3 text-sm text-background"
                   >

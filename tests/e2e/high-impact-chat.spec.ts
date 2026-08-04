@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { waitForKovaHydration } from "./hydration";
 
 const projects = new Set(["phone-390x844", "desktop-1440x900"]);
 
@@ -50,8 +51,8 @@ test("editing a prompt replaces its turn and keeps attachments", async ({ page }
     });
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: "More actions" }).click();
-  await page.getByRole("menuitem", { name: "Edit" }).click();
+  await waitForKovaHydration(page);
+  await page.getByRole("button", { name: "Edit message" }).click();
   const editingBanner = page.getByText("Editing a previous prompt", { exact: true });
   await expect(editingBanner).toBeVisible();
 
@@ -89,6 +90,7 @@ test("regenerate resends the prompt with its attachment without duplicating the 
     });
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
   await page.getByRole("button", { name: "More actions" }).click();
   await page.getByRole("menuitem", { name: "Retry" }).click();
 
@@ -101,7 +103,7 @@ test("regenerate resends the prompt with its attachment without duplicating the 
   ]);
 });
 
-test("archived chats can be cleared with explicit confirmation", async ({ page }) => {
+test("archived chats can be removed from Settings data controls", async ({ page }) => {
   await page.addInitScript(() => {
     const now = Date.now();
     localStorage.setItem(
@@ -119,19 +121,33 @@ test("archived chats can be cleared with explicit confirmation", async ({ page }
     );
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
   if (page.viewportSize()!.width < 1024) {
     await page.getByRole("button", { name: "Open menu" }).click();
   }
-  await page.getByRole("button", { name: "Archived chats" }).click();
-  await expect(page.getByRole("heading", { name: "Archived chats" })).toBeVisible();
-  page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("button", { name: "Delete all archived" }).click();
-  await expect(page.getByText("No archived chats.")).toBeVisible();
-  expect(await page.evaluate(() => localStorage.getItem("kovagpt:archived"))).toBe("[]");
-});
+  await page.getByRole("button", { name: "Settings" }).click();
+  const dataControl = page.getByRole("tab", { name: "Data control" });
+  if ((await dataControl.count()) > 0) {
+    await dataControl.click();
+  }
 
+  const archived = page.getByRole("region", { name: "Archived chats" });
+  await expect(archived).toBeVisible();
+  await archived.getByRole("button", { name: "Delete archived chat Archived chat" }).click();
+  const confirmation = page.getByRole("alertdialog", { name: "Permanently delete this chat?" });
+  await expect(confirmation).toBeVisible();
+  await confirmation.getByRole("button", { name: "Delete permanently" }).click();
+  await expect(archived.getByText("No archived chats", { exact: true })).toBeVisible();
+  expect(
+    await page.evaluate(() => ({
+      legacy: localStorage.getItem("kovagpt:archived"),
+      guest: localStorage.getItem("kovagpt:archived:v2:guest"),
+    })),
+  ).toEqual({ legacy: null, guest: "[]" });
+});
 test("deleting a chat offers a working undo", async ({ page }) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
   if (page.viewportSize()!.width < 1024) {
     await page.getByRole("button", { name: "Open menu" }).click();
   }
@@ -157,8 +173,9 @@ test("text files are attached as real request context and remain visible in hist
     });
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
   await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toBeVisible();
-  await page.getByRole("button", { name: "Attach" }).click();
+  await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
   await page.locator('input[type="file"][accept*=".csv"]').setInputFiles({
     name: "quarterly.csv",
     mimeType: "text/csv",
@@ -186,8 +203,7 @@ test("text files are attached as real request context and remain visible in hist
     }),
   ]);
 
-  await page.getByRole("button", { name: "More actions" }).last().click();
-  await page.getByRole("menuitem", { name: "Edit" }).click();
+  await page.getByRole("button", { name: "Edit message" }).last().click();
   await expect(page.getByRole("textbox", { name: "Message KovaGPT" })).toHaveValue(
     "What is the revenue?",
   );
@@ -215,4 +231,3 @@ test("chat API rejects malformed text attachments at the server boundary", async
     expect.objectContaining({ error: "Invalid text file attachment." }),
   );
 });
-

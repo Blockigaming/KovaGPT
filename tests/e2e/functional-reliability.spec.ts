@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 
+import { waitForKovaHydration } from "./hydration";
+
 test.beforeEach(({ page: _page }, testInfo) =>
   test.skip(testInfo.project.name !== "desktop-1440x900"),
 );
@@ -42,6 +44,7 @@ test("real sharing remains available without the misleading local-member flow", 
     );
   });
   await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
   await page.getByRole("button", { name: "Chat options" }).click();
   await expect(page.getByRole("menuitem", { name: "Share" })).toBeVisible();
   await expect(page.getByRole("menuitem", { name: /Add members/i })).toHaveCount(0);

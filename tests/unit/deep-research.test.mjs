@@ -26,8 +26,9 @@ test("deep research module defines a multi-stage workflow", () => {
 test("deep research reports are instructed to use evidence citations only", () => {
   const source = read("src/lib/ai/deep-research.server.ts");
   assert.match(source, /provided evidence only/);
-  assert.match(source, /\[src-1\]/);
-  assert.match(source, /Do not invent citations or URLs/);
+  assert.match(source, /Markdown links whose labels name the source/);
+  assert.match(source, /URLs exactly match the evidence/);
+  assert.match(source, /Do not invent citations, sources, or URLs/);
 });
 
 test("chat route has a separate deep research execution path", () => {

@@ -23,15 +23,16 @@ test("workspace intelligence aggregates only authenticated existing workspace ta
   assert.doesNotMatch(source, /recommended for you/i);
 });
 
-test("home, projects, work, research, and automations share real workspace signals", async () => {
-  const [home, project, work, research, tasks] = await Promise.all([
-    read("src/routes/index.tsx"),
+test("projects, work, research, and automations share real workspace signals", async () => {
+  const [project, work, research, tasks] = await Promise.all([
     read("src/routes/projects.$projectId.tsx"),
     read("src/routes/work.tsx"),
     read("src/routes/research-planner.tsx"),
     read("src/routes/scheduled-tasks.tsx"),
   ]);
+
   assert.match(home, /WorkspaceIntelligence|ConversationOutline/);
+
   assert.match(project, /Connected project work/);
   assert.match(work, /Recent context for Work/);
   assert.match(research, /Research context/);
@@ -60,6 +61,7 @@ test("workspace resources have reduced-click truthful handoffs", async () => {
   }
 });
 
+
 test("Workspace dashboard and Library combine account intelligence with local chats and Work sessions", async () => {
   const [dashboard, library] = await Promise.all([
     read("src/components/WorkspaceIntelligence.tsx"),
@@ -73,6 +75,24 @@ test("Workspace dashboard and Library combine account intelligence with local ch
   assert.match(library, /listWorkspaceRecents/);
   assert.match(dashboard, /context_pack/);
   assert.match(dashboard, /artifact/);
+
+test("chat history is searchable from both the sidebar and command palette", async () => {
+  const [home, sidebar, palette, search] = await Promise.all([
+    read("src/routes/index.tsx"),
+    read("src/components/Sidebar.tsx"),
+    read("src/components/CommandPalette.tsx"),
+    read("src/lib/conversation-search.ts"),
+  ]);
+  assert.match(home, /loadConversations/);
+  assert.match(sidebar, /searchConversations/);
+  assert.match(palette, /searchConversations/);
+  assert.match(search, /message\.content/);
+  assert.match(search, /is:pinned/);
+  assert.match(palette, /useDeferredValue/);
+  assert.match(palette, /archivedConversations/);
+  assert.match(palette, /returnFocusRef/);
+  assert.match(home, /onSelectArchived/);
+
 });
 
 test("all currently implementable gaps are closed and deferred gaps are classified", async () => {
