@@ -300,7 +300,7 @@ function PlanCard({
 }: CardProps) {
   return (
     <div
-      className={`kova-plan-card relative flex flex-col rounded-xl border p-6 shadow-none ${
+      className={`kova-plan-card ${enterprise ? "kova-plan-card-enterprise" : ""} relative flex flex-col rounded-xl border p-6 shadow-none ${
         enterprise
           ? "border-foreground/30 bg-card"
           : highlight
