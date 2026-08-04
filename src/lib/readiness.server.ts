@@ -26,7 +26,6 @@ const capability = (configured: boolean, optional = true): Capability => ({
 export function structuralReadiness(): ReadinessReport {
   const capabilities: Record<string, Capability> = {
     productionUrl: capability(any("KOVA_PUBLIC_URL", "APP_URL", "SITE_URL"), false),
-    clerk: capability(any("CLERK_SECRET_KEY", "VITE_CLERK_PUBLISHABLE_KEY"), false),
     supabase: capability(
       present("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY") &&
         any("SUPABASE_PUBLISHABLE_KEY", "SUPABASE_ANON_KEY"),
