@@ -613,7 +613,7 @@ function ChatMessageInner({
               {/* Visible: Copy, Share */}
               <button
                 onClick={copy}
-                className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-accent transition-colors duration-100"
+                className="kova-message-action inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground transition-colors duration-100 hover:bg-accent hover:text-foreground"
                 title={copied ? "Copied" : "Copy"}
                 aria-label={copied ? "Copied" : "Copy"}
               >
