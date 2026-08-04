@@ -2159,7 +2159,7 @@ body {
    accent; the workspace itself uses a quiet neutral hierarchy.
    ================================================================ */
 
-:root {
+html:root {
   --parity-sidebar-expanded: 260px;
   --parity-header-height: 52px;
   --parity-chat-max: 48rem;
@@ -2224,7 +2224,7 @@ body {
   --link: #174ea6;
 }
 
-.dark {
+html.dark {
   color-scheme: dark;
   --parity-focus: color-mix(in oklab, #ffffff 72%, transparent);
   --parity-scrim: rgb(0 0 0 / 64%);
@@ -2447,6 +2447,11 @@ body :where(button, input, textarea, select) {
   background: var(--background) !important;
   box-shadow: none !important;
   backdrop-filter: none !important;
+}
+
+.kova-topbar {
+  background: var(--background) !important;
+  box-shadow: none !important;
 }
 
 .kova-desktop-topbar,
