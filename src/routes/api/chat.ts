@@ -550,7 +550,7 @@ export const Route = createFileRoute("/api/chat")({
                 ? `\n\n--- User personality preferences ---\n${personality}\n--- End personality ---`
                 : "";
 
-            })();
+
 
             // Hard caps on message volume and per-message size. Anonymous
             // callers and signed-in callers both run through this; signed-in
