@@ -80,7 +80,7 @@
   --input: oklch(0 0 0 / 10%);
   --ring: oklch(0.45 0.01 255);
 
-  --sidebar: oklch(0.975 0.002 255);
+  --sidebar: var(--background);
   --sidebar-foreground: oklch(0.24 0 0);
   --sidebar-hover: oklch(0 0 0 / 6%);
   --sidebar-active: oklch(0 0 0 / 7%);
@@ -176,19 +176,20 @@
 
 .dark {
   color-scheme: dark;
-  --background: oklch(0.235 0.004 255);
+  /* One single dark base for the whole product: sidebar, shell, and pages. */
+  --background: oklch(0.175 0.004 255);
   --foreground: oklch(0.965 0 0);
-  --card: oklch(0.205 0.006 255);
+  --card: oklch(0.215 0.004 255);
   --card-foreground: oklch(0.965 0 0);
-  --popover: oklch(0.255 0.006 255);
+  --popover: oklch(0.225 0.004 255);
   --popover-foreground: oklch(0.965 0 0);
   --primary: oklch(0.965 0 0);
   --primary-foreground: oklch(0.19 0.003 250);
-  --secondary: oklch(0.27 0.004 255);
+  --secondary: oklch(0.245 0.004 255);
   --secondary-foreground: oklch(0.965 0 0);
-  --muted: oklch(0.27 0.004 255);
+  --muted: oklch(0.245 0.004 255);
   --muted-foreground: oklch(0.7 0.004 250);
-  --accent: oklch(0.29 0.004 255);
+  --accent: oklch(0.26 0.004 255);
   --accent-foreground: oklch(0.965 0 0);
   --destructive: oklch(0.62 0.22 25);
   --destructive-foreground: oklch(0.98 0 0);
@@ -196,21 +197,21 @@
   --input: oklch(1 0 0 / 10%);
   --ring: oklch(0.65 0.01 250);
 
-  --sidebar: oklch(0.175 0.004 255);
+  --sidebar: var(--background);
   --sidebar-foreground: oklch(0.92 0 0);
   --sidebar-hover: oklch(1 0 0 / 6%);
   --sidebar-active: oklch(1 0 0 / 9%);
-  --user-bubble: oklch(0.3 0.004 255);
+  --user-bubble: oklch(0.27 0.004 255);
 
   --surface-app: var(--background);
   --surface-workspace: var(--background);
   --surface-raised: var(--card);
-  --surface-floating: oklch(0.235 0.003 250 / 94%);
-  --surface-secondary: oklch(0.245 0.003 250);
+  --surface-floating: oklch(0.175 0.004 255 / 94%);
+  --surface-secondary: oklch(0.215 0.004 255);
   --surface-hover: oklch(1 0 0 / 6%);
   --surface-selected: oklch(1 0 0 / 10%);
-  --surface-composer: oklch(0.3 0.004 255);
-  --surface-input: oklch(0.22 0.003 250);
+  --surface-composer: oklch(0.245 0.004 255);
+  --surface-input: oklch(0.205 0.004 255);
   --surface-modal: var(--popover);
   --surface-scrim: oklch(0 0 0 / 62%);
   --text-secondary: oklch(0.84 0.003 250);

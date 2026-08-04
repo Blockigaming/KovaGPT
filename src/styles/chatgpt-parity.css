@@ -22,8 +22,12 @@
 /* Shell */
 .kova-sidebar {
   border-right: 1px solid color-mix(in oklab, var(--foreground) 10%, transparent) !important;
-  background: var(--background) !important;
+  background: var(--sidebar) !important;
   box-shadow: none;
+}
+/* No banded header/footer tints inside the sidebar: one flat surface. */
+.kova-sidebar > * {
+  background-color: transparent !important;
 }
 .kova-sidebar :where(button, a) {
   letter-spacing: normal;

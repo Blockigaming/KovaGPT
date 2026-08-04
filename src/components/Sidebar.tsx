@@ -348,7 +348,7 @@ export function Sidebar({
         role={open && isMobileViewport() ? "dialog" : "navigation"}
       >
         <div className="flex h-full min-w-[var(--sidebar-expanded)] flex-col overflow-hidden">
-          <div className="relative z-20 flex min-h-[52px] items-center gap-1 bg-sidebar/90 px-2.5 pt-[var(--safe-top)]">
+          <div className="relative z-20 flex min-h-[52px] items-center gap-1 bg-sidebar px-2.5 pt-[var(--safe-top)]">
             <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
               <NovaLogo className="h-6 w-6 rounded-md" />
               <span className="truncate text-base font-semibold tracking-tight">KovaGPT</span>
@@ -514,7 +514,7 @@ export function Sidebar({
           </div>
 
           <div
-            className={`mt-auto border-t border-border/60 bg-sidebar/95 p-2.5 pb-[max(.625rem,var(--safe-bottom))] ${collapsed ? "lg:px-2" : ""}`}
+            className={`mt-auto border-t border-border/60 bg-sidebar p-2.5 pb-[max(.625rem,var(--safe-bottom))] ${collapsed ? "lg:px-2" : ""}`}
           >
             {!isLoaded ? null : showSignedIn ? (
               <div className={`flex items-center gap-2 ${collapsed ? "lg:flex-col" : ""}`}>
