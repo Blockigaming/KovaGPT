@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
 import { File, Files, HardDrive, Search } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { listMyLibrary, type LibraryItem } from "@/lib/library.functions";
 import {
@@ -13,7 +14,7 @@ import {
 } from "@/lib/workspace-handoffs";
 export const Route = createFileRoute("/files")({
   component: FilesPage,
-  head: () => ({ meta: [{ title: "Files | KovaGPT" }, { name: "robots", content: "noindex" }] }),
+  head: () => ({ meta: [{ title: "KovaGPT Files" }, { name: "robots", content: "noindex" }] }),
 });
 function size(n: number | null) {
   if (!n) return "Size unavailable";
@@ -60,15 +61,11 @@ function FilesPage() {
   return (
     <AppShell>
       <main className="mx-auto w-full max-w-5xl px-4 py-7 sm:px-6">
-        <header>
-          <div className="flex items-center gap-2">
-            <Files className="h-5 w-5" />
-            <h1 className="text-2xl font-semibold">Files</h1>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Search upload history, identify duplicates, and reuse durable Library files.
-          </p>
-        </header>
+        <WorkspacePageHeader
+          icon={Files}
+          title="Files"
+          description="Search upload history, identify duplicates, and reuse durable Library files."
+        />
         <section className="my-6 grid gap-3 rounded-2xl border bg-card/40 p-4 sm:grid-cols-3">
           <div>
             <div className="text-xs text-muted-foreground">Stored files</div>

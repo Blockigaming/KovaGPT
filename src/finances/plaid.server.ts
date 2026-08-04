@@ -1,4 +1,4 @@
-import { encryptCredential } from "@/integrations/credential-vault.server";
+import { decryptCredential, encryptCredential } from "@/integrations/credential-vault.server";
 import type { AuthedCaller } from "@/lib/api-auth.server";
 import { createClient } from "@supabase/supabase-js";
 const base = () =>
@@ -7,10 +7,11 @@ const base = () =>
     : process.env.PLAID_ENV === "development"
       ? "https://development.plaid.com"
       : "https://sandbox.plaid.com";
-const configured = () =>
-  Boolean(process.env.PLAID_CLIENT_ID && process.env.PLAID_SECRET && process.env.PLAID_WEBHOOK_URL);
+const credentialsConfigured = () =>
+  Boolean(process.env.PLAID_CLIENT_ID && process.env.PLAID_SECRET);
+const configured = () => Boolean(credentialsConfigured() && process.env.PLAID_WEBHOOK_URL);
 async function call<T>(path: string, body: Record<string, unknown>): Promise<T> {
-  if (!configured()) throw new Error("plaid_not_configured");
+  if (!credentialsConfigured()) throw new Error("plaid_not_configured");
   const response = await fetch(`${base()}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -24,6 +25,7 @@ async function call<T>(path: string, body: Record<string, unknown>): Promise<T> 
   return response.json() as Promise<T>;
 }
 export async function createFinanceLinkToken(caller: AuthedCaller, country: string) {
+  if (!configured()) throw new Error("plaid_not_configured");
   const allowed = (process.env.KOVA_FINANCE_REGIONS ?? "US")
     .split(",")
     .map((v) => v.trim().toUpperCase());
@@ -74,4 +76,51 @@ export async function exchangeFinanceToken(
     },
   } as never);
   return data;
+}
+
+type FinanceConnectionRow = {
+  id: string;
+  item_reference_ciphertext: string;
+};
+
+export async function disconnectAllFinance(caller: AuthedCaller) {
+  const db = caller.supabaseAdmin as unknown as ReturnType<typeof createClient>;
+  const { data: rawConnections, error } = await db
+    .from("financial_connections")
+    .select("id,item_reference_ciphertext")
+    .eq("owner_id", caller.userId)
+    .eq("provider", "plaid");
+  if (error) throw new Error("finance_connection_enumeration_failed");
+  const connections = (rawConnections ?? []) as unknown as FinanceConnectionRow[];
+
+  for (const connection of connections) {
+    let accessToken: string;
+    try {
+      const credential = JSON.parse(
+        await decryptCredential(connection.item_reference_ciphertext),
+      ) as { access_token?: unknown };
+      if (typeof credential.access_token !== "string" || !credential.access_token) {
+        throw new Error("finance_access_token_missing");
+      }
+      accessToken = credential.access_token;
+    } catch {
+      throw new Error("finance_connection_credential_invalid");
+    }
+
+    // Plaid requires /item/remove during offboarding to invalidate the token
+    // and end subscription billing. Keep the Kova account intact when Plaid
+    // cannot confirm removal so the user can retry or contact support.
+    await call<{ request_id: string }>("/item/remove", { access_token: accessToken });
+
+    const { data: purgedConnection, error: purgeError } = await db
+      .from("financial_connections")
+      .delete()
+      .eq("id", connection.id)
+      .eq("owner_id", caller.userId)
+      .select("id")
+      .maybeSingle();
+    if (purgeError || !purgedConnection) throw new Error("finance_connection_purge_failed");
+  }
+
+  return { disconnected: connections.length };
 }

@@ -113,7 +113,7 @@ function AuditLogErrorComponent({ error, reset }: { error: unknown; reset: () =>
 export const Route = createFileRoute("/audit-log")({
   head: () => ({
     meta: [
-      { title: "Activity · KovaGPT" },
+      { title: "KovaGPT Activity" },
       { name: "description", content: "Recent connected-account actions performed by KovaGPT." },
       { name: "robots", content: "noindex,nofollow" },
     ],

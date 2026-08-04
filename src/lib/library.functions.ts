@@ -57,7 +57,7 @@ const SaveSchema = z.object({
 
 export const saveToLibrary = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => SaveSchema.parse(input))
+  .validator((input: unknown) => SaveSchema.parse(input))
   .handler(async ({ data, context }): Promise<{ id: string }> => {
     const { data: row, error } = await context.supabase
       .from("user_library_items")
@@ -83,7 +83,7 @@ export const saveToLibrary = createServerFn({ method: "POST" })
 
 export const deleteLibraryItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .validator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }): Promise<{ ok: true }> => {
     // If the item is an image with a stored object, remove it from the private bucket first.
     const { data: row } = await context.supabase

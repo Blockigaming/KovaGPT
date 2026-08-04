@@ -34,10 +34,9 @@ test("Apollo migration persists parent tasks, dependencies, retries, outputs and
   assert.match(migration, /agent-evidence/);
 });
 
-test("specialists receive only owner-scoped workspace context", async () => {
+test("legacy agent_runs specialist execution fails closed", async () => {
   const worker = await read("workers/agent-team-worker.mjs");
-  assert.match(worker, /eq\("owner_id", task\.owner_id\)/);
-  assert.match(worker, /eq\("uploaded_by", task\.owner_id\)/);
-  assert.match(worker, /eq\("user_id", task\.owner_id\)/);
-  assert.match(worker, /authorizedWorkspaceContext/);
+  assert.match(worker, /legacy agent_runs specialist worker is disabled/);
+  assert.match(worker, /agent execution is unavailable/);
+  assert.doesNotMatch(worker, /OPENAI_API_KEY|chromium|createClient|while \(true\)/);
 });

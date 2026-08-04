@@ -86,31 +86,37 @@ export const refreshGitHubInstallations = createServerFn({ method: "POST" })
     const ownedById = new Map<number, string>(),
       availableById = new Map<number, any>(),
       appInstallations = (await listGitHubAppInstallations()) as any[];
-    for (const installation of appInstallations) {
-      for (const account of accounts.data ?? []) {
-        let authorized =
-          installation.account?.type === "User" &&
-          Number(installation.account?.id) === Number(account.github_user_id);
-        if (!authorized && installation.account?.type === "Organization") {
-          const membership = await fetch(
-            `https://api.github.com/user/memberships/orgs/${encodeURIComponent(installation.account.login)}`,
-            {
-              headers: {
-                accept: "application/vnd.github+json",
-                authorization: `Bearer ${await decryptSecret(account.token_ciphertext)}`,
-                "x-github-api-version": "2022-11-28",
-              },
-            },
-          );
-          if (membership.ok) {
-            const access = (await membership.json()) as { state?: string; role?: string };
-            authorized = access.state === "active" && access.role === "admin";
-          }
-        }
-        if (authorized) {
-          ownedById.set(Number(installation.id), account.id);
-          availableById.set(Number(installation.id), installation);
-          break;
+    for (const account of accounts.data ?? []) {
+      const userInstallations = new Set<number>();
+      let nextUrl: string | null = "https://api.github.com/user/installations?per_page=100";
+      while (nextUrl) {
+        const response: Response = await fetch(nextUrl, {
+          headers: {
+            accept: "application/vnd.github+json",
+            authorization: `Bearer ${await decryptSecret(account.token_ciphertext)}`,
+            "x-github-api-version": "2022-11-28",
+          },
+        });
+        if (!response.ok) break;
+        const payload = (await response.json()) as { installations?: Array<{ id?: number }> };
+        for (const installation of payload.installations ?? [])
+          if (installation.id) userInstallations.add(Number(installation.id));
+        nextUrl =
+          response.headers
+            .get("link")
+            ?.split(",")
+            .find((part: string) => part.includes('rel="next"'))
+            ?.match(/<([^>]+)>/)?.[1] ?? null;
+      }
+      for (const installation of appInstallations) {
+        const installationId = Number(installation.id);
+        const authorized =
+          userInstallations.has(installationId) ||
+          (installation.account?.type === "User" &&
+            Number(installation.account?.id) === Number(account.github_user_id));
+        if (authorized && !availableById.has(installationId)) {
+          ownedById.set(installationId, account.id);
+          availableById.set(installationId, installation);
         }
       }
     }
@@ -166,7 +172,7 @@ export const refreshGitHubInstallations = createServerFn({ method: "POST" })
   });
 export const updateGitHubRepositoryGrants = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((value: unknown) =>
+  .validator((value: unknown) =>
     z
       .object({
         repositoryIds: z.array(z.number().int().positive()).max(500),
@@ -211,7 +217,7 @@ export const updateGitHubRepositoryGrants = createServerFn({ method: "POST" })
   });
 export const disconnectGitHub = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((value: unknown) =>
+  .validator((value: unknown) =>
     z.object({ accountId: z.string().uuid(), removeData: z.boolean() }).parse(value),
   )
   .handler(async ({ data, context }) => {

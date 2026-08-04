@@ -122,3 +122,38 @@ test("tool activity covers multimodal and Canvas operations without secret metad
     assert.match(activity, new RegExp(`\\b${token}\\b`), `activity should include ${token}`);
   }
 });
+
+test("image lightbox delegates modal lifecycle and restores intentional focus", () => {
+  const images = read("src/routes/images.tsx");
+  for (const token of [
+    "DialogContent",
+    "DialogTitle",
+    "DialogDescription",
+    "data-image-lightbox",
+    "onOpenAutoFocus",
+    "onCloseAutoFocus",
+    "lightboxInitialFocusRef",
+    "lightboxReturnFocusRef",
+    "lightboxReturnToPromptRef",
+    "isConnected",
+  ]) {
+    assert.match(images, new RegExp(token));
+  }
+  assert.doesNotMatch(images, /window\.addEventListener\("keydown", onKey\)/);
+  assert.doesNotMatch(images, /aria-modal="true"/);
+  assert.match(images, /<article\s+key=\{h\.id\}/);
+  assert.doesNotMatch(images, /<button\s+key=\{h\.id\}/);
+  assert.match(images, /group-focus-within:opacity-100/);
+  assert.match(images, /min-h-11/);
+  assert.match(images, /h-11 w-11/);
+
+  const styles = read("src/styles.css");
+  const dialog = read("src/components/ui/dialog.tsx");
+  const shellOverlay = read("src/components/CommandPalette.tsx");
+  assert.match(dialog, /data-kova-dialog-surface=\{constrainToViewport \? "" : undefined\}/);
+  assert.match(images, /constrainToViewport=\{false\}/);
+  assert.doesNotMatch(images, /data-kova-dialog-surface/);
+  assert.doesNotMatch(shellOverlay, /data-kova-dialog-surface/);
+  assert.match(styles, /\.image-lightbox > button:last-child/);
+  assert.match(styles, /width: 2\.75rem;\s+height: 2\.75rem;/);
+});

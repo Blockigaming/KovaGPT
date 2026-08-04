@@ -12,7 +12,7 @@ const migration = await readFile(
 test("Work is loaded from persisted runs, events, deliverables, and approvals", () => {
   for (const contract of [
     "agent_jobs",
-    "agent_run_events",
+    "agent_job_events",
     "agent_deliverables",
     "agent_approvals",
     '.eq("owner_id", context.userId)',
@@ -20,18 +20,16 @@ test("Work is loaded from persisted runs, events, deliverables, and approvals", 
     assert.ok(server.includes(contract), contract);
 });
 
-test("Work exposes factual execution, evidence, deliverables, controls, and approvals", () => {
+test("Work exposes historical evidence and fail-closed controls", () => {
   for (const contract of [
     "Dependency graph",
     "Specialist timeline",
     "Evidence center",
     "No estimated percentage",
-    "Retrying attempt",
     "Approval center",
     "Search deliverables",
     "SHA-256",
-    "pause",
-    "resume",
+    "Agent execution is unavailable",
     "cancel",
   ])
     assert.ok(route.includes(contract), contract);
@@ -40,7 +38,11 @@ test("Work exposes factual execution, evidence, deliverables, controls, and appr
 test("consequential Work transitions are validated in security-definer RPCs", () => {
   assert.match(migration, /control_agent_job[\s\S]+owner_id=auth\.uid\(\)/);
   assert.match(migration, /decide_agent_approval[\s\S]+status='pending'/);
+  assert.match(migration, /p_action <> 'cancel'/);
+  assert.match(migration, /p_decision <> 'denied'/);
   assert.match(migration, /grant execute on function public\.decide_agent_approval/);
+  assert.match(server, /action: z\.literal\("cancel"\)/);
+  assert.match(server, /decision: z\.literal\("denied"\)/);
 });
 
 test("Work graph, evidence, inspector, and revision controls are interactive", () => {

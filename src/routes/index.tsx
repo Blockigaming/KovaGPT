@@ -1,20 +1,28 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { authFetch } from "@/lib/auth-fetch";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type SetStateAction,
+} from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
 import {
+  ArrowDown,
+  BarChart3,
+  Check,
+  Download,
+  FileText,
+  ImageIcon,
+  ListChecks,
+  MessageSquareDashed,
   PanelLeft,
   Search,
-  MessageSquareDashed,
-  Check,
-  Sparkles,
-  Globe2,
-  Code2,
-  GraduationCap,
-  Image as ImageIcon,
-  FileText,
   Share2,
-  Download,
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 
@@ -25,10 +33,9 @@ import {
   type PendingAttachment,
   type RecentLibraryFile,
 } from "@/components/ChatInput";
-import { AIStatus } from "@/components/AIStatus";
 import { MobileTopBar } from "@/components/MobileTopBar";
 import { CommandPalette } from "@/components/CommandPalette";
-import { ConversationOutline } from "@/components/ConversationOutline";
+import { ResponsiveModelSelector } from "@/components/ResponsiveModelSelector";
 
 import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 
@@ -44,16 +51,15 @@ const LimitReachedDialog = lazy(() =>
 const ShareChatDialog = lazy(() =>
   import("@/components/ShareChatDialog").then((m) => ({ default: m.ShareChatDialog })),
 );
-const ArchivedChatsDialog = lazy(() =>
-  import("@/components/ArchivedChatsDialog").then((m) => ({ default: m.ArchivedChatsDialog })),
-);
-const WorkspaceIntelligence = lazy(() =>
-  import("@/components/WorkspaceIntelligence").then((module) => ({
-    default: module.WorkspaceIntelligence,
-  })),
-);
 import { applyThemeMode } from "@/lib/theme";
 import { loadSettings, settingsKey } from "@/lib/use-nova-settings";
+import {
+  blockMemoryWrites,
+  configureMemoryWrites,
+  enqueueMemoryWrite,
+  isMemoryWriteBlocked,
+  memoryWriteBlockStorageKey,
+} from "@/lib/memory-write-coordinator.mjs";
 
 import { getUsage } from "@/lib/limits";
 
@@ -71,13 +77,28 @@ import {
   type Message,
   deriveTitle,
   branchConversation,
+  chatStoragePrincipal,
+  clearDraft,
+  clearPendingActive,
+  draftStorageKey,
+  loadDraft,
   loadConversations,
+  loadPendingActive,
   newId,
   saveConversations,
+  saveDraft,
   archiveConversation,
+  removeArchivedConversation,
 } from "@/lib/chat-store";
 import { toast } from "sonner";
 import { loadPersonality, personalityToInstruction } from "@/components/PersonalitySliders";
+import { useTier } from "@/hooks/useTier";
+import {
+  consumePrincipalHandoff,
+  isPrincipalBrowserStorageClearedEvent,
+  PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT,
+  safeBrowserStorage,
+} from "@/lib/principal-browser-storage.mjs";
 
 export const Route = createFileRoute("/")({
   component: KovaGPT,
@@ -112,11 +133,36 @@ export const Route = createFileRoute("/")({
   }),
 });
 
+const EMPTY_CONVERSATIONS: Conversation[] = [];
+
 function KovaGPT() {
   const { isSignedIn, isLoaded, user } = useUser();
+  const { tier } = useTier();
   const { openSignUp } = useClerkSafe();
   const userKey = user?.id ?? null;
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const storagePrincipal = chatStoragePrincipal(userKey);
+  const storagePrincipalRef = useRef(storagePrincipal);
+  storagePrincipalRef.current = storagePrincipal;
+  const storageGenerationRef = useRef(0);
+  const [conversationState, setConversationState] = useState<{
+    principal: string | null;
+    items: Conversation[];
+  }>({ principal: null, items: [] });
+  const principalReady = isLoaded && conversationState.principal === storagePrincipal;
+  const conversations = principalReady ? conversationState.items : EMPTY_CONVERSATIONS;
+  const setConversations = useCallback(
+    (next: SetStateAction<Conversation[]>) => {
+      setConversationState((previous) => {
+        // Async work started by a prior account must never write into the
+        // currently active account's browser namespace.
+        if (!isLoaded || storagePrincipalRef.current !== storagePrincipal) return previous;
+        const current = previous.principal === storagePrincipal ? previous.items : [];
+        const items = typeof next === "function" ? next(current) : next;
+        return { principal: storagePrincipal, items };
+      });
+    },
+    [isLoaded, storagePrincipal],
+  );
   const [activeId, setActiveId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
@@ -125,12 +171,16 @@ function KovaGPT() {
   const [tempChat, setTempChat] = useState(false);
   const [tempChatConfirmed, setTempChatConfirmed] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
+  const commandReturnFocusRef = useRef<HTMLElement | null>(null);
   const [commandQuery, setCommandQuery] = useState("");
-  const [archivedOpen, setArchivedOpen] = useState(false);
   const [selectedTool, setSelectedTool] = useState<ComposerToolId | null>(null);
   const [recentLibraryFiles, setRecentLibraryFiles] = useState<RecentLibraryFile[]>([]);
   const [recentLibraryLoading, setRecentLibraryLoading] = useState(false);
   const [recentLibraryError, setRecentLibraryError] = useState<string | null>(null);
+  const [editingMessage, setEditingMessage] = useState<{
+    conversationId: string;
+    messageId: string;
+  } | null>(null);
 
   // Start closed to avoid a flash-of-open sidebar on narrow viewports during
   // SSR/hydration. On desktop we honor the persisted user preference so the
@@ -157,11 +207,17 @@ function KovaGPT() {
 
   const loadRecentLibraryFiles = useCallback(async () => {
     if (!isLoaded) return;
+    const generation = storageGenerationRef.current;
+    const requestPrincipal = storagePrincipal;
+    const isCurrent = () =>
+      generation === storageGenerationRef.current &&
+      requestPrincipal === storagePrincipalRef.current;
     setRecentLibraryLoading(true);
     setRecentLibraryError(null);
     try {
       const { listMyLibrary } = await import("@/lib/library.functions");
       const rows = isSignedIn ? await listMyLibrary() : [];
+      if (!isCurrent()) return;
       setRecentLibraryFiles(
         rows
           .filter((item) => item.file_name || item.content_text || item.file_type)
@@ -177,12 +233,13 @@ function KovaGPT() {
           })),
       );
     } catch (error) {
+      if (!isCurrent()) return;
       console.warn("[recentLibraryFiles]", error);
       setRecentLibraryError("Recent Library files are unavailable.");
     } finally {
-      setRecentLibraryLoading(false);
+      if (isCurrent()) setRecentLibraryLoading(false);
     }
-  }, [isLoaded, isSignedIn]);
+  }, [isLoaded, isSignedIn, storagePrincipal]);
 
   useEffect(() => {
     void loadRecentLibraryFiles();
@@ -193,26 +250,32 @@ function KovaGPT() {
   const lastLoadedDraftRef = useRef<string | null>(null);
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (lastLoadedDraftRef.current === activeId) return;
-    lastLoadedDraftRef.current = activeId;
+    if (tempChat) {
+      lastLoadedDraftRef.current = null;
+      setInput("");
+      return;
+    }
+    if (!principalReady) return;
+    const key = draftStorageKey(userKey, activeId);
+    if (lastLoadedDraftRef.current === key) return;
+    lastLoadedDraftRef.current = key;
     try {
-      const saved = localStorage.getItem(`kova-draft:${activeId ?? "__new__"}`);
-      setInput(saved ?? "");
+      setInput(loadDraft(userKey, activeId));
     } catch {
       setInput("");
     }
-  }, [activeId]);
+  }, [activeId, principalReady, tempChat, userKey]);
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (lastLoadedDraftRef.current !== activeId) return;
-    const key = `kova-draft:${activeId ?? "__new__"}`;
+    if (tempChat || !principalReady) return;
+    const key = draftStorageKey(userKey, activeId);
+    if (lastLoadedDraftRef.current !== key) return;
     try {
-      if (input) localStorage.setItem(key, input);
-      else localStorage.removeItem(key);
+      saveDraft(userKey, activeId, input);
     } catch {
       /* ignore */
     }
-  }, [input, activeId]);
+  }, [input, activeId, principalReady, tempChat, userKey]);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<string | undefined>(undefined);
   const settingsReturnFocusRef = useRef<HTMLElement | null>(null);
@@ -263,7 +326,9 @@ function KovaGPT() {
   }, [navigate]);
   const [shareChatId, setShareChatId] = useState<string | null>(null);
 
-  const [settings, setSettings] = useState<Settings>(() => loadSettings(null));
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [settingsPrincipal, setSettingsPrincipal] = useState<string | null>(null);
+  const settingsReady = isLoaded && settingsPrincipal === storagePrincipal;
   const [signupPromptOpen, setSignupPromptOpen] = useState(false);
   const [signupPromptShown, setSignupPromptShown] = useState(false);
   const [limitDialog, setLimitDialog] = useState<{
@@ -272,6 +337,9 @@ function KovaGPT() {
     message?: string;
   }>({ open: false, kind: "image" });
   const abortRef = useRef<AbortController | null>(null);
+  const inFlightRef = useRef(false);
+  const retryTimerRef = useRef<number | null>(null);
+  const activeIdRef = useRef<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
   const [showJumpToLatest, setShowJumpToLatest] = useState(false);
@@ -279,25 +347,54 @@ function KovaGPT() {
   // Load (or reload) settings whenever the signed-in user changes so each
   // account gets its own personalization, behavior, appearance, etc.
   useEffect(() => {
-    if (!isLoaded) return;
-    const loaded = loadSettings(userKey);
+    if (!isLoaded) {
+      storageGenerationRef.current += 1;
+      setConversationState({ principal: null, items: [] });
+      setSettingsPrincipal(null);
+      return;
+    }
+    storageGenerationRef.current += 1;
+    abortRef.current?.abort();
+    abortRef.current = null;
+    inFlightRef.current = false;
+    if (retryTimerRef.current !== null) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+    setIsStreaming(false);
+    setActiveId(null);
+    setInput("");
+    setAttachments([]);
+    setSelectedTool(null);
+    setCommandOpen(false);
+    setCommandQuery("");
+    setEditingMessage(null);
+    setShareChatId(null);
+    setSettingsOpen(false);
+    setRecentLibraryFiles([]);
+    setRecentLibraryLoading(false);
+    setRecentLibraryError(null);
+    lastLoadedDraftRef.current = null;
+
+    const loaded = loadSettings(userKey, { migrateLegacyGuest: userKey === null });
     setSettings(loaded);
+    setSettingsPrincipal(storagePrincipal);
     applyThemeMode(loaded.mode ?? "system");
-    // Never wipe conversations on sign-out — memory persists across sessions
-    // and logins. Only a fully signed-out user refreshing a fresh tab starts
-    // clean (handled implicitly by empty localStorage on a fresh device).
-    const loadedConvs = loadConversations();
-    setConversations(loadedConvs);
+    // Keep each signed-in account and the guest workspace in a separate
+    // browser namespace. Switching accounts must render empty until the new
+    // principal's data has loaded.
+    const loadedConvs = loadConversations(userKey);
+    setConversationState({ principal: storagePrincipal, items: loadedConvs });
     try {
-      const pending = localStorage.getItem("nova-gpt-pending-active");
+      const pending = loadPendingActive(userKey);
       if (pending && loadedConvs.some((c) => c.id === pending)) {
         setActiveId(pending);
       }
-      localStorage.removeItem("nova-gpt-pending-active");
+      clearPendingActive(userKey);
     } catch {
       /* ignore */
     }
-  }, [isLoaded, userKey, isSignedIn]);
+  }, [isLoaded, userKey, isSignedIn, storagePrincipal]);
 
   // Re-apply theme mode whenever it changes
   useEffect(() => {
@@ -307,83 +404,161 @@ function KovaGPT() {
   // Debounced persistence - avoid JSON.stringify on every keystroke / stream token,
   // which was the main source of typing/streaming lag.
   useEffect(() => {
-    if (!isLoaded || typeof window === "undefined") return;
+    if (!settingsReady || typeof window === "undefined") return;
+    const generation = storageGenerationRef.current;
     const t = setTimeout(() => {
-      localStorage.setItem(settingsKey(userKey), JSON.stringify(settings));
+      if (generation !== storageGenerationRef.current) return;
+      safeBrowserStorage("localStorage")?.setItem(settingsKey(userKey), JSON.stringify(settings));
     }, 400);
     return () => clearTimeout(t);
-  }, [isLoaded, settings, userKey]);
+  }, [settings, settingsReady, userKey]);
 
   useEffect(() => {
-    const t = setTimeout(() => saveConversations(conversations.filter((c) => !c.temporary)), 400);
+    if (!principalReady) return;
+    const generation = storageGenerationRef.current;
+    const t = setTimeout(() => {
+      if (generation !== storageGenerationRef.current) return;
+      saveConversations(
+        userKey,
+        conversations.filter((c) => !c.temporary),
+      );
+    }, 400);
     return () => clearTimeout(t);
-  }, [conversations]);
+  }, [conversations, principalReady, userKey]);
 
   useEffect(() => {
-    try {
-      const rawPack =
-        sessionStorage.getItem("kova-active-context-pack") ??
-        localStorage.getItem("kova-active-context-pack");
-      const rawWork = localStorage.getItem("kova-work-context");
-      const rawApp =
-        sessionStorage.getItem("kova-app-chat-context") ??
-        localStorage.getItem("kova-app-chat-context");
-      const rawPrompt =
-        sessionStorage.getItem("kova-prompt-launch") ?? localStorage.getItem("kova-prompt-launch");
-      const rawResearch = localStorage.getItem("kova-research-launch");
-      if (rawPack) {
-        const pack = JSON.parse(rawPack) as {
-          name: string;
-          items: { title: string; content: string }[];
-        };
-        const context = pack.items.map((item) => `## ${item.title}\n${item.content}`).join("\n\n");
+    if (!isLoaded) return;
+    const handlePrincipalReset = (event: Event) => {
+      if (!isPrincipalBrowserStorageClearedEvent(event, userKey)) return;
+      storageGenerationRef.current += 1;
+      abortRef.current?.abort();
+      abortRef.current = null;
+      inFlightRef.current = false;
+      if (retryTimerRef.current !== null) {
+        window.clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+      lastLoadedDraftRef.current = null;
+      setConversationState({ principal: null, items: [] });
+      setSettings(DEFAULT_SETTINGS);
+      setSettingsPrincipal(null);
+      setActiveId(null);
+      setInput("");
+      setAttachments([]);
+      setSelectedTool(null);
+      setEditingMessage(null);
+      setShareChatId(null);
+      setCommandOpen(false);
+      setCommandQuery("");
+      setIsStreaming(false);
+      setRecentLibraryFiles([]);
+      setRecentLibraryLoading(false);
+      setRecentLibraryError(null);
+      configureMemoryWrites({ principal: null, enabled: false });
+    };
+    window.addEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, handlePrincipalReset);
+    return () =>
+      window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, handlePrincipalReset);
+  }, [isLoaded, userKey]);
+
+  useEffect(() => {
+    if (!principalReady) return;
+    let rejectedHandoff = false;
+    const storage = safeBrowserStorage("sessionStorage");
+    const candidates: Array<{ createdAt: number; apply: () => void }> = [];
+    const consume = <T,>(baseKey: string, prepare: (value: T) => () => void) => {
+      const result = consumePrincipalHandoff<T>(storage, baseKey, userKey);
+      if (!result.ok) {
+        if (result.reason !== "missing") rejectedHandoff = true;
+        return;
+      }
+      try {
+        candidates.push({ createdAt: result.createdAt, apply: prepare(result.value) });
+      } catch {
+        rejectedHandoff = true;
+      }
+    };
+
+    // Consume every registered home handoff before choosing one. This makes
+    // the newest valid handoff deterministic and prevents lower-priority
+    // leftovers from replaying on the next render.
+    consume<{
+      name: string;
+      items: { title: string; content: string }[];
+    }>("kova-active-context-pack", (pack) => {
+      if (
+        typeof pack?.name !== "string" ||
+        !Array.isArray(pack.items) ||
+        !pack.items.every(
+          (item) => typeof item?.title === "string" && typeof item?.content === "string",
+        )
+      ) {
+        throw new Error("invalid_context_pack_handoff");
+      }
+      const context = pack.items.map((item) => `## ${item.title}\n${item.content}`).join("\n\n");
+      return () =>
         setInput(
           `Use this saved context pack, “${pack.name}”, to help with my request:\n\n${context}\n\nMy request: `,
         );
-        sessionStorage.removeItem("kova-active-context-pack");
-        localStorage.removeItem("kova-active-context-pack");
-      } else if (rawWork) {
-        const task = JSON.parse(rawWork) as {
-          objective: string;
-          context: string;
-          steps: { text: string; done: boolean }[];
-        };
+    });
+
+    consume<{
+      objective: string;
+      context: string;
+      steps: { text: string; done?: boolean; approval?: boolean }[];
+    }>("kova-work-context", (task) => {
+      if (
+        typeof task?.objective !== "string" ||
+        typeof task.context !== "string" ||
+        !Array.isArray(task.steps) ||
+        !task.steps.every((step) => typeof step?.text === "string")
+      ) {
+        throw new Error("invalid_work_handoff");
+      }
+      return () =>
         setInput(
           `Continue this work task without claiming background execution.\n\nObjective: ${task.objective}\nContext: ${task.context || "None provided"}\nPlan:\n${task.steps.map((step) => `- [${step.done ? "x" : " "}] ${step.text}`).join("\n")}\n\nNext, help me with: `,
         );
-        localStorage.removeItem("kova-work-context");
-      } else if (rawApp) {
-        setInput(rawApp);
-        sessionStorage.removeItem("kova-app-chat-context");
-        localStorage.removeItem("kova-app-chat-context");
-      } else if (rawPrompt) {
-        const launch = JSON.parse(rawPrompt) as {
-          prompt: string;
-          pack?: { name: string; items: { title: string; content: string }[] } | null;
-        };
-        const context = launch.pack
-          ? `\n\nContext pack “${launch.pack.name}”:\n${launch.pack.items.map((item) => `## ${item.title}\n${item.content}`).join("\n\n")}`
-          : "";
-        setInput(`${launch.prompt}${context}`);
-        sessionStorage.removeItem("kova-prompt-launch");
-        localStorage.removeItem("kova-prompt-launch");
-      } else if (rawResearch) {
-        setInput(rawResearch);
-        setSelectedTool("deep_research");
-        localStorage.removeItem("kova-research-launch");
+    });
+
+    consume<string>("kova-app-chat-context", (appContext) => {
+      if (typeof appContext !== "string") throw new Error("invalid_app_handoff");
+      return () => setInput(appContext);
+    });
+
+    consume<{
+      prompt: string;
+      pack?: { name: string; items: { title: string; content: string }[] } | null;
+    }>("kova-prompt-launch", (launch) => {
+      if (
+        typeof launch?.prompt !== "string" ||
+        (launch.pack != null &&
+          (typeof launch.pack.name !== "string" ||
+            !Array.isArray(launch.pack.items) ||
+            !launch.pack.items.every(
+              (item) => typeof item?.title === "string" && typeof item?.content === "string",
+            )))
+      ) {
+        throw new Error("invalid_prompt_handoff");
       }
-    } catch {
-      sessionStorage.removeItem("kova-active-context-pack");
-      localStorage.removeItem("kova-active-context-pack");
-      localStorage.removeItem("kova-work-context");
-      sessionStorage.removeItem("kova-app-chat-context");
-      localStorage.removeItem("kova-app-chat-context");
-      sessionStorage.removeItem("kova-prompt-launch");
-      localStorage.removeItem("kova-prompt-launch");
-      localStorage.removeItem("kova-research-launch");
-      toast.error("Saved workspace context could not be attached");
-    }
-  }, []);
+      const context = launch.pack
+        ? `\n\nContext pack “${launch.pack.name}”:\n${launch.pack.items.map((item) => `## ${item.title}\n${item.content}`).join("\n\n")}`
+        : "";
+      return () => setInput(`${launch.prompt}${context}`);
+    });
+
+    consume<string>("kova-research-launch", (research) => {
+      if (typeof research !== "string") throw new Error("invalid_research_handoff");
+      return () => {
+        setInput(research);
+        setSelectedTool("deep_research");
+      };
+    });
+
+    const newest = candidates.sort((left, right) => right.createdAt - left.createdAt)[0];
+    if (newest) newest.apply();
+    if (rejectedHandoff) toast.error("Saved workspace context could not be attached");
+  }, [principalReady, userKey]);
 
   // Memory is retained across sign-in/sign-out transitions per user request.
 
@@ -391,43 +566,30 @@ function KovaGPT() {
     () => conversations.find((c) => c.id === activeId) ?? null,
     [conversations, activeId],
   );
+  const activeTemporary = active ? Boolean(active.temporary) : null;
+  const historyConversations = useMemo(
+    () => conversations.filter((conversation) => !conversation.temporary),
+    [conversations],
+  );
 
-  // Personalized greeting for the landing screen.
-  const firstName = useMemo(() => {
-    const candidate =
-      settings.displayName?.trim() ||
-      (user as { firstName?: string; username?: string; fullName?: string } | null | undefined)
-        ?.firstName ||
-      (user as { firstName?: string; username?: string; fullName?: string } | null | undefined)
-        ?.username ||
-      (
-        user as { firstName?: string; username?: string; fullName?: string } | null | undefined
-      )?.fullName?.split(" ")[0] ||
-      "";
-    return typeof candidate === "string" ? candidate.split(" ")[0] : "";
-  }, [settings.displayName, user]);
+  useEffect(() => {
+    if (activeTemporary !== null) setTempChat(activeTemporary);
+  }, [activeTemporary]);
 
-  const greeting = useMemo(() => {
-    if (!isLoaded) return "What can I help with?";
-    if (clerkEnabled && !isSignedIn) return "What can I help with?";
-    const name = firstName;
-    const prompts = name
-      ? [
-          `Welcome back, ${name}.`,
-          `Hey, ${name}.`,
-          `Good to see you, ${name}.`,
-          `Ready, ${name}?`,
-          `Let's go, ${name}.`,
-        ]
-      : [
-          "What can I help with?",
-          "How can I help you today?",
-          "Ready when you are.",
-          "What are we working on?",
-          "Ask anything.",
-        ];
-    return prompts[0];
-  }, [firstName, isLoaded, isSignedIn]);
+  useEffect(() => {
+    activeIdRef.current = activeId;
+  }, [activeId]);
+
+  useEffect(
+    () => () => {
+      if (retryTimerRef.current !== null) {
+        window.clearTimeout(retryTimerRef.current);
+      }
+    },
+    [],
+  );
+
+  const greeting = "What can I help with?";
 
   const updateNearBottom = useCallback(() => {
     const el = scrollRef.current;
@@ -452,31 +614,87 @@ function KovaGPT() {
     }
   }, [activeMessageCount, latestMessageContent, isStreaming]);
 
-  // Cross-chat memory: when an active conversation has been updated and
-  // we're not mid-stream, debounce a summary save server-side. The
-  // endpoint silently no-ops for free users.
   useEffect(() => {
-    if (!isSignedIn || isStreaming) return;
+    if (!settingsReady) return;
+    if (userKey && !settings.rememberAcross) blockMemoryWrites(userKey);
+    configureMemoryWrites({
+      principal: userKey,
+      enabled: Boolean(isSignedIn && settings.rememberAcross && tier !== "free"),
+    });
+  }, [isSignedIn, settings.rememberAcross, settingsReady, tier, userKey]);
+
+  useEffect(() => {
+    if (!settingsReady || !userKey) return;
+    const blockKey = memoryWriteBlockStorageKey(userKey);
+    const applySharedBlock = () => {
+      if (!isMemoryWriteBlocked(userKey)) return;
+      setSettings((previous) =>
+        previous.rememberAcross ? { ...previous, rememberAcross: false } : previous,
+      );
+    };
+    applySharedBlock();
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === blockKey && event.newValue === "1") applySharedBlock();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [settingsReady, userKey]);
+
+  // Cross-chat memory is opt-in in each browser. Only eligible paid accounts
+  // may enqueue bounded, non-temporary conversation windows for summarization.
+  useEffect(() => {
+    if (
+      !settingsReady ||
+      !isSignedIn ||
+      !userKey ||
+      isStreaming ||
+      !settings.rememberAcross ||
+      tier === "free"
+    )
+      return;
     if (!active || active.temporary || active.messages.length < 4) return;
     const handle = setTimeout(() => {
       const payload = {
         chatId: active.id,
-        title: active.title,
-        messages: active.messages.map((m) => ({ role: m.role, content: m.content })),
+        title: active.title.slice(0, 120),
+        memoryEnabled: true,
+        temporary: false,
+        // The memory endpoint intentionally accepts only the latest bounded window.
+        messages: active.messages
+          .slice(-30)
+          .map((message) => ({ role: message.role, content: message.content.slice(0, 2000) })),
       };
-      authFetch("/api/memory", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      void enqueueMemoryWrite({
+        principal: userKey,
+        run: async () => {
+          const response = await authFetch("/api/memory", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (!response.ok) {
+            void response.body?.cancel().catch(() => undefined);
+            throw new Error("memory_write_failed");
+          }
+        },
       }).catch(() => {
-        /* best-effort */
+        /* Saved memory is best-effort; foreground chat must remain usable. */
       });
     }, 4000);
     return () => clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active?.id, active?.messages.length, isStreaming, isSignedIn]);
+  }, [
+    active?.id,
+    active?.messages.length,
+    isStreaming,
+    isSignedIn,
+    settings.rememberAcross,
+    settingsReady,
+    tier,
+    userKey,
+  ]);
 
-  // After 3 user messages in this session while signed out, prompt to sign up.
+  // After 4 user messages in this session while signed out, prompt to sign up.
   useEffect(() => {
     if (!isLoaded) return;
     if (signupPromptShown) return;
@@ -485,24 +703,77 @@ function KovaGPT() {
       (sum, c) => sum + c.messages.filter((m) => m.role === "user").length,
       0,
     );
-    if (userMsgCount >= 3 && !isStreaming) {
+    if (userMsgCount >= 4 && !isStreaming) {
       setSignupPromptOpen(true);
       setSignupPromptShown(true);
     }
   }, [conversations, isLoaded, isSignedIn, isStreaming, signupPromptShown]);
 
   const newChat = useCallback(() => {
+    setConversations((previous) => previous.filter((conversation) => !conversation.temporary));
     setActiveId(null);
     setInput("");
     setAttachments([]);
+    setEditingMessage(null);
+  }, [setConversations]);
+
+  const setTemporaryChatEnabled = useCallback(
+    (enabled: boolean) => {
+      if (enabled === tempChat) return;
+
+      if (enabled) {
+        try {
+          clearDraft(userKey, activeId);
+        } catch {
+          /* Storage may be unavailable; temporary input still stays in memory only. */
+        }
+      }
+
+      // Persisted and temporary turns must never share one conversation.
+      newChat();
+      setTempChat(enabled);
+
+      if (enabled) {
+        setTempChatConfirmed(true);
+        window.setTimeout(() => setTempChatConfirmed(false), 1400);
+        toast.success("Temporary chat enabled", {
+          description:
+            "This chat won't appear in history or be used for cross-chat memory. It also will not use saved profile details, custom instructions, or personality settings.",
+        });
+      } else {
+        toast.message("Temporary chat disabled", {
+          description: settings.rememberAcross
+            ? "New chats will be saved on this device and may use saved memory."
+            : "New chats will be saved on this device. Saved memory remains off.",
+        });
+      }
+    },
+    [activeId, newChat, settings.rememberAcross, tempChat, userKey],
+  );
+
+  const openCommandPalette = useCallback(() => {
+    commandReturnFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setCommandOpen(true);
   }, []);
+
+  useEffect(() => {
+    const reloadImportedChats = () => {
+      setConversations(loadConversations(userKey));
+      setActiveId(null);
+      setEditingMessage(null);
+    };
+    window.addEventListener("kova:conversations-imported", reloadImportedChats);
+    return () => window.removeEventListener("kova:conversations-imported", reloadImportedChats);
+  }, [setConversations, userKey]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
       if ((event.metaKey || event.ctrlKey) && key === "k") {
         event.preventDefault();
-        setCommandOpen((value) => !value);
+        if (commandOpen) setCommandOpen(false);
+        else openCommandPalette();
       }
       if ((event.metaKey || event.ctrlKey) && event.shiftKey && key === "o") {
         event.preventDefault();
@@ -511,42 +782,79 @@ function KovaGPT() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [newChat]);
+  }, [commandOpen, newChat, openCommandPalette]);
 
   const deleteChat = useCallback(
     (id: string) => {
-      setConversations((prev) => prev.filter((c) => c.id !== id));
+      const deleted = conversations.find((conversation) => conversation.id === id);
+      setConversations((prev) => prev.filter((conversation) => conversation.id !== id));
       if (activeId === id) setActiveId(null);
+      if (deleted) {
+        toast.success("Chat deleted", {
+          action: {
+            label: "Undo",
+            onClick: () => {
+              setConversations((current) => [
+                deleted!,
+                ...current.filter((conversation) => conversation.id !== deleted!.id),
+              ]);
+              setActiveId(deleted!.id);
+            },
+          },
+        });
+      }
     },
-    [activeId],
+    [activeId, conversations, setConversations],
   );
 
-  const autoTitle = useCallback(async (convId: string, msgs: Message[]) => {
-    try {
-      const resp = await authFetch("/api/title", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: msgs.slice(0, 4).map((m) => ({ role: m.role, content: m.content })),
-        }),
-      });
-      const { title } = await resp.json();
-      if (title) {
-        setConversations((prev) => prev.map((c) => (c.id === convId ? { ...c, title } : c)));
+  const autoTitle = useCallback(
+    async (convId: string, msgs: Message[]) => {
+      try {
+        const resp = await authFetch("/api/title", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: msgs.slice(0, 4).map((m) => ({ role: m.role, content: m.content })),
+          }),
+        });
+        const { title } = await resp.json();
+        if (title) {
+          setConversations((prev) => prev.map((c) => (c.id === convId ? { ...c, title } : c)));
+        }
+      } catch {
+        /* ignore */
       }
-    } catch {
-      /* ignore */
-    }
-  }, []);
+    },
+    [setConversations],
+  );
 
   const send = useCallback(
-    async (text: string, atts: PendingAttachment[], _retryAttempt = 0) => {
+    async (
+      text: string,
+      atts: PendingAttachment[],
+      _retryAttempt = 0,
+      retryConversationId?: string,
+      retryHistory?: Message[],
+    ) => {
       const MAX_AUTO_RETRIES = 2;
       const trimmed = text.trim();
-      if ((!trimmed && atts.length === 0) || isStreaming) return;
+      if (!principalReady || (!trimmed && atts.length === 0) || inFlightRef.current) return;
+      const requestGeneration = storageGenerationRef.current;
+      const requestPrincipal = storagePrincipal;
+      const isCurrentRequest = () =>
+        requestGeneration === storageGenerationRef.current &&
+        requestPrincipal === storagePrincipalRef.current;
 
-      const nextConvId = activeId ?? newId();
-      const isNewConversation = !activeId;
+      if (_retryAttempt === 0 && retryTimerRef.current !== null) {
+        window.clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+
+      const nextConvId = retryConversationId ?? activeId ?? newId();
+      const existingConversation = nextConvId
+        ? conversations.find((conversation) => conversation.id === nextConvId)
+        : undefined;
+      const isNewConversation = !retryConversationId && !existingConversation;
 
       const activeTool = selectedTool;
 
@@ -564,12 +872,32 @@ function KovaGPT() {
                 size: a.size ?? null,
                 sourceProject: a.sourceProject ?? null,
               }
-            : { kind: "image" as const, dataUrl: a.dataUrl },
+            : a.kind === "text_file"
+              ? {
+                  kind: "text_file" as const,
+                  name: a.name,
+                  content: a.textContent ?? "",
+                  fileType: a.fileType ?? null,
+                  size: a.size ?? null,
+                }
+              : { kind: "image" as const, dataUrl: a.dataUrl },
         ),
       };
       const assistantMsg: Message = { id: newId(), role: "assistant", content: "" };
 
-      let priorMessages: Message[] = [];
+      const editIndex =
+        existingConversation && editingMessage?.conversationId === existingConversation.id
+          ? existingConversation.messages.findIndex(
+              (message) => message.id === editingMessage.messageId,
+            )
+          : -1;
+      const priorMessages =
+        retryHistory ??
+        (existingConversation
+          ? editIndex >= 0
+            ? existingConversation.messages.slice(0, editIndex)
+            : existingConversation.messages.slice()
+          : []);
 
       setConversations((prev) => {
         if (isNewConversation) {
@@ -582,47 +910,31 @@ function KovaGPT() {
             updatedAt: Date.now(),
             temporary: tempChat,
           };
-          priorMessages = [];
-          return [c, ...prev];
+          return [c, ...prev.filter((conversation) => conversation.id !== nextConvId)];
         }
 
-        let found = false;
-        return prev
-          .map((c) => {
-            if (c.id !== nextConvId) return c;
-            found = true;
-            priorMessages = c.messages.slice();
-            return {
-              ...c,
-              messages: [...c.messages, userMsg, assistantMsg],
-              updatedAt: Date.now(),
-            };
-          })
-          .concat(
-            found
-              ? []
-              : [
-                  {
-                    id: nextConvId,
-                    title: "New chat",
-                    messages: [userMsg, assistantMsg],
-                    mode,
-                    createdAt: Date.now(),
-                    updatedAt: Date.now(),
-                    temporary: tempChat,
-                  },
-                ],
-          );
+        return prev.map((c) =>
+          c.id === nextConvId
+            ? {
+                ...c,
+                messages: [...priorMessages, userMsg, assistantMsg],
+                updatedAt: Date.now(),
+              }
+            : c,
+        );
       });
       setActiveId(nextConvId);
       setInput("");
       setAttachments([]);
+      setEditingMessage(null);
       setIsStreaming(true);
+      inFlightRef.current = true;
 
       const controller = new AbortController();
       abortRef.current = controller;
 
       const updateAssistant = (chunk: string) => {
+        if (!isCurrentRequest()) return;
         setConversations((prev) =>
           prev.map((c) => {
             if (c.id !== nextConvId) return c;
@@ -637,6 +949,7 @@ function KovaGPT() {
       };
 
       const markPendingImage = () => {
+        if (!isCurrentRequest()) return;
         setConversations((prev) =>
           prev.map((c) => {
             if (c.id !== nextConvId) return c;
@@ -651,53 +964,73 @@ function KovaGPT() {
       let assembledReply = "";
 
       try {
-        const payloadMessages = [...priorMessages, userMsg].map((m) => ({
-          role: m.role,
-          content: m.content,
-          attachments: m.attachments,
-        }));
+        const payloadMessages = [
+          ...priorMessages.map((message) => ({
+            role: message.role,
+            content: message.content,
+          })),
+          {
+            role: userMsg.role,
+            content: userMsg.content,
+            attachments: userMsg.attachments,
+          },
+        ];
 
         const resp = await authFetch("/api/chat", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": userMsg.id,
+          },
           body: JSON.stringify({
             messages: payloadMessages,
-            mode: activeTool === "deep_research" ? "high" : mode,
+            mode: activeTool === "deep_research" ? "thinking" : mode,
             clientTool: activeTool,
-            chatId: nextConvId,
+            // Main-chat ids are device-local until a user-owned memory row
+            // exists. Do not submit an unclaimable relationship for a
+            // service-role Deep Research write.
+            chatId: activeTool === "deep_research" ? undefined : nextConvId,
             temporary: tempChat,
-            user: {
-              name: settings.displayName,
-              pronouns: settings.preferredPronouns,
-              email: settings.email,
-              phone: settings.phone,
-              address: [
-                settings.addressLine1,
-                settings.addressLine2,
-                settings.city,
-                settings.region,
-                settings.postalCode,
-                settings.country,
-              ]
-                .filter(Boolean)
-                .join(", "),
-              extraFacts: settings.extraFacts,
-              customInstructions: settings.customInstructions,
-              mood: settings.mood,
-              responseLength: settings.responseLength,
-              language: settings.language,
-              rememberAcross: settings.rememberAcross,
-              webSearch: settings.webSearch,
-            },
+            user: tempChat
+              ? undefined
+              : {
+                  name: settings.displayName,
+                  pronouns: settings.preferredPronouns,
+                  email: settings.email,
+                  phone: settings.phone,
+                  address: [
+                    settings.addressLine1,
+                    settings.addressLine2,
+                    settings.city,
+                    settings.region,
+                    settings.postalCode,
+                    settings.country,
+                  ]
+                    .filter(Boolean)
+                    .join(", "),
+                  extraFacts: settings.extraFacts,
+                  customInstructions: settings.customInstructions,
+                  mood: settings.mood,
+                  responseLength: settings.responseLength,
+                  language: settings.language,
+                  rememberAcross: settings.rememberAcross,
+                  webSearch: settings.webSearch,
+                },
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             locale: typeof navigator !== "undefined" ? navigator.language : "en-US",
-            personality: personalityToInstruction(loadPersonality()) || undefined,
-            kovaVersion:
-              (typeof window !== "undefined" && (localStorage.getItem("kova-version") ?? "3.5")) ||
-              "3.5",
+            personality: tempChat
+              ? undefined
+              : personalityToInstruction(
+                  loadPersonality(isLoaded ? userKey : undefined),
+                  isLoaded ? userKey : undefined,
+                ) || undefined,
           }),
           signal: controller.signal,
         });
+        if (!isCurrentRequest()) {
+          void resp.body?.cancel().catch(() => undefined);
+          return;
+        }
 
         if (!resp.ok || !resp.body) {
           const errJson = await resp.json().catch(() => ({ error: "Request failed" }));
@@ -725,6 +1058,10 @@ function KovaGPT() {
         let done = false;
         while (!done) {
           const { done: d, value } = await reader.read();
+          if (!isCurrentRequest()) {
+            void reader.cancel().catch(() => undefined);
+            return;
+          }
           if (d) break;
           buffer += decoder.decode(value, { stream: true });
           let idx: number;
@@ -805,10 +1142,26 @@ function KovaGPT() {
             userMsg,
             { ...assistantMsg, content: assembledReply },
           ];
-          autoTitle(nextConvId, fullMsgs);
+          if (isCurrentRequest()) autoTitle(nextConvId, fullMsgs);
         }
       } catch (e: unknown) {
-        if ((e as Error).name !== "AbortError") {
+        if (!isCurrentRequest()) return;
+        if ((e as Error).name === "AbortError") {
+          if (!assembledReply.trim()) {
+            setConversations((prev) =>
+              prev.map((conversation) =>
+                conversation.id === nextConvId
+                  ? {
+                      ...conversation,
+                      messages: conversation.messages.filter(
+                        (message) => message.id !== assistantMsg.id,
+                      ),
+                    }
+                  : conversation,
+              ),
+            );
+          }
+        } else {
           const err = e as Error & { requestId?: string; category?: string; retryable?: boolean };
           const raw = err.message || "Something went wrong";
           const isNetwork =
@@ -820,16 +1173,16 @@ function KovaGPT() {
             category === "streaming_interruption" ||
             category === "network_failure" ||
             category === "model_provider_failure";
-          const canAutoRetry = retryableCategory && _retryAttempt < MAX_AUTO_RETRIES;
+          // Respect the server's retryability signal. Configuration and
+          // authentication failures cannot heal through repeated requests and
+          // previously made the composer look stuck while it silently retried.
+          const canAutoRetry =
+            err.retryable !== false && retryableCategory && _retryAttempt < MAX_AUTO_RETRIES;
 
           if (canAutoRetry) {
-            // Silent exponential backoff: 600ms, 1800ms. Strip the empty
-            // assistant + user bubble so the retry recreates them cleanly.
+            // Exponential backoff: 600ms, 1800ms. Strip the failed turn so
+            // the retry can recreate it without duplicate messages.
             const backoffMs = 600 * Math.pow(3, _retryAttempt);
-            const attemptLabel = _retryAttempt + 1;
-            updateAssistant(
-              `\n\n_Reconnecting… (attempt ${attemptLabel + 1}/${MAX_AUTO_RETRIES + 1})_`,
-            );
             setConversations((prev) =>
               prev.map((c) =>
                 c.id === nextConvId
@@ -844,8 +1197,11 @@ function KovaGPT() {
             );
             setIsStreaming(false);
             abortRef.current = null;
-            setTimeout(() => {
-              void send(text, atts, _retryAttempt + 1);
+            inFlightRef.current = false;
+            retryTimerRef.current = window.setTimeout(() => {
+              retryTimerRef.current = null;
+              if (!isCurrentRequest() || activeIdRef.current !== nextConvId) return;
+              void send(text, atts, _retryAttempt + 1, nextConvId, priorMessages);
             }, backoffMs);
             return;
           }
@@ -859,7 +1215,9 @@ function KovaGPT() {
                 : category === "model_timeout"
                   ? "The model took too long to respond. Tap retry."
                   : category === "model_provider_failure"
-                    ? "The AI provider had a hiccup. Tap retry."
+                    ? err.retryable === false
+                      ? raw
+                      : "KovaGPT is temporarily unavailable. Tap retry."
                     : category === "streaming_interruption"
                       ? "The connection dropped mid-response. Tap retry."
                       : isNetwork
@@ -883,48 +1241,69 @@ function KovaGPT() {
                       : c,
                   ),
                 );
-                setTimeout(() => send(text, atts, 0), 100);
+                retryTimerRef.current = window.setTimeout(() => {
+                  retryTimerRef.current = null;
+                  if (!isCurrentRequest() || activeIdRef.current !== nextConvId) return;
+                  void send(text, atts, 0, nextConvId, priorMessages);
+                }, 100);
               },
             },
           });
           updateAssistant(`\n\n_${detail}_`);
         }
       } finally {
-        setIsStreaming(false);
-        setSelectedTool(null);
-        abortRef.current = null;
+        if (isCurrentRequest()) {
+          setIsStreaming(false);
+          setSelectedTool(null);
+          if (abortRef.current === controller) abortRef.current = null;
+          inFlightRef.current = false;
+        }
       }
     },
-    [activeId, isStreaming, mode, autoTitle, settings, selectedTool, tempChat],
+    [
+      activeId,
+      conversations,
+      mode,
+      autoTitle,
+      settings,
+      selectedTool,
+      tempChat,
+      editingMessage,
+      principalReady,
+      setConversations,
+      storagePrincipal,
+      isLoaded,
+      userKey,
+    ],
   );
 
   const stop = useCallback(() => {
+    if (retryTimerRef.current !== null) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
     abortRef.current?.abort();
+    abortRef.current = null;
+    inFlightRef.current = false;
     setIsStreaming(false);
   }, []);
 
-  const assistantCapabilities = [
-    { label: "Create image", icon: ImageIcon, prompt: "Create a detailed image prompt for: " },
-    {
-      label: "Summarize text",
-      icon: FileText,
-      prompt: "Summarize this into clear bullet points: ",
-    },
-    {
-      label: "Analyze data",
-      icon: Sparkles,
-      prompt: "Analyze this data and explain the key insights: ",
-    },
-    { label: "Write code", icon: Code2, prompt: "Help me write code for: " },
-    { label: "Learn", icon: GraduationCap, prompt: "Teach me this topic like a patient tutor: " },
-    { label: "Web research", icon: Globe2, prompt: "Research this online and cite sources: " },
-  ];
-
   // Image generation removed; can be reintroduced when user explicitly asks.
+  const startWithSuggestion = (prompt: string, tool: ComposerToolId | null = null) => {
+    if (!input.trim()) {
+      setSelectedTool(tool);
+      setInput(prompt);
+    }
+    window.requestAnimationFrame(() =>
+      document
+        .querySelector<HTMLTextAreaElement>('textarea[aria-label="Message KovaGPT"]')
+        ?.focus(),
+    );
+  };
 
   return (
     <div
-      className="flex h-screen w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
+      className="kova-app-shell flex h-screen w-full overflow-hidden bg-[var(--surface-workspace)] text-foreground"
       style={{ height: "100dvh" }}
     >
       {/* Mobile edge-swipe zone: swipe right from the left edge to open the sidebar. */}
@@ -959,11 +1338,20 @@ function KovaGPT() {
       )}
 
       <Sidebar
-        conversations={conversations}
+        conversations={historyConversations}
         activeId={activeId}
         onSelect={setActiveId}
         onNew={newChat}
         onDelete={deleteChat}
+        onRename={(id, title) => {
+          setConversations((previous) =>
+            previous.map((conversation) =>
+              conversation.id === id
+                ? { ...conversation, title, updatedAt: Date.now() }
+                : conversation,
+            ),
+          );
+        }}
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((v) => !v)}
         onOpenSettings={openSettings}
@@ -993,13 +1381,27 @@ function KovaGPT() {
           toast.success("Chat duplicated");
         }}
         onArchive={(id) => {
+          const archived = conversations.find((conversation) => conversation.id === id);
           setConversations((prev) => {
-            const target = prev.find((c) => c.id === id);
-            if (target) archiveConversation(target);
+            if (archived) archiveConversation(userKey, archived);
             return prev.filter((c) => c.id !== id);
           });
           if (activeId === id) setActiveId(null);
-          toast.success("Chat archived");
+          toast.success("Chat archived", {
+            action: archived
+              ? {
+                  label: "Undo",
+                  onClick: () => {
+                    removeArchivedConversation(userKey, archived!.id);
+                    setConversations((current) => [
+                      archived!,
+                      ...current.filter((conversation) => conversation.id !== archived!.id),
+                    ]);
+                    setActiveId(archived!.id);
+                  },
+                }
+              : undefined,
+          });
         }}
         onTogglePin={(id) => {
           setConversations((prev) =>
@@ -1010,124 +1412,113 @@ function KovaGPT() {
             ),
           );
         }}
-        onOpenArchived={() => setArchivedOpen(true)}
       />
 
       <main
-        className="flex min-w-0 flex-1 flex-col bg-background"
+        className="kova-chat-main flex min-w-0 flex-1 flex-col bg-background"
         data-sidebar={sidebarOpen ? "open" : "closed"}
       >
         <MobileTopBar
           onOpenSidebar={() => setSidebarOpen(true)}
           onNewChat={newChat}
           title={active?.title}
+          mode={mode}
+          onModeChange={setMode}
+          userTier={tier}
+          temporaryChat={tempChat}
+          onTemporaryChatChange={setTemporaryChatEnabled}
         />
-        <header
-          className="kova-topbar relative hidden h-[52px] items-center gap-1 px-3 lg:flex"
-          role="banner"
-        >
-          {!sidebarOpen && (
-            <div className="flex items-center gap-1 mr-2 shrink-0">
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="shrink-0 p-2 rounded-lg hover:bg-accent transition"
-                aria-label="Open sidebar"
-                title="Open sidebar"
-              >
-                <PanelLeft className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => setCommandOpen(true)}
-                className="shrink-0 p-2 rounded-lg hover:bg-accent transition"
-                aria-label="Search chats"
-                title="Search chats"
-              >
-                <Search className="w-5 h-5" />
-              </button>
-            </div>
-          )}
+        <header className="kova-desktop-topbar kova-topbar relative hidden h-[52px] items-center gap-1 px-3 lg:flex">
+          <div
+            hidden={sidebarOpen || Boolean(isSignedIn)}
+            className="flex items-center gap-1 mr-2 shrink-0"
+          >
+            <button
+              onClick={() => {
+                setSidebarOpen(true);
+                window.requestAnimationFrame(() => {
+                  document
+                    .querySelector<HTMLElement>('[aria-label="Collapse sidebar"]')
+                    ?.focus({ preventScroll: true });
+                });
+              }}
+              className="shrink-0 p-2 rounded-lg hover:bg-accent transition"
+              aria-label="Open sidebar"
+              title="Open sidebar"
+            >
+              <PanelLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={openCommandPalette}
+              className="shrink-0 p-2 rounded-lg hover:bg-accent transition"
+              aria-label="Search chats"
+              title="Search chats"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+          </div>
 
-          {/* AI status: live indicator to the right of the KovaGPT mark while streaming */}
           <div className="flex items-center min-w-0 flex-1 relative">
-            <div className="mr-3 flex min-h-10 items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-foreground transition hover:bg-accent">
-              <span>KovaGPT</span>
-              <span className="text-muted-foreground">⌄</span>
-            </div>
-            <AIStatus
-              streaming={isStreaming}
-              message={active?.messages[active.messages.length - 1]}
-              lastUserPrompt={(() => {
-                const msgs = active?.messages ?? [];
-                for (let i = msgs.length - 1; i >= 0; i--) {
-                  if (msgs[i].role === "user") return msgs[i].content;
-                }
-                return undefined;
-              })()}
+            <ResponsiveModelSelector
+              mode={mode}
+              onChange={setMode}
+              userTier={tier}
+              placement="topbar"
             />
           </div>
 
           <div className="ml-auto flex items-center gap-2 shrink-0">
             {active && (
               <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const transcript = active.messages
-                      .map((m) => `${m.role === "user" ? "You" : "KovaGPT"}: ${m.content}`)
-                      .join("\n\n");
-                    const blob = new Blob([transcript], { type: "text/markdown;charset=utf-8" });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = `${active.title || "chat"}.md`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  }}
-                  className="hidden xl:inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-medium text-foreground hover:bg-accent"
-                  aria-label="Export chat"
-                  title="Export chat"
-                >
-                  <Download className="h-4 w-4" />
-                  <span>Export</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!isSignedIn) {
-                      toast.message("Sign in to share chats");
-                      openSignUp();
-                      return;
-                    }
-                    setShareChatId(active.id);
-                  }}
-                  className="hidden lg:inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-sm font-medium text-foreground hover:bg-accent"
-                  aria-label="Share chat"
-                  title="Share chat"
-                >
-                  <Share2 className="h-4 w-4" />
-                  <span>Share</span>
-                </button>
+                {isSignedIn ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const transcript = active.messages
+                        .map((m) => `${m.role === "user" ? "You" : "KovaGPT"}: ${m.content}`)
+                        .join("\n\n");
+                      const blob = new Blob([transcript], { type: "text/markdown;charset=utf-8" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `${active.title || "chat"}.md`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="hidden xl:inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-medium text-foreground hover:bg-accent"
+                    aria-label="Export chat"
+                    title="Export chat"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>Export</span>
+                  </button>
+                ) : null}
+                {isSignedIn ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isSignedIn) {
+                        toast.message("Sign in to share chats");
+                        openSignUp();
+                        return;
+                      }
+                      setShareChatId(active.id);
+                    }}
+                    className="hidden lg:inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-sm font-medium text-foreground hover:bg-accent"
+                    aria-label="Share chat"
+                    title="Share chat"
+                  >
+                    <Share2 className="h-4 w-4" />
+                    <span>Share</span>
+                  </button>
+                ) : null}
               </>
             )}
             {isLoaded && isSignedIn && (
               <button
-                onClick={() => {
-                  const next = !tempChat;
-                  setTempChat(next);
-                  if (next) {
-                    setTempChatConfirmed(true);
-                    setTimeout(() => setTempChatConfirmed(false), 1400);
-                    toast.success("Temporary chat enabled", {
-                      description:
-                        "Memory is off for this chat. It's private and won't be saved to your history.",
-                    });
-                  } else {
-                    toast.message("Temporary chat disabled", {
-                      description: "New chats will be saved and use memory again.",
-                    });
-                  }
-                }}
-                aria-label="Toggle temporary chat"
+                onClick={() => setTemporaryChatEnabled(!tempChat)}
+                aria-label={tempChat ? "Turn off temporary chat" : "Start temporary chat"}
+                aria-pressed={tempChat}
                 title={tempChat ? "Temporary chat on" : "Start temporary chat"}
                 className={`relative shrink-0 p-2 rounded-lg transition ${
                   tempChat ? "bg-primary/15 text-primary" : "hover:bg-accent text-foreground"
@@ -1146,12 +1537,12 @@ function KovaGPT() {
             ) : (
               <>
                 <SignInButton mode="modal">
-                  <button className="text-sm font-medium px-4 h-9 rounded-full text-foreground hover:bg-accent transition">
+                  <button className="text-sm font-semibold px-4 h-9 rounded-full bg-foreground text-background hover:opacity-90 active:scale-[0.98] transition">
                     Log in
                   </button>
                 </SignInButton>
                 <SignUpButton mode="modal">
-                  <button className="text-sm font-semibold px-4 h-9 rounded-md bg-[var(--kova-blue)] text-background hover:opacity-90 active:scale-[0.98] transition whitespace-nowrap shadow-sm">
+                  <button className="text-sm font-medium px-4 h-9 rounded-full bg-muted text-foreground hover:bg-accent active:scale-[0.98] transition whitespace-nowrap">
                     Sign up for free
                   </button>
                 </SignUpButton>
@@ -1161,16 +1552,17 @@ function KovaGPT() {
         </header>
 
         {tempChat && (
-          <div className="mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-3xl items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm shadow-sm">
+          <div className="kova-temporary-banner mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-3xl items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm shadow-sm">
             <div className="flex min-w-0 items-center gap-2">
               <MessageSquareDashed className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="truncate">
-                Temporary chat is on. This chat will not use or update memory.
+              <span>
+                Temporary chat is on. It is not saved to history and does not use or update saved
+                memory, profile details, custom instructions, or personality settings.
               </span>
             </div>
             <button
               type="button"
-              onClick={() => setTempChat(false)}
+              onClick={() => setTemporaryChatEnabled(false)}
               className="shrink-0 rounded-md px-2.5 py-1 text-xs font-medium hover:bg-accent"
             >
               Turn off
@@ -1180,117 +1572,114 @@ function KovaGPT() {
 
         {!active || active.messages.length === 0 ? (
           <section
-            className="flex flex-1 flex-col overflow-y-auto px-3 lg:px-6"
+            className="kova-empty-chat kova-empty-chat-surface flex flex-1 flex-col overflow-y-auto"
             aria-labelledby="chat-greeting"
           >
             <div className="flex w-full flex-1 flex-col items-center justify-center py-6 lg:py-10">
-              <div className="mb-5 flex animate-fade-in flex-col items-center gap-2.5 lg:mb-6">
+              <div className="kova-greeting mb-5 flex animate-fade-in flex-col items-center gap-2.5 lg:mb-6">
                 <h1
                   id="chat-greeting"
-                  className="text-balance px-4 text-center font-display text-[26px] font-semibold leading-[1.15] tracking-[-.025em] text-foreground lg:text-[32px]"
+                  className="text-balance px-4 text-center text-[28px] font-semibold leading-9 tracking-tight text-foreground lg:text-[32px]"
                 >
                   {greeting}
                 </h1>
-                <p className="max-w-lg text-center text-sm leading-relaxed text-muted-foreground">
-                  What would you like to work on?
-                </p>
               </div>
 
-              <div className="mx-auto w-full max-w-[48rem]">
+              <div className="kova-empty-composer mx-auto w-full max-w-[48rem]">
                 <ChatInput
-                  value={input}
+                  value={principalReady ? input : ""}
                   onChange={setInput}
                   onSubmit={() => send(input, attachments)}
                   onStop={stop}
                   isStreaming={isStreaming}
-                  attachments={attachments}
+                  attachments={principalReady ? attachments : []}
                   onAttachmentsChange={setAttachments}
                   mode={mode}
                   onModeChange={setMode}
+                  userTier={tier}
+                  canChangeAgent={false}
                   onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
-                  placeholder="Message KovaGPT"
+                  placeholder="Ask anything"
                   onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
+                  selectedTool={selectedTool}
                   onToolSelect={setSelectedTool}
                   recentLibraryFiles={recentLibraryFiles}
                   recentLibraryLoading={recentLibraryLoading}
                   recentLibraryError={recentLibraryError}
                   onRecentLibraryRetry={loadRecentLibraryFiles}
                 />
-
-                <div className="mx-auto mt-3 hidden max-w-[48rem] grid-cols-3 gap-1.5 lg:grid">
-                  {assistantCapabilities.map((p) => {
-                    const Icon = p.icon;
-                    return (
-                      <button
-                        key={p.label}
-                        type="button"
-                        onClick={() => setInput((v) => (v.trim() ? v : p.prompt))}
-                        className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border/70 bg-transparent px-3 text-left text-[13px] font-medium text-foreground transition hover:border-foreground/20 hover:bg-accent"
-                      >
-                        <Icon className="h-4 w-4 text-muted-foreground" />
-                        <span>{p.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="mt-3 lg:hidden flex gap-2 overflow-x-auto -mx-4 px-4 snap-x snap-mandatory no-scrollbar">
-                  {[
-                    {
-                      label: "Summarize a file",
-                      hint: "PDF or doc to key points",
-                      prompt:
-                        "Summarize the attached file into the key points, decisions, and action items.",
-                    },
-                    {
-                      label: "Research a topic",
-                      hint: "Briefing with sources",
-                      prompt: "Research this topic and give me a concise briefing with sources: ",
-                    },
-                    {
-                      label: "Improve my writing",
-                      hint: "Clearer and tighter",
-                      prompt:
-                        "Improve the clarity and tone of this text without changing its meaning:\n\n",
-                    },
-                    {
-                      label: "Debug my code",
-                      hint: "Find and fix the bug",
-                      prompt:
-                        "Here's my code and the error I'm seeing. Explain what's wrong and give a corrected version.\n\n",
-                    },
-                  ].map((p) => (
-                    <button
-                      key={p.label}
-                      type="button"
-                      onClick={() => setInput((v) => (v ? v : p.prompt))}
-                      className="shrink-0 snap-start w-[72%] max-w-[17rem] text-left px-3.5 py-3 rounded-lg border border-border bg-card/70 active:bg-accent/60 transition-colors"
-                    >
-                      <div className="text-[15px] font-medium text-foreground">{p.label}</div>
-                      <div className="text-[12.5px] text-muted-foreground mt-0.5">{p.hint}</div>
-                    </button>
-                  ))}
-                </div>
+              </div>
+              <div
+                className="kova-starter-actions no-scrollbar mx-auto mt-4 grid w-full max-w-[48rem] grid-cols-2 gap-2 lg:grid-cols-4"
+                aria-label="Start with a suggestion"
+              >
+                <button
+                  type="button"
+                  className="kova-starter-action"
+                  onClick={() => startWithSuggestion("Create an image of ", "image")}
+                >
+                  <ImageIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  <span>Create image</span>
+                </button>
+                <button
+                  type="button"
+                  className="kova-starter-action"
+                  onClick={() => startWithSuggestion("Help me write ")}
+                >
+                  <FileText className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                  <span>Help me write</span>
+                </button>
+                <button
+                  type="button"
+                  className="kova-starter-action"
+                  onClick={() =>
+                    startWithSuggestion(
+                      "Analyze this data and explain the key insights: ",
+                      "data_analysis",
+                    )
+                  }
+                >
+                  <BarChart3 className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                  <span>Analyze data</span>
+                </button>
+                <button
+                  type="button"
+                  className="kova-starter-action"
+                  onClick={() => startWithSuggestion("Create a practical step-by-step plan for ")}
+                >
+                  <ListChecks className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <span>Make a plan</span>
+                </button>
               </div>
             </div>
-            <Suspense
-              fallback={
-                <div className="mx-auto mb-6 h-32 w-full max-w-[56rem] animate-pulse rounded-2xl bg-muted" />
-              }
-            >
-              <WorkspaceIntelligence />
-            </Suspense>
+            {!isLoaded || isSignedIn ? null : (
+              <p className="kova-disclaimer mx-auto w-full max-w-[48rem] px-4 pb-3 text-center text-[11px] leading-4 text-muted-foreground/80">
+                KovaGPT is AI. By using it, you agree to our{" "}
+                <Link to="/terms" className="underline underline-offset-2 hover:text-foreground">
+                  Terms
+                </Link>{" "}
+                &amp;{" "}
+                <Link to="/privacy" className="underline underline-offset-2 hover:text-foreground">
+                  Privacy Policy
+                </Link>
+                . Chats may be reviewed and used to improve our AI models.{" "}
+                <Link to="/privacy" className="underline underline-offset-2 hover:text-foreground">
+                  Learn more.
+                </Link>
+              </p>
+            )}
           </section>
         ) : (
           <>
-            <ConversationOutline messages={active.messages} />
             <div
               ref={scrollRef}
               onScroll={updateNearBottom}
-              className="flex-1 overflow-y-auto overscroll-contain scroll-smooth pb-14 pt-5 lg:pb-20 lg:pt-8"
+              data-chat-transcript
+              className="kova-conversation-scroll flex-1 overflow-y-auto overscroll-contain scroll-smooth pb-14 pt-5 lg:pb-20 lg:pt-8"
               aria-label="Conversation"
             >
               {active.branchOrigin && (
-                <div className="mx-auto mb-5 flex w-[calc(100%-2rem)] max-w-[48rem] items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/45 px-3 py-2 text-sm">
+                <div className="kova-content-column kova-inline-notice mx-auto mb-5 flex w-[calc(100%-2rem)] max-w-[48rem] items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/45 px-3 py-2 text-sm">
                   <div className="min-w-0">
                     <span className="font-medium">Branched conversation</span>
                     <span className="ml-1 text-muted-foreground">
@@ -1325,6 +1714,8 @@ function KovaGPT() {
                   <ChatMessage
                     key={m.id}
                     message={m}
+                    userKey={userKey}
+                    principalResolved={isLoaded}
                     streaming={isStreaming && isLastAssistant}
                     onUpdatePendingConfirm={(messageId, next) => {
                       setConversations((prev) =>
@@ -1349,26 +1740,96 @@ function KovaGPT() {
                     onFollowUp={
                       isLastAssistant && !isStreaming ? (prompt) => send(prompt, []) : undefined
                     }
-                    onRetry={
-                      isLastAssistant && !isStreaming && priorUser
+                    onEdit={
+                      m.role === "user" && !isStreaming
                         ? () => {
-                            // Drop the last assistant message, then resend the prior user prompt.
-                            setConversations((prev) =>
-                              prev.map((c) =>
-                                c.id === active.id
-                                  ? { ...c, messages: c.messages.slice(0, -2) }
-                                  : c,
+                            setInput(m.content);
+                            setAttachments(
+                              (m.attachments ?? []).map((attachment) =>
+                                attachment.kind === "image"
+                                  ? {
+                                      kind: "image" as const,
+                                      dataUrl: attachment.dataUrl,
+                                      name: "Attached image",
+                                      status: "complete" as const,
+                                    }
+                                  : attachment.kind === "text_file"
+                                    ? {
+                                        kind: "text_file" as const,
+                                        dataUrl: "",
+                                        name: attachment.name,
+                                        size: attachment.size ?? undefined,
+                                        fileType: attachment.fileType,
+                                        textContent: attachment.content,
+                                        status: "complete" as const,
+                                      }
+                                    : {
+                                        kind: "library_file" as const,
+                                        dataUrl: "",
+                                        name: attachment.name,
+                                        size: attachment.size ?? undefined,
+                                        libraryItemId: attachment.libraryItemId,
+                                        fileType: attachment.fileType,
+                                        sourceProject: attachment.sourceProject,
+                                        status: "complete" as const,
+                                      },
                               ),
                             );
-                            send(priorUser.content, []);
+                            setEditingMessage({
+                              conversationId: active.id,
+                              messageId: m.id,
+                            });
+                            window.setTimeout(
+                              () =>
+                                document
+                                  .querySelector<HTMLTextAreaElement>(
+                                    'textarea[aria-label="Message KovaGPT"]',
+                                  )
+                                  ?.focus(),
+                              0,
+                            );
                           }
                         : undefined
                     }
-                    onEdit={
-                      priorUser
+                    onRetry={
+                      isLastAssistant && !isStreaming && priorUser
                         ? () => {
-                            setInput(priorUser.content);
-                            toast.message("Edit your prompt below, then press Enter");
+                            const retryHistory = active.messages.slice(0, -2);
+                            void send(
+                              priorUser.content,
+                              (priorUser.attachments ?? []).map((attachment) =>
+                                attachment.kind === "image"
+                                  ? {
+                                      kind: "image" as const,
+                                      dataUrl: attachment.dataUrl,
+                                      name: "Attached image",
+                                      status: "complete" as const,
+                                    }
+                                  : attachment.kind === "text_file"
+                                    ? {
+                                        kind: "text_file" as const,
+                                        dataUrl: "",
+                                        name: attachment.name,
+                                        size: attachment.size ?? undefined,
+                                        fileType: attachment.fileType,
+                                        textContent: attachment.content,
+                                        status: "complete" as const,
+                                      }
+                                    : {
+                                        kind: "library_file" as const,
+                                        dataUrl: "",
+                                        name: attachment.name,
+                                        size: attachment.size ?? undefined,
+                                        libraryItemId: attachment.libraryItemId,
+                                        fileType: attachment.fileType,
+                                        sourceProject: attachment.sourceProject,
+                                        status: "complete" as const,
+                                      },
+                              ),
+                              0,
+                              active.id,
+                              retryHistory,
+                            );
                           }
                         : undefined
                     }
@@ -1402,55 +1863,55 @@ function KovaGPT() {
                   el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
                   setShowJumpToLatest(false);
                 }}
-                className="fixed bottom-28 left-1/2 z-20 -translate-x-1/2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium shadow-lg hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+                className="kova-jump-latest rounded-full border border-border bg-card shadow-lg hover:bg-accent"
                 aria-label="Jump to latest message"
               >
-                Jump to latest
+                <ArrowDown className="h-4 w-4" />
+                <span className="sr-only">Jump to latest</span>
               </button>
             )}
-            <div className="lg:pb-2 lg:pt-2">
+            <div className="kova-conversation-composer lg:pb-2 lg:pt-2">
+              {editingMessage?.conversationId === active.id && (
+                <div
+                  className="kova-content-column kova-editing-banner mx-auto mb-2 flex w-full max-w-[48rem] items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-sm"
+                  role="status"
+                >
+                  <span className="min-w-0 truncate">Editing a previous prompt</span>
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-md px-2 py-1 font-medium text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                    onClick={() => {
+                      setEditingMessage(null);
+                      setInput("");
+                      setAttachments([]);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
               <ChatInput
-                value={input}
+                value={principalReady ? input : ""}
                 onChange={setInput}
                 onSubmit={() => send(input, attachments)}
                 onStop={stop}
                 isStreaming={isStreaming}
-                attachments={attachments}
+                attachments={principalReady ? attachments : []}
                 onAttachmentsChange={setAttachments}
                 mode={mode}
                 onModeChange={setMode}
+                userTier={tier}
+                canChangeAgent={false}
                 onUploadLimit={() => setLimitDialog({ open: true, kind: "upload" })}
-                placeholder="Message KovaGPT"
+                placeholder="Ask anything"
                 onPromptShortcut={(prompt) => setInput((v) => (v.trim() ? v : prompt))}
+                selectedTool={selectedTool}
                 onToolSelect={setSelectedTool}
                 recentLibraryFiles={recentLibraryFiles}
                 recentLibraryLoading={recentLibraryLoading}
                 recentLibraryError={recentLibraryError}
                 onRecentLibraryRetry={loadRecentLibraryFiles}
               />
-              <div className="hidden lg:flex flex-col items-center gap-2 text-[11px] text-muted-foreground/70 mt-2 select-none">
-                <div className="flex justify-center gap-3">
-                  <span>
-                    <kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">
-                      Enter
-                    </kbd>{" "}
-                    to send
-                  </span>
-                  <span>
-                    <kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">
-                      Shift+Enter
-                    </kbd>{" "}
-                    newline
-                  </span>
-                  <span>
-                    <kbd className="px-1.5 py-0.5 rounded border border-border bg-muted/50 font-mono text-[10px]">
-                      ⌘K
-                    </kbd>{" "}
-                    search
-                  </span>
-                </div>
-                <p>KovaGPT can make mistakes. Check important info.</p>
-              </div>
             </div>
           </>
         )}
@@ -1463,7 +1924,30 @@ function KovaGPT() {
             onOpenChange={setSettingsOpen}
             settings={settings}
             onChange={setSettings}
-            onClearAll={() => setConversations([])}
+            onClearAll={() => {
+              storageGenerationRef.current += 1;
+              abortRef.current?.abort();
+              abortRef.current = null;
+              inFlightRef.current = false;
+              if (retryTimerRef.current !== null) {
+                window.clearTimeout(retryTimerRef.current);
+                retryTimerRef.current = null;
+              }
+              // A same-principal local reset should remain usable with a clean,
+              // empty workspace. The incremented generation rejects every
+              // closure created before cleanup.
+              setConversationState({ principal: storagePrincipal, items: [] });
+              setSettings(DEFAULT_SETTINGS);
+              setSettingsPrincipal(storagePrincipal);
+              setActiveId(null);
+              setInput("");
+              setAttachments([]);
+              setSelectedTool(null);
+              setCommandOpen(false);
+              setCommandQuery("");
+              setEditingMessage(null);
+              setIsStreaming(false);
+            }}
             onOpenHelp={openHelp}
             initialTab={settingsTab}
             returnFocusTarget={settingsReturnFocusRef.current}
@@ -1489,17 +1973,6 @@ function KovaGPT() {
             resetsAt={getUsage().resetsAt}
           />
         )}
-        <ArchivedChatsDialog
-          open={archivedOpen}
-          onClose={() => setArchivedOpen(false)}
-          onRestore={(conversation) => {
-            setConversations((all) => [
-              conversation,
-              ...all.filter((item) => item.id !== conversation.id),
-            ]);
-            toast.success("Chat restored");
-          }}
-        />
       </Suspense>
 
       <SignUpPrompt open={signupPromptOpen} onOpenChange={setSignupPromptOpen} />
@@ -1508,11 +1981,12 @@ function KovaGPT() {
         open={commandOpen}
         query={commandQuery}
         onQueryChange={setCommandQuery}
-        conversations={conversations}
+        conversations={historyConversations}
         onClose={() => setCommandOpen(false)}
         onNewChat={newChat}
         onSelectChat={setActiveId}
         onOpenSettings={() => openSettings("general")}
+        returnFocusTarget={commandReturnFocusRef.current}
       />
     </div>
   );

@@ -25,14 +25,20 @@ test("sync policy applies bounded retry and deletion propagation", async () => {
   assert.match(sync, /propagateDeletion: true/);
   assert.match(sync, /retry_wait/);
 });
-test("Work can queue a real isolated browser run and the API exposes server history", async () => {
-  const [workspace, api] = await Promise.all([
+test("Work exposes history but browser execution fails closed", async () => {
+  const [workspace, api, execution] = await Promise.all([
     read("src/components/AgentWorkspace.tsx"),
     read("src/routes/api/agents/runs.ts"),
+    read("src/agents/execution.server.ts"),
   ]);
-  assert.match(workspace, /Start secure browser run/);
-  assert.match(workspace, /authFetch\("\/api\/agents\/runs"/);
+  assert.match(workspace, /Secure browser runs unavailable/);
+  assert.doesNotMatch(workspace, /authFetch\("\/api\/agents\/runs"|run queued/);
   assert.match(api, /GET:/);
   assert.match(api, /agent_run_events/);
   assert.match(api, /eq\("owner_id" as never, auth\.userId\)/);
+  assert.match(api, /browser_agent_unavailable/);
+  assert.match(api, /status: 503/);
+  assert.doesNotMatch(api, /status: 202/);
+  assert.match(execution, /Promise<never>/);
+  assert.match(execution, /throw new Error\("browser_agent_unavailable"\)/);
 });

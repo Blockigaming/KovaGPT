@@ -11,9 +11,9 @@ export interface SessionIdentity {
 }
 
 export interface PermissionPolicy {
-  grants: BrowserPermission[];
-  allowedOrigins?: string[];
-  deniedOrigins?: string[];
+  grants: readonly BrowserPermission[];
+  allowedOrigins?: readonly string[];
+  deniedOrigins?: readonly string[];
   allowPrivateNetworks?: boolean;
 }
 

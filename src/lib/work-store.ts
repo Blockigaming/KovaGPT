@@ -17,9 +17,16 @@ export type WorkTask = {
   createdAt: number;
   updatedAt: number;
 };
-const KEY = "kova-work-tasks-v1";
-const TEMPLATE_KEY = "kova-work-templates-v1";
-const AGENT_KEY = "kova-agent-workspace-v1";
+/** Pass null only after authentication has resolved to a confirmed guest. */
+export type WorkStorageUserKey = string | null;
+
+const WORK_TASKS_KEY_BASE = "kova-work-tasks-v2";
+const WORK_TEMPLATES_KEY_BASE = "kova-work-templates-v2";
+const AGENT_WORKSPACE_KEY_BASE = "kova-agent-workspace-v2";
+
+const LEGACY_WORK_TASKS_KEY = "kova-work-tasks-v1";
+const LEGACY_WORK_TEMPLATES_KEY = "kova-work-templates-v1";
+const LEGACY_AGENT_WORKSPACE_KEY = "kova-agent-workspace-v1";
 export type WorkTemplate = {
   id: string;
   name: string;
@@ -51,16 +58,89 @@ export type AgentRun = {
   createdAt: number;
   updatedAt: number;
 };
-export function loadWorkTasks(): WorkTask[] {
+
+/** A stable browser-storage namespace. Signed-in and guest work never share one key. */
+export function workStoragePrincipal(userKey: WorkStorageUserKey): string {
+  return userKey === null ? "guest" : `user:${encodeURIComponent(userKey)}`;
+}
+
+function scopedKey(base: string, userKey: WorkStorageUserKey): string {
+  return `${base}:${workStoragePrincipal(userKey)}`;
+}
+
+export function workTasksStorageKey(userKey: WorkStorageUserKey): string {
+  return scopedKey(WORK_TASKS_KEY_BASE, userKey);
+}
+
+export function workTemplatesStorageKey(userKey: WorkStorageUserKey): string {
+  return scopedKey(WORK_TEMPLATES_KEY_BASE, userKey);
+}
+
+export function agentWorkspaceStorageKey(userKey: WorkStorageUserKey): string {
+  return scopedKey(AGENT_WORKSPACE_KEY_BASE, userKey);
+}
+
+function parseArray<T>(raw: string): T[] | null {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? (parsed as T[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+function loadPrincipalArray<T>(userKey: WorkStorageUserKey, key: string, legacyKey: string): T[] {
+  const currentRaw = localStorage.getItem(key);
+  if (currentRaw !== null || userKey !== null) {
+    return currentRaw === null ? [] : (parseArray<T>(currentRaw) ?? []);
+  }
+
+  const legacyRaw = localStorage.getItem(legacyKey);
+  if (legacyRaw === null) return [];
+  const legacy = parseArray<T>(legacyRaw);
+  if (legacy === null) return [];
+
+  try {
+    localStorage.setItem(key, legacyRaw);
+    localStorage.removeItem(legacyKey);
+  } catch {
+    // Preserve the readable legacy guest value when storage is unavailable.
+  }
+  return legacy;
+}
+
+function savePrincipalArray<T>(
+  userKey: WorkStorageUserKey,
+  key: string,
+  legacyKey: string,
+  values: T[],
+): void {
+  localStorage.setItem(key, JSON.stringify(values));
+  if (userKey === null) {
+    try {
+      localStorage.removeItem(legacyKey);
+    } catch {
+      // The scoped guest value was saved; legacy cleanup remains best effort.
+    }
+  }
+}
+
+export function loadWorkTasks(userKey: WorkStorageUserKey): WorkTask[] {
   if (typeof window === "undefined") return [];
   try {
-    return JSON.parse(localStorage.getItem(KEY) ?? "[]") as WorkTask[];
+    return loadPrincipalArray<WorkTask>(
+      userKey,
+      workTasksStorageKey(userKey),
+      LEGACY_WORK_TASKS_KEY,
+    );
   } catch {
     return [];
   }
 }
-export function saveWorkTasks(tasks: WorkTask[]) {
-  if (typeof window !== "undefined") localStorage.setItem(KEY, JSON.stringify(tasks));
+export function saveWorkTasks(userKey: WorkStorageUserKey, tasks: WorkTask[]) {
+  if (typeof window !== "undefined") {
+    savePrincipalArray(userKey, workTasksStorageKey(userKey), LEGACY_WORK_TASKS_KEY, tasks);
+  }
 }
 export function createWorkTask(
   objective: string,
@@ -87,26 +167,47 @@ export function createWorkTask(
     updatedAt: now,
   };
 }
-export function loadWorkTemplates(): WorkTemplate[] {
+export function loadWorkTemplates(userKey: WorkStorageUserKey): WorkTemplate[] {
   if (typeof window === "undefined") return [];
   try {
-    return JSON.parse(localStorage.getItem(TEMPLATE_KEY) ?? "[]") as WorkTemplate[];
+    return loadPrincipalArray<WorkTemplate>(
+      userKey,
+      workTemplatesStorageKey(userKey),
+      LEGACY_WORK_TEMPLATES_KEY,
+    );
   } catch {
     return [];
   }
 }
-export function saveWorkTemplates(templates: WorkTemplate[]) {
-  if (typeof window !== "undefined") localStorage.setItem(TEMPLATE_KEY, JSON.stringify(templates));
+export function saveWorkTemplates(userKey: WorkStorageUserKey, templates: WorkTemplate[]) {
+  if (typeof window !== "undefined") {
+    savePrincipalArray(
+      userKey,
+      workTemplatesStorageKey(userKey),
+      LEGACY_WORK_TEMPLATES_KEY,
+      templates,
+    );
+  }
 }
-export function loadAgentRuns(): AgentRun[] {
+export function loadAgentRuns(userKey: WorkStorageUserKey): AgentRun[] {
   if (typeof window === "undefined") return [];
   try {
-    const value = JSON.parse(localStorage.getItem(AGENT_KEY) ?? "[]") as AgentRun[];
-    return Array.isArray(value) ? value : [];
+    return loadPrincipalArray<AgentRun>(
+      userKey,
+      agentWorkspaceStorageKey(userKey),
+      LEGACY_AGENT_WORKSPACE_KEY,
+    );
   } catch {
     return [];
   }
 }
-export function saveAgentRuns(runs: AgentRun[]) {
-  if (typeof window !== "undefined") localStorage.setItem(AGENT_KEY, JSON.stringify(runs));
+export function saveAgentRuns(userKey: WorkStorageUserKey, runs: AgentRun[]) {
+  if (typeof window !== "undefined") {
+    savePrincipalArray(
+      userKey,
+      agentWorkspaceStorageKey(userKey),
+      LEGACY_AGENT_WORKSPACE_KEY,
+      runs,
+    );
+  }
 }

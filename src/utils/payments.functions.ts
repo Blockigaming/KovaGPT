@@ -1,8 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
-import { type StripeEnv, createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
+import { type StripeEnv, createStripeClient } from "@/lib/stripe.server";
+import { parseAllowedBillingPortalUrl } from "@/lib/billing-portal-url.mjs";
+import { BILLING_ENV, resolveBillingPlan, tierForLookupKey } from "@/lib/billing-plans";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 type CheckoutSessionResult = { clientSecret: string } | { error: string };
+// Customer-facing billing is production-only. The environment supplied by a
+// browser is never trusted to select Stripe credentials or subscription rows.
 
 async function resolveOrCreateCustomer(
   stripe: ReturnType<typeof createStripeClient>,
@@ -19,7 +23,10 @@ async function resolveOrCreateCustomer(
     if (found.data.length) return found.data[0].id;
   }
   if (options.email) {
-    const existing = await stripe.customers.list({ email: options.email, limit: 1 });
+    const existing = await stripe.customers.list({
+      email: options.email,
+      limit: 1,
+    });
     if (existing.data.length) {
       const customer = existing.data[0];
       if (options.userId && customer.metadata?.userId !== options.userId) {
@@ -39,28 +46,34 @@ async function resolveOrCreateCustomer(
 
 export const createCheckoutSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
+  .validator(
     (data: { priceId: string; quantity?: number; returnUrl: string; environment: StripeEnv }) => {
-      if (!/^[a-zA-Z0-9_-]+$/.test(data.priceId)) throw new Error("Invalid priceId");
+      if (!resolveBillingPlan(data.priceId)) throw new Error("Invalid priceId");
+      if (data.quantity !== undefined && data.quantity !== 1) throw new Error("Invalid quantity");
       return data;
     },
   )
   .handler(async ({ data, context }): Promise<CheckoutSessionResult> => {
     try {
+      const plan = resolveBillingPlan(data.priceId);
+      if (!plan) throw new Error("Invalid priceId");
       const userId = context.userId;
       const customerEmail =
         typeof context.claims.email === "string" ? context.claims.email : undefined;
-      const stripe = createStripeClient(data.environment);
+      const stripe = createStripeClient(BILLING_ENV);
 
       // Prevent duplicate active subscriptions for the same user in this env.
-      const { data: existing } = await context.supabase
+      const { data: existing, error: existingError } = await context.supabase
         .from("subscriptions")
         .select("status, current_period_end, cancel_at_period_end")
         .eq("user_id", userId)
-        .eq("environment", data.environment)
+        .eq("environment", BILLING_ENV)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
+      if (existingError) {
+        return { error: "Billing status couldn't be verified. Try again." };
+      }
       if (existing) {
         const periodEnd = existing.current_period_end
           ? new Date(existing.current_period_end).getTime()
@@ -77,10 +90,19 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         }
       }
 
-      const prices = await stripe.prices.list({ lookup_keys: [data.priceId] });
-      if (!prices.data.length) throw new Error("Price not found");
+      const prices = await stripe.prices.list({
+        lookup_keys: [plan.lookupKey],
+        active: true,
+        limit: 1,
+      });
       const stripePrice = prices.data[0];
-      const isRecurring = stripePrice.type === "recurring";
+      if (
+        !stripePrice ||
+        stripePrice.lookup_key !== plan.lookupKey ||
+        stripePrice.type !== "recurring"
+      ) {
+        throw new Error("Price not found");
+      }
 
       const customerId = await resolveOrCreateCustomer(stripe, {
         email: customerEmail,
@@ -92,7 +114,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       //   2) the Stripe Customer we resolved has no subscription history
       //      (so recreating a KovaGPT account with the same email/userId
       //      doesn't grant a second trial).
-      let isPlusTrialEligible = isRecurring && data.priceId === "plus_monthly" && !existing;
+      let isPlusTrialEligible = plan.trialPeriodDays > 0 && !existing;
       if (isPlusTrialEligible) {
         const prior = await stripe.subscriptions.list({
           customer: customerId,
@@ -103,19 +125,19 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       }
 
       const sessionParams: Record<string, unknown> = {
-        line_items: [{ price: stripePrice.id, quantity: data.quantity || 1 }],
-        mode: isRecurring ? "subscription" : "payment",
+        line_items: [{ price: stripePrice.id, quantity: 1 }],
+        mode: "subscription",
         ui_mode: "embedded_page",
         return_url: data.returnUrl,
         managed_payments: { enabled: true },
         customer: customerId,
         metadata: { userId },
-        ...(isRecurring && {
-          subscription_data: {
-            metadata: { userId },
-            ...(isPlusTrialEligible && { trial_period_days: 30 }),
-          },
-        }),
+        subscription_data: {
+          metadata: { userId },
+          ...(isPlusTrialEligible && {
+            trial_period_days: plan.trialPeriodDays,
+          }),
+        },
       };
       const session = await stripe.checkout.sessions.create(
         sessionParams as Parameters<typeof stripe.checkout.sessions.create>[0],
@@ -123,7 +145,10 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
 
       return { clientSecret: session.client_secret ?? "" };
     } catch (error) {
-      return { error: getStripeErrorMessage(error) };
+      console.error("[billing-checkout] Stripe request failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      return { error: "Checkout is unavailable right now. Try again." };
     }
   });
 
@@ -134,29 +159,45 @@ type PortalResult = { url: string } | { error: string };
 // recent subscription row for this user + env (RLS-scoped via `context.supabase`).
 export const createPortalSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { returnUrl?: string; environment: StripeEnv }) => data)
-  .handler(async ({ data, context }): Promise<PortalResult> => {
+  .validator((data: Record<string, never>) => data)
+  .handler(async ({ context }): Promise<PortalResult> => {
     const { supabase, userId } = context;
-    const { data: sub } = await supabase
+    const { data: sub, error: subscriptionError } = await supabase
       .from("subscriptions")
       .select("stripe_customer_id")
       .eq("user_id", userId)
-      .eq("environment", data.environment)
+      .eq("environment", BILLING_ENV)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+    if (subscriptionError) {
+      return { error: "Billing account couldn't be verified. Try again." };
+    }
     if (!sub?.stripe_customer_id) {
       return { error: "No billing account found. Start a subscription first." };
     }
     try {
-      const stripe = createStripeClient(data.environment);
+      const stripe = createStripeClient(BILLING_ENV);
       const portal = await stripe.billingPortal.sessions.create({
         customer: sub.stripe_customer_id,
-        ...(data.returnUrl && { return_url: data.returnUrl }),
+        // The browser cannot choose an arbitrary post-portal redirect.
+        return_url: "https://kovagpt.com/",
       });
-      return { url: portal.url };
+      const portalUrl = parseAllowedBillingPortalUrl(portal.url);
+      if (!portalUrl) {
+        console.error("[billing-portal] Stripe returned a URL outside the allowlist");
+        return {
+          error: "The billing portal is unavailable right now. Try again.",
+        };
+      }
+      return { url: portalUrl };
     } catch (error) {
-      return { error: getStripeErrorMessage(error) };
+      console.error("[billing-portal] Stripe request failed", {
+        error: error instanceof Error ? error.name : "unknown_error",
+      });
+      return {
+        error: "The billing portal is unavailable right now. Try again.",
+      };
     }
   });
 
@@ -175,19 +216,21 @@ export type SubscriptionSummary = {
 // ever see their own row.
 export const getSubscriptionSummary = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { environment: StripeEnv }) => data)
+  .validator((data: { environment: StripeEnv }) => data)
   .handler(async ({ data, context }): Promise<SubscriptionSummary> => {
     const { supabase, userId } = context;
-    const { data: row } = await supabase
+    const { data: row, error: subscriptionError } = await supabase
       .from("subscriptions")
       .select("stripe_customer_id, price_id, status, current_period_end, cancel_at_period_end")
       .eq("user_id", userId)
-      .eq("environment", data.environment)
+      .eq("environment", BILLING_ENV)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+    if (subscriptionError) {
+      throw new Error("Billing details couldn't be verified.");
+    }
     const priceId = row?.price_id ?? null;
-    const id = (priceId ?? "").toLowerCase();
     const now = Date.now();
     const end = row?.current_period_end ? new Date(row.current_period_end).getTime() : 0;
     const active =
@@ -195,11 +238,7 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
       ((["active", "trialing", "past_due"].includes(row.status) &&
         (!row.current_period_end || end > now)) ||
         (row.status === "canceled" && end > now));
-    let tier: "free" | "plus" | "pro" = "free";
-    if (active) {
-      if (id.includes("pro")) tier = "pro";
-      else if (id.includes("plus")) tier = "plus";
-    }
+    const tier = active ? tierForLookupKey(priceId) : "free";
     return {
       tier,
       status: row?.status ?? null,

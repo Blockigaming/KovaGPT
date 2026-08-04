@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { waitForKovaHydration } from "./hydration";
 
 test.describe("core shell and chat experience", () => {
   test("empty chat, sidebar drawer, multiline composer, and theme states render", async ({
@@ -6,6 +7,7 @@ test.describe("core shell and chat experience", () => {
   }) => {
     await page.addInitScript(() => localStorage.setItem("kova-theme-mode", "dark"));
     await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
     await expect(page.locator("body")).toBeVisible();
     await expect(page.getByRole("textbox").first()).toBeVisible();
     await expect(page.getByText(/What can I help|Ask, search, analyze/i).first()).toBeVisible();
@@ -25,7 +27,7 @@ test.describe("core shell and chat experience", () => {
     }
   });
 
-  test("active chat error and retry surfaces remain reachable", async ({ page }) => {
+  test("active chat error and retry surfaces remain reachable", async ({ page }, testInfo) => {
     await page.route("**/api/chat", async (route) => {
       await route.fulfill({
         status: 503,
@@ -39,9 +41,15 @@ test.describe("core shell and chat experience", () => {
       });
     });
     await page.goto("/", { waitUntil: "domcontentloaded" });
+    await waitForKovaHydration(page);
     const textbox = page.getByRole("textbox").first();
     await textbox.fill("Hello from the retry test");
-    await textbox.press("Enter");
+    if (testInfo.project.use.hasTouch) {
+      await page.getByRole("button", { name: /^send$/i }).click();
+    } else {
+      // Desktop plain Enter remains covered while touch layouts use the visible send control.
+      await textbox.press("Enter");
+    }
     await expect(
       page.getByText(/Provider unavailable|AI provider had a hiccup|Tap retry/i).first(),
     ).toBeVisible({ timeout: 10_000 });

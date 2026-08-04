@@ -4,7 +4,7 @@ import { PublicFooter } from "@/components/PublicFooter";
 export const Route = createFileRoute("/refund")({
   head: () => ({
     meta: [
-      { title: "Refund Policy - KovaGPT" },
+      { title: "KovaGPT Refunds" },
       {
         name: "description",
         content: "How KovaGPT handles subscription cancellations and refund requests.",

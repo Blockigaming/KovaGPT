@@ -33,7 +33,7 @@ export const ONBOARDING_STEPS: Array<{ id: OnboardingStepId; title: string; acti
   { id: "search_research", title: "Search and Deep Research", action: "new-chat:deep-research" },
   { id: "temporary_chat", title: "Use Temporary Chat", action: "new-chat:temporary" },
   { id: "connected_apps", title: "Connect apps when needed", action: "/apps" },
-  { id: "scheduled_tasks", title: "Schedule recurring work", action: "/scheduled-tasks" },
+  { id: "scheduled_tasks", title: "Review Scheduled Tasks status", action: "/scheduled-tasks" },
   { id: "complete", title: "You are ready" },
 ];
 
@@ -124,9 +124,10 @@ export const EMPTY_STATES: Record<EmptyStateRoute, GuidedEmptyState> = {
   },
   scheduled_tasks: {
     route: "scheduled_tasks",
-    title: "Nothing scheduled yet",
-    description: "Create reminders, summaries, or recurring searches.",
-    primaryAction: { label: "Create task", action: "create-task" },
+    title: "Scheduled execution unavailable",
+    description:
+      "This deployment has no background runner. Existing tasks can be reviewed, paused, or deleted.",
+    primaryAction: { label: "Review existing tasks", href: "/scheduled-tasks" },
   },
   canvas: {
     route: "canvas",
@@ -245,7 +246,12 @@ export const COMMANDS: CommandDefinition[] = [
     planGate: "plus",
   },
   { id: "temporary_chat", label: "Temporary Chat", action: "new-chat:temporary" },
-  { id: "create_task", label: "Create Scheduled Task", href: "/scheduled-tasks", planGate: "plus" },
+  {
+    id: "create_task",
+    label: "Scheduled Tasks status",
+    href: "/scheduled-tasks",
+    planGate: "plus",
+  },
   { id: "open_apps", label: "Open Apps", href: "/apps" },
   { id: "open_settings", label: "Open Settings", action: "open-settings" },
   { id: "toggle_theme", label: "Toggle appearance", action: "toggle-theme" },
@@ -450,7 +456,7 @@ export type FeatureClassification =
   | "blocked_runtime_dependency"
   | "not_implemented";
 export const FEATURE_RECONCILIATION: Record<string, FeatureClassification> = {
-  voice: "deferred_product",
+  voice: "implemented_source",
   recovery_deployment: "blocked_external_access",
   build_browser_verification: "blocked_runtime_dependency",
   ai_core: "implemented_source",

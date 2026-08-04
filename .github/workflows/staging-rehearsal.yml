@@ -1,0 +1,63 @@
+name: KovaGPT staging rehearsal
+on: { workflow_dispatch: {} }
+permissions: { contents: read }
+concurrency: { group: staging-rehearsal, cancel-in-progress: false }
+jobs:
+  rehearse:
+    environment: staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@1e60f620b9541dcec8f7a90236bce6b204a1f5b
+        with: { node-version: 24, cache: npm }
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run release:db:isolated
+      - run: npm run build && npm run release:validate && npm run typecheck && npm run lint
+      - run: npm run test:unit && npm run test:integration && npm run test:api && npm run test:a11y && npm run test:visual && npm run test:browser
+      - name: Deploy approved staging commit
+        run: npx wrangler deploy
+        env:
+          {
+            CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
+            CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",
+          }
+      - run: npm run release:edge
+        env:
+          {
+            KOVA_EDGE_BASE_URL: "${{ vars.STAGING_BASE_URL }}",
+            KOVA_EDGE_ALLOWED_HOSTS: "${{ vars.STAGING_ALLOWED_HOST }}",
+          }
+      - run: KOVA_STAGING_SMOKE=1 npm run release:smoke
+        env: { KOVA_SMOKE_BASE_URL: "${{ vars.STAGING_BASE_URL }}" }
+      - run: node scripts/release/authenticated-smoke.mjs
+        env:
+          KOVA_STAGING_BASE_URL: "${{ vars.STAGING_BASE_URL }}"
+          KOVA_STAGING_ALLOWED_HOST: "${{ vars.STAGING_ALLOWED_HOST }}"
+          KOVA_STAGING_DISPOSABLE: "1"
+          KOVA_STAGING_ACCESS_TOKEN: "${{ secrets.STAGING_ACCESS_TOKEN }}"
+          KOVA_STAGING_SECONDARY_TOKEN: "${{ secrets.STAGING_SECONDARY_TOKEN }}"
+          KOVA_STAGING_ADMIN_TOKEN: "${{ secrets.STAGING_ADMIN_TOKEN }}"
+          SUPABASE_URL: "${{ secrets.STAGING_SUPABASE_URL }}"
+          SUPABASE_PUBLISHABLE_KEY: "${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY }}"
+      - run: PLAYWRIGHT_BASE_URL=${{ vars.STAGING_BASE_URL }} npm run test:e2e -- --reporter=line
+      - run: KOVA_REPOSITORY_VALIDATED=1 KOVA_E2E_VALIDATED=1 KOVA_STAGING_VALIDATED=1 KOVA_RELEASE_TARGET=staging npm run release:candidate
+      - name: Consolidate immutable staging evidence
+        run: npm run release:launch-report
+        env:
+          KOVA_RELEASE_TARGET: staging
+          KOVA_STAGING_CREDENTIALS: "1"
+          KOVA_SMOKE_CLEANUP: cleaned
+          KOVA_GATE_REPOSITORY: passed
+          KOVA_GATE_ISOLATED_DATABASE: passed
+          KOVA_GATE_LOCAL_BROWSER: passed
+          KOVA_GATE_DEPLOYED_EDGE: passed
+          KOVA_GATE_UNAUTHENTICATED_SMOKE: passed
+          KOVA_GATE_AUTHENTICATED_CRUD: passed
+          KOVA_GATE_OWNER_ISOLATION: passed
+          KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS: "${{ env.KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS }}"
+          KOVA_GATE_STAGING_E2E: passed
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: staging-release-candidate
+          path: artifacts/release
