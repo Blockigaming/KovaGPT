@@ -2916,12 +2916,21 @@ button[aria-label="Stop dictation"] {
 
 .kova-code-block.kova-code-block,
 .prose-chat pre {
-  overflow: hidden;
   border: 1px solid var(--border) !important;
   border-radius: var(--parity-radius-sm) !important;
   background: var(--code-block-bg);
   color: var(--code-block-fg);
   box-shadow: none !important;
+}
+
+.kova-code-block.kova-code-block {
+  overflow: hidden;
+}
+
+.prose-chat pre {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
 }
 
 .kova-code-toolbar {
