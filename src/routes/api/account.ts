@@ -168,12 +168,12 @@ async function saveDeletionProgress(
     return false;
   }
   return true;
+}
 
 const MAX_DELETE_BODY_BYTES = 1_024;
 
 function jsonError(error: string, status: number) {
   return Response.json({ error }, { status, headers: { "Cache-Control": "no-store" } });
-
 }
 
 export const Route = createFileRoute("/api/account")({
