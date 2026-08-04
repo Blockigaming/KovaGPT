@@ -122,7 +122,7 @@ export function ResponsiveModelSelector({
   return (
     <div
       ref={containerRef}
-      className="kova-model-selector relative inline-flex min-w-0"
+      className="relative inline-flex min-w-0"
       onKeyDown={(event) => {
         if (event.key !== "Escape" || !open) return;
         event.preventDefault();
@@ -171,7 +171,7 @@ export function ResponsiveModelSelector({
             role="dialog"
             aria-label="Choose model"
             className={
-              "kova-model-menu kova-model-menu-surface absolute left-0 z-50 w-64 rounded-xl border border-border bg-popover p-1.5 shadow-lg animate-in fade-in-0 duration-100 " +
+              "kova-model-menu absolute left-0 z-50 w-64 rounded-xl border border-border bg-popover p-1.5 shadow-lg animate-in fade-in-0 duration-100 " +
               (topbar ? "top-full mt-1 origin-top-left" : "bottom-full mb-2 origin-bottom-left")
             }
           >
