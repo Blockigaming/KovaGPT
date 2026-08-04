@@ -27,6 +27,33 @@ export async function createAgentTeamRun(
   if (!input.objective.trim() || input.objective.length > 4000)
     throw new Error("invalid_objective");
   const db = raw(caller);
+  const { data: existingRun } = await db
+    .from("agent_runs")
+    .select("id,status,entitlement,created_at")
+    .eq("owner_id", caller.userId)
+    .eq("idempotency_key", input.idempotencyKey)
+    .maybeSingle();
+  if (existingRun)
+    return existingRun as unknown as {
+      id: string;
+      status: string;
+      entitlement: string;
+      created_at: string;
+    };
+  const { count } = await db
+    .from("agent_runs")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", caller.userId)
+    .in("status", [
+      "queued",
+      "leased",
+      "planning",
+      "running",
+      "approval_needed",
+      "paused",
+      "retry_wait",
+    ]);
+  if ((count ?? 0) >= limits.concurrency) throw new Error("agent_concurrency_limit");
   const { data: run, error } = await db
     .from("agent_runs")
     .upsert(
