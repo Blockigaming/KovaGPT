@@ -208,12 +208,16 @@ export function routeModel(input) {
   // ADVANCED_REASONING: explicit thinking modes, or genuinely complex work.
   const complexEnough = score >= ROUTING_THRESHOLDS.advancedComplexityScore;
   if (ADVANCED_MODES.has(mode) || complexEnough) {
-    if (tier === "free" && !ADVANCED_MODES.has(mode)) {
-      // Free users stay on the default model for auto-upgrades.
+    if (tier === "free") {
+      // Free users cannot select or be auto-upgraded to catalog models that
+      // are restricted to paid tiers.
       return decide(
         "DEFAULT_CHAT",
-        modeCap,
-        [...reasons, "auto_upgrade_blocked_free"],
+        Math.min(modeCap, MODE_MAX_OUTPUT_TOKENS.medium),
+        [
+          ...reasons,
+          ADVANCED_MODES.has(mode) ? "advanced_not_entitled" : "auto_upgrade_blocked_free",
+        ],
         score,
         "ADVANCED_REASONING",
       );

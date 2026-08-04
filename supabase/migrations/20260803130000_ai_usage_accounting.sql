@@ -1,7 +1,7 @@
 -- Direct-OpenAI usage metadata only. Prompts and generated content are deliberately excluded.
 create table if not exists public.ai_usage_events (
   id uuid primary key default gen_random_uuid(), request_id text not null unique,
-  idempotency_key text, user_id uuid references auth.users(id) on delete set null,
+  idempotency_key text, user_id uuid references auth.users(id) on delete cascade,
   guest_ip_hash text, conversation_id uuid, kova_mode text not null check (kova_mode in ('instant','medium','thinking','high','extra_high','pro','utility','image','embedding','deep_research')),
   plan_tier text not null check (plan_tier in ('guest','free','plus','pro')), premium boolean not null default false,
   provider text not null default 'openai' check (provider='openai'), provider_model text not null,
@@ -45,16 +45,16 @@ begin
   select count(*) into active_principal from ai_usage_events where status in ('reserved','started','streaming') and lease_expires_at>=now() and ((p_user_id is not null and user_id=p_user_id) or (p_guest_ip_hash is not null and guest_ip_hash=p_guest_ip_hash));
   if active_principal>=p_principal_concurrency then return query select null::uuid,'principal_concurrency'; return; end if;
   if p_user_id is not null then
-    select coalesce(sum(coalesce(actual_billable_tokens,reserved_tokens)),0) into used_day from ai_usage_events where user_id=p_user_id and created_at>=date_trunc('day',now() at time zone 'utc') at time zone 'utc' and status not in ('quota_rejected','provider_rejected','provider_failed','accounting_failed');
-    select coalesce(sum(coalesce(actual_billable_tokens,reserved_tokens)),0) into used_month from ai_usage_events where user_id=p_user_id and created_at>=date_trunc('month',now() at time zone 'utc') at time zone 'utc' and status not in ('quota_rejected','provider_rejected','provider_failed','accounting_failed');
+    select coalesce(sum(coalesce(actual_billable_tokens,reserved_tokens)),0) into used_day from ai_usage_events where user_id=p_user_id and created_at>=date_trunc('day',now() at time zone 'utc') at time zone 'utc' and status not in ('quota_rejected','provider_rejected','accounting_failed');
+    select coalesce(sum(coalesce(actual_billable_tokens,reserved_tokens)),0) into used_month from ai_usage_events where user_id=p_user_id and created_at>=date_trunc('month',now() at time zone 'utc') at time zone 'utc' and status not in ('quota_rejected','provider_rejected','accounting_failed');
     if used_day+p_reserved_tokens>p_daily_limit then return query select null::uuid,'daily_tokens'; return; end if;
     if used_month+p_reserved_tokens>p_monthly_limit then return query select null::uuid,'monthly_tokens'; return; end if;
     if p_premium then
-      select count(*) into used_premium from ai_usage_events where user_id=p_user_id and premium and created_at>=p_period_start and created_at<p_period_end and status not in ('quota_rejected','provider_rejected','provider_failed','accounting_failed');
+      select count(*) into used_premium from ai_usage_events where user_id=p_user_id and premium and created_at>=p_period_start and created_at<p_period_end and status not in ('quota_rejected','provider_rejected','accounting_failed');
       if used_premium>=p_premium_limit then return query select null::uuid,'premium_period'; return; end if;
     end if;
   else
-    select count(*) into used_guest from ai_usage_events where guest_ip_hash=p_guest_ip_hash and created_at>=date_trunc('day',now() at time zone 'utc') at time zone 'utc' and status not in ('quota_rejected','provider_rejected','provider_failed','accounting_failed');
+    select count(*) into used_guest from ai_usage_events where guest_ip_hash=p_guest_ip_hash and created_at>=date_trunc('day',now() at time zone 'utc') at time zone 'utc' and status not in ('quota_rejected','provider_rejected','accounting_failed');
     if used_guest>=p_guest_limit then return query select null::uuid,'guest_daily'; return; end if;
   end if;
   begin
@@ -62,6 +62,13 @@ begin
     values(p_request_id,p_idempotency_key,p_user_id,p_guest_ip_hash,p_conversation_id,p_mode,p_plan,p_premium,p_model,p_estimated_input,p_reserved_tokens,p_estimated_cost,p_context_trimmed,'reserved',now()+make_interval(secs=>p_lease_seconds)) returning id into new_id;
   exception when unique_violation then return query select null::uuid,'duplicate'; return; end;
   return query select new_id,'acquired';
+end $$;
+
+create or replace function public.renew_ai_generation_lease(p_event_id uuid,p_lease_seconds integer)
+returns boolean language plpgsql security definer set search_path=public,pg_temp as $$
+begin
+  update ai_usage_events set lease_expires_at=now()+make_interval(secs=>p_lease_seconds)
+  where id=p_event_id and status in ('reserved','started','streaming'); return found;
 end $$;
 
 create or replace function public.finalize_ai_generation(p_event_id uuid,p_status text,p_input bigint,p_cached bigint,p_output bigint,p_reasoning bigint,p_actual_cost numeric,p_latency integer,p_tools jsonb,p_error text)
@@ -72,6 +79,8 @@ begin
   where id=p_event_id and status in ('reserved','started','streaming'); return found;
 end $$;
 revoke all on function public.acquire_ai_generation(text,text,uuid,text,uuid,text,text,boolean,text,bigint,bigint,numeric,boolean,bigint,bigint,integer,integer,integer,integer,integer,timestamptz,timestamptz) from public,anon,authenticated;
+revoke all on function public.renew_ai_generation_lease(uuid,integer) from public,anon,authenticated;
+grant execute on function public.renew_ai_generation_lease(uuid,integer) to service_role;
 revoke all on function public.finalize_ai_generation(uuid,text,bigint,bigint,bigint,bigint,numeric,integer,jsonb,text) from public,anon,authenticated;
 grant execute on function public.acquire_ai_generation(text,text,uuid,text,uuid,text,text,boolean,text,bigint,bigint,numeric,boolean,bigint,bigint,integer,integer,integer,integer,integer,timestamptz,timestamptz) to service_role;
 grant execute on function public.finalize_ai_generation(uuid,text,bigint,bigint,bigint,bigint,numeric,integer,jsonb,text) to service_role;
