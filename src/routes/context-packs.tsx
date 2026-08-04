@@ -32,7 +32,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/context-packs")({
   component: ContextPacksPage,
   head: () => ({
-    meta: [{ title: "Context Packs | KovaGPT" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: "KovaGPT Context" }, { name: "robots", content: "noindex" }],
   }),
 });
 type Candidate = {

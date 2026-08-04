@@ -48,7 +48,7 @@ import {
 export const Route = createFileRoute("/summary")({
   head: () => ({
     meta: [
-      { title: "Summary - KovaGPT" },
+      { title: "KovaGPT Summary" },
       {
         name: "description",
         content:
@@ -439,7 +439,6 @@ function SummaryPage() {
                   { label: "New image", icon: ImageIcon, to: "/images" },
                   { label: "New project", icon: FolderKanban, to: "/projects" },
                   { label: "Library", icon: FolderOpen, to: "/library" },
-                  { label: "Apps", icon: Link2, to: "/apps" },
                   { label: "Scheduled", icon: Clock, to: "/scheduled-tasks" },
                 ].map((a) => (
                   <Link

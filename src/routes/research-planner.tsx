@@ -24,7 +24,7 @@ import { loadPrincipalStoredRecord, WORKSPACE_DEFAULTS_KEY_BASE } from "@/lib/se
 export const Route = createFileRoute("/research-planner")({
   component: ResearchPlanner,
   head: () => ({
-    meta: [{ title: "Research Planner | KovaGPT" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: "KovaGPT Research" }, { name: "robots", content: "noindex" }],
   }),
 });
 const starter = [

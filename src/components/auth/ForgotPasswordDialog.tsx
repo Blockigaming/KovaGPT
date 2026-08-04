@@ -61,7 +61,7 @@ export function ForgotPasswordDialog({
       }}
     >
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+        <DialogHeader className="text-center">
           <div className="flex justify-center mb-3">
             <div className="w-12 h-12 rounded-2xl bg-foreground text-background flex items-center justify-center">
               <KeyRound className="w-6 h-6" />

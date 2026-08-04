@@ -194,8 +194,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       ],
       links: [
         { rel: "stylesheet", href: appCss },
-        { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
-        { rel: "apple-touch-icon", href: "/kova-logo.svg" },
+        { rel: "icon", type: "image/png", href: "/favicon.png?v=3" },
+        { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
         { rel: "preconnect", href: "https://fonts.googleapis.com" },
         {
           rel: "preconnect",
@@ -218,7 +218,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
                     "@type": "Organization",
                     name: "KovaGPT",
                     url: "https://kovagpt.com",
-                    logo: "https://kovagpt.com/kova-logo.svg",
+                    logo: "https://kovagpt.com/kova-logo.png",
                   },
                   {
                     "@type": "WebSite",
@@ -302,7 +302,7 @@ function RootThemeManager() {
 }
 
 const PAGE_TITLES: Record<string, string> = {
-  "/": "KovaGPT Chat",
+  "/": "KovaGPT",
   "/pricing": "KovaGPT Billing",
   "/library": "KovaGPT Library",
   "/images": "KovaGPT Images",
@@ -320,7 +320,7 @@ function PageTitleManager() {
     const section = pathname.split("/").filter(Boolean)[0];
     const fallback = section
       ? `KovaGPT ${section.charAt(0).toUpperCase()}${section.slice(1)}`
-      : "KovaGPT Chat";
+      : "KovaGPT";
     document.title = exact ?? fallback;
   }, [pathname]);
   return null;

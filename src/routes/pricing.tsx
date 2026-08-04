@@ -18,7 +18,7 @@ export const Route = createFileRoute("/pricing")({
   component: PricingPage,
   head: () => ({
     meta: [
-      { title: "Pricing - KovaGPT Plus & Pro plans" },
+      { title: "KovaGPT Billing" },
       {
         name: "description",
         content:
@@ -216,8 +216,8 @@ function PricingPage() {
       <EnterpriseContactDialog open={enterpriseOpen} onOpenChange={setEnterpriseOpen} />
 
       {isOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-start justify-center overflow-y-auto py-10 px-4">
-          <div className="relative w-full max-w-2xl bg-background rounded-2xl border border-border overflow-hidden">
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-start justify-center overflow-y-auto py-10 px-4">
+          <div className="relative w-full max-w-2xl bg-background rounded-xl border border-border overflow-hidden">
             <button
               onClick={closeCheckout}
               className="absolute top-3 right-3 z-10 p-2 rounded-full bg-background/80 border border-border hover:bg-accent transition"
@@ -237,27 +237,27 @@ function PricingPage() {
       <section className="mx-auto max-w-5xl px-6 mt-16">
         <h2 className="text-2xl font-semibold mb-6 text-left">Pricing FAQ</h2>
         <div className="grid gap-5 text-sm sm:grid-cols-2">
-          <div className="rounded-2xl border border-border bg-card/50 p-5">
+          <div className="rounded-xl border border-border bg-card/50 p-5">
             <h3 className="font-medium mb-1">Can I cancel anytime?</h3>
             <p className="text-muted-foreground">
               Open Billing in Settings to see the options available for your subscription and when a
               change takes effect.
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/50 p-5">
+          <div className="rounded-xl border border-border bg-card/50 p-5">
             <h3 className="font-medium mb-1">What happens if I hit my limit?</h3>
             <p className="text-muted-foreground">
               You can wait until your limit resets or upgrade to a higher plan for more usage.
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/50 p-5">
+          <div className="rounded-xl border border-border bg-card/50 p-5">
             <h3 className="font-medium mb-1">Can I switch plans?</h3>
             <p className="text-muted-foreground">
               Available plan changes appear in Billing. Review the portal or checkout confirmation
               for timing and price before accepting.
             </p>
           </div>
-          <div className="rounded-2xl border border-border bg-card/50 p-5">
+          <div className="rounded-xl border border-border bg-card/50 p-5">
             <h3 className="font-medium mb-1">Do unused credits roll over?</h3>
             <p className="text-muted-foreground">
               Published daily allowances reset rather than rolling over.
@@ -300,11 +300,11 @@ function PlanCard({
 }: CardProps) {
   return (
     <div
-      className={`kova-plan-card relative flex flex-col rounded-[24px] border p-6 shadow-[0_1px_2px_rgb(0_0_0/.04)] ${
+      className={`kova-plan-card ${enterprise ? "kova-plan-card-enterprise" : ""} relative flex flex-col rounded-xl border p-6 shadow-none ${
         enterprise
-          ? "border-foreground/20 bg-foreground text-background"
+          ? "border-foreground/30 bg-card"
           : highlight
-            ? "border-[var(--kova-blue)] bg-card"
+            ? "border-foreground bg-card"
             : "border-border bg-card/50"
       }`}
     >
@@ -316,29 +316,29 @@ function PlanCard({
       <div className="mb-3 flex items-center gap-2.5">
         {Icon ? (
           <span
-            className={`grid h-9 w-9 place-items-center rounded-xl ${enterprise ? "bg-background/15" : "bg-muted"}`}
+            className={`grid h-9 w-9 place-items-center rounded-xl bg-muted`}
           >
             <Icon className="h-4 w-4" />
           </span>
         ) : null}
         <h2 className="text-xl font-semibold">{name}</h2>
       </div>
-      <div className="flex items-baseline gap-1 mb-2">
-        <span className="text-4xl font-bold">{price}</span>
-        <span className="text-muted-foreground text-sm">{period}</span>
+      <div className="mb-2 flex min-h-[3.25rem] flex-col justify-end">
+        <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+          <span className="text-4xl font-bold leading-none">{price}</span>
+          <span className="text-sm leading-5 text-muted-foreground">{period}</span>
+        </div>
       </div>
-      <p className={`mb-6 text-sm ${enterprise ? "text-background/70" : "text-muted-foreground"}`}>
+      <p className="mb-6 text-sm text-muted-foreground">
         {description}
       </p>
       <button
         onClick={onCta}
         disabled={ctaDisabled}
-        className={`mb-6 w-full rounded-full py-2.5 text-sm font-medium transition ${
+        className={`mb-6 w-full rounded-full border py-2.5 text-sm font-medium transition ${
           enterprise
-            ? "bg-background text-foreground hover:bg-background/90"
-            : highlight
-              ? "bg-foreground text-background hover:opacity-90"
-              : "border border-border hover:bg-accent"
+            ? "border-foreground/40 hover:bg-accent"
+            : "border-border hover:bg-accent"
         } ${ctaDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
       >
         {cta}
