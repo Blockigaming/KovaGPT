@@ -153,6 +153,8 @@ export type Settings = {
   theme?: ThemeColors;
 };
 
+export const SAVED_MEMORY_CONSENT_VERSION = 1;
+
 export const DEFAULT_SETTINGS: Settings = {
   displayName: "",
   email: "",
@@ -818,9 +820,13 @@ export function SettingsDialog({
                           onChange({
                             ...settings,
                             rememberAcross: value,
+
+                            memoryConsentVersion: value ? SAVED_MEMORY_CONSENT_VERSION : undefined,
+
                             memoryConsentVersion: value
                               ? CURRENT_MEMORY_CONSENT_VERSION
                               : settings.memoryConsentVersion,
+
                           });
                         }}
                       />

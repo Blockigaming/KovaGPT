@@ -1,4 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
+
+import {
+  DEFAULT_SETTINGS,
+  SAVED_MEMORY_CONSENT_VERSION,
+  type Settings,
+} from "@/components/SettingsDialog";
+import { loadStoredSettings, saveStoredSettings, settingsKey } from "@/lib/settings-storage";
+
 import { DEFAULT_SETTINGS, type Settings } from "@/components/SettingsDialog";
 import {
   CURRENT_MEMORY_CONSENT_VERSION,
@@ -6,6 +14,7 @@ import {
   saveStoredSettings,
   settingsKey,
 } from "@/lib/settings-storage";
+
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import {
   isPrincipalBrowserStorageClearedEvent,
@@ -32,7 +41,21 @@ export function loadSettings(
 ): Settings {
   if (typeof window === "undefined") return DEFAULT_SETTINGS;
   const stored = loadStoredSettings(userKey, { migrateLegacyGuest });
+
+  if (!stored) return { ...DEFAULT_SETTINGS, mode: loadThemeMode() };
+
+  const loaded = { ...DEFAULT_SETTINGS, ...stored } as Settings;
+  if (loaded.rememberAcross && loaded.memoryConsentVersion !== SAVED_MEMORY_CONSENT_VERSION) {
+    return {
+      ...loaded,
+      rememberAcross: false,
+      memoryConsentVersion: undefined,
+    };
+  }
+  return loaded;
+
   return normalizeLoadedSettings(stored);
+
 }
 
 /**
