@@ -1,49 +1,82 @@
-name: Trigger auto deployment for ca-kovagpt-dev
+name: Deploy KovaGPT to Azure Container Apps
 
-# When this action will be executed
 on:
-  # Automatically trigger it when detected changes in repo
   push:
-    branches: 
-      [ main ]
-    paths:
-    - '**'
-    - '.github/workflows/ca-kovagpt-dev-AutoDeployTrigger-1724b7ba-d38e-4fd3-95e8-bef7f7fbc290.yml'
+    branches:
+      - main
+  workflow_dispatch:
 
-  # Allow manual trigger 
-  workflow_dispatch:      
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: ca-kovagpt-dev
+  cancel-in-progress: true
+
+env:
+  AZURE_CORE_OUTPUT: none
+  ACR_NAME: kovagptacr
+  ACR_LOGIN_SERVER: kovagptacr.azurecr.io
+  CONTAINER_APP_NAME: ca-kovagpt-dev
+  RESOURCE_GROUP: rg-kovagpt-dev
+  IMAGE_NAME: kovagpt-web
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    permissions: 
-      id-token: write #This is required for requesting the OIDC JWT Token
-      contents: read #Required when GH token is used to authenticate with private repo
 
     steps:
-      - name: Checkout to the branch
-        uses: actions/checkout@v2
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
-      - name: Azure Login
-        uses: azure/login@v2
+      - name: Sign in to Azure with OIDC
+        uses: azure/login@v3
         with:
           client-id: ${{ secrets.CAKOVAGPTDEV_AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.CAKOVAGPTDEV_AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.CAKOVAGPTDEV_AZURE_SUBSCRIPTION_ID }}
 
-      - name: Build and push container image to registry
+      - name: Build, push, and deploy container image
         uses: azure/container-apps-deploy-action@v2
         with:
           appSourcePath: ${{ github.workspace }}
-          _dockerfilePathKey_: _dockerfilePath_
-          _targetLabelKey_: _targetLabel_
-          registryUrl: 
-          registryUsername: ${{ secrets.CAKOVAGPTDEV_REGISTRY_USERNAME }}
-          registryPassword: ${{ secrets.CAKOVAGPTDEV_REGISTRY_PASSWORD }}
-          containerAppName: ca-kovagpt-dev
-          resourceGroup: rg-kovagpt-dev
-          imageToBuild: default/[parameters('containerAppName')]:${{ github.sha }}
-          _buildArgumentsKey_: |
-            _buildArgumentsValues_
+          dockerfilePath: Dockerfile
+          acrName: ${{ env.ACR_NAME }}
+          imageToBuild: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          containerAppName: ${{ env.CONTAINER_APP_NAME }}
+          resourceGroup: ${{ env.RESOURCE_GROUP }}
+          disableTelemetry: true
 
+      - name: Verify Azure health endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          fqdn="$(az containerapp show \
+            --name "$CONTAINER_APP_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            --query properties.configuration.ingress.fqdn \
+            --output tsv)"
 
+          if [ -z "$fqdn" ]; then
+            echo "Container Apps did not return an ingress FQDN."
+            exit 1
+          fi
+
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error \
+              --max-time 10 \
+              "https://${fqdn}/api/health"; then
+              echo
+              echo "Azure health check passed."
+              exit 0
+            fi
+
+            echo "Health check attempt ${attempt}/30 failed; retrying in 10 seconds."
+            sleep 10
+          done
+
+          echo "Azure health check failed after 30 attempts."
+          exit 1
