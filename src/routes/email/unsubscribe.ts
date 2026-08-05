@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { createFileRoute } from "@tanstack/react-router";
 import {
+import { resolveBackendUrl } from "@/lib/backend-url"
   BodyReadError,
   noStoreJson,
   readUtf8BodyBounded,
@@ -20,7 +21,7 @@ function redactEmail(email: string | null | undefined): string {
 }
 
 function configuredClient() {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseUrl = resolveBackendUrl();
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !supabaseServiceKey) return null;
   return createClient(supabaseUrl, supabaseServiceKey);

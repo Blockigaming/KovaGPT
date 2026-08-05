@@ -3,6 +3,7 @@ import { render } from "@react-email/components";
 import { createClient } from "@supabase/supabase-js";
 import { createFileRoute } from "@tanstack/react-router";
 import { TEMPLATES } from "@/lib/email-templates/registry";
+import { resolveBackendUrl } from "@/lib/backend-url"
 
 // Configuration baked in at scaffold time
 const SITE_NAME = "KovaGPT";
@@ -33,7 +34,7 @@ export const Route = createFileRoute("/lovable/email/transactional/send")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseUrl = resolveBackendUrl();
         const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
         if (process.env.KOVA_EMAIL_QUEUE_ENABLED !== "true") {
           return Response.json({ error: "Email delivery is not configured" }, { status: 503 });
