@@ -13,11 +13,49 @@ export const GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/drive.readonly",
 ].join(" ");
 
+/**
+ * Envelope encryption for Google tokens at rest (AES-GCM, same key material as
+ * the GitHub/Plaid connector vault). Ciphertext is tagged with a "gcm1." prefix
+ * so rows written before this change (plain text) still decrypt transparently.
+ */
+const TOKEN_PREFIX = "gcm1.";
+const b64u = (bytes: Uint8Array) => Buffer.from(bytes).toString("base64url");
+
+async function tokenKey() {
+  const secret = process.env.CONNECTOR_ENCRYPTION_KEY;
+  if (!secret) throw new Error("CONNECTOR_ENCRYPTION_KEY is required");
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(secret));
+  return crypto.subtle.importKey("raw", digest, "AES-GCM", false, ["encrypt", "decrypt"]);
+}
+
+export async function encryptGoogleToken(value: string): Promise<string> {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const sealed = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    await tokenKey(),
+    new TextEncoder().encode(value),
+  );
+  return `${TOKEN_PREFIX}${b64u(iv)}.${b64u(new Uint8Array(sealed))}`;
+}
+
+export async function decryptGoogleToken(value: string): Promise<string> {
+  if (!value.startsWith(TOKEN_PREFIX)) return value; // legacy plaintext row
+  const [iv, body] = value.slice(TOKEN_PREFIX.length).split(".");
+  if (!iv || !body) throw new Error("invalid_google_token_ciphertext");
+  const clear = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: Buffer.from(iv, "base64url") },
+    await tokenKey(),
+    Buffer.from(body, "base64url"),
+  );
+  return new TextDecoder().decode(clear);
+}
+
 function admin(): SupabaseClient<Database> {
   return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
     auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
   });
 }
+
 
 export function googleRedirectUri(_request: Request): string {
   const configured = process.env.GOOGLE_REDIRECT_URI?.trim();
@@ -115,16 +153,20 @@ export async function storeGoogleTokens(userId: string, tokens: TokenResponse) {
     .select("refresh_token")
     .eq("user_id", userId)
     .maybeSingle();
-  const refresh = tokens.refresh_token ?? existing?.refresh_token ?? null;
+  // New refresh tokens are sealed; a preserved value is already stored sealed.
+  const refresh = tokens.refresh_token
+    ? await encryptGoogleToken(tokens.refresh_token)
+    : (existing?.refresh_token ?? null);
   const row = {
     user_id: userId,
     google_sub: idInfo.sub ?? null,
     email: idInfo.email ?? null,
-    access_token: tokens.access_token,
+    access_token: await encryptGoogleToken(tokens.access_token),
     refresh_token: refresh,
     expires_at: expiresAt,
     scopes: tokens.scope ?? "",
   };
+
   const { error } = await db.from("google_oauth_tokens").upsert(row, { onConflict: "user_id" });
   if (error) throw new Error(`store google tokens failed: ${error.message}`);
 }
@@ -260,7 +302,8 @@ export async function disconnectGoogle(userId: string) {
     .select("access_token, refresh_token")
     .eq("user_id", userId)
     .maybeSingle();
-  const token = data?.refresh_token ?? data?.access_token;
+  const stored = data?.refresh_token ?? data?.access_token;
+  const token = stored ? await decryptGoogleToken(stored).catch(() => null) : null;
   if (token) {
     // Best-effort revoke; ignore failures.
     await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(token)}`, {
@@ -281,13 +324,14 @@ async function refreshAccessToken(userId: string): Promise<string> {
   if (error || !data?.refresh_token) {
     throw new Error("google_not_connected");
   }
+  const refreshToken = await decryptGoogleToken(data.refresh_token);
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       client_id: process.env.GOOGLE_OAUTH_CLIENT_ID!,
       client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET!,
-      refresh_token: data.refresh_token,
+      refresh_token: refreshToken,
       grant_type: "refresh_token",
     }),
   });
@@ -302,7 +346,10 @@ async function refreshAccessToken(userId: string): Promise<string> {
   const expiresAt = new Date(Date.now() + (t.expires_in - 30) * 1000).toISOString();
   await db
     .from("google_oauth_tokens")
-    .update({ access_token: t.access_token, expires_at: expiresAt })
+    .update({
+      access_token: await encryptGoogleToken(t.access_token),
+      expires_at: expiresAt,
+    })
     .eq("user_id", userId);
   return t.access_token;
 }
@@ -315,9 +362,12 @@ export async function getValidGoogleAccessToken(userId: string): Promise<string>
     .eq("user_id", userId)
     .maybeSingle();
   if (error || !data) throw new Error("google_not_connected");
-  if (new Date(data.expires_at).getTime() > Date.now() + 5000) return data.access_token;
+  if (new Date(data.expires_at).getTime() > Date.now() + 5000)
+    return decryptGoogleToken(data.access_token);
   return refreshAccessToken(userId);
 }
+
+
 
 export async function logAudit(opts: {
   userId: string;
