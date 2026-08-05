@@ -302,7 +302,8 @@ export async function disconnectGoogle(userId: string) {
     .select("access_token, refresh_token")
     .eq("user_id", userId)
     .maybeSingle();
-  const token = data?.refresh_token ?? data?.access_token;
+  const stored = data?.refresh_token ?? data?.access_token;
+  const token = stored ? await decryptGoogleToken(stored).catch(() => null) : null;
   if (token) {
     // Best-effort revoke; ignore failures.
     await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(token)}`, {
@@ -323,13 +324,14 @@ async function refreshAccessToken(userId: string): Promise<string> {
   if (error || !data?.refresh_token) {
     throw new Error("google_not_connected");
   }
+  const refreshToken = await decryptGoogleToken(data.refresh_token);
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       client_id: process.env.GOOGLE_OAUTH_CLIENT_ID!,
       client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET!,
-      refresh_token: data.refresh_token,
+      refresh_token: refreshToken,
       grant_type: "refresh_token",
     }),
   });
@@ -344,7 +346,10 @@ async function refreshAccessToken(userId: string): Promise<string> {
   const expiresAt = new Date(Date.now() + (t.expires_in - 30) * 1000).toISOString();
   await db
     .from("google_oauth_tokens")
-    .update({ access_token: t.access_token, expires_at: expiresAt })
+    .update({
+      access_token: await encryptGoogleToken(t.access_token),
+      expires_at: expiresAt,
+    })
     .eq("user_id", userId);
   return t.access_token;
 }
@@ -357,7 +362,11 @@ export async function getValidGoogleAccessToken(userId: string): Promise<string>
     .eq("user_id", userId)
     .maybeSingle();
   if (error || !data) throw new Error("google_not_connected");
-  if (new Date(data.expires_at).getTime() > Date.now() + 5000) return data.access_token;
+  if (new Date(data.expires_at).getTime() > Date.now() + 5000)
+    return decryptGoogleToken(data.access_token);
+  return refreshAccessToken(userId);
+}
+
   return refreshAccessToken(userId);
 }
 
