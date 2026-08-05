@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { createFileRoute } from "@tanstack/react-router";
+import { resolveBackendUrl } from "@/lib/backend-url";
 import {
   BodyReadError,
   noStoreJson,
@@ -8,6 +9,7 @@ import {
   suppressThenConsumeToken,
   unsubscribeLinkState,
 } from "@/lib/endpoint-reliability.mjs";
+
 
 const MAX_UNSUBSCRIBE_BODY_BYTES = 8 * 1024;
 const MAX_TOKEN_CHARS = 1024;
@@ -20,7 +22,7 @@ function redactEmail(email: string | null | undefined): string {
 }
 
 function configuredClient() {
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseUrl = resolveBackendUrl();
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!supabaseUrl || !supabaseServiceKey) return null;
   return createClient(supabaseUrl, supabaseServiceKey);

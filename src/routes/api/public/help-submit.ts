@@ -5,6 +5,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { TEMPLATES } from "@/lib/email-templates/registry";
 import type { Database } from "@/integrations/supabase/types";
+import { resolveBackendUrl } from "@/lib/backend-url"
 
 const SITE_NAME = "KovaGPT";
 const SENDER_DOMAIN = "notify.kovagpt.com";
@@ -144,7 +145,7 @@ export const Route = createFileRoute("/api/public/help-submit")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseUrl = resolveBackendUrl();
         const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
         if (!supabaseUrl || !supabaseServiceKey) {
           return Response.json({ error: "Server not configured" }, { status: 500 });

@@ -10,6 +10,7 @@ import { MagicLinkEmail } from '@/lib/email-templates/magic-link'
 import { RecoveryEmail } from '@/lib/email-templates/recovery'
 import { EmailChangeEmail } from '@/lib/email-templates/email-change'
 import { ReauthenticationEmail } from '@/lib/email-templates/reauthentication'
+import { resolveBackendUrl } from "@/lib/backend-url"
 
 const EMAIL_SUBJECTS: Record<string, string> = {
   signup: 'Confirm your email',
@@ -149,7 +150,7 @@ export const Route = createFileRoute("/lovable/email/auth/webhook")({
         const text = await render(element, { plainText: true })
 
         // Enqueue email for async processing by the dispatcher (process-email-queue).
-        const supabaseUrl = import.meta.env['VITE_SUPABASE_URL']
+        const supabaseUrl = resolveBackendUrl()
         const supabaseServiceKey = process.env['SUPABASE_SERVICE_ROLE_KEY']
 
         if (!supabaseUrl || !supabaseServiceKey) {
