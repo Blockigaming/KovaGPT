@@ -367,8 +367,7 @@ export async function getValidGoogleAccessToken(userId: string): Promise<string>
   return refreshAccessToken(userId);
 }
 
-  return refreshAccessToken(userId);
-}
+
 
 export async function logAudit(opts: {
   userId: string;
