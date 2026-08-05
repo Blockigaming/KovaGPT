@@ -153,16 +153,20 @@ export async function storeGoogleTokens(userId: string, tokens: TokenResponse) {
     .select("refresh_token")
     .eq("user_id", userId)
     .maybeSingle();
-  const refresh = tokens.refresh_token ?? existing?.refresh_token ?? null;
+  // New refresh tokens are sealed; a preserved value is already stored sealed.
+  const refresh = tokens.refresh_token
+    ? await encryptGoogleToken(tokens.refresh_token)
+    : (existing?.refresh_token ?? null);
   const row = {
     user_id: userId,
     google_sub: idInfo.sub ?? null,
     email: idInfo.email ?? null,
-    access_token: tokens.access_token,
+    access_token: await encryptGoogleToken(tokens.access_token),
     refresh_token: refresh,
     expires_at: expiresAt,
     scopes: tokens.scope ?? "",
   };
+
   const { error } = await db.from("google_oauth_tokens").upsert(row, { onConflict: "user_id" });
   if (error) throw new Error(`store google tokens failed: ${error.message}`);
 }
