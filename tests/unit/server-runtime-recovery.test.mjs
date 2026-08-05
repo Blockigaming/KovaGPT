@@ -14,7 +14,10 @@ test("a failed server-entry import is not cached for the Worker isolate lifetime
 
 test("the public health route exposes only its allowlisted KovaGPT status", () => {
   const source = read("src/routes/api/health.ts");
-  assert.match(source, /Response\.json\(\s*\{ ok: true, app: "KovaGPT" \}/);
+  assert.match(
+    source,
+    /Response\.json\(\s*\{[\s\S]*status: "ok",[\s\S]*service: "kovagpt-web",[\s\S]*environment:[\s\S]*timestamp:/,
+  );
   assert.match(source, /"Cache-Control": "no-store"/);
   assert.doesNotMatch(source, /safeDiagnostics|diagnostics\.server/);
   assert.doesNotMatch(

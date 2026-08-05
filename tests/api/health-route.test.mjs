@@ -7,7 +7,10 @@ const diagnostics = await readFile("src/lib/config/diagnostics.server.ts", "utf8
 
 test("health route exposes only the public KovaGPT liveness contract", () => {
   assert.match(route, /createFileRoute\("\/api\/health"\)/);
-  assert.match(route, /\{ ok: true, app: "KovaGPT" \}/);
+  assert.match(
+    route,
+    /status: "ok",[\s\S]*service: "kovagpt-web",[\s\S]*environment:[\s\S]*timestamp:/,
+  );
   assert.match(route, /Cache-Control/);
   assert.match(route, /no-store/);
   assert.doesNotMatch(
