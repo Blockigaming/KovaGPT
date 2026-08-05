@@ -8,6 +8,10 @@ export function PublicFooter() {
           <Link to="/getting-started" className="hover:text-foreground">
             Getting Started
           </Link>
+          <Link to="/connect" className="hover:text-foreground">
+            Connect Your Assistant
+          </Link>
+
           <Link to="/privacy" className="hover:text-foreground">
             Privacy Policy
           </Link>
