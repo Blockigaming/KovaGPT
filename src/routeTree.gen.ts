@@ -20,6 +20,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ChangelogRouteImport } from './routes/changelog'
 import { Route as ChatgptAlternativeRouteImport } from './routes/chatgpt-alternative'
 import { Route as CodeHelperRouteImport } from './routes/code-helper'
+import { Route as ConnectRouteImport } from './routes/connect'
 import { Route as ContactSupportRouteImport } from './routes/contact-support'
 import { Route as ContextPacksRouteImport } from './routes/context-packs'
 import { Route as FilesRouteImport } from './routes/files'
@@ -159,6 +160,11 @@ const ChatgptAlternativeRoute = ChatgptAlternativeRouteImport.update({
 const CodeHelperRoute = CodeHelperRouteImport.update({
   id: '/code-helper',
   path: '/code-helper',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConnectRoute = ConnectRouteImport.update({
+  id: '/connect',
+  path: '/connect',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactSupportRoute = ContactSupportRouteImport.update({
@@ -612,6 +618,7 @@ export interface FileRoutesByFullPath {
   '/changelog': typeof ChangelogRoute
   '/chatgpt-alternative': typeof ChatgptAlternativeRoute
   '/code-helper': typeof CodeHelperRoute
+  '/connect': typeof ConnectRoute
   '/contact-support': typeof ContactSupportRoute
   '/context-packs': typeof ContextPacksRoute
   '/files': typeof FilesRoute
@@ -710,6 +717,7 @@ export interface FileRoutesByTo {
   '/changelog': typeof ChangelogRoute
   '/chatgpt-alternative': typeof ChatgptAlternativeRoute
   '/code-helper': typeof CodeHelperRoute
+  '/connect': typeof ConnectRoute
   '/contact-support': typeof ContactSupportRoute
   '/context-packs': typeof ContextPacksRoute
   '/files': typeof FilesRoute
@@ -809,6 +817,7 @@ export interface FileRoutesById {
   '/changelog': typeof ChangelogRoute
   '/chatgpt-alternative': typeof ChatgptAlternativeRoute
   '/code-helper': typeof CodeHelperRoute
+  '/connect': typeof ConnectRoute
   '/contact-support': typeof ContactSupportRoute
   '/context-packs': typeof ContextPacksRoute
   '/files': typeof FilesRoute
@@ -909,6 +918,7 @@ export interface FileRouteTypes {
     | '/changelog'
     | '/chatgpt-alternative'
     | '/code-helper'
+    | '/connect'
     | '/contact-support'
     | '/context-packs'
     | '/files'
@@ -1007,6 +1017,7 @@ export interface FileRouteTypes {
     | '/changelog'
     | '/chatgpt-alternative'
     | '/code-helper'
+    | '/connect'
     | '/contact-support'
     | '/context-packs'
     | '/files'
@@ -1105,6 +1116,7 @@ export interface FileRouteTypes {
     | '/changelog'
     | '/chatgpt-alternative'
     | '/code-helper'
+    | '/connect'
     | '/contact-support'
     | '/context-packs'
     | '/files'
@@ -1204,6 +1216,7 @@ export interface RootRouteChildren {
   ChangelogRoute: typeof ChangelogRoute
   ChatgptAlternativeRoute: typeof ChatgptAlternativeRoute
   CodeHelperRoute: typeof CodeHelperRoute
+  ConnectRoute: typeof ConnectRoute
   ContactSupportRoute: typeof ContactSupportRoute
   ContextPacksRoute: typeof ContextPacksRoute
   FilesRoute: typeof FilesRoute
@@ -1365,6 +1378,13 @@ declare module '@tanstack/react-router' {
       path: '/code-helper'
       fullPath: '/code-helper'
       preLoaderRoute: typeof CodeHelperRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/connect': {
+      id: '/connect'
+      path: '/connect'
+      fullPath: '/connect'
+      preLoaderRoute: typeof ConnectRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact-support': {
@@ -2011,6 +2031,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChangelogRoute: ChangelogRoute,
   ChatgptAlternativeRoute: ChatgptAlternativeRoute,
   CodeHelperRoute: CodeHelperRoute,
+  ConnectRoute: ConnectRoute,
   ContactSupportRoute: ContactSupportRoute,
   ContextPacksRoute: ContextPacksRoute,
   FilesRoute: FilesRoute,
