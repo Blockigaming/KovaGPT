@@ -1,7 +1,10 @@
 import { renderErrorPage } from "./lib/error-page";
 import { rejectCrossSiteRequest } from "./lib/http-security.server";
 
+import { validateAzureRuntimeEnv } from "./lib/azure-runtime-env.server";
 import { withRuntimeBindings } from "./lib/runtime-env.server";
+
+validateAzureRuntimeEnv();
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;

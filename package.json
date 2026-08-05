@@ -51,7 +51,11 @@
     "release:launch-report": "node scripts/release/launch-report.mjs",
     "release:production-guard": "node scripts/release/production-guard.mjs",
     "release:visual:authenticated": "node scripts/release/visual-harness.mjs --dry-run",
-    "security:ai-runtime": "node scripts/security/scan-ai-runtime.mjs"
+    "security:ai-runtime": "node scripts/security/scan-ai-runtime.mjs",
+    "container:build": "docker build -t kovagpt-web:azure-dev .",
+    "container:run": "docker run --rm --name kovagpt-web-azure-dev --env-file .env.local --env AI_GENERATION_ENABLED=false -e HOST=0.0.0.0 -e PORT=3000 -p 3000:3000 kovagpt-web:azure-dev",
+    "container:smoke": "node -e \"fetch('http://127.0.0.1:3000/api/health').then(async r=>{console.log(r.status, await r.text()); process.exit(r.ok?0:1)}).catch(e=>{console.error(e); process.exit(1)})\"",
+    "azure:validate": "node scripts/azure/validate.mjs"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.3",
