@@ -13,11 +13,49 @@ export const GOOGLE_SCOPES = [
   "https://www.googleapis.com/auth/drive.readonly",
 ].join(" ");
 
+/**
+ * Envelope encryption for Google tokens at rest (AES-GCM, same key material as
+ * the GitHub/Plaid connector vault). Ciphertext is tagged with a "gcm1." prefix
+ * so rows written before this change (plain text) still decrypt transparently.
+ */
+const TOKEN_PREFIX = "gcm1.";
+const b64u = (bytes: Uint8Array) => Buffer.from(bytes).toString("base64url");
+
+async function tokenKey() {
+  const secret = process.env.CONNECTOR_ENCRYPTION_KEY;
+  if (!secret) throw new Error("CONNECTOR_ENCRYPTION_KEY is required");
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(secret));
+  return crypto.subtle.importKey("raw", digest, "AES-GCM", false, ["encrypt", "decrypt"]);
+}
+
+export async function encryptGoogleToken(value: string): Promise<string> {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const sealed = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv },
+    await tokenKey(),
+    new TextEncoder().encode(value),
+  );
+  return `${TOKEN_PREFIX}${b64u(iv)}.${b64u(new Uint8Array(sealed))}`;
+}
+
+export async function decryptGoogleToken(value: string): Promise<string> {
+  if (!value.startsWith(TOKEN_PREFIX)) return value; // legacy plaintext row
+  const [iv, body] = value.slice(TOKEN_PREFIX.length).split(".");
+  if (!iv || !body) throw new Error("invalid_google_token_ciphertext");
+  const clear = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: Buffer.from(iv, "base64url") },
+    await tokenKey(),
+    Buffer.from(body, "base64url"),
+  );
+  return new TextDecoder().decode(clear);
+}
+
 function admin(): SupabaseClient<Database> {
   return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
     auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
   });
 }
+
 
 export function googleRedirectUri(_request: Request): string {
   const configured = process.env.GOOGLE_REDIRECT_URI?.trim();
