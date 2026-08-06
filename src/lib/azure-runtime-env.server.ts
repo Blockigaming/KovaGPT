@@ -39,7 +39,8 @@ export function validateAzureRuntimeEnv(environment = process.env): void {
   const leakedPublicSecrets = Object.keys(environment).filter(
     (name) =>
       publicClientPrefixes.some((prefix) => name.startsWith(prefix)) &&
-      SECRET_NAME_PATTERN.test(name),
+      SECRET_NAME_PATTERN.test(name) &&
+      !PUBLIC_CLIENT_ALLOWLIST.has(name),
   );
   if (leakedPublicSecrets.length > 0) {
     throw new Error(
