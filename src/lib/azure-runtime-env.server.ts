@@ -1,5 +1,14 @@
 const SECRET_NAME_PATTERN = /(SECRET|TOKEN|KEY|PASSWORD|PRIVATE|CONNECTION_STRING)/u;
 
+// Publishable/client-side identifiers are designed to ship in browser bundles.
+// They match the generic secret-name pattern above, so allow them explicitly.
+const PUBLIC_CLIENT_ALLOWLIST = new Set([
+  "VITE_SUPABASE_PUBLISHABLE_KEY",
+  "VITE_SUPABASE_ANON_KEY",
+  "VITE_PAYMENTS_CLIENT_TOKEN",
+  "VITE_STRIPE_PUBLISHABLE_KEY",
+]);
+
 const publicClientPrefixes = ["VITE_"] as const;
 const optionalServerValues = [
   "SUPABASE_URL",
