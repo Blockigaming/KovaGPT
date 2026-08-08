@@ -1,0 +1,134 @@
+name: Build disposable Auth rehearsal image
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: "Migration branch, tag, or commit SHA to build"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AZURE_CORE_OUTPUT: none
+  ACR_NAME: kovagptacr
+  ACR_LOGIN_SERVER: kovagptacr.azurecr.io
+  IMAGE_REPOSITORY: kovagpt-web-auth-rehearsal
+
+jobs:
+  build-and-push:
+    name: Build and push rehearsal image only
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out selected migration source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_ref }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Resolve exact source commit
+        id: source
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SOURCE_SHA="$(git rev-parse HEAD)"
+          IMAGE_TAG="auth-rehearsal-${SOURCE_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          IMAGE_REF="${ACR_LOGIN_SERVER}/${IMAGE_REPOSITORY}:${IMAGE_TAG}"
+
+          echo "sha=${SOURCE_SHA}" >> "$GITHUB_OUTPUT"
+          echo "tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "image_ref=${IMAGE_REF}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify Auth rehearsal receiver exists
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if ! grep -R --line-number \
+            --exclude-dir=node_modules \
+            --exclude-dir=.git \
+            'auth-migration/rehearsal' \
+            src; then
+            echo "The selected source does not contain the Auth rehearsal receiver."
+            exit 1
+          fi
+
+      - name: Sign in to Azure with OIDC
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.CAKOVAGPTDEV_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.CAKOVAGPTDEV_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.CAKOVAGPTDEV_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Sign in to Azure Container Registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          az acr login --name "$ACR_NAME"
+
+      - name: Ensure rehearsal image tag does not already exist
+        shell: bash
+        env:
+          IMAGE_TAG: ${{ steps.source.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          EXISTING="$(
+            az acr repository show-tags \
+              --name "$ACR_NAME" \
+              --repository "$IMAGE_REPOSITORY" \
+              --query "[?@=='${IMAGE_TAG}'] | [0]" \
+              --output tsv 2>/dev/null || true
+          )"
+
+          if [ "$EXISTING" = "$IMAGE_TAG" ]; then
+            echo "Refusing to overwrite existing rehearsal image tag."
+            exit 1
+          fi
+
+      - name: Build rehearsal image
+        shell: bash
+        env:
+          IMAGE_REF: ${{ steps.source.outputs.image_ref }}
+        run: |
+          set -euo pipefail
+
+          docker build \
+            --platform linux/amd64 \
+            --file Dockerfile \
+            --tag "$IMAGE_REF" \
+            .
+
+      - name: Push rehearsal image
+        shell: bash
+        env:
+          IMAGE_REF: ${{ steps.source.outputs.image_ref }}
+        run: |
+          set -euo pipefail
+          docker push "$IMAGE_REF"
+
+      - name: Write build summary
+        shell: bash
+        env:
+          SOURCE_REF: ${{ inputs.source_ref }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          IMAGE_REF: ${{ steps.source.outputs.image_ref }}
+        run: |
+          set -euo pipefail
+
+          {
+            echo "## Disposable Auth rehearsal image"
+            echo
+            echo "- Selected source ref: \`$SOURCE_REF\`"
+            echo "- Exact source SHA: \`$SOURCE_SHA\`"
+            echo "- Image: \`$IMAGE_REF\`"
+            echo
+            echo "This workflow only builds and pushes an image."
+            echo "It does not deploy or modify any Azure Container App."
+          } >> "$GITHUB_STEP_SUMMARY"
