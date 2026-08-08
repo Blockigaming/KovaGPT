@@ -2,7 +2,7 @@ import { createStart, createMiddleware } from "@tanstack/react-start";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 
 import { renderErrorPage } from "./lib/error-page";
-import { rejectCrossSiteRequest } from "./lib/http-security.server";
+import { rejectCrossSiteRequestUnlessSignedAuthMigration } from "./lib/http-security.server";
 
 const SECURITY_HEADERS: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
@@ -47,12 +47,9 @@ function applySecurityHeaders(res: Response): Response {
 }
 
 const errorMiddleware = createMiddleware().server(async ({ next, request }) => {
-  const url = new URL(request.url);
-  if (url.pathname.startsWith("/lovable/")) return next();
-
   try {
     if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
-      const rejected = rejectCrossSiteRequest(request);
+      const rejected = rejectCrossSiteRequestUnlessSignedAuthMigration(request);
       if (rejected) return applySecurityHeaders(rejected);
     }
     const contentLength = Number(request.headers.get("content-length") ?? "0");

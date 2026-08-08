@@ -1,5 +1,5 @@
 import { renderErrorPage } from "./lib/error-page";
-import { rejectCrossSiteRequest } from "./lib/http-security.server";
+import { rejectCrossSiteRequestUnlessSignedAuthMigration } from "./lib/http-security.server";
 
 import { validateAzureRuntimeEnv } from "./lib/azure-runtime-env.server";
 import { withRuntimeBindings } from "./lib/runtime-env.server";
@@ -118,7 +118,7 @@ export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
-        const rejected = rejectCrossSiteRequest(request);
+        const rejected = rejectCrossSiteRequestUnlessSignedAuthMigration(request);
         if (rejected) return hardenResponse(rejected);
       }
       const contentLength = Number(request.headers.get("content-length") ?? "0");

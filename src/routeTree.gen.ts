@@ -98,6 +98,7 @@ import { Route as ApiPublicHelpSubmitRouteImport } from './routes/api/public/hel
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as ApiIntegrationsOauthDisconnectRouteImport } from './routes/api/integrations/oauth/disconnect'
 import { Route as ApiIntegrationsOauthStartRouteImport } from './routes/api/integrations/oauth/start'
+import { Route as ApiInternalAuthMigrationRehearsalRouteImport } from './routes/api/internal/auth-migration/rehearsal'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
@@ -559,6 +560,12 @@ const ApiIntegrationsOauthStartRoute =
     path: '/api/integrations/oauth/start',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiInternalAuthMigrationRehearsalRoute =
+  ApiInternalAuthMigrationRehearsalRouteImport.update({
+    id: '/api/internal/auth-migration/rehearsal',
+    path: '/api/internal/auth-migration/rehearsal',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -696,6 +703,7 @@ export interface FileRoutesByFullPath {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
+  '/api/internal/auth-migration/rehearsal': typeof ApiInternalAuthMigrationRehearsalRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -795,6 +803,7 @@ export interface FileRoutesByTo {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
+  '/api/internal/auth-migration/rehearsal': typeof ApiInternalAuthMigrationRehearsalRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -895,6 +904,7 @@ export interface FileRoutesById {
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
   '/api/integrations/oauth/start': typeof ApiIntegrationsOauthStartRoute
+  '/api/internal/auth-migration/rehearsal': typeof ApiInternalAuthMigrationRehearsalRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -996,6 +1006,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
+    | '/api/internal/auth-migration/rehearsal'
     | '/api/public/payments/webhook'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -1095,6 +1106,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
+    | '/api/internal/auth-migration/rehearsal'
     | '/api/public/payments/webhook'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -1194,6 +1206,7 @@ export interface FileRouteTypes {
     | '/lovable/email/suppression'
     | '/api/integrations/oauth/disconnect'
     | '/api/integrations/oauth/start'
+    | '/api/internal/auth-migration/rehearsal'
     | '/api/public/payments/webhook'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -1292,6 +1305,7 @@ export interface RootRouteChildren {
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiIntegrationsOauthDisconnectRoute: typeof ApiIntegrationsOauthDisconnectRoute
   ApiIntegrationsOauthStartRoute: typeof ApiIntegrationsOauthStartRoute
+  ApiInternalAuthMigrationRehearsalRoute: typeof ApiInternalAuthMigrationRehearsalRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
@@ -1926,6 +1940,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiIntegrationsOauthStartRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/internal/auth-migration/rehearsal': {
+      id: '/api/internal/auth-migration/rehearsal'
+      path: '/api/internal/auth-migration/rehearsal'
+      fullPath: '/api/internal/auth-migration/rehearsal'
+      preLoaderRoute: typeof ApiInternalAuthMigrationRehearsalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -2108,6 +2129,8 @@ const rootRouteChildren: RootRouteChildren = {
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiIntegrationsOauthDisconnectRoute: ApiIntegrationsOauthDisconnectRoute,
   ApiIntegrationsOauthStartRoute: ApiIntegrationsOauthStartRoute,
+  ApiInternalAuthMigrationRehearsalRoute:
+    ApiInternalAuthMigrationRehearsalRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
