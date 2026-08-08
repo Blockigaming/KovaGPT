@@ -15,7 +15,7 @@ permissions:
 env:
   AZURE_CORE_OUTPUT: none
   ACR_NAME: kovagptacr
-  ACR_LOGIN_SERVER: kovagptacr.azurecr.io
+  ACR_LOGIN_SERVER: kovagptacr-dte9hugbhjghcyb8.azurecr.io
   IMAGE_REPOSITORY: kovagpt-web-auth-rehearsal
 
 jobs:
