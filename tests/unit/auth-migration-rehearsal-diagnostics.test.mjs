@@ -44,6 +44,17 @@ test("authentication and payload validation still precede database construction"
   assert.ok(auth >= 0 && payload > auth && nonce > payload && client > nonce);
 });
 
+test("connected pg client is wrapped by authoritative constraint adapter before import", async () => {
+  const route = await readFile("src/routes/api/internal/auth-migration/rehearsal.ts", "utf8");
+
+  assert.match(route, /createAuthRehearsalDatabaseAdapter/);
+  const connected = route.indexOf("await client.connect()");
+  const adapter = route.indexOf("createAuthRehearsalDatabaseAdapter(client)");
+  const imported = route.indexOf("importRehearsal(database, validated)");
+  assert.ok(connected >= 0 && adapter > connected && imported > adapter);
+  assert.doesNotMatch(route, /importRehearsal\(client,\s*validated\)/);
+});
+
 test("unknown errors remain generic and known rehearsal errors remain allowlisted", async () => {
   const route = await readFile("src/routes/api/internal/auth-migration/rehearsal.ts", "utf8");
 
