@@ -50,7 +50,11 @@ export const Route = createFileRoute("/api/internal/auth-migration/rehearsal")({
           const validated = validatePayload(payload, sourceId);
           processGuard.claimNonce(auth.nonce);
           client = new Client({ connectionString: databaseUrl, ssl: { rejectUnauthorized: true } });
-          await client.connect();
+          try {
+            await client.connect();
+          } catch {
+            throw new RehearsalError("database_connect_failed", 503);
+          }
           const result = await importRehearsal(client, validated);
           processGuard.markCompleted();
           return Response.json(result, {
