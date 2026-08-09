@@ -6,7 +6,7 @@ This runbook is scoped only to the disposable rehearsal resources.
 
 Branch: `fix/auth-rehearsal-safe-diagnostics`
 
-Current reviewed hardening commit: `0851ee5f305be64d30e94e4237ba504a253d9628`
+Current reviewed hardening commit: `0d844a535d917646e5a1917e11c5fe36723149c3`
 
 Base V2 commit: `beaa7bb3de70c443f25617880dc23308308ce766`
 
