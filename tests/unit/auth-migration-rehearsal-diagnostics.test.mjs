@@ -13,6 +13,37 @@ test("auth rehearsal maps raw pg connect failures to a safe stable status", asyn
   assert.doesNotMatch(route, /error\.message|error\.detail|error\.stack|connectionString.*Response\.json/s);
 });
 
+test("database TLS stays verified and supports a server-only Supabase CA", async () => {
+  const route = await readFile("src/routes/api/internal/auth-migration/rehearsal.ts", "utf8");
+
+  assert.match(route, /AUTH_MIGRATION_REHEARSAL_DATABASE_CA/);
+  assert.match(route, /rejectUnauthorized:\s*true/);
+  assert.match(route, /databaseCa\s*\?\s*\{\s*ca:\s*databaseCa\s*\}/s);
+  assert.match(route, /connectionTimeoutMillis:\s*10_000/);
+  assert.doesNotMatch(route, /rejectUnauthorized:\s*false/);
+  assert.doesNotMatch(route, /NODE_TLS_REJECT_UNAUTHORIZED/);
+});
+
+test("database close failures log only a fixed non-sensitive stage", async () => {
+  const route = await readFile("src/routes/api/internal/auth-migration/rehearsal.ts", "utf8");
+
+  assert.match(route, /stage:\s*"database_close"/);
+  assert.doesNotMatch(
+    route,
+    /safeDatabaseCloseFailure\([^)]*(?:error|message|stack|detail|databaseUrl|databaseCa|secret)/s,
+  );
+});
+
+test("authentication and payload validation still precede database construction", async () => {
+  const route = await readFile("src/routes/api/internal/auth-migration/rehearsal.ts", "utf8");
+
+  const auth = route.indexOf("authenticateRequest(");
+  const payload = route.indexOf("validatePayload(");
+  const nonce = route.indexOf("processGuard.claimNonce(");
+  const client = route.indexOf("new Client(");
+  assert.ok(auth >= 0 && payload > auth && nonce > payload && client > nonce);
+});
+
 test("unknown errors remain generic and known rehearsal errors remain allowlisted", async () => {
   const route = await readFile("src/routes/api/internal/auth-migration/rehearsal.ts", "utf8");
 
