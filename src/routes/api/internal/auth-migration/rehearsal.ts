@@ -21,6 +21,22 @@ function failure(error: unknown) {
   );
 }
 
+function databaseTlsOptions(databaseCa: string | undefined) {
+  return {
+    rejectUnauthorized: true,
+    ...(databaseCa ? { ca: databaseCa } : {}),
+  };
+}
+
+function safeDatabaseCloseFailure() {
+  console.error(
+    `[auth-migration-rehearsal] ${JSON.stringify({
+      event: "auth_migration_rehearsal_failure",
+      stage: "database_close",
+    })}`,
+  );
+}
+
 const processGuard = createRehearsalProcessGuard();
 
 export const Route = createFileRoute("/api/internal/auth-migration/rehearsal")({
@@ -35,6 +51,7 @@ export const Route = createFileRoute("/api/internal/auth-migration/rehearsal")({
           const sourceId = runtimeEnv("AUTH_MIGRATION_SOURCE_ID");
           const destination = runtimeEnv("AUTH_MIGRATION_DESTINATION_PROJECT_REF");
           const databaseUrl = runtimeEnv("AUTH_MIGRATION_REHEARSAL_DATABASE_URL");
+          const databaseCa = runtimeEnv("AUTH_MIGRATION_REHEARSAL_DATABASE_CA");
           const secret = runtimeEnv("AUTH_MIGRATION_BRIDGE_SECRET");
           if (
             destination !== DESTINATION_PROJECT_REF ||
@@ -49,7 +66,11 @@ export const Route = createFileRoute("/api/internal/auth-migration/rehearsal")({
           const auth = authenticateRequest({ headers: request.headers, rawBody, secret });
           const validated = validatePayload(payload, sourceId);
           processGuard.claimNonce(auth.nonce);
-          client = new Client({ connectionString: databaseUrl, ssl: { rejectUnauthorized: true } });
+          client = new Client({
+            connectionString: databaseUrl,
+            connectionTimeoutMillis: 10_000,
+            ssl: databaseTlsOptions(databaseCa),
+          });
           try {
             await client.connect();
           } catch {
@@ -63,7 +84,7 @@ export const Route = createFileRoute("/api/internal/auth-migration/rehearsal")({
         } catch (error) {
           return failure(error);
         } finally {
-          await client?.end().catch(() => undefined);
+          await client?.end().catch(() => safeDatabaseCloseFailure());
         }
       },
     },
