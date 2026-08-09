@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Client } from "pg";
 
+import { createAuthRehearsalDatabaseAdapter } from "../../../../lib/auth-migration-rehearsal-db-adapter.server.mjs";
 import {
   DESTINATION_PROJECT_REF,
   RehearsalError,
@@ -76,7 +77,8 @@ export const Route = createFileRoute("/api/internal/auth-migration/rehearsal")({
           } catch {
             throw new RehearsalError("database_connect_failed", 503);
           }
-          const result = await importRehearsal(client, validated);
+          const database = createAuthRehearsalDatabaseAdapter(client);
+          const result = await importRehearsal(database, validated);
           processGuard.markCompleted();
           return Response.json(result, {
             headers: { "cache-control": "no-store" },
