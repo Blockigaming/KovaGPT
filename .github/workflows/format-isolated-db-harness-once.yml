@@ -1,0 +1,56 @@
+name: Format isolated database harness once
+
+on:
+  push:
+    branches:
+      - fix/isolated-db-artifact-directory
+    paths:
+      - .github/workflows/format-isolated-db-harness-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: fix/isolated-db-artifact-directory
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Format and verify focused files
+        run: |
+          set -euo pipefail
+          npx prettier --write \
+            scripts/release/isolated-database.mjs \
+            tests/unit/isolated-database-artifact-path.test.mjs
+          npx prettier --check \
+            scripts/release/isolated-database.mjs \
+            tests/unit/isolated-database-artifact-path.test.mjs
+          node --test tests/unit/isolated-database-artifact-path.test.mjs
+          node scripts/release/isolated-database.mjs --dry-run
+
+      - name: Remove one-shot workflow
+        run: rm .github/workflows/format-isolated-db-harness-once.yml
+
+      - name: Commit deterministic formatting
+        run: |
+          set -euo pipefail
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+          git diff --cached --quiet && exit 0
+          git commit -m "Format and verify isolated database harness"
+          git push origin HEAD:fix/isolated-db-artifact-directory
