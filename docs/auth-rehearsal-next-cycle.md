@@ -24,9 +24,20 @@ Historical PR #139 was accidentally merged only into the isolated V2 source bran
 - Session-pooler credentials and PostgreSQL connectivity were independently verified with `psql`.
 - Ingress is disabled.
 - Min/max replicas are exactly `1/1`, with one active replica.
-- `AI_GENERATION_ENABLED=false`.
+- The existing deployment has `AI_GENERATION_ENABLED=false`.
 - Live FK is `FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE`.
 - Live provider-subject uniqueness is one composite constraint over `provider_id` and `provider`.
+
+## AI-generation kill-switch correction
+
+The application runtime currently derives its actual generation-enabled state from `KOVA_GENERATION_DISABLED`, not from `AI_GENERATION_ENABLED`. Therefore `AI_GENERATION_ENABLED=false` must be preserved for the rehearsal's historical/startup contract, but it is not sufficient by itself to prove that model generation is disabled.
+
+Before deploying the reviewed image, set and verify both:
+
+- `AI_GENERATION_ENABLED=false`
+- `KOVA_GENERATION_DISABLED=true`
+
+Do not configure OpenAI, Azure OpenAI, or other model-provider credentials for this disposable Auth rehearsal. Before any temporary public ingress, inspect the effective environment names and verify both values without printing secret values.
 
 ## Hardening now present on the branch
 
@@ -89,21 +100,23 @@ Before deploying a new rehearsal image:
 2. Confirm `ca-kovagpt-auth-rehearsal` ingress is disabled.
 3. Confirm min/max replicas remain exactly `1/1`.
 4. Confirm the image digest belongs to the exact reviewed runtime SHA.
-5. Keep `AI_GENERATION_ENABLED=false`.
-6. Preserve the existing rehearsal-only database URL and HMAC secret references.
-7. Confirm no environment value references the prohibited real project `mfbycmbjygcfkrsuepxf`.
-8. Do not modify `ca-kovagpt-dev`.
+5. Preserve `AI_GENERATION_ENABLED=false` and set `KOVA_GENERATION_DISABLED=true`.
+6. Confirm no model-provider credential is introduced for the disposable rehearsal.
+7. Preserve the existing rehearsal-only database URL and HMAC secret references.
+8. Confirm no environment value references the prohibited real project `mfbycmbjygcfkrsuepxf`.
+9. Do not modify `ca-kovagpt-dev`.
 
 ## Single synthetic retry
 
 After the reviewed image is deployed and healthy:
 
-1. Enable external ingress only on `ca-kovagpt-auth-rehearsal`, target port 3000, HTTPS only.
-2. Confirm `/api/health` returns 200.
-3. Confirm destination counts are still `0 / 0`.
-4. Send exactly one freshly timestamped, freshly nonced, HMAC-signed synthetic request.
-5. Do not reuse a nonce.
-6. Immediately inspect the response.
+1. Reconfirm both generation controls: `AI_GENERATION_ENABLED=false` and `KOVA_GENERATION_DISABLED=true`.
+2. Enable external ingress only on `ca-kovagpt-auth-rehearsal`, target port 3000, HTTPS only.
+3. Confirm `/api/health` returns 200.
+4. Confirm destination counts are still `0 / 0`.
+5. Send exactly one freshly timestamped, freshly nonced, HMAC-signed synthetic request.
+6. Do not reuse a nonce.
+7. Immediately inspect the response.
 
 Interpretation:
 
