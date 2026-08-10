@@ -47,15 +47,30 @@ test("authentication and payload validation still precede database construction"
   assert.ok(auth >= 0 && payload > auth && nonce > payload && client > nonce);
 });
 
-test("connected pg client is wrapped by authoritative constraint adapter before import", async () => {
+test("connected pg client is wrapped by authoritative constraint adapter before safe import", async () => {
   const route = await readFile("src/routes/api/internal/auth-migration/rehearsal.ts", "utf8");
 
   assert.match(route, /createAuthRehearsalDatabaseAdapter/);
   const connected = route.indexOf("await client.connect()");
   const adapter = route.indexOf("createAuthRehearsalDatabaseAdapter(client)");
-  const imported = route.indexOf("importRehearsal(database, validated)");
+  const imported = route.indexOf("importWithSafeDatabaseFailure(database, validated)");
   assert.ok(connected >= 0 && adapter > connected && imported > adapter);
   assert.doesNotMatch(route, /importRehearsal\(client,\s*validated\)/);
+});
+
+test("raw importer failures are normalized without replacing stable rehearsal errors", async () => {
+  const route = await readFile("src/routes/api/internal/auth-migration/rehearsal.ts", "utf8");
+
+  assert.match(route, /async function importWithSafeDatabaseFailure/);
+  assert.match(route, /return await importRehearsal\(database, validated\)/);
+  assert.match(
+    route,
+    /catch\s*\(error\)\s*\{\s*if\s*\(error instanceof RehearsalError\) throw error;\s*throw new RehearsalError\("database_operation_failed", 503\);\s*\}/s,
+  );
+  assert.doesNotMatch(
+    route,
+    /importWithSafeDatabaseFailure[^]*?(?:error\.message|error\.detail|error\.stack)/s,
+  );
 });
 
 test("unknown errors remain generic and known rehearsal errors remain allowlisted", async () => {
