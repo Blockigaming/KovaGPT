@@ -6,7 +6,7 @@ This runbook is scoped only to the disposable rehearsal resources.
 
 Branch: `fix/auth-rehearsal-safe-diagnostics-v2`
 
-Current reviewed runtime commit: `0b07a41d3b18183275dd3e7a80f33e12e67615fb`
+Current reviewed runtime commit: `e6f26b925e33f80b39b88f952e7ca086a888db3a`
 
 Base V2 commit: `beaa7bb3de70c443f25617880dc23308308ce766`
 
@@ -48,17 +48,27 @@ The branch addresses the confirmed weak points without changing the existing imp
 3. Optional server-only `AUTH_MIGRATION_REHEARSAL_DATABASE_CA` PEM material can be supplied to `pg`.
 4. Database connection attempts have a 10-second timeout.
 5. Database-close failures log only a fixed `database_close` stage.
-6. The connected `pg` client is wrapped by `auth-migration-rehearsal-db-adapter.server.mjs` before `importRehearsal()` runs.
-7. Only the fragile legacy constraint-metadata query is replaced. All other SQL is passed through unchanged.
-8. Authoritative constraint discovery uses read-only `pg_catalog.pg_constraint`, `pg_class`, `pg_namespace`, and `pg_attribute` metadata.
-9. The adapter fails closed unless it proves:
-   - `auth.users(id)` is a primary key;
-   - `auth.identities(id)` is a primary key;
-   - one exact, single-column `auth.identities.user_id -> auth.users.id` foreign key exists;
-   - the FK has `ON DELETE CASCADE`;
-   - composite FKs that merely contain the required mapping are rejected;
-   - one composite unique constraint contains exactly `provider` and `provider_id`.
-10. Existing HMAC, nonce/replay, destination-affinity, generated-column, empty-destination, transaction, rollback, evidence, and one-shot behavior remains in the original importer.
+6. Raw importer failures, including a `BEGIN` failure that occurs before the importer's internal transaction `try`, are normalized to `database_operation_failed` without replacing existing stable `RehearsalError` codes or exposing raw error details.
+7. The connected `pg` client is wrapped by `auth-migration-rehearsal-db-adapter.server.mjs` before the safely normalized import runs.
+8. Only the fragile legacy constraint-metadata query is replaced. All other SQL is passed through unchanged.
+9. Authoritative constraint discovery uses read-only `pg_catalog.pg_constraint`, `pg_class`, `pg_namespace`, and `pg_attribute` metadata.
+10. The adapter fails closed unless it proves:
+    - `auth.users(id)` is a primary key;
+    - `auth.identities(id)` is a primary key;
+    - one exact, single-column `auth.identities.user_id -> auth.users.id` foreign key exists;
+    - the FK has `ON DELETE CASCADE`;
+    - composite FKs that merely contain the required mapping are rejected;
+    - one composite unique constraint contains exactly `provider` and `provider_id`.
+11. Existing HMAC, nonce/replay, destination-affinity, generated-column, empty-destination, transaction, rollback, evidence, and one-shot behavior remains in the original importer.
+
+## Focused verification
+
+A reconstructed isolated Node harness using the exact reviewed adapter, route source, adapter tests, and diagnostic tests at runtime commit `e6f26b925e33f80b39b88f952e7ca086a888db3a` passed all 13 focused tests:
+
+- six authoritative database-adapter tests;
+- seven safe-diagnostics and route-ordering tests.
+
+This does not represent a repository-wide CI, typecheck, production build, Docker build, Azure login, ACR push, deployment, or live database rehearsal. The dedicated image build remains blocked at the Azure OIDC federation gate described below.
 
 ## Build only
 
@@ -116,16 +126,19 @@ After the reviewed image is deployed and healthy:
 4. Confirm destination counts are still `0 / 0`.
 5. Send exactly one freshly timestamped, freshly nonced, HMAC-signed synthetic request.
 6. Do not reuse a nonce.
-7. Immediately inspect the response.
+7. Disable ingress and verify its disabled state before interpreting or acting on the response.
+8. Immediately inspect the safe status and independently query destination evidence.
 
 Interpretation:
 
 - `database_connect_failed`: the request passed authentication/payload gates but Node `pg` could not connect. Configure or verify the trusted Supabase CA rather than weakening TLS.
 - `schema_contract_mismatch`: the connected database failed strict schema/constraint verification. Do not alter Supabase schema until the exact mismatch is identified.
-- `database_operation_failed`: a raw transaction-stage database operation failed and should have rolled back; capture only safe stage evidence before changing infrastructure.
+- `database_operation_failed`: a raw import/database operation failed. Independently query the destination before assuming rollback because a lost acknowledgement around `COMMIT` can be ambiguous.
 - `destination_not_empty`: stop immediately and identify the rows before any cleanup.
-- `post_insert_verification_failed`: verify destination rolled back to `0 / 0` before any retry.
-- success (`status: ok`): verify destination evidence directly and then immediately disable ingress.
+- `post_insert_verification_failed`: independently verify destination evidence and rollback state before any retry.
+- success (`status: ok`): verify destination evidence directly and keep ingress disabled.
+
+A non-`ok` response with destination counts `1 / 1` is a possible ambiguous commit. Do not retry or delete rows; verify exact fingerprints, UUIDs, provider distribution, orphan count, and duplicate-provider-subject count while ingress remains disabled.
 
 ## Final success evidence
 
@@ -144,6 +157,6 @@ After success:
 - query `auth.users` and `auth.identities` counts;
 - verify the expected UUID/provider evidence;
 - verify no orphan identity and no duplicate `(provider, provider_id)`;
-- disable ingress immediately;
+- verify ingress is disabled;
 - preserve response/evidence without secrets or PII;
 - do not merge to `main` until the migration design review explicitly approves it.
