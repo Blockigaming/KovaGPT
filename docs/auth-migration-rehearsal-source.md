@@ -100,7 +100,7 @@ The nonce cache is intentionally suitable only for the required single-replica d
 
 Before inserting, the receiver reads column and constraint metadata for `auth.users` and `auth.identities`, including data type/UDT, nullability, default, identity status/generation, generated status/expression, primary keys, unique constraints, and the identity-to-user foreign key. It compares insert fields to an explicit reviewed persistent-field/type allowlist. Generated or identity columns are never inserted. `confirmed_at` is inserted only when the live preflight reports it writable; a generated `confirmed_at` is omitted. Any unreviewed type, generated/identity status, or required-constraint mismatch fails closed.
 
-**Modern Supabase metadata note:** authoritative FK validation must not rely solely on `information_schema.constraint_column_usage` returning referenced-table fields. In the disposable rehearsal project, that view returned blank referenced-table fields for the valid `identities_user_id_fkey`, while `pg_constraint` authoritatively reported `FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE`. Any future preflight patch must preserve the exact FK requirement while using authoritative PostgreSQL catalog metadata when information-schema visibility is incomplete; it must never simply skip the FK check.
+**Modern Supabase metadata note:** authoritative FK validation must not rely solely on `information_schema.constraint_column_usage` returning referenced-table fields. In the disposable rehearsal project, that view returned blank referenced-table fields for the valid `identities_user_id_fkey`, while `pg_constraint` authoritatively reported `FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE`. The adapter therefore requires one exact single-column `auth.identities.user_id -> auth.users.id` constraint with `ON DELETE CASCADE`; a composite FK that merely contains the required mapping is rejected. The check is never skipped.
 
 One database transaction performs:
 
@@ -114,13 +114,15 @@ One database transaction performs:
 8. comparison of destination evidence to the signed request evidence;
 9. `COMMIT` only if every check passes.
 
-Every failure attempts `ROLLBACK`. The HTTP request never creates, alters, or drops schema objects.
+After `BEGIN` succeeds, every failure attempts `ROLLBACK`. A raw failure before the importer's internal transaction handler—such as a rejected `BEGIN`—is converted by the route wrapper to the stable `database_operation_failed` status without exposing raw details. The HTTP request never creates, alters, or drops schema objects.
 
 ## Safe diagnostic behavior
 
 Authenticated requests may expose only a small stable `RehearsalError` code. Raw PostgreSQL/TLS exceptions, exception messages, stack traces, database URLs, credentials, HMAC values, request bodies, emails, password verifiers, identity data, and metadata remain prohibited from responses and logs.
 
-A raw `pg` connection failure is mapped to `database_connect_failed` with HTTP 503 on the diagnostic branch. This diagnostic exists to distinguish container-side `pg`/TLS connection failures from schema/transaction failures without weakening certificate verification or database-affinity guards.
+A raw `pg` connection failure is mapped to `database_connect_failed` with HTTP 503. Raw importer/database failures that are not already stable `RehearsalError` instances are mapped to `database_operation_failed` with HTTP 503. Existing stable error codes remain authoritative. These diagnostics distinguish connection failures from schema/import failures without weakening certificate verification, database-affinity guards, transaction behavior, or response redaction.
+
+A non-`ok` response does not by itself prove rollback. A rare connection loss while acknowledging `COMMIT` can be ambiguous, so operators must independently query destination counts and exact evidence before any retry. Exact committed synthetic evidence after a non-`ok` response is preserved for diagnosis; it is not deleted or retried over.
 
 ## Response and evidence formulas
 
