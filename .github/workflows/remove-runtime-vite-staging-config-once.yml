@@ -1,27 +1,37 @@
 name: Correct staging browser public config once
 
 on:
-  push:
+  pull_request:
+    types: [opened, synchronize, reopened]
     branches:
-      - infra/azure-low-cost-staging
+      - main
     paths:
       - .github/workflows/remove-runtime-vite-staging-config-once.yml
+      - infra/azure/staging/main.bicep
+      - scripts/azure/validate-staging-template.mjs
+      - tests/unit/azure-staging-template.test.mjs
+      - docs/azure-staging-deployment.md
+      - docs/azure-staging-validation-status.md
 
 permissions:
   contents: write
+  pull-requests: read
 
 jobs:
   correct:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'infra/azure-low-cost-staging'
     runs-on: ubuntu-latest
     steps:
       - name: Check out infrastructure branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: infra/azure-low-cost-staging
           fetch-depth: 0
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 24
           cache: npm
@@ -71,20 +81,20 @@ jobs:
             validatorPath,
             "  rejectMatch(\n    template,\n    /SUPABASE_SERVICE_ROLE_KEY'\\s*\\n\\s*value:/u,\n    \"service-role key cannot be a literal env value\",\n  );\n",
             `  rejectMatch(
-              template,
-              /SUPABASE_SERVICE_ROLE_KEY'\\s*\\n\\s*value:/u,
-              "service-role key cannot be a literal env value",
-            );
-            rejectMatch(
-              template,
-              /name: 'VITE_SUPABASE_(?:URL|PUBLISHABLE_KEY)'/u,
-              "runtime Vite variables cannot prove browser bundle configuration",
-            );
-            requireMatch(
-              template,
-              /image reference built and verified with the synthetic staging browser Supabase configuration/iu,
-              "image provenance must require verified browser public configuration",
-            );
+            template,
+            /SUPABASE_SERVICE_ROLE_KEY'\\s*\\n\\s*value:/u,
+            "service-role key cannot be a literal env value",
+          );
+          rejectMatch(
+            template,
+            /name: 'VITE_SUPABASE_(?:URL|PUBLISHABLE_KEY)'/u,
+            "runtime Vite variables cannot prove browser bundle configuration",
+          );
+          requireMatch(
+            template,
+            /image reference built and verified with the synthetic staging browser Supabase configuration/iu,
+            "image provenance must require verified browser public configuration",
+          );
 `,
           );
 
@@ -93,11 +103,11 @@ jobs:
             testPath,
             "  assert.doesNotMatch(template, /value: openAiSecretUri|value: supabaseServiceRoleSecretUri/u);\n",
             `  assert.doesNotMatch(template, /value: openAiSecretUri|value: supabaseServiceRoleSecretUri/u);
-            assert.doesNotMatch(template, /name: 'VITE_SUPABASE_(?:URL|PUBLISHABLE_KEY)'/u);
-            assert.match(
-              template,
-              /image reference built and verified with the synthetic staging browser Supabase configuration/iu,
-            );
+          assert.doesNotMatch(template, /name: 'VITE_SUPABASE_(?:URL|PUBLISHABLE_KEY)'/u);
+          assert.match(
+            template,
+            /image reference built and verified with the synthetic staging browser Supabase configuration/iu,
+          );
 `,
           );
 
@@ -157,5 +167,3 @@ Do not treat Container App runtime \`VITE_SUPABASE_*\` values as a browser confi
           git diff --cached --quiet && exit 0
           git commit -m "Require verified staging browser public config"
           git push origin HEAD:infra/azure-low-cost-staging
-
-# Existing-file retrigger for the one-shot workflow.
