@@ -29,7 +29,7 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
 
-      - name: Apply exact fail-closed foundation repairs
+      - name: Remove dead image attachment UI and align review tests
         shell: bash
         run: |
           set -euo pipefail
@@ -39,11 +39,9 @@ jobs:
           function read(path) {
             return fs.readFileSync(path, "utf8");
           }
-
           function write(path, value) {
             fs.writeFileSync(path, value);
           }
-
           function replaceOnce(path, before, after) {
             const source = read(path);
             const first = source.indexOf(before);
@@ -53,16 +51,16 @@ jobs:
             }
             write(path, source.slice(0, first) + after + source.slice(first + before.length));
           }
-
           function replaceRegexOnce(path, pattern, after) {
             const source = read(path);
-            const matches = source.match(new RegExp(pattern.source, pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`));
+            const matches = source.match(
+              new RegExp(pattern.source, pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`),
+            );
             if (!matches || matches.length !== 1) {
               throw new Error(`${path}: expected exactly one regex match, found ${matches?.length ?? 0}`);
             }
             write(path, source.replace(pattern, after));
           }
-
           function replaceSection(path, start, end, replacement) {
             const source = read(path);
             const startIndex = source.indexOf(start);
@@ -71,43 +69,6 @@ jobs:
               throw new Error(`${path}: section markers not found`);
             }
             write(path, source.slice(0, startIndex) + replacement + source.slice(endIndex));
-          }
-
-          replaceOnce(
-            "src/start.ts",
-            '"Permissions-Policy": "camera=(self), geolocation=(self), microphone=(self), payment=(self)",',
-            '"Permissions-Policy": "camera=(), geolocation=(self), microphone=(), payment=(self), usb=()",',
-          );
-
-          replaceOnce(
-            "src/lib/config/diagnostics.server.ts",
-            'aiProvider: feature(["LOVABLE_API_KEY", "OPENAI_API_KEY"]),',
-            'aiProvider: feature(["OPENAI_API_KEY"]),',
-          );
-          replaceOnce(
-            "src/lib/readiness.server.ts",
-            'aiProvider: capability(any("LOVABLE_API_KEY", "OPENAI_API_KEY")),',
-            'aiProvider: capability(present("OPENAI_API_KEY")),',
-          );
-          replaceOnce(
-            "src/lib/readiness.server.ts",
-            'images: capability(any("LOVABLE_API_KEY", "OPENAI_API_KEY")),',
-            'images: capability(present("OPENAI_API_KEY")),',
-          );
-
-          replaceOnce(
-            "src/lib/ai/model-catalog.server.ts",
-            'export const MODEL_CATALOG_SOURCES = [\n',
-            'export const MODEL_CATALOG_SOURCES = [\n  "https://platform.openai.com/docs/models",\n',
-          );
-          for (const [before, after] of [
-            ["maxOutput: 1_200", "maxOutput: 600"],
-            ["maxOutput: 4_000", "maxOutput: 2_000"],
-            ["maxOutput: 8_000", "maxOutput: 4_000"],
-            ["maxOutput: 16_000", "maxOutput: 4_000"],
-            ["maxOutput: 800", "maxOutput: 256"],
-          ]) {
-            replaceOnce("src/lib/ai/model-catalog.server.ts", before, after);
           }
 
           replaceOnce("src/routes/images.tsx", "  Paperclip,\n", "");
@@ -191,7 +152,7 @@ jobs:
           );
           NODE
 
-      - name: Format repaired files
+      - name: Format all foundation follow-up files
         run: >-
           npx prettier --write
           scripts/security/scan-ai-runtime.mjs
