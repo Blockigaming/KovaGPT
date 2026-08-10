@@ -4,13 +4,15 @@ This runbook is scoped only to the disposable rehearsal resources.
 
 ## Immutable source
 
-Branch: `fix/auth-rehearsal-safe-diagnostics`
+Branch: `fix/auth-rehearsal-safe-diagnostics-v2`
 
-Current reviewed hardening commit: `9624291601c05ab9e4fb3d5bdb70ee7730b4ba96`
+Current reviewed runtime commit: `0b07a41d3b18183275dd3e7a80f33e12e67615fb`
 
 Base V2 commit: `beaa7bb3de70c443f25617880dc23308308ce766`
 
 Do not merge this branch to `main` as part of the rehearsal.
+
+Historical PR #139 was accidentally merged only into the isolated V2 source branch, never into `main`. The isolated base was then restored non-destructively to the authoritative V2 tree before this replacement branch was created. Use the active draft PR for this branch as the current review record.
 
 ## Current verified infrastructure state
 
@@ -28,7 +30,7 @@ Do not merge this branch to `main` as part of the rehearsal.
 
 ## Hardening now present on the branch
 
-The branch now addresses the confirmed weak points without changing the existing importer transaction or payload protocol:
+The branch addresses the confirmed weak points without changing the existing importer transaction or payload protocol:
 
 1. A raw `pg` connection error is mapped to `database_connect_failed` without exposing raw error details.
 2. PostgreSQL TLS verification remains enabled with `rejectUnauthorized: true`.
@@ -49,9 +51,9 @@ The branch now addresses the confirmed weak points without changing the existing
 
 ## Build only
 
-Build only from the exact reviewed hardening commit listed above. The repository workflow `.github/workflows/build-auth-rehearsal-image.yml` is designed to build and push the disposable rehearsal image and must not deploy production or change `main`.
+Build only from the exact reviewed runtime commit listed above. The repository workflow `.github/workflows/build-auth-rehearsal-image.yml` is designed to build and push the disposable rehearsal image and must not deploy production or change `main`.
 
-Before building, re-read PR #139 and confirm its reviewed runtime-code SHA still matches this runbook. If runtime code moves, treat the new SHA as unreviewed until its diff and focused tests are inspected. A later documentation-only branch head is not required in the runtime image.
+Before building, re-read the active draft PR and confirm its reviewed runtime SHA still matches this runbook. If runtime code moves, treat the new SHA as unreviewed until its diff and focused tests are inspected. A later documentation-only branch head is not required in the runtime image.
 
 ## GitHub/Azure OIDC build gate
 
@@ -86,7 +88,7 @@ Before deploying a new rehearsal image:
 1. Confirm `auth.users = 0` and `auth.identities = 0`.
 2. Confirm `ca-kovagpt-auth-rehearsal` ingress is disabled.
 3. Confirm min/max replicas remain exactly `1/1`.
-4. Confirm the image digest belongs to the exact reviewed hardening SHA.
+4. Confirm the image digest belongs to the exact reviewed runtime SHA.
 5. Keep `AI_GENERATION_ENABLED=false`.
 6. Preserve the existing rehearsal-only database URL and HMAC secret references.
 7. Confirm no environment value references the prohibited real project `mfbycmbjygcfkrsuepxf`.
@@ -105,7 +107,7 @@ After the reviewed image is deployed and healthy:
 
 Interpretation:
 
-- `database_connect_failed`: the request passed authentication/payload gates but Node `pg` could not connect. Configure/verify the trusted Supabase CA rather than weakening TLS.
+- `database_connect_failed`: the request passed authentication/payload gates but Node `pg` could not connect. Configure or verify the trusted Supabase CA rather than weakening TLS.
 - `schema_contract_mismatch`: the connected database failed strict schema/constraint verification. Do not alter Supabase schema until the exact mismatch is identified.
 - `database_operation_failed`: a raw transaction-stage database operation failed and should have rolled back; capture only safe stage evidence before changing infrastructure.
 - `destination_not_empty`: stop immediately and identify the rows before any cleanup.
