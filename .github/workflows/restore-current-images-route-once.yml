@@ -1,0 +1,93 @@
+name: Restore current image route once
+
+on:
+  push:
+    branches:
+      - program/azure-gpt56-foundation
+    paths:
+      - .github/workflows/restore-current-images-route-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out foundation branch
+        uses: actions/checkout@v4
+        with:
+          ref: program/azure-gpt56-foundation
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Restore current main implementation and apply reviewed deltas
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show origin/main:src/routes/images.tsx > src/routes/images.tsx
+
+          node <<'NODE'
+          const fs = require("node:fs");
+          const path = "src/routes/images.tsx";
+          let source = fs.readFileSync(path, "utf8");
+
+          function replaceOnce(before, after) {
+            const first = source.indexOf(before);
+            if (first < 0) throw new Error(`expected text not found: ${before.slice(0, 80)}`);
+            if (source.indexOf(before, first + before.length) >= 0) {
+              throw new Error(`expected text is not unique: ${before.slice(0, 80)}`);
+            }
+            source = source.slice(0, first) + after + source.slice(first + before.length);
+          }
+
+          replaceOnce("  Paperclip,\n", "");
+          replaceOnce("  const promptFileRef = useRef<HTMLInputElement>(null);\n", "");
+
+          const attachmentPattern = /\n\s*<button\s+type="button"\s+onClick=\{\(\) => promptFileRef\.current\?\.click\(\)\}[\s\S]*?<\/button>\s*<input\s+ref=\{promptFileRef\}[\s\S]*?\/>/u;
+          const matches = [...source.matchAll(new RegExp(attachmentPattern.source, "gu"))];
+          if (matches.length !== 1) {
+            throw new Error(`expected one dead attachment block, found ${matches.length}`);
+          }
+          source = source.replace(attachmentPattern, "");
+
+          replaceOnce(
+            "                  value={prompt}\n",
+            "                  value={prompt}\n                  aria-label=\"Describe the image to generate\"\n",
+          );
+
+          if (/promptFileRef|Paperclip/.test(source)) {
+            throw new Error("dead image attachment implementation remains");
+          }
+          fs.writeFileSync(path, source);
+          NODE
+
+      - name: Format and verify image route
+        run: |
+          set -euo pipefail
+          npx prettier --write src/routes/images.tsx
+          npx prettier --check src/routes/images.tsx
+          node --test tests/unit/multimodal-scope.test.mjs tests/unit/azure-gpt56-foundation.test.mjs
+          npm run typecheck
+
+      - name: Remove this one-shot workflow
+        run: rm .github/workflows/restore-current-images-route-once.yml
+
+      - name: Commit deterministic restoration
+        run: |
+          set -euo pipefail
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+          git diff --cached --quiet && exit 0
+          git commit -m "Restore current image route architecture"
+          git push origin HEAD:program/azure-gpt56-foundation
