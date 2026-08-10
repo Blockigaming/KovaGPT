@@ -177,7 +177,7 @@ jobs:
           if-no-files-found: error
 
   e2e-report:
-    if: always()
+    if: ${{ always() && needs['release-e2e'].result != 'skipped' && needs['release-e2e'].result != 'cancelled' }}
     needs: release-e2e
     runs-on: ubuntu-latest
     steps:
