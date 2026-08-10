@@ -275,7 +275,9 @@ export function verifyStagingBrowserConfig({
     `Unexpected Supabase project refs were detected in browser assets: ${unexpectedRefs.join(", ")}`,
   );
 
-  const explicitlyForbiddenRefs = [...discoveredProjectRefs].filter((ref) => forbiddenRefs.has(ref));
+  const explicitlyForbiddenRefs = [...discoveredProjectRefs].filter((ref) =>
+    forbiddenRefs.has(ref),
+  );
   assertCondition(
     explicitlyForbiddenRefs.length === 0,
     `Forbidden Supabase project refs were detected in browser assets: ${explicitlyForbiddenRefs.join(", ")}`,

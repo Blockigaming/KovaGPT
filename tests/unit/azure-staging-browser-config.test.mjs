@@ -1,12 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -177,10 +171,7 @@ test("invalid URLs, project refs, keys, and source identities are rejected", () 
         () => verify(bundleDir, { publishableKey: "sb_secret_not_browser_safe" }),
         /sb_publishable_/u,
       );
-      assert.throws(
-        () => verify(bundleDir, { sourceSha: "main" }),
-        /40-character Git commit SHA/u,
-      );
+      assert.throws(() => verify(bundleDir, { sourceSha: "main" }), /40-character Git commit SHA/u);
     },
   );
 });
@@ -204,8 +195,5 @@ test("Docker and public config preserve local defaults while enabling verified s
     publicConfig,
     /PUBLIC_BACKEND_PROJECT_ID = new URL\(PUBLIC_BACKEND_URL\)\.hostname\.split\("\."\)\[0\]/u,
   );
-  assert.doesNotMatch(
-    publicConfig,
-    /PUBLIC_BACKEND_PROJECT_ID\s*=\s*"[a-z0-9]{20}"/u,
-  );
+  assert.doesNotMatch(publicConfig, /PUBLIC_BACKEND_PROJECT_ID\s*=\s*"[a-z0-9]{20}"/u);
 });
