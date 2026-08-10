@@ -1227,7 +1227,7 @@
       "order": 58,
       "filename": "20260803110000_release_security_hardening.sql",
       "timestamp": "20260803110000",
-      "sha256": "d05cf457ef66b13c9f3864d0b550f2e8adf776b6e670e162d9fc77d4eae0aa9c",
+      "sha256": "1fef0d20833a28f9334a0d0fb4ffa5807194e3bc83902ab50cf348fa47c21c02",
       "tables": [],
       "functions": [],
       "destructive": false,
@@ -1235,7 +1235,7 @@
       "reversible": false,
       "rls": [],
       "policies": [],
-      "indexes": ["processed_stripe_events_created_at_idx"]
+      "indexes": ["processed_stripe_events_processed_at_idx"]
     },
     {
       "order": 59,

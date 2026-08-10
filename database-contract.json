@@ -242,7 +242,7 @@
     "operational_events_owner_time_idx",
     "pending_tool_actions_user_idx",
     "plaid_items_user_idx",
-    "processed_stripe_events_created_at_idx",
+    "processed_stripe_events_processed_at_idx",
     "processed_stripe_events_order_idx",
     "processed_stripe_events_subscription_order_idx",
     "project_activity_project_idx",
