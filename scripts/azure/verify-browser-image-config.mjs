@@ -91,7 +91,9 @@ function validatePublishableKey(value, projectRef) {
     return key;
   }
 
-  throw new Error("Browser Supabase key must be a publishable key or an anon JWT for this project.");
+  throw new Error(
+    "Browser Supabase key must be a publishable key or an anon JWT for this project.",
+  );
 }
 
 function normalizeForbiddenRefs(value, expectedProjectRef) {
@@ -216,14 +218,18 @@ export async function verifyBrowserImageConfig({
       const discoveredRef = match[1].toLowerCase();
       discoveredProjectRefs.add(discoveredRef);
       if (discoveredRef !== normalizedProjectRef) {
-        throw new Error(`Browser bundle references an unexpected Supabase project: ${discoveredRef}`);
+        throw new Error(
+          `Browser bundle references an unexpected Supabase project: ${discoveredRef}`,
+        );
       }
     }
     SUPABASE_HOST_PATTERN.lastIndex = 0;
 
     for (const forbiddenRef of forbiddenRefs) {
       if (source.includes(forbiddenRef)) {
-        throw new Error(`Browser bundle contains a forbidden Supabase project ref: ${forbiddenRef}`);
+        throw new Error(
+          `Browser bundle contains a forbidden Supabase project ref: ${forbiddenRef}`,
+        );
       }
     }
   }
@@ -232,10 +238,14 @@ export async function verifyBrowserImageConfig({
     throw new Error("Expected synthetic Supabase URL was not found in deployable browser assets.");
   }
   if (expectedKeyOccurrences === 0) {
-    throw new Error("Expected synthetic Supabase publishable key was not found in deployable browser assets.");
+    throw new Error(
+      "Expected synthetic Supabase publishable key was not found in deployable browser assets.",
+    );
   }
   if (!discoveredProjectRefs.has(normalizedProjectRef)) {
-    throw new Error("Expected synthetic Supabase hostname was not discovered in deployable browser assets.");
+    throw new Error(
+      "Expected synthetic Supabase hostname was not discovered in deployable browser assets.",
+    );
   }
 
   const provenance = {
@@ -277,8 +287,7 @@ if (isCli) {
     const provenance = await verifyBrowserImageConfig({
       assetRoot: process.env.KOVA_BROWSER_ASSET_ROOT || "dist/client",
       outputPath:
-        process.env.KOVA_BROWSER_CONFIG_PROVENANCE_PATH ||
-        "dist/browser-config-provenance.json",
+        process.env.KOVA_BROWSER_CONFIG_PROVENANCE_PATH || "dist/browser-config-provenance.json",
       sourceSha: process.env.KOVA_SOURCE_SHA,
       projectRef: process.env.KOVA_BROWSER_SUPABASE_PROJECT_REF,
       supabaseUrl: process.env.VITE_SUPABASE_URL,

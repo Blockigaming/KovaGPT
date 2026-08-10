@@ -106,10 +106,7 @@ test("values present only in server output do not satisfy browser verification",
 
 test("wrong or forbidden Supabase projects fail closed", async () => {
   await withFixture(async ({ clientRoot, outputPath }) => {
-    await writeValidClient(
-      clientRoot,
-      `const wrong="https://${OTHER_PROJECT_REF}.supabase.co";`,
-    );
+    await writeValidClient(clientRoot, `const wrong="https://${OTHER_PROJECT_REF}.supabase.co";`);
     await assert.rejects(
       verifyBrowserImageConfig(verifyOptions(clientRoot, outputPath)),
       new RegExp(`unexpected Supabase project: ${OTHER_PROJECT_REF}`, "u"),
@@ -126,16 +123,8 @@ test("wrong or forbidden Supabase projects fail closed", async () => {
 });
 
 for (const [name, material, expectedError] of [
-  [
-    "OpenAI secret",
-    "sk-proj-abcdefghijklmnopqrstuvwxyz0123456789",
-    /OpenAI secret key/u,
-  ],
-  [
-    "Supabase secret",
-    "sb_secret_abcdefghijklmnopqrstuvwxyz0123456789",
-    /Supabase secret key/u,
-  ],
+  ["OpenAI secret", "sk-proj-abcdefghijklmnopqrstuvwxyz0123456789", /OpenAI secret key/u],
+  ["Supabase secret", "sb_secret_abcdefghijklmnopqrstuvwxyz0123456789", /Supabase secret key/u],
   ["database URL", "postgresql://user:password@db.example.com/postgres", /PostgreSQL/u],
   [
     "private key",
@@ -220,8 +209,5 @@ test("Dockerfile makes verified staging builds explicit and labels the final ima
     dockerfile,
     /io\.kovagpt\.browser-supabase-project-ref="\$\{KOVA_BROWSER_SUPABASE_PROJECT_REF\}"/u,
   );
-  assert.match(
-    dockerfile,
-    /COPY --from=build --chown=kova:kova \/app\/dist \.\/dist/u,
-  );
+  assert.match(dockerfile, /COPY --from=build --chown=kova:kova \/app\/dist \.\/dist/u);
 });
