@@ -29,6 +29,10 @@ test("provider runtime is official OpenAI Responses API only", async () => {
   assert.match(source, /OPENAI_API_KEY/u);
   assert.match(source, /gpt-image-2/u);
   assert.match(source, /normalizeResponsesTools/u);
+  assert.match(
+    source,
+    /type: "function",\s*name: definition\.name,\s*description: definition\.description,\s*parameters: definition\.parameters/su,
+  );
   assert.doesNotMatch(source, /LOVABLE_API_KEY|ai\.gateway\.lovable\.dev|GATEWAY_MODEL_IDS/u);
 });
 
