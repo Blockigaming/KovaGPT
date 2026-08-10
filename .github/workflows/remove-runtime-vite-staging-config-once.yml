@@ -157,3 +157,5 @@ Do not treat Container App runtime \`VITE_SUPABASE_*\` values as a browser confi
           git diff --cached --quiet && exit 0
           git commit -m "Require verified staging browser public config"
           git push origin HEAD:infra/azure-low-cost-staging
+
+# Existing-file retrigger for the one-shot workflow.
