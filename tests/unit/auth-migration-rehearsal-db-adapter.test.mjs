@@ -88,6 +88,17 @@ test("authoritative constraint contract requires exact auth.users(id) FK with ON
   }
 });
 
+test("authoritative constraint contract rejects a composite FK that only contains the required mapping", () => {
+  const rows = authoritativeRows();
+  rows.push({
+    ...rows.find((row) => row.constraint_name === "identities_user_id_fkey"),
+    column_name: "provider",
+    foreign_column_name: "email",
+    ordinal_position: 2,
+  });
+  expectSchemaMismatch(() => validateAuthoritativeAuthConstraints(rows));
+});
+
 test("authoritative constraint contract rejects split provider uniqueness", () => {
   const rows = authoritativeRows().filter(
     (row) => row.constraint_name !== "identities_provider_id_provider_unique",
