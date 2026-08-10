@@ -7,6 +7,7 @@ import {
   MODEL_COST_PER_MTOK,
   costPerMTok,
 } from "../../src/lib/ai/model-config.mjs";
+import { estimateCostUsd, routeModel } from "../../src/lib/ai/model-router.mjs";
 
 test("GPT-5.6 role routing uses Luna, Terra, Sol, and GPT Image 2", () => {
   assert.equal(DEFAULT_MODELS.DEFAULT_CHAT, "gpt-5.6-luna");
@@ -20,6 +21,28 @@ test("GPT-5.6 standard token prices match the reviewed 2026-08-10 catalog", () =
   assert.deepEqual(MODEL_COST_PER_MTOK["gpt-5.6-terra"], { input: 2.5, output: 15 });
   assert.deepEqual(MODEL_COST_PER_MTOK["gpt-5.6-sol"], { input: 5, output: 30 });
   assert.deepEqual(costPerMTok("gpt-5.6-sol"), { input: 5, output: 30 });
+});
+
+test("cost-first router reserves Sol for explicit premium modes", () => {
+  assert.equal(routeModel({ task: "chat", mode: "instant", tier: "pro" }).modelId, "gpt-5.6-luna");
+  assert.equal(routeModel({ task: "chat", mode: "high", tier: "pro" }).modelId, "gpt-5.6-terra");
+  assert.equal(
+    routeModel({ task: "chat", mode: "extra_high", tier: "pro" }).modelId,
+    "gpt-5.6-sol",
+  );
+  assert.equal(routeModel({ task: "chat", mode: "pro", tier: "pro" }).modelId, "gpt-5.6-sol");
+  assert.deepEqual(
+    routeModel({ task: "chat", mode: "extra_high", tier: "plus" }),
+    assert.match({
+      modelId: "gpt-5.6-terra",
+      downgradedFrom: "PREMIUM_REASONING",
+    }),
+  );
+});
+
+test("router cost estimate applies GPT-5.6 long-context multipliers", () => {
+  assert.equal(estimateCostUsd("gpt-5.6-sol", 272_000, 1_000), 1.39);
+  assert.equal(estimateCostUsd("gpt-5.6-sol", 272_001, 1_000), 2.76501);
 });
 
 test("provider runtime is official OpenAI Responses API only", async () => {
