@@ -1,0 +1,120 @@
+name: Verify synthetic staging browser image once
+
+on:
+  push:
+    branches:
+      - infra/verified-staging-browser-image
+    paths:
+      - .github/workflows/verify-staging-browser-image-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: infra/verified-staging-browser-image
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Format supported changed files
+        run: |
+          set -euo pipefail
+          npx prettier --write \
+            docs/azure-staging-image-provenance.md \
+            scripts/azure/verify-browser-image-config.mjs \
+            tests/unit/azure-browser-image-config.test.mjs
+          npx prettier --check \
+            docs/azure-staging-image-provenance.md \
+            scripts/azure/verify-browser-image-config.mjs \
+            tests/unit/azure-browser-image-config.test.mjs
+
+      - name: Remove one-shot workflow and create exact verification commit
+        run: |
+          set -euo pipefail
+          rm .github/workflows/verify-staging-browser-image-once.yml
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+          git commit -m "Format verified staging browser image workstream"
+
+      - name: Run focused executable tests
+        run: |
+          set -euo pipefail
+          node --test \
+            tests/unit/azure-browser-image-config.test.mjs \
+            tests/unit/azure-staging-template.test.mjs
+
+      - name: Prove ordinary local image build remains backward compatible
+        run: |
+          set -euo pipefail
+          docker build \
+            --build-arg KOVA_VERIFY_BROWSER_CONFIG=false \
+            --tag kovagpt-browser-config-local:test \
+            .
+          docker image inspect kovagpt-browser-config-local:test \
+            --format '{{index .Config.Labels "io.kovagpt.browser-config-verification"}}' \
+            | grep -Fx false
+
+      - name: Build exact verified synthetic staging candidate
+        env:
+          SYNTHETIC_REF: abcdefghijklmnopqrst
+          SYNTHETIC_URL: https://abcdefghijklmnopqrst.supabase.co
+          SYNTHETIC_KEY: sb_publishable_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
+          FORBIDDEN_REFS: zrzwkqrwurgutrmvalri
+        run: |
+          set -euo pipefail
+          SOURCE_SHA="$(git rev-parse HEAD)"
+          docker build \
+            --build-arg KOVA_VERIFY_BROWSER_CONFIG=true \
+            --build-arg KOVA_SOURCE_SHA="$SOURCE_SHA" \
+            --build-arg KOVA_BROWSER_SUPABASE_PROJECT_REF="$SYNTHETIC_REF" \
+            --build-arg KOVA_FORBIDDEN_SUPABASE_REFS="$FORBIDDEN_REFS" \
+            --build-arg VITE_SUPABASE_URL="$SYNTHETIC_URL" \
+            --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="$SYNTHETIC_KEY" \
+            --tag kovagpt-browser-config-verified:test \
+            .
+
+          test "$(docker image inspect kovagpt-browser-config-verified:test --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')" = "$SOURCE_SHA"
+          test "$(docker image inspect kovagpt-browser-config-verified:test --format '{{index .Config.Labels "io.kovagpt.browser-supabase-project-ref"}}')" = "$SYNTHETIC_REF"
+          test "$(docker image inspect kovagpt-browser-config-verified:test --format '{{index .Config.Labels "io.kovagpt.browser-config-verification"}}')" = "true"
+
+          container_id="$(docker create kovagpt-browser-config-verified:test)"
+          trap 'docker rm -f "$container_id" >/dev/null 2>&1 || true' EXIT
+          docker cp \
+            "$container_id:/app/dist/browser-config-provenance.json" \
+            /tmp/browser-config-provenance.json
+
+          node - "$SOURCE_SHA" "$SYNTHETIC_REF" "$SYNTHETIC_KEY" <<'NODE'
+          const fs = require("node:fs");
+          const [sourceSha, projectRef, key] = process.argv.slice(2);
+          const raw = fs.readFileSync("/tmp/browser-config-provenance.json", "utf8");
+          const provenance = JSON.parse(raw);
+          if (raw.includes(key)) throw new Error("raw publishable key leaked into provenance");
+          if (provenance.sourceSha !== sourceSha) throw new Error("source SHA mismatch");
+          if (provenance.browserSupabaseProjectRef !== projectRef) {
+            throw new Error("browser project ref mismatch");
+          }
+          if (!/^sha256:[0-9a-f]{64}$/.test(provenance.browserBundleDigest)) {
+            throw new Error("browser bundle digest missing");
+          }
+          if (provenance.scan.expectedUrlOccurrences < 1) throw new Error("URL proof missing");
+          if (provenance.scan.expectedKeyOccurrences < 1) throw new Error("key proof missing");
+          NODE
+
+      - name: Push verified exact commit
+        run: git push origin HEAD:infra/verified-staging-browser-image
