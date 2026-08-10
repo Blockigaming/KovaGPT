@@ -18,10 +18,13 @@ This record applies only to draft PR #143 and branch `program/azure-gpt56-founda
 - Lovable email SDK packages are removed from npm package metadata and the stale Bun lockfile is removed.
 - The release security scanner rejects Lovable SDK, credential, gateway, hostname, or metered endpoint references in executable runtime and package metadata.
 - Camera, microphone, and USB permissions remain denied while same-origin geolocation remains available for the existing explicit location feature.
+- The Images route now uses the current `main` component architecture rather than stale imports from an older UI implementation.
 - Dead image-reference controls that had no server implementation are removed rather than shown as fake capability.
+- The image-generation prompt retains the explicit accessible name `Describe the image to generate`.
+- Enter submission is IME-safe through `nativeEvent.isComposing` and does not submit while text composition is active.
+- Image history remains principal-scoped, in-flight generation is aborted across identity changes, and stale responses are rejected by the monotonic generation guard.
+- The focused restoration workflow passed formatting, the foundation checks, the release-remediation source contract, and TypeScript before committing the deterministic route restoration.
 - Repository tests that described the retired provider behavior are aligned with the new fail-closed boundary.
-- The image-generation prompt retains the explicit accessible name `Describe the image to generate` after the dead attachment control was removed.
-- The focused foundation suite contains ten tests covering routing, pricing, long-context cost, provider boundary, modes, environment uniqueness, package removal, and route retirement.
 
 ## Still required before merge or deployment
 
@@ -30,7 +33,7 @@ This record applies only to draft PR #143 and branch `program/azure-gpt56-founda
 3. Tool-call streaming and multi-hop continuation need an authenticated end-to-end staging test.
 4. Maximum and actual cost accounting must be reconciled against returned provider usage.
 5. No Azure deployment or production Supabase/Auth migration is authorized by this checkpoint.
-6. Draft database-chain repairs #158, #161, and #163 remain separate and unmerged.
+6. Draft database-chain repairs #158, #161, #163, and #166 remain separate and unmerged.
 7. The isolated Auth rehearsal chain #140-#142 remains separate, draft, and unmerged.
 
 A passing GitHub check does not authorize production promotion.
