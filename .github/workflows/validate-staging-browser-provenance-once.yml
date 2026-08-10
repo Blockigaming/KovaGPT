@@ -1,0 +1,146 @@
+name: Validate staging browser provenance once
+
+on:
+  push:
+    branches:
+      - infra/azure-staging-browser-provenance
+    paths:
+      - .github/workflows/validate-staging-browser-provenance-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      SYNTHETIC_PROJECT_REF: abcdefghijklmnopqrst
+      SYNTHETIC_SUPABASE_URL: https://abcdefghijklmnopqrst.supabase.co
+      SYNTHETIC_PUBLISHABLE_KEY: sb_publishable_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_abcd
+      FORBIDDEN_PROJECT_REFS: zrzwkqrwurgutrmvalri,mfbycmbjygcfkrsuepxf,oztdrjtdglkizlewnulh
+      IMAGE_TAG: kovagpt-staging-provenance:test
+    steps:
+      - name: Check out provenance branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: infra/azure-staging-browser-provenance
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Format reviewed files
+        run: |
+          set -euo pipefail
+          npx prettier --write \
+            scripts/azure/verify-staging-browser-config.mjs \
+            tests/unit/azure-staging-browser-config.test.mjs \
+            src/config/public-config.ts \
+            docs/azure/staging-image-build-provenance.md
+          npx prettier --check \
+            scripts/azure/verify-staging-browser-config.mjs \
+            tests/unit/azure-staging-browser-config.test.mjs \
+            src/config/public-config.ts \
+            docs/azure/staging-image-build-provenance.md
+
+      - name: Static and focused verification
+        run: |
+          set -euo pipefail
+          node --check scripts/azure/verify-staging-browser-config.mjs
+          node --test tests/unit/azure-staging-browser-config.test.mjs
+          node scripts/azure/validate-staging-template.mjs
+          npm run typecheck
+
+      - name: Prove the real production browser bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_SHA="$(git rev-parse HEAD)"
+          rm -rf dist
+          env \
+            KOVA_BROWSER_PREVIEW=node \
+            VITE_SUPABASE_URL="$SYNTHETIC_SUPABASE_URL" \
+            VITE_SUPABASE_PUBLISHABLE_KEY="$SYNTHETIC_PUBLISHABLE_KEY" \
+            npm run build
+          find dist -name '*.map' -type f -delete
+          env \
+            KOVA_BROWSER_BUNDLE_DIR=dist \
+            KOVA_BROWSER_CONFIG_PROVENANCE_PATH=dist/staging-browser-config-provenance.json \
+            KOVA_SOURCE_SHA="$SOURCE_SHA" \
+            KOVA_EXPECTED_SUPABASE_PROJECT_REF="$SYNTHETIC_PROJECT_REF" \
+            KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS="$FORBIDDEN_PROJECT_REFS" \
+            VITE_SUPABASE_URL="$SYNTHETIC_SUPABASE_URL" \
+            VITE_SUPABASE_PUBLISHABLE_KEY="$SYNTHETIC_PUBLISHABLE_KEY" \
+            node scripts/azure/verify-staging-browser-config.mjs
+          node - <<'NODE'
+          const fs = require("node:fs");
+          const raw = fs.readFileSync("dist/staging-browser-config-provenance.json", "utf8");
+          const data = JSON.parse(raw);
+          if (raw.includes(process.env.SYNTHETIC_PUBLISHABLE_KEY)) {
+            throw new Error("Provenance leaked the full publishable key");
+          }
+          if (data.supabaseProjectRef !== process.env.SYNTHETIC_PROJECT_REF) {
+            throw new Error("Browser provenance project ref mismatch");
+          }
+          if (data.verification !== "verified-build-time-browser-config") {
+            throw new Error("Browser provenance verification marker missing");
+          }
+          console.log(`DIRECT_BROWSER_BUNDLE_SHA256=${data.browserBundleSha256}`);
+          NODE
+
+      - name: Build and inspect the verified runtime image
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE_SHA="$(git rev-parse HEAD)"
+          docker build \
+            --build-arg KOVA_VERIFY_STAGING_BROWSER_CONFIG=true \
+            --build-arg KOVA_SOURCE_SHA="$SOURCE_SHA" \
+            --build-arg KOVA_EXPECTED_SUPABASE_PROJECT_REF="$SYNTHETIC_PROJECT_REF" \
+            --build-arg KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS="$FORBIDDEN_PROJECT_REFS" \
+            --build-arg VITE_SUPABASE_URL="$SYNTHETIC_SUPABASE_URL" \
+            --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="$SYNTHETIC_PUBLISHABLE_KEY" \
+            --tag "$IMAGE_TAG" \
+            .
+          test "$(docker image inspect "$IMAGE_TAG" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$SOURCE_SHA"
+          test "$(docker image inspect "$IMAGE_TAG" --format '{{ index .Config.Labels "com.kovagpt.browser.supabase-project-ref" }}')" = "$SYNTHETIC_PROJECT_REF"
+          test "$(docker image inspect "$IMAGE_TAG" --format '{{ index .Config.Labels "com.kovagpt.browser.config-verified" }}')" = "true"
+          docker run --rm "$IMAGE_TAG" \
+            cat /app/dist/staging-browser-config-provenance.json \
+            > /tmp/image-browser-provenance.json
+          node - <<'NODE'
+          const fs = require("node:fs");
+          const raw = fs.readFileSync("/tmp/image-browser-provenance.json", "utf8");
+          const data = JSON.parse(raw);
+          if (raw.includes(process.env.SYNTHETIC_PUBLISHABLE_KEY)) {
+            throw new Error("Runtime image provenance leaked the full publishable key");
+          }
+          if (data.sourceSha !== process.env.GITHUB_SHA) {
+            console.log(`IMAGE_SOURCE_SHA=${data.sourceSha}`);
+          }
+          if (data.supabaseProjectRef !== process.env.SYNTHETIC_PROJECT_REF) {
+            throw new Error("Runtime image project ref mismatch");
+          }
+          console.log(`IMAGE_BROWSER_BUNDLE_SHA256=${data.browserBundleSha256}`);
+          NODE
+
+      - name: Remove this one-shot workflow
+        run: rm .github/workflows/validate-staging-browser-provenance-once.yml
+
+      - name: Commit deterministic formatting
+        run: |
+          set -euo pipefail
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+          git diff --cached --quiet && exit 0
+          git commit -m "Validate staging browser image provenance"
+          git push origin HEAD:infra/azure-staging-browser-provenance
