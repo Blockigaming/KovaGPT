@@ -95,7 +95,9 @@ export function validateAuthoritativeAuthConstraints(rows) {
   const identityUniqueConstraints = groupConstraintColumns(rows, "identities", "UNIQUE");
   const identityForeignKeys = groupForeignKeyMappings(rows, "identities");
 
-  const hasUsersPk = [...usersPrimaryKeys.values()].some((columns) => sameColumnSet(columns, ["id"]));
+  const hasUsersPk = [...usersPrimaryKeys.values()].some((columns) =>
+    sameColumnSet(columns, ["id"]),
+  );
   const hasIdentitiesPk = [...identitiesPrimaryKeys.values()].some((columns) =>
     sameColumnSet(columns, ["id"]),
   );

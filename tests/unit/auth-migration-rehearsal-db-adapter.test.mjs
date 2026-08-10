@@ -147,5 +147,8 @@ test("catalog query is read-only and does not rely on constraint_column_usage", 
   assert.match(AUTH_CONSTRAINT_CATALOG_SQL, /pg_catalog\.pg_constraint/);
   assert.match(AUTH_CONSTRAINT_CATALOG_SQL, /pg_catalog\.pg_attribute/);
   assert.doesNotMatch(AUTH_CONSTRAINT_CATALOG_SQL, /constraint_column_usage/);
-  assert.doesNotMatch(AUTH_CONSTRAINT_CATALOG_SQL, /\b(?:INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\b/i);
+  assert.doesNotMatch(
+    AUTH_CONSTRAINT_CATALOG_SQL,
+    /\b(?:INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\b/i,
+  );
 });
