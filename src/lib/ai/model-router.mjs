@@ -34,7 +34,7 @@ export const UTILITY_TASKS = /** @type {const} */ ([
 const UTILITY_TASK_SET = new Set(UTILITY_TASKS);
 
 const ADVANCED_MODES = new Set(["thinking", "high", "extra_high", "pro"]);
-const PREMIUM_MODES = new Set(["pro"]);
+const PREMIUM_MODES = new Set(["extra_high", "pro"]);
 
 // Signals that extra reasoning will noticeably improve the answer. Length is
 // deliberately NOT one of them.
@@ -73,9 +73,12 @@ export function approxTokens(chars) {
  */
 export function estimateCostUsd(modelId, inputTokens, outputTokens) {
   const cost = costPerMTok(modelId);
+  const safeInput = Math.max(0, inputTokens);
+  const safeOutput = Math.max(0, outputTokens);
+  const longContext = modelId.startsWith("gpt-5.6-") && safeInput > 272_000;
   const value =
-    (Math.max(0, inputTokens) / 1_000_000) * cost.input +
-    (Math.max(0, outputTokens) / 1_000_000) * cost.output;
+    (safeInput / 1_000_000) * cost.input * (longContext ? 2 : 1) +
+    (safeOutput / 1_000_000) * cost.output * (longContext ? 1.5 : 1);
   return Math.round(value * 1_000_000) / 1_000_000;
 }
 
