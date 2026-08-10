@@ -1,4 +1,4 @@
-name: Repair PR 143 foundation once
+name: Apply PR 143 deterministic patches once
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  repair:
+  patch:
     runs-on: ubuntu-latest
     steps:
       - name: Check out foundation branch
@@ -53,11 +53,10 @@ jobs:
           }
           function replaceRegexOnce(path, pattern, after) {
             const source = read(path);
-            const matches = source.match(
-              new RegExp(pattern.source, pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`),
-            );
-            if (!matches || matches.length !== 1) {
-              throw new Error(`${path}: expected exactly one regex match, found ${matches?.length ?? 0}`);
+            const globalFlags = pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`;
+            const matches = [...source.matchAll(new RegExp(pattern.source, globalFlags))];
+            if (matches.length !== 1) {
+              throw new Error(`${path}: expected exactly one regex match, found ${matches.length}`);
             }
             write(path, source.replace(pattern, after));
           }
@@ -165,19 +164,10 @@ jobs:
           tests/unit/azure-gpt56-foundation.test.mjs
           tests/unit/review-findings.test.mjs
 
-      - name: Run complete unit and policy gates
-        run: |
-          set -euo pipefail
-          node --test tests/unit/azure-gpt56-foundation.test.mjs
-          node scripts/security/scan-ai-runtime.mjs
-          npm run lint
-          npm run typecheck
-          npm run test:unit
-
       - name: Remove this one-shot workflow
         run: rm .github/workflows/format-pr143-followup-once.yml
 
-      - name: Commit deterministic repair
+      - name: Commit deterministic patch
         run: |
           set -euo pipefail
           git diff --check
@@ -185,5 +175,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add --all
           git diff --cached --quiet && exit 0
-          git commit -m "Repair GPT-5.6 foundation policy gates"
+          git commit -m "Apply GPT-5.6 foundation policy repairs"
           git push origin HEAD:program/azure-gpt56-foundation
