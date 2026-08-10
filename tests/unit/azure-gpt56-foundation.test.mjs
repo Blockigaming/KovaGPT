@@ -74,8 +74,16 @@ test("environment template is unique, GPT-5.6 aligned, and contains no Lovable c
   assert.doesNotMatch(source, /^LOVABLE_/mu);
 });
 
+test("package metadata contains no Lovable dependency", async () => {
+  for (const path of ["package.json", "package-lock.json"]) {
+    const source = await readFile(path, "utf8");
+    assert.doesNotMatch(source, /@lovable\.dev\//u, path);
+  }
+});
+
 test("legacy Lovable credit-consuming email routes are permanently retired", async () => {
   const paths = [
+    "src/routes/lovable/email/auth/preview.ts",
     "src/routes/lovable/email/auth/webhook.ts",
     "src/routes/lovable/email/queue/process.ts",
     "src/routes/lovable/email/transactional/send.ts",
