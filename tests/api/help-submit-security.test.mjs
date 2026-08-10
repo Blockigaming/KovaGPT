@@ -7,7 +7,10 @@ const notification = await readFile(
   "src/lib/email-templates/help-contact-notification.tsx",
   "utf8",
 );
-const authenticatedSend = await readFile("src/routes/lovable/email/transactional/send.ts", "utf8");
+const retiredTransactionalSend = await readFile(
+  "src/routes/lovable/email/transactional/send.ts",
+  "utf8",
+);
 
 test("public support submission can enqueue only a fixed internal recipient", () => {
   assert.match(notification, /to:\s*"help@kovagpt\.com"/);
@@ -26,8 +29,10 @@ test("support payload remains bounded and retains the reply address", () => {
   assert.match(route, /data:\s*body/);
 });
 
-test("authenticated dynamic-recipient email remains restricted to the verified owner", () => {
-  assert.match(authenticatedSend, /user\.email_confirmed_at/);
-  assert.match(authenticatedSend, /requested !== ownEmail/);
-  assert.match(authenticatedSend, /You can only send this template to your own email address/);
+test("legacy dynamic-recipient email route is permanently fail-closed", () => {
+  assert.match(retiredTransactionalSend, /status:\s*410/);
+  assert.match(retiredTransactionalSend, /legacy_email_provider_retired/);
+  assert.match(retiredTransactionalSend, /"Cache-Control":\s*"no-store"/);
+  assert.doesNotMatch(retiredTransactionalSend, /email_confirmed_at|requested\s*!==\s*ownEmail/);
+  assert.doesNotMatch(retiredTransactionalSend, /sendEmail|enqueue|LOVABLE_|@lovable\.dev/iu);
 });
