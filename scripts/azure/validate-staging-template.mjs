@@ -87,6 +87,27 @@ export function validateAzureStagingTemplate({
   requireMatch(template, /workspaceCapping/u, "Log Analytics daily cap missing");
   requireMatch(template, /logRetentionDays/u, "Log Analytics retention control missing");
 
+  requireMatch(
+    template,
+    /image reference built and verified with the synthetic staging browser Supabase configuration/iu,
+    "image provenance must require verified browser public configuration",
+  );
+  requireMatch(
+    template,
+    /name: 'SUPABASE_URL'\s+value: supabaseUrl/su,
+    "server runtime must receive the synthetic Supabase URL",
+  );
+  requireMatch(
+    template,
+    /name: 'SUPABASE_PUBLISHABLE_KEY'\s+value: supabasePublishableKey/su,
+    "server runtime must receive the synthetic publishable key",
+  );
+  rejectMatch(
+    template,
+    /name: 'VITE_SUPABASE_(?:URL|PUBLISHABLE_KEY)'/u,
+    "runtime Vite variables cannot prove browser bundle configuration",
+  );
+
   rejectMatch(
     template,
     /@lovable\.dev|LOVABLE_|lovable\.(?:app|dev)/iu,
@@ -130,6 +151,7 @@ export function validateAzureStagingTemplate({
   rejectMatch(parameters, /lovable\.(?:app|dev)|LOVABLE_/iu, "Lovable configuration prohibited");
 
   return {
+    browserConfigIsBuildVerified: true,
     containerAppApi: "2025-01-01",
     generationEnabled: false,
     maxReplicas: values.maxReplicas.value,
