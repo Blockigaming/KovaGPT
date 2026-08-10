@@ -54,8 +54,37 @@ function groupConstraintColumns(rows, tableName, constraintType) {
   return grouped;
 }
 
+function groupForeignKeyMappings(rows, tableName) {
+  const grouped = new Map();
+  for (const row of rows) {
+    if (row.table_name !== tableName || row.constraint_type !== "FOREIGN KEY") continue;
+    const mappings = grouped.get(row.constraint_name) ?? [];
+    mappings.push({
+      columnName: row.column_name,
+      foreignTableSchema: row.foreign_table_schema,
+      foreignTableName: row.foreign_table_name,
+      foreignColumnName: row.foreign_column_name,
+      foreignDeleteAction: row.foreign_delete_action,
+    });
+    grouped.set(row.constraint_name, mappings);
+  }
+  return grouped;
+}
+
 function sameColumnSet(actual, expected) {
   return actual.length === expected.length && expected.every((column) => actual.includes(column));
+}
+
+function isExactIdentityUserForeignKey(mappings) {
+  if (mappings.length !== 1) return false;
+  const [mapping] = mappings;
+  return (
+    mapping.columnName === "user_id" &&
+    mapping.foreignTableSchema === "auth" &&
+    mapping.foreignTableName === "users" &&
+    mapping.foreignColumnName === "id" &&
+    mapping.foreignDeleteAction === "c"
+  );
 }
 
 export function validateAuthoritativeAuthConstraints(rows) {
@@ -64,6 +93,7 @@ export function validateAuthoritativeAuthConstraints(rows) {
   const usersPrimaryKeys = groupConstraintColumns(rows, "users", "PRIMARY KEY");
   const identitiesPrimaryKeys = groupConstraintColumns(rows, "identities", "PRIMARY KEY");
   const identityUniqueConstraints = groupConstraintColumns(rows, "identities", "UNIQUE");
+  const identityForeignKeys = groupForeignKeyMappings(rows, "identities");
 
   const hasUsersPk = [...usersPrimaryKeys.values()].some((columns) => sameColumnSet(columns, ["id"]));
   const hasIdentitiesPk = [...identitiesPrimaryKeys.values()].some((columns) =>
@@ -72,15 +102,8 @@ export function validateAuthoritativeAuthConstraints(rows) {
   const hasUniqueProviderSubject = [...identityUniqueConstraints.values()].some((columns) =>
     sameColumnSet(columns, ["provider", "provider_id"]),
   );
-  const hasIdentityUserFk = rows.some(
-    (row) =>
-      row.table_name === "identities" &&
-      row.constraint_type === "FOREIGN KEY" &&
-      row.column_name === "user_id" &&
-      row.foreign_table_schema === "auth" &&
-      row.foreign_table_name === "users" &&
-      row.foreign_column_name === "id" &&
-      row.foreign_delete_action === "c",
+  const hasIdentityUserFk = [...identityForeignKeys.values()].some((mappings) =>
+    isExactIdentityUserForeignKey(mappings),
   );
 
   if (!hasUsersPk || !hasIdentitiesPk || !hasUniqueProviderSubject || !hasIdentityUserFk) {
