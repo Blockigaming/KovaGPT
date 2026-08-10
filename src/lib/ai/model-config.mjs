@@ -3,8 +3,8 @@
 // Business logic never names a model. It asks for a logical role
 // (DEFAULT_CHAT, ADVANCED_REASONING, PREMIUM_REASONING, UTILITY,
 // IMAGE_ANALYSIS, IMAGE_GENERATION, EMBEDDING) and this file decides which
-// concrete model id serves that role. Upgrading to a future model generation
-// is a change to this file (or to the matching environment variable) only.
+// concrete model id serves that role. Upgrading models is a change to this
+// file, or to the matching environment variable, rather than application logic.
 //
 // This module is intentionally dependency-free and pure so it can be unit
 // tested directly with node:test.
@@ -21,14 +21,16 @@ export const MODEL_ROLES = /** @type {const} */ ([
   "EMBEDDING",
 ]);
 
-// Cheapest-capable-first defaults. Luna handles 90-95% of traffic.
+// Cheapest-capable-first defaults. Luna handles routine and utility traffic,
+// Terra handles deliberate reasoning, and Sol is reserved for explicit
+// premium/deep work so KovaGPT stays capable without wasting inference spend.
 export const DEFAULT_MODELS = Object.freeze({
   DEFAULT_CHAT: "gpt-5.6-luna",
   ADVANCED_REASONING: "gpt-5.6-terra",
   PREMIUM_REASONING: "gpt-5.6-sol",
   UTILITY: "gpt-5.6-luna",
   IMAGE_ANALYSIS: "gpt-5.6-luna",
-  IMAGE_GENERATION: "gpt-image-1",
+  IMAGE_GENERATION: "gpt-image-2",
   EMBEDDING: "text-embedding-3-small",
 });
 
@@ -44,14 +46,14 @@ export const ROLE_ENV_KEYS = Object.freeze({
   EMBEDDING: "KOVA_MODEL_EMBEDDING",
 });
 
-// USD per 1M tokens. Used for cost estimates in routing logs only; it never
-// changes which model is selected. Unknown models fall back to the
-// DEFAULT_CHAT price so estimates stay conservative instead of throwing.
+// Standard API USD per 1M tokens, reviewed against official OpenAI pricing on
+// 2026-08-10. Image generation is metered differently; its entry is a
+// conservative text/image-token estimate used only in routing diagnostics.
 export const MODEL_COST_PER_MTOK = Object.freeze({
-  "gpt-5.6-luna": { input: 0.1, output: 0.4 },
-  "gpt-5.6-terra": { input: 1.25, output: 10 },
-  "gpt-5.6-sol": { input: 5, output: 40 },
-  "gpt-image-1": { input: 5, output: 40 },
+  "gpt-5.6-luna": { input: 1, output: 6 },
+  "gpt-5.6-terra": { input: 2.5, output: 15 },
+  "gpt-5.6-sol": { input: 5, output: 30 },
+  "gpt-image-2": { input: 5, output: 30 },
   "text-embedding-3-small": { input: 0.02, output: 0 },
 });
 
