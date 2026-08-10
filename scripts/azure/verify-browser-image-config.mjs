@@ -8,10 +8,10 @@ const PROJECT_REF_PATTERN = /^[a-z0-9]{20}$/u;
 const SOURCE_SHA_PATTERN = /^[0-9a-f]{40}$/iu;
 const PUBLISHABLE_KEY_PATTERN = /^sb_publishable_[A-Za-z0-9_-]{20,}$/u;
 const JWT_PATTERN = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/u;
-const OPENAI_SECRET_PATTERN = /\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{20,}\b/gu;
-const SUPABASE_SECRET_PATTERN = /\bsb_secret_[A-Za-z0-9_-]{20,}\b/gu;
-const DATABASE_URL_PATTERN = /\bpostgres(?:ql)?:\/\/[^\s"'`<>]+/giu;
-const PRIVATE_KEY_PATTERN = /-----BEGIN (?:EC |OPENSSH |RSA )?PRIVATE KEY-----/gu;
+const OPENAI_SECRET_PATTERN = /\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{20,}\b/u;
+const SUPABASE_SECRET_PATTERN = /\bsb_secret_[A-Za-z0-9_-]{20,}\b/u;
+const DATABASE_URL_PATTERN = /\bpostgres(?:ql)?:\/\/[^\s"'`<>]+/iu;
+const PRIVATE_KEY_PATTERN = /-----BEGIN (?:EC |OPENSSH |RSA )?PRIVATE KEY-----/u;
 const SUPABASE_HOST_PATTERN = /https:\/\/([a-z0-9]{20})\.supabase\.co(?:\/)?/giu;
 const JWT_CANDIDATE_PATTERN = /\b[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/gu;
 
@@ -146,22 +146,15 @@ function rejectSecretMaterial(source) {
   if (OPENAI_SECRET_PATTERN.test(source)) {
     throw new Error("Browser bundle contains material matching an OpenAI secret key.");
   }
-  OPENAI_SECRET_PATTERN.lastIndex = 0;
-
   if (SUPABASE_SECRET_PATTERN.test(source)) {
     throw new Error("Browser bundle contains material matching a Supabase secret key.");
   }
-  SUPABASE_SECRET_PATTERN.lastIndex = 0;
-
   if (DATABASE_URL_PATTERN.test(source)) {
     throw new Error("Browser bundle contains a PostgreSQL connection URL.");
   }
-  DATABASE_URL_PATTERN.lastIndex = 0;
-
   if (PRIVATE_KEY_PATTERN.test(source)) {
     throw new Error("Browser bundle contains private-key PEM material.");
   }
-  PRIVATE_KEY_PATTERN.lastIndex = 0;
 
   rejectServiceRoleJwtCandidates(source);
 }
