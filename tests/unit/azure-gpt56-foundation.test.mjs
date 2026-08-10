@@ -31,13 +31,9 @@ test("cost-first router reserves Sol for explicit premium modes", () => {
     "gpt-5.6-sol",
   );
   assert.equal(routeModel({ task: "chat", mode: "pro", tier: "pro" }).modelId, "gpt-5.6-sol");
-  assert.deepEqual(
-    routeModel({ task: "chat", mode: "extra_high", tier: "plus" }),
-    assert.match({
-      modelId: "gpt-5.6-terra",
-      downgradedFrom: "PREMIUM_REASONING",
-    }),
-  );
+  const downgraded = routeModel({ task: "chat", mode: "extra_high", tier: "plus" });
+  assert.equal(downgraded.modelId, "gpt-5.6-terra");
+  assert.equal(downgraded.downgradedFrom, "PREMIUM_REASONING");
 });
 
 test("router cost estimate applies GPT-5.6 long-context multipliers", () => {
