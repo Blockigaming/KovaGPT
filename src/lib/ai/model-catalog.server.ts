@@ -2,6 +2,7 @@ import { runtimeEnv } from "@/lib/runtime-env.server";
 
 export const MODEL_CATALOG_VERSION = "2026-08-10";
 export const MODEL_CATALOG_SOURCES = [
+  "https://platform.openai.com/docs/models",
   "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
   "https://developers.openai.com/api/docs/models/gpt-5.6-terra",
   "https://developers.openai.com/api/docs/models/gpt-5.6-luna",
@@ -114,31 +115,31 @@ const policies: Record<
   instant: {
     env: "KOVA_INSTANT_MODEL",
     fallback: "gpt-5.6-luna",
-    maxOutput: 1_200,
+    maxOutput: 600,
     allowed: ["gpt-4.1-nano", "gpt-5.6-luna"],
   },
   normal: {
     env: "KOVA_NORMAL_MODEL",
     fallback: "gpt-5.6-luna",
-    maxOutput: 4_000,
+    maxOutput: 2_000,
     allowed: ["gpt-4.1-nano", "gpt-4.1-mini", "gpt-5.6-luna"],
   },
   thinking: {
     env: "KOVA_THINKING_MODEL",
     fallback: "gpt-5.6-terra",
-    maxOutput: 8_000,
+    maxOutput: 4_000,
     allowed: ["gpt-5-mini", "gpt-5.6-terra"],
   },
   deep: {
     env: "KOVA_DEEP_MODEL",
     fallback: "gpt-5.6-sol",
-    maxOutput: 16_000,
+    maxOutput: 4_000,
     allowed: ["gpt-5-mini", "gpt-5", "gpt-5.6-terra", "gpt-5.6-sol"],
   },
   utility: {
     env: "KOVA_UTILITY_MODEL",
     fallback: "gpt-5.6-luna",
-    maxOutput: 800,
+    maxOutput: 256,
     allowed: ["gpt-4.1-nano", "gpt-5.6-luna"],
   },
 };
