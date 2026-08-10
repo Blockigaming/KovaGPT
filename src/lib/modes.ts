@@ -11,12 +11,14 @@ export type ModeId =
 
 export type Tier = "free" | "plus" | "pro";
 
+export type ReasoningEffort = "none" | "low" | "medium" | "high" | "xhigh" | "max";
+
 export type Mode = {
   id: ModeId;
   label: string;
   description: string;
   systemPrompt: string;
-  reasoning?: "minimal" | "low" | "medium" | "high";
+  reasoning?: ReasoningEffort;
   tier: Tier;
 };
 
@@ -74,6 +76,7 @@ export const MODES: Mode[] = [
     label: "Instant",
     description: "Fastest replies. Snappy, concise answers.",
     tier: "free",
+    reasoning: "none",
     systemPrompt: `${BASE_SYSTEM}
 
 Mode: Instant. Optimize aggressively for speed and brevity.
@@ -86,14 +89,15 @@ Mode: Instant. Optimize aggressively for speed and brevity.
     label: "Medium",
     description: "Balanced intelligence. The default KovaGPT experience.",
     tier: "free",
+    reasoning: "low",
     systemPrompt: BASE_SYSTEM,
   },
   {
     id: "thinking",
     label: "Thinking",
-    description: "Deepest reasoning. Careful, thorough, well-structured answers.",
+    description: "Deeper reasoning with careful, well-structured answers.",
     tier: "free",
-    reasoning: "high",
+    reasoning: "medium",
     systemPrompt: `${BASE_SYSTEM}
 
 Mode: Thinking. Think carefully and thoroughly before answering.
@@ -114,15 +118,15 @@ Mode: Thinking. Think carefully and thoroughly before answering.
     label: "Extra high",
     description: "Maximum-depth reasoning before Pro mode.",
     tier: "pro",
-    reasoning: "high",
+    reasoning: "xhigh",
     systemPrompt: `${BASE_SYSTEM}\n\nMode: Extra high. Explore alternatives, verify details, and use all relevant conversation context before delivering the strongest practical result.`,
   },
   {
     id: "pro",
     label: "Pro",
-    description: "Maximum reasoning, context, and completeness.",
+    description: "Maximum GPT-5.6 Sol reasoning, context, and completeness.",
     tier: "pro",
-    reasoning: "high",
+    reasoning: "max",
     systemPrompt: `${BASE_SYSTEM}\n\nMode: Pro. Use maximum available context and reasoning. Anticipate useful follow-through, check the result, and produce a polished, comprehensive answer.`,
   },
   {
@@ -192,10 +196,10 @@ export function modesForTier(tier: Tier): Mode[] {
 
 export function getMode(id: string | null | undefined): Mode {
   if (!id) return MODES[0];
-  const direct = MODES.find((m) => m.id === id);
+  const direct = MODES.find((mode) => mode.id === id);
   if (direct) return direct;
   const alias = LEGACY_ALIAS[id];
-  return MODES.find((m) => m.id === alias) ?? MODES[0];
+  return MODES.find((mode) => mode.id === alias) ?? MODES[0];
 }
 
 export const STORAGE_LIMITS_BYTES: Record<Tier, number> = {
