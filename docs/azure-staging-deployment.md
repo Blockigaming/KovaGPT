@@ -24,12 +24,28 @@ The staging web app defaults to:
 - `maxReplicas=2` to contain unexpected cost;
 - 0.5 vCPU and 1 GiB memory per replica;
 - single-revision mode;
-- immutable `repository@sha256:digest` image input;
+- immutable `repository@sha256:digest` image input that was built and verified against the synthetic staging browser Supabase configuration;
 - external HTTPS ingress on port 3000;
 - generation disabled by both `AI_GENERATION_ENABLED=false` and `KOVA_GENERATION_DISABLED=true`;
 - Luna for routine chat, Terra for deliberate reasoning, and Sol for explicit deep work after a separate generation-enable gate.
 
 No Front Door resource is created for initial staging. The Container Apps FQDN is sufficient for synthetic verification and avoids an unnecessary fixed staging layer. Production edge/WAF configuration is a separate reviewed phase.
+
+## Browser and server configuration must be identical
+
+KovaGPT's browser client resolves `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` while Vite builds the image. Azure Container App runtime environment variables cannot rewrite those values inside an already-built JavaScript bundle.
+
+The template therefore deliberately omits runtime `VITE_SUPABASE_*` variables. Until issue #164 lands a separately reviewed runtime-public-config implementation, the immutable staging image must already contain the synthetic browser configuration.
+
+A deployment is invalid unless all of the following are proven for the exact image digest:
+
+1. the browser bundle was compiled with the synthetic staging Supabase URL and publishable key;
+2. the server runtime receives the same synthetic URL and publishable key through `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`;
+3. the browser bundle contains neither the production project ref nor the Auth rehearsal project ref;
+4. source SHA, image digest, and synthetic browser project ref are recorded together;
+5. the image is not rebuilt, retagged, or replaced between verification and deployment.
+
+Treat any browser/server project mismatch as a release-blocking authorization defect, not as a cosmetic configuration problem.
 
 ## Official Azure references
 
@@ -65,7 +81,7 @@ az bicep build --file infra/azure/staging/main.bicep --stdout >/dev/null
 Expected local evidence includes:
 
 ```text
-AZURE_STAGING_TEMPLATE_VALIDATION={"containerAppApi":"2025-01-01","generationEnabled":false,"maxReplicas":2,"scaleToZero":true,"imageUsesDigest":true,"zeroLovable":true}
+AZURE_STAGING_TEMPLATE_VALIDATION={"browserConfigIsBuildVerified":true,"containerAppApi":"2025-01-01","generationEnabled":false,"maxReplicas":2,"scaleToZero":true,"imageUsesDigest":true,"zeroLovable":true}
 ```
 
 ## Step 2: verify the Azure account
@@ -80,7 +96,51 @@ az account show \
 
 Stop if the subscription or tenant is not the intended KovaGPT Azure account.
 
-## Step 3: prepare a temporary parameter file
+## Step 3: verify immutable image provenance
+
+Before preparing Azure parameters, record the exact source and image identity:
+
+```bash
+set -euo pipefail
+
+SOURCE_SHA="$(git rev-parse HEAD)"
+IMAGE_REFERENCE="REPLACE_WITH_ACR_REPOSITORY@sha256:REPLACE_WITH_64_HEX_DIGEST"
+SYNTHETIC_PROJECT_REF="REPLACE_WITH_SYNTHETIC_PROJECT_REF"
+
+printf 'source_sha=%s\nimage_reference=%s\nbrowser_supabase_project_ref=%s\n' \
+  "$SOURCE_SHA" \
+  "$IMAGE_REFERENCE" \
+  "$SYNTHETIC_PROJECT_REF"
+```
+
+The image build must have used the synthetic browser values explicitly. Do not infer this from Container App runtime variables.
+
+Inspect the built client assets from the exact image or extracted Nitro artifact. The exact extraction command depends on the image layout, but the acceptance test is invariant:
+
+```bash
+set -euo pipefail
+
+CLIENT_ASSET_ROOT="REPLACE_WITH_EXTRACTED_CLIENT_ASSET_DIRECTORY"
+SYNTHETIC_PROJECT_REF="REPLACE_WITH_SYNTHETIC_PROJECT_REF"
+PRODUCTION_PROJECT_REF="zrzwkqrwurgutrmvalri"
+AUTH_REHEARSAL_PROJECT_REF="REPLACE_WITH_AUTH_REHEARSAL_PROJECT_REF"
+
+rg --fixed-strings "$SYNTHETIC_PROJECT_REF" "$CLIENT_ASSET_ROOT" >/dev/null
+
+if rg --fixed-strings "$PRODUCTION_PROJECT_REF" "$CLIENT_ASSET_ROOT"; then
+  echo "SAFETY STOP: production Supabase ref is present in the staging browser bundle" >&2
+  exit 1
+fi
+
+if rg --fixed-strings "$AUTH_REHEARSAL_PROJECT_REF" "$CLIENT_ASSET_ROOT"; then
+  echo "SAFETY STOP: Auth rehearsal Supabase ref is present in the staging browser bundle" >&2
+  exit 1
+fi
+```
+
+Do not continue merely because the synthetic ref is present; the prohibited refs must also be absent.
+
+## Step 4: prepare a temporary parameter file
 
 Do not edit or commit the repository example with real values.
 
@@ -94,6 +154,7 @@ Edit only `/tmp/kovagpt-staging.parameters.json` and replace every `REPLACE_WITH
 Required inputs:
 
 - exact immutable ACR image reference in `repository@sha256:<64 hex>` form;
+- build provenance proving that image's browser bundle was compiled with the same synthetic staging Supabase URL and publishable key supplied to the server runtime;
 - existing ACR name and resource group;
 - existing staging Key Vault name and resource group;
 - Key Vault URI for the staging OpenAI key;
@@ -101,6 +162,8 @@ Required inputs:
 - synthetic staging Supabase URL and publishable key.
 
 Do not use the real production Supabase project or the disposable Auth rehearsal project as general application staging.
+
+Do not treat Container App runtime `VITE_SUPABASE_*` values as a browser configuration mechanism. Vite replaces those values during the image build. The template intentionally omits runtime `VITE_*` variables.
 
 Keep:
 
@@ -110,7 +173,7 @@ Keep:
 
 until the staging app passes health, auth, authorization, storage, and redaction checks.
 
-## Step 4: run Azure what-if only
+## Step 5: run Azure what-if only
 
 `what-if` evaluates the change but does not deploy it:
 
@@ -136,10 +199,11 @@ Review every proposed resource. Stop if the output includes:
 - a Lovable hostname, package, credential, or route dependency;
 - generation enabled;
 - a secret literal;
+- runtime `VITE_SUPABASE_*` variables;
 - more than two staging web replicas;
 - an unexpected resource group, subscription, identity, registry, or Key Vault.
 
-## Step 5: deploy only after explicit approval
+## Step 6: deploy only after explicit approval
 
 The following commands mutate Azure. Do not run them as part of template review.
 
@@ -177,7 +241,7 @@ unset APPLY_KOVAGPT_STAGING
 rm -f /tmp/kovagpt-staging.parameters.json
 ```
 
-## Step 6: post-deployment gates before generation
+## Step 7: post-deployment gates before generation
 
 Keep generation disabled and verify:
 
@@ -185,7 +249,7 @@ Keep generation disabled and verify:
 2. HTTPS ingress works and HTTP is not accepted;
 3. `/api/health` returns 200 without exposing configuration;
 4. the app scales to zero and wakes successfully;
-5. browser configuration contains only the synthetic Supabase URL and publishable key;
+5. browser and server configuration prove the exact same synthetic Supabase project ref;
 6. the service-role and OpenAI values remain Key Vault-backed secret references;
 7. no Lovable environment variable, package, hostname, or outbound request exists;
 8. two synthetic users cannot read or mutate each other's chats, files, projects, memory, tasks, or usage;
