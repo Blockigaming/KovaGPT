@@ -31,6 +31,8 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Formatting changed files
+        id: changed-format
+        continue-on-error: true
         run: npm run format:check:changed
 
       - name: Legacy repository formatting audit
@@ -38,24 +40,40 @@ jobs:
         run: npm run format:check
 
       - name: Lint
+        id: lint
+        continue-on-error: true
         run: npm run lint
 
       - name: TypeScript typecheck
+        id: typecheck
+        continue-on-error: true
         run: npm run typecheck
 
       - name: Unit tests
+        id: unit-tests
+        continue-on-error: true
         run: npm run test:unit
 
       - name: Azure readiness validation
+        id: azure-validation
+        continue-on-error: true
         run: npm run azure:validate
 
       - name: Production build
+        id: production-build
+        continue-on-error: true
         run: KOVA_BROWSER_PREVIEW=node npm run build
 
       - name: Docker image build
+        id: image-build
+        if: ${{ always() && steps.production-build.outcome == 'success' }}
+        continue-on-error: true
         run: npm run container:build
 
       - name: Container startup
+        id: container-startup
+        if: ${{ always() && steps.image-build.outcome == 'success' }}
+        continue-on-error: true
         run: |
           docker run -d --name kovagpt-web-ci \
             -e AI_GENERATION_ENABLED=false \
@@ -73,8 +91,50 @@ jobs:
           exit 1
 
       - name: Health smoke test
+        id: health-smoke
+        if: ${{ always() && steps.container-startup.outcome == 'success' }}
+        continue-on-error: true
         run: npm run container:smoke
 
       - name: Container shutdown
         if: always()
         run: docker rm -f kovagpt-web-ci || true
+
+      - name: Azure readiness verdict
+        if: always()
+        env:
+          CHANGED_FORMAT: ${{ steps.changed-format.outcome }}
+          LINT: ${{ steps.lint.outcome }}
+          TYPECHECK: ${{ steps.typecheck.outcome }}
+          UNIT_TESTS: ${{ steps.unit-tests.outcome }}
+          AZURE_VALIDATION: ${{ steps.azure-validation.outcome }}
+          PRODUCTION_BUILD: ${{ steps.production-build.outcome }}
+          IMAGE_BUILD: ${{ steps.image-build.outcome }}
+          CONTAINER_STARTUP: ${{ steps.container-startup.outcome }}
+          HEALTH_SMOKE: ${{ steps.health-smoke.outcome }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          failed=0
+          for check in \
+            CHANGED_FORMAT \
+            LINT \
+            TYPECHECK \
+            UNIT_TESTS \
+            AZURE_VALIDATION \
+            PRODUCTION_BUILD \
+            IMAGE_BUILD \
+            CONTAINER_STARTUP \
+            HEALTH_SMOKE
+          do
+            outcome="${!check}"
+            printf '%s=%s\n' "$check" "$outcome"
+            if [ "$outcome" != "success" ]; then
+              failed=1
+            fi
+          done
+          if [ "$failed" -ne 0 ]; then
+            echo "AZURE_CONTAINER_READINESS=failed"
+            exit 1
+          fi
+          echo "AZURE_CONTAINER_READINESS=passed"
