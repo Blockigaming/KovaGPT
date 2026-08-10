@@ -1,27 +1,33 @@
 name: Restore current image route once
 
 on:
-  push:
+  pull_request:
+    types: [opened, synchronize, reopened]
     branches:
-      - program/azure-gpt56-foundation
+      - main
     paths:
       - .github/workflows/restore-current-images-route-once.yml
+      - src/routes/images.tsx
 
 permissions:
   contents: write
+  pull-requests: read
 
 jobs:
   restore:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'program/azure-gpt56-foundation'
     runs-on: ubuntu-latest
     steps:
       - name: Check out foundation branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: program/azure-gpt56-foundation
           fetch-depth: 0
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 24
           cache: npm
@@ -60,11 +66,11 @@ jobs:
           source = source.replace(attachmentPattern, "");
 
           replaceOnce(
-            "                  value={prompt}\n",
-            "                  value={prompt}\n                  aria-label=\"Describe the image to generate\"\n",
+            '                  aria-label="Describe a new image"\n',
+            '                  aria-label="Describe the image to generate"\n',
           );
 
-          if (/promptFileRef|Paperclip/.test(source)) {
+          if (/promptFileRef|Paperclip|Attach a reference image/.test(source)) {
             throw new Error("dead image attachment implementation remains");
           }
           fs.writeFileSync(path, source);
@@ -75,7 +81,7 @@ jobs:
           set -euo pipefail
           npx prettier --write src/routes/images.tsx
           npx prettier --check src/routes/images.tsx
-          node --test tests/unit/multimodal-scope.test.mjs tests/unit/azure-gpt56-foundation.test.mjs
+          node --test tests/unit/release-remediation.test.mjs tests/unit/azure-gpt56-foundation.test.mjs
           npm run typecheck
 
       - name: Remove this one-shot workflow
@@ -91,5 +97,3 @@ jobs:
           git diff --cached --quiet && exit 0
           git commit -m "Restore current image route architecture"
           git push origin HEAD:program/azure-gpt56-foundation
-
-# Existing-file retrigger for the one-shot workflow.
