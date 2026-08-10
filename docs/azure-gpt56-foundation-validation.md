@@ -20,6 +20,8 @@ This record applies only to draft PR #143 and branch `program/azure-gpt56-founda
 - Camera, microphone, and USB permissions remain denied while same-origin geolocation remains available for the existing explicit location feature.
 - Dead image-reference controls that had no server implementation are removed rather than shown as fake capability.
 - Repository tests that described the retired provider behavior are aligned with the new fail-closed boundary.
+- The image-generation prompt retains the explicit accessible name `Describe the image to generate` after the dead attachment control was removed.
+- The focused foundation suite contains ten tests covering routing, pricing, long-context cost, provider boundary, modes, environment uniqueness, package removal, and route retirement.
 
 ## Still required before merge or deployment
 
