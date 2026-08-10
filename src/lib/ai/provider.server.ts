@@ -4,9 +4,6 @@ import { responsesStreamToChatStream } from "@/lib/ai/responses-compat.server.mj
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
 import { maximumServerOutputForModel, modelForPolicy } from "@/lib/ai/model-catalog.server";
 
-import { DEFAULT_MODELS } from "./model-config.mjs";
-
-
 export type JsonObject = Record<string, unknown>;
 
 export type ProviderCapability =
@@ -52,57 +49,6 @@ export type ProviderConfig = {
 };
 
 const OPENAI_API_BASE_URL = "https://api.openai.com/v1";
-const LOVABLE_GATEWAY_BASE_URL = "https://ai.gateway.lovable.dev/v1";
-
-/**
- * Kova buys inference through the managed AI gateway when a gateway key is
- * present, and only falls back to a direct provider account otherwise. The
- * gateway namespaces every model id, so catalog ids are translated here and
- * nowhere else.
- */
-const GATEWAY_MODEL_IDS: Record<string, string> = {
-  "gpt-5.6-luna": "openai/gpt-5.6-luna",
-  "gpt-5.6-terra": "openai/gpt-5.6-terra",
-  "gpt-5.6-sol": "openai/gpt-5.6-sol",
-  "gpt-4.1-nano": "openai/gpt-5-nano",
-  "gpt-4.1-mini": "openai/gpt-5-mini",
-  "gpt-5-mini": "openai/gpt-5-mini",
-  "gpt-5": "openai/gpt-5",
-  "gpt-image-1": "openai/gpt-image-1-mini",
-  "text-embedding-3-small": "openai/text-embedding-3-small",
-  "text-embedding-3-large": "openai/text-embedding-3-large",
-};
-
-function usingGateway(): boolean {
-  return Boolean(env("LOVABLE_API_KEY"));
-}
-
-export function providerBaseUrl(): string {
-  return usingGateway() ? LOVABLE_GATEWAY_BASE_URL : OPENAI_API_BASE_URL;
-}
-
-/** Translates a catalog model id into the id the active provider accepts. */
-export function providerModelId(modelId: string): string {
-  if (!usingGateway()) return modelId;
-  if (modelId.includes("/")) return modelId;
-  return GATEWAY_MODEL_IDS[modelId] ?? "openai/gpt-5-mini";
-}
-
-function withProviderModel(body: JsonObject): JsonObject {
-  if (typeof body.model !== "string") return body;
-  return { ...body, model: providerModelId(body.model) };
-}
-
-// Model ids live in ONE place: src/lib/ai/model-config.mjs. This adapter only
-// mirrors the logical roles so nothing in the repository hardcodes a model.
-const OPENAI_MODELS = {
-  chat: DEFAULT_MODELS.DEFAULT_CHAT,
-  fast: DEFAULT_MODELS.UTILITY,
-  deep: DEFAULT_MODELS.PREMIUM_REASONING,
-  image: DEFAULT_MODELS.IMAGE_GENERATION,
-  embedding: DEFAULT_MODELS.EMBEDDING,
-};
-
 const DEFAULT_TIMEOUT_MS = 45_000;
 const NO_STORE_HEADERS = { "Cache-Control": "no-store" } as const;
 const PROVIDER_FAILURE_CATEGORY = "model_provider_failure";
@@ -112,6 +58,7 @@ const DEFAULT_CAPABILITIES: ProviderCapability[] = [
   "streaming",
   "reasoning",
   "tool_calls",
+  "web_search",
   "embeddings",
   "image_generation",
   "vision",
@@ -147,14 +94,14 @@ function env(name: string): string | undefined {
 
 function parseTimeout(value: string | undefined): number {
   if (!value) return DEFAULT_TIMEOUT_MS;
-  const n = Number(value);
-  if (!Number.isFinite(n)) return DEFAULT_TIMEOUT_MS;
-  return Math.min(Math.max(n, 5_000), 120_000);
+  const timeout = Number(value);
+  if (!Number.isFinite(timeout)) return DEFAULT_TIMEOUT_MS;
+  return Math.min(Math.max(timeout, 5_000), 120_000);
 }
 
 function parseCapabilities(value: string | undefined): ProviderCapability[] {
   if (!value) return DEFAULT_CAPABILITIES;
-  const allowed = new Set<ProviderCapability>(DEFAULT_CAPABILITIES.concat("web_search"));
+  const allowed = new Set<ProviderCapability>(DEFAULT_CAPABILITIES);
   const configured = value
     .split(",")
     .map((item) => item.trim())
@@ -162,18 +109,37 @@ function parseCapabilities(value: string | undefined): ProviderCapability[] {
   return configured.length ? Array.from(new Set(configured)) : DEFAULT_CAPABILITIES;
 }
 
+/**
+ * KovaGPT is deliberately locked to the official OpenAI API. Keeping the
+ * endpoint non-configurable prevents accidental fallback to a metered gateway
+ * and guarantees that no Lovable credits can be consumed by AI generation.
+ */
+export function providerBaseUrl(): string {
+  return OPENAI_API_BASE_URL;
+}
+
+/** Model IDs are already official OpenAI IDs and pass through unchanged. */
+export function providerModelId(modelId: string): string {
+  return modelId;
+}
+
+function withProviderModel(body: JsonObject): JsonObject {
+  if (typeof body.model !== "string") return body;
+  return { ...body, model: providerModelId(body.model) };
+}
+
 export function getAiProviderConfig(): ProviderConfig {
   return {
     provider: "openai",
-    baseUrl: providerBaseUrl(),
+    baseUrl: OPENAI_API_BASE_URL,
     chatModel: modelForPolicy("normal").id,
     fastModel: modelForPolicy("instant").id,
     deepModel: modelForPolicy("deep").id,
-    imageModel: env("KOVA_IMAGE_MODEL") ?? "gpt-image-1",
+    imageModel: env("KOVA_IMAGE_MODEL") ?? "gpt-image-2",
     embeddingModel: env("KOVA_EMBEDDING_MODEL") ?? "text-embedding-3-small",
     timeoutMs: parseTimeout(env("KOVA_AI_TIMEOUT_MS")),
     capabilities: parseCapabilities(env("KOVA_AI_CAPABILITIES")),
-    configured: Boolean(env("LOVABLE_API_KEY") ?? env("OPENAI_API_KEY")),
+    configured: Boolean(env("OPENAI_API_KEY")),
   };
 }
 
@@ -197,7 +163,7 @@ export function validateAiProviderConfig(): ProviderErrorEnvelope | null {
       status: 503,
     };
   }
-  if (env("LOVABLE_API_KEY") || env("OPENAI_API_KEY")) return null;
+  if (env("OPENAI_API_KEY")) return null;
   return {
     error: "KovaGPT is temporarily unavailable. Please try again later.",
     code: "provider_unavailable",
@@ -248,7 +214,7 @@ export function missingAiProviderResponse(fallback?: JsonObject): Response | nul
 }
 
 function headers(): Record<string, string> {
-  const key = env("LOVABLE_API_KEY") ?? env("OPENAI_API_KEY");
+  const key = env("OPENAI_API_KEY");
   if (!key) throw new AiProviderError(validateAiProviderConfig()!);
   return {
     Authorization: `Bearer ${key}`,
@@ -256,22 +222,22 @@ function headers(): Record<string, string> {
   };
 }
 
-export function chatModel(kind: ProviderModelKind = "balanced") {
+export function chatModel(kind: ProviderModelKind = "balanced"): string {
   const config = getAiProviderConfig();
   if (kind === "fast") return config.fastModel;
   if (kind === "deep") return config.deepModel;
   return config.chatModel;
 }
 
-export function utilityModel() {
+export function utilityModel(): string {
   return modelForPolicy("utility").id;
 }
 
-export function imageModel() {
+export function imageModel(): string {
   return getAiProviderConfig().imageModel;
 }
 
-export function embeddingModel() {
+export function embeddingModel(): string {
   return getAiProviderConfig().embeddingModel;
 }
 
@@ -361,7 +327,7 @@ async function providerFetch(
   const config = getAiProviderConfig();
   const { signal, cleanup } = mergeSignals(init?.signal ?? undefined, config.timeoutMs);
   try {
-    return await fetch(`${providerBaseUrl()}${path}`, {
+    return await fetch(`${config.baseUrl}${path}`, {
       ...init,
       method: "POST",
       redirect: "error",
@@ -412,16 +378,45 @@ export async function streamingChatCompletions(
   return chatCompletions({ ...body, stream: true }, init);
 }
 
+function normalizeResponsesTools(value: unknown): unknown[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.map((raw) => {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+    const tool = raw as Record<string, unknown>;
+    if (tool.type !== "function") return tool;
+    const fn = tool.function;
+    if (!fn || typeof fn !== "object" || Array.isArray(fn)) return tool;
+    const definition = fn as Record<string, unknown>;
+    return {
+      type: "function",
+      name: definition.name,
+      description: definition.description,
+      parameters: definition.parameters,
+      strict: definition.strict ?? false,
+    };
+  });
+}
+
+function normalizeResponsesToolChoice(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const choice = value as Record<string, unknown>;
+  if (choice.type !== "function") return choice;
+  const fn = choice.function;
+  if (!fn || typeof fn !== "object" || Array.isArray(fn)) return choice;
+  return { type: "function", name: (fn as Record<string, unknown>).name };
+}
+
 /**
- * Kova's browser protocol intentionally remains the established Chat Completions
- * SSE shape. This adapter is the only compatibility boundary: OpenAI receives a
+ * The browser protocol remains the established Chat Completions-compatible
+ * shape. This adapter is the single compatibility boundary: OpenAI receives a
  * Responses API request and provider events are translated before leaving the
- * server. Consequently no UI code knows the provider or its wire format.
+ * server.
  */
 function toResponsesRequest(body: JsonObject): JsonObject {
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const instructions: string[] = [];
   const input: unknown[] = [];
+
   for (const value of messages) {
     if (!value || typeof value !== "object" || Array.isArray(value)) continue;
     const message = value as Record<string, unknown>;
@@ -438,9 +433,11 @@ function toResponsesRequest(body: JsonObject): JsonObject {
       });
       continue;
     }
+
     const toolCalls = Array.isArray(message.tool_calls) ? message.tool_calls : [];
-    if (message.content)
+    if (message.content) {
       input.push({ role: message.role, content: normalizeResponsesContent(message) });
+    }
     for (const rawCall of toolCalls) {
       if (!rawCall || typeof rawCall !== "object" || Array.isArray(rawCall)) continue;
       const call = rawCall as Record<string, unknown>;
@@ -453,27 +450,37 @@ function toResponsesRequest(body: JsonObject): JsonObject {
       });
     }
   }
+
   const request: JsonObject = {
     model: body.model,
     input,
     stream: body.stream === true,
+    store: false,
   };
   const serverOutputCeiling = maximumServerOutputForModel(String(body.model ?? ""));
   if (instructions.length) request.instructions = instructions.join("\n\n");
-  if (Array.isArray(body.tools)) request.tools = body.tools;
-  if (body.tool_choice !== undefined) request.tool_choice = body.tool_choice;
-  if (typeof body.max_tokens === "number")
+
+  const tools = normalizeResponsesTools(body.tools);
+  if (tools) request.tools = tools;
+  if (body.tool_choice !== undefined) {
+    request.tool_choice = normalizeResponsesToolChoice(body.tool_choice);
+  }
+  if (typeof body.max_tokens === "number") {
     request.max_output_tokens = Math.min(body.max_tokens, serverOutputCeiling);
-  if (typeof body.max_completion_tokens === "number")
+  }
+  if (typeof body.max_completion_tokens === "number") {
     request.max_output_tokens = Math.min(body.max_completion_tokens, serverOutputCeiling);
+  }
   if (request.max_output_tokens === undefined) request.max_output_tokens = serverOutputCeiling;
-  // Reasoning models default to medium effort, which makes ordinary chat slow
-  // and expensive. Kova asks for low effort unless a caller opts into more.
-  request.reasoning =
-    body.reasoning && typeof body.reasoning === "object"
-      ? body.reasoning
-      : { effort: "low", summary: "auto" };
-  request.store = false;
+
+  const requestedReasoning =
+    body.reasoning && typeof body.reasoning === "object" && !Array.isArray(body.reasoning)
+      ? (body.reasoning as JsonObject)
+      : undefined;
+  request.reasoning = requestedReasoning
+    ? { ...requestedReasoning, summary: requestedReasoning.summary ?? "auto" }
+    : { effort: "low", summary: "auto" };
+
   return request;
 }
 
@@ -487,7 +494,10 @@ function normalizeResponsesContent(message: Record<string, unknown>): unknown {
       return { type: "input_image", image_url: image?.url };
     }
     if (part.type === "text") {
-      return { type: message.role === "assistant" ? "output_text" : "input_text", text: part.text };
+      return {
+        type: message.role === "assistant" ? "output_text" : "input_text",
+        text: part.text,
+      };
     }
     return part;
   });
@@ -497,15 +507,15 @@ function responseOutputToMessage(value: JsonObject): JsonObject {
   const output = Array.isArray(value.output) ? value.output : [];
   let content = "";
   const toolCalls: JsonObject[] = [];
+
   for (const raw of output) {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
     const item = raw as Record<string, unknown>;
     if (item.type === "message" && Array.isArray(item.content)) {
       for (const part of item.content) {
-        if (part && typeof part === "object" && !Array.isArray(part)) {
-          const text = (part as Record<string, unknown>).text;
-          if (typeof text === "string") content += text;
-        }
+        if (!part || typeof part !== "object" || Array.isArray(part)) continue;
+        const text = (part as Record<string, unknown>).text;
+        if (typeof text === "string") content += text;
       }
     }
     if (item.type === "function_call") {
@@ -516,6 +526,7 @@ function responseOutputToMessage(value: JsonObject): JsonObject {
       });
     }
   }
+
   return {
     role: "assistant",
     content: content || null,
@@ -548,7 +559,7 @@ async function responsesJsonToChatJson(response: Response): Promise<Response> {
           }
         : undefined,
     },
-    { headers: { "Cache-Control": "no-store" } },
+    { headers: NO_STORE_HEADERS },
   );
 }
 
