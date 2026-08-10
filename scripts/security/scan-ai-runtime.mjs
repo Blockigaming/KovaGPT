@@ -21,7 +21,8 @@ const secretPatterns = [
   /VITE_(?:OPENAI|LOVABLE|FIRECRAWL|ANTHROPIC)[A-Z0-9_]*(?:KEY|SECRET|TOKEN)/,
   /NEXT_PUBLIC_(?:OPENAI|LOVABLE|FIRECRAWL|ANTHROPIC)[A-Z0-9_]*(?:KEY|SECRET|TOKEN)/,
 ];
-const managedRuntime = /ai\.gateway\.lovable\.dev|LOVABLE_AI_BASE_URL|Lovable-API-Key/;
+const lovableRuntime =
+  /@lovable\.dev\/|ai\.gateway\.lovable\.dev|LOVABLE_(?:API_KEY|AI_BASE_URL)|Lovable-API-Key|https?:\/\/[^\s"']*lovable\.(?:app|dev)/i;
 const browserProvider =
   /https:\/\/api\.openai\.com\/v1\/(?:responses|chat\/completions|images|embeddings)/;
 const unsafeLogging =
@@ -35,8 +36,8 @@ function inspect(file, scope) {
   const source = readFileSync(file, "utf8");
   for (const rule of secretPatterns)
     if (rule.test(source)) violations.push(`${rel}: credential pattern`);
-  if (managedRuntime.test(source) && !/^(?:docs|tests|scripts\/security)\//.test(rel))
-    violations.push(`${rel}: Lovable managed AI runtime`);
+  if (lovableRuntime.test(source) && !/^(?:docs|tests|scripts\/security)\//.test(rel))
+    violations.push(`${rel}: Lovable runtime, package, credential, or hostname reference`);
   if (scope === "browser" && browserProvider.test(source))
     violations.push(`${rel}: direct browser provider request`);
   if (scope !== "fixtures" && unsafeLogging.test(source))
@@ -71,5 +72,5 @@ if (violations.length) {
   process.exit(1);
 }
 console.log(
-  "AI runtime security scan passed: source, browser/server bundles, maps, assets, and fixtures contain no exposed provider secret or Lovable AI production path.",
+  "AI runtime security scan passed: source, package metadata, browser/server bundles, maps, assets, and fixtures contain no exposed provider secret, browser provider call, or Lovable runtime dependency.",
 );
