@@ -31,14 +31,17 @@ test("Playwright starts the built preview app before browser tests", () => {
   assert.match(config, /url:\s*"http:\/\/127\.0\.0\.1:8080"/);
 });
 
-test("email routes do not report delivery success when the queue worker is unavailable", () => {
+test("email routes fail closed when delivery is unavailable or retired", () => {
   const support = read("src/routes/api/public/help-submit.ts");
   const transactional = read("src/routes/lovable/email/transactional/send.ts");
   assert.match(support, /KOVA_EMAIL_QUEUE_ENABLED/);
   assert.match(support, /Email delivery is not configured/);
-  assert.match(transactional, /KOVA_EMAIL_QUEUE_ENABLED/);
-  assert.match(transactional, /status: 503/);
-  assert.match(transactional, /Email delivery is not configured/);
+  assert.match(transactional, /legacy_email_provider_retired/);
+  assert.match(transactional, /status: 410/);
+  assert.doesNotMatch(
+    transactional,
+    /KOVA_EMAIL_QUEUE_ENABLED|sendLovableEmail|@lovable\.dev|LOVABLE_API_KEY/,
+  );
 });
 
 test("MCP validates Supabase bearer tokens and uses the real user id for created tasks", () => {
@@ -101,14 +104,19 @@ test("study assistant only promises upload formats supported by the composer", (
   assert.match(composer, /f\.type\.startsWith\("text\/"\)/);
 });
 
-test("email previews and From display use KovaGPT production branding", () => {
-  const transactional = read("src/routes/lovable/email/transactional/send.ts");
-  const authPreview = read("src/routes/lovable/email/auth/preview.ts");
-  assert.match(transactional, /const SITE_NAME = "KovaGPT";/);
-  assert.doesNotMatch(transactional, /nova-aigpt/i);
-  assert.match(authPreview, /const SITE_NAME = "KovaGPT";/);
-  assert.match(authPreview, /const SAMPLE_PROJECT_URL = "https:\/\/kovagpt\.com";/);
-  assert.doesNotMatch(authPreview, /kovagpt\.kovagpt\.com/i);
+test("retired Lovable email routes expose no sender or preview implementation", () => {
+  for (const path of [
+    "src/routes/lovable/email/auth/preview.ts",
+    "src/routes/lovable/email/transactional/send.ts",
+  ]) {
+    const source = read(path);
+    assert.match(source, /legacy_email_provider_retired/);
+    assert.match(source, /status: 410/);
+    assert.doesNotMatch(
+      source,
+      /SITE_NAME|SAMPLE_PROJECT_URL|nova-aigpt|@lovable\.dev|sendLovableEmail|LOVABLE_API_KEY/,
+    );
+  }
 });
 
 test("model selectors only advertise backed intelligence modes", () => {
@@ -117,8 +125,9 @@ test("model selectors only advertise backed intelligence modes", () => {
   const chat = read("src/routes/api/chat.ts");
   const shell = read("src/routes/index.tsx");
 
+  assert.match(desktop, /ResponsiveModelSelector/);
+  assert.match(responsive, /versionGroupsForTier\(userTier\)/);
   for (const selector of [desktop, responsive]) {
-    assert.match(selector, /modesForTier\(userTier\)/);
     assert.doesNotMatch(selector, /KOVA_VERSIONS|kova-version|KovaGPT version|Kova 3\.[345]/);
   }
   assert.doesNotMatch(shell, /kovaVersion|kova-version/);
