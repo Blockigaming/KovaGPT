@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 63,
-  "latest": "20260803130000_ai_usage_accounting.sql",
+  "count": 71,
+  "latest": "20260805123909_98bb0463-448a-425d-ad2b-f91759cf12fa.sql",
   "migrations": [
     {
       "order": 1,
@@ -92,7 +92,7 @@
       "order": 7,
       "filename": "20260623155803_689e3fda-4d71-4138-9248-613595517f5f.sql",
       "timestamp": "20260623155803",
-      "sha256": "ab018c68d5f63eb8d4d961b625d1c27e79d2bdd1b35538324ba595e62050243e",
+      "sha256": "850cd12cdb894110f4b43c4d59d4b8639e79ee5c6481c86e1160737565688aef",
       "tables": [],
       "functions": [],
       "destructive": false,
@@ -1312,6 +1312,155 @@
         "ai_usage_events_user_idempotency_idx",
         "ai_usage_events_guest_idempotency_idx"
       ]
+    },
+    {
+      "order": 64,
+      "filename": "20260803143000_developer_api_profit_protection.sql",
+      "timestamp": "20260803143000",
+      "sha256": "b075f479dddb849840bb8431a1cb20bde9704d42d70a54f8f5c3c48d70e83888",
+      "tables": [
+        "upstream_price_registry",
+        "api_pricing_versions",
+        "api_emergency_controls",
+        "developer_credit_accounts",
+        "developer_credit_ledger",
+        "developer_api_requests",
+        "credit_purchases"
+      ],
+      "functions": ["prevent_financial_entry_mutation", "reserve_developer_api_credit"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [
+        "upstream_price_registry",
+        "api_pricing_versions",
+        "api_emergency_controls",
+        "developer_credit_accounts",
+        "developer_credit_ledger",
+        "developer_api_requests",
+        "credit_purchases"
+      ],
+      "policies": [],
+      "indexes": ["upstream_price_active_idx"]
+    },
+    {
+      "order": 65,
+      "filename": "20260803184741_2fcabe55-857e-40eb-aa49-9e3d29d99bad.sql",
+      "timestamp": "20260803184741",
+      "sha256": "28052ad10731ce4a50911f07520d8033bd685527c9e222aa74eda453bbf91831",
+      "tables": ["writing_documents", "writing_document_versions"],
+      "functions": ["save_writing_document"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["writing_documents", "writing_document_versions"],
+      "policies": ["Users manage own writing documents", "Users manage own writing versions"],
+      "indexes": ["writing_documents_owner_updated_idx", "writing_document_versions_doc_idx"]
+    },
+    {
+      "order": 66,
+      "filename": "20260803184803_f1160e45-5203-486e-8a06-8119fae9efd6.sql",
+      "timestamp": "20260803184803",
+      "sha256": "06c7dcfd815758f0ad9f5b9bd7c2b669dc2e5de2e7869f15095948410ee38455",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 67,
+      "filename": "20260803200951_6057d47d-9e48-4651-8c9b-918d92d5de25.sql",
+      "timestamp": "20260803200951",
+      "sha256": "29443a5dc267baa0cbf90fa263a3ee818b5e30174d6fafca636509a11c19c6ae",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": ["project_files_update"],
+      "indexes": []
+    },
+    {
+      "order": 68,
+      "filename": "20260803202921_1e097656-2cd6-4be0-ba5c-dcfd1146e02e.sql",
+      "timestamp": "20260803202921",
+      "sha256": "a54b3058fba594bc0370b155d9a31376c01aa6536debc6e48ddccc27ccac935e",
+      "tables": ["ai_generation_events"],
+      "functions": ["acquire_ai_generation", "finalize_ai_generation"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["ai_generation_events"],
+      "policies": [],
+      "indexes": [
+        "ai_generation_events_user_period_idx",
+        "ai_generation_events_guest_idx",
+        "ai_generation_events_running_idx"
+      ]
+    },
+    {
+      "order": 69,
+      "filename": "20260804004928_dd95bde0-8a33-4045-bf61-b54fed5230e4.sql",
+      "timestamp": "20260804004928",
+      "sha256": "ff1045eb27b2932201e953df5bf9c553237f13cdce2721989a98e69a0f8a4934",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [
+        "banned_users_deny_clients",
+        "ai_generation_events_deny_clients",
+        "pending_tool_actions_deny_clients",
+        "processed_stripe_events_deny_clients",
+        "plaid_items_deny_clients",
+        "google_oauth_tokens_deny_client_reads"
+      ],
+      "indexes": []
+    },
+    {
+      "order": 70,
+      "filename": "20260804015247_b1e57b1d-0fd3-4abb-93f0-4b0b462124fe.sql",
+      "timestamp": "20260804015247",
+      "sha256": "b107e356c8d5e2228784d32bb8c308dd9a063726bbee73e66c003ab6b60489cc",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [
+        "feature_flags_authenticated_read",
+        "feature_flags_deny_client_insert",
+        "feature_flags_deny_client_update",
+        "feature_flags_deny_client_delete",
+        "financial_accounts_deny_client_insert",
+        "financial_accounts_deny_client_update",
+        "financial_accounts_deny_client_delete",
+        "google_oauth_tokens_deny_client_insert",
+        "google_oauth_tokens_deny_client_update"
+      ],
+      "indexes": []
+    },
+    {
+      "order": 71,
+      "filename": "20260805123909_98bb0463-448a-425d-ad2b-f91759cf12fa.sql",
+      "timestamp": "20260805123909",
+      "sha256": "ecf0d80667a3a6fdb35c5fbe93d5818d2f284bc521336ce1fb16ada70618acd9",
+      "tables": [],
+      "functions": ["is_project_member", "can_edit_project", "is_family_member"],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
     }
   ]
 }

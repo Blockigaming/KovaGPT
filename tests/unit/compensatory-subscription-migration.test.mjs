@@ -4,8 +4,7 @@ import test from "node:test";
 
 import { PGlite } from "@electric-sql/pglite";
 
-const migrationPath =
-  "supabase/migrations/20260623155803_689e3fda-4d71-4138-9248-613595517f5f.sql";
+const migrationPath = "supabase/migrations/20260623155803_689e3fda-4d71-4138-9248-613595517f5f.sql";
 const intendedUserId = "381887de-16c6-4120-8fc1-a0f7767c4d54";
 
 async function createDatabase() {
