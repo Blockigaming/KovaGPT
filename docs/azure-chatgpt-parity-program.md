@@ -38,26 +38,26 @@ Official sources:
 - https://developers.openai.com/api/docs/models
 - https://openai.com/api/pricing/
 
-| Role | Default model | Standard input / cached / output per 1M tokens | Purpose |
-| --- | --- | --- | --- |
-| Routine chat | `gpt-5.6-luna` | $1.00 / $0.10 / $6.00 | Low-latency, cost-controlled everyday work |
-| Deliberate reasoning | `gpt-5.6-terra` | $2.50 / $0.25 / $15.00 | Thinking, larger analysis, multi-step work |
-| Frontier reasoning | `gpt-5.6-sol` | $5.00 / $0.50 / $30.00 | Explicit Pro, deep research, hardest professional work |
-| Image generation/editing | `gpt-image-2` | Metered by text/image tokens and output quality | Current image generation and editing |
-| Embeddings | `text-embedding-3-small` | Catalog-controlled | Retrieval and project knowledge |
+| Role                     | Default model            | Standard input / cached / output per 1M tokens  | Purpose                                                |
+| ------------------------ | ------------------------ | ----------------------------------------------- | ------------------------------------------------------ |
+| Routine chat             | `gpt-5.6-luna`           | $1.00 / $0.10 / $6.00                           | Low-latency, cost-controlled everyday work             |
+| Deliberate reasoning     | `gpt-5.6-terra`          | $2.50 / $0.25 / $15.00                          | Thinking, larger analysis, multi-step work             |
+| Frontier reasoning       | `gpt-5.6-sol`            | $5.00 / $0.50 / $30.00                          | Explicit Pro, deep research, hardest professional work |
+| Image generation/editing | `gpt-image-2`            | Metered by text/image tokens and output quality | Current image generation and editing                   |
+| Embeddings               | `text-embedding-3-small` | Catalog-controlled                              | Retrieval and project knowledge                        |
 
 All GPT-5.6 text variants have a 1,050,000-token context window, a 128,000-token maximum output, image input, tool support through the Responses API, and reasoning efforts `none`, `low`, `medium`, `high`, `xhigh`, and `max`. Requests above the documented long-context threshold must receive the correct cost multiplier in preflight and final accounting.
 
 ## Cost-first routing contract
 
-| Kova mode | Model role | Reasoning effort | Default output cap |
-| --- | --- | --- | --- |
-| Instant | Luna | `none` | 700 |
-| Medium | Luna | `low` | 1,600 |
-| Thinking | Terra | `medium` | 3,000 |
-| High | Terra | `high` | 4,000 |
-| Extra high | Sol | `xhigh` | 6,000 |
-| Pro | Sol | `max` | 8,000 |
+| Kova mode  | Model role | Reasoning effort | Default output cap |
+| ---------- | ---------- | ---------------- | ------------------ |
+| Instant    | Luna       | `none`           | 700                |
+| Medium     | Luna       | `low`            | 1,600              |
+| Thinking   | Terra      | `medium`         | 3,000              |
+| High       | Terra      | `high`           | 4,000              |
+| Extra high | Sol        | `xhigh`          | 6,000              |
+| Pro        | Sol        | `max`            | 8,000              |
 
 Additional controls:
 
@@ -118,37 +118,37 @@ Status terms:
 - **Missing**: no production-quality equivalent is proven.
 - **Verify**: code appears to exist but requires an authenticated end-to-end test.
 
-| Capability | Current assessment | Required acceptance evidence |
-| --- | --- | --- |
-| General chat and streaming | Present | Correct SSE completion, stop/regenerate/edit, recovery after network interruption |
-| GPT-5.6 model/mode selector | Partial | Luna/Terra/Sol routing, all six reasoning efforts, entitlement enforcement, transparent UX |
-| Web search with citations | Partial | Fresh search, source cards, inline citations, safe fallback, date-sensitive regression suite |
-| Deep research | Partial | Editable plan, progress, mid-run steering, source controls, full-screen cited report, persistence |
-| Image understanding | Present/Verify | Multiple images, screenshot/chart interpretation, privacy-safe upload path |
-| Image generation | Partial | GPT Image 2 generation, editing, variation, transparent progress, library persistence |
-| Document/file uploads | Partial | PDF, DOCX, PPTX, text, image, CSV/XLSX support, extraction quality, secure storage, reuse |
-| File Library | Partial | Automatic save, search/filter, previews, reuse in chat/project, deletion/export, quotas |
-| Data analysis/code interpreter | Missing/Partial | Isolated code execution, Python packages, files in/out, charts/tables, resource limits, audit trail |
-| Canvas | Missing/Partial | Side-by-side document/code workspace, inline edits, version history, apply/revert/download |
-| Memory | Partial | Saved memories, chat-history reference, user controls, temporary chat exclusion, deletion proof |
-| Projects | Partial | Chats/files/instructions/memory, sharing, roles, tool availability, project search and export |
-| Scheduled tasks/monitoring | Partial | One-time/recurring/monitoring jobs, hourly floor, next-run UI, pause/edit/delete, useful-only alerts |
-| Apps/plugins/connectors | Partial | Directory, permission model, search/read/write capabilities, confirmation before external actions |
-| MCP/custom apps | Missing/Partial | Remote MCP registration, tool discovery, consent, admin controls, safe execution and revocation |
-| Custom GPT equivalents | Missing | Builder, instructions, knowledge, tool selection, sharing, versioning, moderation, directory |
-| GPT/plugin directory | Missing | Discover/install/uninstall, ratings or trust metadata, permissions, dependency management |
-| Voice | Missing by prior product choice; new parity goal requires review | Realtime voice, transcript, interruption, voice picker, privacy, accessibility, cost controls |
-| Work/agent mode | Missing/Partial | Long-running task plan, progress, checkpoints, connected apps, artifacts, approvals, continuation |
-| Computer use | Missing | Isolated browser, screenshots/actions, domain policy, confirmation, secrets boundary, audit logs |
-| Shopping/product cards | Missing/Partial | Current products, comparison, images, price/source provenance, refinements, no fabricated inventory |
-| Rich visual answers | Partial | Cards, tables, charts, maps/media where justified, responsive and accessible presentation |
-| Sharing | Partial | Public/private links, revocation, redaction, project sharing, permission and abuse controls |
-| Search/history/recents | Partial | Fast full-text search, grouping, pin/archive/delete, unified recents, keyboard navigation |
-| Temporary chat | Verify | No durable memory/history side effects, clear UI state, deletion semantics |
-| Notifications | Partial | Web/email/push policy, task notifications, user controls, deduplication and quiet hours |
-| Account/settings/billing | Partial | Full preference, privacy, security, data export/delete, subscription, usage, invoice, failure states |
-| Mobile/responsive/PWA | Partial | 320px+ matrix, safe areas, keyboard/composer, drawers, touch targets, offline/reconnect behavior |
-| Accessibility | Partial | WCAG 2.2 AA target, keyboard-only, focus, screen reader, reduced motion, contrast, zoom |
+| Capability                     | Current assessment                                               | Required acceptance evidence                                                                         |
+| ------------------------------ | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| General chat and streaming     | Present                                                          | Correct SSE completion, stop/regenerate/edit, recovery after network interruption                    |
+| GPT-5.6 model/mode selector    | Partial                                                          | Luna/Terra/Sol routing, all six reasoning efforts, entitlement enforcement, transparent UX           |
+| Web search with citations      | Partial                                                          | Fresh search, source cards, inline citations, safe fallback, date-sensitive regression suite         |
+| Deep research                  | Partial                                                          | Editable plan, progress, mid-run steering, source controls, full-screen cited report, persistence    |
+| Image understanding            | Present/Verify                                                   | Multiple images, screenshot/chart interpretation, privacy-safe upload path                           |
+| Image generation               | Partial                                                          | GPT Image 2 generation, editing, variation, transparent progress, library persistence                |
+| Document/file uploads          | Partial                                                          | PDF, DOCX, PPTX, text, image, CSV/XLSX support, extraction quality, secure storage, reuse            |
+| File Library                   | Partial                                                          | Automatic save, search/filter, previews, reuse in chat/project, deletion/export, quotas              |
+| Data analysis/code interpreter | Missing/Partial                                                  | Isolated code execution, Python packages, files in/out, charts/tables, resource limits, audit trail  |
+| Canvas                         | Missing/Partial                                                  | Side-by-side document/code workspace, inline edits, version history, apply/revert/download           |
+| Memory                         | Partial                                                          | Saved memories, chat-history reference, user controls, temporary chat exclusion, deletion proof      |
+| Projects                       | Partial                                                          | Chats/files/instructions/memory, sharing, roles, tool availability, project search and export        |
+| Scheduled tasks/monitoring     | Partial                                                          | One-time/recurring/monitoring jobs, hourly floor, next-run UI, pause/edit/delete, useful-only alerts |
+| Apps/plugins/connectors        | Partial                                                          | Directory, permission model, search/read/write capabilities, confirmation before external actions    |
+| MCP/custom apps                | Missing/Partial                                                  | Remote MCP registration, tool discovery, consent, admin controls, safe execution and revocation      |
+| Custom GPT equivalents         | Missing                                                          | Builder, instructions, knowledge, tool selection, sharing, versioning, moderation, directory         |
+| GPT/plugin directory           | Missing                                                          | Discover/install/uninstall, ratings or trust metadata, permissions, dependency management            |
+| Voice                          | Missing by prior product choice; new parity goal requires review | Realtime voice, transcript, interruption, voice picker, privacy, accessibility, cost controls        |
+| Work/agent mode                | Missing/Partial                                                  | Long-running task plan, progress, checkpoints, connected apps, artifacts, approvals, continuation    |
+| Computer use                   | Missing                                                          | Isolated browser, screenshots/actions, domain policy, confirmation, secrets boundary, audit logs     |
+| Shopping/product cards         | Missing/Partial                                                  | Current products, comparison, images, price/source provenance, refinements, no fabricated inventory  |
+| Rich visual answers            | Partial                                                          | Cards, tables, charts, maps/media where justified, responsive and accessible presentation            |
+| Sharing                        | Partial                                                          | Public/private links, revocation, redaction, project sharing, permission and abuse controls          |
+| Search/history/recents         | Partial                                                          | Fast full-text search, grouping, pin/archive/delete, unified recents, keyboard navigation            |
+| Temporary chat                 | Verify                                                           | No durable memory/history side effects, clear UI state, deletion semantics                           |
+| Notifications                  | Partial                                                          | Web/email/push policy, task notifications, user controls, deduplication and quiet hours              |
+| Account/settings/billing       | Partial                                                          | Full preference, privacy, security, data export/delete, subscription, usage, invoice, failure states |
+| Mobile/responsive/PWA          | Partial                                                          | 320px+ matrix, safe areas, keyboard/composer, drawers, touch targets, offline/reconnect behavior     |
+| Accessibility                  | Partial                                                          | WCAG 2.2 AA target, keyboard-only, focus, screen reader, reduced motion, contrast, zoom              |
 
 ## UI/UX parity contract
 

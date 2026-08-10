@@ -21,10 +21,7 @@ export type ProviderCapability =
   | "realtime_voice";
 
 export type ProviderErrorCode =
-  | "provider_timeout"
-  | "provider_rate_limited"
-  | "provider_unavailable"
-  | "provider_bad_response";
+  "provider_timeout" | "provider_rate_limited" | "provider_unavailable" | "provider_bad_response";
 
 export type ProviderErrorEnvelope = {
   error: string;
