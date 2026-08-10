@@ -10,14 +10,20 @@ test("isolated database script creates the release artifact directory before dat
   const start = source.indexOf('run(["start"');
   const dump = source.indexOf('run(["db", "dump"');
   assert.ok(mkdir >= 0 && start > mkdir && dump > start);
-  assert.match(source, /const isolatedSchemaPath = `\$\{artifactDirectory\}\/isolated-schema\.sql`/u);
+  assert.match(
+    source,
+    /const isolatedSchemaPath = `\$\{artifactDirectory\}\/isolated-schema\.sql`/u,
+  );
   assert.match(source, /-f", isolatedSchemaPath/u);
 });
 
 test("isolated database script keeps failures authoritative and always stops a started stack", async () => {
   const source = await readFile(path, "utf8");
   assert.match(source, /if \(r\.status !== 0 && !allow\) process\.exit\(r\.status \?\? 1\)/u);
-  assert.match(source, /finally \{\s*if \(started\) run\(\["stop", "--no-backup"\], true\);\s*\}/su);
+  assert.match(
+    source,
+    /finally \{\s*if \(started\) run\(\["stop", "--no-backup"\], true\);\s*\}/su,
+  );
   assert.doesNotMatch(source, /db", "dump"[^\n]*, true/u);
 });
 
