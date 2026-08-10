@@ -8,7 +8,7 @@ param location string = resourceGroup().location
 @maxLength(24)
 param namePrefix string = 'kovagpt-stg'
 
-@description('Immutable ACR image reference. Supply repository@sha256:digest, never a mutable tag.')
+@description('Immutable ACR image reference built and verified with the synthetic staging browser Supabase configuration. Supply repository@sha256:digest, never a mutable tag.')
 param imageReference string
 
 @description('Existing Azure Container Registry name.')
@@ -259,15 +259,7 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
               value: supabaseUrl
             }
             {
-              name: 'VITE_SUPABASE_URL'
-              value: supabaseUrl
-            }
-            {
               name: 'SUPABASE_PUBLISHABLE_KEY'
-              value: supabasePublishableKey
-            }
-            {
-              name: 'VITE_SUPABASE_PUBLISHABLE_KEY'
               value: supabasePublishableKey
             }
             {
