@@ -551,7 +551,9 @@ function ImagesPage() {
                       style={{ backgroundSize: "200% 100%" }}
                     />
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center text-sm text-muted-foreground">Creating your image…</div>
+                      <div className="text-center text-sm text-muted-foreground">
+                        Creating your image…
+                      </div>
                     </div>
                   </div>
                 )}
@@ -579,7 +581,9 @@ function ImagesPage() {
                     <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
                       <button
                         type="button"
-                        onClick={() => saveGeneratedImage({ prompt: resultPrompt, imageUrl: result })}
+                        onClick={() =>
+                          saveGeneratedImage({ prompt: resultPrompt, imageUrl: result })
+                        }
                         disabled={savingImage}
                         className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium transition hover:bg-accent disabled:opacity-50"
                       >
@@ -626,7 +630,9 @@ function ImagesPage() {
                       type="button"
                       onClick={() => {
                         lightboxReturnFocusRef.current =
-                          document.activeElement instanceof HTMLElement ? document.activeElement : null;
+                          document.activeElement instanceof HTMLElement
+                            ? document.activeElement
+                            : null;
                         setLightbox(item);
                       }}
                       className="group relative aspect-square overflow-hidden rounded-2xl bg-muted ring-1 ring-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -664,11 +670,7 @@ function ImagesPage() {
 
       {loginOpen && <LoginRequiredModal open={loginOpen} onOpenChange={setLoginOpen} />}
       {limitOpen && (
-        <UsageLimitModal
-          open={limitOpen}
-          onOpenChange={setLimitOpen}
-          message={limitMessage}
-        />
+        <UsageLimitModal open={limitOpen} onOpenChange={setLimitOpen} message={limitMessage} />
       )}
 
       {lightbox && (
@@ -780,7 +782,11 @@ function ImageLightbox({
             disabled={saving}
             className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium transition hover:bg-accent disabled:opacity-50"
           >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bookmark className="h-4 w-4" />}
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Bookmark className="h-4 w-4" />
+            )}
             Save to Library
           </button>
           <button
