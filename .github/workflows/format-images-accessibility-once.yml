@@ -1,0 +1,53 @@
+name: Format image route accessibility fix once
+
+on:
+  push:
+    branches:
+      - program/azure-gpt56-foundation
+    paths:
+      - .github/workflows/format-images-accessibility-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out foundation branch
+        uses: actions/checkout@v4
+        with:
+          ref: program/azure-gpt56-foundation
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Format image route only
+        run: npx prettier --write src/routes/images.tsx
+
+      - name: Verify image route contract
+        run: |
+          set -euo pipefail
+          npx prettier --check src/routes/images.tsx
+          node --test tests/unit/multimodal-scope.test.mjs tests/unit/azure-gpt56-foundation.test.mjs
+
+      - name: Remove this one-shot workflow
+        run: rm .github/workflows/format-images-accessibility-once.yml
+
+      - name: Commit deterministic formatting
+        run: |
+          set -euo pipefail
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+          git diff --cached --quiet && exit 0
+          git commit -m "Format accessible image prompt fix"
+          git push origin HEAD:program/azure-gpt56-foundation
