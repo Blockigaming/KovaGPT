@@ -6,7 +6,7 @@ This runbook is scoped only to the disposable rehearsal resources.
 
 Branch: `fix/auth-rehearsal-safe-diagnostics`
 
-Current reviewed hardening commit: `0d844a535d917646e5a1917e11c5fe36723149c3`
+Current reviewed hardening commit: `9624291601c05ab9e4fb3d5bdb70ee7730b4ba96`
 
 Base V2 commit: `beaa7bb3de70c443f25617880dc23308308ce766`
 
@@ -18,15 +18,17 @@ Do not merge this branch to `main` as part of the rehearsal.
 - Resource group: `rg-kovagpt-dev`
 - Rehearsal Supabase ref: `oztdrjtdglkizlewnulh`
 - Real NEW Supabase ref `mfbycmbjygcfkrsuepxf` remains prohibited.
-- Destination `auth.users = 0` and `auth.identities = 0` after the failed signed attempt.
+- Destination `auth.users = 0` and `auth.identities = 0` was re-verified during the pre-deployment audit.
 - Session-pooler credentials and PostgreSQL connectivity were independently verified with `psql`.
-- Ingress was disabled after the failed signed attempt.
+- Ingress is disabled.
+- Min/max replicas are exactly `1/1`, with one active replica.
+- `AI_GENERATION_ENABLED=false`.
 - Live FK is `FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE`.
 - Live provider-subject uniqueness is one composite constraint over `provider_id` and `provider`.
 
 ## Hardening now present on the branch
 
-The branch now addresses both confirmed weak points without changing the existing importer transaction or payload protocol:
+The branch now addresses the confirmed weak points without changing the existing importer transaction or payload protocol:
 
 1. A raw `pg` connection error is mapped to `database_connect_failed` without exposing raw error details.
 2. PostgreSQL TLS verification remains enabled with `rejectUnauthorized: true`.
@@ -39,16 +41,31 @@ The branch now addresses both confirmed weak points without changing the existin
 9. The adapter fails closed unless it proves:
    - `auth.users(id)` is a primary key;
    - `auth.identities(id)` is a primary key;
-   - `auth.identities.user_id` references `auth.users.id`;
-   - that FK has `ON DELETE CASCADE`;
+   - one exact, single-column `auth.identities.user_id -> auth.users.id` foreign key exists;
+   - the FK has `ON DELETE CASCADE`;
+   - composite FKs that merely contain the required mapping are rejected;
    - one composite unique constraint contains exactly `provider` and `provider_id`.
 10. Existing HMAC, nonce/replay, destination-affinity, generated-column, empty-destination, transaction, rollback, evidence, and one-shot behavior remains in the original importer.
 
 ## Build only
 
-Build only from the exact reviewed head commit. The repository workflow `.github/workflows/build-auth-rehearsal-image.yml` is designed to build and push the disposable rehearsal image and must not deploy production or change `main`.
+Build only from the exact reviewed hardening commit listed above. The repository workflow `.github/workflows/build-auth-rehearsal-image.yml` is designed to build and push the disposable rehearsal image and must not deploy production or change `main`.
 
-Before building, re-read PR #139 and confirm its head SHA still matches this runbook. If the branch head moved, treat the new SHA as unreviewed until its diff is inspected.
+Before building, re-read PR #139 and confirm its reviewed runtime-code SHA still matches this runbook. If runtime code moves, treat the new SHA as unreviewed until its diff and focused tests are inspected. A later documentation-only branch head is not required in the runtime image.
+
+## GitHub/Azure OIDC build gate
+
+The GitHub Actions billing gate was cleared, and the build workflow now starts. The latest run stopped at `azure/login@v3` before ACR login, Docker build, or image push because Azure had no federated identity credential matching GitHub's immutable OIDC subject.
+
+The required exact federation values are:
+
+- issuer: `https://token.actions.githubusercontent.com`
+- subject: `repo:Blockigaming@266891108/kovagpt-790c8a3a@1307138301:ref:refs/heads/main`
+- audience: `api://AzureADTokenExchange`
+
+Add that exact subject only to the Azure identity referenced by `CAKOVAGPTDEV_AZURE_CLIENT_ID`. First determine whether the client ID belongs to an Entra app registration or a user-assigned managed identity, then list its existing federated credentials and add a narrowly scoped credential if the exact subject is absent.
+
+Do not replace OIDC with a client secret. Do not add interactive `az login` to the workflow. Do not broaden the subject. Preserve any existing federated credential until the new credential has been verified. Do not rerun the image workflow until Azure lists the exact issuer, subject, and audience.
 
 ## CA configuration gate
 
