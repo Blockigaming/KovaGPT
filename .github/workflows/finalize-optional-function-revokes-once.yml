@@ -1,0 +1,56 @@
+name: Finalize optional function revokes once
+
+on:
+  push:
+    branches:
+      - fix/fresh-db-optional-function-revokes
+    paths:
+      - .github/workflows/finalize-optional-function-revokes-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repair branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/fresh-db-optional-function-revokes
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Format focused test
+        run: npx prettier --write tests/unit/optional-function-privilege-migration.test.mjs
+
+      - name: Run executable privilege regression tests
+        run: node --test tests/unit/optional-function-privilege-migration.test.mjs
+
+      - name: Regenerate and verify migration manifest
+        run: |
+          set -euo pipefail
+          npm run release:manifest
+          npm run release:migrations
+
+      - name: Remove this one-shot workflow
+        run: rm .github/workflows/finalize-optional-function-revokes-once.yml
+
+      - name: Commit deterministic outputs
+        run: |
+          set -euo pipefail
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+          git diff --cached --quiet && exit 0
+          git commit -m "Finalize optional function privilege repair"
+          git push origin HEAD:fix/fresh-db-optional-function-revokes
