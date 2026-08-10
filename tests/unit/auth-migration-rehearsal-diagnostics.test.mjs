@@ -10,9 +10,10 @@ test("auth rehearsal maps raw pg connect failures to a safe stable status", asyn
     route,
     /catch\s*\{\s*throw new RehearsalError\("database_connect_failed", 503\);\s*\}/s,
   );
+  assert.doesNotMatch(route, /error\.(?:message|detail|stack)/);
   assert.doesNotMatch(
     route,
-    /error\.message|error\.detail|error\.stack|connectionString.*Response\.json/s,
+    /Response\.json\([^)]*(?:connectionString|databaseUrl|databaseCa|secret)/s,
   );
 });
 
