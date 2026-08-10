@@ -27,7 +27,10 @@ test("validator rejects Lovable, mutable image, production target, and enabled g
   );
   assert.throws(() =>
     validateAzureStagingTemplate({
-      template: template.replace("param generationEnabled bool = false", "param generationEnabled bool = true"),
+      template: template.replace(
+        "param generationEnabled bool = false",
+        "param generationEnabled bool = true",
+      ),
       parameters,
     }),
   );

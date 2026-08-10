@@ -43,13 +43,21 @@ export function validateAzureStagingTemplate({
   requireMatch(template, /targetPort: 3000/u, "web target port must match the container");
   requireMatch(template, /path: '\/api\/health'/u, "health probes must use the health route");
 
-  requireMatch(template, /@secure\(\)\s*param openAiSecretUri string/su, "OpenAI URI must be secure input");
+  requireMatch(
+    template,
+    /@secure\(\)\s*param openAiSecretUri string/su,
+    "OpenAI URI must be secure input",
+  );
   requireMatch(
     template,
     /@secure\(\)\s*param supabaseServiceRoleSecretUri string/su,
     "Supabase service-role URI must be secure input",
   );
-  requireMatch(template, /keyVaultUrl: openAiSecretUri/u, "OpenAI key must use Key Vault reference");
+  requireMatch(
+    template,
+    /keyVaultUrl: openAiSecretUri/u,
+    "OpenAI key must use Key Vault reference",
+  );
   requireMatch(
     template,
     /keyVaultUrl: supabaseServiceRoleSecretUri/u,
@@ -79,11 +87,23 @@ export function validateAzureStagingTemplate({
   requireMatch(template, /workspaceCapping/u, "Log Analytics daily cap missing");
   requireMatch(template, /logRetentionDays/u, "Log Analytics retention control missing");
 
-  rejectMatch(template, /@lovable\.dev|LOVABLE_|lovable\.(?:app|dev)/iu, "Lovable dependency prohibited");
+  rejectMatch(
+    template,
+    /@lovable\.dev|LOVABLE_|lovable\.(?:app|dev)/iu,
+    "Lovable dependency prohibited",
+  );
   rejectMatch(template, /ca-kovagpt-dev/u, "production app name prohibited in staging template");
   rejectMatch(template, /mfbycmbjygcfkrsuepxf/u, "real Supabase project prohibited");
-  rejectMatch(template, /rejectUnauthorized\s*:\s*false|NODE_TLS_REJECT_UNAUTHORIZED/iu, "TLS bypass prohibited");
-  rejectMatch(template, /OPENAI_API_KEY'\s*\n\s*value:/u, "OpenAI key cannot be a literal env value");
+  rejectMatch(
+    template,
+    /rejectUnauthorized\s*:\s*false|NODE_TLS_REJECT_UNAUTHORIZED/iu,
+    "TLS bypass prohibited",
+  );
+  rejectMatch(
+    template,
+    /OPENAI_API_KEY'\s*\n\s*value:/u,
+    "OpenAI key cannot be a literal env value",
+  );
   rejectMatch(
     template,
     /SUPABASE_SERVICE_ROLE_KEY'\s*\n\s*value:/u,
@@ -94,9 +114,17 @@ export function validateAzureStagingTemplate({
   assert.equal(values.minReplicas?.value, 0, "example must scale to zero");
   assert.equal(values.maxReplicas?.value, 2, "example max replicas must remain bounded");
   assert.equal(values.deployBudget?.value, false, "example budget requires explicit enablement");
-  assert.match(values.imageReference?.value ?? "", /@sha256:/u, "example image must be digest-pinned");
+  assert.match(
+    values.imageReference?.value ?? "",
+    /@sha256:/u,
+    "example image must be digest-pinned",
+  );
 
-  rejectMatch(parameters, /\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{20,}/u, "real OpenAI key prohibited");
+  rejectMatch(
+    parameters,
+    /\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{20,}/u,
+    "real OpenAI key prohibited",
+  );
   rejectMatch(parameters, /\bsb_secret_[A-Za-z0-9_-]{20,}/u, "real Supabase secret prohibited");
   rejectMatch(parameters, /mfbycmbjygcfkrsuepxf/u, "real Supabase project prohibited");
   rejectMatch(parameters, /lovable\.(?:app|dev)|LOVABLE_/iu, "Lovable configuration prohibited");
