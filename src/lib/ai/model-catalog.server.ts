@@ -1,9 +1,11 @@
 import { runtimeEnv } from "@/lib/runtime-env.server";
 
-export const MODEL_CATALOG_VERSION = "2026-08-03";
+export const MODEL_CATALOG_VERSION = "2026-08-10";
 export const MODEL_CATALOG_SOURCES = [
-  "https://platform.openai.com/docs/models",
-  "https://platform.openai.com/docs/pricing",
+  "https://developers.openai.com/api/docs/models/gpt-5.6-sol",
+  "https://developers.openai.com/api/docs/models/gpt-5.6-terra",
+  "https://developers.openai.com/api/docs/models/gpt-5.6-luna",
+  "https://openai.com/api/pricing/",
 ] as const;
 
 export type ModelTier = "guest" | "free" | "plus" | "pro";
@@ -21,8 +23,10 @@ export type CatalogModel = {
   tiers: readonly ModelTier[];
 };
 
-// Prices are USD per one million tokens. Updating models or prices requires a
-// catalog version bump and review against MODEL_CATALOG_SOURCES.
+// Prices are standard-processing USD per one million tokens. Updating models
+// or prices requires a catalog version bump and review against the sources
+// above. GPT-5.6 requests above 272K input tokens receive OpenAI's documented
+// long-context multiplier; that is enforced by the request accounting layer.
 export const OPENAI_TEXT_MODELS: readonly CatalogModel[] = [
   {
     id: "gpt-4.1-nano",
@@ -76,7 +80,7 @@ export const OPENAI_TEXT_MODELS: readonly CatalogModel[] = [
     tools: true,
     structuredOutput: true,
     maxOutputTokens: 128_000,
-    pricePerMillion: { input: 0.25, cachedInput: 0.025, output: 2 },
+    pricePerMillion: { input: 1, cachedInput: 0.1, output: 6 },
     tiers: ["guest", "free", "plus", "pro"],
   },
   {
@@ -87,7 +91,7 @@ export const OPENAI_TEXT_MODELS: readonly CatalogModel[] = [
     tools: true,
     structuredOutput: true,
     maxOutputTokens: 128_000,
-    pricePerMillion: { input: 1.25, cachedInput: 0.125, output: 10 },
+    pricePerMillion: { input: 2.5, cachedInput: 0.25, output: 15 },
     tiers: ["free", "plus", "pro"],
   },
   {
@@ -98,7 +102,7 @@ export const OPENAI_TEXT_MODELS: readonly CatalogModel[] = [
     tools: true,
     structuredOutput: true,
     maxOutputTokens: 128_000,
-    pricePerMillion: { input: 2.5, cachedInput: 0.25, output: 20 },
+    pricePerMillion: { input: 5, cachedInput: 0.5, output: 30 },
     tiers: ["plus", "pro"],
   },
 ] as const;
@@ -139,7 +143,6 @@ const policies: Record<
   },
 };
 
-
 export function modelForPolicy(policy: ModelPolicy): CatalogModel & { outputCeiling: number } {
   const definition = policies[policy];
   const id = runtimeEnv(definition.env) ?? definition.fallback;
@@ -164,9 +167,12 @@ export function estimateMaximumCostUsd(
   estimatedInputTokens: number,
   maximumOutputTokens: number,
 ): number {
+  const longContext = model.id.startsWith("gpt-5.6-") && estimatedInputTokens > 272_000;
+  const inputMultiplier = longContext ? 2 : 1;
+  const outputMultiplier = longContext ? 1.5 : 1;
   return (
-    (estimatedInputTokens * model.pricePerMillion.input +
-      maximumOutputTokens * model.pricePerMillion.output) /
+    (estimatedInputTokens * model.pricePerMillion.input * inputMultiplier +
+      maximumOutputTokens * model.pricePerMillion.output * outputMultiplier) /
     1_000_000
   );
 }
@@ -176,10 +182,13 @@ export function actualCostUsd(
   usage: { input: number; cachedInput: number; output: number },
 ): number {
   const uncached = Math.max(0, usage.input - usage.cachedInput);
+  const longContext = model.id.startsWith("gpt-5.6-") && usage.input > 272_000;
+  const inputMultiplier = longContext ? 2 : 1;
+  const outputMultiplier = longContext ? 1.5 : 1;
   return (
-    (uncached * model.pricePerMillion.input +
-      usage.cachedInput * model.pricePerMillion.cachedInput +
-      usage.output * model.pricePerMillion.output) /
+    (uncached * model.pricePerMillion.input * inputMultiplier +
+      usage.cachedInput * model.pricePerMillion.cachedInput * inputMultiplier +
+      usage.output * model.pricePerMillion.output * outputMultiplier) /
     1_000_000
   );
 }
