@@ -38,6 +38,18 @@ function safeDatabaseCloseFailure() {
   );
 }
 
+async function importWithSafeDatabaseFailure(
+  database: ReturnType<typeof createAuthRehearsalDatabaseAdapter>,
+  validated: Parameters<typeof importRehearsal>[1],
+) {
+  try {
+    return await importRehearsal(database, validated);
+  } catch (error) {
+    if (error instanceof RehearsalError) throw error;
+    throw new RehearsalError("database_operation_failed", 503);
+  }
+}
+
 const processGuard = createRehearsalProcessGuard();
 
 export const Route = createFileRoute("/api/internal/auth-migration/rehearsal")({
@@ -78,7 +90,7 @@ export const Route = createFileRoute("/api/internal/auth-migration/rehearsal")({
             throw new RehearsalError("database_connect_failed", 503);
           }
           const database = createAuthRehearsalDatabaseAdapter(client);
-          const result = await importRehearsal(database, validated);
+          const result = await importWithSafeDatabaseFailure(database, validated);
           processGuard.markCompleted();
           return Response.json(result, {
             headers: { "cache-control": "no-store" },
