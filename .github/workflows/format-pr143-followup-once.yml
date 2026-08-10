@@ -1,4 +1,4 @@
-name: Format PR 143 follow-up once
+name: Repair PR 143 foundation once
 
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  format:
+  repair:
     runs-on: ubuntu-latest
     steps:
       - name: Check out foundation branch
@@ -29,23 +29,194 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
 
-      - name: Format follow-up files
+      - name: Apply exact fail-closed foundation repairs
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require("node:fs");
+
+          function read(path) {
+            return fs.readFileSync(path, "utf8");
+          }
+
+          function write(path, value) {
+            fs.writeFileSync(path, value);
+          }
+
+          function replaceOnce(path, before, after) {
+            const source = read(path);
+            const first = source.indexOf(before);
+            if (first < 0) throw new Error(`${path}: expected text not found`);
+            if (source.indexOf(before, first + before.length) >= 0) {
+              throw new Error(`${path}: expected text is not unique`);
+            }
+            write(path, source.slice(0, first) + after + source.slice(first + before.length));
+          }
+
+          function replaceRegexOnce(path, pattern, after) {
+            const source = read(path);
+            const matches = source.match(new RegExp(pattern.source, pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`));
+            if (!matches || matches.length !== 1) {
+              throw new Error(`${path}: expected exactly one regex match, found ${matches?.length ?? 0}`);
+            }
+            write(path, source.replace(pattern, after));
+          }
+
+          function replaceSection(path, start, end, replacement) {
+            const source = read(path);
+            const startIndex = source.indexOf(start);
+            const endIndex = source.indexOf(end, startIndex + start.length);
+            if (startIndex < 0 || endIndex < 0) {
+              throw new Error(`${path}: section markers not found`);
+            }
+            write(path, source.slice(0, startIndex) + replacement + source.slice(endIndex));
+          }
+
+          replaceOnce(
+            "src/start.ts",
+            '"Permissions-Policy": "camera=(self), geolocation=(self), microphone=(self), payment=(self)",',
+            '"Permissions-Policy": "camera=(), geolocation=(self), microphone=(), payment=(self), usb=()",',
+          );
+
+          replaceOnce(
+            "src/lib/config/diagnostics.server.ts",
+            'aiProvider: feature(["LOVABLE_API_KEY", "OPENAI_API_KEY"]),',
+            'aiProvider: feature(["OPENAI_API_KEY"]),',
+          );
+          replaceOnce(
+            "src/lib/readiness.server.ts",
+            'aiProvider: capability(any("LOVABLE_API_KEY", "OPENAI_API_KEY")),',
+            'aiProvider: capability(present("OPENAI_API_KEY")),',
+          );
+          replaceOnce(
+            "src/lib/readiness.server.ts",
+            'images: capability(any("LOVABLE_API_KEY", "OPENAI_API_KEY")),',
+            'images: capability(present("OPENAI_API_KEY")),',
+          );
+
+          replaceOnce(
+            "src/lib/ai/model-catalog.server.ts",
+            'export const MODEL_CATALOG_SOURCES = [\n',
+            'export const MODEL_CATALOG_SOURCES = [\n  "https://platform.openai.com/docs/models",\n',
+          );
+          for (const [before, after] of [
+            ["maxOutput: 1_200", "maxOutput: 600"],
+            ["maxOutput: 4_000", "maxOutput: 2_000"],
+            ["maxOutput: 8_000", "maxOutput: 4_000"],
+            ["maxOutput: 16_000", "maxOutput: 4_000"],
+            ["maxOutput: 800", "maxOutput: 256"],
+          ]) {
+            replaceOnce("src/lib/ai/model-catalog.server.ts", before, after);
+          }
+
+          replaceOnce("src/routes/images.tsx", "  Paperclip,\n", "");
+          replaceOnce(
+            "src/routes/images.tsx",
+            "  const promptFileRef = useRef<HTMLInputElement>(null);\n",
+            "",
+          );
+          replaceRegexOnce(
+            "src/routes/images.tsx",
+            /\n\s*<button\s+type="button"\s+onClick=\{\(\) => promptFileRef\.current\?\.click\(\)\}[\s\S]*?<\/button>\s*<input\s+ref=\{promptFileRef\}[\s\S]*?\/>/u,
+            "",
+          );
+
+          const reviewPath = "tests/unit/review-findings.test.mjs";
+          replaceSection(
+            reviewPath,
+            'test("email routes do not report delivery success when the queue worker is unavailable", () => {',
+            'test("MCP validates Supabase bearer tokens and uses the real user id for created tasks", () => {',
+            `test("email routes fail closed when delivery is unavailable or retired", () => {
+              const support = read("src/routes/api/public/help-submit.ts");
+              const transactional = read("src/routes/lovable/email/transactional/send.ts");
+              assert.match(support, /KOVA_EMAIL_QUEUE_ENABLED/);
+              assert.match(support, /Email delivery is not configured/);
+              assert.match(transactional, /legacy_email_provider_retired/);
+              assert.match(transactional, /status: 410/);
+              assert.doesNotMatch(
+                transactional,
+                /KOVA_EMAIL_QUEUE_ENABLED|sendLovableEmail|@lovable\\.dev|LOVABLE_API_KEY/,
+              );
+            });
+
+            `,
+          );
+          replaceSection(
+            reviewPath,
+            'test("email previews and From display use KovaGPT production branding", () => {',
+            'test("model selectors only advertise backed intelligence modes", () => {',
+            `test("retired Lovable email routes expose no sender or preview implementation", () => {
+              for (const path of [
+                "src/routes/lovable/email/auth/preview.ts",
+                "src/routes/lovable/email/transactional/send.ts",
+              ]) {
+                const source = read(path);
+                assert.match(source, /legacy_email_provider_retired/);
+                assert.match(source, /status: 410/);
+                assert.doesNotMatch(
+                  source,
+                  /SITE_NAME|SAMPLE_PROJECT_URL|nova-aigpt|@lovable\\.dev|sendLovableEmail|LOVABLE_API_KEY/,
+                );
+              }
+            });
+
+            `,
+          );
+          replaceSection(
+            reviewPath,
+            'test("model selectors only advertise backed intelligence modes", () => {',
+            'test("upload quotas follow the signed-in tier and reject invalid sizes before charging", () => {',
+            `test("model selectors only advertise backed intelligence modes", () => {
+              const desktop = read("src/components/ModelSelector.tsx");
+              const responsive = read("src/components/ResponsiveModelSelector.tsx");
+              const chat = read("src/routes/api/chat.ts");
+              const shell = read("src/routes/index.tsx");
+
+              assert.match(desktop, /ResponsiveModelSelector/);
+              assert.match(responsive, /versionGroupsForTier\\(userTier\\)/);
+              for (const selector of [desktop, responsive]) {
+                assert.doesNotMatch(selector, /KOVA_VERSIONS|kova-version|KovaGPT version|Kova 3\\.[345]/);
+              }
+              assert.doesNotMatch(shell, /kovaVersion|kova-version/);
+              assert.doesNotMatch(
+                chat,
+                /kovaVersion|KOVA_VERSION|IS_LEGACY_KOVA|previous-generation model|Math\\.random\\(\\) \\* 4000/,
+              );
+              assert.match(chat, /if \\(m\\.reasoning\\)/);
+              assert.equal(existsSync("src/lib/kova-version.ts"), false);
+            });
+
+            `,
+          );
+          NODE
+
+      - name: Format repaired files
         run: >-
           npx prettier --write
           scripts/security/scan-ai-runtime.mjs
+          src/lib/ai/model-catalog.server.ts
           src/lib/ai/model-router.mjs
+          src/lib/config/diagnostics.server.ts
+          src/lib/readiness.server.ts
+          src/routes/images.tsx
+          src/start.ts
           tests/unit/azure-gpt56-foundation.test.mjs
+          tests/unit/review-findings.test.mjs
 
-      - name: Run focused tests and zero-Lovable scan
+      - name: Run complete unit and policy gates
         run: |
           set -euo pipefail
           node --test tests/unit/azure-gpt56-foundation.test.mjs
           node scripts/security/scan-ai-runtime.mjs
+          npm run lint
+          npm run typecheck
+          npm run test:unit
 
       - name: Remove this one-shot workflow
         run: rm .github/workflows/format-pr143-followup-once.yml
 
-      - name: Commit deterministic formatting
+      - name: Commit deterministic repair
         run: |
           set -euo pipefail
           git diff --check
@@ -53,5 +224,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add --all
           git diff --cached --quiet && exit 0
-          git commit -m "Format and verify GPT-5.6 routing follow-up"
+          git commit -m "Repair GPT-5.6 foundation policy gates"
           git push origin HEAD:program/azure-gpt56-foundation
