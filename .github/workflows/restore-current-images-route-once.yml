@@ -69,20 +69,24 @@ jobs:
             '                  aria-label="Describe a new image"\n',
             '                  aria-label="Describe the image to generate"\n',
           );
+
+          const keyboardHandler =
+            [
+              '                  onChange={(e) => setPrompt(e.target.value)}',
+              '                  onKeyDown={(event) => {',
+              '                    if (',
+              '                      event.key === "Enter" &&',
+              '                      !event.shiftKey &&',
+              '                      !event.nativeEvent.isComposing',
+              '                    ) {',
+              '                      event.preventDefault();',
+              '                      void generate(prompt);',
+              '                    }',
+              '                  }}',
+            ].join("\n") + "\n";
           replaceOnce(
             "                  onChange={(e) => setPrompt(e.target.value)}\n",
-            `                  onChange={(e) => setPrompt(e.target.value)}
-                  onKeyDown={(event) => {
-                    if (
-                      event.key === "Enter" &&
-                      !event.shiftKey &&
-                      !event.nativeEvent.isComposing
-                    ) {
-                      event.preventDefault();
-                      void generate(prompt);
-                    }
-                  }}
-`,
+            keyboardHandler,
           );
 
           if (/promptFileRef|Paperclip|Attach a reference image/.test(source)) {
