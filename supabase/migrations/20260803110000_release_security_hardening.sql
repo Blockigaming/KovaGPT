@@ -10,5 +10,6 @@ alter function public.family_owner_of(uuid) set search_path = public, pg_temp;
 
 alter table public.processed_stripe_events add column if not exists processed_at timestamptz;
 alter table public.processed_stripe_events add column if not exists correlation_id uuid;
-create index if not exists processed_stripe_events_created_at_idx on public.processed_stripe_events(created_at);
+create index if not exists processed_stripe_events_processed_at_idx
+  on public.processed_stripe_events(processed_at);
 revoke all on public.processed_stripe_events from anon, authenticated;

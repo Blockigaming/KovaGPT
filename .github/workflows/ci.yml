@@ -185,11 +185,32 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with: { pattern: e2e-blob-*, path: blob-reports, merge-multiple: true }
-      - run: npx playwright merge-reports --reporter=html ./blob-reports
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with: { name: merged-playwright-report, path: playwright-report }
+      - name: Download blob reports
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: e2e-blob-*
+          path: blob-reports
+          merge-multiple: true
+      - name: Detect blob reports
+        id: reports
+        shell: bash
+        run: |
+          if find blob-reports -type f -name '*.zip' -print -quit 2>/dev/null | grep -q .; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "No Playwright blob reports were produced; skipping report merge."
+          fi
+      - name: Merge Playwright reports
+        if: steps.reports.outputs.available == 'true'
+        run: npx playwright merge-reports --reporter=html ./blob-reports
+      - name: Upload merged Playwright report
+        if: steps.reports.outputs.available == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: merged-playwright-report
+          path: playwright-report
 
   isolated-database:
     runs-on: ubuntu-latest

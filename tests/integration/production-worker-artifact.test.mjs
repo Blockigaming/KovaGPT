@@ -90,6 +90,8 @@ test(
         detached: !isWindows,
         env: {
           ...process.env,
+          AI_GENERATION_ENABLED: "false",
+          AZURE_ENVIRONMENT: "ci",
           CI: "1",
           NO_COLOR: "1",
           WRANGLER_SEND_METRICS: "false",
