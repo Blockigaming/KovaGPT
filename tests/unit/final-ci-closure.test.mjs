@@ -4,8 +4,9 @@ import test from "node:test";
 
 test("production Worker smoke test disables unavailable AI providers without weakening runtime validation", async () => {
   const source = await readFile("tests/integration/production-worker-artifact.test.mjs", "utf8");
-  assert.match(source, /AI_GENERATION_ENABLED: "false"/u);
-  assert.match(source, /AZURE_ENVIRONMENT: "ci"/u);
+  assert.match(source, /"--var",\s*"AI_GENERATION_ENABLED:false"/u);
+  assert.match(source, /"--var",\s*"AZURE_ENVIRONMENT:ci"/u);
+  assert.doesNotMatch(source, /AI_GENERATION_ENABLED:\s*"false"/u);
   assert.match(source, /Worker did not become healthy/u);
 });
 
