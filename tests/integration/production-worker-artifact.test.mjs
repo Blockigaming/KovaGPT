@@ -84,14 +84,25 @@ test(
     let spawnError;
     const worker = spawn(
       wranglerBinary,
-      ["--cwd", "dist/server", "dev", "--local", "--ip", "127.0.0.1", "--port", String(port)],
+      [
+        "--cwd",
+        "dist/server",
+        "dev",
+        "--local",
+        "--ip",
+        "127.0.0.1",
+        "--port",
+        String(port),
+        "--var",
+        "AI_GENERATION_ENABLED:false",
+        "--var",
+        "AZURE_ENVIRONMENT:ci",
+      ],
       {
         cwd: fixtureRoot,
         detached: !isWindows,
         env: {
           ...process.env,
-          AI_GENERATION_ENABLED: "false",
-          AZURE_ENVIRONMENT: "ci",
           CI: "1",
           NO_COLOR: "1",
           WRANGLER_SEND_METRICS: "false",
