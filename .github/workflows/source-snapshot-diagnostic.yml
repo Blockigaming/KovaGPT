@@ -11,7 +11,7 @@ jobs:
   snapshot:
     if: github.event.pull_request.number == 175
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - name: Checkout current PR
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -63,5 +63,24 @@ jobs:
         with:
           name: reviewed-release-baseline-8ef0392
           path: reviewed-release-baseline.tgz
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Checkout last all-integration-green source baseline
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: 0a426ff3dab49cca1bdcbb2562806d86f01e44e7
+          path: integration-green-baseline
+
+      - name: Archive last all-integration-green source baseline
+        shell: bash
+        working-directory: integration-green-baseline
+        run: git ls-files -z | tar --null --files-from=- -czf ../integration-green-baseline.tgz
+
+      - name: Upload last all-integration-green source baseline
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: integration-green-baseline-0a426ff
+          path: integration-green-baseline.tgz
           if-no-files-found: error
           retention-days: 1
