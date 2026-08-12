@@ -59,7 +59,20 @@ jobs:
         run: npm run build
 
       - name: Integration tests
-        run: npm run test:integration
+        shell: bash
+        run: |
+          mkdir -p artifacts/ci
+          set -o pipefail
+          npm run test:integration 2>&1 | tee artifacts/ci/integration-tests.log
+
+      - name: Upload integration test log
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: integration-test-log-${{ github.sha }}
+          path: artifacts/ci/integration-tests.log
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
