@@ -1,0 +1,6 @@
+{
+  "revisions": [
+    { "name": "ca-kovagpt-staging--good", "active": true },
+    { "name": "ca-kovagpt-staging--candidate", "active": true }
+  ]
+}

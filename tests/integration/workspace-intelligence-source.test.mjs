@@ -71,9 +71,9 @@ test("chat history is searchable from both the sidebar and command palette", asy
   assert.match(search, /message\.content/);
   assert.match(search, /is:pinned/);
   assert.match(palette, /useDeferredValue/);
-  assert.match(palette, /archivedConversations/);
+  assert.match(palette, /conversationMatches/);
   assert.match(palette, /returnFocusRef/);
-  assert.match(home, /onSelectArchived/);
+  assert.match(home, /archiveConversation\(userKey, archived\)/);
 });
 
 test("all currently implementable gaps are closed and deferred gaps are classified", async () => {

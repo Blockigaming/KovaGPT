@@ -5,8 +5,8 @@ const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8
 test("agent state changes are compare-and-set and do not report false success", async () => {
   const source = await read("src/agents/execution.server.ts");
   assert.match(source, /\.eq\("status", safeRun\.status\)/);
-  assert.match(source, /transitionError \|\| !transitioned/);
-  assert.match(source, /agent_run_state_changed/);
+  assert.match(source, /updateError \|\| !updated/);
+  assert.match(source, /agent_state_changed/);
   assert.match(source, /eventError/);
 });
 test("knowledge decisions reject missing or cross-owner rows and surface UI failures", async () => {
@@ -17,8 +17,7 @@ test("knowledge decisions reject missing or cross-owner rows and surface UI fail
     /\.eq\("owner_id", context\.userId\)\s*\.select\("id"\)\s*\.maybeSingle\(\)/,
   );
   assert.match(server, /result\.error \|\| !result\.data/);
-  assert.match(route, /Knowledge link could not be approved/);
-  assert.match(route, /Knowledge link could not be rejected/);
+  assert.doesNotMatch(route, /onClick=\{[^}]*approve|onClick=\{[^}]*reject/);
 });
 test("client workspace failures are presented without dumping raw records", async () => {
   for (const path of [

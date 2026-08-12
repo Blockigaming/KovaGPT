@@ -1,0 +1,205 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "case": "configured success",
+      "fixtureBoundary": "provider adapter / Responses stream parser",
+      "expectedUserBehavior": "safe retryable or unavailable message; composer exits streaming",
+      "expectedServerBehavior": "fixed endpoint policy; no secret/body logging; bounded timeout; stable error envelope",
+      "billingInvariant": "no duplicate usage charge; retry preserves idempotency",
+      "privacyInvariant": "no silent provider switch that changes residency or terms",
+      "azureInvariant": "Azure and direct rollback are explicit operator configurations",
+      "liveValidationRequired": true
+    },
+    {
+      "case": "generation disabled",
+      "fixtureBoundary": "provider adapter / Responses stream parser",
+      "expectedUserBehavior": "safe retryable or unavailable message; composer exits streaming",
+      "expectedServerBehavior": "fixed endpoint policy; no secret/body logging; bounded timeout; stable error envelope",
+      "billingInvariant": "no duplicate usage charge; retry preserves idempotency",
+      "privacyInvariant": "no silent provider switch that changes residency or terms",
+      "azureInvariant": "Azure and direct rollback are explicit operator configurations",
+      "liveValidationRequired": false
+    },
+    {
+      "case": "missing credentials",
+      "fixtureBoundary": "provider adapter / Responses stream parser",
+      "expectedUserBehavior": "safe retryable or unavailable message; composer exits streaming",
+      "expectedServerBehavior": "fixed endpoint policy; no secret/body logging; bounded timeout; stable error envelope",
+      "billingInvariant": "no duplicate usage charge; retry preserves idempotency",
+      "privacyInvariant": "no silent provider switch that changes residency or terms",
+      "azureInvariant": "Azure and direct rollback are explicit operator configurations",
+      "liveValidationRequired": false
+    },
+    {
+      "case": "invalid endpoint",
+      "fixtureBoundary": "provider adapter / Responses stream parser",
+      "expectedUserBehavior": "safe retryable or unavailable message; composer exits streaming",
+      "expectedServerBehavior": "fixed endpoint policy; no secret/body logging; bounded timeout; stable error envelope",
+      "billingInvariant": "no duplicate usage charge; retry preserves idempotency",
+      "privacyInvariant": "no silent provider switch that changes residency or terms",
+      "azureInvariant": "Azure and direct rollback are explicit operator configurations",
+      "liveValidationRequired": false
+    },
+    {
+      "case": "disallowed endpoint",
+      "fixtureBoundary": "provider adapter / Responses stream parser",
+      "expectedUserBehavior": "safe retryable or unavailable message; composer exits streaming",
+      "expectedServerBehavior": "fixed endpoint policy; no secret/body logging; bounded timeout; stable error envelope",
+      "billingInvariant": "no duplicate usage charge; retry preserves idempotency",
+      "privacyInvariant": "no silent provider switch that changes residency or terms",
+      "azureInvariant": "Azure and direct rollback are explicit operator configurations",
+      "liveValidationRequired": false
+    },
+    {
+      "case": "timeout",
+      "fixtureBoundary": "provider adapter / Responses stream parser",
+      "expectedUserBehavior": "safe retryable or unavailable message; composer exits streaming",
+      "expectedServerBehavior": "fixed endpoint policy; no secret/body logging; bounded timeout; stable error envelope",
+      "billingInvariant": "no duplicate usage charge; retry preserves idempotency",
+      "privacyInvariant": "no silent provider switch that changes residency or terms",
+      "azureInvariant": "Azure and direct rollback are explicit operator configurations",
+      "liveValidationRequired": false
+    },
+    {
+      "case": "DNS/network failure",
+      "fixtureBoundary": "provider adapter / Responses stream parser",
+      "expectedUserBehavior": "safe retryable or unavailable message; composer exits streaming",
+      "expectedServerBehavior": "fixed endpoint policy; no secret/body logging; bounded timeout; stable error envelope",
+      "billingInvariant": "no duplicate usage charge; retry preserves idempotency",
+      "privacyInvariant": "no silent provider switch that changes residency or terms",
+      "azureInvariant": "Azure and direct rollback are explicit operator configurations",
+      "liveValidationRequired": false
+    },
+    {
+      "case": "401",
+      "fixtureBoundary": "provider adapter / Responses stream parser",
+      "expectedUserBehavior": "safe retryable or unavailable message; composer exits streaming",
+      "expectedServerBehavior": "fixed endpoint policy; no secret/body logging; bounded timeout; stable error envelope",
+      "billingInvariant": "no duplicate usage charge; retry preserves idempotency",
+      "privacyInvariant": "no silent provider switch that changes residency or terms",
+      "azureInvariant": "Azure and direct rollback are explicit operator configurations",
+      "liveValidationRequired": false
+    },
+    {
+      "case": "403",
+      "fixtureBoundary": "provider adapter / Responses stream parser",
+      "expectedUserBehavior": "safe retryable or unavailable message; composer exits streaming",
+      "expectedServerBehavior": "fixed endpoint policy; no secret/body logging; bounded timeout; stable error envelope",
+      "billingInvariant": "no duplicate usage charge; retry preserves idempotency",
+      "privacyInvariant": "no silent provider switch that changes residency or terms",
+      "azureInvariant": "Azure and direct rollback are explicit operator configurations",
+      "liveValidationRequired": false
+    },
+    {
+      "case": "429",
+      "fixtureBoundary": "provider adapter / Responses stream parser",
+      "expectedUserBehavior": "safe retryable or unavailable message; composer exits streaming",
+      "expectedServerBehavior": "fixed endpoint policy; no secret/body logging; bounded timeout; stable error envelope",
+      "billingInvariant": "no duplicate usage charge; retry preserves idempotency",
+      "privacyInvariant": "no silent provider switch that changes residency or terms",
+      "azureInvariant": "Azure and direct rollback are explicit operator configurations",
+      "liveValidationRequired": false
+    },
+    {
+      "case": "500",
+      "fixtureBoundary": "provider adapter / Responses stream parser",
+      "expectedUserBehavior": "safe retryable or unavailable message; composer exits streaming",
+      "expectedServerBehavior": "fixed endpoint policy; no secret/body logging; bounded timeout; stable error envelope",
+      "billingInvariant": "no duplicate usage charge; retry preserves idempotency",
+      "privacyInvariant": "no silent provider switch that changes residency or terms",
+      "azureInvariant": "Azure and direct rollback are explicit operator configurations",
+      "liveValidationRequired": false
+    },
+    {
+      "case": "malformed response",
+      "fixtureBoundary": "provider adapter / Responses stream parser",
+      "expectedUserBehavior": "safe retryable or unavailable message; composer exits streaming",
+      "expectedServerBehavior": "fixed endpoint policy; no secret/body logging; bounded timeout; stable error envelope",
+      "billingInvariant": "no duplicate usage charge; retry preserves idempotency",
+      "privacyInvariant": "no silent provider switch that changes residency or terms",
+      "azureInvariant": "Azure and direct rollback are explicit operator configurations",
+      "liveValidationRequired": false
+    },
+    {
+      "case": "malformed stream",
+      "fixtureBoundary": "provider adapter / Responses stream parser",
+      "expectedUserBehavior": "safe retryable or unavailable message; composer exits streaming",
+      "expectedServerBehavior": "fixed endpoint policy; no secret/body logging; bounded timeout; stable error envelope",
+      "billingInvariant": "no duplicate usage charge; retry preserves idempotency",
+      "privacyInvariant": "no silent provider switch that changes residency or terms",
+      "azureInvariant": "Azure and direct rollback are explicit operator configurations",
+      "liveValidationRequired": false
+    },
+    {
+      "case": "stream interruption",
+      "fixtureBoundary": "provider adapter / Responses stream parser",
+      "expectedUserBehavior": "safe retryable or unavailable message; composer exits streaming",
+      "expectedServerBehavior": "fixed endpoint policy; no secret/body logging; bounded timeout; stable error envelope",
+      "billingInvariant": "no duplicate usage charge; retry preserves idempotency",
+      "privacyInvariant": "no silent provider switch that changes residency or terms",
+      "azureInvariant": "Azure and direct rollback are explicit operator configurations",
+      "liveValidationRequired": false
+    },
+    {
+      "case": "tool-call error",
+      "fixtureBoundary": "provider adapter / Responses stream parser",
+      "expectedUserBehavior": "safe retryable or unavailable message; composer exits streaming",
+      "expectedServerBehavior": "fixed endpoint policy; no secret/body logging; bounded timeout; stable error envelope",
+      "billingInvariant": "no duplicate usage charge; retry preserves idempotency",
+      "privacyInvariant": "no silent provider switch that changes residency or terms",
+      "azureInvariant": "Azure and direct rollback are explicit operator configurations",
+      "liveValidationRequired": false
+    },
+    {
+      "case": "provider quota exhaustion",
+      "fixtureBoundary": "provider adapter / Responses stream parser",
+      "expectedUserBehavior": "safe retryable or unavailable message; composer exits streaming",
+      "expectedServerBehavior": "fixed endpoint policy; no secret/body logging; bounded timeout; stable error envelope",
+      "billingInvariant": "no duplicate usage charge; retry preserves idempotency",
+      "privacyInvariant": "no silent provider switch that changes residency or terms",
+      "azureInvariant": "Azure and direct rollback are explicit operator configurations",
+      "liveValidationRequired": false
+    },
+    {
+      "case": "provider outage",
+      "fixtureBoundary": "provider adapter / Responses stream parser",
+      "expectedUserBehavior": "safe retryable or unavailable message; composer exits streaming",
+      "expectedServerBehavior": "fixed endpoint policy; no secret/body logging; bounded timeout; stable error envelope",
+      "billingInvariant": "no duplicate usage charge; retry preserves idempotency",
+      "privacyInvariant": "no silent provider switch that changes residency or terms",
+      "azureInvariant": "Azure and direct rollback are explicit operator configurations",
+      "liveValidationRequired": false
+    },
+    {
+      "case": "Azure endpoint failure",
+      "fixtureBoundary": "provider adapter / Responses stream parser",
+      "expectedUserBehavior": "safe retryable or unavailable message; composer exits streaming",
+      "expectedServerBehavior": "fixed endpoint policy; no secret/body logging; bounded timeout; stable error envelope",
+      "billingInvariant": "no duplicate usage charge; retry preserves idempotency",
+      "privacyInvariant": "no silent provider switch that changes residency or terms",
+      "azureInvariant": "Azure and direct rollback are explicit operator configurations",
+      "liveValidationRequired": true
+    },
+    {
+      "case": "direct-provider rollback path",
+      "fixtureBoundary": "provider adapter / Responses stream parser",
+      "expectedUserBehavior": "safe retryable or unavailable message; composer exits streaming",
+      "expectedServerBehavior": "fixed endpoint policy; no secret/body logging; bounded timeout; stable error envelope",
+      "billingInvariant": "no duplicate usage charge; retry preserves idempotency",
+      "privacyInvariant": "no silent provider switch that changes residency or terms",
+      "azureInvariant": "Azure and direct rollback are explicit operator configurations",
+      "liveValidationRequired": true
+    },
+    {
+      "case": "kill switch",
+      "fixtureBoundary": "provider adapter / Responses stream parser",
+      "expectedUserBehavior": "safe retryable or unavailable message; composer exits streaming",
+      "expectedServerBehavior": "fixed endpoint policy; no secret/body logging; bounded timeout; stable error envelope",
+      "billingInvariant": "no duplicate usage charge; retry preserves idempotency",
+      "privacyInvariant": "no silent provider switch that changes residency or terms",
+      "azureInvariant": "Azure and direct rollback are explicit operator configurations",
+      "liveValidationRequired": false
+    }
+  ]
+}

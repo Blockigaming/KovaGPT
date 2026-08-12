@@ -25,13 +25,14 @@ test("AI provider adapter exposes typed capabilities and safe errors", () => {
   }
 });
 
-test("AI requests are locked to the official OpenAI endpoint", () => {
+test("AI requests are locked to approved direct or managed OpenAI endpoints", () => {
   const source = read("src/lib/ai/provider.server.ts");
   assert.match(source, /const OPENAI_API_BASE_URL = "https:\/\/api\.openai\.com\/v1"/);
   assert.match(source, /provider: "openai"/);
   assert.match(source, /redirect: "error"/);
   assert.doesNotMatch(source, /OPENAI_BASE_URL|AI_PROVIDER_URL|AI_PROVIDER_API_KEY/);
-  assert.doesNotMatch(source, /LOVABLE_API_KEY|LOVABLE_AI_BASE_URL|Lovable-API-Key/i);
+  assert.match(source, /LOVABLE_GATEWAY_BASE_URL = "https:\/\/ai\.gateway\.lovable\.dev\/v1"/);
+  assert.doesNotMatch(source, /LOVABLE_AI_BASE_URL|Lovable-API-Key/i);
   assert.doesNotMatch(source, /VITE_.*API_KEY/);
 });
 

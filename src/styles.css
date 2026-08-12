@@ -850,18 +850,13 @@ body {
   cursor: not-allowed;
   opacity: 0.48;
 }
-:where(
-  [data-kova-dialog-surface],
-  [role="menu"],
-  [role="listbox"],
-  [data-radix-popper-content-wrapper]
-) {
+:where([role="menu"], [role="listbox"], [data-radix-popper-content-wrapper]) {
   transform-origin: var(--radix-popover-content-transform-origin, center);
 }
-:where([data-kova-dialog-surface], [role="menu"], [role="listbox"])[data-state="open"] {
+:where([role="menu"], [role="listbox"])[data-state="open"] {
   animation: kova-surface-in var(--motion-menu) var(--ease-spring) both;
 }
-:where([data-kova-dialog-surface], [role="menu"], [role="listbox"])[data-state="closed"] {
+:where([role="menu"], [role="listbox"])[data-state="closed"] {
   animation: kova-surface-out var(--motion-fast) var(--ease-standard) both;
 }
 @keyframes kova-surface-in {
@@ -1804,7 +1799,6 @@ body {
     padding-bottom: 0;
   }
 
-
   .kova-composer-leading {
     padding-left: calc((var(--composer-height) - var(--composer-control)) / 2);
   }
@@ -2039,7 +2033,6 @@ body {
   .kova-secondary-page > .kova-toolbar {
     margin-bottom: 0;
   }
-
 
   .kova-secondary-page :is(input, textarea, select),
   .kova-settings-dialog :is(input, textarea, select),

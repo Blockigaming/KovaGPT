@@ -306,8 +306,6 @@ export function Sidebar({
         </div>
       ) : null}
 
-
-
       <aside
         ref={drawerRef}
         style={
@@ -386,7 +384,6 @@ export function Sidebar({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search titles, messages, or operators…"
                 className="h-10 w-full rounded-lg border border-border/60 bg-background px-3 text-sm outline-none transition focus:border-ring focus-visible:ring-2 focus-visible:ring-ring"
-
               />
             </div>
           ) : null}
@@ -397,7 +394,7 @@ export function Sidebar({
                 onNew();
                 closeAfterMobileNavigation();
               }}
-              className={navItemClass(false)}
+              className={`${navItemClass(false)} kova-new-chat`}
               aria-label="New chat"
               title="New chat"
             >
@@ -584,7 +581,6 @@ export function Sidebar({
                 ) : null}
               </div>
             ) : null}
-
           </div>
         </div>
       </aside>

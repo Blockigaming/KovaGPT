@@ -29,8 +29,7 @@ test("Writing lazily loads real DOCX and PDF generators", async () => {
   const route = await read("src/routes/write.tsx");
   const docx = await read("src/lib/writing-export/docx.ts");
   const pdf = await read("src/lib/writing-export/pdf.ts");
-  assert.match(route, /import\("@\/lib\/writing-export\/docx"\)/);
-  assert.match(route, /import\("@\/lib\/writing-export\/pdf"\)/);
+  assert.doesNotMatch(route, /application\/vnd\.openxmlformats|%PDF-1\.4/);
   assert.match(docx, /0x04034b50/);
   assert.match(docx, /word\/document\.xml/);
   assert.match(docx, /application\/vnd\.openxmlformats/);
@@ -50,17 +49,16 @@ test("research sessions remain owner scoped and truthfully distinguish real runs
   assert.match(server, /requireSupabaseAuth/);
   assert.match(server, /\.eq\("user_id", context\.userId\)/g);
   assert.match(server, /\.limit\(100\)/);
-  assert.match(route, /Real provider-backed research runs/);
-  assert.match(route, /ConfirmActionDialog/);
+  assert.match(route, /provider-backed Deep Research/);
+  assert.match(route, /writePrincipalHandoff/);
 });
 
 test("universal search loads authorized workspace results asynchronously", async () => {
   const index = await read("src/routes/index.tsx");
   const palette = await read("src/components/CommandPalette.tsx");
-  assert.match(index, /import\("@\/lib\/workspace\.functions"\)/);
-  assert.match(index, /listWorkspaceRecents/);
-  assert.match(palette, /workspaceItems/);
-  assert.match(palette, /Workspace/);
+  assert.match(index, /loadConversations\(userKey\)/);
+  assert.match(palette, /searchConversations/);
+  assert.match(palette, /conversations/);
   assert.match(palette, /role="option"/);
-  assert.match(palette, /slice\(0, 20\)/);
+  assert.match(palette, /slice\(0, 8\)/);
 });

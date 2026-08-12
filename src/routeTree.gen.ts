@@ -10,50 +10,111 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as AcceptableUseRouteImport } from './routes/acceptable-use'
+import { Route as AccessibilityRouteImport } from './routes/accessibility'
+import { Route as AccountDeletionRouteImport } from './routes/account-deletion'
 import { Route as AiHumanizerRouteImport } from './routes/ai-humanizer'
 import { Route as AiImageGeneratorRouteImport } from './routes/ai-image-generator'
 import { Route as AiSafetyRouteImport } from './routes/ai-safety'
 import { Route as AiWriterRouteImport } from './routes/ai-writer'
+import { Route as AnnouncementsRouteImport } from './routes/announcements'
 import { Route as AppsRouteImport } from './routes/apps'
+import { Route as AssistantsRouteImport } from './routes/assistants'
 import { Route as AuditLogRouteImport } from './routes/audit-log'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as BrandRouteImport } from './routes/brand'
+import { Route as BusinessRouteImport } from './routes/business'
+import { Route as CareersRouteImport } from './routes/careers'
+import { Route as CaseStudiesRouteImport } from './routes/case-studies'
 import { Route as ChangelogRouteImport } from './routes/changelog'
+import { Route as ChatRouteImport } from './routes/chat'
 import { Route as ChatgptAlternativeRouteImport } from './routes/chatgpt-alternative'
 import { Route as CodeHelperRouteImport } from './routes/code-helper'
+import { Route as CompanyRouteImport } from './routes/company'
 import { Route as ConnectRouteImport } from './routes/connect'
+import { Route as ContactRouteImport } from './routes/contact'
 import { Route as ContactSupportRouteImport } from './routes/contact-support'
+import { Route as ContentModerationRouteImport } from './routes/content-moderation'
 import { Route as ContextPacksRouteImport } from './routes/context-packs'
+import { Route as CookiePolicyRouteImport } from './routes/cookie-policy'
+import { Route as CopyrightRouteImport } from './routes/copyright'
+import { Route as CustomerStoriesRouteImport } from './routes/customer-stories'
+import { Route as CustomersRouteImport } from './routes/customers'
+import { Route as DataControlsRouteImport } from './routes/data-controls'
+import { Route as DataExportRouteImport } from './routes/data-export'
+import { Route as DataProcessingRouteImport } from './routes/data-processing'
+import { Route as DevelopersRouteImport } from './routes/developers'
+import { Route as EducationRouteImport } from './routes/education'
+import { Route as EnRouteImport } from './routes/en'
+import { Route as EngineeringRouteImport } from './routes/engineering'
+import { Route as EnterpriseRouteImport } from './routes/enterprise'
+import { Route as FamiliesRouteImport } from './routes/families'
+import { Route as FamilySafetyRouteImport } from './routes/family-safety'
+import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as FilesRouteImport } from './routes/files'
 import { Route as GettingStartedRouteImport } from './routes/getting-started'
+import { Route as GuidesRouteImport } from './routes/guides'
+import { Route as HealthRouteImport } from './routes/health'
 import { Route as HelpRouteImport } from './routes/help'
 import { Route as HumanizeAiTextRouteImport } from './routes/humanize-ai-text'
 import { Route as ImagesRouteImport } from './routes/images'
 import { Route as KnowledgeGraphRouteImport } from './routes/knowledge-graph'
+import { Route as LawEnforcementRouteImport } from './routes/law-enforcement'
+import { Route as LeadershipRouteImport } from './routes/leadership'
+import { Route as LearnRouteImport } from './routes/learn'
 import { Route as LibraryRouteImport } from './routes/library'
+import { Route as MapsRouteImport } from './routes/maps'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MemoryRouteImport } from './routes/memory'
+import { Route as MissionRouteImport } from './routes/mission'
+import { Route as ModelBehaviorRouteImport } from './routes/model-behavior'
 import { Route as ModesRouteImport } from './routes/modes'
+import { Route as NewRouteImport } from './routes/new'
+import { Route as NewsRouteImport } from './routes/news'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as OmegaRouteImport } from './routes/omega'
+import { Route as OrganizationsRouteImport } from './routes/organizations'
+import { Route as OverviewRouteImport } from './routes/overview'
+import { Route as PartnersRouteImport } from './routes/partners'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as PromptStudioRouteImport } from './routes/prompt-studio'
 import { Route as RefundRouteImport } from './routes/refund'
+import { Route as RegionalNoticesRouteImport } from './routes/regional-notices'
+import { Route as ReleaseNotesRouteImport } from './routes/release-notes'
+import { Route as ResearchRouteImport } from './routes/research'
 import { Route as ResearchAssistantRouteImport } from './routes/research-assistant'
 import { Route as ResearchPlannerRouteImport } from './routes/research-planner'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as ResponsibleDisclosureRouteImport } from './routes/responsible-disclosure'
+import { Route as SafetyEvaluationsRouteImport } from './routes/safety-evaluations'
 import { Route as ScheduledTasksRouteImport } from './routes/scheduled-tasks'
+import { Route as SearchRouteImport } from './routes/search'
+import { Route as SecurityRouteImport } from './routes/security'
+import { Route as ShoppingRouteImport } from './routes/shopping'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StatusRouteImport } from './routes/status'
+import { Route as StudentsRouteImport } from './routes/students'
 import { Route as StudyAssistantRouteImport } from './routes/study-assistant'
 import { Route as SummaryRouteImport } from './routes/summary'
+import { Route as TechnicalReportsRouteImport } from './routes/technical-reports'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as TranslateRouteImport } from './routes/translate'
+import { Route as TransparencyRouteImport } from './routes/transparency'
+import { Route as TrustRouteImport } from './routes/trust'
+import { Route as TutorialsRouteImport } from './routes/tutorials'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
+import { Route as UpdatesRouteImport } from './routes/updates'
+import { Route as UseCasesRouteImport } from './routes/use-cases'
+import { Route as VideosRouteImport } from './routes/videos'
 import { Route as WorkRouteImport } from './routes/work'
 import { Route as WriteRouteImport } from './routes/write'
+import { Route as WritingRouteImport } from './routes/writing'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AnnouncementsSlugRouteImport } from './routes/announcements.$slug'
 import { Route as ApiAccountRouteImport } from './routes/api/account'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiGenerateImageRouteImport } from './routes/api/generate-image'
@@ -65,12 +126,66 @@ import { Route as ApiReadyzRouteImport } from './routes/api/readyz'
 import { Route as ApiTitleRouteImport } from './routes/api/title'
 import { Route as ApiVersionRouteImport } from './routes/api/version'
 import { Route as ApiWriteRouteImport } from './routes/api/write'
+import { Route as AppsCategoryRouteImport } from './routes/apps.$category'
+import { Route as AssistantsAssistantSlugRouteImport } from './routes/assistants.$assistantSlug'
 import { Route as BlogAiMarketResearchGuideRouteImport } from './routes/blog.ai-market-research-guide'
 import { Route as BlogBestAiAssistantsRouteImport } from './routes/blog.best-ai-assistants'
 import { Route as BlogBestAiMarketResearchToolsRouteImport } from './routes/blog.best-ai-market-research-tools'
+import { Route as CanvasDocumentIdRouteImport } from './routes/canvas.$documentId'
+import { Route as CaseStudiesSlugRouteImport } from './routes/case-studies.$slug'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
+import { Route as DevelopersApiRouteImport } from './routes/developers.api'
+import { Route as DevelopersApiKeysRouteImport } from './routes/developers.api-keys'
+import { Route as DevelopersAuthenticationRouteImport } from './routes/developers.authentication'
+import { Route as DevelopersBillingRouteImport } from './routes/developers.billing'
+import { Route as DevelopersChangelogRouteImport } from './routes/developers.changelog'
+import { Route as DevelopersErrorsRouteImport } from './routes/developers.errors'
+import { Route as DevelopersExamplesRouteImport } from './routes/developers.examples'
+import { Route as DevelopersFilesRouteImport } from './routes/developers.files'
+import { Route as DevelopersImageGenerationRouteImport } from './routes/developers.image-generation'
+import { Route as DevelopersMigrationsRouteImport } from './routes/developers.migrations'
+import { Route as DevelopersModelsRouteImport } from './routes/developers.models'
+import { Route as DevelopersPoliciesRouteImport } from './routes/developers.policies'
+import { Route as DevelopersPricingRouteImport } from './routes/developers.pricing'
+import { Route as DevelopersQuickstartRouteImport } from './routes/developers.quickstart'
+import { Route as DevelopersRateLimitsRouteImport } from './routes/developers.rate-limits'
+import { Route as DevelopersReferenceRouteImport } from './routes/developers.reference'
+import { Route as DevelopersSafetyRouteImport } from './routes/developers.safety'
+import { Route as DevelopersSdksRouteImport } from './routes/developers.sdks'
+import { Route as DevelopersStatusRouteImport } from './routes/developers.status'
+import { Route as DevelopersStreamingRouteImport } from './routes/developers.streaming'
+import { Route as DevelopersTermsRouteImport } from './routes/developers.terms'
+import { Route as DevelopersToolCallingRouteImport } from './routes/developers.tool-calling'
+import { Route as DevelopersUsageRouteImport } from './routes/developers.usage'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
+import { Route as EngineeringSlugRouteImport } from './routes/engineering.$slug'
+import { Route as GuidesSlugRouteImport } from './routes/guides.$slug'
+import { Route as NewsSlugRouteImport } from './routes/news.$slug'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
+import { Route as ReleaseNotesSlugRouteImport } from './routes/release-notes.$slug'
+import { Route as ResearchSlugRouteImport } from './routes/research.$slug'
+import { Route as SafetyEvaluationsSlugRouteImport } from './routes/safety-evaluations.$slug'
+import { Route as ShareShareIdRouteImport } from './routes/share.$shareId'
+import { Route as TechnicalReportsSlugRouteImport } from './routes/technical-reports.$slug'
+import { Route as TutorialsSlugRouteImport } from './routes/tutorials.$slug'
+import { Route as UpdatesSlugRouteImport } from './routes/updates.$slug'
+import { Route as UseCasesAiAssistantRouteImport } from './routes/use-cases.ai-assistant'
+import { Route as UseCasesAiChatbotRouteImport } from './routes/use-cases.ai-chatbot'
+import { Route as UseCasesBrainstormingRouteImport } from './routes/use-cases.brainstorming'
+import { Route as UseCasesBusinessAssistantRouteImport } from './routes/use-cases.business-assistant'
+import { Route as UseCasesDocumentAnalysisRouteImport } from './routes/use-cases.document-analysis'
+import { Route as UseCasesEducationAssistantRouteImport } from './routes/use-cases.education-assistant'
+import { Route as UseCasesEmailWritingRouteImport } from './routes/use-cases.email-writing'
+import { Route as UseCasesFileAnalysisRouteImport } from './routes/use-cases.file-analysis'
+import { Route as UseCasesGrammarCheckerRouteImport } from './routes/use-cases.grammar-checker'
+import { Route as UseCasesMathHelpRouteImport } from './routes/use-cases.math-help'
+import { Route as UseCasesParaphrasingRouteImport } from './routes/use-cases.paraphrasing'
+import { Route as UseCasesResumeHelpRouteImport } from './routes/use-cases.resume-help'
+import { Route as UseCasesShoppingResearchRouteImport } from './routes/use-cases.shopping-research'
+import { Route as UseCasesSummarizationRouteImport } from './routes/use-cases.summarization'
+import { Route as UseCasesTranslationRouteImport } from './routes/use-cases.translation'
+import { Route as UseCasesWritingAssistantRouteImport } from './routes/use-cases.writing-assistant'
+import { Route as VideosSlugRouteImport } from './routes/videos.$slug'
 import { Route as Char126oauthCallbackRouteImport } from './routes/~oauth.callback'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
@@ -112,6 +227,26 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AcceptableUseRoute = AcceptableUseRouteImport.update({
+  id: '/acceptable-use',
+  path: '/acceptable-use',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccessibilityRoute = AccessibilityRouteImport.update({
+  id: '/accessibility',
+  path: '/accessibility',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountDeletionRoute = AccountDeletionRouteImport.update({
+  id: '/account-deletion',
+  path: '/account-deletion',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AiHumanizerRoute = AiHumanizerRouteImport.update({
   id: '/ai-humanizer',
   path: '/ai-humanizer',
@@ -132,9 +267,19 @@ const AiWriterRoute = AiWriterRouteImport.update({
   path: '/ai-writer',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AnnouncementsRoute = AnnouncementsRouteImport.update({
+  id: '/announcements',
+  path: '/announcements',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppsRoute = AppsRouteImport.update({
   id: '/apps',
   path: '/apps',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AssistantsRoute = AssistantsRouteImport.update({
+  id: '/assistants',
+  path: '/assistants',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuditLogRoute = AuditLogRouteImport.update({
@@ -147,9 +292,34 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BrandRoute = BrandRouteImport.update({
+  id: '/brand',
+  path: '/brand',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BusinessRoute = BusinessRouteImport.update({
+  id: '/business',
+  path: '/business',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CareersRoute = CareersRouteImport.update({
+  id: '/careers',
+  path: '/careers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CaseStudiesRoute = CaseStudiesRouteImport.update({
+  id: '/case-studies',
+  path: '/case-studies',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ChangelogRoute = ChangelogRouteImport.update({
   id: '/changelog',
   path: '/changelog',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChatRoute = ChatRouteImport.update({
+  id: '/chat',
+  path: '/chat',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChatgptAlternativeRoute = ChatgptAlternativeRouteImport.update({
@@ -162,9 +332,19 @@ const CodeHelperRoute = CodeHelperRouteImport.update({
   path: '/code-helper',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CompanyRoute = CompanyRouteImport.update({
+  id: '/company',
+  path: '/company',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ConnectRoute = ConnectRouteImport.update({
   id: '/connect',
   path: '/connect',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactSupportRoute = ContactSupportRouteImport.update({
@@ -172,9 +352,89 @@ const ContactSupportRoute = ContactSupportRouteImport.update({
   path: '/contact-support',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ContentModerationRoute = ContentModerationRouteImport.update({
+  id: '/content-moderation',
+  path: '/content-moderation',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ContextPacksRoute = ContextPacksRouteImport.update({
   id: '/context-packs',
   path: '/context-packs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CookiePolicyRoute = CookiePolicyRouteImport.update({
+  id: '/cookie-policy',
+  path: '/cookie-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CopyrightRoute = CopyrightRouteImport.update({
+  id: '/copyright',
+  path: '/copyright',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CustomerStoriesRoute = CustomerStoriesRouteImport.update({
+  id: '/customer-stories',
+  path: '/customer-stories',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CustomersRoute = CustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DataControlsRoute = DataControlsRouteImport.update({
+  id: '/data-controls',
+  path: '/data-controls',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DataExportRoute = DataExportRouteImport.update({
+  id: '/data-export',
+  path: '/data-export',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DataProcessingRoute = DataProcessingRouteImport.update({
+  id: '/data-processing',
+  path: '/data-processing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevelopersRoute = DevelopersRouteImport.update({
+  id: '/developers',
+  path: '/developers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EducationRoute = EducationRouteImport.update({
+  id: '/education',
+  path: '/education',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EnRoute = EnRouteImport.update({
+  id: '/en',
+  path: '/en',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EngineeringRoute = EngineeringRouteImport.update({
+  id: '/engineering',
+  path: '/engineering',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EnterpriseRoute = EnterpriseRouteImport.update({
+  id: '/enterprise',
+  path: '/enterprise',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FamiliesRoute = FamiliesRouteImport.update({
+  id: '/families',
+  path: '/families',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FamilySafetyRoute = FamilySafetyRouteImport.update({
+  id: '/family-safety',
+  path: '/family-safety',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeaturesRoute = FeaturesRouteImport.update({
+  id: '/features',
+  path: '/features',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FilesRoute = FilesRouteImport.update({
@@ -185,6 +445,16 @@ const FilesRoute = FilesRouteImport.update({
 const GettingStartedRoute = GettingStartedRouteImport.update({
   id: '/getting-started',
   path: '/getting-started',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuidesRoute = GuidesRouteImport.update({
+  id: '/guides',
+  path: '/guides',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HealthRoute = HealthRouteImport.update({
+  id: '/health',
+  path: '/health',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HelpRoute = HelpRouteImport.update({
@@ -207,9 +477,29 @@ const KnowledgeGraphRoute = KnowledgeGraphRouteImport.update({
   path: '/knowledge-graph',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LawEnforcementRoute = LawEnforcementRouteImport.update({
+  id: '/law-enforcement',
+  path: '/law-enforcement',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LeadershipRoute = LeadershipRouteImport.update({
+  id: '/leadership',
+  path: '/leadership',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LearnRoute = LearnRouteImport.update({
+  id: '/learn',
+  path: '/learn',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LibraryRoute = LibraryRouteImport.update({
   id: '/library',
   path: '/library',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MapsRoute = MapsRouteImport.update({
+  id: '/maps',
+  path: '/maps',
   getParentRoute: () => rootRouteImport,
 } as any)
 const McpRoute = McpRouteImport.update({
@@ -222,9 +512,29 @@ const MemoryRoute = MemoryRouteImport.update({
   path: '/memory',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MissionRoute = MissionRouteImport.update({
+  id: '/mission',
+  path: '/mission',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ModelBehaviorRoute = ModelBehaviorRouteImport.update({
+  id: '/model-behavior',
+  path: '/model-behavior',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ModesRoute = ModesRouteImport.update({
   id: '/modes',
   path: '/modes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NewRoute = NewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NewsRoute = NewsRouteImport.update({
+  id: '/news',
+  path: '/news',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotificationsRoute = NotificationsRouteImport.update({
@@ -235,6 +545,21 @@ const NotificationsRoute = NotificationsRouteImport.update({
 const OmegaRoute = OmegaRouteImport.update({
   id: '/omega',
   path: '/omega',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrganizationsRoute = OrganizationsRouteImport.update({
+  id: '/organizations',
+  path: '/organizations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OverviewRoute = OverviewRouteImport.update({
+  id: '/overview',
+  path: '/overview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PartnersRoute = PartnersRouteImport.update({
+  id: '/partners',
+  path: '/partners',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PricingRoute = PricingRouteImport.update({
@@ -262,6 +587,21 @@ const RefundRoute = RefundRouteImport.update({
   path: '/refund',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RegionalNoticesRoute = RegionalNoticesRouteImport.update({
+  id: '/regional-notices',
+  path: '/regional-notices',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReleaseNotesRoute = ReleaseNotesRouteImport.update({
+  id: '/release-notes',
+  path: '/release-notes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResearchRoute = ResearchRouteImport.update({
+  id: '/research',
+  path: '/research',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResearchAssistantRoute = ResearchAssistantRouteImport.update({
   id: '/research-assistant',
   path: '/research-assistant',
@@ -277,9 +617,34 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResponsibleDisclosureRoute = ResponsibleDisclosureRouteImport.update({
+  id: '/responsible-disclosure',
+  path: '/responsible-disclosure',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SafetyEvaluationsRoute = SafetyEvaluationsRouteImport.update({
+  id: '/safety-evaluations',
+  path: '/safety-evaluations',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ScheduledTasksRoute = ScheduledTasksRouteImport.update({
   id: '/scheduled-tasks',
   path: '/scheduled-tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SecurityRoute = SecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShoppingRoute = ShoppingRouteImport.update({
+  id: '/shopping',
+  path: '/shopping',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -292,6 +657,11 @@ const StatusRoute = StatusRouteImport.update({
   path: '/status',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StudentsRoute = StudentsRouteImport.update({
+  id: '/students',
+  path: '/students',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StudyAssistantRoute = StudyAssistantRouteImport.update({
   id: '/study-assistant',
   path: '/study-assistant',
@@ -302,14 +672,54 @@ const SummaryRoute = SummaryRouteImport.update({
   path: '/summary',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TechnicalReportsRoute = TechnicalReportsRouteImport.update({
+  id: '/technical-reports',
+  path: '/technical-reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TranslateRoute = TranslateRouteImport.update({
+  id: '/translate',
+  path: '/translate',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TransparencyRoute = TransparencyRouteImport.update({
+  id: '/transparency',
+  path: '/transparency',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrustRoute = TrustRouteImport.update({
+  id: '/trust',
+  path: '/trust',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TutorialsRoute = TutorialsRouteImport.update({
+  id: '/tutorials',
+  path: '/tutorials',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UnsubscribeRoute = UnsubscribeRouteImport.update({
   id: '/unsubscribe',
   path: '/unsubscribe',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UpdatesRoute = UpdatesRouteImport.update({
+  id: '/updates',
+  path: '/updates',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UseCasesRoute = UseCasesRouteImport.update({
+  id: '/use-cases',
+  path: '/use-cases',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VideosRoute = VideosRouteImport.update({
+  id: '/videos',
+  path: '/videos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkRoute = WorkRouteImport.update({
@@ -320,6 +730,11 @@ const WorkRoute = WorkRouteImport.update({
 const WriteRoute = WriteRouteImport.update({
   id: '/write',
   path: '/write',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WritingRoute = WritingRouteImport.update({
+  id: '/writing',
+  path: '/writing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const Char91DotmcpChar93ListToolsRoute =
@@ -334,6 +749,11 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
     path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AnnouncementsSlugRoute = AnnouncementsSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => AnnouncementsRoute,
+} as any)
 const ApiAccountRoute = ApiAccountRouteImport.update({
   id: '/api/account',
   path: '/api/account',
@@ -389,6 +809,16 @@ const ApiWriteRoute = ApiWriteRouteImport.update({
   path: '/api/write',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppsCategoryRoute = AppsCategoryRouteImport.update({
+  id: '/$category',
+  path: '/$category',
+  getParentRoute: () => AppsRoute,
+} as any)
+const AssistantsAssistantSlugRoute = AssistantsAssistantSlugRouteImport.update({
+  id: '/$assistantSlug',
+  path: '/$assistantSlug',
+  getParentRoute: () => AssistantsRoute,
+} as any)
 const BlogAiMarketResearchGuideRoute =
   BlogAiMarketResearchGuideRouteImport.update({
     id: '/blog/ai-market-research-guide',
@@ -406,20 +836,287 @@ const BlogBestAiMarketResearchToolsRoute =
     path: '/blog/best-ai-market-research-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
+const CanvasDocumentIdRoute = CanvasDocumentIdRouteImport.update({
+  id: '/canvas/$documentId',
+  path: '/canvas/$documentId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CaseStudiesSlugRoute = CaseStudiesSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => CaseStudiesRoute,
+} as any)
 const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
   id: '/checkout/return',
   path: '/checkout/return',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DevelopersApiRoute = DevelopersApiRouteImport.update({
+  id: '/api',
+  path: '/api',
+  getParentRoute: () => DevelopersRoute,
+} as any)
+const DevelopersApiKeysRoute = DevelopersApiKeysRouteImport.update({
+  id: '/api-keys',
+  path: '/api-keys',
+  getParentRoute: () => DevelopersRoute,
+} as any)
+const DevelopersAuthenticationRoute =
+  DevelopersAuthenticationRouteImport.update({
+    id: '/authentication',
+    path: '/authentication',
+    getParentRoute: () => DevelopersRoute,
+  } as any)
+const DevelopersBillingRoute = DevelopersBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => DevelopersRoute,
+} as any)
+const DevelopersChangelogRoute = DevelopersChangelogRouteImport.update({
+  id: '/changelog',
+  path: '/changelog',
+  getParentRoute: () => DevelopersRoute,
+} as any)
+const DevelopersErrorsRoute = DevelopersErrorsRouteImport.update({
+  id: '/errors',
+  path: '/errors',
+  getParentRoute: () => DevelopersRoute,
+} as any)
+const DevelopersExamplesRoute = DevelopersExamplesRouteImport.update({
+  id: '/examples',
+  path: '/examples',
+  getParentRoute: () => DevelopersRoute,
+} as any)
+const DevelopersFilesRoute = DevelopersFilesRouteImport.update({
+  id: '/files',
+  path: '/files',
+  getParentRoute: () => DevelopersRoute,
+} as any)
+const DevelopersImageGenerationRoute =
+  DevelopersImageGenerationRouteImport.update({
+    id: '/image-generation',
+    path: '/image-generation',
+    getParentRoute: () => DevelopersRoute,
+  } as any)
+const DevelopersMigrationsRoute = DevelopersMigrationsRouteImport.update({
+  id: '/migrations',
+  path: '/migrations',
+  getParentRoute: () => DevelopersRoute,
+} as any)
+const DevelopersModelsRoute = DevelopersModelsRouteImport.update({
+  id: '/models',
+  path: '/models',
+  getParentRoute: () => DevelopersRoute,
+} as any)
+const DevelopersPoliciesRoute = DevelopersPoliciesRouteImport.update({
+  id: '/policies',
+  path: '/policies',
+  getParentRoute: () => DevelopersRoute,
+} as any)
+const DevelopersPricingRoute = DevelopersPricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => DevelopersRoute,
+} as any)
+const DevelopersQuickstartRoute = DevelopersQuickstartRouteImport.update({
+  id: '/quickstart',
+  path: '/quickstart',
+  getParentRoute: () => DevelopersRoute,
+} as any)
+const DevelopersRateLimitsRoute = DevelopersRateLimitsRouteImport.update({
+  id: '/rate-limits',
+  path: '/rate-limits',
+  getParentRoute: () => DevelopersRoute,
+} as any)
+const DevelopersReferenceRoute = DevelopersReferenceRouteImport.update({
+  id: '/reference',
+  path: '/reference',
+  getParentRoute: () => DevelopersRoute,
+} as any)
+const DevelopersSafetyRoute = DevelopersSafetyRouteImport.update({
+  id: '/safety',
+  path: '/safety',
+  getParentRoute: () => DevelopersRoute,
+} as any)
+const DevelopersSdksRoute = DevelopersSdksRouteImport.update({
+  id: '/sdks',
+  path: '/sdks',
+  getParentRoute: () => DevelopersRoute,
+} as any)
+const DevelopersStatusRoute = DevelopersStatusRouteImport.update({
+  id: '/status',
+  path: '/status',
+  getParentRoute: () => DevelopersRoute,
+} as any)
+const DevelopersStreamingRoute = DevelopersStreamingRouteImport.update({
+  id: '/streaming',
+  path: '/streaming',
+  getParentRoute: () => DevelopersRoute,
+} as any)
+const DevelopersTermsRoute = DevelopersTermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => DevelopersRoute,
+} as any)
+const DevelopersToolCallingRoute = DevelopersToolCallingRouteImport.update({
+  id: '/tool-calling',
+  path: '/tool-calling',
+  getParentRoute: () => DevelopersRoute,
+} as any)
+const DevelopersUsageRoute = DevelopersUsageRouteImport.update({
+  id: '/usage',
+  path: '/usage',
+  getParentRoute: () => DevelopersRoute,
 } as any)
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
   id: '/email/unsubscribe',
   path: '/email/unsubscribe',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EngineeringSlugRoute = EngineeringSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => EngineeringRoute,
+} as any)
+const GuidesSlugRoute = GuidesSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => GuidesRoute,
+} as any)
+const NewsSlugRoute = NewsSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => NewsRoute,
+} as any)
 const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
   id: '/$projectId',
   path: '/$projectId',
   getParentRoute: () => ProjectsRoute,
+} as any)
+const ReleaseNotesSlugRoute = ReleaseNotesSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => ReleaseNotesRoute,
+} as any)
+const ResearchSlugRoute = ResearchSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => ResearchRoute,
+} as any)
+const SafetyEvaluationsSlugRoute = SafetyEvaluationsSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => SafetyEvaluationsRoute,
+} as any)
+const ShareShareIdRoute = ShareShareIdRouteImport.update({
+  id: '/share/$shareId',
+  path: '/share/$shareId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TechnicalReportsSlugRoute = TechnicalReportsSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => TechnicalReportsRoute,
+} as any)
+const TutorialsSlugRoute = TutorialsSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => TutorialsRoute,
+} as any)
+const UpdatesSlugRoute = UpdatesSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => UpdatesRoute,
+} as any)
+const UseCasesAiAssistantRoute = UseCasesAiAssistantRouteImport.update({
+  id: '/ai-assistant',
+  path: '/ai-assistant',
+  getParentRoute: () => UseCasesRoute,
+} as any)
+const UseCasesAiChatbotRoute = UseCasesAiChatbotRouteImport.update({
+  id: '/ai-chatbot',
+  path: '/ai-chatbot',
+  getParentRoute: () => UseCasesRoute,
+} as any)
+const UseCasesBrainstormingRoute = UseCasesBrainstormingRouteImport.update({
+  id: '/brainstorming',
+  path: '/brainstorming',
+  getParentRoute: () => UseCasesRoute,
+} as any)
+const UseCasesBusinessAssistantRoute =
+  UseCasesBusinessAssistantRouteImport.update({
+    id: '/business-assistant',
+    path: '/business-assistant',
+    getParentRoute: () => UseCasesRoute,
+  } as any)
+const UseCasesDocumentAnalysisRoute =
+  UseCasesDocumentAnalysisRouteImport.update({
+    id: '/document-analysis',
+    path: '/document-analysis',
+    getParentRoute: () => UseCasesRoute,
+  } as any)
+const UseCasesEducationAssistantRoute =
+  UseCasesEducationAssistantRouteImport.update({
+    id: '/education-assistant',
+    path: '/education-assistant',
+    getParentRoute: () => UseCasesRoute,
+  } as any)
+const UseCasesEmailWritingRoute = UseCasesEmailWritingRouteImport.update({
+  id: '/email-writing',
+  path: '/email-writing',
+  getParentRoute: () => UseCasesRoute,
+} as any)
+const UseCasesFileAnalysisRoute = UseCasesFileAnalysisRouteImport.update({
+  id: '/file-analysis',
+  path: '/file-analysis',
+  getParentRoute: () => UseCasesRoute,
+} as any)
+const UseCasesGrammarCheckerRoute = UseCasesGrammarCheckerRouteImport.update({
+  id: '/grammar-checker',
+  path: '/grammar-checker',
+  getParentRoute: () => UseCasesRoute,
+} as any)
+const UseCasesMathHelpRoute = UseCasesMathHelpRouteImport.update({
+  id: '/math-help',
+  path: '/math-help',
+  getParentRoute: () => UseCasesRoute,
+} as any)
+const UseCasesParaphrasingRoute = UseCasesParaphrasingRouteImport.update({
+  id: '/paraphrasing',
+  path: '/paraphrasing',
+  getParentRoute: () => UseCasesRoute,
+} as any)
+const UseCasesResumeHelpRoute = UseCasesResumeHelpRouteImport.update({
+  id: '/resume-help',
+  path: '/resume-help',
+  getParentRoute: () => UseCasesRoute,
+} as any)
+const UseCasesShoppingResearchRoute =
+  UseCasesShoppingResearchRouteImport.update({
+    id: '/shopping-research',
+    path: '/shopping-research',
+    getParentRoute: () => UseCasesRoute,
+  } as any)
+const UseCasesSummarizationRoute = UseCasesSummarizationRouteImport.update({
+  id: '/summarization',
+  path: '/summarization',
+  getParentRoute: () => UseCasesRoute,
+} as any)
+const UseCasesTranslationRoute = UseCasesTranslationRouteImport.update({
+  id: '/translation',
+  path: '/translation',
+  getParentRoute: () => UseCasesRoute,
+} as any)
+const UseCasesWritingAssistantRoute =
+  UseCasesWritingAssistantRouteImport.update({
+    id: '/writing-assistant',
+    path: '/writing-assistant',
+    getParentRoute: () => UseCasesRoute,
+  } as any)
+const VideosSlugRoute = VideosSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => VideosRoute,
 } as any)
 const Char126oauthCallbackRoute = Char126oauthCallbackRouteImport.update({
   id: '/~oauth/callback',
@@ -608,50 +1305,111 @@ const ApiIntegrationsOauthCallbackProviderRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/acceptable-use': typeof AcceptableUseRoute
+  '/accessibility': typeof AccessibilityRoute
+  '/account-deletion': typeof AccountDeletionRoute
   '/ai-humanizer': typeof AiHumanizerRoute
   '/ai-image-generator': typeof AiImageGeneratorRoute
   '/ai-safety': typeof AiSafetyRoute
   '/ai-writer': typeof AiWriterRoute
-  '/apps': typeof AppsRoute
+  '/announcements': typeof AnnouncementsRouteWithChildren
+  '/apps': typeof AppsRouteWithChildren
+  '/assistants': typeof AssistantsRouteWithChildren
   '/audit-log': typeof AuditLogRoute
   '/auth': typeof AuthRoute
+  '/brand': typeof BrandRoute
+  '/business': typeof BusinessRoute
+  '/careers': typeof CareersRoute
+  '/case-studies': typeof CaseStudiesRouteWithChildren
   '/changelog': typeof ChangelogRoute
+  '/chat': typeof ChatRoute
   '/chatgpt-alternative': typeof ChatgptAlternativeRoute
   '/code-helper': typeof CodeHelperRoute
+  '/company': typeof CompanyRoute
   '/connect': typeof ConnectRoute
+  '/contact': typeof ContactRoute
   '/contact-support': typeof ContactSupportRoute
+  '/content-moderation': typeof ContentModerationRoute
   '/context-packs': typeof ContextPacksRoute
+  '/cookie-policy': typeof CookiePolicyRoute
+  '/copyright': typeof CopyrightRoute
+  '/customer-stories': typeof CustomerStoriesRoute
+  '/customers': typeof CustomersRoute
+  '/data-controls': typeof DataControlsRoute
+  '/data-export': typeof DataExportRoute
+  '/data-processing': typeof DataProcessingRoute
+  '/developers': typeof DevelopersRouteWithChildren
+  '/education': typeof EducationRoute
+  '/en': typeof EnRoute
+  '/engineering': typeof EngineeringRouteWithChildren
+  '/enterprise': typeof EnterpriseRoute
+  '/families': typeof FamiliesRoute
+  '/family-safety': typeof FamilySafetyRoute
+  '/features': typeof FeaturesRoute
   '/files': typeof FilesRoute
   '/getting-started': typeof GettingStartedRoute
+  '/guides': typeof GuidesRouteWithChildren
+  '/health': typeof HealthRoute
   '/help': typeof HelpRoute
   '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
   '/knowledge-graph': typeof KnowledgeGraphRoute
+  '/law-enforcement': typeof LawEnforcementRoute
+  '/leadership': typeof LeadershipRoute
+  '/learn': typeof LearnRoute
   '/library': typeof LibraryRoute
+  '/maps': typeof MapsRoute
   '/mcp': typeof McpRoute
   '/memory': typeof MemoryRoute
+  '/mission': typeof MissionRoute
+  '/model-behavior': typeof ModelBehaviorRoute
   '/modes': typeof ModesRoute
+  '/new': typeof NewRoute
+  '/news': typeof NewsRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/omega': typeof OmegaRoute
+  '/organizations': typeof OrganizationsRoute
+  '/overview': typeof OverviewRoute
+  '/partners': typeof PartnersRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/projects': typeof ProjectsRouteWithChildren
   '/prompt-studio': typeof PromptStudioRoute
   '/refund': typeof RefundRoute
+  '/regional-notices': typeof RegionalNoticesRoute
+  '/release-notes': typeof ReleaseNotesRouteWithChildren
+  '/research': typeof ResearchRouteWithChildren
   '/research-assistant': typeof ResearchAssistantRoute
   '/research-planner': typeof ResearchPlannerRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/responsible-disclosure': typeof ResponsibleDisclosureRoute
+  '/safety-evaluations': typeof SafetyEvaluationsRouteWithChildren
   '/scheduled-tasks': typeof ScheduledTasksRoute
+  '/search': typeof SearchRoute
+  '/security': typeof SecurityRoute
+  '/shopping': typeof ShoppingRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/status': typeof StatusRoute
+  '/students': typeof StudentsRoute
   '/study-assistant': typeof StudyAssistantRoute
   '/summary': typeof SummaryRoute
+  '/technical-reports': typeof TechnicalReportsRouteWithChildren
   '/terms': typeof TermsRoute
+  '/translate': typeof TranslateRoute
+  '/transparency': typeof TransparencyRoute
+  '/trust': typeof TrustRoute
+  '/tutorials': typeof TutorialsRouteWithChildren
   '/unsubscribe': typeof UnsubscribeRoute
+  '/updates': typeof UpdatesRouteWithChildren
+  '/use-cases': typeof UseCasesRouteWithChildren
+  '/videos': typeof VideosRouteWithChildren
   '/work': typeof WorkRoute
   '/write': typeof WriteRoute
+  '/writing': typeof WritingRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/announcements/$slug': typeof AnnouncementsSlugRoute
   '/api/account': typeof ApiAccountRoute
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
@@ -663,12 +1421,66 @@ export interface FileRoutesByFullPath {
   '/api/title': typeof ApiTitleRoute
   '/api/version': typeof ApiVersionRoute
   '/api/write': typeof ApiWriteRoute
+  '/apps/$category': typeof AppsCategoryRoute
+  '/assistants/$assistantSlug': typeof AssistantsAssistantSlugRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
   '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
+  '/canvas/$documentId': typeof CanvasDocumentIdRoute
+  '/case-studies/$slug': typeof CaseStudiesSlugRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/developers/api': typeof DevelopersApiRoute
+  '/developers/api-keys': typeof DevelopersApiKeysRoute
+  '/developers/authentication': typeof DevelopersAuthenticationRoute
+  '/developers/billing': typeof DevelopersBillingRoute
+  '/developers/changelog': typeof DevelopersChangelogRoute
+  '/developers/errors': typeof DevelopersErrorsRoute
+  '/developers/examples': typeof DevelopersExamplesRoute
+  '/developers/files': typeof DevelopersFilesRoute
+  '/developers/image-generation': typeof DevelopersImageGenerationRoute
+  '/developers/migrations': typeof DevelopersMigrationsRoute
+  '/developers/models': typeof DevelopersModelsRoute
+  '/developers/policies': typeof DevelopersPoliciesRoute
+  '/developers/pricing': typeof DevelopersPricingRoute
+  '/developers/quickstart': typeof DevelopersQuickstartRoute
+  '/developers/rate-limits': typeof DevelopersRateLimitsRoute
+  '/developers/reference': typeof DevelopersReferenceRoute
+  '/developers/safety': typeof DevelopersSafetyRoute
+  '/developers/sdks': typeof DevelopersSdksRoute
+  '/developers/status': typeof DevelopersStatusRoute
+  '/developers/streaming': typeof DevelopersStreamingRoute
+  '/developers/terms': typeof DevelopersTermsRoute
+  '/developers/tool-calling': typeof DevelopersToolCallingRoute
+  '/developers/usage': typeof DevelopersUsageRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/engineering/$slug': typeof EngineeringSlugRoute
+  '/guides/$slug': typeof GuidesSlugRoute
+  '/news/$slug': typeof NewsSlugRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
+  '/release-notes/$slug': typeof ReleaseNotesSlugRoute
+  '/research/$slug': typeof ResearchSlugRoute
+  '/safety-evaluations/$slug': typeof SafetyEvaluationsSlugRoute
+  '/share/$shareId': typeof ShareShareIdRoute
+  '/technical-reports/$slug': typeof TechnicalReportsSlugRoute
+  '/tutorials/$slug': typeof TutorialsSlugRoute
+  '/updates/$slug': typeof UpdatesSlugRoute
+  '/use-cases/ai-assistant': typeof UseCasesAiAssistantRoute
+  '/use-cases/ai-chatbot': typeof UseCasesAiChatbotRoute
+  '/use-cases/brainstorming': typeof UseCasesBrainstormingRoute
+  '/use-cases/business-assistant': typeof UseCasesBusinessAssistantRoute
+  '/use-cases/document-analysis': typeof UseCasesDocumentAnalysisRoute
+  '/use-cases/education-assistant': typeof UseCasesEducationAssistantRoute
+  '/use-cases/email-writing': typeof UseCasesEmailWritingRoute
+  '/use-cases/file-analysis': typeof UseCasesFileAnalysisRoute
+  '/use-cases/grammar-checker': typeof UseCasesGrammarCheckerRoute
+  '/use-cases/math-help': typeof UseCasesMathHelpRoute
+  '/use-cases/paraphrasing': typeof UseCasesParaphrasingRoute
+  '/use-cases/resume-help': typeof UseCasesResumeHelpRoute
+  '/use-cases/shopping-research': typeof UseCasesShoppingResearchRoute
+  '/use-cases/summarization': typeof UseCasesSummarizationRoute
+  '/use-cases/translation': typeof UseCasesTranslationRoute
+  '/use-cases/writing-assistant': typeof UseCasesWritingAssistantRoute
+  '/videos/$slug': typeof VideosSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -707,50 +1519,111 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/acceptable-use': typeof AcceptableUseRoute
+  '/accessibility': typeof AccessibilityRoute
+  '/account-deletion': typeof AccountDeletionRoute
   '/ai-humanizer': typeof AiHumanizerRoute
   '/ai-image-generator': typeof AiImageGeneratorRoute
   '/ai-safety': typeof AiSafetyRoute
   '/ai-writer': typeof AiWriterRoute
-  '/apps': typeof AppsRoute
+  '/announcements': typeof AnnouncementsRouteWithChildren
+  '/apps': typeof AppsRouteWithChildren
+  '/assistants': typeof AssistantsRouteWithChildren
   '/audit-log': typeof AuditLogRoute
   '/auth': typeof AuthRoute
+  '/brand': typeof BrandRoute
+  '/business': typeof BusinessRoute
+  '/careers': typeof CareersRoute
+  '/case-studies': typeof CaseStudiesRouteWithChildren
   '/changelog': typeof ChangelogRoute
+  '/chat': typeof ChatRoute
   '/chatgpt-alternative': typeof ChatgptAlternativeRoute
   '/code-helper': typeof CodeHelperRoute
+  '/company': typeof CompanyRoute
   '/connect': typeof ConnectRoute
+  '/contact': typeof ContactRoute
   '/contact-support': typeof ContactSupportRoute
+  '/content-moderation': typeof ContentModerationRoute
   '/context-packs': typeof ContextPacksRoute
+  '/cookie-policy': typeof CookiePolicyRoute
+  '/copyright': typeof CopyrightRoute
+  '/customer-stories': typeof CustomerStoriesRoute
+  '/customers': typeof CustomersRoute
+  '/data-controls': typeof DataControlsRoute
+  '/data-export': typeof DataExportRoute
+  '/data-processing': typeof DataProcessingRoute
+  '/developers': typeof DevelopersRouteWithChildren
+  '/education': typeof EducationRoute
+  '/en': typeof EnRoute
+  '/engineering': typeof EngineeringRouteWithChildren
+  '/enterprise': typeof EnterpriseRoute
+  '/families': typeof FamiliesRoute
+  '/family-safety': typeof FamilySafetyRoute
+  '/features': typeof FeaturesRoute
   '/files': typeof FilesRoute
   '/getting-started': typeof GettingStartedRoute
+  '/guides': typeof GuidesRouteWithChildren
+  '/health': typeof HealthRoute
   '/help': typeof HelpRoute
   '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
   '/knowledge-graph': typeof KnowledgeGraphRoute
+  '/law-enforcement': typeof LawEnforcementRoute
+  '/leadership': typeof LeadershipRoute
+  '/learn': typeof LearnRoute
   '/library': typeof LibraryRoute
+  '/maps': typeof MapsRoute
   '/mcp': typeof McpRoute
   '/memory': typeof MemoryRoute
+  '/mission': typeof MissionRoute
+  '/model-behavior': typeof ModelBehaviorRoute
   '/modes': typeof ModesRoute
+  '/new': typeof NewRoute
+  '/news': typeof NewsRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/omega': typeof OmegaRoute
+  '/organizations': typeof OrganizationsRoute
+  '/overview': typeof OverviewRoute
+  '/partners': typeof PartnersRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/projects': typeof ProjectsRouteWithChildren
   '/prompt-studio': typeof PromptStudioRoute
   '/refund': typeof RefundRoute
+  '/regional-notices': typeof RegionalNoticesRoute
+  '/release-notes': typeof ReleaseNotesRouteWithChildren
+  '/research': typeof ResearchRouteWithChildren
   '/research-assistant': typeof ResearchAssistantRoute
   '/research-planner': typeof ResearchPlannerRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/responsible-disclosure': typeof ResponsibleDisclosureRoute
+  '/safety-evaluations': typeof SafetyEvaluationsRouteWithChildren
   '/scheduled-tasks': typeof ScheduledTasksRoute
+  '/search': typeof SearchRoute
+  '/security': typeof SecurityRoute
+  '/shopping': typeof ShoppingRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/status': typeof StatusRoute
+  '/students': typeof StudentsRoute
   '/study-assistant': typeof StudyAssistantRoute
   '/summary': typeof SummaryRoute
+  '/technical-reports': typeof TechnicalReportsRouteWithChildren
   '/terms': typeof TermsRoute
+  '/translate': typeof TranslateRoute
+  '/transparency': typeof TransparencyRoute
+  '/trust': typeof TrustRoute
+  '/tutorials': typeof TutorialsRouteWithChildren
   '/unsubscribe': typeof UnsubscribeRoute
+  '/updates': typeof UpdatesRouteWithChildren
+  '/use-cases': typeof UseCasesRouteWithChildren
+  '/videos': typeof VideosRouteWithChildren
   '/work': typeof WorkRoute
   '/write': typeof WriteRoute
+  '/writing': typeof WritingRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/announcements/$slug': typeof AnnouncementsSlugRoute
   '/api/account': typeof ApiAccountRoute
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
@@ -762,12 +1635,66 @@ export interface FileRoutesByTo {
   '/api/title': typeof ApiTitleRoute
   '/api/version': typeof ApiVersionRoute
   '/api/write': typeof ApiWriteRoute
+  '/apps/$category': typeof AppsCategoryRoute
+  '/assistants/$assistantSlug': typeof AssistantsAssistantSlugRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
   '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
+  '/canvas/$documentId': typeof CanvasDocumentIdRoute
+  '/case-studies/$slug': typeof CaseStudiesSlugRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/developers/api': typeof DevelopersApiRoute
+  '/developers/api-keys': typeof DevelopersApiKeysRoute
+  '/developers/authentication': typeof DevelopersAuthenticationRoute
+  '/developers/billing': typeof DevelopersBillingRoute
+  '/developers/changelog': typeof DevelopersChangelogRoute
+  '/developers/errors': typeof DevelopersErrorsRoute
+  '/developers/examples': typeof DevelopersExamplesRoute
+  '/developers/files': typeof DevelopersFilesRoute
+  '/developers/image-generation': typeof DevelopersImageGenerationRoute
+  '/developers/migrations': typeof DevelopersMigrationsRoute
+  '/developers/models': typeof DevelopersModelsRoute
+  '/developers/policies': typeof DevelopersPoliciesRoute
+  '/developers/pricing': typeof DevelopersPricingRoute
+  '/developers/quickstart': typeof DevelopersQuickstartRoute
+  '/developers/rate-limits': typeof DevelopersRateLimitsRoute
+  '/developers/reference': typeof DevelopersReferenceRoute
+  '/developers/safety': typeof DevelopersSafetyRoute
+  '/developers/sdks': typeof DevelopersSdksRoute
+  '/developers/status': typeof DevelopersStatusRoute
+  '/developers/streaming': typeof DevelopersStreamingRoute
+  '/developers/terms': typeof DevelopersTermsRoute
+  '/developers/tool-calling': typeof DevelopersToolCallingRoute
+  '/developers/usage': typeof DevelopersUsageRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/engineering/$slug': typeof EngineeringSlugRoute
+  '/guides/$slug': typeof GuidesSlugRoute
+  '/news/$slug': typeof NewsSlugRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
+  '/release-notes/$slug': typeof ReleaseNotesSlugRoute
+  '/research/$slug': typeof ResearchSlugRoute
+  '/safety-evaluations/$slug': typeof SafetyEvaluationsSlugRoute
+  '/share/$shareId': typeof ShareShareIdRoute
+  '/technical-reports/$slug': typeof TechnicalReportsSlugRoute
+  '/tutorials/$slug': typeof TutorialsSlugRoute
+  '/updates/$slug': typeof UpdatesSlugRoute
+  '/use-cases/ai-assistant': typeof UseCasesAiAssistantRoute
+  '/use-cases/ai-chatbot': typeof UseCasesAiChatbotRoute
+  '/use-cases/brainstorming': typeof UseCasesBrainstormingRoute
+  '/use-cases/business-assistant': typeof UseCasesBusinessAssistantRoute
+  '/use-cases/document-analysis': typeof UseCasesDocumentAnalysisRoute
+  '/use-cases/education-assistant': typeof UseCasesEducationAssistantRoute
+  '/use-cases/email-writing': typeof UseCasesEmailWritingRoute
+  '/use-cases/file-analysis': typeof UseCasesFileAnalysisRoute
+  '/use-cases/grammar-checker': typeof UseCasesGrammarCheckerRoute
+  '/use-cases/math-help': typeof UseCasesMathHelpRoute
+  '/use-cases/paraphrasing': typeof UseCasesParaphrasingRoute
+  '/use-cases/resume-help': typeof UseCasesResumeHelpRoute
+  '/use-cases/shopping-research': typeof UseCasesShoppingResearchRoute
+  '/use-cases/summarization': typeof UseCasesSummarizationRoute
+  '/use-cases/translation': typeof UseCasesTranslationRoute
+  '/use-cases/writing-assistant': typeof UseCasesWritingAssistantRoute
+  '/videos/$slug': typeof VideosSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -807,50 +1734,111 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/acceptable-use': typeof AcceptableUseRoute
+  '/accessibility': typeof AccessibilityRoute
+  '/account-deletion': typeof AccountDeletionRoute
   '/ai-humanizer': typeof AiHumanizerRoute
   '/ai-image-generator': typeof AiImageGeneratorRoute
   '/ai-safety': typeof AiSafetyRoute
   '/ai-writer': typeof AiWriterRoute
-  '/apps': typeof AppsRoute
+  '/announcements': typeof AnnouncementsRouteWithChildren
+  '/apps': typeof AppsRouteWithChildren
+  '/assistants': typeof AssistantsRouteWithChildren
   '/audit-log': typeof AuditLogRoute
   '/auth': typeof AuthRoute
+  '/brand': typeof BrandRoute
+  '/business': typeof BusinessRoute
+  '/careers': typeof CareersRoute
+  '/case-studies': typeof CaseStudiesRouteWithChildren
   '/changelog': typeof ChangelogRoute
+  '/chat': typeof ChatRoute
   '/chatgpt-alternative': typeof ChatgptAlternativeRoute
   '/code-helper': typeof CodeHelperRoute
+  '/company': typeof CompanyRoute
   '/connect': typeof ConnectRoute
+  '/contact': typeof ContactRoute
   '/contact-support': typeof ContactSupportRoute
+  '/content-moderation': typeof ContentModerationRoute
   '/context-packs': typeof ContextPacksRoute
+  '/cookie-policy': typeof CookiePolicyRoute
+  '/copyright': typeof CopyrightRoute
+  '/customer-stories': typeof CustomerStoriesRoute
+  '/customers': typeof CustomersRoute
+  '/data-controls': typeof DataControlsRoute
+  '/data-export': typeof DataExportRoute
+  '/data-processing': typeof DataProcessingRoute
+  '/developers': typeof DevelopersRouteWithChildren
+  '/education': typeof EducationRoute
+  '/en': typeof EnRoute
+  '/engineering': typeof EngineeringRouteWithChildren
+  '/enterprise': typeof EnterpriseRoute
+  '/families': typeof FamiliesRoute
+  '/family-safety': typeof FamilySafetyRoute
+  '/features': typeof FeaturesRoute
   '/files': typeof FilesRoute
   '/getting-started': typeof GettingStartedRoute
+  '/guides': typeof GuidesRouteWithChildren
+  '/health': typeof HealthRoute
   '/help': typeof HelpRoute
   '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
   '/knowledge-graph': typeof KnowledgeGraphRoute
+  '/law-enforcement': typeof LawEnforcementRoute
+  '/leadership': typeof LeadershipRoute
+  '/learn': typeof LearnRoute
   '/library': typeof LibraryRoute
+  '/maps': typeof MapsRoute
   '/mcp': typeof McpRoute
   '/memory': typeof MemoryRoute
+  '/mission': typeof MissionRoute
+  '/model-behavior': typeof ModelBehaviorRoute
   '/modes': typeof ModesRoute
+  '/new': typeof NewRoute
+  '/news': typeof NewsRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/omega': typeof OmegaRoute
+  '/organizations': typeof OrganizationsRoute
+  '/overview': typeof OverviewRoute
+  '/partners': typeof PartnersRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/projects': typeof ProjectsRouteWithChildren
   '/prompt-studio': typeof PromptStudioRoute
   '/refund': typeof RefundRoute
+  '/regional-notices': typeof RegionalNoticesRoute
+  '/release-notes': typeof ReleaseNotesRouteWithChildren
+  '/research': typeof ResearchRouteWithChildren
   '/research-assistant': typeof ResearchAssistantRoute
   '/research-planner': typeof ResearchPlannerRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/responsible-disclosure': typeof ResponsibleDisclosureRoute
+  '/safety-evaluations': typeof SafetyEvaluationsRouteWithChildren
   '/scheduled-tasks': typeof ScheduledTasksRoute
+  '/search': typeof SearchRoute
+  '/security': typeof SecurityRoute
+  '/shopping': typeof ShoppingRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/status': typeof StatusRoute
+  '/students': typeof StudentsRoute
   '/study-assistant': typeof StudyAssistantRoute
   '/summary': typeof SummaryRoute
+  '/technical-reports': typeof TechnicalReportsRouteWithChildren
   '/terms': typeof TermsRoute
+  '/translate': typeof TranslateRoute
+  '/transparency': typeof TransparencyRoute
+  '/trust': typeof TrustRoute
+  '/tutorials': typeof TutorialsRouteWithChildren
   '/unsubscribe': typeof UnsubscribeRoute
+  '/updates': typeof UpdatesRouteWithChildren
+  '/use-cases': typeof UseCasesRouteWithChildren
+  '/videos': typeof VideosRouteWithChildren
   '/work': typeof WorkRoute
   '/write': typeof WriteRoute
+  '/writing': typeof WritingRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/announcements/$slug': typeof AnnouncementsSlugRoute
   '/api/account': typeof ApiAccountRoute
   '/api/chat': typeof ApiChatRouteWithChildren
   '/api/generate-image': typeof ApiGenerateImageRoute
@@ -862,12 +1850,66 @@ export interface FileRoutesById {
   '/api/title': typeof ApiTitleRoute
   '/api/version': typeof ApiVersionRoute
   '/api/write': typeof ApiWriteRoute
+  '/apps/$category': typeof AppsCategoryRoute
+  '/assistants/$assistantSlug': typeof AssistantsAssistantSlugRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
   '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
+  '/canvas/$documentId': typeof CanvasDocumentIdRoute
+  '/case-studies/$slug': typeof CaseStudiesSlugRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/developers/api': typeof DevelopersApiRoute
+  '/developers/api-keys': typeof DevelopersApiKeysRoute
+  '/developers/authentication': typeof DevelopersAuthenticationRoute
+  '/developers/billing': typeof DevelopersBillingRoute
+  '/developers/changelog': typeof DevelopersChangelogRoute
+  '/developers/errors': typeof DevelopersErrorsRoute
+  '/developers/examples': typeof DevelopersExamplesRoute
+  '/developers/files': typeof DevelopersFilesRoute
+  '/developers/image-generation': typeof DevelopersImageGenerationRoute
+  '/developers/migrations': typeof DevelopersMigrationsRoute
+  '/developers/models': typeof DevelopersModelsRoute
+  '/developers/policies': typeof DevelopersPoliciesRoute
+  '/developers/pricing': typeof DevelopersPricingRoute
+  '/developers/quickstart': typeof DevelopersQuickstartRoute
+  '/developers/rate-limits': typeof DevelopersRateLimitsRoute
+  '/developers/reference': typeof DevelopersReferenceRoute
+  '/developers/safety': typeof DevelopersSafetyRoute
+  '/developers/sdks': typeof DevelopersSdksRoute
+  '/developers/status': typeof DevelopersStatusRoute
+  '/developers/streaming': typeof DevelopersStreamingRoute
+  '/developers/terms': typeof DevelopersTermsRoute
+  '/developers/tool-calling': typeof DevelopersToolCallingRoute
+  '/developers/usage': typeof DevelopersUsageRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/engineering/$slug': typeof EngineeringSlugRoute
+  '/guides/$slug': typeof GuidesSlugRoute
+  '/news/$slug': typeof NewsSlugRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
+  '/release-notes/$slug': typeof ReleaseNotesSlugRoute
+  '/research/$slug': typeof ResearchSlugRoute
+  '/safety-evaluations/$slug': typeof SafetyEvaluationsSlugRoute
+  '/share/$shareId': typeof ShareShareIdRoute
+  '/technical-reports/$slug': typeof TechnicalReportsSlugRoute
+  '/tutorials/$slug': typeof TutorialsSlugRoute
+  '/updates/$slug': typeof UpdatesSlugRoute
+  '/use-cases/ai-assistant': typeof UseCasesAiAssistantRoute
+  '/use-cases/ai-chatbot': typeof UseCasesAiChatbotRoute
+  '/use-cases/brainstorming': typeof UseCasesBrainstormingRoute
+  '/use-cases/business-assistant': typeof UseCasesBusinessAssistantRoute
+  '/use-cases/document-analysis': typeof UseCasesDocumentAnalysisRoute
+  '/use-cases/education-assistant': typeof UseCasesEducationAssistantRoute
+  '/use-cases/email-writing': typeof UseCasesEmailWritingRoute
+  '/use-cases/file-analysis': typeof UseCasesFileAnalysisRoute
+  '/use-cases/grammar-checker': typeof UseCasesGrammarCheckerRoute
+  '/use-cases/math-help': typeof UseCasesMathHelpRoute
+  '/use-cases/paraphrasing': typeof UseCasesParaphrasingRoute
+  '/use-cases/resume-help': typeof UseCasesResumeHelpRoute
+  '/use-cases/shopping-research': typeof UseCasesShoppingResearchRoute
+  '/use-cases/summarization': typeof UseCasesSummarizationRoute
+  '/use-cases/translation': typeof UseCasesTranslationRoute
+  '/use-cases/writing-assistant': typeof UseCasesWritingAssistantRoute
+  '/videos/$slug': typeof VideosSlugRoute
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -908,50 +1950,111 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/about'
+    | '/acceptable-use'
+    | '/accessibility'
+    | '/account-deletion'
     | '/ai-humanizer'
     | '/ai-image-generator'
     | '/ai-safety'
     | '/ai-writer'
+    | '/announcements'
     | '/apps'
+    | '/assistants'
     | '/audit-log'
     | '/auth'
+    | '/brand'
+    | '/business'
+    | '/careers'
+    | '/case-studies'
     | '/changelog'
+    | '/chat'
     | '/chatgpt-alternative'
     | '/code-helper'
+    | '/company'
     | '/connect'
+    | '/contact'
     | '/contact-support'
+    | '/content-moderation'
     | '/context-packs'
+    | '/cookie-policy'
+    | '/copyright'
+    | '/customer-stories'
+    | '/customers'
+    | '/data-controls'
+    | '/data-export'
+    | '/data-processing'
+    | '/developers'
+    | '/education'
+    | '/en'
+    | '/engineering'
+    | '/enterprise'
+    | '/families'
+    | '/family-safety'
+    | '/features'
     | '/files'
     | '/getting-started'
+    | '/guides'
+    | '/health'
     | '/help'
     | '/humanize-ai-text'
     | '/images'
     | '/knowledge-graph'
+    | '/law-enforcement'
+    | '/leadership'
+    | '/learn'
     | '/library'
+    | '/maps'
     | '/mcp'
     | '/memory'
+    | '/mission'
+    | '/model-behavior'
     | '/modes'
+    | '/new'
+    | '/news'
     | '/notifications'
     | '/omega'
+    | '/organizations'
+    | '/overview'
+    | '/partners'
     | '/pricing'
     | '/privacy'
     | '/projects'
     | '/prompt-studio'
     | '/refund'
+    | '/regional-notices'
+    | '/release-notes'
+    | '/research'
     | '/research-assistant'
     | '/research-planner'
     | '/reset-password'
+    | '/responsible-disclosure'
+    | '/safety-evaluations'
     | '/scheduled-tasks'
+    | '/search'
+    | '/security'
+    | '/shopping'
     | '/sitemap.xml'
     | '/status'
+    | '/students'
     | '/study-assistant'
     | '/summary'
+    | '/technical-reports'
     | '/terms'
+    | '/translate'
+    | '/transparency'
+    | '/trust'
+    | '/tutorials'
     | '/unsubscribe'
+    | '/updates'
+    | '/use-cases'
+    | '/videos'
     | '/work'
     | '/write'
+    | '/writing'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/announcements/$slug'
     | '/api/account'
     | '/api/chat'
     | '/api/generate-image'
@@ -963,12 +2066,66 @@ export interface FileRouteTypes {
     | '/api/title'
     | '/api/version'
     | '/api/write'
+    | '/apps/$category'
+    | '/assistants/$assistantSlug'
     | '/blog/ai-market-research-guide'
     | '/blog/best-ai-assistants'
     | '/blog/best-ai-market-research-tools'
+    | '/canvas/$documentId'
+    | '/case-studies/$slug'
     | '/checkout/return'
+    | '/developers/api'
+    | '/developers/api-keys'
+    | '/developers/authentication'
+    | '/developers/billing'
+    | '/developers/changelog'
+    | '/developers/errors'
+    | '/developers/examples'
+    | '/developers/files'
+    | '/developers/image-generation'
+    | '/developers/migrations'
+    | '/developers/models'
+    | '/developers/policies'
+    | '/developers/pricing'
+    | '/developers/quickstart'
+    | '/developers/rate-limits'
+    | '/developers/reference'
+    | '/developers/safety'
+    | '/developers/sdks'
+    | '/developers/status'
+    | '/developers/streaming'
+    | '/developers/terms'
+    | '/developers/tool-calling'
+    | '/developers/usage'
     | '/email/unsubscribe'
+    | '/engineering/$slug'
+    | '/guides/$slug'
+    | '/news/$slug'
     | '/projects/$projectId'
+    | '/release-notes/$slug'
+    | '/research/$slug'
+    | '/safety-evaluations/$slug'
+    | '/share/$shareId'
+    | '/technical-reports/$slug'
+    | '/tutorials/$slug'
+    | '/updates/$slug'
+    | '/use-cases/ai-assistant'
+    | '/use-cases/ai-chatbot'
+    | '/use-cases/brainstorming'
+    | '/use-cases/business-assistant'
+    | '/use-cases/document-analysis'
+    | '/use-cases/education-assistant'
+    | '/use-cases/email-writing'
+    | '/use-cases/file-analysis'
+    | '/use-cases/grammar-checker'
+    | '/use-cases/math-help'
+    | '/use-cases/paraphrasing'
+    | '/use-cases/resume-help'
+    | '/use-cases/shopping-research'
+    | '/use-cases/summarization'
+    | '/use-cases/translation'
+    | '/use-cases/writing-assistant'
+    | '/videos/$slug'
     | '/~oauth/callback'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -1007,50 +2164,111 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
+    | '/acceptable-use'
+    | '/accessibility'
+    | '/account-deletion'
     | '/ai-humanizer'
     | '/ai-image-generator'
     | '/ai-safety'
     | '/ai-writer'
+    | '/announcements'
     | '/apps'
+    | '/assistants'
     | '/audit-log'
     | '/auth'
+    | '/brand'
+    | '/business'
+    | '/careers'
+    | '/case-studies'
     | '/changelog'
+    | '/chat'
     | '/chatgpt-alternative'
     | '/code-helper'
+    | '/company'
     | '/connect'
+    | '/contact'
     | '/contact-support'
+    | '/content-moderation'
     | '/context-packs'
+    | '/cookie-policy'
+    | '/copyright'
+    | '/customer-stories'
+    | '/customers'
+    | '/data-controls'
+    | '/data-export'
+    | '/data-processing'
+    | '/developers'
+    | '/education'
+    | '/en'
+    | '/engineering'
+    | '/enterprise'
+    | '/families'
+    | '/family-safety'
+    | '/features'
     | '/files'
     | '/getting-started'
+    | '/guides'
+    | '/health'
     | '/help'
     | '/humanize-ai-text'
     | '/images'
     | '/knowledge-graph'
+    | '/law-enforcement'
+    | '/leadership'
+    | '/learn'
     | '/library'
+    | '/maps'
     | '/mcp'
     | '/memory'
+    | '/mission'
+    | '/model-behavior'
     | '/modes'
+    | '/new'
+    | '/news'
     | '/notifications'
     | '/omega'
+    | '/organizations'
+    | '/overview'
+    | '/partners'
     | '/pricing'
     | '/privacy'
     | '/projects'
     | '/prompt-studio'
     | '/refund'
+    | '/regional-notices'
+    | '/release-notes'
+    | '/research'
     | '/research-assistant'
     | '/research-planner'
     | '/reset-password'
+    | '/responsible-disclosure'
+    | '/safety-evaluations'
     | '/scheduled-tasks'
+    | '/search'
+    | '/security'
+    | '/shopping'
     | '/sitemap.xml'
     | '/status'
+    | '/students'
     | '/study-assistant'
     | '/summary'
+    | '/technical-reports'
     | '/terms'
+    | '/translate'
+    | '/transparency'
+    | '/trust'
+    | '/tutorials'
     | '/unsubscribe'
+    | '/updates'
+    | '/use-cases'
+    | '/videos'
     | '/work'
     | '/write'
+    | '/writing'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/announcements/$slug'
     | '/api/account'
     | '/api/chat'
     | '/api/generate-image'
@@ -1062,12 +2280,66 @@ export interface FileRouteTypes {
     | '/api/title'
     | '/api/version'
     | '/api/write'
+    | '/apps/$category'
+    | '/assistants/$assistantSlug'
     | '/blog/ai-market-research-guide'
     | '/blog/best-ai-assistants'
     | '/blog/best-ai-market-research-tools'
+    | '/canvas/$documentId'
+    | '/case-studies/$slug'
     | '/checkout/return'
+    | '/developers/api'
+    | '/developers/api-keys'
+    | '/developers/authentication'
+    | '/developers/billing'
+    | '/developers/changelog'
+    | '/developers/errors'
+    | '/developers/examples'
+    | '/developers/files'
+    | '/developers/image-generation'
+    | '/developers/migrations'
+    | '/developers/models'
+    | '/developers/policies'
+    | '/developers/pricing'
+    | '/developers/quickstart'
+    | '/developers/rate-limits'
+    | '/developers/reference'
+    | '/developers/safety'
+    | '/developers/sdks'
+    | '/developers/status'
+    | '/developers/streaming'
+    | '/developers/terms'
+    | '/developers/tool-calling'
+    | '/developers/usage'
     | '/email/unsubscribe'
+    | '/engineering/$slug'
+    | '/guides/$slug'
+    | '/news/$slug'
     | '/projects/$projectId'
+    | '/release-notes/$slug'
+    | '/research/$slug'
+    | '/safety-evaluations/$slug'
+    | '/share/$shareId'
+    | '/technical-reports/$slug'
+    | '/tutorials/$slug'
+    | '/updates/$slug'
+    | '/use-cases/ai-assistant'
+    | '/use-cases/ai-chatbot'
+    | '/use-cases/brainstorming'
+    | '/use-cases/business-assistant'
+    | '/use-cases/document-analysis'
+    | '/use-cases/education-assistant'
+    | '/use-cases/email-writing'
+    | '/use-cases/file-analysis'
+    | '/use-cases/grammar-checker'
+    | '/use-cases/math-help'
+    | '/use-cases/paraphrasing'
+    | '/use-cases/resume-help'
+    | '/use-cases/shopping-research'
+    | '/use-cases/summarization'
+    | '/use-cases/translation'
+    | '/use-cases/writing-assistant'
+    | '/videos/$slug'
     | '/~oauth/callback'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -1106,50 +2378,111 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/about'
+    | '/acceptable-use'
+    | '/accessibility'
+    | '/account-deletion'
     | '/ai-humanizer'
     | '/ai-image-generator'
     | '/ai-safety'
     | '/ai-writer'
+    | '/announcements'
     | '/apps'
+    | '/assistants'
     | '/audit-log'
     | '/auth'
+    | '/brand'
+    | '/business'
+    | '/careers'
+    | '/case-studies'
     | '/changelog'
+    | '/chat'
     | '/chatgpt-alternative'
     | '/code-helper'
+    | '/company'
     | '/connect'
+    | '/contact'
     | '/contact-support'
+    | '/content-moderation'
     | '/context-packs'
+    | '/cookie-policy'
+    | '/copyright'
+    | '/customer-stories'
+    | '/customers'
+    | '/data-controls'
+    | '/data-export'
+    | '/data-processing'
+    | '/developers'
+    | '/education'
+    | '/en'
+    | '/engineering'
+    | '/enterprise'
+    | '/families'
+    | '/family-safety'
+    | '/features'
     | '/files'
     | '/getting-started'
+    | '/guides'
+    | '/health'
     | '/help'
     | '/humanize-ai-text'
     | '/images'
     | '/knowledge-graph'
+    | '/law-enforcement'
+    | '/leadership'
+    | '/learn'
     | '/library'
+    | '/maps'
     | '/mcp'
     | '/memory'
+    | '/mission'
+    | '/model-behavior'
     | '/modes'
+    | '/new'
+    | '/news'
     | '/notifications'
     | '/omega'
+    | '/organizations'
+    | '/overview'
+    | '/partners'
     | '/pricing'
     | '/privacy'
     | '/projects'
     | '/prompt-studio'
     | '/refund'
+    | '/regional-notices'
+    | '/release-notes'
+    | '/research'
     | '/research-assistant'
     | '/research-planner'
     | '/reset-password'
+    | '/responsible-disclosure'
+    | '/safety-evaluations'
     | '/scheduled-tasks'
+    | '/search'
+    | '/security'
+    | '/shopping'
     | '/sitemap.xml'
     | '/status'
+    | '/students'
     | '/study-assistant'
     | '/summary'
+    | '/technical-reports'
     | '/terms'
+    | '/translate'
+    | '/transparency'
+    | '/trust'
+    | '/tutorials'
     | '/unsubscribe'
+    | '/updates'
+    | '/use-cases'
+    | '/videos'
     | '/work'
     | '/write'
+    | '/writing'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/announcements/$slug'
     | '/api/account'
     | '/api/chat'
     | '/api/generate-image'
@@ -1161,12 +2494,66 @@ export interface FileRouteTypes {
     | '/api/title'
     | '/api/version'
     | '/api/write'
+    | '/apps/$category'
+    | '/assistants/$assistantSlug'
     | '/blog/ai-market-research-guide'
     | '/blog/best-ai-assistants'
     | '/blog/best-ai-market-research-tools'
+    | '/canvas/$documentId'
+    | '/case-studies/$slug'
     | '/checkout/return'
+    | '/developers/api'
+    | '/developers/api-keys'
+    | '/developers/authentication'
+    | '/developers/billing'
+    | '/developers/changelog'
+    | '/developers/errors'
+    | '/developers/examples'
+    | '/developers/files'
+    | '/developers/image-generation'
+    | '/developers/migrations'
+    | '/developers/models'
+    | '/developers/policies'
+    | '/developers/pricing'
+    | '/developers/quickstart'
+    | '/developers/rate-limits'
+    | '/developers/reference'
+    | '/developers/safety'
+    | '/developers/sdks'
+    | '/developers/status'
+    | '/developers/streaming'
+    | '/developers/terms'
+    | '/developers/tool-calling'
+    | '/developers/usage'
     | '/email/unsubscribe'
+    | '/engineering/$slug'
+    | '/guides/$slug'
+    | '/news/$slug'
     | '/projects/$projectId'
+    | '/release-notes/$slug'
+    | '/research/$slug'
+    | '/safety-evaluations/$slug'
+    | '/share/$shareId'
+    | '/technical-reports/$slug'
+    | '/tutorials/$slug'
+    | '/updates/$slug'
+    | '/use-cases/ai-assistant'
+    | '/use-cases/ai-chatbot'
+    | '/use-cases/brainstorming'
+    | '/use-cases/business-assistant'
+    | '/use-cases/document-analysis'
+    | '/use-cases/education-assistant'
+    | '/use-cases/email-writing'
+    | '/use-cases/file-analysis'
+    | '/use-cases/grammar-checker'
+    | '/use-cases/math-help'
+    | '/use-cases/paraphrasing'
+    | '/use-cases/resume-help'
+    | '/use-cases/shopping-research'
+    | '/use-cases/summarization'
+    | '/use-cases/translation'
+    | '/use-cases/writing-assistant'
+    | '/videos/$slug'
     | '/~oauth/callback'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
@@ -1206,48 +2593,108 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
+  AcceptableUseRoute: typeof AcceptableUseRoute
+  AccessibilityRoute: typeof AccessibilityRoute
+  AccountDeletionRoute: typeof AccountDeletionRoute
   AiHumanizerRoute: typeof AiHumanizerRoute
   AiImageGeneratorRoute: typeof AiImageGeneratorRoute
   AiSafetyRoute: typeof AiSafetyRoute
   AiWriterRoute: typeof AiWriterRoute
-  AppsRoute: typeof AppsRoute
+  AnnouncementsRoute: typeof AnnouncementsRouteWithChildren
+  AppsRoute: typeof AppsRouteWithChildren
+  AssistantsRoute: typeof AssistantsRouteWithChildren
   AuditLogRoute: typeof AuditLogRoute
   AuthRoute: typeof AuthRoute
+  BrandRoute: typeof BrandRoute
+  BusinessRoute: typeof BusinessRoute
+  CareersRoute: typeof CareersRoute
+  CaseStudiesRoute: typeof CaseStudiesRouteWithChildren
   ChangelogRoute: typeof ChangelogRoute
+  ChatRoute: typeof ChatRoute
   ChatgptAlternativeRoute: typeof ChatgptAlternativeRoute
   CodeHelperRoute: typeof CodeHelperRoute
+  CompanyRoute: typeof CompanyRoute
   ConnectRoute: typeof ConnectRoute
+  ContactRoute: typeof ContactRoute
   ContactSupportRoute: typeof ContactSupportRoute
+  ContentModerationRoute: typeof ContentModerationRoute
   ContextPacksRoute: typeof ContextPacksRoute
+  CookiePolicyRoute: typeof CookiePolicyRoute
+  CopyrightRoute: typeof CopyrightRoute
+  CustomerStoriesRoute: typeof CustomerStoriesRoute
+  CustomersRoute: typeof CustomersRoute
+  DataControlsRoute: typeof DataControlsRoute
+  DataExportRoute: typeof DataExportRoute
+  DataProcessingRoute: typeof DataProcessingRoute
+  DevelopersRoute: typeof DevelopersRouteWithChildren
+  EducationRoute: typeof EducationRoute
+  EnRoute: typeof EnRoute
+  EngineeringRoute: typeof EngineeringRouteWithChildren
+  EnterpriseRoute: typeof EnterpriseRoute
+  FamiliesRoute: typeof FamiliesRoute
+  FamilySafetyRoute: typeof FamilySafetyRoute
+  FeaturesRoute: typeof FeaturesRoute
   FilesRoute: typeof FilesRoute
   GettingStartedRoute: typeof GettingStartedRoute
+  GuidesRoute: typeof GuidesRouteWithChildren
+  HealthRoute: typeof HealthRoute
   HelpRoute: typeof HelpRoute
   HumanizeAiTextRoute: typeof HumanizeAiTextRoute
   ImagesRoute: typeof ImagesRoute
   KnowledgeGraphRoute: typeof KnowledgeGraphRoute
+  LawEnforcementRoute: typeof LawEnforcementRoute
+  LeadershipRoute: typeof LeadershipRoute
+  LearnRoute: typeof LearnRoute
   LibraryRoute: typeof LibraryRoute
+  MapsRoute: typeof MapsRoute
   McpRoute: typeof McpRoute
   MemoryRoute: typeof MemoryRoute
+  MissionRoute: typeof MissionRoute
+  ModelBehaviorRoute: typeof ModelBehaviorRoute
   ModesRoute: typeof ModesRoute
+  NewRoute: typeof NewRoute
+  NewsRoute: typeof NewsRouteWithChildren
   NotificationsRoute: typeof NotificationsRoute
   OmegaRoute: typeof OmegaRoute
+  OrganizationsRoute: typeof OrganizationsRoute
+  OverviewRoute: typeof OverviewRoute
+  PartnersRoute: typeof PartnersRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProjectsRoute: typeof ProjectsRouteWithChildren
   PromptStudioRoute: typeof PromptStudioRoute
   RefundRoute: typeof RefundRoute
+  RegionalNoticesRoute: typeof RegionalNoticesRoute
+  ReleaseNotesRoute: typeof ReleaseNotesRouteWithChildren
+  ResearchRoute: typeof ResearchRouteWithChildren
   ResearchAssistantRoute: typeof ResearchAssistantRoute
   ResearchPlannerRoute: typeof ResearchPlannerRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  ResponsibleDisclosureRoute: typeof ResponsibleDisclosureRoute
+  SafetyEvaluationsRoute: typeof SafetyEvaluationsRouteWithChildren
   ScheduledTasksRoute: typeof ScheduledTasksRoute
+  SearchRoute: typeof SearchRoute
+  SecurityRoute: typeof SecurityRoute
+  ShoppingRoute: typeof ShoppingRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StatusRoute: typeof StatusRoute
+  StudentsRoute: typeof StudentsRoute
   StudyAssistantRoute: typeof StudyAssistantRoute
   SummaryRoute: typeof SummaryRoute
+  TechnicalReportsRoute: typeof TechnicalReportsRouteWithChildren
   TermsRoute: typeof TermsRoute
+  TranslateRoute: typeof TranslateRoute
+  TransparencyRoute: typeof TransparencyRoute
+  TrustRoute: typeof TrustRoute
+  TutorialsRoute: typeof TutorialsRouteWithChildren
   UnsubscribeRoute: typeof UnsubscribeRoute
+  UpdatesRoute: typeof UpdatesRouteWithChildren
+  UseCasesRoute: typeof UseCasesRouteWithChildren
+  VideosRoute: typeof VideosRouteWithChildren
   WorkRoute: typeof WorkRoute
   WriteRoute: typeof WriteRoute
+  WritingRoute: typeof WritingRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   ApiAccountRoute: typeof ApiAccountRoute
@@ -1264,8 +2711,10 @@ export interface RootRouteChildren {
   BlogAiMarketResearchGuideRoute: typeof BlogAiMarketResearchGuideRoute
   BlogBestAiAssistantsRoute: typeof BlogBestAiAssistantsRoute
   BlogBestAiMarketResearchToolsRoute: typeof BlogBestAiMarketResearchToolsRoute
+  CanvasDocumentIdRoute: typeof CanvasDocumentIdRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
+  ShareShareIdRoute: typeof ShareShareIdRoute
   Char126oauthCallbackRoute: typeof Char126oauthCallbackRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -1310,6 +2759,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/acceptable-use': {
+      id: '/acceptable-use'
+      path: '/acceptable-use'
+      fullPath: '/acceptable-use'
+      preLoaderRoute: typeof AcceptableUseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/accessibility': {
+      id: '/accessibility'
+      path: '/accessibility'
+      fullPath: '/accessibility'
+      preLoaderRoute: typeof AccessibilityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account-deletion': {
+      id: '/account-deletion'
+      path: '/account-deletion'
+      fullPath: '/account-deletion'
+      preLoaderRoute: typeof AccountDeletionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ai-humanizer': {
       id: '/ai-humanizer'
       path: '/ai-humanizer'
@@ -1338,11 +2815,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AiWriterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/announcements': {
+      id: '/announcements'
+      path: '/announcements'
+      fullPath: '/announcements'
+      preLoaderRoute: typeof AnnouncementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/apps': {
       id: '/apps'
       path: '/apps'
       fullPath: '/apps'
       preLoaderRoute: typeof AppsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/assistants': {
+      id: '/assistants'
+      path: '/assistants'
+      fullPath: '/assistants'
+      preLoaderRoute: typeof AssistantsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/audit-log': {
@@ -1359,11 +2850,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/brand': {
+      id: '/brand'
+      path: '/brand'
+      fullPath: '/brand'
+      preLoaderRoute: typeof BrandRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/business': {
+      id: '/business'
+      path: '/business'
+      fullPath: '/business'
+      preLoaderRoute: typeof BusinessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/careers': {
+      id: '/careers'
+      path: '/careers'
+      fullPath: '/careers'
+      preLoaderRoute: typeof CareersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/case-studies': {
+      id: '/case-studies'
+      path: '/case-studies'
+      fullPath: '/case-studies'
+      preLoaderRoute: typeof CaseStudiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/changelog': {
       id: '/changelog'
       path: '/changelog'
       fullPath: '/changelog'
       preLoaderRoute: typeof ChangelogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chat': {
+      id: '/chat'
+      path: '/chat'
+      fullPath: '/chat'
+      preLoaderRoute: typeof ChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/chatgpt-alternative': {
@@ -1380,11 +2906,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CodeHelperRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/company': {
+      id: '/company'
+      path: '/company'
+      fullPath: '/company'
+      preLoaderRoute: typeof CompanyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/connect': {
       id: '/connect'
       path: '/connect'
       fullPath: '/connect'
       preLoaderRoute: typeof ConnectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact-support': {
@@ -1394,11 +2934,123 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContactSupportRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/content-moderation': {
+      id: '/content-moderation'
+      path: '/content-moderation'
+      fullPath: '/content-moderation'
+      preLoaderRoute: typeof ContentModerationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/context-packs': {
       id: '/context-packs'
       path: '/context-packs'
       fullPath: '/context-packs'
       preLoaderRoute: typeof ContextPacksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cookie-policy': {
+      id: '/cookie-policy'
+      path: '/cookie-policy'
+      fullPath: '/cookie-policy'
+      preLoaderRoute: typeof CookiePolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/copyright': {
+      id: '/copyright'
+      path: '/copyright'
+      fullPath: '/copyright'
+      preLoaderRoute: typeof CopyrightRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/customer-stories': {
+      id: '/customer-stories'
+      path: '/customer-stories'
+      fullPath: '/customer-stories'
+      preLoaderRoute: typeof CustomerStoriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/customers': {
+      id: '/customers'
+      path: '/customers'
+      fullPath: '/customers'
+      preLoaderRoute: typeof CustomersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/data-controls': {
+      id: '/data-controls'
+      path: '/data-controls'
+      fullPath: '/data-controls'
+      preLoaderRoute: typeof DataControlsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/data-export': {
+      id: '/data-export'
+      path: '/data-export'
+      fullPath: '/data-export'
+      preLoaderRoute: typeof DataExportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/data-processing': {
+      id: '/data-processing'
+      path: '/data-processing'
+      fullPath: '/data-processing'
+      preLoaderRoute: typeof DataProcessingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/developers': {
+      id: '/developers'
+      path: '/developers'
+      fullPath: '/developers'
+      preLoaderRoute: typeof DevelopersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/education': {
+      id: '/education'
+      path: '/education'
+      fullPath: '/education'
+      preLoaderRoute: typeof EducationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/en': {
+      id: '/en'
+      path: '/en'
+      fullPath: '/en'
+      preLoaderRoute: typeof EnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/engineering': {
+      id: '/engineering'
+      path: '/engineering'
+      fullPath: '/engineering'
+      preLoaderRoute: typeof EngineeringRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/enterprise': {
+      id: '/enterprise'
+      path: '/enterprise'
+      fullPath: '/enterprise'
+      preLoaderRoute: typeof EnterpriseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/families': {
+      id: '/families'
+      path: '/families'
+      fullPath: '/families'
+      preLoaderRoute: typeof FamiliesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/family-safety': {
+      id: '/family-safety'
+      path: '/family-safety'
+      fullPath: '/family-safety'
+      preLoaderRoute: typeof FamilySafetyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/features': {
+      id: '/features'
+      path: '/features'
+      fullPath: '/features'
+      preLoaderRoute: typeof FeaturesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/files': {
@@ -1413,6 +3065,20 @@ declare module '@tanstack/react-router' {
       path: '/getting-started'
       fullPath: '/getting-started'
       preLoaderRoute: typeof GettingStartedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guides': {
+      id: '/guides'
+      path: '/guides'
+      fullPath: '/guides'
+      preLoaderRoute: typeof GuidesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/health': {
+      id: '/health'
+      path: '/health'
+      fullPath: '/health'
+      preLoaderRoute: typeof HealthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/help': {
@@ -1443,11 +3109,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KnowledgeGraphRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/law-enforcement': {
+      id: '/law-enforcement'
+      path: '/law-enforcement'
+      fullPath: '/law-enforcement'
+      preLoaderRoute: typeof LawEnforcementRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/leadership': {
+      id: '/leadership'
+      path: '/leadership'
+      fullPath: '/leadership'
+      preLoaderRoute: typeof LeadershipRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/learn': {
+      id: '/learn'
+      path: '/learn'
+      fullPath: '/learn'
+      preLoaderRoute: typeof LearnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/library': {
       id: '/library'
       path: '/library'
       fullPath: '/library'
       preLoaderRoute: typeof LibraryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/maps': {
+      id: '/maps'
+      path: '/maps'
+      fullPath: '/maps'
+      preLoaderRoute: typeof MapsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mcp': {
@@ -1464,11 +3158,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MemoryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/mission': {
+      id: '/mission'
+      path: '/mission'
+      fullPath: '/mission'
+      preLoaderRoute: typeof MissionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/model-behavior': {
+      id: '/model-behavior'
+      path: '/model-behavior'
+      fullPath: '/model-behavior'
+      preLoaderRoute: typeof ModelBehaviorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/modes': {
       id: '/modes'
       path: '/modes'
       fullPath: '/modes'
       preLoaderRoute: typeof ModesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/new': {
+      id: '/new'
+      path: '/new'
+      fullPath: '/new'
+      preLoaderRoute: typeof NewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/news': {
+      id: '/news'
+      path: '/news'
+      fullPath: '/news'
+      preLoaderRoute: typeof NewsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notifications': {
@@ -1483,6 +3205,27 @@ declare module '@tanstack/react-router' {
       path: '/omega'
       fullPath: '/omega'
       preLoaderRoute: typeof OmegaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/organizations': {
+      id: '/organizations'
+      path: '/organizations'
+      fullPath: '/organizations'
+      preLoaderRoute: typeof OrganizationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/overview': {
+      id: '/overview'
+      path: '/overview'
+      fullPath: '/overview'
+      preLoaderRoute: typeof OverviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/partners': {
+      id: '/partners'
+      path: '/partners'
+      fullPath: '/partners'
+      preLoaderRoute: typeof PartnersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pricing': {
@@ -1520,6 +3263,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RefundRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/regional-notices': {
+      id: '/regional-notices'
+      path: '/regional-notices'
+      fullPath: '/regional-notices'
+      preLoaderRoute: typeof RegionalNoticesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/release-notes': {
+      id: '/release-notes'
+      path: '/release-notes'
+      fullPath: '/release-notes'
+      preLoaderRoute: typeof ReleaseNotesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/research': {
+      id: '/research'
+      path: '/research'
+      fullPath: '/research'
+      preLoaderRoute: typeof ResearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/research-assistant': {
       id: '/research-assistant'
       path: '/research-assistant'
@@ -1541,11 +3305,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/responsible-disclosure': {
+      id: '/responsible-disclosure'
+      path: '/responsible-disclosure'
+      fullPath: '/responsible-disclosure'
+      preLoaderRoute: typeof ResponsibleDisclosureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/safety-evaluations': {
+      id: '/safety-evaluations'
+      path: '/safety-evaluations'
+      fullPath: '/safety-evaluations'
+      preLoaderRoute: typeof SafetyEvaluationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/scheduled-tasks': {
       id: '/scheduled-tasks'
       path: '/scheduled-tasks'
       fullPath: '/scheduled-tasks'
       preLoaderRoute: typeof ScheduledTasksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/security': {
+      id: '/security'
+      path: '/security'
+      fullPath: '/security'
+      preLoaderRoute: typeof SecurityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shopping': {
+      id: '/shopping'
+      path: '/shopping'
+      fullPath: '/shopping'
+      preLoaderRoute: typeof ShoppingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -1562,6 +3361,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StatusRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/students': {
+      id: '/students'
+      path: '/students'
+      fullPath: '/students'
+      preLoaderRoute: typeof StudentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/study-assistant': {
       id: '/study-assistant'
       path: '/study-assistant'
@@ -1576,6 +3382,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SummaryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/technical-reports': {
+      id: '/technical-reports'
+      path: '/technical-reports'
+      fullPath: '/technical-reports'
+      preLoaderRoute: typeof TechnicalReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -1583,11 +3396,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/translate': {
+      id: '/translate'
+      path: '/translate'
+      fullPath: '/translate'
+      preLoaderRoute: typeof TranslateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/transparency': {
+      id: '/transparency'
+      path: '/transparency'
+      fullPath: '/transparency'
+      preLoaderRoute: typeof TransparencyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trust': {
+      id: '/trust'
+      path: '/trust'
+      fullPath: '/trust'
+      preLoaderRoute: typeof TrustRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tutorials': {
+      id: '/tutorials'
+      path: '/tutorials'
+      fullPath: '/tutorials'
+      preLoaderRoute: typeof TutorialsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/unsubscribe': {
       id: '/unsubscribe'
       path: '/unsubscribe'
       fullPath: '/unsubscribe'
       preLoaderRoute: typeof UnsubscribeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/updates': {
+      id: '/updates'
+      path: '/updates'
+      fullPath: '/updates'
+      preLoaderRoute: typeof UpdatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/use-cases': {
+      id: '/use-cases'
+      path: '/use-cases'
+      fullPath: '/use-cases'
+      preLoaderRoute: typeof UseCasesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/videos': {
+      id: '/videos'
+      path: '/videos'
+      fullPath: '/videos'
+      preLoaderRoute: typeof VideosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/work': {
@@ -1604,6 +3466,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WriteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/writing': {
+      id: '/writing'
+      path: '/writing'
+      fullPath: '/writing'
+      preLoaderRoute: typeof WritingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/.mcp/list-tools': {
       id: '/.mcp/list-tools'
       path: '/.mcp/list-tools'
@@ -1617,6 +3486,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/.well-known/oauth-protected-resource'
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/announcements/$slug': {
+      id: '/announcements/$slug'
+      path: '/$slug'
+      fullPath: '/announcements/$slug'
+      preLoaderRoute: typeof AnnouncementsSlugRouteImport
+      parentRoute: typeof AnnouncementsRoute
     }
     '/api/account': {
       id: '/api/account'
@@ -1695,6 +3571,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiWriteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/apps/$category': {
+      id: '/apps/$category'
+      path: '/$category'
+      fullPath: '/apps/$category'
+      preLoaderRoute: typeof AppsCategoryRouteImport
+      parentRoute: typeof AppsRoute
+    }
+    '/assistants/$assistantSlug': {
+      id: '/assistants/$assistantSlug'
+      path: '/$assistantSlug'
+      fullPath: '/assistants/$assistantSlug'
+      preLoaderRoute: typeof AssistantsAssistantSlugRouteImport
+      parentRoute: typeof AssistantsRoute
+    }
     '/blog/ai-market-research-guide': {
       id: '/blog/ai-market-research-guide'
       path: '/blog/ai-market-research-guide'
@@ -1716,12 +3606,187 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogBestAiMarketResearchToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/canvas/$documentId': {
+      id: '/canvas/$documentId'
+      path: '/canvas/$documentId'
+      fullPath: '/canvas/$documentId'
+      preLoaderRoute: typeof CanvasDocumentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/case-studies/$slug': {
+      id: '/case-studies/$slug'
+      path: '/$slug'
+      fullPath: '/case-studies/$slug'
+      preLoaderRoute: typeof CaseStudiesSlugRouteImport
+      parentRoute: typeof CaseStudiesRoute
+    }
     '/checkout/return': {
       id: '/checkout/return'
       path: '/checkout/return'
       fullPath: '/checkout/return'
       preLoaderRoute: typeof CheckoutReturnRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/developers/api': {
+      id: '/developers/api'
+      path: '/api'
+      fullPath: '/developers/api'
+      preLoaderRoute: typeof DevelopersApiRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
+    '/developers/api-keys': {
+      id: '/developers/api-keys'
+      path: '/api-keys'
+      fullPath: '/developers/api-keys'
+      preLoaderRoute: typeof DevelopersApiKeysRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
+    '/developers/authentication': {
+      id: '/developers/authentication'
+      path: '/authentication'
+      fullPath: '/developers/authentication'
+      preLoaderRoute: typeof DevelopersAuthenticationRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
+    '/developers/billing': {
+      id: '/developers/billing'
+      path: '/billing'
+      fullPath: '/developers/billing'
+      preLoaderRoute: typeof DevelopersBillingRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
+    '/developers/changelog': {
+      id: '/developers/changelog'
+      path: '/changelog'
+      fullPath: '/developers/changelog'
+      preLoaderRoute: typeof DevelopersChangelogRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
+    '/developers/errors': {
+      id: '/developers/errors'
+      path: '/errors'
+      fullPath: '/developers/errors'
+      preLoaderRoute: typeof DevelopersErrorsRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
+    '/developers/examples': {
+      id: '/developers/examples'
+      path: '/examples'
+      fullPath: '/developers/examples'
+      preLoaderRoute: typeof DevelopersExamplesRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
+    '/developers/files': {
+      id: '/developers/files'
+      path: '/files'
+      fullPath: '/developers/files'
+      preLoaderRoute: typeof DevelopersFilesRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
+    '/developers/image-generation': {
+      id: '/developers/image-generation'
+      path: '/image-generation'
+      fullPath: '/developers/image-generation'
+      preLoaderRoute: typeof DevelopersImageGenerationRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
+    '/developers/migrations': {
+      id: '/developers/migrations'
+      path: '/migrations'
+      fullPath: '/developers/migrations'
+      preLoaderRoute: typeof DevelopersMigrationsRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
+    '/developers/models': {
+      id: '/developers/models'
+      path: '/models'
+      fullPath: '/developers/models'
+      preLoaderRoute: typeof DevelopersModelsRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
+    '/developers/policies': {
+      id: '/developers/policies'
+      path: '/policies'
+      fullPath: '/developers/policies'
+      preLoaderRoute: typeof DevelopersPoliciesRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
+    '/developers/pricing': {
+      id: '/developers/pricing'
+      path: '/pricing'
+      fullPath: '/developers/pricing'
+      preLoaderRoute: typeof DevelopersPricingRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
+    '/developers/quickstart': {
+      id: '/developers/quickstart'
+      path: '/quickstart'
+      fullPath: '/developers/quickstart'
+      preLoaderRoute: typeof DevelopersQuickstartRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
+    '/developers/rate-limits': {
+      id: '/developers/rate-limits'
+      path: '/rate-limits'
+      fullPath: '/developers/rate-limits'
+      preLoaderRoute: typeof DevelopersRateLimitsRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
+    '/developers/reference': {
+      id: '/developers/reference'
+      path: '/reference'
+      fullPath: '/developers/reference'
+      preLoaderRoute: typeof DevelopersReferenceRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
+    '/developers/safety': {
+      id: '/developers/safety'
+      path: '/safety'
+      fullPath: '/developers/safety'
+      preLoaderRoute: typeof DevelopersSafetyRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
+    '/developers/sdks': {
+      id: '/developers/sdks'
+      path: '/sdks'
+      fullPath: '/developers/sdks'
+      preLoaderRoute: typeof DevelopersSdksRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
+    '/developers/status': {
+      id: '/developers/status'
+      path: '/status'
+      fullPath: '/developers/status'
+      preLoaderRoute: typeof DevelopersStatusRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
+    '/developers/streaming': {
+      id: '/developers/streaming'
+      path: '/streaming'
+      fullPath: '/developers/streaming'
+      preLoaderRoute: typeof DevelopersStreamingRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
+    '/developers/terms': {
+      id: '/developers/terms'
+      path: '/terms'
+      fullPath: '/developers/terms'
+      preLoaderRoute: typeof DevelopersTermsRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
+    '/developers/tool-calling': {
+      id: '/developers/tool-calling'
+      path: '/tool-calling'
+      fullPath: '/developers/tool-calling'
+      preLoaderRoute: typeof DevelopersToolCallingRouteImport
+      parentRoute: typeof DevelopersRoute
+    }
+    '/developers/usage': {
+      id: '/developers/usage'
+      path: '/usage'
+      fullPath: '/developers/usage'
+      preLoaderRoute: typeof DevelopersUsageRouteImport
+      parentRoute: typeof DevelopersRoute
     }
     '/email/unsubscribe': {
       id: '/email/unsubscribe'
@@ -1730,12 +3795,201 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmailUnsubscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/engineering/$slug': {
+      id: '/engineering/$slug'
+      path: '/$slug'
+      fullPath: '/engineering/$slug'
+      preLoaderRoute: typeof EngineeringSlugRouteImport
+      parentRoute: typeof EngineeringRoute
+    }
+    '/guides/$slug': {
+      id: '/guides/$slug'
+      path: '/$slug'
+      fullPath: '/guides/$slug'
+      preLoaderRoute: typeof GuidesSlugRouteImport
+      parentRoute: typeof GuidesRoute
+    }
+    '/news/$slug': {
+      id: '/news/$slug'
+      path: '/$slug'
+      fullPath: '/news/$slug'
+      preLoaderRoute: typeof NewsSlugRouteImport
+      parentRoute: typeof NewsRoute
+    }
     '/projects/$projectId': {
       id: '/projects/$projectId'
       path: '/$projectId'
       fullPath: '/projects/$projectId'
       preLoaderRoute: typeof ProjectsProjectIdRouteImport
       parentRoute: typeof ProjectsRoute
+    }
+    '/release-notes/$slug': {
+      id: '/release-notes/$slug'
+      path: '/$slug'
+      fullPath: '/release-notes/$slug'
+      preLoaderRoute: typeof ReleaseNotesSlugRouteImport
+      parentRoute: typeof ReleaseNotesRoute
+    }
+    '/research/$slug': {
+      id: '/research/$slug'
+      path: '/$slug'
+      fullPath: '/research/$slug'
+      preLoaderRoute: typeof ResearchSlugRouteImport
+      parentRoute: typeof ResearchRoute
+    }
+    '/safety-evaluations/$slug': {
+      id: '/safety-evaluations/$slug'
+      path: '/$slug'
+      fullPath: '/safety-evaluations/$slug'
+      preLoaderRoute: typeof SafetyEvaluationsSlugRouteImport
+      parentRoute: typeof SafetyEvaluationsRoute
+    }
+    '/share/$shareId': {
+      id: '/share/$shareId'
+      path: '/share/$shareId'
+      fullPath: '/share/$shareId'
+      preLoaderRoute: typeof ShareShareIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/technical-reports/$slug': {
+      id: '/technical-reports/$slug'
+      path: '/$slug'
+      fullPath: '/technical-reports/$slug'
+      preLoaderRoute: typeof TechnicalReportsSlugRouteImport
+      parentRoute: typeof TechnicalReportsRoute
+    }
+    '/tutorials/$slug': {
+      id: '/tutorials/$slug'
+      path: '/$slug'
+      fullPath: '/tutorials/$slug'
+      preLoaderRoute: typeof TutorialsSlugRouteImport
+      parentRoute: typeof TutorialsRoute
+    }
+    '/updates/$slug': {
+      id: '/updates/$slug'
+      path: '/$slug'
+      fullPath: '/updates/$slug'
+      preLoaderRoute: typeof UpdatesSlugRouteImport
+      parentRoute: typeof UpdatesRoute
+    }
+    '/use-cases/ai-assistant': {
+      id: '/use-cases/ai-assistant'
+      path: '/ai-assistant'
+      fullPath: '/use-cases/ai-assistant'
+      preLoaderRoute: typeof UseCasesAiAssistantRouteImport
+      parentRoute: typeof UseCasesRoute
+    }
+    '/use-cases/ai-chatbot': {
+      id: '/use-cases/ai-chatbot'
+      path: '/ai-chatbot'
+      fullPath: '/use-cases/ai-chatbot'
+      preLoaderRoute: typeof UseCasesAiChatbotRouteImport
+      parentRoute: typeof UseCasesRoute
+    }
+    '/use-cases/brainstorming': {
+      id: '/use-cases/brainstorming'
+      path: '/brainstorming'
+      fullPath: '/use-cases/brainstorming'
+      preLoaderRoute: typeof UseCasesBrainstormingRouteImport
+      parentRoute: typeof UseCasesRoute
+    }
+    '/use-cases/business-assistant': {
+      id: '/use-cases/business-assistant'
+      path: '/business-assistant'
+      fullPath: '/use-cases/business-assistant'
+      preLoaderRoute: typeof UseCasesBusinessAssistantRouteImport
+      parentRoute: typeof UseCasesRoute
+    }
+    '/use-cases/document-analysis': {
+      id: '/use-cases/document-analysis'
+      path: '/document-analysis'
+      fullPath: '/use-cases/document-analysis'
+      preLoaderRoute: typeof UseCasesDocumentAnalysisRouteImport
+      parentRoute: typeof UseCasesRoute
+    }
+    '/use-cases/education-assistant': {
+      id: '/use-cases/education-assistant'
+      path: '/education-assistant'
+      fullPath: '/use-cases/education-assistant'
+      preLoaderRoute: typeof UseCasesEducationAssistantRouteImport
+      parentRoute: typeof UseCasesRoute
+    }
+    '/use-cases/email-writing': {
+      id: '/use-cases/email-writing'
+      path: '/email-writing'
+      fullPath: '/use-cases/email-writing'
+      preLoaderRoute: typeof UseCasesEmailWritingRouteImport
+      parentRoute: typeof UseCasesRoute
+    }
+    '/use-cases/file-analysis': {
+      id: '/use-cases/file-analysis'
+      path: '/file-analysis'
+      fullPath: '/use-cases/file-analysis'
+      preLoaderRoute: typeof UseCasesFileAnalysisRouteImport
+      parentRoute: typeof UseCasesRoute
+    }
+    '/use-cases/grammar-checker': {
+      id: '/use-cases/grammar-checker'
+      path: '/grammar-checker'
+      fullPath: '/use-cases/grammar-checker'
+      preLoaderRoute: typeof UseCasesGrammarCheckerRouteImport
+      parentRoute: typeof UseCasesRoute
+    }
+    '/use-cases/math-help': {
+      id: '/use-cases/math-help'
+      path: '/math-help'
+      fullPath: '/use-cases/math-help'
+      preLoaderRoute: typeof UseCasesMathHelpRouteImport
+      parentRoute: typeof UseCasesRoute
+    }
+    '/use-cases/paraphrasing': {
+      id: '/use-cases/paraphrasing'
+      path: '/paraphrasing'
+      fullPath: '/use-cases/paraphrasing'
+      preLoaderRoute: typeof UseCasesParaphrasingRouteImport
+      parentRoute: typeof UseCasesRoute
+    }
+    '/use-cases/resume-help': {
+      id: '/use-cases/resume-help'
+      path: '/resume-help'
+      fullPath: '/use-cases/resume-help'
+      preLoaderRoute: typeof UseCasesResumeHelpRouteImport
+      parentRoute: typeof UseCasesRoute
+    }
+    '/use-cases/shopping-research': {
+      id: '/use-cases/shopping-research'
+      path: '/shopping-research'
+      fullPath: '/use-cases/shopping-research'
+      preLoaderRoute: typeof UseCasesShoppingResearchRouteImport
+      parentRoute: typeof UseCasesRoute
+    }
+    '/use-cases/summarization': {
+      id: '/use-cases/summarization'
+      path: '/summarization'
+      fullPath: '/use-cases/summarization'
+      preLoaderRoute: typeof UseCasesSummarizationRouteImport
+      parentRoute: typeof UseCasesRoute
+    }
+    '/use-cases/translation': {
+      id: '/use-cases/translation'
+      path: '/translation'
+      fullPath: '/use-cases/translation'
+      preLoaderRoute: typeof UseCasesTranslationRouteImport
+      parentRoute: typeof UseCasesRoute
+    }
+    '/use-cases/writing-assistant': {
+      id: '/use-cases/writing-assistant'
+      path: '/writing-assistant'
+      fullPath: '/use-cases/writing-assistant'
+      preLoaderRoute: typeof UseCasesWritingAssistantRouteImport
+      parentRoute: typeof UseCasesRoute
+    }
+    '/videos/$slug': {
+      id: '/videos/$slug'
+      path: '/$slug'
+      fullPath: '/videos/$slug'
+      preLoaderRoute: typeof VideosSlugRouteImport
+      parentRoute: typeof VideosRoute
     }
     '/~oauth/callback': {
       id: '/~oauth/callback'
@@ -1985,6 +4239,141 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AnnouncementsRouteChildren {
+  AnnouncementsSlugRoute: typeof AnnouncementsSlugRoute
+}
+
+const AnnouncementsRouteChildren: AnnouncementsRouteChildren = {
+  AnnouncementsSlugRoute: AnnouncementsSlugRoute,
+}
+
+const AnnouncementsRouteWithChildren = AnnouncementsRoute._addFileChildren(
+  AnnouncementsRouteChildren,
+)
+
+interface AppsRouteChildren {
+  AppsCategoryRoute: typeof AppsCategoryRoute
+}
+
+const AppsRouteChildren: AppsRouteChildren = {
+  AppsCategoryRoute: AppsCategoryRoute,
+}
+
+const AppsRouteWithChildren = AppsRoute._addFileChildren(AppsRouteChildren)
+
+interface AssistantsRouteChildren {
+  AssistantsAssistantSlugRoute: typeof AssistantsAssistantSlugRoute
+}
+
+const AssistantsRouteChildren: AssistantsRouteChildren = {
+  AssistantsAssistantSlugRoute: AssistantsAssistantSlugRoute,
+}
+
+const AssistantsRouteWithChildren = AssistantsRoute._addFileChildren(
+  AssistantsRouteChildren,
+)
+
+interface CaseStudiesRouteChildren {
+  CaseStudiesSlugRoute: typeof CaseStudiesSlugRoute
+}
+
+const CaseStudiesRouteChildren: CaseStudiesRouteChildren = {
+  CaseStudiesSlugRoute: CaseStudiesSlugRoute,
+}
+
+const CaseStudiesRouteWithChildren = CaseStudiesRoute._addFileChildren(
+  CaseStudiesRouteChildren,
+)
+
+interface DevelopersRouteChildren {
+  DevelopersApiRoute: typeof DevelopersApiRoute
+  DevelopersApiKeysRoute: typeof DevelopersApiKeysRoute
+  DevelopersAuthenticationRoute: typeof DevelopersAuthenticationRoute
+  DevelopersBillingRoute: typeof DevelopersBillingRoute
+  DevelopersChangelogRoute: typeof DevelopersChangelogRoute
+  DevelopersErrorsRoute: typeof DevelopersErrorsRoute
+  DevelopersExamplesRoute: typeof DevelopersExamplesRoute
+  DevelopersFilesRoute: typeof DevelopersFilesRoute
+  DevelopersImageGenerationRoute: typeof DevelopersImageGenerationRoute
+  DevelopersMigrationsRoute: typeof DevelopersMigrationsRoute
+  DevelopersModelsRoute: typeof DevelopersModelsRoute
+  DevelopersPoliciesRoute: typeof DevelopersPoliciesRoute
+  DevelopersPricingRoute: typeof DevelopersPricingRoute
+  DevelopersQuickstartRoute: typeof DevelopersQuickstartRoute
+  DevelopersRateLimitsRoute: typeof DevelopersRateLimitsRoute
+  DevelopersReferenceRoute: typeof DevelopersReferenceRoute
+  DevelopersSafetyRoute: typeof DevelopersSafetyRoute
+  DevelopersSdksRoute: typeof DevelopersSdksRoute
+  DevelopersStatusRoute: typeof DevelopersStatusRoute
+  DevelopersStreamingRoute: typeof DevelopersStreamingRoute
+  DevelopersTermsRoute: typeof DevelopersTermsRoute
+  DevelopersToolCallingRoute: typeof DevelopersToolCallingRoute
+  DevelopersUsageRoute: typeof DevelopersUsageRoute
+}
+
+const DevelopersRouteChildren: DevelopersRouteChildren = {
+  DevelopersApiRoute: DevelopersApiRoute,
+  DevelopersApiKeysRoute: DevelopersApiKeysRoute,
+  DevelopersAuthenticationRoute: DevelopersAuthenticationRoute,
+  DevelopersBillingRoute: DevelopersBillingRoute,
+  DevelopersChangelogRoute: DevelopersChangelogRoute,
+  DevelopersErrorsRoute: DevelopersErrorsRoute,
+  DevelopersExamplesRoute: DevelopersExamplesRoute,
+  DevelopersFilesRoute: DevelopersFilesRoute,
+  DevelopersImageGenerationRoute: DevelopersImageGenerationRoute,
+  DevelopersMigrationsRoute: DevelopersMigrationsRoute,
+  DevelopersModelsRoute: DevelopersModelsRoute,
+  DevelopersPoliciesRoute: DevelopersPoliciesRoute,
+  DevelopersPricingRoute: DevelopersPricingRoute,
+  DevelopersQuickstartRoute: DevelopersQuickstartRoute,
+  DevelopersRateLimitsRoute: DevelopersRateLimitsRoute,
+  DevelopersReferenceRoute: DevelopersReferenceRoute,
+  DevelopersSafetyRoute: DevelopersSafetyRoute,
+  DevelopersSdksRoute: DevelopersSdksRoute,
+  DevelopersStatusRoute: DevelopersStatusRoute,
+  DevelopersStreamingRoute: DevelopersStreamingRoute,
+  DevelopersTermsRoute: DevelopersTermsRoute,
+  DevelopersToolCallingRoute: DevelopersToolCallingRoute,
+  DevelopersUsageRoute: DevelopersUsageRoute,
+}
+
+const DevelopersRouteWithChildren = DevelopersRoute._addFileChildren(
+  DevelopersRouteChildren,
+)
+
+interface EngineeringRouteChildren {
+  EngineeringSlugRoute: typeof EngineeringSlugRoute
+}
+
+const EngineeringRouteChildren: EngineeringRouteChildren = {
+  EngineeringSlugRoute: EngineeringSlugRoute,
+}
+
+const EngineeringRouteWithChildren = EngineeringRoute._addFileChildren(
+  EngineeringRouteChildren,
+)
+
+interface GuidesRouteChildren {
+  GuidesSlugRoute: typeof GuidesSlugRoute
+}
+
+const GuidesRouteChildren: GuidesRouteChildren = {
+  GuidesSlugRoute: GuidesSlugRoute,
+}
+
+const GuidesRouteWithChildren =
+  GuidesRoute._addFileChildren(GuidesRouteChildren)
+
+interface NewsRouteChildren {
+  NewsSlugRoute: typeof NewsSlugRoute
+}
+
+const NewsRouteChildren: NewsRouteChildren = {
+  NewsSlugRoute: NewsSlugRoute,
+}
+
+const NewsRouteWithChildren = NewsRoute._addFileChildren(NewsRouteChildren)
+
 interface ProjectsProjectIdRouteChildren {
   ProjectsProjectIdChatChatIdRoute: typeof ProjectsProjectIdChatChatIdRoute
 }
@@ -2008,6 +4397,128 @@ const ProjectsRouteWithChildren = ProjectsRoute._addFileChildren(
   ProjectsRouteChildren,
 )
 
+interface ReleaseNotesRouteChildren {
+  ReleaseNotesSlugRoute: typeof ReleaseNotesSlugRoute
+}
+
+const ReleaseNotesRouteChildren: ReleaseNotesRouteChildren = {
+  ReleaseNotesSlugRoute: ReleaseNotesSlugRoute,
+}
+
+const ReleaseNotesRouteWithChildren = ReleaseNotesRoute._addFileChildren(
+  ReleaseNotesRouteChildren,
+)
+
+interface ResearchRouteChildren {
+  ResearchSlugRoute: typeof ResearchSlugRoute
+}
+
+const ResearchRouteChildren: ResearchRouteChildren = {
+  ResearchSlugRoute: ResearchSlugRoute,
+}
+
+const ResearchRouteWithChildren = ResearchRoute._addFileChildren(
+  ResearchRouteChildren,
+)
+
+interface SafetyEvaluationsRouteChildren {
+  SafetyEvaluationsSlugRoute: typeof SafetyEvaluationsSlugRoute
+}
+
+const SafetyEvaluationsRouteChildren: SafetyEvaluationsRouteChildren = {
+  SafetyEvaluationsSlugRoute: SafetyEvaluationsSlugRoute,
+}
+
+const SafetyEvaluationsRouteWithChildren =
+  SafetyEvaluationsRoute._addFileChildren(SafetyEvaluationsRouteChildren)
+
+interface TechnicalReportsRouteChildren {
+  TechnicalReportsSlugRoute: typeof TechnicalReportsSlugRoute
+}
+
+const TechnicalReportsRouteChildren: TechnicalReportsRouteChildren = {
+  TechnicalReportsSlugRoute: TechnicalReportsSlugRoute,
+}
+
+const TechnicalReportsRouteWithChildren =
+  TechnicalReportsRoute._addFileChildren(TechnicalReportsRouteChildren)
+
+interface TutorialsRouteChildren {
+  TutorialsSlugRoute: typeof TutorialsSlugRoute
+}
+
+const TutorialsRouteChildren: TutorialsRouteChildren = {
+  TutorialsSlugRoute: TutorialsSlugRoute,
+}
+
+const TutorialsRouteWithChildren = TutorialsRoute._addFileChildren(
+  TutorialsRouteChildren,
+)
+
+interface UpdatesRouteChildren {
+  UpdatesSlugRoute: typeof UpdatesSlugRoute
+}
+
+const UpdatesRouteChildren: UpdatesRouteChildren = {
+  UpdatesSlugRoute: UpdatesSlugRoute,
+}
+
+const UpdatesRouteWithChildren =
+  UpdatesRoute._addFileChildren(UpdatesRouteChildren)
+
+interface UseCasesRouteChildren {
+  UseCasesAiAssistantRoute: typeof UseCasesAiAssistantRoute
+  UseCasesAiChatbotRoute: typeof UseCasesAiChatbotRoute
+  UseCasesBrainstormingRoute: typeof UseCasesBrainstormingRoute
+  UseCasesBusinessAssistantRoute: typeof UseCasesBusinessAssistantRoute
+  UseCasesDocumentAnalysisRoute: typeof UseCasesDocumentAnalysisRoute
+  UseCasesEducationAssistantRoute: typeof UseCasesEducationAssistantRoute
+  UseCasesEmailWritingRoute: typeof UseCasesEmailWritingRoute
+  UseCasesFileAnalysisRoute: typeof UseCasesFileAnalysisRoute
+  UseCasesGrammarCheckerRoute: typeof UseCasesGrammarCheckerRoute
+  UseCasesMathHelpRoute: typeof UseCasesMathHelpRoute
+  UseCasesParaphrasingRoute: typeof UseCasesParaphrasingRoute
+  UseCasesResumeHelpRoute: typeof UseCasesResumeHelpRoute
+  UseCasesShoppingResearchRoute: typeof UseCasesShoppingResearchRoute
+  UseCasesSummarizationRoute: typeof UseCasesSummarizationRoute
+  UseCasesTranslationRoute: typeof UseCasesTranslationRoute
+  UseCasesWritingAssistantRoute: typeof UseCasesWritingAssistantRoute
+}
+
+const UseCasesRouteChildren: UseCasesRouteChildren = {
+  UseCasesAiAssistantRoute: UseCasesAiAssistantRoute,
+  UseCasesAiChatbotRoute: UseCasesAiChatbotRoute,
+  UseCasesBrainstormingRoute: UseCasesBrainstormingRoute,
+  UseCasesBusinessAssistantRoute: UseCasesBusinessAssistantRoute,
+  UseCasesDocumentAnalysisRoute: UseCasesDocumentAnalysisRoute,
+  UseCasesEducationAssistantRoute: UseCasesEducationAssistantRoute,
+  UseCasesEmailWritingRoute: UseCasesEmailWritingRoute,
+  UseCasesFileAnalysisRoute: UseCasesFileAnalysisRoute,
+  UseCasesGrammarCheckerRoute: UseCasesGrammarCheckerRoute,
+  UseCasesMathHelpRoute: UseCasesMathHelpRoute,
+  UseCasesParaphrasingRoute: UseCasesParaphrasingRoute,
+  UseCasesResumeHelpRoute: UseCasesResumeHelpRoute,
+  UseCasesShoppingResearchRoute: UseCasesShoppingResearchRoute,
+  UseCasesSummarizationRoute: UseCasesSummarizationRoute,
+  UseCasesTranslationRoute: UseCasesTranslationRoute,
+  UseCasesWritingAssistantRoute: UseCasesWritingAssistantRoute,
+}
+
+const UseCasesRouteWithChildren = UseCasesRoute._addFileChildren(
+  UseCasesRouteChildren,
+)
+
+interface VideosRouteChildren {
+  VideosSlugRoute: typeof VideosSlugRoute
+}
+
+const VideosRouteChildren: VideosRouteChildren = {
+  VideosSlugRoute: VideosSlugRoute,
+}
+
+const VideosRouteWithChildren =
+  VideosRoute._addFileChildren(VideosRouteChildren)
+
 interface ApiChatRouteChildren {
   ApiChatConfirmRoute: typeof ApiChatConfirmRoute
 }
@@ -2021,48 +4532,108 @@ const ApiChatRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
+  AcceptableUseRoute: AcceptableUseRoute,
+  AccessibilityRoute: AccessibilityRoute,
+  AccountDeletionRoute: AccountDeletionRoute,
   AiHumanizerRoute: AiHumanizerRoute,
   AiImageGeneratorRoute: AiImageGeneratorRoute,
   AiSafetyRoute: AiSafetyRoute,
   AiWriterRoute: AiWriterRoute,
-  AppsRoute: AppsRoute,
+  AnnouncementsRoute: AnnouncementsRouteWithChildren,
+  AppsRoute: AppsRouteWithChildren,
+  AssistantsRoute: AssistantsRouteWithChildren,
   AuditLogRoute: AuditLogRoute,
   AuthRoute: AuthRoute,
+  BrandRoute: BrandRoute,
+  BusinessRoute: BusinessRoute,
+  CareersRoute: CareersRoute,
+  CaseStudiesRoute: CaseStudiesRouteWithChildren,
   ChangelogRoute: ChangelogRoute,
+  ChatRoute: ChatRoute,
   ChatgptAlternativeRoute: ChatgptAlternativeRoute,
   CodeHelperRoute: CodeHelperRoute,
+  CompanyRoute: CompanyRoute,
   ConnectRoute: ConnectRoute,
+  ContactRoute: ContactRoute,
   ContactSupportRoute: ContactSupportRoute,
+  ContentModerationRoute: ContentModerationRoute,
   ContextPacksRoute: ContextPacksRoute,
+  CookiePolicyRoute: CookiePolicyRoute,
+  CopyrightRoute: CopyrightRoute,
+  CustomerStoriesRoute: CustomerStoriesRoute,
+  CustomersRoute: CustomersRoute,
+  DataControlsRoute: DataControlsRoute,
+  DataExportRoute: DataExportRoute,
+  DataProcessingRoute: DataProcessingRoute,
+  DevelopersRoute: DevelopersRouteWithChildren,
+  EducationRoute: EducationRoute,
+  EnRoute: EnRoute,
+  EngineeringRoute: EngineeringRouteWithChildren,
+  EnterpriseRoute: EnterpriseRoute,
+  FamiliesRoute: FamiliesRoute,
+  FamilySafetyRoute: FamilySafetyRoute,
+  FeaturesRoute: FeaturesRoute,
   FilesRoute: FilesRoute,
   GettingStartedRoute: GettingStartedRoute,
+  GuidesRoute: GuidesRouteWithChildren,
+  HealthRoute: HealthRoute,
   HelpRoute: HelpRoute,
   HumanizeAiTextRoute: HumanizeAiTextRoute,
   ImagesRoute: ImagesRoute,
   KnowledgeGraphRoute: KnowledgeGraphRoute,
+  LawEnforcementRoute: LawEnforcementRoute,
+  LeadershipRoute: LeadershipRoute,
+  LearnRoute: LearnRoute,
   LibraryRoute: LibraryRoute,
+  MapsRoute: MapsRoute,
   McpRoute: McpRoute,
   MemoryRoute: MemoryRoute,
+  MissionRoute: MissionRoute,
+  ModelBehaviorRoute: ModelBehaviorRoute,
   ModesRoute: ModesRoute,
+  NewRoute: NewRoute,
+  NewsRoute: NewsRouteWithChildren,
   NotificationsRoute: NotificationsRoute,
   OmegaRoute: OmegaRoute,
+  OrganizationsRoute: OrganizationsRoute,
+  OverviewRoute: OverviewRoute,
+  PartnersRoute: PartnersRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ProjectsRoute: ProjectsRouteWithChildren,
   PromptStudioRoute: PromptStudioRoute,
   RefundRoute: RefundRoute,
+  RegionalNoticesRoute: RegionalNoticesRoute,
+  ReleaseNotesRoute: ReleaseNotesRouteWithChildren,
+  ResearchRoute: ResearchRouteWithChildren,
   ResearchAssistantRoute: ResearchAssistantRoute,
   ResearchPlannerRoute: ResearchPlannerRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  ResponsibleDisclosureRoute: ResponsibleDisclosureRoute,
+  SafetyEvaluationsRoute: SafetyEvaluationsRouteWithChildren,
   ScheduledTasksRoute: ScheduledTasksRoute,
+  SearchRoute: SearchRoute,
+  SecurityRoute: SecurityRoute,
+  ShoppingRoute: ShoppingRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StatusRoute: StatusRoute,
+  StudentsRoute: StudentsRoute,
   StudyAssistantRoute: StudyAssistantRoute,
   SummaryRoute: SummaryRoute,
+  TechnicalReportsRoute: TechnicalReportsRouteWithChildren,
   TermsRoute: TermsRoute,
+  TranslateRoute: TranslateRoute,
+  TransparencyRoute: TransparencyRoute,
+  TrustRoute: TrustRoute,
+  TutorialsRoute: TutorialsRouteWithChildren,
   UnsubscribeRoute: UnsubscribeRoute,
+  UpdatesRoute: UpdatesRouteWithChildren,
+  UseCasesRoute: UseCasesRouteWithChildren,
+  VideosRoute: VideosRouteWithChildren,
   WorkRoute: WorkRoute,
   WriteRoute: WriteRoute,
+  WritingRoute: WritingRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
@@ -2080,8 +4651,10 @@ const rootRouteChildren: RootRouteChildren = {
   BlogAiMarketResearchGuideRoute: BlogAiMarketResearchGuideRoute,
   BlogBestAiAssistantsRoute: BlogBestAiAssistantsRoute,
   BlogBestAiMarketResearchToolsRoute: BlogBestAiMarketResearchToolsRoute,
+  CanvasDocumentIdRoute: CanvasDocumentIdRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
+  ShareShareIdRoute: ShareShareIdRoute,
   Char126oauthCallbackRoute: Char126oauthCallbackRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,

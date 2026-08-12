@@ -32,12 +32,11 @@ const [
 
 test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
   assert.match(route, /const greeting = "What can I help with\?";/);
-  assert.match(chatInput, /KovaGPT can make mistakes\. Check important information\./);
+  assert.match(route, /KovaGPT can make mistakes\. Check important info\./);
   assert.doesNotMatch(route, /ConversationOutline/);
-  assert.equal((route.match(/canChangeAgent=\{false\}/g) ?? []).length, 2);
+  assert.equal((route.match(/<ResponsiveModelSelector/g) ?? []).length, 1);
   assert.match(route, /<ResponsiveModelSelector[\s\S]{0,240}placement="topbar"/);
   assert.match(mobileTopBar, /<ResponsiveModelSelector[\s\S]{0,240}placement="topbar"/);
-  assert.match(modelSelector, /placement\?: "composer" \| "topbar"/);
   assert.match(responsiveSelector, /placement\?: "composer" \| "topbar"/);
   assert.equal((responsiveSelector.match(/data-testid="model-selector-trigger"/g) ?? []).length, 1);
   assert.match(responsiveSelector, /const useSheet = !isDesktop \|\| interaction === "touch"/);
@@ -52,7 +51,7 @@ test("composer actions, message editing, and markdown stay reachable and lossles
     chatInput,
     /spellCheck\s+autoComplete="off"\s+autoCorrect="on"\s+autoCapitalize="sentences"/,
   );
-  assert.match(chatInput, /COMPOSER_TOOLS\.map/);
+  assert.match(chatInput, /COMPOSER_TOOLS\.find/);
   assert.match(chatInput, /onToolSelect\?\.\(next\)/);
   assert.equal((route.match(/selectedTool=\{selectedTool\}/g) ?? []).length, 2);
   assert.match(chatInput, /kova-send-button is-enabled/);

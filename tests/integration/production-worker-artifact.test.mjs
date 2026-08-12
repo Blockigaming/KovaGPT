@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { cp, mkdtemp, rm } from "node:fs/promises";
+import { cp, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -76,6 +76,11 @@ test(
   async () => {
     const fixtureRoot = await mkdtemp(join(tmpdir(), "kovagpt-worker-"));
     await cp("dist", join(fixtureRoot, "dist"), { recursive: true });
+    await writeFile(
+      join(fixtureRoot, "dist/server/.dev.vars"),
+      "AI_GENERATION_ENABLED=false\n",
+      "utf8",
+    );
 
     const port = await getAvailablePort();
     const origin = `http://127.0.0.1:${port}`;
@@ -134,8 +139,8 @@ test(
       assert.ok(healthResponse, `Worker did not become healthy\n${output}`);
       assert.match(healthResponse.headers.get("content-type") ?? "", /application\/json/);
       const diagnostics = await healthResponse.json();
-      assert.equal(diagnostics.ok, true);
-      assert.equal(diagnostics.app, "KovaGPT");
+      assert.equal(diagnostics.status, "ok");
+      assert.equal(diagnostics.service, "kovagpt-web");
 
       const rootResponse = await fetch(`${origin}/`, {
         signal: AbortSignal.timeout(5_000),

@@ -37,7 +37,7 @@ export const DEFAULT_SETTINGS: Settings = {
   customInstructions: "",
   mood: "neutral",
   responseLength: "medium",
-  rememberAcross: true,
+  rememberAcross: false,
   webSearch: true,
   sendOnEnter: true,
   mode: "system",

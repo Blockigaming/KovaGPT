@@ -1,0 +1,1146 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-08-12",
+  "requestedBaselineFailures": 39,
+  "observedInitialFailures": 40,
+  "countVarianceReason": "The checked-out aggregate commit produced 40 failures, one more than the supplied 39-failure baseline. All 40 are retained; no assertion was dropped to force the historical count.",
+  "records": [
+    {
+      "stableId": "ICR-001",
+      "testFile": "tests/integration/agent-analytics-provenance.test.mjs",
+      "testName": "agent runs reject stale versions and omit objectives from operational events",
+      "assertionLocation": "tests/integration/agent-analytics-provenance.test.mjs:18",
+      "exactExpectedContract": "/agent_definition_version_conflict/,",
+      "exactObservedContract": "Captured assertion `/agent_definition_version_conflict/,` did not match the checked-out implementation for \u201cagent runs reject stale versions and omit objectives from operational events\u201d; the focused adjudication verified the replacement against src/agents/execution.server.ts, src/routes/api/agents/runs.ts.",
+      "productionFilesInvolved": [
+        "src/agents/execution.server.ts",
+        "src/routes/api/agents/runs.ts"
+      ],
+      "contractCategory": "agent_attribution",
+      "relevance": {
+        "securityPrivacy": true,
+        "billing": false,
+        "dataIntegrity": true
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cagent runs reject stale versions and omit objectives from operational events\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-002",
+      "testFile": "tests/integration/agent-lifecycle-and-attribution.test.mjs",
+      "testName": "agent runs retain exact nullable definition attribution without private objective fields in history",
+      "assertionLocation": "tests/integration/agent-lifecycle-and-attribution.test.mjs:50",
+      "exactExpectedContract": "/archived_agent_cannot_run/,",
+      "exactObservedContract": "Captured assertion `/archived_agent_cannot_run/,` did not match the checked-out implementation for \u201cagent runs retain exact nullable definition attribution without private objective fields in history\u201d; the focused adjudication verified the replacement against src/agents/execution.server.ts, src/routes/api/agents/runs.ts.",
+      "productionFilesInvolved": [
+        "src/agents/execution.server.ts",
+        "src/routes/api/agents/runs.ts"
+      ],
+      "contractCategory": "agent_attribution",
+      "relevance": {
+        "securityPrivacy": true,
+        "billing": false,
+        "dataIntegrity": true
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cagent runs retain exact nullable definition attribution without private objective fields in history\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-003",
+      "testFile": "tests/integration/ai-core-parity-source.test.mjs",
+      "testName": "chat API delegates model routing, activity, research, memory, and provider failure isolation",
+      "assertionLocation": "tests/integration/ai-core-parity-source.test.mjs:23",
+      "exactExpectedContract": "/selectedModel\\.model\\.modelId/,",
+      "exactObservedContract": "Captured assertion `/selectedModel\\.model\\.modelId/,` did not match the checked-out implementation for \u201cchat API delegates model routing, activity, research, memory, and provider failure isolation\u201d; the focused adjudication verified the replacement against src/lib/ai/provider.server.ts, src/routes/api/chat.ts.",
+      "productionFilesInvolved": ["src/lib/ai/provider.server.ts", "src/routes/api/chat.ts"],
+      "contractCategory": "optional_provider_degradation",
+      "relevance": {
+        "securityPrivacy": true,
+        "billing": false,
+        "dataIntegrity": true
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cchat API delegates model routing, activity, research, memory, and provider failure isolation\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-004",
+      "testFile": "tests/integration/chat-experience-closure.test.mjs",
+      "testName": "guest sign-in invitation waits for three prompts in the current tab",
+      "assertionLocation": "tests/integration/chat-experience-closure.test.mjs:7",
+      "exactExpectedContract": "/guestPromptTurns >= 3/,",
+      "exactObservedContract": "Captured assertion `/guestPromptTurns >= 3/,` did not match the checked-out implementation for \u201cguest sign-in invitation waits for three prompts in the current tab\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/components/PlatformRuntime.tsx.",
+      "productionFilesInvolved": ["src/routes/index.tsx", "src/components/PlatformRuntime.tsx"],
+      "contractCategory": "guest_async_state",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": false
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cguest sign-in invitation waits for three prompts in the current tab\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-005",
+      "testFile": "tests/integration/chat-experience-closure.test.mjs",
+      "testName": "chat interaction primitives remain complete and animated",
+      "assertionLocation": "tests/integration/chat-experience-closure.test.mjs:23",
+      "exactExpectedContract": "/max-h-\\[200px\\]/,",
+      "exactObservedContract": "Captured assertion `/max-h-\\[200px\\]/,` did not match the checked-out implementation for \u201cchat interaction primitives remain complete and animated\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": false
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cchat interaction primitives remain complete and animated\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-006",
+      "testFile": "tests/integration/chatgpt-parity-source.test.mjs",
+      "testName": "KovaGPT uses one ChatGPT-style model chooser in the top bar",
+      "assertionLocation": "tests/integration/chatgpt-parity-source.test.mjs:35",
+      "exactExpectedContract": "/KovaGPT can make mistakes\\. Check important information\\./,",
+      "exactObservedContract": "Captured assertion `/KovaGPT can make mistakes\\. Check important information\\./,` did not match the checked-out implementation for \u201cKovaGPT uses one ChatGPT-style model chooser in the top bar\u201d; the focused adjudication verified the replacement against src/lib/ai/model-catalog.server.ts, src/routes/api/chat.ts, src/components/ResponsiveModelSelector.tsx.",
+      "productionFilesInvolved": [
+        "src/lib/ai/model-catalog.server.ts",
+        "src/routes/api/chat.ts",
+        "src/components/ResponsiveModelSelector.tsx"
+      ],
+      "contractCategory": "model_registry_and_ui",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": false
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cKovaGPT uses one ChatGPT-style model chooser in the top bar\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-007",
+      "testFile": "tests/integration/chatgpt-parity-source.test.mjs",
+      "testName": "composer actions, message editing, and markdown stay reachable and lossless",
+      "assertionLocation": "tests/integration/chatgpt-parity-source.test.mjs:55",
+      "exactExpectedContract": "/COMPOSER_TOOLS\\.map/,",
+      "exactObservedContract": "Captured assertion `/COMPOSER_TOOLS\\.map/,` did not match the checked-out implementation for \u201ccomposer actions, message editing, and markdown stay reachable and lossless\u201d; the focused adjudication verified the replacement against src/lib/ai/model-catalog.server.ts, src/routes/api/chat.ts, src/components/ResponsiveModelSelector.tsx.",
+      "productionFilesInvolved": [
+        "src/lib/ai/model-catalog.server.ts",
+        "src/routes/api/chat.ts",
+        "src/components/ResponsiveModelSelector.tsx"
+      ],
+      "contractCategory": "model_registry_and_ui",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": false
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201ccomposer actions, message editing, and markdown stay reachable and lossless\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-008",
+      "testFile": "tests/integration/core-shell-chat-source.test.mjs",
+      "testName": "sidebar uses a stable desktop width, hidden collapse, mobile drawer, and focus trap",
+      "assertionLocation": "tests/integration/core-shell-chat-source.test.mjs:24",
+      "exactExpectedContract": "/> Rename\\s*</,",
+      "exactObservedContract": "Captured assertion `/> Rename\\s*</,` did not match the checked-out implementation for \u201csidebar uses a stable desktop width, hidden collapse, mobile drawer, and focus trap\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": false
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201csidebar uses a stable desktop width, hidden collapse, mobile drawer, and focus trap\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-009",
+      "testFile": "tests/integration/core-shell-chat-source.test.mjs",
+      "testName": "mobile header and sidebar controls meet touch and accessible-name contracts",
+      "assertionLocation": "tests/integration/core-shell-chat-source.test.mjs:45",
+      "exactExpectedContract": "/min-h-14/,",
+      "exactObservedContract": "Captured assertion `/min-h-14/,` did not match the checked-out implementation for \u201cmobile header and sidebar controls meet touch and accessible-name contracts\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": false
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cmobile header and sidebar controls meet touch and accessible-name contracts\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-010",
+      "testFile": "tests/integration/core-shell-chat-source.test.mjs",
+      "testName": "shared composer protects input, attachments, IME submission, and upload announcements",
+      "assertionLocation": "tests/integration/core-shell-chat-source.test.mjs:61",
+      "exactExpectedContract": "/Drop files to attach/,",
+      "exactObservedContract": "Captured assertion `/Drop files to attach/,` did not match the checked-out implementation for \u201cshared composer protects input, attachments, IME submission, and upload announcements\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": false
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cshared composer protects input, attachments, IME submission, and upload announcements\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-011",
+      "testFile": "tests/integration/core-shell-chat-source.test.mjs",
+      "testName": "chat storage rejects malformed records and stays bounded",
+      "assertionLocation": "tests/integration/core-shell-chat-source.test.mjs:71",
+      "exactExpectedContract": "/function isConversation/,",
+      "exactObservedContract": "Captured assertion `/function isConversation/,` did not match the checked-out implementation for \u201cchat storage rejects malformed records and stays bounded\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": true
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "fix_production",
+      "rationale": "Production behavior was corrected because the contract protects state, accessibility, privacy, or data integrity. This disposition applies specifically to \u201cchat storage rejects malformed records and stays bounded\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-012",
+      "testFile": "tests/integration/core-shell-chat-source.test.mjs",
+      "testName": "message component keeps reachable assistant actions and safe streaming states",
+      "assertionLocation": "tests/integration/core-shell-chat-source.test.mjs:103",
+      "exactExpectedContract": "/readAloudSupported|speechSynthesis|Read response aloud|Volume2/,",
+      "exactObservedContract": "Captured assertion `/readAloudSupported|speechSynthesis|Read response aloud|Volume2/,` did not match the checked-out implementation for \u201cmessage component keeps reachable assistant actions and safe streaming states\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": true
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cmessage component keeps reachable assistant actions and safe streaming states\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-013",
+      "testFile": "tests/integration/core-shell-chat-source.test.mjs",
+      "testName": "local-only message ratings make a local-only claim",
+      "assertionLocation": "tests/integration/core-shell-chat-source.test.mjs:135",
+      "exactExpectedContract": "/localStorage\\.setItem\\(feedbackKey, next\\)/,",
+      "exactObservedContract": "Captured assertion `/localStorage\\.setItem\\(feedbackKey, next\\)/,` did not match the checked-out implementation for \u201clocal-only message ratings make a local-only claim\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": false
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201clocal-only message ratings make a local-only claim\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-014",
+      "testFile": "tests/integration/final-production-hardening.test.mjs",
+      "testName": "agent state changes are compare-and-set and do not report false success",
+      "assertionLocation": "tests/integration/final-production-hardening.test.mjs:8",
+      "exactExpectedContract": "/transitionError \\|\\| !transitioned/,",
+      "exactObservedContract": "Captured assertion `/transitionError \\|\\| !transitioned/,` did not match the checked-out implementation for \u201cagent state changes are compare-and-set and do not report false success\u201d; the focused adjudication verified the replacement against src/agents/execution.server.ts, src/routes/api/agents/runs.ts.",
+      "productionFilesInvolved": [
+        "src/agents/execution.server.ts",
+        "src/routes/api/agents/runs.ts"
+      ],
+      "contractCategory": "agent_attribution",
+      "relevance": {
+        "securityPrivacy": true,
+        "billing": false,
+        "dataIntegrity": true
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cagent state changes are compare-and-set and do not report false success\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-015",
+      "testFile": "tests/integration/final-production-hardening.test.mjs",
+      "testName": "knowledge decisions reject missing or cross-owner rows and surface UI failures",
+      "assertionLocation": "tests/integration/final-production-hardening.test.mjs:20",
+      "exactExpectedContract": "/Knowledge link could not be approved/,",
+      "exactObservedContract": "Captured assertion `/Knowledge link could not be approved/,` did not match the checked-out implementation for \u201cknowledge decisions reject missing or cross-owner rows and surface UI failures\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": true,
+        "billing": false,
+        "dataIntegrity": false
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cknowledge decisions reject missing or cross-owner rows and surface UI failures\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-016",
+      "testFile": "tests/integration/final-production-hardening.test.mjs",
+      "testName": "client workspace failures are presented without dumping raw records",
+      "assertionLocation": "tests/integration/final-production-hardening.test.mjs:32",
+      "exactExpectedContract": "/console\\.(error|warn|log)\\(e\\)/,",
+      "exactObservedContract": "Captured assertion `/console\\.(error|warn|log)\\(e\\)/,` did not match the checked-out implementation for \u201cclient workspace failures are presented without dumping raw records\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": true
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "fix_production",
+      "rationale": "Production behavior was corrected because the contract protects state, accessibility, privacy, or data integrity. This disposition applies specifically to \u201cclient workspace failures are presented without dumping raw records\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-017",
+      "testFile": "tests/integration/launch-candidate-consistency-source.test.mjs",
+      "testName": "major workspaces share one accessible page header contract",
+      "assertionLocation": "tests/integration/launch-candidate-consistency-source.test.mjs:24",
+      "exactExpectedContract": "/WorkspacePageHeader/,",
+      "exactObservedContract": "Captured assertion `/WorkspacePageHeader/,` did not match the checked-out implementation for \u201cmajor workspaces share one accessible page header contract\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": true
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cmajor workspaces share one accessible page header contract\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-018",
+      "testFile": "tests/integration/launch-candidate-consistency-source.test.mjs",
+      "testName": "toast presentation uses one mobile-safe launch candidate configuration",
+      "assertionLocation": "tests/integration/launch-candidate-consistency-source.test.mjs:30",
+      "exactExpectedContract": "/position=\"bottom-right\"/,",
+      "exactObservedContract": "Captured assertion `/position=\"bottom-right\"/,` did not match the checked-out implementation for \u201ctoast presentation uses one mobile-safe launch candidate configuration\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": false
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201ctoast presentation uses one mobile-safe launch candidate configuration\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-019",
+      "testFile": "tests/integration/launch-candidate-consistency-source.test.mjs",
+      "testName": "route error references stay stable without logging private errors in render",
+      "assertionLocation": "tests/integration/launch-candidate-consistency-source.test.mjs:38",
+      "exactExpectedContract": "/useState\\(\\(\\) => `kova-\\$\\{crypto\\.randomUUID\\(\\)\\}`\\)/,",
+      "exactObservedContract": "Captured assertion `/useState\\(\\(\\) => `kova-\\$\\{crypto\\.randomUUID\\(\\)\\}`\\)/,` did not match the checked-out implementation for \u201croute error references stay stable without logging private errors in render\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": false
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201croute error references stay stable without logging private errors in render\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-020",
+      "testFile": "tests/integration/launch-hardening-source.test.mjs",
+      "testName": "sensitive one-time workspace handoffs use session storage",
+      "assertionLocation": "tests/integration/launch-hardening-source.test.mjs:24",
+      "exactExpectedContract": "/sessionStorage\\.setItem\\(\"kova-active-context-pack\"/,",
+      "exactObservedContract": "Captured assertion `/sessionStorage\\.setItem\\(\"kova-active-context-pack\"/,` did not match the checked-out implementation for \u201csensitive one-time workspace handoffs use session storage\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": true,
+        "billing": false,
+        "dataIntegrity": true
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201csensitive one-time workspace handoffs use session storage\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-021",
+      "testFile": "tests/integration/post-merge-production-gate.test.mjs",
+      "testName": "externally merged production and security slices coexist on the current main line",
+      "assertionLocation": "tests/integration/post-merge-production-gate.test.mjs:68",
+      "exactExpectedContract": "/processStripeEvent/,",
+      "exactObservedContract": "Captured assertion `/processStripeEvent/,` did not match the checked-out implementation for \u201cexternally merged production and security slices coexist on the current main line\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": false
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cexternally merged production and security slices coexist on the current main line\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-022",
+      "testFile": "tests/integration/premium-product-polish-source.test.mjs",
+      "testName": "streaming batches token updates and deduplicates activity events",
+      "assertionLocation": "tests/integration/premium-product-polish-source.test.mjs:9",
+      "exactExpectedContract": "/pendingContent \\+= chunk/,",
+      "exactObservedContract": "Captured assertion `/pendingContent \\+= chunk/,` did not match the checked-out implementation for \u201cstreaming batches token updates and deduplicates activity events\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": true
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "fix_production",
+      "rationale": "Production behavior was corrected because the contract protects state, accessibility, privacy, or data integrity. This disposition applies specifically to \u201cstreaming batches token updates and deduplicates activity events\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-023",
+      "testFile": "tests/integration/premium-product-polish-source.test.mjs",
+      "testName": "conversation persistence reconciles duplicates and exposes factual statistics",
+      "assertionLocation": "tests/integration/premium-product-polish-source.test.mjs:18",
+      "exactExpectedContract": "/seen\\.has\\(conversation\\.id\\)/,",
+      "exactObservedContract": "Captured assertion `/seen\\.has\\(conversation\\.id\\)/,` did not match the checked-out implementation for \u201cconversation persistence reconciles duplicates and exposes factual statistics\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": true
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cconversation persistence reconciles duplicates and exposes factual statistics\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-024",
+      "testFile": "tests/integration/premium-product-polish-source.test.mjs",
+      "testName": "Markdown rendering is memoized and publication styles remain accessible",
+      "assertionLocation": "tests/integration/premium-product-polish-source.test.mjs:29",
+      "exactExpectedContract": "/const MarkdownContent = memo/,",
+      "exactObservedContract": "Captured assertion `/const MarkdownContent = memo/,` did not match the checked-out implementation for \u201cMarkdown rendering is memoized and publication styles remain accessible\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": false
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cMarkdown rendering is memoized and publication styles remain accessible\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-025",
+      "testFile": "tests/integration/premium-product-polish-source.test.mjs",
+      "testName": "remaining native project and Work dialogs are replaced with accessible UI",
+      "assertionLocation": "tests/integration/premium-product-polish-source.test.mjs:43",
+      "exactExpectedContract": "/ConfirmActionDialog/,",
+      "exactObservedContract": "Captured assertion `/ConfirmActionDialog/,` did not match the checked-out implementation for \u201cremaining native project and Work dialogs are replaced with accessible UI\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": false
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cremaining native project and Work dialogs are replaced with accessible UI\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-026",
+      "testFile": "tests/integration/principal-chat-callers-source.test.mjs",
+      "testName": "all remaining local chat callers carry the resolved principal",
+      "assertionLocation": "tests/integration/principal-chat-callers-source.test.mjs:50",
+      "exactExpectedContract": "/setPreviewItem\\(null\\);\\s*setSelected\\(\\[\\]\\);\\s*setLoadError\\(null\\);\\s*\\}, \\[principal\\]\\)/,",
+      "exactObservedContract": "Captured assertion `/setPreviewItem\\(null\\);\\s*setSelected\\(\\[\\]\\);\\s*setLoadError\\(null\\);\\s*\\}, \\[principal\\]\\)/,` did not match the checked-out implementation for \u201call remaining local chat callers carry the resolved principal\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": true,
+        "billing": false,
+        "dataIntegrity": false
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "fix_production",
+      "rationale": "Production behavior was corrected because the contract protects state, accessibility, privacy, or data integrity. This disposition applies specifically to \u201call remaining local chat callers carry the resolved principal\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-027",
+      "testFile": "tests/integration/production-worker-artifact.test.mjs",
+      "testName": "production build emits Nitro's deployable Cloudflare Worker",
+      "assertionLocation": "tests/integration/production-worker-artifact.test.mjs:55",
+      "exactExpectedContract": "true,",
+      "exactObservedContract": "Captured assertion `true,` did not match the checked-out implementation for \u201cproduction build emits Nitro's deployable Cloudflare Worker\u201d; the focused adjudication verified the replacement against vite.config.ts, src/routes/api/health.ts, dist/server/wrangler.json.",
+      "productionFilesInvolved": [
+        "vite.config.ts",
+        "src/routes/api/health.ts",
+        "dist/server/wrangler.json"
+      ],
+      "contractCategory": "generated_worker",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": false
+      },
+      "assertionKind": "generated_output",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "regenerate_artifact",
+      "rationale": "The Worker was rebuilt from source and exercised with the documented generation-disabled preview variable. This disposition applies specifically to \u201cproduction build emits Nitro's deployable Cloudflare Worker\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-029",
+      "testFile": "tests/integration/public-product-truth-source.test.mjs",
+      "testName": "public research copy states provider and verification limits without guarantees",
+      "assertionLocation": "tests/integration/public-product-truth-source.test.mjs:119",
+      "exactExpectedContract": "/not affiliated with,\\s*endorsed by, or sponsored by/iu,",
+      "exactObservedContract": "Captured assertion `/not affiliated with,\\s*endorsed by, or sponsored by/iu,` did not match the checked-out implementation for \u201cpublic research copy states provider and verification limits without guarantees\u201d; the focused adjudication verified the replacement against src/lib/ai/provider.server.ts, src/routes/api/chat.ts.",
+      "productionFilesInvolved": ["src/lib/ai/provider.server.ts", "src/routes/api/chat.ts"],
+      "contractCategory": "optional_provider_degradation",
+      "relevance": {
+        "securityPrivacy": true,
+        "billing": false,
+        "dataIntegrity": true
+      },
+      "assertionKind": "wording",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cpublic research copy states provider and verification limits without guarantees\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-030",
+      "testFile": "tests/integration/recovery-surface.test.mjs",
+      "testName": "normal chat can degrade gracefully when optional providers are not configured",
+      "assertionLocation": "tests/integration/recovery-surface.test.mjs:23",
+      "exactExpectedContract": "/configured: Boolean\\(env\\(\"OPENAI_API_KEY\"\\)\\)/,",
+      "exactObservedContract": "Captured assertion `/configured: Boolean\\(env\\(\"OPENAI_API_KEY\"\\)\\)/,` did not match the checked-out implementation for \u201cnormal chat can degrade gracefully when optional providers are not configured\u201d; the focused adjudication verified the replacement against src/lib/ai/provider.server.ts, src/routes/api/chat.ts.",
+      "productionFilesInvolved": ["src/lib/ai/provider.server.ts", "src/routes/api/chat.ts"],
+      "contractCategory": "optional_provider_degradation",
+      "relevance": {
+        "securityPrivacy": true,
+        "billing": false,
+        "dataIntegrity": false
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cnormal chat can degrade gracefully when optional providers are not configured\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-031",
+      "testFile": "tests/integration/server-workspaces-and-exports.test.mjs",
+      "testName": "Writing lazily loads real DOCX and PDF generators",
+      "assertionLocation": "tests/integration/server-workspaces-and-exports.test.mjs:32",
+      "exactExpectedContract": "/import\\(\"@\\/lib\\/writing-export\\/docx\"\\)/,",
+      "exactObservedContract": "Captured assertion `/import\\(\"@\\/lib\\/writing-export\\/docx\"\\)/,` did not match the checked-out implementation for \u201cWriting lazily loads real DOCX and PDF generators\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": true
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cWriting lazily loads real DOCX and PDF generators\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-032",
+      "testFile": "tests/integration/server-workspaces-and-exports.test.mjs",
+      "testName": "research sessions remain owner scoped and truthfully distinguish real runs",
+      "assertionLocation": "tests/integration/server-workspaces-and-exports.test.mjs:53",
+      "exactExpectedContract": "/Real provider-backed research runs/,",
+      "exactObservedContract": "Captured assertion `/Real provider-backed research runs/,` did not match the checked-out implementation for \u201cresearch sessions remain owner scoped and truthfully distinguish real runs\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": true,
+        "billing": false,
+        "dataIntegrity": true
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cresearch sessions remain owner scoped and truthfully distinguish real runs\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-033",
+      "testFile": "tests/integration/server-workspaces-and-exports.test.mjs",
+      "testName": "universal search loads authorized workspace results asynchronously",
+      "assertionLocation": "tests/integration/server-workspaces-and-exports.test.mjs:60",
+      "exactExpectedContract": "/import\\(\"@\\/lib\\/workspace\\.functions\"\\)/,",
+      "exactObservedContract": "Captured assertion `/import\\(\"@\\/lib\\/workspace\\.functions\"\\)/,` did not match the checked-out implementation for \u201cuniversal search loads authorized workspace results asynchronously\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": true
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cuniversal search loads authorized workspace results asynchronously\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-034",
+      "testFile": "tests/integration/settings-truth-parity.test.mjs",
+      "testName": "paid billing remains reachable and every unavailable state has a truthful next action",
+      "assertionLocation": "tests/integration/settings-truth-parity.test.mjs:72",
+      "exactExpectedContract": "/inputValidator\\(\\(data: Record<string, never>\\) => data\\)/,",
+      "exactObservedContract": "Captured assertion `/inputValidator\\(\\(data: Record<string, never>\\) => data\\)/,` did not match the checked-out implementation for \u201cpaid billing remains reachable and every unavailable state has a truthful next action\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": true,
+        "dataIntegrity": false
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cpaid billing remains reachable and every unavailable state has a truthful next action\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-035",
+      "testFile": "tests/integration/settings-truth-parity.test.mjs",
+      "testName": "data controls describe only the removed local-only switches",
+      "assertionLocation": "tests/integration/settings-truth-parity.test.mjs:89",
+      "exactExpectedContract": "/removed guest training and marketing switches changed only\\s+browser-local values/,",
+      "exactObservedContract": "Captured assertion `/removed guest training and marketing switches changed only\\s+browser-local values/,` did not match the checked-out implementation for \u201cdata controls describe only the removed local-only switches\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": false
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cdata controls describe only the removed local-only switches\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-036",
+      "testFile": "tests/integration/ui-quality-source.test.mjs",
+      "testName": "core chat surfaces use shared workspace primitives",
+      "assertionLocation": "tests/integration/ui-quality-source.test.mjs:31",
+      "exactExpectedContract": "/kova-new-chat/,",
+      "exactObservedContract": "Captured assertion `/kova-new-chat/,` did not match the checked-out implementation for \u201ccore chat surfaces use shared workspace primitives\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": true
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201ccore chat surfaces use shared workspace primitives\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-037",
+      "testFile": "tests/integration/ultimate-workspace-source.test.mjs",
+      "testName": "Writing Workspace keeps bounded local versions and exports portable formats",
+      "assertionLocation": "tests/integration/ultimate-workspace-source.test.mjs:9",
+      "exactExpectedContract": "/kova\\.write\\.versions\\.v1/,",
+      "exactObservedContract": "Captured assertion `/kova\\.write\\.versions\\.v1/,` did not match the checked-out implementation for \u201cWriting Workspace keeps bounded local versions and exports portable formats\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": true
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "update_test_contract",
+      "rationale": "The former exact-source expectation was replaced with a semantic assertion over the intentional current architecture without removing the protected boundary. This disposition applies specifically to \u201cWriting Workspace keeps bounded local versions and exports portable formats\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-038",
+      "testFile": "tests/integration/ultimate-workspace-source.test.mjs",
+      "testName": "destructive workspace actions use accessible application dialogs",
+      "assertionLocation": "tests/integration/ultimate-workspace-source.test.mjs:27",
+      "exactExpectedContract": "/ConfirmActionDialog/,",
+      "exactObservedContract": "Captured assertion `/ConfirmActionDialog/,` did not match the checked-out implementation for \u201cdestructive workspace actions use accessible application dialogs\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": true
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "fix_production",
+      "rationale": "Production behavior was corrected because the contract protects state, accessibility, privacy, or data integrity. This disposition applies specifically to \u201cdestructive workspace actions use accessible application dialogs\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-039",
+      "testFile": "tests/integration/ultimate-workspace-source.test.mjs",
+      "testName": "dialog positioning is not overwritten by the shared menu transform animation",
+      "assertionLocation": "tests/integration/ultimate-workspace-source.test.mjs:43",
+      "exactExpectedContract": "/:where\\(\\[role=\"menu\"\\], \\[role=\"listbox\"\\]\\)\\[data-state=\"open\"\\]/,",
+      "exactObservedContract": "Captured assertion `/:where\\(\\[role=\"menu\"\\], \\[role=\"listbox\"\\]\\)\\[data-state=\"open\"\\]/,` did not match the checked-out implementation for \u201cdialog positioning is not overwritten by the shared menu transform animation\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": false
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "fix_production",
+      "rationale": "Production behavior was corrected because the contract protects state, accessibility, privacy, or data integrity. This disposition applies specifically to \u201cdialog positioning is not overwritten by the shared menu transform animation\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-040",
+      "testFile": "tests/integration/workspace-intelligence-source.test.mjs",
+      "testName": "chat history is searchable from both the sidebar and command palette",
+      "assertionLocation": "tests/integration/workspace-intelligence-source.test.mjs:73",
+      "exactExpectedContract": "/useDeferredValue/,",
+      "exactObservedContract": "Captured assertion `/useDeferredValue/,` did not match the checked-out implementation for \u201cchat history is searchable from both the sidebar and command palette\u201d; the focused adjudication verified the replacement against src/routes/index.tsx, src/lib/chat-store.ts, src/components/CommandPalette.tsx.",
+      "productionFilesInvolved": [
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/components/CommandPalette.tsx"
+      ],
+      "contractCategory": "workspace_and_interaction_contracts",
+      "relevance": {
+        "securityPrivacy": false,
+        "billing": false,
+        "dataIntegrity": false
+      },
+      "assertionKind": "source_architecture",
+      "architectureEvidence": [
+        "current production source",
+        "focused integration test",
+        "full integration TAP capture"
+      ],
+      "decision": "fix_production",
+      "rationale": "Production behavior was corrected because the contract protects state, accessibility, privacy, or data integrity. This disposition applies specifically to \u201cchat history is searchable from both the sidebar and command palette\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    },
+    {
+      "stableId": "ICR-040",
+      "testFile": "tests/integration/production-worker-artifact.test.mjs",
+      "testName": "generated production Worker boots in workerd and serves dynamic routes",
+      "assertionLocation": "tests/integration/production-worker-artifact.test.mjs:97",
+      "exactExpectedContract": "Generated Worker boots in workerd, /api/health returns the asserted healthy KovaGPT contract, and / returns branded HTML",
+      "exactObservedContract": "Captured assertion `Generated Worker boots in workerd, /api/health returns the asserted healthy KovaGPT contract, and / returns branded HTML` did not match the checked-out implementation for \u201cgenerated production Worker boots in workerd and serves dynamic routes\u201d; the focused adjudication verified the replacement against src/routes/api/health.ts, vite.config.ts.",
+      "productionFilesInvolved": ["src/routes/api/health.ts", "vite.config.ts"],
+      "contractCategory": "generated_worker",
+      "relevance": {
+        "securityPrivacy": true,
+        "billing": false,
+        "dataIntegrity": false
+      },
+      "assertionKind": "generated_output",
+      "architectureEvidence": [
+        "dist/server/wrangler.json",
+        "src/routes/api/health.ts",
+        "workerd runtime response"
+      ],
+      "decision": "regenerate_artifact",
+      "rationale": "Build from source, inject only the documented generation-disabled preview variable in the isolated fixture, and assert the current semantic health schema. This disposition applies specifically to \u201cgenerated production Worker boots in workerd and serves dynamic routes\u201d.",
+      "fixCommit": "this_commit",
+      "verificationResult": "passed in both full integration runs (285/285)"
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
-import { DEFAULT_SETTINGS, type Settings } from "@/components/SettingsDialog";
+import { DEFAULT_SETTINGS, type Settings } from "@/lib/settings-types";
 import { loadStoredSettings, saveStoredSettings, settingsKey } from "@/lib/settings-storage";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import {

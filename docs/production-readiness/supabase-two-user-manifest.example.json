@@ -1,0 +1,10 @@
+{
+  "resources": [
+    { "table": "chats", "id": "<USER_A_FIXTURE_UUID>" },
+    { "table": "projects", "id": "<USER_A_FIXTURE_UUID>" },
+    { "table": "project_files", "id": "<USER_A_FIXTURE_UUID>" },
+    { "table": "deep_research_runs", "id": "<USER_A_FIXTURE_UUID>" },
+    { "table": "integration_linked_accounts", "id": "<USER_A_FIXTURE_UUID>" },
+    { "table": "subscriptions", "id": "<USER_A_FIXTURE_UUID>" }
+  ]
+}

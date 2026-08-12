@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from "react";
 import { useLocation } from "@tanstack/react-router";
 import { platformEvents } from "@/platform/events";
 import { recordMetric } from "@/platform/observability";
+import { useUser } from "@/components/auth/ClerkSafe";
 
 const DeveloperConsole = import.meta.env.DEV
   ? lazy(() =>
@@ -11,6 +12,7 @@ const DeveloperConsole = import.meta.env.DEV
 
 export function PlatformRuntime() {
   const location = useLocation();
+  const { isLoaded, isSignedIn } = useUser();
   useEffect(() => {
     const started = performance.now();
     const frame = requestAnimationFrame(() => {
@@ -25,6 +27,7 @@ export function PlatformRuntime() {
     return () => cancelAnimationFrame(frame);
   }, [location.pathname]);
   useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
     const unsubscribe = platformEvents.subscribe((event) => {
       void import("@/lib/operational-analytics").then((module) =>
         module.queueOperationalEvent(event),
@@ -39,7 +42,7 @@ export function PlatformRuntime() {
       window.removeEventListener("pagehide", flush);
       flush();
     };
-  }, []);
+  }, [isLoaded, isSignedIn]);
   return DeveloperConsole ? (
     <Suspense fallback={null}>
       <DeveloperConsole />

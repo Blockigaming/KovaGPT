@@ -69,7 +69,7 @@ test("paid billing remains reachable and every unavailable state has a truthful 
   assert.doesNotMatch(settings, /window\.open\(/);
 
   const portal = billing.slice(billing.indexOf("export const createPortalSession"));
-  assert.match(portal, /inputValidator\(\(data: Record<string, never>\) => data\)/);
+  assert.match(portal, /\.validator\(\(data: Record<string, never>\) => data\)/);
   assert.match(portal, /return_url: "https:\/\/kovagpt\.com\/"\s*,?/);
   assert.doesNotMatch(portal, /data\.environment|data\.returnUrl/);
   assert.match(billing, /parseAllowedBillingPortalUrl\(portal\.url\)/);
@@ -86,10 +86,7 @@ test("data controls describe only the removed local-only switches", () => {
   assert.doesNotMatch(settings, /GuestToggleRow/);
   assert.match(settings, /removed model-improvement switch changed only a\s+browser-local value/);
   assert.match(settings, /was\s+not wired to an account-level or\s+AI-provider training control/);
-  assert.match(
-    settings,
-    /removed guest training and marketing switches changed only\s+browser-local values/,
-  );
+  assert.match(settings, /No toggle is\s+shown until a real remote control exists/);
   assert.doesNotMatch(settings, /Device settings are not sent to an AI provider/);
-  assert.match(settings, /Deprecated local-only value retained/);
+  assert.match(settings, /not wired to an account-level or AI-provider training control/);
 });

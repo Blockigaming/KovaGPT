@@ -335,17 +335,17 @@ function ProjectsPage() {
   if (!isLoaded) {
     return (
       <AppShell>
-        <div className="max-w-5xl mx-auto p-6 md:p-8 w-full space-y-6">
+        <main className="max-w-5xl mx-auto p-6 md:p-8 w-full space-y-6">
           <div className="h-8 w-40 rounded bg-muted animate-pulse" />
           <SkeletonGrid count={6} minWidth={240} />
-        </div>
+        </main>
       </AppShell>
     );
   }
   if (!isSignedIn) {
     return (
       <AppShell>
-        <div className="kova-empty-state mx-auto mt-12 max-w-2xl">
+        <main className="kova-empty-state mx-auto mt-12 max-w-2xl">
           <FolderKanban className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
           <h1 className="text-2xl font-semibold mb-2">Sign in to use Projects</h1>
           <p className="text-muted-foreground mb-6">
@@ -354,14 +354,14 @@ function ProjectsPage() {
           <SignInButton mode="modal">
             <Button>Sign in</Button>
           </SignInButton>
-        </div>
+        </main>
       </AppShell>
     );
   }
 
   return (
     <AppShell>
-      <div className="kova-page kova-secondary-page pb-24 lg:pb-8">
+      <main className="kova-page kova-secondary-page pb-24 lg:pb-8">
         <WorkspacePageHeader
           icon={FolderKanban}
           title="Projects"
@@ -700,7 +700,7 @@ function ProjectsPage() {
             );
           })()
         )}
-      </div>
+      </main>
 
       {/* Mobile floating new-project button */}
       <button

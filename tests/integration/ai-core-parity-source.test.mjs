@@ -10,7 +10,7 @@ test("chat API delegates model routing, activity, research, memory, and provider
   const chat = read("src/routes/api/chat.ts");
   for (const token of [
     "selectModelForMode",
-    "selectedModel.model.modelId",
+    "routeDecision.modelId",
     "createToolActivityEvent",
     "activityToSseDelta",
     "runDeepResearch",

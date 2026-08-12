@@ -145,6 +145,7 @@ function ContextPacksPage() {
     getPrompts,
     getResearch,
     principal,
+    userKey,
   ]);
   const candidates = useMemo<Candidate[]>(() => {
     if (!dataReady) return [];

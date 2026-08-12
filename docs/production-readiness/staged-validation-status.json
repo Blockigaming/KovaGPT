@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "asOf": "2026-08-12",
+  "decision": {
+    "codeSide": "ready",
+    "stagingExecutionPackage": "candidate",
+    "externallyValidated": false,
+    "productionApproved": false
+  },
+  "metrics": {
+    "subsystems": 15,
+    "deterministicExecutable": 15,
+    "liveStagingExecuted": 0,
+    "liveStagingPassed": 0,
+    "productionExecuted": 0
+  },
+  "subsystems": [
+    {
+      "name": "build",
+      "codeContract": "pass",
+      "deterministicTest": "pass",
+      "liveStaging": "not_executed",
+      "production": "not_executed",
+      "prerequisite": "Azure deployment authorization",
+      "severity": "high",
+      "evidence": "local build and artifact validator"
+    },
+    {
+      "name": "Azure",
+      "codeContract": "pass",
+      "deterministicTest": "pass",
+      "liveStaging": "not_executed",
+      "production": "not_executed",
+      "prerequisite": "Azure Reader/Contributor",
+      "severity": "high",
+      "evidence": "fixture preflight and rollback tests"
+    },
+    {
+      "name": "Supabase",
+      "codeContract": "pass",
+      "deterministicTest": "pass",
+      "liveStaging": "not_executed",
+      "production": "not_executed",
+      "prerequisite": "staging project and two users",
+      "severity": "critical",
+      "evidence": "RLS static contracts and prerequisite harness"
+    },
+    {
+      "name": "auth",
+      "codeContract": "pass",
+      "deterministicTest": "pass",
+      "liveStaging": "not_executed",
+      "production": "not_executed",
+      "prerequisite": "staging IdP accounts",
+      "severity": "critical",
+      "evidence": "auth tests and migration guard"
+    },
+    {
+      "name": "Stripe",
+      "codeContract": "pass",
+      "deterministicTest": "pass",
+      "liveStaging": "not_executed",
+      "production": "not_executed",
+      "prerequisite": "Stripe test key/webhook secret",
+      "severity": "high",
+      "evidence": "API/integration tests and test-mode guard"
+    },
+    {
+      "name": "provider",
+      "codeContract": "pass",
+      "deterministicTest": "pass",
+      "liveStaging": "not_executed",
+      "production": "not_executed",
+      "prerequisite": "bounded provider deployment credential",
+      "severity": "high",
+      "evidence": "20-case matrix and bounded prerequisite guard"
+    },
+    {
+      "name": "OAuth",
+      "codeContract": "pass",
+      "deterministicTest": "pass",
+      "liveStaging": "not_executed",
+      "production": "not_executed",
+      "prerequisite": "Google/GitHub test apps",
+      "severity": "high",
+      "evidence": "callback/state contracts"
+    },
+    {
+      "name": "DNS",
+      "codeContract": "pass",
+      "deterministicTest": "pass",
+      "liveStaging": "not_executed",
+      "production": "not_executed",
+      "prerequisite": "DNS/domain authority",
+      "severity": "high",
+      "evidence": "callback/domain validator"
+    },
+    {
+      "name": "security",
+      "codeContract": "pass",
+      "deterministicTest": "pass",
+      "liveStaging": "not_executed",
+      "production": "not_executed",
+      "prerequisite": "staging deployment",
+      "severity": "high",
+      "evidence": "release security suites"
+    },
+    {
+      "name": "RLS",
+      "codeContract": "pass",
+      "deterministicTest": "pass",
+      "liveStaging": "not_executed",
+      "production": "not_executed",
+      "prerequisite": "two staging sessions",
+      "severity": "critical",
+      "evidence": "migration-policy tests"
+    },
+    {
+      "name": "rate limits",
+      "codeContract": "pass",
+      "deterministicTest": "pass",
+      "liveStaging": "not_executed",
+      "production": "not_executed",
+      "prerequisite": "deployed staging endpoints",
+      "severity": "medium",
+      "evidence": "bounded-load prerequisite guard"
+    },
+    {
+      "name": "account lifecycle",
+      "codeContract": "pass",
+      "deterministicTest": "pass",
+      "liveStaging": "not_executed",
+      "production": "not_executed",
+      "prerequisite": "disposable staging user",
+      "severity": "high",
+      "evidence": "lifecycle contracts and guard"
+    },
+    {
+      "name": "performance",
+      "codeContract": "pass",
+      "deterministicTest": "pass",
+      "liveStaging": "not_executed",
+      "production": "not_executed",
+      "prerequisite": "deployed staging revision",
+      "severity": "medium",
+      "evidence": "bundle budget and visual harness"
+    },
+    {
+      "name": "accessibility",
+      "codeContract": "pass",
+      "deterministicTest": "pass",
+      "liveStaging": "not_executed",
+      "production": "not_executed",
+      "prerequisite": "manual device validation",
+      "severity": "medium",
+      "evidence": "automated accessibility test"
+    },
+    {
+      "name": "legal/admin",
+      "codeContract": "not_applicable",
+      "deterministicTest": "not_applicable",
+      "liveStaging": "not_executed",
+      "production": "not_executed",
+      "prerequisite": "authorized human approval",
+      "severity": "high",
+      "evidence": "review markers"
+    }
+  ]
+}

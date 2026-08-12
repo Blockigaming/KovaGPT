@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-08-12",
+  "items": [
+    {
+      "category": "external dependency",
+      "pattern": "scheduled runner",
+      "disposition": "disabled until configured runner and secret exist"
+    },
+    {
+      "category": "intentional",
+      "pattern": "TODO/FIXME and placeholders",
+      "disposition": "retain only where no public capability claim is made; full raw matches require owner triage"
+    },
+    {
+      "category": "development-only",
+      "pattern": "localhost/mock/demo",
+      "disposition": "allowed in tests, local preview, and fixtures only"
+    },
+    {
+      "category": "pre-existing",
+      "pattern": "repository-wide Prettier drift",
+      "disposition": "changed-file gate enforced; broad formatting deferred to isolated PR"
+    },
+    {
+      "category": "external dependency",
+      "pattern": "live vulnerability confirmation",
+      "disposition": "review npm audit output and production reachability with dependency owner before upgrades"
+    }
+  ]
+}

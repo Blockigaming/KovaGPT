@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Bookmark, Check, Copy, Download, Eraser, Loader2, Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { authFetch } from "@/lib/auth-fetch";
 import { saveToLibrary } from "@/lib/library.functions";
 import { useUser, useClerkSafe } from "@/components/auth/ClerkSafe";
@@ -34,14 +35,7 @@ const STORAGE_KEY_BASE = "kova-write-draft";
 const TITLE_KEY_BASE = "kova-write-title";
 
 type Action =
-  | "improve"
-  | "expand"
-  | "shorten"
-  | "grammar"
-  | "continue"
-  | "tone"
-  | "outline"
-  | "custom";
+  "improve" | "expand" | "shorten" | "grammar" | "continue" | "tone" | "outline" | "custom";
 
 function countWords(t: string) {
   const m = t.trim().match(/\S+/g);
@@ -55,6 +49,7 @@ function WritePage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [clearOpen, setClearOpen] = useState(false);
   const [selection, setSelection] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
   const [tone, setTone] = useState("professional");
   const [custom, setCustom] = useState("");
@@ -263,10 +258,14 @@ function WritePage() {
   const clearAll = () => {
     if (!documentReady) return;
     if (!text.trim()) return;
-    if (!confirm("Clear the document? This cannot be undone.")) return;
+    setClearOpen(true);
+  };
+
+  const confirmClear = () => {
     pushUndo(text);
     setText("");
     setDirty(true);
+    setClearOpen(false);
   };
 
   const save = async () => {
@@ -460,6 +459,15 @@ function WritePage() {
           </div>
         </div>
       </div>
+      <ConfirmActionDialog
+        open={clearOpen}
+        onOpenChange={setClearOpen}
+        title="Clear this document?"
+        description="The current text will be added to undo history before the editor is cleared."
+        confirmLabel="Clear document"
+        destructive
+        onConfirm={confirmClear}
+      />
     </AppShell>
   );
 }

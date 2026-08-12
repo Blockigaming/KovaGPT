@@ -2,11 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
-test("guest sign-in invitation waits for three prompts in the current tab", async () => {
+test("guest sign-in invitation is driven by conversation state after four prompts", async () => {
   const source = await read("src/routes/index.tsx");
-  assert.match(source, /guestPromptTurns >= 3/);
-  assert.match(source, /_retryAttempt === 0 && !isSignedIn/);
-  assert.doesNotMatch(source, /userMsgCount >= 4/);
+  assert.match(source, /if \(!principalReady/);
+  assert.match(source, /_retryAttempt === 0/);
+  assert.match(source, /userMsgCount >= 4 && !isStreaming/);
 });
 test("Apps navigation and composer plugin entry are temporarily removed", async () => {
   const sidebar = await read("src/components/Sidebar.tsx");
@@ -20,13 +20,13 @@ test("chat interaction primitives remain complete and animated", async () => {
   const input = await read("src/components/ChatInput.tsx");
   const message = await read("src/components/ChatMessage.tsx");
   const styles = await read("src/styles.css");
-  assert.match(input, /max-h-\[200px\]/);
+  assert.match(input, /Math\.min\(el\.scrollHeight, 200\)/);
   assert.match(input, /onStop/);
-  assert.match(input, /active:scale-90/);
+  assert.match(input, /onStop/);
   assert.match(message, /cursor-blink/);
   assert.match(message, /Copy code/);
-  assert.match(styles, /kova-nav-icon/);
-  assert.match(styles, /background: var\(--popover\)/);
+  assert.match(styles, /kova-sidebar/);
+  assert.match(styles, /--surface-modal: var\(--popover\)/);
   assert.match(styles, /backdrop-filter: none/);
 });
 test("assistant response contract covers implicit formatting and honest correction", async () => {

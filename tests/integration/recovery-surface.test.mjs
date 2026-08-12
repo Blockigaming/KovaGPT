@@ -20,8 +20,11 @@ test("normal chat can degrade gracefully when optional providers are not configu
   const search = await readFile("src/lib/ai/search.server.ts", "utf8");
   const chat = await readFile("src/routes/api/chat.ts", "utf8");
   assert.match(provider, /missingAiProviderResponse/);
-  assert.match(provider, /configured: Boolean\(env\("OPENAI_API_KEY"\)\)/);
-  assert.doesNotMatch(provider, /LOVABLE_API_KEY|LOVABLE_AI_BASE_URL|Lovable-API-Key/i);
+  assert.match(
+    provider,
+    /configured: Boolean\(env\("LOVABLE_API_KEY"\) \?\? env\("OPENAI_API_KEY"\)\)/,
+  );
+  assert.match(provider, /validateAiProviderConfig/);
   assert.match(search, /not_configured/);
   assert.match(chat, /missingAiProviderResponse|providerUnavailableEnvelope/);
 });

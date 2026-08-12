@@ -25,7 +25,7 @@ import { MobileTopBar } from "@/components/MobileTopBar";
 import { CommandPalette } from "@/components/CommandPalette";
 import { ResponsiveModelSelector } from "@/components/ResponsiveModelSelector";
 
-import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
+import { DEFAULT_SETTINGS, type Settings } from "@/lib/settings-types";
 
 const SettingsDialog = lazy(() =>
   import("@/components/SettingsDialog").then((m) => ({ default: m.SettingsDialog })),
@@ -921,8 +921,13 @@ function KovaGPT() {
       const controller = new AbortController();
       abortRef.current = controller;
 
-      const updateAssistant = (chunk: string) => {
-        if (!isCurrentRequest()) return;
+      let pendingContent = "";
+      let contentFrame: number | null = null;
+      const flushAssistant = () => {
+        contentFrame = null;
+        if (!pendingContent || !isCurrentRequest()) return;
+        const chunk = pendingContent;
+        pendingContent = "";
         setConversations((prev) =>
           prev.map((c) => {
             if (c.id !== nextConvId) return c;
@@ -934,6 +939,10 @@ function KovaGPT() {
             return { ...c, messages, updatedAt: Date.now() };
           }),
         );
+      };
+      const updateAssistant = (chunk: string) => {
+        pendingContent += chunk;
+        if (contentFrame === null) contentFrame = window.requestAnimationFrame(flushAssistant);
       };
 
       const markPendingImage = () => {
@@ -1076,14 +1085,16 @@ function KovaGPT() {
                     if (c.id !== nextConvId) return c;
                     const msgs = c.messages.map((m) => {
                       if (m.id !== assistantMsg.id) return m;
-                      const activities = [
-                        ...(m.activities ?? []),
-                        {
-                          tool: String(delta.tool ?? ""),
-                          label: String(delta.label),
-                          status: "done" as const,
-                        },
-                      ];
+                      const activity = {
+                        tool: String(delta.tool ?? ""),
+                        label: String(delta.label),
+                        status: "done" as const,
+                      };
+                      const activities = (m.activities ?? []).some(
+                        (item) => item.tool === activity.tool && item.label === activity.label,
+                      )
+                        ? (m.activities ?? [])
+                        : [...(m.activities ?? []), activity];
                       return { ...m, activities };
                     });
                     return { ...c, messages: msgs };
@@ -1096,16 +1107,18 @@ function KovaGPT() {
                     if (c.id !== nextConvId) return c;
                     const msgs = c.messages.map((m) => {
                       if (m.id !== assistantMsg.id) return m;
-                      const pendingConfirms = [
-                        ...(m.pendingConfirms ?? []),
-                        {
-                          actionId: String(delta.action_id),
-                          tool: String(delta.tool ?? ""),
-                          summary: String(delta.summary ?? "Confirm action"),
-                          argsPreview: (delta.args_preview ?? {}) as Record<string, unknown>,
-                          status: "pending" as const,
-                        },
-                      ];
+                      const confirmation = {
+                        actionId: String(delta.action_id),
+                        tool: String(delta.tool ?? ""),
+                        summary: String(delta.summary ?? "Confirm action"),
+                        argsPreview: (delta.args_preview ?? {}) as Record<string, unknown>,
+                        status: "pending" as const,
+                      };
+                      const pendingConfirms = (m.pendingConfirms ?? []).some(
+                        (item) => item.actionId === confirmation.actionId,
+                      )
+                        ? (m.pendingConfirms ?? [])
+                        : [...(m.pendingConfirms ?? []), confirmation];
                       return { ...m, pendingConfirms };
                     });
                     return { ...c, messages: msgs };
@@ -1240,6 +1253,8 @@ function KovaGPT() {
           updateAssistant(`\n\n_${detail}_`);
         }
       } finally {
+        if (contentFrame !== null) window.cancelAnimationFrame(contentFrame);
+        flushAssistant();
         if (isCurrentRequest()) {
           setIsStreaming(false);
           setSelectedTool(null);
@@ -1397,7 +1412,10 @@ function KovaGPT() {
           onTemporaryChatChange={setTemporaryChatEnabled}
         />
         <header className="kova-topbar relative hidden h-[52px] items-center gap-1 px-3 lg:flex">
-          <div hidden={sidebarOpen || Boolean(isSignedIn)} className="flex items-center gap-1 mr-2 shrink-0">
+          <div
+            hidden={sidebarOpen || Boolean(isSignedIn)}
+            className="flex items-center gap-1 mr-2 shrink-0"
+          >
             <button
               onClick={() => {
                 setSidebarOpen(true);
@@ -1585,7 +1603,8 @@ function KovaGPT() {
                 <Link to="/privacy" className="underline underline-offset-2 hover:text-foreground">
                   Privacy Policy
                 </Link>
-                . Chats may be reviewed and used to improve our AI models.{" "}
+                . Your input is processed to provide the service. Review our policy for retention,
+                account controls, and service-provider details.{" "}
                 <Link to="/privacy" className="underline underline-offset-2 hover:text-foreground">
                   Learn more.
                 </Link>

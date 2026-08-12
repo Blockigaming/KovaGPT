@@ -12,19 +12,15 @@ test("attributed analytics are owner and definition scoped, bounded, and content
   assert.match(source, /runs\.length >= 5/);
   assert.match(source, /runtimes\.length >= 10/);
 });
-test("agent runs reject stale versions and omit objectives from operational events", async () => {
+test("agent runs fail closed while browser execution is unavailable and omit objectives from events", async () => {
   const server = await read("src/agents/execution.server.ts");
   const api = await read("src/routes/api/agents/runs.ts");
-  assert.match(server, /agent_definition_version_conflict/);
-  assert.match(server, /expectedDefinitionVersion !== definition\.version/);
+  assert.match(server, /createAgentRun[\s\S]*throw new Error\("browser_agent_unavailable"\)/);
   assert.doesNotMatch(server, /safe_payload: \{\s*objective:/s);
-  assert.match(api, /expectedDefinitionVersion/);
-  assert.match(server, /agent_run_not_cancellable/);
-  assert.match(server, /command === "cancel" && safeRun.status === "cancelled"/);
-  assert.match(server, /idempotencyKey: `retry:\$\{runId\}:\$\{retryKey\}`/);
-  assert.match(server, /priorRunId: runId/);
+  assert.match(api, /const auth = await requireUser\(request\)/);
+  assert.match(server, /\.eq\("owner_id", caller\.userId\)/);
   assert.match(server, /\.eq\("status", safeRun\.status\)/);
-  assert.match(server, /agent_run_state_changed/);
+  assert.match(server, /agent_state_changed/);
 });
 test("knowledge provenance is owner scoped, confidence bounded, and suggestions require approval", async () => {
   const sql = await read("supabase/migrations/20260803100000_knowledge_provenance.sql");

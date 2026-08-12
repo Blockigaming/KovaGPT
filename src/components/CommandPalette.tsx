@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   Search,
   SquarePen,
@@ -171,9 +171,10 @@ export function CommandPalette({
   const pinsStorageKey = isLoaded
     ? principalScopedStorageKey("kova-command-pins-v1", userKey)
     : null;
-  const normalized = query.trim().toLowerCase();
+  const deferredQuery = useDeferredValue(query);
+  const normalized = deferredQuery.trim().toLowerCase();
   const conversationMatches = normalized
-    ? searchConversations(conversations, query).slice(0, 8)
+    ? searchConversations(conversations, deferredQuery).slice(0, 8)
     : conversations.slice(0, 6).map((conversation) => ({
         conversation,
         snippet: `${conversation.messages.length} messages`,
@@ -191,8 +192,14 @@ export function CommandPalette({
     principal !== null &&
     commandState.principal === principal &&
     commandState.generation === storageGenerationRef.current;
-  const recentCommands = commandReady ? commandState.recent : [];
-  const pinnedCommands = commandReady ? commandState.pinned : [];
+  const recentCommands = useMemo(
+    () => (commandReady ? commandState.recent : []),
+    [commandReady, commandState.recent],
+  );
+  const pinnedCommands = useMemo(
+    () => (commandReady ? commandState.pinned : []),
+    [commandReady, commandState.pinned],
+  );
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);

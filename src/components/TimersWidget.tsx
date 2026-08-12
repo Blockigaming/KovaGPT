@@ -1,7 +1,7 @@
 // Floating widget in the bottom-right that shows active timers/alarms,
 // counts down live, plays a beep + notification when a timer fires, and
 // exposes a quick "add timer" affordance.
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   addTimer,
   formatRemaining,
@@ -62,7 +62,7 @@ export function TimersWidget({
   const [items, setItems] = useState<TimerItem[]>([]);
   const [itemsPrincipal, setItemsPrincipal] = useState<string | null>(null);
   const ready = principal !== null && itemsPrincipal === principal;
-  const visibleItems = ready ? items : [];
+  const visibleItems = useMemo(() => (ready ? items : []), [items, ready]);
   const [now, setNow] = useState(Date.now());
   const [open, setOpen] = useState(false);
   const [minutes, setMinutes] = useState(5);
@@ -85,7 +85,7 @@ export function TimersWidget({
       unsub();
       window.clearInterval(id);
     };
-  }, [refresh]);
+  }, [principalResolved, refresh, userKey]);
 
   useEffect(() => {
     if (!principalResolved || !principal) return;

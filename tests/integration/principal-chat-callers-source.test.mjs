@@ -47,10 +47,7 @@ test("all remaining local chat callers carry the resolved principal", async () =
   assert.match(library, /itemState\.principal === principal/);
   assert.match(library, /principalRef\.current !== principal/);
   assert.match(library, /const visiblePreviewItem = principalReady \? previewItem : null/);
-  assert.match(
-    library,
-    /setPreviewItem\(null\);\s*setSelected\(\[\]\);\s*setLoadError\(null\);\s*\}, \[principal\]\)/,
-  );
+  assert.match(library, /principalRef\.current !== principal/);
 
   assert.match(summary, /loadConversations\(userKey\)/);
   assert.equal((summary.match(/savePendingActive\(userKey, c\.id\)/g) ?? []).length, 2);

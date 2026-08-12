@@ -64,6 +64,45 @@ const LEGACY_CONVERSATIONS_KEY = "nova-gpt-conversations-v2";
 const LEGACY_ARCHIVED_KEY = "kovagpt:archived";
 const LEGACY_DRAFT_KEY_BASE = "kova-draft";
 const LEGACY_PENDING_ACTIVE_KEY = "nova-gpt-pending-active";
+const MAX_STORED_CONVERSATIONS = 500;
+const MAX_MESSAGES_PER_CONVERSATION = 1_000;
+
+function isConversation(value: unknown): value is Conversation {
+  if (!value || typeof value !== "object") return false;
+  const conversation = value as Partial<Conversation>;
+  return (
+    typeof conversation.id === "string" &&
+    typeof conversation.title === "string" &&
+    Array.isArray(conversation.messages) &&
+    conversation.messages.every(
+      (message) =>
+        Boolean(message) &&
+        typeof message.id === "string" &&
+        (message.role === "user" || message.role === "assistant") &&
+        typeof message.content === "string",
+    ) &&
+    typeof conversation.createdAt === "number" &&
+    typeof conversation.updatedAt === "number"
+  );
+}
+
+function boundConversations(values: unknown[]): Conversation[] {
+  const seen = new Set<string>();
+  return values
+    .filter(isConversation)
+    .filter((conversation) => {
+      if (seen.has(conversation.id)) return false;
+      seen.add(conversation.id);
+      return true;
+    })
+    .map((conversation) => ({
+      ...conversation,
+      title: conversation.title.trim().slice(0, 100) || "New chat",
+      messages: conversation.messages.slice(-MAX_MESSAGES_PER_CONVERSATION),
+    }))
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, MAX_STORED_CONVERSATIONS);
+}
 
 /** A stable browser-storage namespace. Signed-in and guest data never share one key. */
 export function chatStoragePrincipal(userKey: ChatStorageUserKey): string {
@@ -101,7 +140,6 @@ function purgeGuestStorageOnFreshLoad() {
 }
 
 purgeGuestStorageOnFreshLoad();
-
 
 function readWithGuestLegacyMigration(
   userKey: ChatStorageUserKey,
@@ -150,7 +188,8 @@ export function loadConversations(userKey: ChatStorageUserKey): Conversation[] {
       LEGACY_CONVERSATIONS_KEY,
     );
     if (!raw) return [];
-    return JSON.parse(raw) as Conversation[];
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? boundConversations(parsed) : [];
   } catch {
     return [];
   }
@@ -158,7 +197,14 @@ export function loadConversations(userKey: ChatStorageUserKey): Conversation[] {
 
 export function saveConversations(userKey: ChatStorageUserKey, convs: Conversation[]) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(conversationStorageKey(userKey), JSON.stringify(convs));
+  try {
+    localStorage.setItem(
+      conversationStorageKey(userKey),
+      JSON.stringify(boundConversations(convs)),
+    );
+  } catch {
+    // Storage can be unavailable or full; the in-memory conversation remains usable.
+  }
   if (userKey === null) localStorage.removeItem(LEGACY_CONVERSATIONS_KEY);
 }
 
@@ -176,7 +222,8 @@ export function loadArchivedConversations(userKey: ChatStorageUserKey): Conversa
       archivedConversationStorageKey(userKey),
       LEGACY_ARCHIVED_KEY,
     );
-    return JSON.parse(raw ?? "[]") as Conversation[];
+    const parsed: unknown = JSON.parse(raw ?? "[]");
+    return Array.isArray(parsed) ? boundConversations(parsed) : [];
   } catch {
     return [];
   }

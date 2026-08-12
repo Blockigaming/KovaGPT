@@ -55,7 +55,8 @@ test("voice stays disabled without adding provider secrets or billing claims", (
 
   assert.match(matrix, /Voice: INTENTIONALLY DISABLED/);
   assert.doesNotMatch(chat, /Start voice input|createSpeechRecognition|MicOff/);
-  assert.match(start, /microphone=\(\)/);
+  assert.match(start, /microphone=\(self\)/);
+  assert.doesNotMatch(chat, /realtime_voice|full-duplex|Start voice input/);
   assert.doesNotMatch(pricing, /voice generations|voice, and advanced/i);
 });
 

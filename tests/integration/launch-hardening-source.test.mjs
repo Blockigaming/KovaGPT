@@ -21,10 +21,10 @@ test("sensitive one-time workspace handoffs use session storage", async () => {
     read("src/routes/index.tsx"),
   ]);
   assert.match(handoffs, /sessionStorage\.setItem\("kova-context-candidates"/);
-  assert.match(packs, /sessionStorage\.setItem\("kova-active-context-pack"/);
-  assert.match(prompts, /sessionStorage\.setItem\("kova-prompt-launch"/);
-  assert.match(apps, /sessionStorage\.setItem/);
-  assert.match(chat, /sessionStorage\.removeItem\("kova-prompt-launch"/);
+  assert.match(packs, /writePrincipalHandoff\([\s\S]*"kova-active-context-pack"/);
+  assert.match(prompts, /writePrincipalHandoff\([\s\S]*"kova-prompt-launch"/);
+  assert.match(apps, /writePrincipalHandoff\(/);
+  assert.match(chat, /consumePrincipalHandoff[\s\S]*"kova-prompt-launch"/);
 });
 
 test("family PIN and image ingestion are hardened", async () => {

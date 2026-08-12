@@ -65,7 +65,7 @@ import {
 } from "@/lib/connectors-catalog";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { getMyDailyUsage, type DailyUsageDto } from "@/utils/usage.functions";
 import {
@@ -113,61 +113,9 @@ import {
 import { getUsage } from "@/lib/limits";
 import { useUser, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
-import { applyThemeMode, DEFAULT_THEME, type ThemeColors, type ThemeMode } from "@/lib/theme";
+import { applyThemeMode, type ThemeMode } from "@/lib/theme";
 import { authFetch } from "@/lib/auth-fetch";
-
-export type Mood = "neutral" | "friendly" | "professional" | "concise";
-
-export type Settings = {
-  displayName: string;
-  email: string;
-  extraFacts: string;
-  customInstructions: string;
-  mood: Mood;
-  responseLength: "short" | "medium" | "long";
-  rememberAcross: boolean;
-  webSearch: boolean;
-  sendOnEnter: boolean;
-  mode: ThemeMode;
-  // Notifications
-  notifyEmail?: boolean;
-  notifyProduct?: boolean;
-  // Parental controls
-  parentalMode?: boolean;
-  // Deprecated local-only value retained so old device exports still import safely.
-  // It is not exposed as an account- or provider-level training control.
-  trainingOptOut?: boolean;
-  // deprecated fields kept so old localStorage payloads still load
-  preferredPronouns?: string;
-  phone?: string;
-  addressLine1?: string;
-  addressLine2?: string;
-  city?: string;
-  region?: string;
-  postalCode?: string;
-  country?: string;
-  language?: string;
-  showTimestamps?: boolean;
-  theme?: ThemeColors;
-};
-
-export const DEFAULT_SETTINGS: Settings = {
-  displayName: "",
-  email: "",
-  extraFacts: "",
-  customInstructions: "",
-  mood: "neutral",
-  responseLength: "medium",
-  rememberAcross: false,
-  webSearch: true,
-  sendOnEnter: true,
-  mode: "system",
-  notifyEmail: true,
-  notifyProduct: true,
-  parentalMode: false,
-  trainingOptOut: false,
-  theme: DEFAULT_THEME,
-};
+import { DEFAULT_SETTINGS, type Mood, type Settings } from "@/lib/settings-types";
 
 const MOODS: { value: Mood; label: string; hint: string }[] = [
   { value: "neutral", label: "Neutral", hint: "Balanced and helpful" },
@@ -2014,7 +1962,6 @@ function LibraryPanel() {
       setShared(inbox);
       setMine(mineShares);
     } catch (e) {
-      console.error(e);
       setLoadError(e instanceof Error ? e.message : "Library data could not be loaded.");
     } finally {
       setLoading(false);
@@ -2279,7 +2226,10 @@ function SignedOutSettings({
             <div className="flex items-center justify-between gap-4 py-4 first:pt-0">
               <span className="text-sm">Appearance</span>
               <div className="w-44">
-                <Select value={settings.mode ?? "system"} onValueChange={(v) => setMode(v as ThemeMode)}>
+                <Select
+                  value={settings.mode ?? "system"}
+                  onValueChange={(v) => setMode(v as ThemeMode)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -2759,7 +2709,7 @@ function ShortcutsEditor({
   const [listPrincipal, setListPrincipal] = useState<string | null>(null);
   const [recordingId, setRecordingId] = useState<string | null>(null);
   const ready = principal !== null && listPrincipal === principal;
-  const visibleList = ready ? list : [];
+  const visibleList = useMemo(() => (ready ? list : []), [list, ready]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2820,7 +2770,7 @@ function ShortcutsEditor({
       window.removeEventListener("keydown", onKey, {
         capture: true,
       } as unknown as EventListenerOptions);
-  }, [recordingId, ready, userKey, visibleList]);
+  }, [principal, recordingId, ready, userKey, visibleList]);
 
   const reset = async () => {
     const mod = await import("@/lib/shortcuts");

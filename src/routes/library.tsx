@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -146,10 +147,16 @@ function LibraryPage() {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [favoritesPrincipal, setFavoritesPrincipal] = useState<string | null>(null);
   const favoritesReady = principal !== null && favoritesPrincipal === principal;
-  const visibleFavorites = favoritesReady ? favorites : new Set<string>();
+  const visibleFavorites = useMemo(
+    () => (favoritesReady ? favorites : new Set<string>()),
+    [favorites, favoritesReady],
+  );
   const [previewItem, setPreviewItem] = useState<LibItem | null>(null);
   const visiblePreviewItem = principalReady ? previewItem : null;
   const [selected, setSelected] = useState<string[]>([]);
+  const [deleteRequest, setDeleteRequest] = useState<
+    { kind: "single"; id: string } | { kind: "bulk" } | null
+  >(null);
 
   const load = useCallback(async () => {
     const generation = ++loadGenerationRef.current;
@@ -220,7 +227,6 @@ function LibraryPage() {
       if (isCurrent()) setItems([...localItems, ...saved, ...workspaceItems]);
     } catch (e) {
       if (!isCurrent()) return;
-      console.error(e);
       setLoadError(e instanceof Error ? e.message : "Could not load your library.");
       toast.error("Could not load your library.");
     } finally {
@@ -290,14 +296,15 @@ function LibraryPage() {
     return () => window.removeEventListener("keydown", close);
   }, [visiblePreviewItem]);
 
-  const remove = async (id: string) => {
+  const remove = (id: string) => setDeleteRequest({ kind: "single", id });
+
+  const removeConfirmed = async (id: string) => {
     if (!principalReady || !principal) return;
     const generation = lifecycleGenerationRef.current;
     const requestPrincipal = principal;
     const isCurrent = () =>
       generation === lifecycleGenerationRef.current && principalRef.current === requestPrincipal;
     const existing = items;
-    if (!confirm("Delete this Library item?")) return;
     setItems((prev) => prev.filter((i) => i.id !== id));
     if (id.startsWith("chat:")) {
       saveConversations(
@@ -343,13 +350,17 @@ function LibraryPage() {
     });
   };
 
-  const deleteSelected = async () => {
+  const deleteSelected = () => {
+    if (selected.length) setDeleteRequest({ kind: "bulk" });
+  };
+
+  const deleteSelectedConfirmed = async () => {
     if (!principalReady || !principal) return;
     const generation = lifecycleGenerationRef.current;
     const requestPrincipal = principal;
     const isCurrent = () =>
       generation === lifecycleGenerationRef.current && principalRef.current === requestPrincipal;
-    if (!selected.length || !confirm(`Delete ${selected.length} selected Library items?`)) return;
+    if (!selected.length) return;
     const existing = items;
     setItems((current) => current.filter((item) => !selected.includes(item.id)));
     try {
@@ -845,6 +856,24 @@ function LibraryPage() {
           </div>
         ) : null}
       </main>
+      <ConfirmActionDialog
+        open={Boolean(deleteRequest)}
+        onOpenChange={(open) => !open && setDeleteRequest(null)}
+        title={
+          deleteRequest?.kind === "bulk"
+            ? "Delete selected Library items?"
+            : "Delete this Library item?"
+        }
+        description="This removes the selected content from your current Library scope."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => {
+          const request = deleteRequest;
+          setDeleteRequest(null);
+          if (request?.kind === "single") void removeConfirmed(request.id);
+          else if (request?.kind === "bulk") void deleteSelectedConfirmed();
+        }}
+      />
     </AppShell>
   );
 }

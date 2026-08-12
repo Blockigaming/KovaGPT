@@ -97,16 +97,19 @@ const FILTER_CATEGORIES: (ConnectorCategory | "All")[] = [
 
 export const Route = createFileRoute("/apps")({
   component: AppsPage,
-  head: () => ({
-    meta: [
-      { title: "KovaGPT Apps" },
-      {
-        name: "description",
-        content: "Connect KovaGPT to supported Google, Drive, Gmail, and Calendar services.",
-      },
-      { name: "robots", content: "noindex" },
-    ],
-  }),
+  head: ({ matches }) =>
+    matches.at(-1)?.pathname === "/apps"
+      ? {
+          meta: [
+            { title: "KovaGPT Apps" },
+            {
+              name: "description",
+              content: "Connect KovaGPT to supported Google, Drive, Gmail, and Calendar services.",
+            },
+            { name: "robots", content: "noindex" },
+          ],
+        }
+      : {},
 });
 
 type ConnState =
@@ -637,14 +640,17 @@ function AppsPage() {
     return () => window.removeEventListener(PRINCIPAL_BROWSER_STORAGE_CLEARED_EVENT, reset);
   }, [isLoaded, principal, userKey]);
 
-  const recordActivity = (app: string, action: string) => {
-    if (!activityReady || !activityKey) return;
-    setActivity((current) => {
-      const next = [{ app, action, at: new Date().toISOString() }, ...current].slice(0, 50);
-      safeBrowserStorage("localStorage")?.setItem(activityKey, JSON.stringify(next));
-      return next;
-    });
-  };
+  const recordActivity = useCallback(
+    (app: string, action: string) => {
+      if (!activityReady || !activityKey) return;
+      setActivity((current) => {
+        const next = [{ app, action, at: new Date().toISOString() }, ...current].slice(0, 50);
+        safeBrowserStorage("localStorage")?.setItem(activityKey, JSON.stringify(next));
+        return next;
+      });
+    },
+    [activityKey, activityReady],
+  );
 
   const refreshGoogle = useCallback(async () => {
     if (!isLoaded || !principal) return;
@@ -700,7 +706,7 @@ function AppsPage() {
       const url = window.location.pathname + (params.toString() ? `?${params}` : "");
       window.history.replaceState({}, "", url);
     }
-  }, [activityReady, isSignedIn, refreshGoogle]);
+  }, [activityReady, isSignedIn, recordActivity, refreshGoogle]);
 
   const isGoogleId = (id: string) => GOOGLE_IDS.has(id);
 

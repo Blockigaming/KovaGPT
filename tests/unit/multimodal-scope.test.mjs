@@ -18,8 +18,8 @@ test("provider voice remains disabled while local browser read-aloud needs no AI
   assert.match(chatMessage, /speechSynthesis/);
   assert.match(chatMessage, /Read aloud/);
   assert.doesNotMatch(chatMessage, /OPENAI_API_KEY|audio\/speech|realtime/);
-  assert.match(start, /microphone=\(\)/);
-  assert.match(server, /microphone=\(\)/);
+  assert.match(start, /microphone=\(self\)/);
+  assert.match(server, /microphone=\(self\)/);
 });
 
 test("image workflow maps settings to provider payload and metadata", () => {

@@ -69,7 +69,6 @@ const COMPOSER_TOOLS: readonly ComposerAction[] = [
   { id: "image", label: "Create Image", icon: ImagePlus },
 ];
 
-
 const PROMPT_SHORTCUTS = [
   { label: "Brainstorm ideas", prompt: "Help me brainstorm ideas about " },
   { label: "Make a plan", prompt: "Create a practical step-by-step plan for " },
@@ -165,6 +164,9 @@ export function ChatInput({
   const [dictating, setDictating] = useState(false);
   const recognitionRef = useRef<{ stop: () => void } | null>(null);
   const dictationBaseRef = useRef("");
+  const dragDepthRef = useRef(0);
+  const cancelledAttachmentKeysRef = useRef(new Set<string>());
+  const [dragActive, setDragActive] = useState(false);
 
   useEffect(() => () => recognitionRef.current?.stop(), []);
 
@@ -213,7 +215,9 @@ export function ChatInput({
       recognitionRef.current = null;
       const code = event?.error;
       if (code === "not-allowed" || code === "service-not-allowed")
-        toast.error("Microphone permission was not granted. Open KovaGPT in its own tab and retry.");
+        toast.error(
+          "Microphone permission was not granted. Open KovaGPT in its own tab and retry.",
+        );
       else if (code === "no-speech") toast.error("No speech detected. Try dictating again.");
       else if (code === "network") toast.error("Dictation needs a network connection.");
       else if (code && code !== "aborted") toast.error("Dictation stopped unexpectedly.");
@@ -231,7 +235,6 @@ export function ChatInput({
     recognitionRef.current = recognition;
     setDictating(true);
   };
-
 
   useEffect(() => {
     if (!plusOpen) return;
@@ -346,6 +349,8 @@ export function ChatInput({
     const uploadLimit = DAILY_UPLOAD_LIMIT_BY_TIER[userTier];
 
     for (const f of files.slice(0, availableSlots)) {
+      const duplicateKey = `${f.name}:${f.size}`;
+      cancelledAttachmentKeysRef.current.delete(duplicateKey);
       const isImage = f.type.startsWith("image/");
       const isTextLike =
         f.type.startsWith("text/") || f.type === "application/json" || TEXT_LIKE_EXT.test(f.name);
@@ -364,7 +369,6 @@ export function ChatInput({
         continue;
       }
 
-      const duplicateKey = `${f.name}:${f.size}`;
       if (seen.has(duplicateKey)) {
         setUploadAnnouncement(`${f.name} is already attached`);
         toast.message(`${f.name} is already attached.`);
@@ -408,6 +412,11 @@ export function ChatInput({
             r.onerror = () => rej(new Error("Could not read image"));
             r.readAsDataURL(f);
           });
+          if (cancelledAttachmentKeysRef.current.has(duplicateKey)) {
+            nextAttachments = nextAttachments.filter((attachment) => attachment !== uploading);
+            onAttachmentsChange(nextAttachments);
+            continue;
+          }
           nextAttachments = nextAttachments.map((a) =>
             a === uploading ? { ...uploading, dataUrl, status: "complete" as const } : a,
           );
@@ -460,6 +469,11 @@ export function ChatInput({
         setUploadAnnouncement(`Reading ${f.name}`);
         try {
           const textContent = await f.text();
+          if (cancelledAttachmentKeysRef.current.has(duplicateKey)) {
+            nextAttachments = nextAttachments.filter((attachment) => attachment !== uploading);
+            onAttachmentsChange(nextAttachments);
+            continue;
+          }
           nextAttachments = nextAttachments.map((attachment) =>
             attachment === uploading
               ? { ...uploading, textContent, status: "complete" as const }
@@ -501,6 +515,8 @@ export function ChatInput({
 
   const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     const files = Array.from(e.dataTransfer.files || []);
+    dragDepthRef.current = 0;
+    setDragActive(false);
     if (files.length === 0) return;
     e.preventDefault();
     if (disabled || !showAddMenu) return;
@@ -508,7 +524,23 @@ export function ChatInput({
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    if (!disabled && showAddMenu && e.dataTransfer.types.includes("Files")) e.preventDefault();
+    if (!disabled && showAddMenu && e.dataTransfer.types.includes("Files")) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    }
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    if (disabled || !showAddMenu || !e.dataTransfer.types.includes("Files")) return;
+    e.preventDefault();
+    dragDepthRef.current += 1;
+    setDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!e.dataTransfer.types.includes("Files")) return;
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) setDragActive(false);
   };
 
   const attachLibraryFile = (item: RecentLibraryFile) => {
@@ -541,6 +573,14 @@ export function ChatInput({
     setPlusOpen(false);
     setUploadAnnouncement(`${name} attached from Library`);
     ref.current?.focus();
+  };
+
+  const removeAttachment = (index: number) => {
+    const attachment = attachments[index];
+    if (!attachment) return;
+    cancelledAttachmentKeysRef.current.add(`${attachment.name}:${attachment.size ?? 0}`);
+    onAttachmentsChange(attachments.filter((_, itemIndex) => itemIndex !== index));
+    setUploadAnnouncement(`${attachment.name} removed`);
   };
 
   const visibleRecentLibraryFiles = recentLibraryFiles
@@ -647,7 +687,9 @@ export function ChatInput({
     const rowClass = `flex w-full items-center gap-3 rounded-xl text-left transition-colors duration-150 hover:bg-accent active:bg-accent disabled:cursor-not-allowed disabled:opacity-50 outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
       mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5 text-sm"
     }`;
-    const iconClass = mobile ? "h-5 w-5 shrink-0 text-muted-foreground" : "h-4 w-4 shrink-0 text-muted-foreground";
+    const iconClass = mobile
+      ? "h-5 w-5 shrink-0 text-muted-foreground"
+      : "h-4 w-4 shrink-0 text-muted-foreground";
     const webSearchTool = COMPOSER_TOOLS.find((tool) => tool.id === "web_search");
     const imageTool = COMPOSER_TOOLS.find((tool) => tool.id === "image");
     const deepResearchTool = COMPOSER_TOOLS.find((tool) => tool.id === "deep_research");
@@ -718,9 +760,7 @@ export function ChatInput({
           {addPhotosRow}
           {cameraRow}
           {webSearchTool ? toolRow({ ...webSearchTool, label: "Web search" }) : null}
-          <p
-            className={`pt-3 pb-1 text-sm text-muted-foreground ${mobile ? "px-4" : "px-3"}`}
-          >
+          <p className={`pt-3 pb-1 text-sm text-muted-foreground ${mobile ? "px-4" : "px-3"}`}>
             Log in to use...
           </p>
           {lockedRow("locked-deep-research", deepResearchTool?.icon ?? Telescope, "Deep research")}
@@ -740,7 +780,6 @@ export function ChatInput({
     );
   };
 
-
   return (
     <div
       className="w-full px-2.5 pb-[max(.75rem,var(--safe-bottom))] pt-2 transition-[padding] duration-150 sm:px-0"
@@ -748,9 +787,22 @@ export function ChatInput({
       onPaste={handlePaste}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
     >
       <div className="mx-auto max-w-[48rem]">
-        <div className={`kova-composer overflow-visible ${isStreaming ? "is-streaming" : ""}`}>
+        <div
+          className={`kova-composer relative overflow-visible ${isStreaming ? "is-streaming" : ""} ${dragActive ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`}
+        >
+          {dragActive && (
+            <div
+              className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center rounded-[inherit] bg-background/90 text-sm font-medium text-foreground backdrop-blur-sm"
+              role="status"
+              aria-live="polite"
+            >
+              Drop up to two supported files
+            </div>
+          )}
           {attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 p-3 pb-0" aria-label="Attachments">
               {attachments.map((a, i) => (
@@ -802,7 +854,7 @@ export function ChatInput({
                     <button
                       type="button"
                       onClick={() => {
-                        onAttachmentsChange(attachments.filter((_, j) => j !== i));
+                        removeAttachment(i);
                         fileRef.current?.click();
                       }}
                       className="absolute bottom-5 left-1 flex h-7 w-7 items-center justify-center rounded-full bg-background/90 hover:bg-background"
@@ -814,7 +866,7 @@ export function ChatInput({
                   ) : null}
                   <button
                     type="button"
-                    onClick={() => onAttachmentsChange(attachments.filter((_, j) => j !== i))}
+                    onClick={() => removeAttachment(i)}
                     className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-background/85 hover:bg-background"
                     aria-label={`Remove ${a.name}`}
                   >
@@ -908,7 +960,6 @@ export function ChatInput({
                 <div className="flex max-h-[70vh] flex-col gap-1 overflow-y-auto p-1">
                   {renderComposerActions(true)}
                 </div>
-
               </MobileBottomSheet>
             )}
 

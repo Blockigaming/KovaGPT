@@ -13,8 +13,8 @@ const runtimeRoots = [
   "supabase/functions",
 ];
 const runtimeExtension = /\.(?:[cm]?[jt]sx?|jsonc?|ya?ml|toml)$/;
-const creditEscapePattern =
-  /LOVABLE_API_KEY|LOVABLE_AI_BASE_URL|ai\.gateway\.lovable\.dev|Lovable-API-Key|OPENAI_BASE_URL|AI_PROVIDER_(?:URL|API_KEY)/i;
+const configurableEndpointPattern =
+  /LOVABLE_AI_BASE_URL|Lovable-API-Key|OPENAI_BASE_URL|AI_PROVIDER_(?:URL|API_KEY)/i;
 
 async function runtimeFiles(relativePath) {
   const url = new URL(relativePath, repositoryRoot);
@@ -37,7 +37,7 @@ async function runtimeFiles(relativePath) {
   }
 }
 
-test("AI provider configuration has no Lovable credit path", async () => {
+test("AI provider configuration has no configurable endpoint escape hatch", async () => {
   const [providerSource, diagnosticsSource, envExample, discoveredFiles] = await Promise.all([
     readFile(new URL("../../src/lib/ai/provider.server.ts", import.meta.url), "utf8"),
     readFile(new URL("../../src/lib/config/diagnostics.server.ts", import.meta.url), "utf8"),
@@ -48,19 +48,26 @@ test("AI provider configuration has no Lovable credit path", async () => {
   const violations = [];
   for (const file of discoveredFiles) {
     const source = await readFile(new URL(file, repositoryRoot), "utf8");
-    if (creditEscapePattern.test(source)) violations.push(file);
+    if (configurableEndpointPattern.test(source)) violations.push(file);
   }
   assert.deepEqual(
     violations,
     [],
-    `credit-routing escape hatches found in: ${violations.join(", ")}`,
+    `provider endpoint escape hatches found in: ${violations.join(", ")}`,
   );
 
   assert.match(providerSource, /provider:\s*"openai"/);
-  assert.match(providerSource, /configured:\s*Boolean\(env\("OPENAI_API_KEY"\)\)/);
+  assert.match(
+    providerSource,
+    /configured:\s*Boolean\(env\("LOVABLE_API_KEY"\) \?\? env\("OPENAI_API_KEY"\)\)/,
+  );
   assert.match(providerSource, /https:\/\/api\.openai\.com\/v1/);
+  assert.match(providerSource, /https:\/\/ai\.gateway\.lovable\.dev\/v1/);
   assert.match(providerSource, /redirect:\s*"error"/);
-  assert.match(diagnosticsSource, /aiProvider:\s*feature\(\["OPENAI_API_KEY"\]\)/);
+  assert.match(
+    diagnosticsSource,
+    /aiProvider:\s*feature\(\["LOVABLE_API_KEY", "OPENAI_API_KEY"\]\)/,
+  );
   assert.doesNotMatch(envExample, /OPENAI_BASE_URL/);
 });
 

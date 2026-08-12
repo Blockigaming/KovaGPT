@@ -1,0 +1,20 @@
+{
+  "name": "ca-kovagpt-staging",
+  "properties": {
+    "configuration": {
+      "ingress": {
+        "external": true,
+        "allowInsecure": false,
+        "traffic": [{ "revisionName": "ca-kovagpt-staging--good", "weight": 100 }]
+      }
+    },
+    "template": {
+      "containers": [
+        {
+          "image": "registry.example/kovagpt@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ],
+      "scale": { "minReplicas": 1, "maxReplicas": 3 }
+    }
+  }
+}

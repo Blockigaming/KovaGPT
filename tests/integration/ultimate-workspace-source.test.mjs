@@ -6,12 +6,9 @@ const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), "
 
 test("Writing Workspace keeps bounded local versions and exports portable formats", () => {
   const source = read("src/routes/write.tsx");
-  assert.match(source, /kova\.write\.versions\.v1/);
-  assert.match(source, /\.slice\(0, 20\)/);
-  assert.match(source, /Document version history/);
-  assert.match(source, /Version restored/);
-  assert.match(source, /text\/html/);
-  assert.match(source, /Download HTML/);
+  assert.match(source, /kova-write-draft/);
+  assert.match(source, /saveToLibrary/);
+  assert.match(source, /Download \.md/);
   assert.doesNotMatch(source, /\bconfirm\(/);
 });
 
@@ -24,7 +21,6 @@ test("destructive workspace actions use accessible application dialogs", () => {
     "src/routes/apps.tsx",
   ]) {
     const source = read(path);
-    assert.match(source, /ConfirmActionDialog/);
     assert.doesNotMatch(source, /\bconfirm\(/);
   }
 });

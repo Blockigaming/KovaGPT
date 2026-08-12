@@ -1,0 +1,9 @@
+{
+  "publicOrigin": "https://staging.kovagpt.example",
+  "supabaseCallback": "https://staging.kovagpt.example/auth/callback",
+  "googleCallback": "https://staging.kovagpt.example/api/google/callback",
+  "githubCallback": "https://staging.kovagpt.example/api/github/callback",
+  "stripeWebhook": "https://staging.kovagpt.example/api/public/payments/webhook",
+  "azureHost": "https://ca-kovagpt-staging.example.azurecontainerapps.io",
+  "allowedHosts": ["staging.kovagpt.example", "ca-kovagpt-staging.example.azurecontainerapps.io"]
+}

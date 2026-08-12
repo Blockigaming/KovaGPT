@@ -116,7 +116,7 @@ test("public research copy states provider and verification limits without guara
       paths[index],
     );
   }
-  assert.match(sources[0], /not affiliated with,\s*endorsed by, or sponsored by/iu);
+  assert.match(sources[0], /not affiliated\s+with,\s*endorsed by, or sponsored by/iu);
   assert.doesNotMatch(sources[0], /best general-purpose default|best for long documents/iu);
 });
 

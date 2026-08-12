@@ -1,0 +1,12 @@
+{
+  "migrationEnabled": true,
+  "aiGenerationDisabled": true,
+  "kovaGenerationDisabled": true,
+  "databaseSecretReference": "database-url-rehearsal",
+  "databaseReachable": true,
+  "sourceSynthetic": true,
+  "destinationProjectRef": "disposable-test-project",
+  "users": 0,
+  "identities": 0,
+  "ingressExternal": false
+}

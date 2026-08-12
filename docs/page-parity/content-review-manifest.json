@@ -1,0 +1,3823 @@
+{
+  "reviewedAt": "2026-08-11",
+  "baseUrl": "http://127.0.0.1:8080",
+  "count": 105,
+  "decisions": {
+    "remain_noindex": 105
+  },
+  "routes": [
+    {
+      "route": "/about",
+      "testPath": "/about",
+      "templateFamily": "public-page",
+      "h1": "About KovaGPT",
+      "wordCount": 78,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/company",
+          "score": 0.847
+        },
+        {
+          "route": "/organizations",
+          "score": 0.847
+        },
+        {
+          "route": "/overview",
+          "score": 0.845
+        },
+        {
+          "route": "/families",
+          "score": 0.836
+        },
+        {
+          "route": "/mission",
+          "score": 0.836
+        }
+      ],
+      "uniqueContentScore": 0.153
+    },
+    {
+      "route": "/acceptable-use",
+      "testPath": "/acceptable-use",
+      "templateFamily": "legal",
+      "h1": "Acceptable-use policy",
+      "wordCount": 93,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": true,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Professional review remains unresolved.",
+      "duplicateContentMatches": [
+        {
+          "route": "/law-enforcement",
+          "score": 0.877
+        },
+        {
+          "route": "/cookie-policy",
+          "score": 0.854
+        },
+        {
+          "route": "/regional-notices",
+          "score": 0.843
+        },
+        {
+          "route": "/data-processing",
+          "score": 0.821
+        },
+        {
+          "route": "/copyright",
+          "score": 0.814
+        }
+      ],
+      "uniqueContentScore": 0.123
+    },
+    {
+      "route": "/accessibility",
+      "testPath": "/accessibility",
+      "templateFamily": "public-page",
+      "h1": "Accessibility",
+      "wordCount": 78,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/contact",
+          "score": 0.836
+        },
+        {
+          "route": "/about",
+          "score": 0.833
+        },
+        {
+          "route": "/overview",
+          "score": 0.822
+        },
+        {
+          "route": "/writing",
+          "score": 0.822
+        },
+        {
+          "route": "/enterprise",
+          "score": 0.813
+        }
+      ],
+      "uniqueContentScore": 0.164
+    },
+    {
+      "route": "/account-deletion",
+      "testPath": "/account-deletion",
+      "templateFamily": "public-page",
+      "h1": "Account deletion",
+      "wordCount": 79,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/data-export",
+          "score": 0.873
+        },
+        {
+          "route": "/model-behavior",
+          "score": 0.833
+        },
+        {
+          "route": "/security",
+          "score": 0.833
+        },
+        {
+          "route": "/about",
+          "score": 0.831
+        },
+        {
+          "route": "/transparency",
+          "score": 0.824
+        }
+      ],
+      "uniqueContentScore": 0.127
+    },
+    {
+      "route": "/announcements/$slug",
+      "testPath": "/announcements/unpublished-entry",
+      "templateFamily": "publishing-detail",
+      "h1": "404",
+      "wordCount": 0,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": null,
+      "ctaRuntimeResult": "not_applicable",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Unpublished detail template intentionally fails closed.",
+      "duplicateContentMatches": [],
+      "uniqueContentScore": 1
+    },
+    {
+      "route": "/announcements",
+      "testPath": "/announcements",
+      "templateFamily": "publishing-index",
+      "h1": "Announcements",
+      "wordCount": 54,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": "/changelog",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/engineering",
+          "score": 0.953
+        },
+        {
+          "route": "/guides",
+          "score": 0.953
+        },
+        {
+          "route": "/news",
+          "score": 0.953
+        },
+        {
+          "route": "/research",
+          "score": 0.953
+        },
+        {
+          "route": "/tutorials",
+          "score": 0.953
+        }
+      ],
+      "uniqueContentScore": 0.047
+    },
+    {
+      "route": "/apps/$category",
+      "testPath": "/apps/collaboration",
+      "templateFamily": "app-category",
+      "h1": "Your KovaGPT workspace",
+      "wordCount": 103,
+      "verifiedCapabilitiesReferenced": [
+        "files"
+      ],
+      "ctaRoute": null,
+      "ctaRuntimeResult": "not_applicable",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [],
+      "uniqueContentScore": 1
+    },
+    {
+      "route": "/assistants/$assistantSlug",
+      "testPath": "/assistants/study-coach",
+      "templateFamily": "assistant",
+      "h1": "KovaGPT assistants",
+      "wordCount": 47,
+      "verifiedCapabilitiesReferenced": [
+        "chat"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/assistants",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/assistants",
+      "testPath": "/assistants",
+      "templateFamily": "assistant",
+      "h1": "KovaGPT assistants",
+      "wordCount": 47,
+      "verifiedCapabilitiesReferenced": [
+        "chat"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/assistants/$assistantSlug",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/brand",
+      "testPath": "/brand",
+      "templateFamily": "public-page",
+      "h1": "Brand resources",
+      "wordCount": 81,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/family-safety",
+          "score": 0.813
+        },
+        {
+          "route": "/learn",
+          "score": 0.813
+        },
+        {
+          "route": "/about",
+          "score": 0.811
+        },
+        {
+          "route": "/organizations",
+          "score": 0.803
+        },
+        {
+          "route": "/overview",
+          "score": 0.8
+        }
+      ],
+      "uniqueContentScore": 0.187
+    },
+    {
+      "route": "/business",
+      "testPath": "/business",
+      "templateFamily": "public-page",
+      "h1": "KovaGPT for business",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/education",
+          "score": 0.849
+        },
+        {
+          "route": "/overview",
+          "score": 0.847
+        },
+        {
+          "route": "/enterprise",
+          "score": 0.838
+        },
+        {
+          "route": "/data-controls",
+          "score": 0.824
+        },
+        {
+          "route": "/writing",
+          "score": 0.822
+        }
+      ],
+      "uniqueContentScore": 0.151
+    },
+    {
+      "route": "/careers",
+      "testPath": "/careers",
+      "templateFamily": "public-page",
+      "h1": "Careers and general interest",
+      "wordCount": 85,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/company",
+          "score": 0.795
+        },
+        {
+          "route": "/contact",
+          "score": 0.782
+        },
+        {
+          "route": "/about",
+          "score": 0.779
+        },
+        {
+          "route": "/accessibility",
+          "score": 0.759
+        },
+        {
+          "route": "/security",
+          "score": 0.759
+        }
+      ],
+      "uniqueContentScore": 0.205
+    },
+    {
+      "route": "/case-studies/$slug",
+      "testPath": "/case-studies/unpublished-entry",
+      "templateFamily": "publishing-detail",
+      "h1": "404",
+      "wordCount": 0,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": null,
+      "ctaRuntimeResult": "not_applicable",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Unpublished detail template intentionally fails closed.",
+      "duplicateContentMatches": [],
+      "uniqueContentScore": 1
+    },
+    {
+      "route": "/case-studies",
+      "testPath": "/case-studies",
+      "templateFamily": "publishing-index",
+      "h1": "Case studies",
+      "wordCount": 56,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": "/changelog",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/announcements",
+          "score": 0.932
+        },
+        {
+          "route": "/engineering",
+          "score": 0.932
+        },
+        {
+          "route": "/guides",
+          "score": 0.932
+        },
+        {
+          "route": "/news",
+          "score": 0.932
+        },
+        {
+          "route": "/research",
+          "score": 0.932
+        }
+      ],
+      "uniqueContentScore": 0.068
+    },
+    {
+      "route": "/company",
+      "testPath": "/company",
+      "templateFamily": "public-page",
+      "h1": "Company overview",
+      "wordCount": 81,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/about",
+          "score": 0.847
+        },
+        {
+          "route": "/account-deletion",
+          "score": 0.822
+        },
+        {
+          "route": "/overview",
+          "score": 0.811
+        },
+        {
+          "route": "/accessibility",
+          "score": 0.8
+        },
+        {
+          "route": "/contact",
+          "score": 0.8
+        }
+      ],
+      "uniqueContentScore": 0.153
+    },
+    {
+      "route": "/contact",
+      "testPath": "/contact",
+      "templateFamily": "public-page",
+      "h1": "Contact KovaGPT",
+      "wordCount": 80,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/accessibility",
+          "score": 0.836
+        },
+        {
+          "route": "/about",
+          "score": 0.833
+        },
+        {
+          "route": "/overview",
+          "score": 0.822
+        },
+        {
+          "route": "/writing",
+          "score": 0.822
+        },
+        {
+          "route": "/enterprise",
+          "score": 0.813
+        }
+      ],
+      "uniqueContentScore": 0.164
+    },
+    {
+      "route": "/content-moderation",
+      "testPath": "/content-moderation",
+      "templateFamily": "public-page",
+      "h1": "Content moderation",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/account-deletion",
+          "score": 0.8
+        },
+        {
+          "route": "/family-safety",
+          "score": 0.779
+        },
+        {
+          "route": "/model-behavior",
+          "score": 0.779
+        },
+        {
+          "route": "/about",
+          "score": 0.776
+        },
+        {
+          "route": "/company",
+          "score": 0.769
+        }
+      ],
+      "uniqueContentScore": 0.2
+    },
+    {
+      "route": "/cookie-policy",
+      "testPath": "/cookie-policy",
+      "templateFamily": "legal",
+      "h1": "Cookie policy",
+      "wordCount": 96,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": true,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Professional review remains unresolved.",
+      "duplicateContentMatches": [
+        {
+          "route": "/acceptable-use",
+          "score": 0.854
+        },
+        {
+          "route": "/law-enforcement",
+          "score": 0.854
+        },
+        {
+          "route": "/regional-notices",
+          "score": 0.843
+        },
+        {
+          "route": "/copyright",
+          "score": 0.835
+        },
+        {
+          "route": "/data-processing",
+          "score": 0.821
+        }
+      ],
+      "uniqueContentScore": 0.146
+    },
+    {
+      "route": "/copyright",
+      "testPath": "/copyright",
+      "templateFamily": "legal",
+      "h1": "Copyright and IP requests",
+      "wordCount": 100,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": true,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Professional review remains unresolved.",
+      "duplicateContentMatches": [
+        {
+          "route": "/cookie-policy",
+          "score": 0.835
+        },
+        {
+          "route": "/law-enforcement",
+          "score": 0.835
+        },
+        {
+          "route": "/acceptable-use",
+          "score": 0.814
+        },
+        {
+          "route": "/data-processing",
+          "score": 0.805
+        },
+        {
+          "route": "/regional-notices",
+          "score": 0.805
+        }
+      ],
+      "uniqueContentScore": 0.165
+    },
+    {
+      "route": "/customer-stories",
+      "testPath": "/customer-stories",
+      "templateFamily": "company-admin",
+      "h1": "Customer stories",
+      "wordCount": 92,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": true,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Verified administrator content is unavailable.",
+      "duplicateContentMatches": [
+        {
+          "route": "/leadership",
+          "score": 0.867
+        },
+        {
+          "route": "/partners",
+          "score": 0.814
+        },
+        {
+          "route": "/about",
+          "score": 0.744
+        }
+      ],
+      "uniqueContentScore": 0.133
+    },
+    {
+      "route": "/customers",
+      "testPath": "/customers",
+      "templateFamily": "public-page",
+      "h1": "Customer use cases",
+      "wordCount": 81,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/about",
+          "score": 0.822
+        },
+        {
+          "route": "/use-cases/ai-assistant",
+          "score": 0.805
+        },
+        {
+          "route": "/use-cases/ai-chatbot",
+          "score": 0.805
+        },
+        {
+          "route": "/use-cases/brainstorming",
+          "score": 0.805
+        },
+        {
+          "route": "/use-cases/business-assistant",
+          "score": 0.805
+        }
+      ],
+      "uniqueContentScore": 0.178
+    },
+    {
+      "route": "/data-controls",
+      "testPath": "/data-controls",
+      "templateFamily": "public-page",
+      "h1": "Data controls",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "files",
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/business",
+          "score": 0.824
+        },
+        {
+          "route": "/account-deletion",
+          "score": 0.822
+        },
+        {
+          "route": "/data-export",
+          "score": 0.813
+        },
+        {
+          "route": "/overview",
+          "score": 0.811
+        },
+        {
+          "route": "/family-safety",
+          "score": 0.8
+        }
+      ],
+      "uniqueContentScore": 0.176
+    },
+    {
+      "route": "/data-export",
+      "testPath": "/data-export",
+      "templateFamily": "public-page",
+      "h1": "Data export",
+      "wordCount": 81,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/account-deletion",
+          "score": 0.873
+        },
+        {
+          "route": "/data-controls",
+          "score": 0.813
+        },
+        {
+          "route": "/security",
+          "score": 0.8
+        },
+        {
+          "route": "/about",
+          "score": 0.797
+        },
+        {
+          "route": "/transparency",
+          "score": 0.792
+        }
+      ],
+      "uniqueContentScore": 0.127
+    },
+    {
+      "route": "/data-processing",
+      "testPath": "/data-processing",
+      "templateFamily": "legal",
+      "h1": "Data processing information",
+      "wordCount": 99,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": true,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Professional review remains unresolved.",
+      "duplicateContentMatches": [
+        {
+          "route": "/acceptable-use",
+          "score": 0.821
+        },
+        {
+          "route": "/cookie-policy",
+          "score": 0.821
+        },
+        {
+          "route": "/law-enforcement",
+          "score": 0.821
+        },
+        {
+          "route": "/regional-notices",
+          "score": 0.812
+        },
+        {
+          "route": "/copyright",
+          "score": 0.805
+        }
+      ],
+      "uniqueContentScore": 0.179
+    },
+    {
+      "route": "/developers/api",
+      "testPath": "/developers/api",
+      "templateFamily": "developer",
+      "h1": "KovaGPT developer platform",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "no_concrete_endpoint_documented",
+      "decision": "remain_noindex",
+      "reason": "Overview-only developer content does not yet document a verified public developer API contract.",
+      "duplicateContentMatches": [
+        {
+          "route": "/developers/authentication",
+          "score": 1
+        },
+        {
+          "route": "/developers/errors",
+          "score": 1
+        },
+        {
+          "route": "/developers/examples",
+          "score": 1
+        },
+        {
+          "route": "/developers/files",
+          "score": 1
+        },
+        {
+          "route": "/developers/image-generation",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/developers/authentication",
+      "testPath": "/developers/authentication",
+      "templateFamily": "developer",
+      "h1": "KovaGPT developer platform",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "no_concrete_endpoint_documented",
+      "decision": "remain_noindex",
+      "reason": "Overview-only developer content does not yet document a verified public developer API contract.",
+      "duplicateContentMatches": [
+        {
+          "route": "/developers/api",
+          "score": 1
+        },
+        {
+          "route": "/developers/errors",
+          "score": 1
+        },
+        {
+          "route": "/developers/examples",
+          "score": 1
+        },
+        {
+          "route": "/developers/files",
+          "score": 1
+        },
+        {
+          "route": "/developers/image-generation",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/developers/errors",
+      "testPath": "/developers/errors",
+      "templateFamily": "developer",
+      "h1": "KovaGPT developer platform",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "no_concrete_endpoint_documented",
+      "decision": "remain_noindex",
+      "reason": "Overview-only developer content does not yet document a verified public developer API contract.",
+      "duplicateContentMatches": [
+        {
+          "route": "/developers/api",
+          "score": 1
+        },
+        {
+          "route": "/developers/authentication",
+          "score": 1
+        },
+        {
+          "route": "/developers/examples",
+          "score": 1
+        },
+        {
+          "route": "/developers/files",
+          "score": 1
+        },
+        {
+          "route": "/developers/image-generation",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/developers/examples",
+      "testPath": "/developers/examples",
+      "templateFamily": "developer",
+      "h1": "KovaGPT developer platform",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "no_concrete_endpoint_documented",
+      "decision": "remain_noindex",
+      "reason": "Overview-only developer content does not yet document a verified public developer API contract.",
+      "duplicateContentMatches": [
+        {
+          "route": "/developers/api",
+          "score": 1
+        },
+        {
+          "route": "/developers/authentication",
+          "score": 1
+        },
+        {
+          "route": "/developers/errors",
+          "score": 1
+        },
+        {
+          "route": "/developers/files",
+          "score": 1
+        },
+        {
+          "route": "/developers/image-generation",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/developers/files",
+      "testPath": "/developers/files",
+      "templateFamily": "developer",
+      "h1": "KovaGPT developer platform",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "no_concrete_endpoint_documented",
+      "decision": "remain_noindex",
+      "reason": "Overview-only developer content does not yet document a verified public developer API contract.",
+      "duplicateContentMatches": [
+        {
+          "route": "/developers/api",
+          "score": 1
+        },
+        {
+          "route": "/developers/authentication",
+          "score": 1
+        },
+        {
+          "route": "/developers/errors",
+          "score": 1
+        },
+        {
+          "route": "/developers/examples",
+          "score": 1
+        },
+        {
+          "route": "/developers/image-generation",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/developers/image-generation",
+      "testPath": "/developers/image-generation",
+      "templateFamily": "developer",
+      "h1": "KovaGPT developer platform",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "no_concrete_endpoint_documented",
+      "decision": "remain_noindex",
+      "reason": "Overview-only developer content does not yet document a verified public developer API contract.",
+      "duplicateContentMatches": [
+        {
+          "route": "/developers/api",
+          "score": 1
+        },
+        {
+          "route": "/developers/authentication",
+          "score": 1
+        },
+        {
+          "route": "/developers/errors",
+          "score": 1
+        },
+        {
+          "route": "/developers/examples",
+          "score": 1
+        },
+        {
+          "route": "/developers/files",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/developers/migrations",
+      "testPath": "/developers/migrations",
+      "templateFamily": "developer",
+      "h1": "KovaGPT developer platform",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "no_concrete_endpoint_documented",
+      "decision": "remain_noindex",
+      "reason": "Overview-only developer content does not yet document a verified public developer API contract.",
+      "duplicateContentMatches": [
+        {
+          "route": "/developers/api",
+          "score": 1
+        },
+        {
+          "route": "/developers/authentication",
+          "score": 1
+        },
+        {
+          "route": "/developers/errors",
+          "score": 1
+        },
+        {
+          "route": "/developers/examples",
+          "score": 1
+        },
+        {
+          "route": "/developers/files",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/developers/models",
+      "testPath": "/developers/models",
+      "templateFamily": "developer",
+      "h1": "KovaGPT developer platform",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "no_concrete_endpoint_documented",
+      "decision": "remain_noindex",
+      "reason": "Overview-only developer content does not yet document a verified public developer API contract.",
+      "duplicateContentMatches": [
+        {
+          "route": "/developers/api",
+          "score": 1
+        },
+        {
+          "route": "/developers/authentication",
+          "score": 1
+        },
+        {
+          "route": "/developers/errors",
+          "score": 1
+        },
+        {
+          "route": "/developers/examples",
+          "score": 1
+        },
+        {
+          "route": "/developers/files",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/developers/policies",
+      "testPath": "/developers/policies",
+      "templateFamily": "developer",
+      "h1": "KovaGPT developer platform",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": true,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "no_concrete_endpoint_documented",
+      "decision": "remain_noindex",
+      "reason": "Professional review remains unresolved.",
+      "duplicateContentMatches": [
+        {
+          "route": "/developers/api",
+          "score": 1
+        },
+        {
+          "route": "/developers/authentication",
+          "score": 1
+        },
+        {
+          "route": "/developers/errors",
+          "score": 1
+        },
+        {
+          "route": "/developers/examples",
+          "score": 1
+        },
+        {
+          "route": "/developers/files",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/developers/pricing",
+      "testPath": "/developers/pricing",
+      "templateFamily": "developer",
+      "h1": "KovaGPT developer platform",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "no_concrete_endpoint_documented",
+      "decision": "remain_noindex",
+      "reason": "Overview-only developer content does not yet document a verified public developer API contract.",
+      "duplicateContentMatches": [
+        {
+          "route": "/developers/api",
+          "score": 1
+        },
+        {
+          "route": "/developers/authentication",
+          "score": 1
+        },
+        {
+          "route": "/developers/errors",
+          "score": 1
+        },
+        {
+          "route": "/developers/examples",
+          "score": 1
+        },
+        {
+          "route": "/developers/files",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/developers/quickstart",
+      "testPath": "/developers/quickstart",
+      "templateFamily": "developer",
+      "h1": "KovaGPT developer platform",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "no_concrete_endpoint_documented",
+      "decision": "remain_noindex",
+      "reason": "Overview-only developer content does not yet document a verified public developer API contract.",
+      "duplicateContentMatches": [
+        {
+          "route": "/developers/api",
+          "score": 1
+        },
+        {
+          "route": "/developers/authentication",
+          "score": 1
+        },
+        {
+          "route": "/developers/errors",
+          "score": 1
+        },
+        {
+          "route": "/developers/examples",
+          "score": 1
+        },
+        {
+          "route": "/developers/files",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/developers/rate-limits",
+      "testPath": "/developers/rate-limits",
+      "templateFamily": "developer",
+      "h1": "KovaGPT developer platform",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "no_concrete_endpoint_documented",
+      "decision": "remain_noindex",
+      "reason": "Overview-only developer content does not yet document a verified public developer API contract.",
+      "duplicateContentMatches": [
+        {
+          "route": "/developers/api",
+          "score": 1
+        },
+        {
+          "route": "/developers/authentication",
+          "score": 1
+        },
+        {
+          "route": "/developers/errors",
+          "score": 1
+        },
+        {
+          "route": "/developers/examples",
+          "score": 1
+        },
+        {
+          "route": "/developers/files",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/developers/reference",
+      "testPath": "/developers/reference",
+      "templateFamily": "developer",
+      "h1": "KovaGPT developer platform",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "no_concrete_endpoint_documented",
+      "decision": "remain_noindex",
+      "reason": "Overview-only developer content does not yet document a verified public developer API contract.",
+      "duplicateContentMatches": [
+        {
+          "route": "/developers/api",
+          "score": 1
+        },
+        {
+          "route": "/developers/authentication",
+          "score": 1
+        },
+        {
+          "route": "/developers/errors",
+          "score": 1
+        },
+        {
+          "route": "/developers/examples",
+          "score": 1
+        },
+        {
+          "route": "/developers/files",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/developers/safety",
+      "testPath": "/developers/safety",
+      "templateFamily": "developer",
+      "h1": "KovaGPT developer platform",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "no_concrete_endpoint_documented",
+      "decision": "remain_noindex",
+      "reason": "Overview-only developer content does not yet document a verified public developer API contract.",
+      "duplicateContentMatches": [
+        {
+          "route": "/developers/api",
+          "score": 1
+        },
+        {
+          "route": "/developers/authentication",
+          "score": 1
+        },
+        {
+          "route": "/developers/errors",
+          "score": 1
+        },
+        {
+          "route": "/developers/examples",
+          "score": 1
+        },
+        {
+          "route": "/developers/files",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/developers/sdks",
+      "testPath": "/developers/sdks",
+      "templateFamily": "developer",
+      "h1": "KovaGPT developer platform",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "no_concrete_endpoint_documented",
+      "decision": "remain_noindex",
+      "reason": "Overview-only developer content does not yet document a verified public developer API contract.",
+      "duplicateContentMatches": [
+        {
+          "route": "/developers/api",
+          "score": 1
+        },
+        {
+          "route": "/developers/authentication",
+          "score": 1
+        },
+        {
+          "route": "/developers/errors",
+          "score": 1
+        },
+        {
+          "route": "/developers/examples",
+          "score": 1
+        },
+        {
+          "route": "/developers/files",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/developers/streaming",
+      "testPath": "/developers/streaming",
+      "templateFamily": "developer",
+      "h1": "KovaGPT developer platform",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "no_concrete_endpoint_documented",
+      "decision": "remain_noindex",
+      "reason": "Overview-only developer content does not yet document a verified public developer API contract.",
+      "duplicateContentMatches": [
+        {
+          "route": "/developers/api",
+          "score": 1
+        },
+        {
+          "route": "/developers/authentication",
+          "score": 1
+        },
+        {
+          "route": "/developers/errors",
+          "score": 1
+        },
+        {
+          "route": "/developers/examples",
+          "score": 1
+        },
+        {
+          "route": "/developers/files",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/developers/terms",
+      "testPath": "/developers/terms",
+      "templateFamily": "developer",
+      "h1": "KovaGPT developer platform",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": true,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "no_concrete_endpoint_documented",
+      "decision": "remain_noindex",
+      "reason": "Professional review remains unresolved.",
+      "duplicateContentMatches": [
+        {
+          "route": "/developers/api",
+          "score": 1
+        },
+        {
+          "route": "/developers/authentication",
+          "score": 1
+        },
+        {
+          "route": "/developers/errors",
+          "score": 1
+        },
+        {
+          "route": "/developers/examples",
+          "score": 1
+        },
+        {
+          "route": "/developers/files",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/developers/tool-calling",
+      "testPath": "/developers/tool-calling",
+      "templateFamily": "developer",
+      "h1": "KovaGPT developer platform",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "no_concrete_endpoint_documented",
+      "decision": "remain_noindex",
+      "reason": "Overview-only developer content does not yet document a verified public developer API contract.",
+      "duplicateContentMatches": [
+        {
+          "route": "/developers/api",
+          "score": 1
+        },
+        {
+          "route": "/developers/authentication",
+          "score": 1
+        },
+        {
+          "route": "/developers/errors",
+          "score": 1
+        },
+        {
+          "route": "/developers/examples",
+          "score": 1
+        },
+        {
+          "route": "/developers/files",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/developers",
+      "testPath": "/developers",
+      "templateFamily": "developer",
+      "h1": "KovaGPT developer platform",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "no_concrete_endpoint_documented",
+      "decision": "remain_noindex",
+      "reason": "Overview-only developer content does not yet document a verified public developer API contract.",
+      "duplicateContentMatches": [
+        {
+          "route": "/developers/api",
+          "score": 1
+        },
+        {
+          "route": "/developers/authentication",
+          "score": 1
+        },
+        {
+          "route": "/developers/errors",
+          "score": 1
+        },
+        {
+          "route": "/developers/examples",
+          "score": 1
+        },
+        {
+          "route": "/developers/files",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/education",
+      "testPath": "/education",
+      "templateFamily": "public-page",
+      "h1": "KovaGPT for education",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/business",
+          "score": 0.849
+        },
+        {
+          "route": "/overview",
+          "score": 0.836
+        },
+        {
+          "route": "/family-safety",
+          "score": 0.824
+        },
+        {
+          "route": "/learn",
+          "score": 0.824
+        },
+        {
+          "route": "/writing",
+          "score": 0.811
+        }
+      ],
+      "uniqueContentScore": 0.151
+    },
+    {
+      "route": "/en",
+      "testPath": "/en",
+      "templateFamily": "public-page",
+      "h1": "KovaGPT",
+      "wordCount": 36,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [],
+      "uniqueContentScore": 1
+    },
+    {
+      "route": "/engineering/$slug",
+      "testPath": "/engineering/unpublished-entry",
+      "templateFamily": "publishing-detail",
+      "h1": "404",
+      "wordCount": 0,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": null,
+      "ctaRuntimeResult": "not_applicable",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Unpublished detail template intentionally fails closed.",
+      "duplicateContentMatches": [],
+      "uniqueContentScore": 1
+    },
+    {
+      "route": "/engineering",
+      "testPath": "/engineering",
+      "templateFamily": "publishing-index",
+      "h1": "Engineering",
+      "wordCount": 54,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": "/changelog",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/announcements",
+          "score": 0.953
+        },
+        {
+          "route": "/guides",
+          "score": 0.953
+        },
+        {
+          "route": "/news",
+          "score": 0.953
+        },
+        {
+          "route": "/research",
+          "score": 0.953
+        },
+        {
+          "route": "/tutorials",
+          "score": 0.953
+        }
+      ],
+      "uniqueContentScore": 0.047
+    },
+    {
+      "route": "/enterprise",
+      "testPath": "/enterprise",
+      "templateFamily": "public-page",
+      "h1": "KovaGPT for enterprise",
+      "wordCount": 82,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/business",
+          "score": 0.838
+        },
+        {
+          "route": "/overview",
+          "score": 0.824
+        },
+        {
+          "route": "/accessibility",
+          "score": 0.813
+        },
+        {
+          "route": "/contact",
+          "score": 0.813
+        },
+        {
+          "route": "/education",
+          "score": 0.803
+        }
+      ],
+      "uniqueContentScore": 0.162
+    },
+    {
+      "route": "/families",
+      "testPath": "/families",
+      "templateFamily": "public-page",
+      "h1": "KovaGPT for families",
+      "wordCount": 81,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/family-safety",
+          "score": 0.863
+        },
+        {
+          "route": "/about",
+          "score": 0.836
+        },
+        {
+          "route": "/organizations",
+          "score": 0.827
+        },
+        {
+          "route": "/overview",
+          "score": 0.824
+        },
+        {
+          "route": "/customers",
+          "score": 0.803
+        }
+      ],
+      "uniqueContentScore": 0.137
+    },
+    {
+      "route": "/family-safety",
+      "testPath": "/family-safety",
+      "templateFamily": "public-page",
+      "h1": "Child and family safety",
+      "wordCount": 81,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/families",
+          "score": 0.863
+        },
+        {
+          "route": "/learn",
+          "score": 0.836
+        },
+        {
+          "route": "/education",
+          "score": 0.824
+        },
+        {
+          "route": "/overview",
+          "score": 0.822
+        },
+        {
+          "route": "/brand",
+          "score": 0.813
+        }
+      ],
+      "uniqueContentScore": 0.137
+    },
+    {
+      "route": "/features",
+      "testPath": "/features",
+      "templateFamily": "public-page",
+      "h1": "Features",
+      "wordCount": 79,
+      "verifiedCapabilitiesReferenced": [
+        "chat",
+        "files",
+        "images",
+        "projects",
+        "research",
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/overview",
+          "score": 0.822
+        },
+        {
+          "route": "/writing",
+          "score": 0.822
+        },
+        {
+          "route": "/accessibility",
+          "score": 0.811
+        },
+        {
+          "route": "/business",
+          "score": 0.811
+        },
+        {
+          "route": "/contact",
+          "score": 0.811
+        }
+      ],
+      "uniqueContentScore": 0.178
+    },
+    {
+      "route": "/guides/$slug",
+      "testPath": "/guides/unpublished-entry",
+      "templateFamily": "publishing-detail",
+      "h1": "404",
+      "wordCount": 0,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": null,
+      "ctaRuntimeResult": "not_applicable",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Unpublished detail template intentionally fails closed.",
+      "duplicateContentMatches": [],
+      "uniqueContentScore": 1
+    },
+    {
+      "route": "/guides",
+      "testPath": "/guides",
+      "templateFamily": "publishing-index",
+      "h1": "Guides",
+      "wordCount": 54,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": "/changelog",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/announcements",
+          "score": 0.953
+        },
+        {
+          "route": "/engineering",
+          "score": 0.953
+        },
+        {
+          "route": "/news",
+          "score": 0.953
+        },
+        {
+          "route": "/research",
+          "score": 0.953
+        },
+        {
+          "route": "/tutorials",
+          "score": 0.953
+        }
+      ],
+      "uniqueContentScore": 0.047
+    },
+    {
+      "route": "/health",
+      "testPath": "/health",
+      "templateFamily": "public-page",
+      "h1": "KovaGPT and health information",
+      "wordCount": 86,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/overview",
+          "score": 0.813
+        },
+        {
+          "route": "/business",
+          "score": 0.803
+        },
+        {
+          "route": "/about",
+          "score": 0.8
+        },
+        {
+          "route": "/education",
+          "score": 0.792
+        },
+        {
+          "route": "/writing",
+          "score": 0.789
+        }
+      ],
+      "uniqueContentScore": 0.187
+    },
+    {
+      "route": "/law-enforcement",
+      "testPath": "/law-enforcement",
+      "templateFamily": "legal",
+      "h1": "Law-enforcement requests",
+      "wordCount": 95,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": true,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Professional review remains unresolved.",
+      "duplicateContentMatches": [
+        {
+          "route": "/acceptable-use",
+          "score": 0.877
+        },
+        {
+          "route": "/cookie-policy",
+          "score": 0.854
+        },
+        {
+          "route": "/regional-notices",
+          "score": 0.843
+        },
+        {
+          "route": "/copyright",
+          "score": 0.835
+        },
+        {
+          "route": "/data-processing",
+          "score": 0.821
+        }
+      ],
+      "uniqueContentScore": 0.123
+    },
+    {
+      "route": "/leadership",
+      "testPath": "/leadership",
+      "templateFamily": "company-admin",
+      "h1": "Leadership",
+      "wordCount": 88,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": true,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Verified administrator content is unavailable.",
+      "duplicateContentMatches": [
+        {
+          "route": "/customer-stories",
+          "score": 0.867
+        },
+        {
+          "route": "/partners",
+          "score": 0.867
+        },
+        {
+          "route": "/about",
+          "score": 0.753
+        },
+        {
+          "route": "/regional-notices",
+          "score": 0.73
+        },
+        {
+          "route": "/company",
+          "score": 0.726
+        }
+      ],
+      "uniqueContentScore": 0.133
+    },
+    {
+      "route": "/learn",
+      "testPath": "/learn",
+      "templateFamily": "public-page",
+      "h1": "Learn KovaGPT",
+      "wordCount": 78,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/family-safety",
+          "score": 0.836
+        },
+        {
+          "route": "/education",
+          "score": 0.824
+        },
+        {
+          "route": "/overview",
+          "score": 0.822
+        },
+        {
+          "route": "/brand",
+          "score": 0.813
+        },
+        {
+          "route": "/students",
+          "score": 0.813
+        }
+      ],
+      "uniqueContentScore": 0.164
+    },
+    {
+      "route": "/mission",
+      "testPath": "/mission",
+      "templateFamily": "public-page",
+      "h1": "Our mission",
+      "wordCount": 84,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/about",
+          "score": 0.836
+        },
+        {
+          "route": "/accessibility",
+          "score": 0.813
+        },
+        {
+          "route": "/organizations",
+          "score": 0.803
+        },
+        {
+          "route": "/overview",
+          "score": 0.8
+        },
+        {
+          "route": "/families",
+          "score": 0.792
+        }
+      ],
+      "uniqueContentScore": 0.164
+    },
+    {
+      "route": "/model-behavior",
+      "testPath": "/model-behavior",
+      "templateFamily": "public-page",
+      "h1": "Model behavior",
+      "wordCount": 80,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/account-deletion",
+          "score": 0.833
+        },
+        {
+          "route": "/family-safety",
+          "score": 0.811
+        },
+        {
+          "route": "/about",
+          "score": 0.808
+        },
+        {
+          "route": "/trust",
+          "score": 0.8
+        },
+        {
+          "route": "/overview",
+          "score": 0.797
+        }
+      ],
+      "uniqueContentScore": 0.167
+    },
+    {
+      "route": "/news/$slug",
+      "testPath": "/news/unpublished-entry",
+      "templateFamily": "publishing-detail",
+      "h1": "404",
+      "wordCount": 0,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": null,
+      "ctaRuntimeResult": "not_applicable",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Unpublished detail template intentionally fails closed.",
+      "duplicateContentMatches": [],
+      "uniqueContentScore": 1
+    },
+    {
+      "route": "/news",
+      "testPath": "/news",
+      "templateFamily": "publishing-index",
+      "h1": "News",
+      "wordCount": 54,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": "/changelog",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/announcements",
+          "score": 0.953
+        },
+        {
+          "route": "/engineering",
+          "score": 0.953
+        },
+        {
+          "route": "/guides",
+          "score": 0.953
+        },
+        {
+          "route": "/research",
+          "score": 0.953
+        },
+        {
+          "route": "/tutorials",
+          "score": 0.953
+        }
+      ],
+      "uniqueContentScore": 0.047
+    },
+    {
+      "route": "/organizations",
+      "testPath": "/organizations",
+      "templateFamily": "public-page",
+      "h1": "KovaGPT for organizations",
+      "wordCount": 81,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/about",
+          "score": 0.847
+        },
+        {
+          "route": "/overview",
+          "score": 0.836
+        },
+        {
+          "route": "/families",
+          "score": 0.827
+        },
+        {
+          "route": "/brand",
+          "score": 0.803
+        },
+        {
+          "route": "/mission",
+          "score": 0.803
+        }
+      ],
+      "uniqueContentScore": 0.153
+    },
+    {
+      "route": "/overview",
+      "testPath": "/overview",
+      "templateFamily": "public-page",
+      "h1": "KovaGPT overview",
+      "wordCount": 80,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/business",
+          "score": 0.847
+        },
+        {
+          "route": "/about",
+          "score": 0.845
+        },
+        {
+          "route": "/education",
+          "score": 0.836
+        },
+        {
+          "route": "/organizations",
+          "score": 0.836
+        },
+        {
+          "route": "/writing",
+          "score": 0.833
+        }
+      ],
+      "uniqueContentScore": 0.153
+    },
+    {
+      "route": "/partners",
+      "testPath": "/partners",
+      "templateFamily": "company-admin",
+      "h1": "Partners",
+      "wordCount": 89,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": true,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Verified administrator content is unavailable.",
+      "duplicateContentMatches": [
+        {
+          "route": "/leadership",
+          "score": 0.867
+        },
+        {
+          "route": "/customer-stories",
+          "score": 0.814
+        },
+        {
+          "route": "/about",
+          "score": 0.744
+        }
+      ],
+      "uniqueContentScore": 0.133
+    },
+    {
+      "route": "/regional-notices",
+      "testPath": "/regional-notices",
+      "templateFamily": "legal",
+      "h1": "Regional legal notices",
+      "wordCount": 98,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": true,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Professional review remains unresolved.",
+      "duplicateContentMatches": [
+        {
+          "route": "/acceptable-use",
+          "score": 0.843
+        },
+        {
+          "route": "/cookie-policy",
+          "score": 0.843
+        },
+        {
+          "route": "/law-enforcement",
+          "score": 0.843
+        },
+        {
+          "route": "/data-processing",
+          "score": 0.812
+        },
+        {
+          "route": "/copyright",
+          "score": 0.805
+        }
+      ],
+      "uniqueContentScore": 0.157
+    },
+    {
+      "route": "/release-notes/$slug",
+      "testPath": "/release-notes/unpublished-entry",
+      "templateFamily": "publishing-detail",
+      "h1": "404",
+      "wordCount": 0,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": null,
+      "ctaRuntimeResult": "not_applicable",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Unpublished detail template intentionally fails closed.",
+      "duplicateContentMatches": [],
+      "uniqueContentScore": 1
+    },
+    {
+      "route": "/release-notes",
+      "testPath": "/release-notes",
+      "templateFamily": "publishing-index",
+      "h1": "Release notes",
+      "wordCount": 56,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": "/changelog",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/announcements",
+          "score": 0.932
+        },
+        {
+          "route": "/engineering",
+          "score": 0.932
+        },
+        {
+          "route": "/guides",
+          "score": 0.932
+        },
+        {
+          "route": "/news",
+          "score": 0.932
+        },
+        {
+          "route": "/research",
+          "score": 0.932
+        }
+      ],
+      "uniqueContentScore": 0.068
+    },
+    {
+      "route": "/research/$slug",
+      "testPath": "/research/unpublished-entry",
+      "templateFamily": "publishing-detail",
+      "h1": "404",
+      "wordCount": 0,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": null,
+      "ctaRuntimeResult": "not_applicable",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Unpublished detail template intentionally fails closed.",
+      "duplicateContentMatches": [],
+      "uniqueContentScore": 1
+    },
+    {
+      "route": "/research",
+      "testPath": "/research",
+      "templateFamily": "publishing-index",
+      "h1": "Research",
+      "wordCount": 54,
+      "verifiedCapabilitiesReferenced": [
+        "research"
+      ],
+      "ctaRoute": "/changelog",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/announcements",
+          "score": 0.953
+        },
+        {
+          "route": "/engineering",
+          "score": 0.953
+        },
+        {
+          "route": "/guides",
+          "score": 0.953
+        },
+        {
+          "route": "/news",
+          "score": 0.953
+        },
+        {
+          "route": "/tutorials",
+          "score": 0.953
+        }
+      ],
+      "uniqueContentScore": 0.047
+    },
+    {
+      "route": "/responsible-disclosure",
+      "testPath": "/responsible-disclosure",
+      "templateFamily": "public-page",
+      "h1": "Responsible disclosure",
+      "wordCount": 81,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/security",
+          "score": 0.863
+        },
+        {
+          "route": "/account-deletion",
+          "score": 0.811
+        },
+        {
+          "route": "/trust",
+          "score": 0.803
+        },
+        {
+          "route": "/business",
+          "score": 0.789
+        },
+        {
+          "route": "/about",
+          "score": 0.787
+        }
+      ],
+      "uniqueContentScore": 0.137
+    },
+    {
+      "route": "/safety-evaluations/$slug",
+      "testPath": "/safety-evaluations/unpublished-entry",
+      "templateFamily": "publishing-detail",
+      "h1": "404",
+      "wordCount": 0,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": null,
+      "ctaRuntimeResult": "not_applicable",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Unpublished detail template intentionally fails closed.",
+      "duplicateContentMatches": [],
+      "uniqueContentScore": 1
+    },
+    {
+      "route": "/safety-evaluations",
+      "testPath": "/safety-evaluations",
+      "templateFamily": "publishing-index",
+      "h1": "Safety evaluations",
+      "wordCount": 56,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": "/changelog",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/announcements",
+          "score": 0.932
+        },
+        {
+          "route": "/engineering",
+          "score": 0.932
+        },
+        {
+          "route": "/guides",
+          "score": 0.932
+        },
+        {
+          "route": "/news",
+          "score": 0.932
+        },
+        {
+          "route": "/research",
+          "score": 0.932
+        }
+      ],
+      "uniqueContentScore": 0.068
+    },
+    {
+      "route": "/security",
+      "testPath": "/security",
+      "templateFamily": "public-page",
+      "h1": "Security",
+      "wordCount": 78,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/responsible-disclosure",
+          "score": 0.863
+        },
+        {
+          "route": "/account-deletion",
+          "score": 0.833
+        },
+        {
+          "route": "/trust",
+          "score": 0.824
+        },
+        {
+          "route": "/business",
+          "score": 0.811
+        },
+        {
+          "route": "/about",
+          "score": 0.808
+        }
+      ],
+      "uniqueContentScore": 0.137
+    },
+    {
+      "route": "/share/$shareId",
+      "testPath": "/share/abcdefghijkl",
+      "templateFamily": "public-page",
+      "h1": "Shared conversation unavailable",
+      "wordCount": 41,
+      "verifiedCapabilitiesReferenced": [
+        "chat"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [],
+      "uniqueContentScore": 1
+    },
+    {
+      "route": "/shopping",
+      "testPath": "/shopping",
+      "templateFamily": "public-page",
+      "h1": "Shopping research",
+      "wordCount": 81,
+      "verifiedCapabilitiesReferenced": [
+        "research",
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/features",
+          "score": 0.803
+        },
+        {
+          "route": "/overview",
+          "score": 0.789
+        },
+        {
+          "route": "/writing",
+          "score": 0.789
+        },
+        {
+          "route": "/enterprise",
+          "score": 0.782
+        },
+        {
+          "route": "/accessibility",
+          "score": 0.779
+        }
+      ],
+      "uniqueContentScore": 0.197
+    },
+    {
+      "route": "/students",
+      "testPath": "/students",
+      "templateFamily": "public-page",
+      "h1": "KovaGPT for students",
+      "wordCount": 81,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/learn",
+          "score": 0.813
+        },
+        {
+          "route": "/about",
+          "score": 0.811
+        },
+        {
+          "route": "/organizations",
+          "score": 0.803
+        },
+        {
+          "route": "/overview",
+          "score": 0.8
+        },
+        {
+          "route": "/brand",
+          "score": 0.792
+        }
+      ],
+      "uniqueContentScore": 0.187
+    },
+    {
+      "route": "/technical-reports/$slug",
+      "testPath": "/technical-reports/unpublished-entry",
+      "templateFamily": "publishing-detail",
+      "h1": "404",
+      "wordCount": 0,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": null,
+      "ctaRuntimeResult": "not_applicable",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Unpublished detail template intentionally fails closed.",
+      "duplicateContentMatches": [],
+      "uniqueContentScore": 1
+    },
+    {
+      "route": "/technical-reports",
+      "testPath": "/technical-reports",
+      "templateFamily": "publishing-index",
+      "h1": "Technical reports",
+      "wordCount": 56,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": "/changelog",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/announcements",
+          "score": 0.932
+        },
+        {
+          "route": "/engineering",
+          "score": 0.932
+        },
+        {
+          "route": "/guides",
+          "score": 0.932
+        },
+        {
+          "route": "/news",
+          "score": 0.932
+        },
+        {
+          "route": "/research",
+          "score": 0.932
+        }
+      ],
+      "uniqueContentScore": 0.068
+    },
+    {
+      "route": "/translate",
+      "testPath": "/translate",
+      "templateFamily": "public-page",
+      "h1": "Translation assistant",
+      "wordCount": 81,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/overview",
+          "score": 0.811
+        },
+        {
+          "route": "/writing",
+          "score": 0.811
+        },
+        {
+          "route": "/accessibility",
+          "score": 0.8
+        },
+        {
+          "route": "/business",
+          "score": 0.8
+        },
+        {
+          "route": "/contact",
+          "score": 0.8
+        }
+      ],
+      "uniqueContentScore": 0.189
+    },
+    {
+      "route": "/transparency",
+      "testPath": "/transparency",
+      "templateFamily": "public-page",
+      "h1": "Transparency",
+      "wordCount": 80,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/account-deletion",
+          "score": 0.824
+        },
+        {
+          "route": "/data-export",
+          "score": 0.792
+        },
+        {
+          "route": "/overview",
+          "score": 0.789
+        },
+        {
+          "route": "/writing",
+          "score": 0.789
+        },
+        {
+          "route": "/accessibility",
+          "score": 0.779
+        }
+      ],
+      "uniqueContentScore": 0.176
+    },
+    {
+      "route": "/trust",
+      "testPath": "/trust",
+      "templateFamily": "public-page",
+      "h1": "Trust center",
+      "wordCount": 80,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/security",
+          "score": 0.824
+        },
+        {
+          "route": "/account-deletion",
+          "score": 0.822
+        },
+        {
+          "route": "/responsible-disclosure",
+          "score": 0.803
+        },
+        {
+          "route": "/family-safety",
+          "score": 0.8
+        },
+        {
+          "route": "/model-behavior",
+          "score": 0.8
+        }
+      ],
+      "uniqueContentScore": 0.176
+    },
+    {
+      "route": "/tutorials/$slug",
+      "testPath": "/tutorials/unpublished-entry",
+      "templateFamily": "publishing-detail",
+      "h1": "404",
+      "wordCount": 0,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": null,
+      "ctaRuntimeResult": "not_applicable",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Unpublished detail template intentionally fails closed.",
+      "duplicateContentMatches": [],
+      "uniqueContentScore": 1
+    },
+    {
+      "route": "/tutorials",
+      "testPath": "/tutorials",
+      "templateFamily": "publishing-index",
+      "h1": "Tutorials",
+      "wordCount": 54,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": "/changelog",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/announcements",
+          "score": 0.953
+        },
+        {
+          "route": "/engineering",
+          "score": 0.953
+        },
+        {
+          "route": "/guides",
+          "score": 0.953
+        },
+        {
+          "route": "/news",
+          "score": 0.953
+        },
+        {
+          "route": "/research",
+          "score": 0.953
+        }
+      ],
+      "uniqueContentScore": 0.047
+    },
+    {
+      "route": "/updates/$slug",
+      "testPath": "/updates/unpublished-entry",
+      "templateFamily": "publishing-detail",
+      "h1": "404",
+      "wordCount": 0,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": null,
+      "ctaRuntimeResult": "not_applicable",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Unpublished detail template intentionally fails closed.",
+      "duplicateContentMatches": [],
+      "uniqueContentScore": 1
+    },
+    {
+      "route": "/updates",
+      "testPath": "/updates",
+      "templateFamily": "publishing-index",
+      "h1": "Updates",
+      "wordCount": 54,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": "/changelog",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/announcements",
+          "score": 0.953
+        },
+        {
+          "route": "/engineering",
+          "score": 0.953
+        },
+        {
+          "route": "/guides",
+          "score": 0.953
+        },
+        {
+          "route": "/news",
+          "score": 0.953
+        },
+        {
+          "route": "/research",
+          "score": 0.953
+        }
+      ],
+      "uniqueContentScore": 0.047
+    },
+    {
+      "route": "/use-cases/ai-assistant",
+      "testPath": "/use-cases/ai-assistant",
+      "templateFamily": "use-case",
+      "h1": "Ways to use KovaGPT",
+      "wordCount": 86,
+      "verifiedCapabilitiesReferenced": [
+        "research",
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/use-cases/ai-chatbot",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/brainstorming",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/business-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/document-analysis",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/education-assistant",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/use-cases/ai-chatbot",
+      "testPath": "/use-cases/ai-chatbot",
+      "templateFamily": "use-case",
+      "h1": "Ways to use KovaGPT",
+      "wordCount": 86,
+      "verifiedCapabilitiesReferenced": [
+        "research",
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/use-cases/ai-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/brainstorming",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/business-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/document-analysis",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/education-assistant",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/use-cases/brainstorming",
+      "testPath": "/use-cases/brainstorming",
+      "templateFamily": "use-case",
+      "h1": "Ways to use KovaGPT",
+      "wordCount": 86,
+      "verifiedCapabilitiesReferenced": [
+        "research",
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/use-cases/ai-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/ai-chatbot",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/business-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/document-analysis",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/education-assistant",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/use-cases/business-assistant",
+      "testPath": "/use-cases/business-assistant",
+      "templateFamily": "use-case",
+      "h1": "Ways to use KovaGPT",
+      "wordCount": 86,
+      "verifiedCapabilitiesReferenced": [
+        "research",
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/use-cases/ai-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/ai-chatbot",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/brainstorming",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/document-analysis",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/education-assistant",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/use-cases/document-analysis",
+      "testPath": "/use-cases/document-analysis",
+      "templateFamily": "use-case",
+      "h1": "Ways to use KovaGPT",
+      "wordCount": 86,
+      "verifiedCapabilitiesReferenced": [
+        "research",
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/use-cases/ai-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/ai-chatbot",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/brainstorming",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/business-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/education-assistant",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/use-cases/education-assistant",
+      "testPath": "/use-cases/education-assistant",
+      "templateFamily": "use-case",
+      "h1": "Ways to use KovaGPT",
+      "wordCount": 86,
+      "verifiedCapabilitiesReferenced": [
+        "research",
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/use-cases/ai-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/ai-chatbot",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/brainstorming",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/business-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/document-analysis",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/use-cases/email-writing",
+      "testPath": "/use-cases/email-writing",
+      "templateFamily": "use-case",
+      "h1": "Ways to use KovaGPT",
+      "wordCount": 86,
+      "verifiedCapabilitiesReferenced": [
+        "research",
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/use-cases/ai-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/ai-chatbot",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/brainstorming",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/business-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/document-analysis",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/use-cases/file-analysis",
+      "testPath": "/use-cases/file-analysis",
+      "templateFamily": "use-case",
+      "h1": "Ways to use KovaGPT",
+      "wordCount": 86,
+      "verifiedCapabilitiesReferenced": [
+        "research",
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/use-cases/ai-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/ai-chatbot",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/brainstorming",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/business-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/document-analysis",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/use-cases/grammar-checker",
+      "testPath": "/use-cases/grammar-checker",
+      "templateFamily": "use-case",
+      "h1": "Ways to use KovaGPT",
+      "wordCount": 86,
+      "verifiedCapabilitiesReferenced": [
+        "research",
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/use-cases/ai-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/ai-chatbot",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/brainstorming",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/business-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/document-analysis",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/use-cases/math-help",
+      "testPath": "/use-cases/math-help",
+      "templateFamily": "use-case",
+      "h1": "Ways to use KovaGPT",
+      "wordCount": 86,
+      "verifiedCapabilitiesReferenced": [
+        "research",
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/use-cases/ai-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/ai-chatbot",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/brainstorming",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/business-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/document-analysis",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/use-cases/paraphrasing",
+      "testPath": "/use-cases/paraphrasing",
+      "templateFamily": "use-case",
+      "h1": "Ways to use KovaGPT",
+      "wordCount": 86,
+      "verifiedCapabilitiesReferenced": [
+        "research",
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/use-cases/ai-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/ai-chatbot",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/brainstorming",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/business-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/document-analysis",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/use-cases/resume-help",
+      "testPath": "/use-cases/resume-help",
+      "templateFamily": "use-case",
+      "h1": "Ways to use KovaGPT",
+      "wordCount": 86,
+      "verifiedCapabilitiesReferenced": [
+        "research",
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/use-cases/ai-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/ai-chatbot",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/brainstorming",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/business-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/document-analysis",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/use-cases/shopping-research",
+      "testPath": "/use-cases/shopping-research",
+      "templateFamily": "use-case",
+      "h1": "Ways to use KovaGPT",
+      "wordCount": 86,
+      "verifiedCapabilitiesReferenced": [
+        "research",
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/use-cases/ai-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/ai-chatbot",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/brainstorming",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/business-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/document-analysis",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/use-cases/summarization",
+      "testPath": "/use-cases/summarization",
+      "templateFamily": "use-case",
+      "h1": "Ways to use KovaGPT",
+      "wordCount": 86,
+      "verifiedCapabilitiesReferenced": [
+        "research",
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/use-cases/ai-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/ai-chatbot",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/brainstorming",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/business-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/document-analysis",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/use-cases/translation",
+      "testPath": "/use-cases/translation",
+      "templateFamily": "use-case",
+      "h1": "Ways to use KovaGPT",
+      "wordCount": 86,
+      "verifiedCapabilitiesReferenced": [
+        "research",
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/use-cases/ai-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/ai-chatbot",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/brainstorming",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/business-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/document-analysis",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/use-cases",
+      "testPath": "/use-cases",
+      "templateFamily": "use-case",
+      "h1": "Ways to use KovaGPT",
+      "wordCount": 86,
+      "verifiedCapabilitiesReferenced": [
+        "research",
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/use-cases/ai-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/ai-chatbot",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/brainstorming",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/business-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/document-analysis",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/use-cases/writing-assistant",
+      "testPath": "/use-cases/writing-assistant",
+      "templateFamily": "use-case",
+      "h1": "Ways to use KovaGPT",
+      "wordCount": 86,
+      "verifiedCapabilitiesReferenced": [
+        "research",
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/use-cases/ai-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/ai-chatbot",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/brainstorming",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/business-assistant",
+          "score": 1
+        },
+        {
+          "route": "/use-cases/document-analysis",
+          "score": 1
+        }
+      ],
+      "uniqueContentScore": 0
+    },
+    {
+      "route": "/videos/$slug",
+      "testPath": "/videos/unpublished-entry",
+      "templateFamily": "publishing-detail",
+      "h1": "404",
+      "wordCount": 0,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": null,
+      "ctaRuntimeResult": "not_applicable",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Unpublished detail template intentionally fails closed.",
+      "duplicateContentMatches": [],
+      "uniqueContentScore": 1
+    },
+    {
+      "route": "/videos",
+      "testPath": "/videos",
+      "templateFamily": "publishing-index",
+      "h1": "Videos",
+      "wordCount": 54,
+      "verifiedCapabilitiesReferenced": [],
+      "ctaRoute": "/changelog",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/announcements",
+          "score": 0.953
+        },
+        {
+          "route": "/engineering",
+          "score": 0.953
+        },
+        {
+          "route": "/guides",
+          "score": 0.953
+        },
+        {
+          "route": "/news",
+          "score": 0.953
+        },
+        {
+          "route": "/research",
+          "score": 0.953
+        }
+      ],
+      "uniqueContentScore": 0.047
+    },
+    {
+      "route": "/writing",
+      "testPath": "/writing",
+      "templateFamily": "public-page",
+      "h1": "Writing workspace",
+      "wordCount": 81,
+      "verifiedCapabilitiesReferenced": [
+        "tools"
+      ],
+      "ctaRoute": "/",
+      "ctaRuntimeResult": "verified_no_500",
+      "legalReviewNeeded": false,
+      "administratorContentNeeded": false,
+      "developerEndpointVerification": "not_applicable",
+      "decision": "remain_noindex",
+      "reason": "Concise shared-template content is not yet distinct and deep enough for indexing.",
+      "duplicateContentMatches": [
+        {
+          "route": "/overview",
+          "score": 0.833
+        },
+        {
+          "route": "/accessibility",
+          "score": 0.822
+        },
+        {
+          "route": "/business",
+          "score": 0.822
+        },
+        {
+          "route": "/contact",
+          "score": 0.822
+        },
+        {
+          "route": "/features",
+          "score": 0.822
+        }
+      ],
+      "uniqueContentScore": 0.167
+    }
+  ]
+}

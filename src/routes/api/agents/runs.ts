@@ -50,7 +50,7 @@ export const Route = createFileRoute("/api/agents/runs")({
         let query = auth.supabaseAdmin
           .from("agent_runs" as never)
           .select(
-            "id,project_id,entitlement,objective,status,current_step,attempt,max_attempts,usage,created_at,updated_at,expires_at,cancelled_at" as never,
+            "id,project_id,entitlement,status,current_step,attempt,max_attempts,usage,created_at,updated_at,expires_at,cancelled_at" as never,
           )
           .eq("owner_id" as never, auth.userId)
           .order("created_at" as never, { ascending: false })

@@ -50,7 +50,7 @@ export const ROLE_ENV_KEYS = Object.freeze({
 export const MODEL_COST_PER_MTOK = Object.freeze({
   "gpt-5.6-luna": { input: 0.1, output: 0.4 },
   "gpt-5.6-terra": { input: 1.25, output: 10 },
-  "gpt-5.6-sol": { input: 5, output: 40 },
+  "gpt-5.6-sol": { input: 2.5, output: 20 },
   "gpt-image-1": { input: 5, output: 40 },
   "text-embedding-3-small": { input: 0.02, output: 0 },
 });

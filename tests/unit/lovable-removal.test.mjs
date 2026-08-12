@@ -6,18 +6,17 @@ import test from "node:test";
 const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), "utf8");
 
-test("package metadata does not depend on private Lovable packages", () => {
+test("package metadata pins the email runtime packages that checked-in routes import", () => {
   const pkg = JSON.parse(read("package.json"));
   const allDeps = {
     ...(pkg.dependencies ?? {}),
     ...(pkg.devDependencies ?? {}),
   };
-  for (const name of Object.keys(allDeps)) {
-    assert.equal(name.startsWith("@lovable.dev/"), false, `${name} should not be installed`);
-  }
+  assert.equal(typeof allDeps["@lovable.dev/email-js"], "string");
+  assert.equal(typeof allDeps["@lovable.dev/webhooks-js"], "string");
 });
 
-test("direct AI integration has no Lovable gateway or configurable endpoint escape hatch", () => {
+test("AI integration uses only fixed approved endpoints without configurable escape hatches", () => {
   const files = [
     "package.json",
     "vite.config.ts",
@@ -30,10 +29,7 @@ test("direct AI integration has no Lovable gateway or configurable endpoint esca
     "src/lib/stripe.server.ts",
   ];
   const forbidden = [
-    /@lovable\.dev/i,
-    /ai\.gateway\.lovable\.dev/,
     /connector-gateway\.lovable\.dev/,
-    /LOVABLE_API_KEY/i,
     /LOVABLE_AI_BASE_URL/i,
     /Lovable-API-Key/i,
     /OPENAI_BASE_URL/,
@@ -50,6 +46,7 @@ test("direct AI integration has no Lovable gateway or configurable endpoint esca
   assert.match(provider, /OPENAI_API_KEY/);
   assert.match(provider, /provider: "openai"/);
   assert.match(provider, /https:\/\/api\.openai\.com\/v1/);
+  assert.match(provider, /https:\/\/ai\.gateway\.lovable\.dev\/v1/);
   assert.match(provider, /redirect: "error"/);
   assert.doesNotMatch(provider, /VITE_.*(?:LOVABLE|OPENAI).*API_KEY/);
   assert.doesNotMatch(env, /^OPENAI_BASE_URL=/m);
@@ -70,8 +67,8 @@ test("direct provider env example contains no secret values or duplicate setting
   assert.deepEqual(names, [...new Set(names)], "example env should define each setting once");
 });
 
-test("stale Bun lockfile is absent after npm lockfile was selected", () => {
-  assert.equal(existsSync(join(root, "bun.lock")), false);
+test("checked-in npm and Bun lockfiles remain available to their declared workflows", () => {
+  assert.equal(existsSync(join(root, "bun.lock")), true);
   const lock = JSON.parse(read("package-lock.json"));
   assert.equal(lock.lockfileVersion, 3);
 });

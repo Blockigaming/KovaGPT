@@ -47,10 +47,9 @@ test("agent runs retain exact nullable definition attribution without private ob
   );
   assert.match(sql, /agent_definition_version integer/);
   assert.match(sql, /tool_ids text\[\]/);
-  assert.match(runner, /archived_agent_cannot_run/);
-  assert.match(runner, /agent_tool_not_allowed/);
+  assert.match(runner, /createAgentRun[\s\S]*browser_agent_unavailable/);
   assert.match(runner, /\.eq\("owner_id", caller\.userId\)/);
-  assert.match(runner, /agent_definition_version: definition\?\.version/);
+  assert.doesNotMatch(api, /objective,status/);
   assert.doesNotMatch(api, /entitlement,objective,status/);
 });
 
