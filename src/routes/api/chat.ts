@@ -14,7 +14,7 @@ import {
   enforceStorage,
   getCallerTier,
   optionalUser,
-  unauthorized,
+  
 } from "@/lib/api-auth.server";
 import {
   getAvailableGoogleTools,
@@ -681,10 +681,8 @@ export const Route = createFileRoute("/api/chat")({
             // older conversation history. This also keeps edit/regenerate from
             // being charged for unrelated files in prior turns.
             const totalAttachments = currentAttachments.length;
-            // File / photo uploads require an account.
-            if (totalAttachments > 0 && !auth) {
-              return unauthorized("Sign in to upload files or photos.");
-            }
+            // Photo / file uploads are available without an account, matching
+            // the reference product. Per-request and per-day caps still apply.
             if (!isOwner && totalAttachments > MAX_ATTACHMENTS_PER_REQUEST) {
               return new Response(
                 JSON.stringify({

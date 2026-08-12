@@ -679,7 +679,7 @@ export function ChatInput({
         className={rowClass}
       >
         <Paperclip className={iconClass} />
-        <span>{user ? "Add photos and files" : "Add photos"}</span>
+        <span>Add photos and files</span>
       </button>
     );
 

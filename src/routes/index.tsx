@@ -124,6 +124,17 @@ export const Route = createFileRoute("/")({
 
 const EMPTY_CONVERSATIONS: Conversation[] = [];
 
+// Some environments report non-canonical locales (e.g. "en-US@posix"), which the
+// API rejects. Fall back to a canonical tag instead of failing the request.
+function safeLocale(): string {
+  const raw = typeof navigator !== "undefined" ? navigator.language : "en-US";
+  try {
+    return Intl.getCanonicalLocales(raw)[0] ?? "en-US";
+  } catch {
+    return "en-US";
+  }
+}
+
 function KovaGPT() {
   const { isSignedIn, isLoaded, user } = useUser();
   const { tier } = useTier();
@@ -1039,7 +1050,7 @@ function KovaGPT() {
                   webSearch: settings.webSearch,
                 },
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            locale: typeof navigator !== "undefined" ? navigator.language : "en-US",
+            locale: safeLocale(),
             personality: tempChat
               ? undefined
               : personalityToInstruction(
