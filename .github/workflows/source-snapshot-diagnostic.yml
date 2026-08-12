@@ -46,3 +46,22 @@ jobs:
           path: reviewed-ui-baseline.tgz
           if-no-files-found: error
           retention-days: 1
+
+      - name: Checkout reviewed release baseline
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: 8ef0392e50f0519bb3f4fc82837888100d08b10b
+          path: reviewed-release-baseline
+
+      - name: Archive reviewed release baseline
+        shell: bash
+        working-directory: reviewed-release-baseline
+        run: git ls-files -z | tar --null --files-from=- -czf ../reviewed-release-baseline.tgz
+
+      - name: Upload reviewed release baseline
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: reviewed-release-baseline-8ef0392
+          path: reviewed-release-baseline.tgz
+          if-no-files-found: error
+          retention-days: 1
