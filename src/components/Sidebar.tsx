@@ -633,8 +633,8 @@ export function Sidebar({
                       Get responses tailored to you
                     </p>
                     <p className="mt-1.5 text-[13px] leading-5 text-muted-foreground">
-                      Log in to get answers based on saved chats, plus create images and upload
-                      files.
+                      Log in to get answers based on saved chats, plus create images and use
+                      advanced models.
                     </p>
                     <SignInButton mode="modal">
                       <button className="mt-4 flex min-h-10 w-full items-center justify-center rounded-full border border-transparent bg-muted px-4 text-sm font-medium text-foreground transition hover:bg-accent">
