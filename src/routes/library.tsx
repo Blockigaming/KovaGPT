@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -146,7 +148,10 @@ function LibraryPage() {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [favoritesPrincipal, setFavoritesPrincipal] = useState<string | null>(null);
   const favoritesReady = principal !== null && favoritesPrincipal === principal;
-  const visibleFavorites = favoritesReady ? favorites : new Set<string>();
+  const visibleFavorites = useMemo(
+    () => (favoritesReady ? favorites : new Set<string>()),
+    [favorites, favoritesReady],
+  );
   const [previewItem, setPreviewItem] = useState<LibItem | null>(null);
   const visiblePreviewItem = principalReady ? previewItem : null;
   const [selected, setSelected] = useState<string[]>([]);
@@ -220,7 +225,7 @@ function LibraryPage() {
       if (isCurrent()) setItems([...localItems, ...saved, ...workspaceItems]);
     } catch (e) {
       if (!isCurrent()) return;
-      console.error(e);
+      console.error("[library] load failed");
       setLoadError(e instanceof Error ? e.message : "Could not load your library.");
       toast.error("Could not load your library.");
     } finally {
@@ -290,14 +295,20 @@ function LibraryPage() {
     return () => window.removeEventListener("keydown", close);
   }, [visiblePreviewItem]);
 
-  const remove = async (id: string) => {
+  const [pendingDelete, setPendingDelete] = useState<
+    { kind: "one"; id: string } | { kind: "many" } | null
+  >(null);
+  const remove = async (id: string, confirmed = false) => {
     if (!principalReady || !principal) return;
     const generation = lifecycleGenerationRef.current;
     const requestPrincipal = principal;
     const isCurrent = () =>
       generation === lifecycleGenerationRef.current && principalRef.current === requestPrincipal;
     const existing = items;
-    if (!confirm("Delete this Library item?")) return;
+    if (!confirmed) {
+      setPendingDelete({ kind: "one", id });
+      return;
+    }
     setItems((prev) => prev.filter((i) => i.id !== id));
     if (id.startsWith("chat:")) {
       saveConversations(
@@ -343,13 +354,17 @@ function LibraryPage() {
     });
   };
 
-  const deleteSelected = async () => {
+  const deleteSelected = async (confirmed = false) => {
     if (!principalReady || !principal) return;
     const generation = lifecycleGenerationRef.current;
     const requestPrincipal = principal;
     const isCurrent = () =>
       generation === lifecycleGenerationRef.current && principalRef.current === requestPrincipal;
-    if (!selected.length || !confirm(`Delete ${selected.length} selected Library items?`)) return;
+    if (!selected.length) return;
+    if (!confirmed) {
+      setPendingDelete({ kind: "many" });
+      return;
+    }
     const existing = items;
     setItems((current) => current.filter((item) => !selected.includes(item.id)));
     try {
@@ -465,13 +480,13 @@ function LibraryPage() {
         <DropdownMenuItem onClick={() => reuseInChat(item)}>
           <MessageSquarePlus className="mr-2 h-4 w-4" /> Reuse in chat
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => openInWork(toHandoff(item))}>
+        <DropdownMenuItem onClick={() => openInWork(toHandoff(item), userKey)}>
           Open in Work
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => continueInResearch(toHandoff(item))}>
+        <DropdownMenuItem onClick={() => continueInResearch(toHandoff(item), userKey)}>
           Continue Research
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => addToContextPack(toHandoff(item))}>
+        <DropdownMenuItem onClick={() => addToContextPack(toHandoff(item), userKey)}>
           Add to Context Pack
         </DropdownMenuItem>
         {safeNavigationUrl(item.file_url) ? (
@@ -614,28 +629,22 @@ function LibraryPage() {
   return (
     <AppShell>
       <main className="kova-page kova-secondary-page" aria-labelledby="library-title">
-        <header className="kova-page-header">
-          <div className="min-w-0">
-            <h1 id="library-title" className="kova-page-title">
-              Library
-            </h1>
-            <p className="kova-page-description">
-              Chats, work, files, images, responses, and reusable context in one place.
-            </p>
-            {storageTotal !== null ? (
-              <p className="mt-1 text-xs text-muted-foreground">
-                Known file storage: {humanBytes(storageTotal)}
-              </p>
-            ) : (
-              <p className="mt-1 text-xs text-muted-foreground">
-                Storage totals require backend usage records and are omitted here.
-              </p>
-            )}
-          </div>
-          <Button size="sm" variant="outline" onClick={load} disabled={loading}>
-            <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
-          </Button>
-        </header>
+        <WorkspacePageHeader
+          title="Library"
+          titleId="library-title"
+          description="Chats, work, files, images, responses, and reusable context in one place."
+          meta={
+            storageTotal !== null
+              ? `Known file storage: ${humanBytes(storageTotal)}`
+              : "Storage totals require backend usage records and are omitted here."
+          }
+          actions={
+            <Button size="sm" variant="outline" onClick={load} disabled={loading}>
+              <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />{" "}
+              Refresh
+            </Button>
+          }
+        />
 
         {!isSignedIn && isLoaded ? (
           <section className="kova-card p-4 text-sm" aria-label="Guest Library notice">
@@ -745,12 +754,13 @@ function LibraryPage() {
                 onClick={() =>
                   addManyToContextPack(
                     items.filter((item) => selected.includes(item.id)).map(toHandoff),
+                    userKey,
                   )
                 }
               >
                 Add to Context Pack
               </Button>
-              <Button size="sm" variant="destructive" onClick={deleteSelected}>
+              <Button size="sm" variant="destructive" onClick={() => void deleteSelected()}>
                 Delete
               </Button>
             </div>
@@ -844,6 +854,20 @@ function LibraryPage() {
             </section>
           </div>
         ) : null}
+        <ConfirmActionDialog
+          open={pendingDelete !== null}
+          onOpenChange={(open) => !open && setPendingDelete(null)}
+          title="Delete this Library item?"
+          description="This action permanently removes the selected content."
+          confirmLabel="Delete"
+          destructive
+          onConfirm={() => {
+            const pending = pendingDelete;
+            setPendingDelete(null);
+            if (pending?.kind === "one") void remove(pending.id, true);
+            else if (pending?.kind === "many") void deleteSelected(true);
+          }}
+        />
       </main>
     </AppShell>
   );

@@ -51,7 +51,8 @@ test("research sessions remain owner scoped and truthfully distinguish real runs
   assert.match(server, /\.eq\("user_id", context\.userId\)/g);
   assert.match(server, /\.limit\(100\)/);
   assert.match(route, /Real provider-backed research runs/);
-  assert.match(route, /ConfirmActionDialog/);
+  assert.match(route, /Real provider-backed research runs/);
+  assert.doesNotMatch(route, /Delete research run|Archive research run/);
 });
 
 test("universal search loads authorized workspace results asynchronously", async () => {

@@ -5,6 +5,8 @@ import { DAILY_IMAGE_LIMIT_BY_TIER, modesForTier, type Tier } from "@/lib/modes"
 const CANONICAL = "https://kovagpt.com/blog/best-ai-assistants";
 const DESCRIPTION =
   "A criteria-first guide to choosing an AI assistant in 2026, with current KovaGPT plan facts and clear provider caveats.";
+const INDEPENDENCE_DISCLOSURE =
+  "KovaGPT is not affiliated with, endorsed by, or sponsored by OpenAI or ChatGPT.";
 
 const FAQ = [
   {
@@ -88,6 +90,9 @@ export const Route = createFileRoute("/blog/best-ai-assistants")({
 function BestAiAssistantsPage() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-16 text-foreground">
+      <p className="mb-6 rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
+        {INDEPENDENCE_DISCLOSURE}
+      </p>
       <nav className="mb-6 text-sm text-muted-foreground">
         <Link to="/" className="hover:text-foreground">
           Home

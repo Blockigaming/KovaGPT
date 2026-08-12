@@ -64,6 +64,74 @@ const LEGACY_CONVERSATIONS_KEY = "nova-gpt-conversations-v2";
 const LEGACY_ARCHIVED_KEY = "kovagpt:archived";
 const LEGACY_DRAFT_KEY_BASE = "kova-draft";
 const LEGACY_PENDING_ACTIVE_KEY = "nova-gpt-pending-active";
+const MAX_STORED_CONVERSATIONS = 500;
+const MAX_MESSAGES_PER_CONVERSATION = 1_000;
+
+function isConversation(value: unknown): value is Conversation {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<Conversation>;
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.title === "string" &&
+    typeof candidate.createdAt === "number" &&
+    typeof candidate.updatedAt === "number" &&
+    typeof candidate.mode === "string" &&
+    Array.isArray(candidate.messages) &&
+    candidate.messages.every(
+      (message) =>
+        message &&
+        typeof message.id === "string" &&
+        (message.role === "user" || message.role === "assistant") &&
+        typeof message.content === "string",
+    )
+  );
+}
+
+function boundConversations(value: unknown[]): Conversation[] {
+  const seen = new Set<string>();
+  return value
+    .filter(isConversation)
+    .filter((conversation) => {
+      if (seen.has(conversation.id)) return false;
+      seen.add(conversation.id);
+      return true;
+    })
+    .slice(0, MAX_STORED_CONVERSATIONS)
+    .map((conversation) => ({
+      ...conversation,
+      messages: dedupeMessages(conversation.messages).slice(-MAX_MESSAGES_PER_CONVERSATION),
+    }));
+}
+
+export function dedupeMessages(messages: Message[]): Message[] {
+  const seen = new Set<string>();
+  return messages.filter((message) => {
+    if (seen.has(message.id)) return false;
+    seen.add(message.id);
+    return true;
+  });
+}
+
+export function getConversationStats(conversation: Conversation) {
+  const words = conversation.messages.reduce(
+    (total, message) => total + message.content.trim().split(/\s+/u).filter(Boolean).length,
+    0,
+  );
+  return {
+    messages: conversation.messages.length,
+    words,
+    estimatedTokens: Math.ceil(words * 1.33),
+    estimatedReadingMinutes: Math.max(1, Math.ceil(words / 220)),
+  };
+}
+
+export function exportConversationMarkdown(conversation: Conversation): string {
+  const stats = getConversationStats(conversation);
+  const body = conversation.messages
+    .map((message) => `## ${message.role === "user" ? "You" : "KovaGPT"}\n\n${message.content}`)
+    .join("\n\n");
+  return `# ${conversation.title}\n\n${body}\n\n---\nEstimated reading time: ${stats.estimatedReadingMinutes} minute${stats.estimatedReadingMinutes === 1 ? "" : "s"}.\n`;
+}
 
 /** A stable browser-storage namespace. Signed-in and guest data never share one key. */
 export function chatStoragePrincipal(userKey: ChatStorageUserKey): string {
@@ -101,7 +169,6 @@ function purgeGuestStorageOnFreshLoad() {
 }
 
 purgeGuestStorageOnFreshLoad();
-
 
 function readWithGuestLegacyMigration(
   userKey: ChatStorageUserKey,
@@ -150,7 +217,8 @@ export function loadConversations(userKey: ChatStorageUserKey): Conversation[] {
       LEGACY_CONVERSATIONS_KEY,
     );
     if (!raw) return [];
-    return JSON.parse(raw) as Conversation[];
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? boundConversations(parsed) : [];
   } catch {
     return [];
   }
@@ -158,7 +226,14 @@ export function loadConversations(userKey: ChatStorageUserKey): Conversation[] {
 
 export function saveConversations(userKey: ChatStorageUserKey, convs: Conversation[]) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(conversationStorageKey(userKey), JSON.stringify(convs));
+  try {
+    localStorage.setItem(
+      conversationStorageKey(userKey),
+      JSON.stringify(boundConversations(convs)),
+    );
+  } catch {
+    // Storage can be unavailable or full; the in-memory conversation remains usable.
+  }
   if (userKey === null) localStorage.removeItem(LEGACY_CONVERSATIONS_KEY);
 }
 
@@ -297,6 +372,19 @@ export function newId() {
 export function deriveTitle(text: string) {
   const t = text.trim().replace(/\s+/g, " ");
   return t.length > 40 ? t.slice(0, 40) + "…" : t || "New chat";
+}
+
+export function subscribeToConversationChanges(
+  userKey: ChatStorageUserKey,
+  listener: (conversations: Conversation[]) => void,
+) {
+  if (typeof window === "undefined") return () => undefined;
+  const key = conversationStorageKey(userKey);
+  const handle = (event: StorageEvent) => {
+    if (event.key === key) listener(loadConversations(userKey));
+  };
+  window.addEventListener("storage", handle);
+  return () => window.removeEventListener("storage", handle);
 }
 
 /** Create a persisted, independent branch without mutating its source conversation. */

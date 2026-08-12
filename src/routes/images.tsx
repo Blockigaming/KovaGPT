@@ -6,7 +6,6 @@ import { saveToLibrary } from "@/lib/library.functions";
 import {
   PanelLeft,
   ArrowUp,
-  Paperclip,
   ChevronLeft,
   ChevronRight,
   Loader2,
@@ -329,7 +328,6 @@ function ImagesPage() {
   const generationRef = useRef(0);
   const generationControllerRef = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const promptFileRef = useRef<HTMLInputElement>(null);
   const presetsRef = useRef<HTMLDivElement>(null);
   const scrollPresets = (direction: 1 | -1) => {
     const el = presetsRef.current;
@@ -561,29 +559,17 @@ function ImagesPage() {
               className="mt-5"
             >
               <div className="kova-composer flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2">
-                <button
-                  type="button"
-                  onClick={() => promptFileRef.current?.click()}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-accent hover:text-foreground"
-                  aria-label="Attach a reference image"
-                >
-                  <Paperclip className="h-[18px] w-[18px]" />
-                </button>
-                <input
-                  ref={promptFileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={() => {
-                    toast.message("Describe the image you want and Kova will create it.");
-                  }}
-                />
                 <input
                   ref={inputRef}
                   value={prompt}
-                  aria-label="Describe a new image"
+                  aria-label="Describe the image to generate"
                   maxLength={2000}
                   onChange={(e) => setPrompt(e.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.nativeEvent.isComposing && event.key === "Enter") {
+                      event.preventDefault();
+                    }
+                  }}
                   placeholder="Describe a new image"
                   spellCheck={false}
                   autoComplete="off"
@@ -819,7 +805,6 @@ function ImagesPage() {
             </section>
           </div>
         </div>
-
       </main>
 
       <SettingsDialog

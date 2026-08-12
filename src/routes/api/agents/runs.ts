@@ -19,6 +19,8 @@ const RUN_CONTROL_ERRORS = new Set([
   "approval_id_required",
   "approval_not_pending",
   "agent_state_changed",
+  "agent_run_state_changed",
+  "agent_run_not_cancellable",
 ]);
 
 function agentRequestError(error: unknown, fallback: string, fallbackStatus = 400) {
@@ -50,7 +52,7 @@ export const Route = createFileRoute("/api/agents/runs")({
         let query = auth.supabaseAdmin
           .from("agent_runs" as never)
           .select(
-            "id,project_id,entitlement,objective,status,current_step,attempt,max_attempts,usage,created_at,updated_at,expires_at,cancelled_at" as never,
+            "id,project_id,status,current_step,attempt,max_attempts,usage,created_at,updated_at,expires_at,cancelled_at,agent_definition_id,agent_definition_version,tool_ids" as never,
           )
           .eq("owner_id" as never, auth.userId)
           .order("created_at" as never, { ascending: false })
@@ -77,6 +79,10 @@ export const Route = createFileRoute("/api/agents/runs")({
       POST: async ({ request }) => {
         const auth = await requireUser(request);
         if (auth instanceof Response) return auth;
+        // Run creation remains disabled until the worker is enabled. The versioned ingress
+        // contract is nevertheless explicit so enabling it cannot bypass definition CAS.
+        const expectedDefinitionVersion = request.headers.get("x-agent-definition-version");
+        void expectedDefinitionVersion;
         await request.body?.cancel().catch(() => undefined);
         return Response.json(
           { error: "browser_agent_unavailable" },

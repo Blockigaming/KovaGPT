@@ -40,7 +40,7 @@ test("remaining native project and Work dialogs are replaced with accessible UI"
   for (const source of [projectChat, collaboration, work]) {
     assert.doesNotMatch(source, /\b(?:confirm|prompt|alert)\(/);
   }
-  assert.match(projectChat, /ConfirmActionDialog/);
+  assert.match(projectChat, /AlertDialog/);
   assert.match(projectChat, /aria-label="Project chat title"/);
   assert.match(collaboration, /Delete project comment\?/);
   assert.match(work, /aria-label="Deliverable title"/);

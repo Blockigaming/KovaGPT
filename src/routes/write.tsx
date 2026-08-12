@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Bookmark, Check, Copy, Download, Eraser, Loader2, Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { authFetch } from "@/lib/auth-fetch";
 import { saveToLibrary } from "@/lib/library.functions";
 import { useUser, useClerkSafe } from "@/components/auth/ClerkSafe";
@@ -32,16 +33,10 @@ export const Route = createFileRoute("/write")({
 
 const STORAGE_KEY_BASE = "kova-write-draft";
 const TITLE_KEY_BASE = "kova-write-title";
+const VERSIONS_KEY_BASE = "kova.write.versions.v1";
 
 type Action =
-  | "improve"
-  | "expand"
-  | "shorten"
-  | "grammar"
-  | "continue"
-  | "tone"
-  | "outline"
-  | "custom";
+  "improve" | "expand" | "shorten" | "grammar" | "continue" | "tone" | "outline" | "custom";
 
 function countWords(t: string) {
   const m = t.trim().match(/\S+/g);
@@ -60,12 +55,14 @@ function WritePage() {
   const [custom, setCustom] = useState("");
   const [undoStack, setUndoStack] = useState<string[]>([]);
   const [dirty, setDirty] = useState(false);
+  const [clearOpen, setClearOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const { isLoaded, isSignedIn, user } = useUser();
   const userKey = user?.id ?? null;
   const principal = isLoaded ? browserStoragePrincipal(userKey) : null;
   const draftKey = isLoaded ? principalScopedStorageKey(STORAGE_KEY_BASE, userKey) : null;
   const titleKey = isLoaded ? principalScopedStorageKey(TITLE_KEY_BASE, userKey) : null;
+  const versionsKey = isLoaded ? principalScopedStorageKey(VERSIONS_KEY_BASE, userKey) : null;
   const storageGenerationRef = useRef(0);
   const principalRef = useRef(principal);
   principalRef.current = principal;
@@ -260,10 +257,67 @@ function WritePage() {
     URL.revokeObjectURL(url);
   };
 
+  const downloadBlob = (blob: Blob, extension: string) => {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${title.replace(/[^a-z0-9-_ ]/gi, "").trim() || "document"}.${extension}`;
+    anchor.click();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
+
+  const exportDocument = async (format: "docx" | "pdf" | "html") => {
+    if (!documentReady) return;
+    try {
+      if (format === "docx") {
+        const { exportDocumentDocx } = await import("@/lib/writing-export/docx");
+        await exportDocumentDocx(title, text);
+      } else if (format === "pdf") {
+        const { exportDocumentPdf } = await import("@/lib/writing-export/pdf");
+        await exportDocumentPdf(title, text);
+      } else {
+        const escaped = text
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;");
+        downloadBlob(
+          new Blob(
+            [`<!doctype html><meta charset="utf-8"><title>${title}</title><pre>${escaped}</pre>`],
+            { type: "text/html" },
+          ),
+          "html",
+        );
+      }
+      toast.success("Document exported");
+    } catch {
+      toast.error("Document export failed");
+    }
+  };
+
+  const saveVersion = () => {
+    if (!versionsKey || !documentReady) return;
+    const storage = safeBrowserStorage("localStorage");
+    const existing = storage?.getItem(versionsKey);
+    const parsed = existing ? (JSON.parse(existing) as { title: string; text: string }[]) : [];
+    storage?.setItem(versionsKey, JSON.stringify([{ title, text }, ...parsed].slice(0, 20)));
+    toast.success("Document version saved");
+  };
+
+  const restoreLatestVersion = () => {
+    if (!versionsKey || !documentReady) return;
+    const existing = safeBrowserStorage("localStorage")?.getItem(versionsKey);
+    const [latest] = existing ? (JSON.parse(existing) as { title: string; text: string }[]) : [];
+    if (!latest) return;
+    pushUndo(text);
+    setTitle(latest.title);
+    setText(latest.text);
+    setDirty(true);
+    toast.success("Version restored");
+  };
+
   const clearAll = () => {
     if (!documentReady) return;
     if (!text.trim()) return;
-    if (!confirm("Clear the document? This cannot be undone.")) return;
     pushUndo(text);
     setText("");
     setDirty(true);
@@ -449,16 +503,40 @@ function WritePage() {
             {saved ? "Saved" : saving ? "Saving…" : "Save to Library"}
           </button>
           <button
-            onClick={clearAll}
+            onClick={() => setClearOpen(true)}
             className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
           >
             <Eraser className="h-3 w-3" />
             Clear
           </button>
+          <button onClick={saveVersion} className="text-xs underline">
+            Document version history
+          </button>
+          <button onClick={restoreLatestVersion} className="text-xs underline">
+            Restore latest
+          </button>
+          <button onClick={() => void exportDocument("docx")} className="text-xs underline">
+            Download DOCX
+          </button>
+          <button onClick={() => void exportDocument("pdf")} className="text-xs underline">
+            Download PDF
+          </button>
+          <button onClick={() => void exportDocument("html")} className="text-xs underline">
+            Download HTML
+          </button>
           <div className="ml-auto text-xs text-muted-foreground sm:hidden">
             {words.toLocaleString()} words
           </div>
         </div>
+        <ConfirmActionDialog
+          open={clearOpen}
+          onOpenChange={setClearOpen}
+          title="Clear document?"
+          description="This removes the current text from this device."
+          confirmLabel="Clear"
+          destructive
+          onConfirm={clearAll}
+        />
       </div>
     </AppShell>
   );
