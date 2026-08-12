@@ -8,6 +8,8 @@ import {
   HelpCircle,
   ImageIcon,
   LifeBuoy,
+  Map,
+  Blocks,
   MoreHorizontal,
   PanelLeft,
   Pin,
@@ -16,6 +18,7 @@ import {
   Settings as SettingsIcon,
   Share2,
   Sparkles,
+  Telescope,
   SquarePen,
   Trash2,
   X,
@@ -49,6 +52,7 @@ export function Sidebar({
   onSelect,
   onNew,
   onDelete,
+  onRename,
   onShare,
   onDuplicate,
   onArchive,
@@ -63,6 +67,7 @@ export function Sidebar({
   onSelect: (id: string) => void;
   onNew: () => void;
   onDelete: (id: string) => void;
+  onRename?: (id: string, title: string) => void;
   onShare?: (id: string) => void;
   onDuplicate?: (id: string) => void;
   onArchive?: (id: string) => void;
@@ -78,6 +83,8 @@ export function Sidebar({
   const lastFocusedRef = useRef<HTMLElement | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [renameChat, setRenameChat] = useState<Conversation | null>(null);
+  const [renameTitle, setRenameTitle] = useState("");
 
   const showSignedIn = isLoaded && isSignedIn;
   const showSignedOut = isLoaded && !isSignedIn;
@@ -178,7 +185,7 @@ export function Sidebar({
   const pinned = filtered
     .filter((c) => c.pinned)
     .sort((a, b) => (b.pinnedAt ?? 0) - (a.pinnedAt ?? 0));
-  const recents = filtered.filter((c) => !c.pinned);
+  const recents = filtered.filter((c) => !c.pinned).sort((a, b) => b.updatedAt - a.updatedAt);
 
   const renderRow = (c: Conversation) => (
     <div
@@ -213,6 +220,17 @@ export function Sidebar({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44" onClick={(e) => e.stopPropagation()}>
+            {onRename ? (
+              <DropdownMenuItem
+                aria-label={`Rename ${c.title}`}
+                onClick={() => {
+                  setRenameChat(c);
+                  setRenameTitle(c.title);
+                }}
+              >
+                Rename
+              </DropdownMenuItem>
+            ) : null}
             {onTogglePin ? (
               <DropdownMenuItem onClick={() => onTogglePin(c.id)}>
                 {c.pinned ? <PinOff className="mr-2 h-4 w-4" /> : <Pin className="mr-2 h-4 w-4" />}
@@ -249,6 +267,49 @@ export function Sidebar({
 
   return (
     <>
+      {renameChat ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="rename-chat-title"
+          className="fixed inset-0 z-[80] grid place-items-center bg-black/50 p-4"
+        >
+          <form
+            className="w-full max-w-sm rounded-xl border bg-background p-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const title = renameTitle.trim();
+              if (title) onRename?.(renameChat.id, title);
+              setRenameChat(null);
+            }}
+          >
+            <h2 id="rename-chat-title" className="font-semibold">
+              Rename chat
+            </h2>
+            <input
+              autoFocus
+              value={renameTitle}
+              onChange={(event) => setRenameTitle(event.target.value)}
+              className="mt-3 min-h-11 w-full rounded-md border bg-background px-3"
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setRenameChat(null)}
+                className="min-h-11 rounded-md px-3"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="min-h-11 rounded-md bg-foreground px-3 text-background"
+              >
+                Rename
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
       {open ? (
         <button
           type="button"
@@ -275,7 +336,7 @@ export function Sidebar({
           <button
             type="button"
             onClick={onNew}
-            className="flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
+            className="kova-new-chat flex h-10 w-10 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="New chat"
             title="New chat"
           >
@@ -306,8 +367,6 @@ export function Sidebar({
         </div>
       ) : null}
 
-
-
       <aside
         ref={drawerRef}
         style={
@@ -337,10 +396,10 @@ export function Sidebar({
               <Link
                 to="/library"
                 className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:flex"
-                aria-label="Search"
-                title="Search"
+                aria-label="Library"
+                title="Library"
               >
-                <Search className="h-[18px] w-[18px]" />
+                <FolderOpen className="h-[18px] w-[18px]" />
               </Link>
             ) : null}
 
@@ -386,7 +445,6 @@ export function Sidebar({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search titles, messages, or operators…"
                 className="h-10 w-full rounded-lg border border-border/60 bg-background px-3 text-sm outline-none transition focus:border-ring focus-visible:ring-2 focus-visible:ring-ring"
-
               />
             </div>
           ) : null}
@@ -419,6 +477,9 @@ export function Sidebar({
             {showSignedIn ? renderNavLink("/projects", "Projects", FolderKanban) : null}
             {showSignedIn ? renderNavLink("/library", "Library", FolderOpen) : null}
             {renderNavLink("/images", "Images", ImageIcon)}
+            {renderNavLink("/apps", "Apps", Blocks)}
+            {renderNavLink("/research-planner", "Deep research", Telescope)}
+            {renderNavLink("/maps", "Maps — preview", Map)}
             {showSignedIn && (tier === "plus" || tier === "pro")
               ? renderNavLink(
                   "/scheduled-tasks",
@@ -584,7 +645,6 @@ export function Sidebar({
                 ) : null}
               </div>
             ) : null}
-
           </div>
         </div>
       </aside>

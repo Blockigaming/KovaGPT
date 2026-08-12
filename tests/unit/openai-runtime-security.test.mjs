@@ -15,7 +15,11 @@ const catalog = readFileSync("src/lib/ai/model-catalog.server.ts", "utf8");
 test("normal AI calls use the official Responses API through the server adapter", () => {
   assert.match(provider, /providerFetch\(\s*"\/responses"/);
   assert.match(provider, /https:\/\/api\.openai\.com\/v1/);
-  assert.doesNotMatch(provider, /ai\.gateway\.lovable\.dev|LOVABLE_API_KEY/);
+  assert.match(
+    provider,
+    /const LOVABLE_GATEWAY_BASE_URL = "https:\/\/ai\.gateway\.lovable\.dev\/v1"/,
+  );
+  assert.doesNotMatch(provider, /OPENAI_BASE_URL|AI_PROVIDER_URL|VITE_.*API_KEY/);
 });
 
 test("provider fails closed for missing key and kill switch", () => {
@@ -31,8 +35,8 @@ test("server owns entitlement, context, tools, abort, and output ceilings", () =
   assert.match(chat, /MAX_TOOL_CALLS_TOTAL = 16/);
   assert.match(chat, /signal: request\.signal/);
   assert.match(chat, /max_completion_tokens:\s*modelForPolicy/);
-  assert.match(catalog, /instant:[\s\S]{0,150}?maxOutput:\s*600/);
-  assert.match(catalog, /deep:[\s\S]{0,150}?maxOutput:\s*4_000/);
+  assert.match(catalog, /instant:[\s\S]{0,150}?maxOutput:\s*1_200/);
+  assert.match(catalog, /deep:[\s\S]{0,150}?maxOutput:\s*16_000/);
 });
 
 test("usage schema excludes prompt and response bodies", () => {

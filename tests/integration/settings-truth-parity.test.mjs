@@ -69,7 +69,7 @@ test("paid billing remains reachable and every unavailable state has a truthful 
   assert.doesNotMatch(settings, /window\.open\(/);
 
   const portal = billing.slice(billing.indexOf("export const createPortalSession"));
-  assert.match(portal, /inputValidator\(\(data: Record<string, never>\) => data\)/);
+  assert.match(portal, /\.validator\(\(data: Record<string, never>\) => data\)/);
   assert.match(portal, /return_url: "https:\/\/kovagpt\.com\/"\s*,?/);
   assert.doesNotMatch(portal, /data\.environment|data\.returnUrl/);
   assert.match(billing, /parseAllowedBillingPortalUrl\(portal\.url\)/);

@@ -23,16 +23,16 @@ const optionalServerValues = [
   "AZURE_CLIENT_ID",
 ] as const;
 
-function booleanEnv(name: string, fallback: boolean): boolean {
-  const raw = process.env[name];
+function booleanEnv(environment: NodeJS.ProcessEnv, name: string, fallback: boolean): boolean {
+  const raw = environment[name];
   if (raw == null || raw.trim() === "") return fallback;
   if (/^(1|true|yes|on)$/iu.test(raw)) return true;
   if (/^(0|false|no|off)$/iu.test(raw)) return false;
   throw new Error(`[env] ${name} must be true or false.`);
 }
 
-function missing(names: string[]): string[] {
-  return names.filter((name) => !process.env[name] || process.env[name]?.trim() === "");
+function missing(environment: NodeJS.ProcessEnv, names: string[]): string[] {
+  return names.filter((name) => !environment[name] || environment[name]?.trim() === "");
 }
 
 export function validateAzureRuntimeEnv(environment = process.env): void {
@@ -50,7 +50,11 @@ export function validateAzureRuntimeEnv(environment = process.env): void {
     );
   }
 
-  const aiGenerationEnabled = booleanEnv("AI_GENERATION_ENABLED", true);
+  // AI inference is an optional runtime capability. A deployment without model
+  // credentials must still boot so health, auth and non-AI routes remain
+  // reachable; explicitly enabling generation keeps the strict fail-closed
+  // credential validation below.
+  const aiGenerationEnabled = booleanEnv(environment, "AI_GENERATION_ENABLED", false);
   if (aiGenerationEnabled) {
     const aiProviderReady = Boolean(
       environment.OPENAI_API_KEY || environment.AZURE_OPENAI_ENDPOINT,
@@ -64,7 +68,7 @@ export function validateAzureRuntimeEnv(environment = process.env): void {
 
   const azureEndpoint = environment.AZURE_OPENAI_ENDPOINT;
   if (azureEndpoint) {
-    const requiredAzureOpenAi = missing([
+    const requiredAzureOpenAi = missing(environment, [
       "AZURE_OPENAI_API_VERSION",
       "AZURE_OPENAI_DEPLOYMENT_CHAT",
       "AZURE_OPENAI_DEPLOYMENT_THINKING",

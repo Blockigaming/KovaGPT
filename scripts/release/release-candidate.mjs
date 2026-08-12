@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 const hash = async (p) =>
@@ -6,6 +6,22 @@ const hash = async (p) =>
     .update(await readFile(new URL(`../../${p}`, import.meta.url)))
     .digest("hex");
 const git = (...a) => execFileSync("git", a, { encoding: "utf8" }).trim();
+const requiredInputs = [
+  "package-lock.json",
+  "release-migrations.json",
+  "database-contract.json",
+  "artifacts/release/bundle-report.json",
+  "src/routeTree.gen.ts",
+];
+for (const input of requiredInputs) {
+  try {
+    await access(new URL(`../../${input}`, import.meta.url));
+  } catch {
+    throw new Error(
+      `Release candidate prerequisite is missing: ${input}. Run npm run build && npm run release:validate first.`,
+    );
+  }
+}
 const manifest = {
   schemaVersion: 1,
   application: "KovaGPT",

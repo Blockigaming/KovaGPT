@@ -29,3 +29,17 @@ test("smoke defaults to dry-run and never performs paid actions", async () => {
   assert.match(s, /KOVA_STAGING_SMOKE\s*===\s*["']1["']/);
   assert.doesNotMatch(s, /\/api\/(?:checkout|chat|agents\/runs|scheduled-tasks)/i);
 });
+
+test("staging builds before bundle validation and release evidence fails clearly", async () => {
+  const [workflow, candidate] = await Promise.all([
+    readFile(new URL("../../.github/workflows/staging-rehearsal.yml", import.meta.url), "utf8"),
+    readFile(new URL("../../scripts/release/release-candidate.mjs", import.meta.url), "utf8"),
+  ]);
+  assert.match(workflow, /npm run build && npm run release:validate/);
+  assert.ok(
+    workflow.indexOf("npm run build && npm run release:validate") <
+      workflow.indexOf("npm run release:candidate"),
+  );
+  assert.match(candidate, /artifacts\/release\/bundle-report\.json/);
+  assert.match(candidate, /Run npm run build && npm run release:validate first/);
+});

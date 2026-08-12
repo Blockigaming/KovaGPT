@@ -21,7 +21,8 @@ function size(n: number | null) {
   return n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.ceil(n / 1024)} KB`;
 }
 function FilesPage() {
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const userKey = user?.id ?? null;
   const list = useServerFn(listMyLibrary);
   const [items, setItems] = useState<LibraryItem[]>([]),
     [loading, setLoading] = useState(true),
@@ -124,6 +125,7 @@ function FilesPage() {
                         title: item.file_name ?? item.title,
                         content: item.content_text ?? item.file_url ?? "",
                       })),
+                    userKey,
                   )
                 }
                 className="min-h-10 rounded-lg bg-foreground px-3 text-sm text-background"
@@ -188,12 +190,15 @@ function FilesPage() {
                 <div className="hidden gap-1 md:flex">
                   <button
                     onClick={() =>
-                      openInWork({
-                        type: "file",
-                        id: item.id,
-                        title: item.file_name ?? item.title,
-                        content: item.content_text ?? item.file_url ?? "",
-                      })
+                      openInWork(
+                        {
+                          type: "file",
+                          id: item.id,
+                          title: item.file_name ?? item.title,
+                          content: item.content_text ?? item.file_url ?? "",
+                        },
+                        userKey,
+                      )
                     }
                     className="min-h-10 rounded-lg px-2 text-xs hover:bg-accent"
                   >
@@ -201,12 +206,15 @@ function FilesPage() {
                   </button>
                   <button
                     onClick={() =>
-                      continueInResearch({
-                        type: "file",
-                        id: item.id,
-                        title: item.file_name ?? item.title,
-                        content: item.content_text ?? item.file_url ?? "",
-                      })
+                      continueInResearch(
+                        {
+                          type: "file",
+                          id: item.id,
+                          title: item.file_name ?? item.title,
+                          content: item.content_text ?? item.file_url ?? "",
+                        },
+                        userKey,
+                      )
                     }
                     className="min-h-10 rounded-lg px-2 text-xs hover:bg-accent"
                   >
@@ -214,12 +222,15 @@ function FilesPage() {
                   </button>
                   <button
                     onClick={() =>
-                      addToContextPack({
-                        type: "file",
-                        id: item.id,
-                        title: item.file_name ?? item.title,
-                        content: item.content_text ?? item.file_url ?? "",
-                      })
+                      addToContextPack(
+                        {
+                          type: "file",
+                          id: item.id,
+                          title: item.file_name ?? item.title,
+                          content: item.content_text ?? item.file_url ?? "",
+                        },
+                        userKey,
+                      )
                     }
                     className="min-h-10 rounded-lg px-2 text-xs hover:bg-accent"
                   >

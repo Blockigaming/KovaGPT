@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BarChart3, FlaskConical, Heart, History, Play, Plus, Search, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { listProjects, type ProjectSummary } from "@/lib/projects.functions";
 import { listContextPacks, type ContextPack } from "@/lib/workspace.functions";
@@ -296,16 +297,12 @@ function PromptStudio() {
   return (
     <AppShell>
       <main className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6">
-        <header>
-          <div className="flex items-center gap-2">
-            <FlaskConical className="h-5 w-5" />
-            <h1 className="text-2xl font-semibold">Prompt Studio</h1>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Build reusable prompts with variables, Projects, and Context Packs, then test them in
-            chat.
-          </p>
-        </header>
+        <WorkspacePageHeader
+          icon={FlaskConical}
+          title="Prompt Studio"
+          titleId="prompt-studio-title"
+          description="Build reusable prompts with variables, Projects, and Context Packs, then test them in chat."
+        />
         {!isSignedIn && !loading ? (
           <div className="mt-6 rounded-2xl border p-8 text-center">
             Sign in to save reusable prompts.

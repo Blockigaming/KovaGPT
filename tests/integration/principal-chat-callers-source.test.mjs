@@ -49,7 +49,7 @@ test("all remaining local chat callers carry the resolved principal", async () =
   assert.match(library, /const visiblePreviewItem = principalReady \? previewItem : null/);
   assert.match(
     library,
-    /setPreviewItem\(null\);\s*setSelected\(\[\]\);\s*setLoadError\(null\);\s*\}, \[principal\]\)/,
+    /setPreviewItem\(null\);\s*setSelected\(\[\]\);\s*setLoadError\(null\);[\s\S]*\}, \[favoritesKey, principal\]\)/,
   );
 
   assert.match(summary, /loadConversations\(userKey\)/);

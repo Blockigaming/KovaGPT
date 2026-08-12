@@ -21,6 +21,13 @@ import { useEffect, useLayoutEffect, useState } from "react";
 import { PlatformRuntime } from "@/components/PlatformRuntime";
 
 const HYDRATION_READY_EVENT = "kova:hydrated";
+const LOCALE_DOCUMENT_BOOTSTRAP = `(() => {
+  const segment = location.pathname.split("/")[1];
+  const supported = new Set(["en", "es", "fr", "de", "pt-BR", "ja", "ko", "ar"]);
+  if (!supported.has(segment)) return;
+  document.documentElement.lang = segment;
+  document.documentElement.dir = segment === "ar" ? "rtl" : "ltr";
+})();`;
 const EARLY_SHORTCUT_BOOTSTRAP = `(() => {
   const pendingShortcuts = [];
   const captureShortcut = (event) => {
@@ -250,6 +257,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
+        <ScriptOnce>{LOCALE_DOCUMENT_BOOTSTRAP}</ScriptOnce>
         <ScriptOnce>{EARLY_SHORTCUT_BOOTSTRAP}</ScriptOnce>
         <HydrationInteractionGuard>{children}</HydrationInteractionGuard>
         <Scripts />
@@ -332,6 +340,12 @@ function RootComponent() {
   return (
     <ClerkProvider>
       <QueryClientProvider client={queryClient}>
+        <a
+          href="#main-content"
+          className="sr-only fixed left-3 top-3 z-[100] rounded-md bg-background px-3 py-2 text-sm font-medium text-foreground shadow-lg focus:not-sr-only focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          Skip to content
+        </a>
         <RootThemeManager />
         <PageTitleManager />
         <PlatformRuntime />

@@ -117,10 +117,10 @@ test("model selectors only advertise backed intelligence modes", () => {
   const chat = read("src/routes/api/chat.ts");
   const shell = read("src/routes/index.tsx");
 
-  for (const selector of [desktop, responsive]) {
-    assert.match(selector, /modesForTier\(userTier\)/);
+  assert.match(desktop, /ResponsiveModelSelector/);
+  assert.match(responsive, /versionGroupsForTier\(userTier\)/);
+  for (const selector of [desktop, responsive])
     assert.doesNotMatch(selector, /KOVA_VERSIONS|kova-version|KovaGPT version|Kova 3\.[345]/);
-  }
   assert.doesNotMatch(shell, /kovaVersion|kova-version/);
   assert.doesNotMatch(
     chat,

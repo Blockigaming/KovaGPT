@@ -22,3 +22,14 @@ test("security hardening migration protects legacy definers and webhook claims",
   assert.match(s, /set search_path = public, pg_temp/);
   assert.match(s, /revoke all.*anon, authenticated/i);
 });
+
+test("bundle budget selects the actual main entry and enforces compressed size", async () => {
+  const source = await readFile(
+    new URL("../../scripts/release/bundle-budget.mjs", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /file\.startsWith\("index-"\)/);
+  assert.match(source, /sort\(\(a, b\) => b\.raw - a\.raw\)\[0\]/);
+  assert.match(source, /gzipBudget/);
+  assert.doesNotMatch(source, /raw > 350000/);
+});

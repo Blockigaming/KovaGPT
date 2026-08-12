@@ -1,0 +1,6 @@
+{
+  "status": "superseded",
+  "supersededAt": "2026-08-12",
+  "authoritativeReport": "docs/release-reconciliation/developer-contract-report.json",
+  "reason": "The release reconciliation resolved the 0-versus-15 public-contract disagreement."
+}

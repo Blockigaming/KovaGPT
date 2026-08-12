@@ -331,6 +331,10 @@ input {
 .prose-chat ul li {
   list-style: disc;
 }
+
+.prose-chat :where(ul, ol) :where(ul, ol) {
+  margin-block: 0.25rem;
+}
 .prose-chat ol li {
   list-style: decimal;
 }
@@ -742,6 +746,17 @@ body {
   font-size: 0.875rem !important;
 }
 
+.kova-nav-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  stroke-width: 1.8;
+}
+
+.kova-glass {
+  background: var(--popover);
+  backdrop-filter: none;
+}
+
 .kova-card,
 .kova-row {
   box-shadow: none;
@@ -1041,6 +1056,10 @@ a {
   html {
     scroll-behavior: smooth;
   }
+}
+
+:where([role="menu"], [role="listbox"])[data-state="open"] {
+  animation: kova-menu-in 140ms ease-out;
 }
 
 /* Custom scrollbars - subtle in light, softer in dark. */
@@ -1804,7 +1823,6 @@ body {
     padding-bottom: 0;
   }
 
-
   .kova-composer-leading {
     padding-left: calc((var(--composer-height) - var(--composer-control)) / 2);
   }
@@ -2039,7 +2057,6 @@ body {
   .kova-secondary-page > .kova-toolbar {
     margin-bottom: 0;
   }
-
 
   .kova-secondary-page :is(input, textarea, select),
   .kova-settings-dialog :is(input, textarea, select),

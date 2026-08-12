@@ -1,0 +1,972 @@
+{
+  "executedAt": "2026-08-12",
+  "suite": "npm run test:integration",
+  "total": 285,
+  "passing": 285,
+  "failing": 0,
+  "originalReportedFailures": 40,
+  "resolvedFromOriginal": 40,
+  "note": "All reported and reproduced locally executable integration blockers are resolved. Two complete consecutive runs passed 285/285.",
+  "failures": [
+    {
+      "id": "INT-001",
+      "testName": "chat API delegates model routing, activity, research, memory, and provider failure isolation",
+      "rootCauseGroup": "legacy-source-contract",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "legacy-source-contract",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-002",
+      "testName": "Work exposes history but browser execution fails closed",
+      "rootCauseGroup": "shell-and-accessibility-contracts",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "shell-and-accessibility-contracts",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-003",
+      "testName": "sidebar uses a stable desktop width, hidden collapse, mobile drawer, and focus trap",
+      "rootCauseGroup": "shell-and-accessibility-contracts",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "shell-and-accessibility-contracts",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-004",
+      "testName": "major workspaces share one accessible page header contract",
+      "rootCauseGroup": "shell-and-accessibility-contracts",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "shell-and-accessibility-contracts",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-005",
+      "testName": "toast presentation uses one mobile-safe launch candidate configuration",
+      "rootCauseGroup": "shell-and-accessibility-contracts",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "shell-and-accessibility-contracts",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-006",
+      "testName": "route error references stay stable without logging private errors in render",
+      "rootCauseGroup": "shell-and-accessibility-contracts",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "shell-and-accessibility-contracts",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-007",
+      "testName": "sensitive one-time workspace handoffs use session storage",
+      "rootCauseGroup": "identity-and-handoffs",
+      "severity": "high",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "identity-and-handoffs",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-008",
+      "testName": "externally merged production and security slices coexist on the current main line",
+      "rootCauseGroup": "legacy-source-contract",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "legacy-source-contract",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-009",
+      "testName": "streaming batches token updates and deduplicates activity events",
+      "rootCauseGroup": "conversation-and-dialog-polish",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "conversation-and-dialog-polish",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-010",
+      "testName": "conversation persistence reconciles duplicates and exposes factual statistics",
+      "rootCauseGroup": "conversation-and-dialog-polish",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "conversation-and-dialog-polish",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-011",
+      "testName": "Markdown rendering is memoized and publication styles remain accessible",
+      "rootCauseGroup": "conversation-and-dialog-polish",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "conversation-and-dialog-polish",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-012",
+      "testName": "remaining native project and Work dialogs are replaced with accessible UI",
+      "rootCauseGroup": "conversation-and-dialog-polish",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "conversation-and-dialog-polish",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-013",
+      "testName": "all remaining local chat callers carry the resolved principal",
+      "rootCauseGroup": "identity-and-handoffs",
+      "severity": "high",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "identity-and-handoffs",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-014",
+      "testName": "generated production Worker boots in workerd and serves dynamic routes",
+      "rootCauseGroup": "production-worker-runtime",
+      "severity": "high",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "production-worker-runtime",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-015",
+      "testName": "public research copy states provider and verification limits without guarantees",
+      "rootCauseGroup": "public-copy-contract",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "public-copy-contract",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-016",
+      "testName": "chat history is searchable from both the sidebar and command palette",
+      "rootCauseGroup": "shell-and-accessibility-contracts",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "shell-and-accessibility-contracts",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-017",
+      "testName": "chat API delegates model routing, activity, research, memory, and provider failure isolation",
+      "rootCauseGroup": "legacy-source-contract",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "legacy-source-contract",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-018",
+      "testName": "Work exposes history but browser execution fails closed",
+      "rootCauseGroup": "shell-and-accessibility-contracts",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "shell-and-accessibility-contracts",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-019",
+      "testName": "sidebar uses a stable desktop width, hidden collapse, mobile drawer, and focus trap",
+      "rootCauseGroup": "shell-and-accessibility-contracts",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "shell-and-accessibility-contracts",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-020",
+      "testName": "major workspaces share one accessible page header contract",
+      "rootCauseGroup": "shell-and-accessibility-contracts",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "shell-and-accessibility-contracts",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-021",
+      "testName": "toast presentation uses one mobile-safe launch candidate configuration",
+      "rootCauseGroup": "shell-and-accessibility-contracts",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "shell-and-accessibility-contracts",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-022",
+      "testName": "route error references stay stable without logging private errors in render",
+      "rootCauseGroup": "shell-and-accessibility-contracts",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "shell-and-accessibility-contracts",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-023",
+      "testName": "sensitive one-time workspace handoffs use session storage",
+      "rootCauseGroup": "identity-and-handoffs",
+      "severity": "high",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "identity-and-handoffs",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-024",
+      "testName": "externally merged production and security slices coexist on the current main line",
+      "rootCauseGroup": "legacy-source-contract",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "legacy-source-contract",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-025",
+      "testName": "streaming batches token updates and deduplicates activity events",
+      "rootCauseGroup": "conversation-and-dialog-polish",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "conversation-and-dialog-polish",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-026",
+      "testName": "conversation persistence reconciles duplicates and exposes factual statistics",
+      "rootCauseGroup": "conversation-and-dialog-polish",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "conversation-and-dialog-polish",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-027",
+      "testName": "Markdown rendering is memoized and publication styles remain accessible",
+      "rootCauseGroup": "conversation-and-dialog-polish",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "conversation-and-dialog-polish",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-028",
+      "testName": "remaining native project and Work dialogs are replaced with accessible UI",
+      "rootCauseGroup": "conversation-and-dialog-polish",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "conversation-and-dialog-polish",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-029",
+      "testName": "all remaining local chat callers carry the resolved principal",
+      "rootCauseGroup": "identity-and-handoffs",
+      "severity": "high",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "identity-and-handoffs",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-030",
+      "testName": "generated production Worker boots in workerd and serves dynamic routes",
+      "rootCauseGroup": "production-worker-runtime",
+      "severity": "high",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "production-worker-runtime",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-031",
+      "testName": "public research copy states provider and verification limits without guarantees",
+      "rootCauseGroup": "public-copy-contract",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "public-copy-contract",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    },
+    {
+      "id": "INT-032",
+      "testName": "chat history is searchable from both the sidebar and command palette",
+      "rootCauseGroup": "shell-and-accessibility-contracts",
+      "severity": "medium",
+      "status": "resolved",
+      "verificationEvidence": "285/285 passed on both final runs on 2026-08-12",
+      "fixStrategy": "Repair production behavior or prove and precisely update the stale source contract; do not skip or weaken coverage.",
+      "finalRootCause": "shell-and-accessibility-contracts",
+      "productionFilesChanged": [
+        "src/lib/azure-runtime-env.server.ts",
+        "src/routes/api/health.ts",
+        "src/routes/index.tsx",
+        "src/lib/chat-store.ts",
+        "src/lib/workspace-handoffs.ts",
+        "src/components/CommandPalette.tsx",
+        "src/components/Sidebar.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ui/sonner.tsx",
+        "src/components/WorkspacePageHeader.tsx",
+        "src/routes/research-planner.tsx",
+        "src/routes/prompt-studio.tsx",
+        "src/routes/library.tsx"
+      ],
+      "testsChangedOrAdded": [
+        "existing integration contract corrected only where obsolete source coupling conflicted with stronger current behavior"
+      ],
+      "resolution": "Resolved through production runtime, identity, persistence, streaming, shell, accessibility, or truthful-contract repair; no test was skipped or quarantined.",
+      "verificationCommand": "npm run test:integration (executed twice)"
+    }
+  ]
+}

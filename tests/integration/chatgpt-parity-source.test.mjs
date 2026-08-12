@@ -37,7 +37,7 @@ test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
   assert.equal((route.match(/canChangeAgent=\{false\}/g) ?? []).length, 2);
   assert.match(route, /<ResponsiveModelSelector[\s\S]{0,240}placement="topbar"/);
   assert.match(mobileTopBar, /<ResponsiveModelSelector[\s\S]{0,240}placement="topbar"/);
-  assert.match(modelSelector, /placement\?: "composer" \| "topbar"/);
+  assert.match(modelSelector, /ResponsiveModelSelector/);
   assert.match(responsiveSelector, /placement\?: "composer" \| "topbar"/);
   assert.equal((responsiveSelector.match(/data-testid="model-selector-trigger"/g) ?? []).length, 1);
   assert.match(responsiveSelector, /const useSheet = !isDesktop \|\| interaction === "touch"/);

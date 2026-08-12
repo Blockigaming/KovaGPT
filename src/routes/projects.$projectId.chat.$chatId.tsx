@@ -349,7 +349,7 @@ function ProjectChatPage() {
               className="min-h-11 min-w-0 flex-1 truncate rounded-lg px-2 text-left font-medium hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
               onClick={openRenameDialog}
               disabled={sending}
-              aria-label="Rename chat"
+              aria-label="Project chat title"
             >
               {title}
             </button>
