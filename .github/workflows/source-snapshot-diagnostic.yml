@@ -11,7 +11,7 @@ jobs:
   snapshot:
     if: github.event.pull_request.number == 175
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
       - name: Checkout current PR
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -82,5 +82,24 @@ jobs:
         with:
           name: integration-green-baseline-0a426ff
           path: integration-green-baseline.tgz
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Checkout conversational parity implementation baseline
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: 9041aa8760d195eb895f9cf49b8d3a417f29326c
+          path: conversational-parity-baseline
+
+      - name: Archive conversational parity implementation baseline
+        shell: bash
+        working-directory: conversational-parity-baseline
+        run: git ls-files -z | tar --null --files-from=- -czf ../conversational-parity-baseline.tgz
+
+      - name: Upload conversational parity implementation baseline
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: conversational-parity-baseline-9041aa8
+          path: conversational-parity-baseline.tgz
           if-no-files-found: error
           retention-days: 1
