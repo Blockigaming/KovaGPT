@@ -1,0 +1,29 @@
+name: Historical Source Snapshot
+
+on:
+  push:
+    branches:
+      - codex/historical-snapshot-ui80
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Archive tracked source only
+        shell: bash
+        run: git ls-files -z | tar --null --files-from=- -czf historical-source-snapshot.tgz
+
+      - name: Upload tracked source snapshot
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: historical-source-snapshot-${{ github.sha }}
+          path: historical-source-snapshot.tgz
+          if-no-files-found: error
+          retention-days: 1
