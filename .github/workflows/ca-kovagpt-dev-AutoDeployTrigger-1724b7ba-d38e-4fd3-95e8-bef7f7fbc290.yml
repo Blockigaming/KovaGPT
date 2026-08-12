@@ -1,10 +1,17 @@
 name: Deploy KovaGPT to Azure Container Apps
 
+# Deployment is deliberately manual. The prior push trigger spent hosted-runner
+# minutes on every main update even while the OIDC principal lacked ACR push
+# access. Re-enable automation only after a reviewed release policy and a proven
+# registry permission preflight exist.
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+    inputs:
+      confirm_deploy:
+        description: Confirm that CI is green and the OIDC principal has AcrPush on kovagptacr
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   id-token: write
@@ -24,7 +31,9 @@ env:
 
 jobs:
   build-and-deploy:
+    if: github.ref == 'refs/heads/main' && inputs.confirm_deploy == true
     runs-on: ubuntu-latest
+    timeout-minutes: 35
 
     steps:
       - name: Check out repository
@@ -38,6 +47,22 @@ jobs:
           client-id: ${{ secrets.CAKOVAGPTDEV_AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.CAKOVAGPTDEV_AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.CAKOVAGPTDEV_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Verify ACR push access before building
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! az acr login \
+            --name "$ACR_NAME" \
+            --expose-token \
+            --query accessToken \
+            --output tsv \
+            --only-show-errors >/dev/null; then
+            echo "::error::The GitHub OIDC service principal cannot obtain an ACR access token."
+            echo "Grant AcrPush at the registry scope before starting another deployment."
+            echo "Use scripts/azure/grant-acr-push.sh from an authorized Azure shell."
+            exit 1
+          fi
 
       - name: Build, push, and deploy container image
         uses: azure/container-apps-deploy-action@v2

@@ -84,7 +84,20 @@ test(
     let spawnError;
     const worker = spawn(
       wranglerBinary,
-      ["--cwd", "dist/server", "dev", "--local", "--ip", "127.0.0.1", "--port", String(port)],
+      [
+        "--cwd",
+        "dist/server",
+        "dev",
+        "--local",
+        "--ip",
+        "127.0.0.1",
+        "--port",
+        String(port),
+        "--var",
+        "AI_GENERATION_ENABLED:false",
+        "--var",
+        "AZURE_ENVIRONMENT:ci",
+      ],
       {
         cwd: fixtureRoot,
         detached: !isWindows,
@@ -133,9 +146,12 @@ test(
 
       assert.ok(healthResponse, `Worker did not become healthy\n${output}`);
       assert.match(healthResponse.headers.get("content-type") ?? "", /application\/json/);
+      assert.equal(healthResponse.headers.get("cache-control"), "no-store");
       const diagnostics = await healthResponse.json();
-      assert.equal(diagnostics.ok, true);
-      assert.equal(diagnostics.app, "KovaGPT");
+      assert.equal(diagnostics.status, "ok");
+      assert.equal(diagnostics.service, "kovagpt-web");
+      assert.equal(diagnostics.environment, "ci");
+      assert.match(diagnostics.timestamp, /^\d{4}-\d{2}-\d{2}T/);
 
       const rootResponse = await fetch(`${origin}/`, {
         signal: AbortSignal.timeout(5_000),

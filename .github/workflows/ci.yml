@@ -2,85 +2,150 @@ name: KovaGPT CI
 
 on:
   pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
   push:
     branches:
       - main
-      - work
-      - "codex/**"
+  workflow_dispatch:
+
+concurrency:
+  group: kova-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
   verify:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    outputs:
+      run_database: ${{ steps.scope.outputs.run_database }}
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
+      - name: Classify changed files
+        id: scope
+        shell: bash
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" != "pull_request" ]]; then
+            echo "run_ci=true" >> "$GITHUB_OUTPUT"
+            echo "run_database=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          files="$(git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD)"
+          printf '%s\n' "$files"
+
+          if printf '%s\n' "$files" | grep -Ev '^(docs/|artifacts/)|\.md$' | grep -q .; then
+            echo "run_ci=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_ci=false" >> "$GITHUB_OUTPUT"
+            echo "Documentation-only change: expensive CI stages are not required."
+          fi
+
+          if printf '%s\n' "$files" | grep -Eq '^(supabase/migrations/|database-contract\.json$|release-migrations\.json$|scripts/release/(isolated-database|migrations|schema-contract)\.mjs$)'; then
+            echo "run_database=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_database=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Set up Node
+        if: steps.scope.outputs.run_ci == 'true'
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: npm
 
       - name: Install dependencies
+        if: steps.scope.outputs.run_ci == 'true'
         run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Formatting changed files
+        if: steps.scope.outputs.run_ci == 'true'
         run: npm run format:check:changed
 
       - name: Legacy repository formatting audit
+        if: steps.scope.outputs.run_ci == 'true'
         continue-on-error: true
         run: npm run format:check
 
       - name: Lint
+        if: steps.scope.outputs.run_ci == 'true'
         run: npm run lint
 
       - name: Typecheck
+        if: steps.scope.outputs.run_ci == 'true'
         run: npm run typecheck
 
       - name: Release contracts
-        run: npm run release:migrations && npm run release:manifest && npm run release:schema && npm run release:env && npm run release:security
+        if: steps.scope.outputs.run_ci == 'true'
+        run: npm run release:migrations && npm run release:manifest && npm run release:schema && npm run release:env && npm run release:security && git diff --exit-code -- release-migrations.json database-contract.json
 
       - name: Dependency audit
+        if: steps.scope.outputs.run_ci == 'true'
         run: npm audit --audit-level=high --omit=dev
 
       - name: Unit tests
+        if: steps.scope.outputs.run_ci == 'true'
         run: npm run test:unit
 
       - name: API tests
+        if: steps.scope.outputs.run_ci == 'true'
         run: npm run test:api
 
       - name: Production build
+        if: steps.scope.outputs.run_ci == 'true'
         run: npm run build
 
       - name: Integration tests
-        run: npm run test:integration
+        id: integration
+        if: steps.scope.outputs.run_ci == 'true'
+        shell: bash
+        run: |
+          mkdir -p artifacts/ci
+          set -o pipefail
+          npm run test:integration 2>&1 | tee artifacts/ci/integration-tests.log
+
+      - name: Upload integration test log
+        if: steps.integration.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: integration-test-log-${{ github.sha }}
+          path: artifacts/ci/integration-tests.log
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Install Playwright browsers
+        if: steps.scope.outputs.run_ci == 'true'
         run: npx playwright install --with-deps chromium
 
       - name: Accessibility checks
+        if: steps.scope.outputs.run_ci == 'true'
         run: npm run test:a11y
 
       - name: Visual checks
+        if: steps.scope.outputs.run_ci == 'true'
         run: npm run test:visual
 
       - name: Browser smoke checks
+        if: steps.scope.outputs.run_ci == 'true'
         run: npm run test:browser
 
       - name: Release checks
+        if: steps.scope.outputs.run_ci == 'true'
         run: npm run release:bundle && npm run test:release
 
       - name: Clean tree check
+        if: steps.scope.outputs.run_ci == 'true'
         run: git diff --check
 
       - name: Upload Playwright report
-        if: always()
+        if: failure() && steps.scope.outputs.run_ci == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: playwright-artifacts-verify
@@ -90,6 +155,7 @@ jobs:
           if-no-files-found: ignore
 
   browser:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     name: Browser (${{ matrix.id }})
     needs: verify
     runs-on: ubuntu-latest
@@ -145,7 +211,7 @@ jobs:
         run: npm run test:e2e -- ${{ matrix.projects }} --shard=${{ matrix.shard }}
 
       - name: Upload Playwright report
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: playwright-artifacts-${{ matrix.id }}
@@ -155,6 +221,7 @@ jobs:
           if-no-files-found: ignore
 
   release-e2e:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -177,7 +244,7 @@ jobs:
           if-no-files-found: error
 
   e2e-report:
-    if: always()
+    if: always() && (needs.release-e2e.result == 'success' || needs.release-e2e.result == 'failure')
     needs: release-e2e
     runs-on: ubuntu-latest
     steps:
@@ -185,17 +252,43 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with: { pattern: e2e-blob-*, path: blob-reports, merge-multiple: true }
-      - run: npx playwright merge-reports --reporter=html ./blob-reports
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with: { name: merged-playwright-report, path: playwright-report }
+      - name: Download blob reports
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: e2e-blob-*
+          path: blob-reports
+          merge-multiple: true
+      - name: Detect blob reports
+        id: reports
+        shell: bash
+        run: |
+          if find blob-reports -type f -name '*.zip' -print -quit 2>/dev/null | grep -q .; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "No Playwright blob reports were produced; skipping report merge."
+          fi
+      - name: Merge Playwright reports
+        if: steps.reports.outputs.available == 'true'
+        run: npx playwright merge-reports --reporter=html ./blob-reports
+      - name: Upload merged Playwright report
+        if: steps.reports.outputs.available == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: merged-playwright-report
+          path: playwright-report
 
   isolated-database:
+    needs: verify
+    if: always() && needs.verify.result == 'success' && needs.verify.outputs.run_database == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund

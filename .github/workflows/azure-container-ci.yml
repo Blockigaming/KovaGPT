@@ -2,38 +2,96 @@ name: Azure Container Readiness
 
 on:
   pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+  workflow_dispatch:
+
+concurrency:
+  group: azure-readiness-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   validate:
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     env:
       AI_GENERATION_ENABLED: "false"
       HOST: 0.0.0.0
       PORT: 3000
       AZURE_ENVIRONMENT: ci
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Classify Azure changes
+        id: scope
+        shell: bash
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" != "pull_request" ]]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          files="$(git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD)"
+          printf '%s\n' "$files"
+          if printf '%s\n' "$files" | grep -Eq '^(\.github/workflows/(azure-container-ci|ca-kovagpt-dev-AutoDeployTrigger-1724b7ba-d38e-4fd3-95e8-bef7f7fbc290)\.yml$|\.dockerignore$|Dockerfile$|\.env\.example$|package(-lock)?\.json$|infra/azure/|scripts/azure/|src/lib/azure-runtime-env\.server\.ts$|src/lib/readiness\.server\.ts$|src/routes/api/health\.ts$|src/server\.ts$|src/start\.ts$|vite\.config\.ts$)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No Azure/container-sensitive files changed; expensive readiness stages are skipped."
+          fi
+
+      - name: Set up Node
+        if: steps.scope.outputs.run == 'true'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: npm
+
       - name: Install dependencies
-        run: npm ci
-      - name: Formatting check
+        if: steps.scope.outputs.run == 'true'
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Formatting changed files
+        if: steps.scope.outputs.run == 'true'
+        run: npm run format:check:changed
+
+      - name: Legacy repository formatting audit
+        if: steps.scope.outputs.run == 'true'
+        continue-on-error: true
         run: npm run format:check
+
       - name: Lint
+        if: steps.scope.outputs.run == 'true'
         run: npm run lint
+
       - name: TypeScript typecheck
+        if: steps.scope.outputs.run == 'true'
         run: npm run typecheck
+
       - name: Unit tests
+        if: steps.scope.outputs.run == 'true'
         run: npm run test:unit
+
       - name: Azure readiness validation
+        if: steps.scope.outputs.run == 'true'
         run: npm run azure:validate
+
       - name: Production build
+        if: steps.scope.outputs.run == 'true'
         run: KOVA_BROWSER_PREVIEW=node npm run build
+
       - name: Docker image build
+        if: steps.scope.outputs.run == 'true'
         run: npm run container:build
+
       - name: Container startup
+        if: steps.scope.outputs.run == 'true'
         run: |
           docker run -d --name kovagpt-web-ci \
             -e AI_GENERATION_ENABLED=false \
@@ -49,8 +107,11 @@ jobs:
           done
           docker logs kovagpt-web-ci
           exit 1
+
       - name: Health smoke test
+        if: steps.scope.outputs.run == 'true'
         run: npm run container:smoke
+
       - name: Container shutdown
-        if: always()
+        if: always() && steps.scope.outputs.run == 'true'
         run: docker rm -f kovagpt-web-ci || true
