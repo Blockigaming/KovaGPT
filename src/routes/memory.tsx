@@ -21,7 +21,8 @@ export const Route = createFileRoute("/memory")({
   }),
 });
 function MemoryPage() {
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const userKey = user?.id ?? null;
   const list = useServerFn(listMemoryCenter);
   const update = useServerFn(updateMemoryRecord);
   const remove = useServerFn(deleteMemoryRecord);
@@ -211,12 +212,15 @@ function MemoryPage() {
                   <div className="flex flex-wrap justify-end">
                     <button
                       onClick={() =>
-                        openInWork({
-                          type: "memory",
-                          id: item.id,
-                          title: item.title,
-                          content: item.content,
-                        })
+                        openInWork(
+                          {
+                            type: "memory",
+                            id: item.id,
+                            title: item.title,
+                            content: item.content,
+                          },
+                          userKey,
+                        )
                       }
                       className="min-h-11 rounded-lg px-2 text-xs hover:bg-accent"
                     >
@@ -224,12 +228,15 @@ function MemoryPage() {
                     </button>
                     <button
                       onClick={() =>
-                        continueInResearch({
-                          type: "memory",
-                          id: item.id,
-                          title: item.title,
-                          content: item.content,
-                        })
+                        continueInResearch(
+                          {
+                            type: "memory",
+                            id: item.id,
+                            title: item.title,
+                            content: item.content,
+                          },
+                          userKey,
+                        )
                       }
                       className="min-h-11 rounded-lg px-2 text-xs hover:bg-accent"
                     >
@@ -237,12 +244,15 @@ function MemoryPage() {
                     </button>
                     <button
                       onClick={() =>
-                        addToContextPack({
-                          type: "memory",
-                          id: item.id,
-                          title: item.title,
-                          content: item.content,
-                        })
+                        addToContextPack(
+                          {
+                            type: "memory",
+                            id: item.id,
+                            title: item.title,
+                            content: item.content,
+                          },
+                          userKey,
+                        )
                       }
                       className="min-h-11 rounded-lg px-2 text-xs hover:bg-accent"
                     >

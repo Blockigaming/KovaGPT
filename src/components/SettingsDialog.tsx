@@ -65,7 +65,7 @@ import {
 } from "@/lib/connectors-catalog";
 import { toast } from "sonner";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { LogoutConfirmDialog } from "@/components/LogoutConfirmDialog";
 import { getMyDailyUsage, type DailyUsageDto } from "@/utils/usage.functions";
 import {
@@ -151,6 +151,8 @@ export type Settings = {
   theme?: ThemeColors;
 };
 
+// Shared persisted-settings default; exported here until the settings schema is separated from the dialog.
+// eslint-disable-next-line react-refresh/only-export-components
 export const DEFAULT_SETTINGS: Settings = {
   displayName: "",
   email: "",
@@ -1304,6 +1306,10 @@ export function SettingsDialog({
                     for how provider processing is described.
                   </p>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  removed guest training and marketing switches changed only browser-local values.
+                  Deprecated local-only value retained only for safe import compatibility.
+                </p>
                 <SecurityRow
                   title="Export your data"
                   body="Download chats, archived chats, and preferences stored on this device. Cloud account records are not included."
@@ -2014,7 +2020,7 @@ function LibraryPanel() {
       setShared(inbox);
       setMine(mineShares);
     } catch (e) {
-      console.error(e);
+      console.error("[settings] library load failed");
       setLoadError(e instanceof Error ? e.message : "Library data could not be loaded.");
     } finally {
       setLoading(false);
@@ -2279,7 +2285,10 @@ function SignedOutSettings({
             <div className="flex items-center justify-between gap-4 py-4 first:pt-0">
               <span className="text-sm">Appearance</span>
               <div className="w-44">
-                <Select value={settings.mode ?? "system"} onValueChange={(v) => setMode(v as ThemeMode)}>
+                <Select
+                  value={settings.mode ?? "system"}
+                  onValueChange={(v) => setMode(v as ThemeMode)}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -2759,7 +2768,7 @@ function ShortcutsEditor({
   const [listPrincipal, setListPrincipal] = useState<string | null>(null);
   const [recordingId, setRecordingId] = useState<string | null>(null);
   const ready = principal !== null && listPrincipal === principal;
-  const visibleList = ready ? list : [];
+  const visibleList = useMemo(() => (ready ? list : []), [list, ready]);
 
   useEffect(() => {
     let cancelled = false;
@@ -2820,7 +2829,7 @@ function ShortcutsEditor({
       window.removeEventListener("keydown", onKey, {
         capture: true,
       } as unknown as EventListenerOptions);
-  }, [recordingId, ready, userKey, visibleList]);
+  }, [principal, recordingId, ready, userKey, visibleList]);
 
   const reset = async () => {
     const mod = await import("@/lib/shortcuts");

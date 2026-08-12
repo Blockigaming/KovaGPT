@@ -1,0 +1,7 @@
+{
+  "status": "superseded",
+  "supersededAt": "2026-08-12",
+  "authoritativeManifest": "docs/release-reconciliation/canonical-route-manifest.json",
+  "sitemapSourceOfTruth": "src/lib/seo-policy.mjs",
+  "contentReviewSourceOfTruth": "docs/page-parity/indexable-content-review.json"
+}

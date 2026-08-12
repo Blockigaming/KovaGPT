@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { chromium } from "@playwright/test";
+import { chromium, webkit } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
@@ -10,9 +10,21 @@ const targets = {
   chatgpt: process.env.CHATGPT_URL || "https://chatgpt.com",
   kova: process.env.KOVAGPT_URL || "https://kovagpt.com",
 };
-const widths = [320, 360, 375, 390, 412, 430, 768, 820, 1024, 1280, 1366, 1440, 1512, 1728];
+const viewports = [
+  [320, 568],
+  [360, 800],
+  [390, 844],
+  [412, 915],
+  [768, 1024],
+  [1024, 768],
+  [1280, 800],
+  [1440, 900],
+  [1512, 982],
+  [1728, 1117],
+  [1920, 1080],
+];
 const heights = {
-  320: 700,
+  320: 568,
   360: 800,
   375: 812,
   390: 844,
@@ -26,11 +38,15 @@ const heights = {
   1440: 900,
   1512: 982,
   1728: 1117,
+  1920: 1080,
 };
 const defaultScenarios = [
   { id: "empty-chat", path: "/" },
   { id: "images", path: "/images" },
   { id: "library", path: "/library" },
+  { id: "apps", path: "/apps" },
+  { id: "deep-research", path: "/research-planner" },
+  { id: "maps", path: "/maps" },
 ];
 const styleProperties = [
   "display",
@@ -97,15 +113,22 @@ const styleProperties = [
 ];
 const args = new Set(process.argv.slice(2));
 const quick = args.has("--quick");
+const browserName = process.env.PARITY_BROWSER || "chromium";
+if (!new Set(["chromium", "webkit"]).has(browserName))
+  throw new Error("PARITY_BROWSER must be chromium or webkit");
+const requestedDprs = (process.env.PARITY_DPRS || "1,2").split(",").map(Number);
 const scenarios = process.env.PARITY_SCENARIOS
   ? JSON.parse(process.env.PARITY_SCENARIOS)
   : defaultScenarios;
-const matrix = (quick ? [1280] : widths).flatMap((width) =>
-  (quick ? ["light"] : ["light", "dark"]).map((theme) => ({
-    width,
-    height: heights[width],
-    theme,
-  })),
+const matrix = (quick ? [[1280, 800]] : viewports).flatMap(([width, height]) =>
+  (quick ? ["light"] : ["light", "dark", "system"]).flatMap((theme) =>
+    (quick ? [1] : requestedDprs).map((deviceScaleFactor) => ({
+      width,
+      height: height ?? heights[width],
+      theme,
+      deviceScaleFactor,
+    })),
+  ),
 );
 
 const dirs = ["screenshots", "diffs", "snapshots", "motion", "reports"];
@@ -284,13 +307,11 @@ async function snapshot(page) {
               decodedBodySize,
             }),
           ),
-        shifts: performance
-          .getEntriesByType("layout-shift")
-          .map((entry) => ({
-            value: entry.value,
-            hadRecentInput: entry.hadRecentInput,
-            startTime: entry.startTime,
-          })),
+        shifts: performance.getEntriesByType("layout-shift").map((entry) => ({
+          value: entry.value,
+          hadRecentInput: entry.hadRecentInput,
+          startTime: entry.startTime,
+        })),
       };
     },
     { styleProperties },
@@ -400,7 +421,7 @@ async function pixelDiff(browser, left, right, destination) {
   return result;
 }
 
-const browser = await chromium.launch();
+const browser = await (browserName === "webkit" ? webkit : chromium).launch();
 for (const authentication of [
   "anonymous",
   ...(process.env.CHATGPT_STORAGE_STATE && process.env.KOVAGPT_STORAGE_STATE
@@ -410,11 +431,12 @@ for (const authentication of [
   for (const scenario of scenarios)
     for (const viewport of matrix) {
       const pair = {};
-      const id = `${authentication}-${scenario.id}-${viewport.width}x${viewport.height}-${viewport.theme}`;
+      const id = `${browserName}-${authentication}-${scenario.id}-${viewport.width}x${viewport.height}-${viewport.theme}-${viewport.deviceScaleFactor}x`;
       for (const [site, baseUrl] of Object.entries(targets)) {
         const context = await browser.newContext({
           viewport: { width: viewport.width, height: viewport.height },
-          colorScheme: viewport.theme,
+          colorScheme: viewport.theme === "system" ? "no-preference" : viewport.theme,
+          deviceScaleFactor: viewport.deviceScaleFactor,
           hasTouch: viewport.width < 1024,
           storageState:
             authentication === "authenticated"
@@ -507,6 +529,7 @@ const report = {
   schemaVersion: 2,
   generatedAt,
   commitSha,
+  browser: browserName,
   targets,
   requestedPairs:
     matrix.length *

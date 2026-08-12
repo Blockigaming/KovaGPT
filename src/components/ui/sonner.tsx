@@ -6,10 +6,10 @@ const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
       className="toaster group"
-      position="top-center"
+      position="bottom-right"
       closeButton
       duration={4_000}
-      visibleToasts={3}
+      visibleToasts={4}
       gap={8}
       mobileOffset={{ bottom: "calc(1rem + env(safe-area-inset-bottom))", left: 8, right: 8 }}
       toastOptions={{

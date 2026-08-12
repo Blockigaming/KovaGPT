@@ -65,6 +65,7 @@ test("externally merged production and security slices coexist on the current ma
 
   assert.match(deepResearch, /if \(!authenticated\)/);
   assert.match(deepResearch, /if \(!owner && tier === "free"\)/);
-  assert.match(paymentWebhook, /processStripeEvent/);
+  assert.match(paymentWebhook, /verifyWebhook/);
+  assert.match(paymentWebhook, /resolveBillingPlan/);
   assert.match(paymentWebhook, /received: true, duplicate: result\.duplicate/);
 });

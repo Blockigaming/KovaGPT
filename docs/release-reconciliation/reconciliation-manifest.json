@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "reconciledAt": "2026-08-12",
+  "branch": "work",
+  "startingHead": "0df0f5dd188fa9cb6657570cc78ecc21677e5b95",
+  "mergeBase": "f8280ea9f60dedb44d077bedf2659290d800254b",
+  "workstreams": {
+    "A": {
+      "commit": "dc1ca2dd0f37274d1b2e5f64cbc7e5357fe544e9",
+      "availability": "unavailable",
+      "remoteFetch": "not_possible_no_configured_remotes",
+      "claimsUsedAsEvidence": false
+    },
+    "B_accessibility_indexing": {
+      "commit": "0934d48bc272655c549ac0d7d5dc16b3425b1ac8",
+      "availability": "ancestor_of_starting_head"
+    },
+    "B_inventory_review": {
+      "commit": "0df0f5dd188fa9cb6657570cc78ecc21677e5b95",
+      "availability": "starting_head"
+    }
+  },
+  "resolutions": {
+    "sitemap": {
+      "reported": [
+        24,
+        64
+      ],
+      "final": 23,
+      "source": "src/lib/seo-policy.mjs"
+    },
+    "developerTopics": {
+      "reportedIndexable": [
+        0,
+        15
+      ],
+      "finalIndexable": 0,
+      "total": 19
+    },
+    "tests": {
+      "reported": [
+        295,
+        276
+      ],
+      "availablePassing": 277,
+      "unavailableAssertionsNotInvented": true,
+      "integration": {
+        "total": 285,
+        "passing": 245,
+        "failing": 40
+      }
+    }
+  },
+  "authorities": {
+    "routes": "docs/release-reconciliation/canonical-route-manifest.json",
+    "sitemap": "src/lib/seo-policy.mjs",
+    "contentReview": "docs/page-parity/indexable-content-review.json",
+    "developerContract": "docs/release-reconciliation/developer-contract-report.json",
+    "sourceInventory": "docs/page-parity/source-inventory.json",
+    "releaseReport": "docs/release-reconciliation/final-release-report.md"
+  }
+}

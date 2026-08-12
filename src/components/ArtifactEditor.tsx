@@ -77,7 +77,8 @@ export function ArtifactEditor({
   const [saveState, setSaveState] = useState<"saved" | "saving" | "unsaved">("saved");
   const [versions, setVersions] = useState<SessionVersion[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { isSignedIn } = useUser();
+  const { isSignedIn, user } = useUser();
+  const userKey = user?.id ?? null;
   const clerk = useClerkSafe();
   const saveFn = useServerFn(saveToLibrary);
   const artifactTitle =
@@ -603,7 +604,10 @@ export function ArtifactEditor({
           </button>
           <button
             onClick={() =>
-              openInWork({ type: "artifact", id: kind, title: artifactTitle, content: value })
+              openInWork(
+                { type: "artifact", id: kind, title: artifactTitle, content: value },
+                userKey,
+              )
             }
             className="text-xs px-3 py-1.5 rounded border border-border hover:bg-accent"
           >
@@ -611,12 +615,15 @@ export function ArtifactEditor({
           </button>
           <button
             onClick={() =>
-              continueInResearch({
-                type: "artifact",
-                id: kind,
-                title: artifactTitle,
-                content: value,
-              })
+              continueInResearch(
+                {
+                  type: "artifact",
+                  id: kind,
+                  title: artifactTitle,
+                  content: value,
+                },
+                userKey,
+              )
             }
             className="text-xs px-3 py-1.5 rounded border border-border hover:bg-accent"
           >
@@ -624,7 +631,10 @@ export function ArtifactEditor({
           </button>
           <button
             onClick={() =>
-              addToContextPack({ type: "artifact", id: kind, title: artifactTitle, content: value })
+              addToContextPack(
+                { type: "artifact", id: kind, title: artifactTitle, content: value },
+                userKey,
+              )
             }
             className="text-xs px-3 py-1.5 rounded border border-border hover:bg-accent"
           >

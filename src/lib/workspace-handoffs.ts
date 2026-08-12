@@ -1,3 +1,5 @@
+import { safeBrowserStorage, writePrincipalHandoff } from "@/lib/principal-browser-storage.mjs";
+
 export type WorkspaceHandoff = {
   type:
     | "chat"
@@ -15,39 +17,42 @@ export type WorkspaceHandoff = {
   content: string;
 };
 
-export function openInWork(item: WorkspaceHandoff) {
-  localStorage.setItem(
-    "kova-work-draft",
-    JSON.stringify({
-      objective: `Continue working with ${item.title}`,
-      context: `${item.type}: ${item.title}\n\n${item.content}`.slice(0, 24_000),
-      plan: [
-        "Review the source material",
-        "Complete the requested work",
-        "Review and record deliverables",
-      ],
-    }),
-  );
+function writeHandoff(baseKey: string, userKey: string | null, payload: unknown): boolean {
+  return writePrincipalHandoff(safeBrowserStorage("sessionStorage"), baseKey, userKey, payload).ok;
+}
+
+export function openInWork(item: WorkspaceHandoff, userKey: string | null) {
+  const written = writeHandoff("kova-work-draft", userKey, {
+    objective: `Continue working with ${item.title}`,
+    context: `${item.type}: ${item.title}\n\n${item.content}`.slice(0, 24_000),
+    plan: [
+      "Review the source material",
+      "Complete the requested work",
+      "Review and record deliverables",
+    ],
+  });
+  if (!written) return false;
   window.location.href = "/work";
+  return true;
 }
 
-export function continueInResearch(item: WorkspaceHandoff) {
-  localStorage.setItem(
-    "kova-research-draft",
-    JSON.stringify({
-      question: `Research and verify the key claims related to ${item.title}`,
-      context: `${item.type}: ${item.title}\n\n${item.content}`.slice(0, 20_000),
-    }),
-  );
+export function continueInResearch(item: WorkspaceHandoff, userKey: string | null) {
+  const written = writeHandoff("kova-research-draft", userKey, {
+    question: `Research and verify the key claims related to ${item.title}`,
+    context: `${item.type}: ${item.title}\n\n${item.content}`.slice(0, 20_000),
+  });
+  if (!written) return false;
   window.location.href = "/research-planner";
+  return true;
 }
 
-export function addToContextPack(item: WorkspaceHandoff) {
-  addManyToContextPack([item]);
+export function addToContextPack(item: WorkspaceHandoff, userKey: string | null) {
+  return addManyToContextPack([item], userKey);
 }
 
-export function addManyToContextPack(items: WorkspaceHandoff[]) {
+export function addManyToContextPack(items: WorkspaceHandoff[], userKey: string | null) {
   const unique = [...new Map(items.map((item) => [`${item.type}:${item.id}`, item])).values()];
-  sessionStorage.setItem("kova-context-candidates", JSON.stringify(unique.slice(0, 30)));
+  if (!writeHandoff("kova-context-candidates", userKey, unique.slice(0, 30))) return false;
   window.location.href = "/context-packs";
+  return true;
 }

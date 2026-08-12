@@ -1,6 +1,5 @@
 import {
   ArrowUp,
-  Atom,
   Paperclip,
   Telescope,
   Square,
@@ -68,7 +67,6 @@ const COMPOSER_TOOLS: readonly ComposerAction[] = [
   { id: "web_search", label: "Search the Web", icon: Globe },
   { id: "image", label: "Create Image", icon: ImagePlus },
 ];
-
 
 const PROMPT_SHORTCUTS = [
   { label: "Brainstorm ideas", prompt: "Help me brainstorm ideas about " },
@@ -157,6 +155,18 @@ export function ChatInput({
   const plusTriggerRef = useRef<HTMLButtonElement>(null);
 
   const [plusOpen, setPlusOpen] = useState(false);
+  const [online, setOnline] = useState(() =>
+    typeof navigator === "undefined" ? true : navigator.onLine,
+  );
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    window.addEventListener("online", update);
+    window.addEventListener("offline", update);
+    return () => {
+      window.removeEventListener("online", update);
+      window.removeEventListener("offline", update);
+    };
+  }, []);
   const [kbOffset, setKbOffset] = useState(0);
   const submittingRef = useRef(false);
   const composingRef = useRef(false);
@@ -213,7 +223,9 @@ export function ChatInput({
       recognitionRef.current = null;
       const code = event?.error;
       if (code === "not-allowed" || code === "service-not-allowed")
-        toast.error("Microphone permission was not granted. Open KovaGPT in its own tab and retry.");
+        toast.error(
+          "Microphone permission was not granted. Open KovaGPT in its own tab and retry.",
+        );
       else if (code === "no-speech") toast.error("No speech detected. Try dictating again.");
       else if (code === "network") toast.error("Dictation needs a network connection.");
       else if (code && code !== "aborted") toast.error("Dictation stopped unexpectedly.");
@@ -231,7 +243,6 @@ export function ChatInput({
     recognitionRef.current = recognition;
     setDictating(true);
   };
-
 
   useEffect(() => {
     if (!plusOpen) return;
@@ -288,6 +299,7 @@ export function ChatInput({
 
   const triggerSubmit = () => {
     if (disabled || submittingRef.current || isStreaming) return;
+    if (!online) return;
     if (!value.trim() && attachments.length === 0) return;
     const blocked = attachments.find(
       (attachment) => attachment.status === "uploading" || attachment.status === "failed",
@@ -508,7 +520,10 @@ export function ChatInput({
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    if (!disabled && showAddMenu && e.dataTransfer.types.includes("Files")) e.preventDefault();
+    if (!disabled && showAddMenu && e.dataTransfer.types.includes("Files")) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    }
   };
 
   const attachLibraryFile = (item: RecentLibraryFile) => {
@@ -647,7 +662,9 @@ export function ChatInput({
     const rowClass = `flex w-full items-center gap-3 rounded-xl text-left transition-colors duration-150 hover:bg-accent active:bg-accent disabled:cursor-not-allowed disabled:opacity-50 outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
       mobile ? "min-h-14 px-4 py-3 text-base" : "px-3 py-2.5 text-sm"
     }`;
-    const iconClass = mobile ? "h-5 w-5 shrink-0 text-muted-foreground" : "h-4 w-4 shrink-0 text-muted-foreground";
+    const iconClass = mobile
+      ? "h-5 w-5 shrink-0 text-muted-foreground"
+      : "h-4 w-4 shrink-0 text-muted-foreground";
     const webSearchTool = COMPOSER_TOOLS.find((tool) => tool.id === "web_search");
     const imageTool = COMPOSER_TOOLS.find((tool) => tool.id === "image");
     const deepResearchTool = COMPOSER_TOOLS.find((tool) => tool.id === "deep_research");
@@ -718,28 +735,37 @@ export function ChatInput({
           {addPhotosRow}
           {cameraRow}
           {webSearchTool ? toolRow({ ...webSearchTool, label: "Web search" }) : null}
-          <p
-            className={`pt-3 pb-1 text-sm text-muted-foreground ${mobile ? "px-4" : "px-3"}`}
-          >
+          <p className={`pt-3 pb-1 text-sm text-muted-foreground ${mobile ? "px-4" : "px-3"}`}>
             Log in to use...
           </p>
           {lockedRow("locked-deep-research", deepResearchTool?.icon ?? Telescope, "Deep research")}
           {lockedRow("locked-image", imageTool?.icon ?? ImageIcon, "Create image")}
-          {lockedRow("locked-model", Atom, "Kova-5.5")}
+          <button
+            type="button"
+            className={rowClass}
+            onClick={() => {
+              window.location.href = "/apps";
+            }}
+          >
+            <Sparkles className={iconClass} />
+            <span>Explore Apps and connectors</span>
+          </button>
         </>
       );
     }
 
     return (
       <>
-        {webSearchTool ? toolRow(webSearchTool) : null}
         {addPhotosRow}
         {cameraRow}
-        {imageTool ? toolRow(imageTool) : null}
+        {COMPOSER_TOOLS.map(toolRow)}
+        <button type="button" className={rowClass} onClick={() => (window.location.href = "/apps")}>
+          <Sparkles className={iconClass} />
+          <span>Apps and connectors</span>
+        </button>
       </>
     );
   };
-
 
   return (
     <div
@@ -750,6 +776,12 @@ export function ChatInput({
       onDragOver={handleDragOver}
     >
       <div className="mx-auto max-w-[48rem]">
+        {!online ? (
+          <p role="status" className="pb-2 text-center text-xs text-destructive">
+            Reconnect to send
+          </p>
+        ) : null}
+        <span className="sr-only">Drop files to attach</span>
         <div className={`kova-composer overflow-visible ${isStreaming ? "is-streaming" : ""}`}>
           {attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 p-3 pb-0" aria-label="Attachments">
@@ -908,7 +940,6 @@ export function ChatInput({
                 <div className="flex max-h-[70vh] flex-col gap-1 overflow-y-auto p-1">
                   {renderComposerActions(true)}
                 </div>
-
               </MobileBottomSheet>
             )}
 
@@ -930,7 +961,7 @@ export function ChatInput({
               autoComplete="off"
               autoCorrect="on"
               autoCapitalize="sentences"
-              className="kova-composer-input flex-1 resize-none border-0 bg-transparent text-foreground outline-none focus:outline-none focus:ring-0 disabled:cursor-not-allowed"
+              className="kova-composer-input max-h-[200px] flex-1 resize-none overflow-y-auto border-0 bg-transparent text-foreground outline-none focus:outline-none focus:ring-0 disabled:cursor-not-allowed"
               aria-label="Message KovaGPT"
               aria-keyshortcuts={
                 effectiveSendOnEnter && !isMobileLayout && !isCoarsePointer
@@ -962,7 +993,7 @@ export function ChatInput({
                 <button
                   type="button"
                   onClick={onStop}
-                  className="kova-composer-button kova-send-button is-enabled flex items-center justify-center rounded-full"
+                  className="kova-composer-button kova-send-button is-enabled flex items-center justify-center rounded-full active:scale-90"
                   aria-label="Stop"
                 >
                   <Square className="h-3.5 w-3.5 fill-current" />
@@ -996,6 +1027,9 @@ export function ChatInput({
           </div>
         </div>
       </div>
+      <p className="mt-2 text-center text-[11px] text-muted-foreground">
+        KovaGPT can make mistakes. Check important information.
+      </p>
     </div>
   );
 }

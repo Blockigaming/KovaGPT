@@ -1,0 +1,715 @@
+{
+  "generatedAt": "2026-08-12",
+  "availableTestFiles": 140,
+  "unitTestFiles": 52,
+  "classificationCounts": {
+    "retained": 140,
+    "duplicate": 0,
+    "superseded": 0,
+    "incompatible": 0,
+    "missingFromUnavailableTrack": "unknown"
+  },
+  "workstreamAComparison": "unavailable_commit_prevents_file_level_comparison",
+  "records": [
+    {
+      "file": "tests/a11y/root-accessibility.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/api/chat-ingress.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/api/health-route.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/api/help-submit-security.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/api/memory-consent.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/account-and-provider-repair-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/advanced-os-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/agent-analytics-provenance.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/agent-ingress-authorization-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/agent-lifecycle-and-attribution.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/agent-operating-system-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/ai-core-parity-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/apollo-agent-workspace.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/auth-account-security-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/browser-preview-config-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/chat-experience-closure.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/chat-ingress-security.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/chatgpt-parity-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/connectors-tasks-settings-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/constellation-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/core-shell-chat-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/desktop-polish-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/feature-parity-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/feedback-migration.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/final-production-hardening.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/final-readiness-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/functional-reliability-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/future-workspace-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/github-management-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/github-oauth-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/github-operations-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/google-oauth-token-boundary.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/google-write-confirmation-security.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/hydration-interaction-guard-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/launch-candidate-consistency-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/launch-hardening-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/live-production-suite-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/memory-privacy-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/mobile-quality-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/mobile-shell-ui-truth.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/multimodal-canvas-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/notification-center-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/openai-responses-stream.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/openai-usage-migration.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/operational-analytics-privacy.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/post-merge-production-gate.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/premium-design-system-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/premium-product-polish-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/principal-chat-callers-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/principal-chat-storage-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/principal-lifecycle-bc-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/principal-settings-storage-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/principal-storage-lifecycle-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/principal-work-storage-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/pro-workspace-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/product-completeness-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/production-entry-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/production-recovery-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/production-repair-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/production-worker-artifact.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/project-ascension-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/project-chat-convergence.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/project-infinity-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/project-nexus-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/project-omega-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/project-titan-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/projects-library-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/provider-response-bounds-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/public-capability-registry-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/public-product-truth-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/recovery-surface.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/research-persistence-authorization-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/secondary-screens-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/seo-error-boundary-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/server-workspaces-and-exports.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/settings-truth-parity.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/ui-quality-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/ultimate-workspace-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/work-experience-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/integration/workspace-intelligence-source.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/release/migrations-and-bundles.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/release/readiness-and-observability.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/release/release-contract.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/release/runtime-closure.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/release/staging-schema-admin.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/release/stripe-and-tanstack.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/release/stripe-ordering-edge.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/agent-ingress-authorization.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/ai-core-registry.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/apollo-agent-graphs.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/auth-security.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/auth-validation-policy.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/billing-portal-url.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/chat-ingress-security.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/ci-browser-matrix.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/cloudflare-deploy-workflow.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/composer-keyboard.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/composer-preference-storage.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/connectors-governance.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/constellation-security.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/cost-plus-pricing.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/deep-research-persistence.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/deep-research.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/deliverable-content.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/device-data-portability.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/feature-breadth.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/github-connector.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/google-rate-limit.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/google-write-security.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/helios-worker.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/lovable-removal.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/memory-write-coordinator.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/model-router.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/multimodal-scope.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/openai-budget-policy.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/openai-runtime-security.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/page-parity-manifest.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/paid-feature-entitlements.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/platform-architecture.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/principal-browser-storage.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/principal-chat-storage.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/principal-settings-storage.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/principal-work-storage.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/product-completeness.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/production-worker-bootstrap.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/provider-architecture.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/provider-response-bounds.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/public-build-env.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/public-build-workflow.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/release-remediation.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/reliability-handler-fault-injection.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/research-persistence-authorization.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/review-findings.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/search-provider.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/seo-policy.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/server-runtime-recovery.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/webhook-reliability.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/work-graph.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/unit/zero-lovable-provider.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    },
+    {
+      "file": "tests/visual/playwright-viewports.test.mjs",
+      "classification": "retained",
+      "reason": "Present in the current consolidated tree; no legitimate assertion was removed during reconciliation."
+    }
+  ]
+}

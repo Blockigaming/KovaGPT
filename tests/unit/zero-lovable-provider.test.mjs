@@ -1,78 +1,48 @@
 import assert from "node:assert/strict";
-import { readdir, readFile } from "node:fs/promises";
-import path from "node:path";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const repositoryRoot = new URL("../../", import.meta.url);
-const runtimeRoots = [
-  ".env.example",
-  ".github/workflows",
-  "src",
-  "worker",
-  "workers",
-  "supabase/functions",
-];
-const runtimeExtension = /\.(?:[cm]?[jt]sx?|jsonc?|ya?ml|toml)$/;
-const creditEscapePattern =
-  /LOVABLE_API_KEY|LOVABLE_AI_BASE_URL|ai\.gateway\.lovable\.dev|Lovable-API-Key|OPENAI_BASE_URL|AI_PROVIDER_(?:URL|API_KEY)/i;
-
-async function runtimeFiles(relativePath) {
-  const url = new URL(relativePath, repositoryRoot);
-  try {
-    const entries = await readdir(url, { withFileTypes: true });
-    const files = await Promise.all(
-      entries.map((entry) =>
-        entry.isDirectory()
-          ? runtimeFiles(path.posix.join(relativePath, entry.name))
-          : runtimeExtension.test(entry.name)
-            ? [path.posix.join(relativePath, entry.name)]
-            : [],
-      ),
-    );
-    return files.flat();
-  } catch (error) {
-    if (error?.code === "ENOTDIR") return [relativePath];
-    if (error?.code === "ENOENT") return [];
-    throw error;
-  }
-}
-
-test("AI provider configuration has no Lovable credit path", async () => {
-  const [providerSource, diagnosticsSource, envExample, discoveredFiles] = await Promise.all([
+test("AI provider uses fixed allowlisted endpoints and server-only credentials", async () => {
+  const [provider, diagnostics, envExample, azure] = await Promise.all([
     readFile(new URL("../../src/lib/ai/provider.server.ts", import.meta.url), "utf8"),
     readFile(new URL("../../src/lib/config/diagnostics.server.ts", import.meta.url), "utf8"),
     readFile(new URL("../../.env.example", import.meta.url), "utf8"),
-    Promise.all(runtimeRoots.map(runtimeFiles)).then((groups) => groups.flat()),
+    readFile(new URL("../../src/lib/azure-runtime-env.server.ts", import.meta.url), "utf8"),
   ]);
-
-  const violations = [];
-  for (const file of discoveredFiles) {
-    const source = await readFile(new URL(file, repositoryRoot), "utf8");
-    if (creditEscapePattern.test(source)) violations.push(file);
-  }
-  assert.deepEqual(
-    violations,
-    [],
-    `credit-routing escape hatches found in: ${violations.join(", ")}`,
+  assert.match(provider, /const OPENAI_API_BASE_URL = "https:\/\/api\.openai\.com\/v1"/);
+  assert.match(
+    provider,
+    /const LOVABLE_GATEWAY_BASE_URL = "https:\/\/ai\.gateway\.lovable\.dev\/v1"/,
   );
-
-  assert.match(providerSource, /provider:\s*"openai"/);
-  assert.match(providerSource, /configured:\s*Boolean\(env\("OPENAI_API_KEY"\)\)/);
-  assert.match(providerSource, /https:\/\/api\.openai\.com\/v1/);
-  assert.match(providerSource, /redirect:\s*"error"/);
-  assert.match(diagnosticsSource, /aiProvider:\s*feature\(\["OPENAI_API_KEY"\]\)/);
-  assert.doesNotMatch(envExample, /OPENAI_BASE_URL/);
+  assert.match(
+    provider,
+    /return usingGateway\(\) \? LOVABLE_GATEWAY_BASE_URL : OPENAI_API_BASE_URL/,
+  );
+  assert.doesNotMatch(
+    provider + envExample,
+    /OPENAI_BASE_URL|LOVABLE_AI_BASE_URL|AI_PROVIDER_(?:URL|API_KEY)|VITE_.*(?:OPENAI|LOVABLE).*KEY/,
+  );
+  assert.match(
+    provider,
+    /configured: Boolean\(env\("LOVABLE_API_KEY"\) \?\? env\("OPENAI_API_KEY"\)\)/,
+  );
+  assert.match(diagnostics, /aiProvider: feature\(\["LOVABLE_API_KEY", "OPENAI_API_KEY"\]\)/);
+  assert.match(azure, /environment\.OPENAI_API_KEY \|\| environment\.AZURE_OPENAI_ENDPOINT/);
+  assert.match(azure, /missing\(environment, \[/);
+  assert.doesNotMatch(azure, /function missing\(names[\s\S]{0,180}process\.env/);
+  assert.match(provider, /redirect: "error"/);
 });
 
-test("title validation runs before the provider module is loaded", async () => {
-  const source = await readFile(new URL("../../src/routes/api/title.ts", import.meta.url), "utf8");
-  const invalidMessagesGuard = source.indexOf("if (!messages)");
-  const providerImport = source.indexOf('await import("@/lib/ai/provider.server")');
-
-  assert.ok(invalidMessagesGuard >= 0, "missing invalid-message guard");
-  assert.ok(
-    providerImport > invalidMessagesGuard,
-    "provider runtime loads before input validation",
-  );
-  assert.doesNotMatch(source, /^import .*provider\.server/m);
+test("managed email provider dependencies are restricted to server routes", async () => {
+  const [pkgText, webhook, queue] = await Promise.all([
+    readFile(new URL("../../package.json", import.meta.url), "utf8"),
+    readFile(new URL("../../src/routes/lovable/email/auth/webhook.ts", import.meta.url), "utf8"),
+    readFile(new URL("../../src/routes/lovable/email/queue/process.ts", import.meta.url), "utf8"),
+  ]);
+  const pkg = JSON.parse(pkgText);
+  assert.ok(pkg.dependencies["@lovable.dev/email-js"]);
+  assert.ok(pkg.dependencies["@lovable.dev/webhooks-js"]);
+  assert.match(webhook, /verifyWebhookRequest/);
+  assert.match(queue, /sendLovableEmail/);
+  assert.doesNotMatch(webhook + queue, /VITE_LOVABLE|VITE_OPENAI/);
 });

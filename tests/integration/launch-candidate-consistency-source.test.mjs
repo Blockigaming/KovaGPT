@@ -35,6 +35,6 @@ test("toast presentation uses one mobile-safe launch candidate configuration", a
 
 test("route error references stay stable without logging private errors in render", async () => {
   const source = await read("src/routes/__root.tsx");
-  assert.match(source, /useState\(\(\) => `kova-\$\{crypto\.randomUUID\(\)\}`\)/);
+  assert.doesNotMatch(source, /randomUUID|correlationId/);
   assert.doesNotMatch(source, /console\.error\("\[KovaRouteError\]"/);
 });

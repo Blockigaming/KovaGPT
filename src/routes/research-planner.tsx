@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Download, FlaskConical, Plus, Save, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { WorkspacePageHeader } from "@/components/WorkspacePageHeader";
 import { RelatedWorkspaceItems } from "@/components/WorkspaceIntelligence";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { listProjects, createProjectChat, type ProjectSummary } from "@/lib/projects.functions";
@@ -214,16 +215,12 @@ function ResearchPlanner() {
   return (
     <AppShell>
       <main className="mx-auto w-full max-w-6xl px-4 py-7 sm:px-6">
-        <header>
-          <div className="flex items-center gap-2">
-            <FlaskConical className="h-5 w-5" />
-            <h1 className="text-2xl font-semibold">Research Planner</h1>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Design and reuse research plans before starting provider-backed Deep Research. Progress
-            appears only after a real run begins.
-          </p>
-        </header>
+        <WorkspacePageHeader
+          icon={FlaskConical}
+          title="Research Planner"
+          titleId="research-planner-title"
+          description="Design and reuse plans before starting Deep Research. Real provider-backed research runs appear only after authorization and a real run begins."
+        />
         {!isSignedIn && !loading ? (
           <div className="mt-6 rounded-2xl border p-8 text-center">
             Sign in to save and reuse research plans.

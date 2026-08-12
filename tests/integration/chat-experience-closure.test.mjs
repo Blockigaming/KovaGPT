@@ -8,12 +8,12 @@ test("guest sign-in invitation waits for three prompts in the current tab", asyn
   assert.match(source, /_retryAttempt === 0 && !isSignedIn/);
   assert.doesNotMatch(source, /userMsgCount >= 4/);
 });
-test("Apps navigation and composer plugin entry are temporarily removed", async () => {
+test("Apps navigation and composer connector entry are truthful and reachable", async () => {
   const sidebar = await read("src/components/Sidebar.tsx");
   const composer = await read("src/components/ChatInput.tsx");
   const palette = await read("src/components/CommandPalette.tsx");
-  assert.doesNotMatch(sidebar, /renderNavLink\("\/apps"/);
-  assert.doesNotMatch(composer, /window\.location\.href = "\/apps"/);
+  assert.match(sidebar, /renderNavLink\("\/apps"/);
+  assert.match(composer, /window\.location\.href = "\/apps"/);
   assert.doesNotMatch(palette, /Open Apps|href: "\/apps"/);
 });
 test("chat interaction primitives remain complete and animated", async () => {

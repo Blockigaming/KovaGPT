@@ -10,11 +10,13 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as AiHumanizerRouteImport } from './routes/ai-humanizer'
 import { Route as AiImageGeneratorRouteImport } from './routes/ai-image-generator'
 import { Route as AiSafetyRouteImport } from './routes/ai-safety'
 import { Route as AiWriterRouteImport } from './routes/ai-writer'
 import { Route as AppsRouteImport } from './routes/apps'
+import { Route as AssistantsRouteImport } from './routes/assistants'
 import { Route as AuditLogRouteImport } from './routes/audit-log'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ChangelogRouteImport } from './routes/changelog'
@@ -30,6 +32,7 @@ import { Route as HumanizeAiTextRouteImport } from './routes/humanize-ai-text'
 import { Route as ImagesRouteImport } from './routes/images'
 import { Route as KnowledgeGraphRouteImport } from './routes/knowledge-graph'
 import { Route as LibraryRouteImport } from './routes/library'
+import { Route as MapsRouteImport } from './routes/maps'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MemoryRouteImport } from './routes/memory'
 import { Route as ModesRouteImport } from './routes/modes'
@@ -52,6 +55,8 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as WorkRouteImport } from './routes/work'
 import { Route as WriteRouteImport } from './routes/write'
+import { Route as LocaleHomeRouteImport } from './routes/$locale.home'
+import { Route as SectionArticleSlugRouteImport } from './routes/$section.$articleSlug'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as ApiAccountRouteImport } from './routes/api/account'
@@ -65,10 +70,13 @@ import { Route as ApiReadyzRouteImport } from './routes/api/readyz'
 import { Route as ApiTitleRouteImport } from './routes/api/title'
 import { Route as ApiVersionRouteImport } from './routes/api/version'
 import { Route as ApiWriteRouteImport } from './routes/api/write'
+import { Route as AssistantsAssistantSlugRouteImport } from './routes/assistants.$assistantSlug'
 import { Route as BlogAiMarketResearchGuideRouteImport } from './routes/blog.ai-market-research-guide'
 import { Route as BlogBestAiAssistantsRouteImport } from './routes/blog.best-ai-assistants'
 import { Route as BlogBestAiMarketResearchToolsRouteImport } from './routes/blog.best-ai-market-research-tools'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
+import { Route as DevelopersIndexRouteImport } from './routes/developers.index'
+import { Route as DevelopersDocSlugRouteImport } from './routes/developers.$docSlug'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
 import { Route as Char126oauthCallbackRouteImport } from './routes/~oauth.callback'
@@ -112,6 +120,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SlugRoute = SlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AiHumanizerRoute = AiHumanizerRouteImport.update({
   id: '/ai-humanizer',
   path: '/ai-humanizer',
@@ -135,6 +148,11 @@ const AiWriterRoute = AiWriterRouteImport.update({
 const AppsRoute = AppsRouteImport.update({
   id: '/apps',
   path: '/apps',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AssistantsRoute = AssistantsRouteImport.update({
+  id: '/assistants',
+  path: '/assistants',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuditLogRoute = AuditLogRouteImport.update({
@@ -210,6 +228,11 @@ const KnowledgeGraphRoute = KnowledgeGraphRouteImport.update({
 const LibraryRoute = LibraryRouteImport.update({
   id: '/library',
   path: '/library',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MapsRoute = MapsRouteImport.update({
+  id: '/maps',
+  path: '/maps',
   getParentRoute: () => rootRouteImport,
 } as any)
 const McpRoute = McpRouteImport.update({
@@ -322,6 +345,16 @@ const WriteRoute = WriteRouteImport.update({
   path: '/write',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LocaleHomeRoute = LocaleHomeRouteImport.update({
+  id: '/$locale/home',
+  path: '/$locale/home',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SectionArticleSlugRoute = SectionArticleSlugRouteImport.update({
+  id: '/$section/$articleSlug',
+  path: '/$section/$articleSlug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const Char91DotmcpChar93ListToolsRoute =
   Char91DotmcpChar93ListToolsRouteImport.update({
     id: '/.mcp/list-tools',
@@ -389,6 +422,11 @@ const ApiWriteRoute = ApiWriteRouteImport.update({
   path: '/api/write',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AssistantsAssistantSlugRoute = AssistantsAssistantSlugRouteImport.update({
+  id: '/$assistantSlug',
+  path: '/$assistantSlug',
+  getParentRoute: () => AssistantsRoute,
+} as any)
 const BlogAiMarketResearchGuideRoute =
   BlogAiMarketResearchGuideRouteImport.update({
     id: '/blog/ai-market-research-guide',
@@ -409,6 +447,16 @@ const BlogBestAiMarketResearchToolsRoute =
 const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
   id: '/checkout/return',
   path: '/checkout/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevelopersIndexRoute = DevelopersIndexRouteImport.update({
+  id: '/developers/',
+  path: '/developers/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevelopersDocSlugRoute = DevelopersDocSlugRouteImport.update({
+  id: '/developers/$docSlug',
+  path: '/developers/$docSlug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
@@ -608,11 +656,13 @@ const ApiIntegrationsOauthCallbackProviderRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$slug': typeof SlugRoute
   '/ai-humanizer': typeof AiHumanizerRoute
   '/ai-image-generator': typeof AiImageGeneratorRoute
   '/ai-safety': typeof AiSafetyRoute
   '/ai-writer': typeof AiWriterRoute
   '/apps': typeof AppsRoute
+  '/assistants': typeof AssistantsRouteWithChildren
   '/audit-log': typeof AuditLogRoute
   '/auth': typeof AuthRoute
   '/changelog': typeof ChangelogRoute
@@ -628,6 +678,7 @@ export interface FileRoutesByFullPath {
   '/images': typeof ImagesRoute
   '/knowledge-graph': typeof KnowledgeGraphRoute
   '/library': typeof LibraryRoute
+  '/maps': typeof MapsRoute
   '/mcp': typeof McpRoute
   '/memory': typeof MemoryRoute
   '/modes': typeof ModesRoute
@@ -650,6 +701,8 @@ export interface FileRoutesByFullPath {
   '/unsubscribe': typeof UnsubscribeRoute
   '/work': typeof WorkRoute
   '/write': typeof WriteRoute
+  '/$locale/home': typeof LocaleHomeRoute
+  '/$section/$articleSlug': typeof SectionArticleSlugRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/api/account': typeof ApiAccountRoute
@@ -663,13 +716,16 @@ export interface FileRoutesByFullPath {
   '/api/title': typeof ApiTitleRoute
   '/api/version': typeof ApiVersionRoute
   '/api/write': typeof ApiWriteRoute
+  '/assistants/$assistantSlug': typeof AssistantsAssistantSlugRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
   '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/developers/$docSlug': typeof DevelopersDocSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
+  '/developers/': typeof DevelopersIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
@@ -707,11 +763,13 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$slug': typeof SlugRoute
   '/ai-humanizer': typeof AiHumanizerRoute
   '/ai-image-generator': typeof AiImageGeneratorRoute
   '/ai-safety': typeof AiSafetyRoute
   '/ai-writer': typeof AiWriterRoute
   '/apps': typeof AppsRoute
+  '/assistants': typeof AssistantsRouteWithChildren
   '/audit-log': typeof AuditLogRoute
   '/auth': typeof AuthRoute
   '/changelog': typeof ChangelogRoute
@@ -727,6 +785,7 @@ export interface FileRoutesByTo {
   '/images': typeof ImagesRoute
   '/knowledge-graph': typeof KnowledgeGraphRoute
   '/library': typeof LibraryRoute
+  '/maps': typeof MapsRoute
   '/mcp': typeof McpRoute
   '/memory': typeof MemoryRoute
   '/modes': typeof ModesRoute
@@ -749,6 +808,8 @@ export interface FileRoutesByTo {
   '/unsubscribe': typeof UnsubscribeRoute
   '/work': typeof WorkRoute
   '/write': typeof WriteRoute
+  '/$locale/home': typeof LocaleHomeRoute
+  '/$section/$articleSlug': typeof SectionArticleSlugRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/api/account': typeof ApiAccountRoute
@@ -762,13 +823,16 @@ export interface FileRoutesByTo {
   '/api/title': typeof ApiTitleRoute
   '/api/version': typeof ApiVersionRoute
   '/api/write': typeof ApiWriteRoute
+  '/assistants/$assistantSlug': typeof AssistantsAssistantSlugRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
   '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/developers/$docSlug': typeof DevelopersDocSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
+  '/developers': typeof DevelopersIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
@@ -807,11 +871,13 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$slug': typeof SlugRoute
   '/ai-humanizer': typeof AiHumanizerRoute
   '/ai-image-generator': typeof AiImageGeneratorRoute
   '/ai-safety': typeof AiSafetyRoute
   '/ai-writer': typeof AiWriterRoute
   '/apps': typeof AppsRoute
+  '/assistants': typeof AssistantsRouteWithChildren
   '/audit-log': typeof AuditLogRoute
   '/auth': typeof AuthRoute
   '/changelog': typeof ChangelogRoute
@@ -827,6 +893,7 @@ export interface FileRoutesById {
   '/images': typeof ImagesRoute
   '/knowledge-graph': typeof KnowledgeGraphRoute
   '/library': typeof LibraryRoute
+  '/maps': typeof MapsRoute
   '/mcp': typeof McpRoute
   '/memory': typeof MemoryRoute
   '/modes': typeof ModesRoute
@@ -849,6 +916,8 @@ export interface FileRoutesById {
   '/unsubscribe': typeof UnsubscribeRoute
   '/work': typeof WorkRoute
   '/write': typeof WriteRoute
+  '/$locale/home': typeof LocaleHomeRoute
+  '/$section/$articleSlug': typeof SectionArticleSlugRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/api/account': typeof ApiAccountRoute
@@ -862,13 +931,16 @@ export interface FileRoutesById {
   '/api/title': typeof ApiTitleRoute
   '/api/version': typeof ApiVersionRoute
   '/api/write': typeof ApiWriteRoute
+  '/assistants/$assistantSlug': typeof AssistantsAssistantSlugRoute
   '/blog/ai-market-research-guide': typeof BlogAiMarketResearchGuideRoute
   '/blog/best-ai-assistants': typeof BlogBestAiAssistantsRoute
   '/blog/best-ai-market-research-tools': typeof BlogBestAiMarketResearchToolsRoute
   '/checkout/return': typeof CheckoutReturnRoute
+  '/developers/$docSlug': typeof DevelopersDocSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
+  '/developers/': typeof DevelopersIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
@@ -908,11 +980,13 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/$slug'
     | '/ai-humanizer'
     | '/ai-image-generator'
     | '/ai-safety'
     | '/ai-writer'
     | '/apps'
+    | '/assistants'
     | '/audit-log'
     | '/auth'
     | '/changelog'
@@ -928,6 +1002,7 @@ export interface FileRouteTypes {
     | '/images'
     | '/knowledge-graph'
     | '/library'
+    | '/maps'
     | '/mcp'
     | '/memory'
     | '/modes'
@@ -950,6 +1025,8 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/work'
     | '/write'
+    | '/$locale/home'
+    | '/$section/$articleSlug'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/api/account'
@@ -963,13 +1040,16 @@ export interface FileRouteTypes {
     | '/api/title'
     | '/api/version'
     | '/api/write'
+    | '/assistants/$assistantSlug'
     | '/blog/ai-market-research-guide'
     | '/blog/best-ai-assistants'
     | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
+    | '/developers/$docSlug'
     | '/email/unsubscribe'
     | '/projects/$projectId'
     | '/~oauth/callback'
+    | '/developers/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/admin/ai-usage'
@@ -1007,11 +1087,13 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/$slug'
     | '/ai-humanizer'
     | '/ai-image-generator'
     | '/ai-safety'
     | '/ai-writer'
     | '/apps'
+    | '/assistants'
     | '/audit-log'
     | '/auth'
     | '/changelog'
@@ -1027,6 +1109,7 @@ export interface FileRouteTypes {
     | '/images'
     | '/knowledge-graph'
     | '/library'
+    | '/maps'
     | '/mcp'
     | '/memory'
     | '/modes'
@@ -1049,6 +1132,8 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/work'
     | '/write'
+    | '/$locale/home'
+    | '/$section/$articleSlug'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/api/account'
@@ -1062,13 +1147,16 @@ export interface FileRouteTypes {
     | '/api/title'
     | '/api/version'
     | '/api/write'
+    | '/assistants/$assistantSlug'
     | '/blog/ai-market-research-guide'
     | '/blog/best-ai-assistants'
     | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
+    | '/developers/$docSlug'
     | '/email/unsubscribe'
     | '/projects/$projectId'
     | '/~oauth/callback'
+    | '/developers'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/admin/ai-usage'
@@ -1106,11 +1194,13 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/$slug'
     | '/ai-humanizer'
     | '/ai-image-generator'
     | '/ai-safety'
     | '/ai-writer'
     | '/apps'
+    | '/assistants'
     | '/audit-log'
     | '/auth'
     | '/changelog'
@@ -1126,6 +1216,7 @@ export interface FileRouteTypes {
     | '/images'
     | '/knowledge-graph'
     | '/library'
+    | '/maps'
     | '/mcp'
     | '/memory'
     | '/modes'
@@ -1148,6 +1239,8 @@ export interface FileRouteTypes {
     | '/unsubscribe'
     | '/work'
     | '/write'
+    | '/$locale/home'
+    | '/$section/$articleSlug'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/api/account'
@@ -1161,13 +1254,16 @@ export interface FileRouteTypes {
     | '/api/title'
     | '/api/version'
     | '/api/write'
+    | '/assistants/$assistantSlug'
     | '/blog/ai-market-research-guide'
     | '/blog/best-ai-assistants'
     | '/blog/best-ai-market-research-tools'
     | '/checkout/return'
+    | '/developers/$docSlug'
     | '/email/unsubscribe'
     | '/projects/$projectId'
     | '/~oauth/callback'
+    | '/developers/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/admin/ai-usage'
@@ -1206,11 +1302,13 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SlugRoute: typeof SlugRoute
   AiHumanizerRoute: typeof AiHumanizerRoute
   AiImageGeneratorRoute: typeof AiImageGeneratorRoute
   AiSafetyRoute: typeof AiSafetyRoute
   AiWriterRoute: typeof AiWriterRoute
   AppsRoute: typeof AppsRoute
+  AssistantsRoute: typeof AssistantsRouteWithChildren
   AuditLogRoute: typeof AuditLogRoute
   AuthRoute: typeof AuthRoute
   ChangelogRoute: typeof ChangelogRoute
@@ -1226,6 +1324,7 @@ export interface RootRouteChildren {
   ImagesRoute: typeof ImagesRoute
   KnowledgeGraphRoute: typeof KnowledgeGraphRoute
   LibraryRoute: typeof LibraryRoute
+  MapsRoute: typeof MapsRoute
   McpRoute: typeof McpRoute
   MemoryRoute: typeof MemoryRoute
   ModesRoute: typeof ModesRoute
@@ -1248,6 +1347,8 @@ export interface RootRouteChildren {
   UnsubscribeRoute: typeof UnsubscribeRoute
   WorkRoute: typeof WorkRoute
   WriteRoute: typeof WriteRoute
+  LocaleHomeRoute: typeof LocaleHomeRoute
+  SectionArticleSlugRoute: typeof SectionArticleSlugRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   ApiAccountRoute: typeof ApiAccountRoute
@@ -1265,8 +1366,10 @@ export interface RootRouteChildren {
   BlogBestAiAssistantsRoute: typeof BlogBestAiAssistantsRoute
   BlogBestAiMarketResearchToolsRoute: typeof BlogBestAiMarketResearchToolsRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
+  DevelopersDocSlugRoute: typeof DevelopersDocSlugRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   Char126oauthCallbackRoute: typeof Char126oauthCallbackRoute
+  DevelopersIndexRoute: typeof DevelopersIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiAdminAiUsageRoute: typeof ApiAdminAiUsageRoute
@@ -1310,6 +1413,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$slug': {
+      id: '/$slug'
+      path: '/$slug'
+      fullPath: '/$slug'
+      preLoaderRoute: typeof SlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ai-humanizer': {
       id: '/ai-humanizer'
       path: '/ai-humanizer'
@@ -1343,6 +1453,13 @@ declare module '@tanstack/react-router' {
       path: '/apps'
       fullPath: '/apps'
       preLoaderRoute: typeof AppsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/assistants': {
+      id: '/assistants'
+      path: '/assistants'
+      fullPath: '/assistants'
+      preLoaderRoute: typeof AssistantsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/audit-log': {
@@ -1448,6 +1565,13 @@ declare module '@tanstack/react-router' {
       path: '/library'
       fullPath: '/library'
       preLoaderRoute: typeof LibraryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/maps': {
+      id: '/maps'
+      path: '/maps'
+      fullPath: '/maps'
+      preLoaderRoute: typeof MapsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mcp': {
@@ -1604,6 +1728,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WriteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$locale/home': {
+      id: '/$locale/home'
+      path: '/$locale/home'
+      fullPath: '/$locale/home'
+      preLoaderRoute: typeof LocaleHomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$section/$articleSlug': {
+      id: '/$section/$articleSlug'
+      path: '/$section/$articleSlug'
+      fullPath: '/$section/$articleSlug'
+      preLoaderRoute: typeof SectionArticleSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/.mcp/list-tools': {
       id: '/.mcp/list-tools'
       path: '/.mcp/list-tools'
@@ -1695,6 +1833,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiWriteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/assistants/$assistantSlug': {
+      id: '/assistants/$assistantSlug'
+      path: '/$assistantSlug'
+      fullPath: '/assistants/$assistantSlug'
+      preLoaderRoute: typeof AssistantsAssistantSlugRouteImport
+      parentRoute: typeof AssistantsRoute
+    }
     '/blog/ai-market-research-guide': {
       id: '/blog/ai-market-research-guide'
       path: '/blog/ai-market-research-guide'
@@ -1721,6 +1866,20 @@ declare module '@tanstack/react-router' {
       path: '/checkout/return'
       fullPath: '/checkout/return'
       preLoaderRoute: typeof CheckoutReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/developers/': {
+      id: '/developers/'
+      path: '/developers'
+      fullPath: '/developers/'
+      preLoaderRoute: typeof DevelopersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/developers/$docSlug': {
+      id: '/developers/$docSlug'
+      path: '/developers/$docSlug'
+      fullPath: '/developers/$docSlug'
+      preLoaderRoute: typeof DevelopersDocSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/email/unsubscribe': {
@@ -1985,6 +2144,18 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AssistantsRouteChildren {
+  AssistantsAssistantSlugRoute: typeof AssistantsAssistantSlugRoute
+}
+
+const AssistantsRouteChildren: AssistantsRouteChildren = {
+  AssistantsAssistantSlugRoute: AssistantsAssistantSlugRoute,
+}
+
+const AssistantsRouteWithChildren = AssistantsRoute._addFileChildren(
+  AssistantsRouteChildren,
+)
+
 interface ProjectsProjectIdRouteChildren {
   ProjectsProjectIdChatChatIdRoute: typeof ProjectsProjectIdChatChatIdRoute
 }
@@ -2021,11 +2192,13 @@ const ApiChatRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SlugRoute: SlugRoute,
   AiHumanizerRoute: AiHumanizerRoute,
   AiImageGeneratorRoute: AiImageGeneratorRoute,
   AiSafetyRoute: AiSafetyRoute,
   AiWriterRoute: AiWriterRoute,
   AppsRoute: AppsRoute,
+  AssistantsRoute: AssistantsRouteWithChildren,
   AuditLogRoute: AuditLogRoute,
   AuthRoute: AuthRoute,
   ChangelogRoute: ChangelogRoute,
@@ -2041,6 +2214,7 @@ const rootRouteChildren: RootRouteChildren = {
   ImagesRoute: ImagesRoute,
   KnowledgeGraphRoute: KnowledgeGraphRoute,
   LibraryRoute: LibraryRoute,
+  MapsRoute: MapsRoute,
   McpRoute: McpRoute,
   MemoryRoute: MemoryRoute,
   ModesRoute: ModesRoute,
@@ -2063,6 +2237,8 @@ const rootRouteChildren: RootRouteChildren = {
   UnsubscribeRoute: UnsubscribeRoute,
   WorkRoute: WorkRoute,
   WriteRoute: WriteRoute,
+  LocaleHomeRoute: LocaleHomeRoute,
+  SectionArticleSlugRoute: SectionArticleSlugRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
@@ -2081,8 +2257,10 @@ const rootRouteChildren: RootRouteChildren = {
   BlogBestAiAssistantsRoute: BlogBestAiAssistantsRoute,
   BlogBestAiMarketResearchToolsRoute: BlogBestAiMarketResearchToolsRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
+  DevelopersDocSlugRoute: DevelopersDocSlugRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   Char126oauthCallbackRoute: Char126oauthCallbackRoute,
+  DevelopersIndexRoute: DevelopersIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiAdminAiUsageRoute: ApiAdminAiUsageRoute,

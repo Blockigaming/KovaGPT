@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   Search,
   SquarePen,
@@ -17,6 +17,7 @@ import {
   Zap,
 } from "lucide-react";
 import type { Conversation } from "@/lib/chat-store";
+import type { RecentItem } from "@/lib/workspace.functions";
 import type { LucideIcon } from "lucide-react";
 import { CAPABILITIES } from "@/platform/capabilities";
 import { extensionRegistry } from "@/platform/extensions";
@@ -146,9 +147,12 @@ export function CommandPalette({
   query,
   onQueryChange,
   conversations,
+  archivedConversations,
+  workspaceItems,
   onClose,
   onNewChat,
   onSelectChat,
+  onSelectArchived,
   onOpenSettings,
   returnFocusTarget,
 }: {
@@ -156,9 +160,12 @@ export function CommandPalette({
   query: string;
   onQueryChange: (value: string) => void;
   conversations: Conversation[];
+  archivedConversations: Conversation[];
+  workspaceItems: RecentItem[];
   onClose: () => void;
   onNewChat: () => void;
   onSelectChat: (id: string) => void;
+  onSelectArchived: (conversation: Conversation) => void;
   onOpenSettings: () => void;
   returnFocusTarget?: HTMLElement | null;
 }) {
@@ -171,9 +178,10 @@ export function CommandPalette({
   const pinsStorageKey = isLoaded
     ? principalScopedStorageKey("kova-command-pins-v1", userKey)
     : null;
-  const normalized = query.trim().toLowerCase();
+  const deferredQuery = useDeferredValue(query);
+  const normalized = deferredQuery.trim().toLowerCase();
   const conversationMatches = normalized
-    ? searchConversations(conversations, query).slice(0, 8)
+    ? searchConversations([...conversations, ...archivedConversations], deferredQuery).slice(0, 8)
     : conversations.slice(0, 6).map((conversation) => ({
         conversation,
         snippet: `${conversation.messages.length} messages`,
@@ -191,8 +199,14 @@ export function CommandPalette({
     principal !== null &&
     commandState.principal === principal &&
     commandState.generation === storageGenerationRef.current;
-  const recentCommands = commandReady ? commandState.recent : [];
-  const pinnedCommands = commandReady ? commandState.pinned : [];
+  const recentCommands = useMemo(
+    () => (commandReady ? commandState.recent : []),
+    [commandReady, commandState.recent],
+  );
+  const pinnedCommands = useMemo(
+    () => (commandReady ? commandState.pinned : []),
+    [commandReady, commandState.pinned],
+  );
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
@@ -389,7 +403,9 @@ export function CommandPalette({
     if (!action) {
       const match = conversationMatches[activeIndex - actionItems.length];
       if (match) {
-        onSelectChat(match.conversation.id);
+        if (archivedConversations.some((item) => item.id === match.conversation.id))
+          onSelectArchived(match.conversation);
+        else onSelectChat(match.conversation.id);
         closePalette();
       }
     }
@@ -598,6 +614,29 @@ export function CommandPalette({
             );
           })}
 
+          <div className="px-3 pb-1 pt-4 text-xs font-medium text-muted-foreground">Workspace</div>
+          {workspaceItems
+            .filter((item) =>
+              normalized
+                ? `${item.title} ${item.subtitle}`.toLowerCase().includes(normalized)
+                : true,
+            )
+            .slice(0, 20)
+            .map((item) => (
+              <Link
+                key={`${item.type}:${item.id}`}
+                to={item.href as never}
+                role="option"
+                aria-selected={false}
+                onClick={closePalette}
+                className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm hover:bg-accent"
+              >
+                <Boxes className="h-4 w-4 text-muted-foreground" />
+                <span className="min-w-0 flex-1 truncate">{item.title}</span>
+                <span className="text-xs text-muted-foreground">{item.type}</span>
+              </Link>
+            ))}
+
           <div className="px-3 pb-1 pt-4 text-xs font-medium text-muted-foreground">Chats</div>
           {normalized ? null : (
             <p className="px-3 pb-2 text-[11px] text-muted-foreground">
@@ -614,7 +653,9 @@ export function CommandPalette({
                 key={chat.id}
                 type="button"
                 onClick={() => {
-                  onSelectChat(chat.id);
+                  if (archivedConversations.some((item) => item.id === chat.id))
+                    onSelectArchived(chat);
+                  else onSelectChat(chat.id);
                   closePalette();
                 }}
                 id={`command-option-${actionItems.length + chatIndex}`}
