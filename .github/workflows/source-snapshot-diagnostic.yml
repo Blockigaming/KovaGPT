@@ -13,17 +13,36 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Checkout
+      - name: Checkout current PR
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Archive tracked source only
+      - name: Archive current tracked source
         shell: bash
         run: git ls-files -z | tar --null --files-from=- -czf kova-source-snapshot.tgz
 
-      - name: Upload tracked source snapshot
+      - name: Upload current tracked source snapshot
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: kova-source-snapshot-${{ github.event.pull_request.head.sha }}
           path: kova-source-snapshot.tgz
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Checkout reviewed UI baseline
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: 455a53c08725d02d38320d06d88bb207f9b5d4e5
+          path: reviewed-ui-baseline
+
+      - name: Archive reviewed UI baseline
+        shell: bash
+        working-directory: reviewed-ui-baseline
+        run: git ls-files -z | tar --null --files-from=- -czf ../reviewed-ui-baseline.tgz
+
+      - name: Upload reviewed UI baseline
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: reviewed-ui-baseline-455a53c
+          path: reviewed-ui-baseline.tgz
           if-no-files-found: error
           retention-days: 1
