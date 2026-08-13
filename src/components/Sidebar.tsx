@@ -164,7 +164,13 @@ export function Sidebar({
         : "text-sidebar-foreground hover:bg-sidebar-hover"
     }`;
 
-  const renderNavLink = (to: string, title: string, Icon: LucideIcon, active = isOn(to)) => (
+  const renderNavLink = (
+    to: string,
+    title: string,
+    Icon: LucideIcon,
+    active = isOn(to),
+    badge?: string,
+  ) => (
     <Link
       to={to as never}
       className={navItemClass(active)}
@@ -175,8 +181,14 @@ export function Sidebar({
     >
       <Icon className="h-[18px] w-[18px] shrink-0" />
       <span className={labelClass}>{title}</span>
+      {badge && !collapsed ? (
+        <span className="ml-auto rounded-full bg-sidebar-hover px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          {badge}
+        </span>
+      ) : null}
     </Link>
   );
+
 
   const q = searchQuery.trim().toLowerCase();
   const filtered = q
