@@ -469,13 +469,14 @@ export function Sidebar({
                 onNew();
                 closeAfterMobileNavigation();
               }}
-              className={navItemClass(false)}
+              className={navItemClass(isOn("/"))}
               aria-label="New chat"
               title="New chat"
             >
               <SquarePen className="h-[18px] w-[18px] shrink-0" />
               <span className={labelClass}>New chat</span>
             </button>
+
             {showSignedIn ? (
               <button
                 type="button"
