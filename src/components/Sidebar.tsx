@@ -620,6 +620,9 @@ export function Sidebar({
                   >
                     <Sparkles className="h-[18px] w-[18px] shrink-0" />
                     <span className={labelClass}>See plans and pricing</span>
+                    {!collapsed ? (
+                      <ArrowUpRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
+                    ) : null}
                   </Link>
                   <button
                     onClick={() => {
@@ -644,7 +647,11 @@ export function Sidebar({
                   >
                     <LifeBuoy className="h-[18px] w-[18px] shrink-0" />
                     <span className={labelClass}>Help</span>
+                    {!collapsed ? (
+                      <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
+                    ) : null}
                   </button>
+
                 </div>
                 {!collapsed ? (
                   <div className="border-t border-border/60 px-4 pb-4 pt-4">
