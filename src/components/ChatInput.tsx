@@ -15,7 +15,9 @@ import {
   Brain,
   AlertCircle,
   RotateCcw,
+  AudioLines,
   Mic,
+
   type LucideIcon,
 } from "lucide-react";
 
