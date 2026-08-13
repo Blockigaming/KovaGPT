@@ -1,0 +1,125 @@
+name: Build Azure staging image
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Reviewed full commit SHA to build from main
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: azure-staging-image
+  cancel-in-progress: false
+
+env:
+  AI_GENERATION_ENABLED: "false"
+  ACR_NAME: kovagptacr
+  ACR_LOGIN_SERVER: kovagptacr-dte9hugbhjghcyb8.azurecr.io
+  IMAGE_REPOSITORY: kovagpt-web
+  EXPECTED_SUPABASE_PROJECT_REF: oztdrjtdglkizlewnulh
+  VITE_SUPABASE_URL: https://oztdrjtdglkizlewnulh.supabase.co
+
+jobs:
+  build-and-push:
+    name: Validate, build, and push (no deployment)
+    environment: staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+    steps:
+      - name: Validate requested source
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::source_sha must be a full commit SHA."; exit 1; }
+
+      - name: Check out the immutable source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require source to be on main
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ inputs.source_sha }}"
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor HEAD origin/main || {
+            echo "::error::The selected source is not contained in authoritative main."
+            exit 1
+          }
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Validate required browser build input
+        run: node scripts/validate-public-build-env.mjs
+
+      - name: Build and inspect browser bundle
+        run: |
+          set -euo pipefail
+          KOVA_BROWSER_PREVIEW=node npm run build
+          npm run staging:verify-browser
+
+      - name: Run staging image checks
+        run: |
+          npm run typecheck
+          npm run lint
+          npm run test:unit
+          npm run test:integration
+          npm run azure:validate
+          git diff --check
+
+      - name: Sign in to Azure with OIDC
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.CAKOVAGPTSTAGING_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.CAKOVAGPTSTAGING_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.CAKOVAGPTSTAGING_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Sign in to Azure Container Registry
+        run: az acr login --name "$ACR_NAME"
+
+      - name: Build immutable staging candidate
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+          IMAGE_TAG="staging-$(git rev-parse HEAD)-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          IMAGE_REF="${ACR_LOGIN_SERVER}/${IMAGE_REPOSITORY}:${IMAGE_TAG}"
+          docker build --platform linux/amd64 --file Dockerfile --tag "$IMAGE_REF" \
+            --build-arg "VITE_SUPABASE_URL=$VITE_SUPABASE_URL" \
+            --build-arg "VITE_SUPABASE_PUBLISHABLE_KEY=$VITE_SUPABASE_PUBLISHABLE_KEY" \
+            --build-arg "EXPECTED_SUPABASE_PROJECT_REF=$EXPECTED_SUPABASE_PROJECT_REF" .
+          docker push "$IMAGE_REF"
+          DIGEST="$(az acr repository show --name "$ACR_NAME" --image "${IMAGE_REPOSITORY}:${IMAGE_TAG}" --query digest --output tsv)"
+          test -n "$DIGEST"
+          echo "ref=${ACR_LOGIN_SERVER}/${IMAGE_REPOSITORY}@${DIGEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Record candidate provenance
+        env:
+          DIGEST_REF: ${{ steps.image.outputs.ref }}
+        run: |
+          {
+            echo "## Azure staging image candidate (not deployed)"
+            echo "- Source SHA: \`$(git rev-parse HEAD)\`"
+            echo "- Immutable image: \`$DIGEST_REF\`"
+            echo "- Browser Supabase ref: \`$EXPECTED_SUPABASE_PROJECT_REF\`"
+            echo "- AI generation: disabled"
+          } >> "$GITHUB_STEP_SUMMARY"
