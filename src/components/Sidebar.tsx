@@ -405,15 +405,17 @@ export function Sidebar({
             </div>
 
             {showSignedOut ? (
-              <Link
-                to="/library"
+              <button
+                type="button"
+                onClick={() => setSearchOpen((v) => !v)}
                 className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:flex"
-                aria-label="Library"
-                title="Library"
+                aria-label="Search chats"
+                title="Search chats"
               >
-                <FolderOpen className="h-[18px] w-[18px]" />
-              </Link>
+                <Search className="h-[18px] w-[18px]" />
+              </button>
             ) : null}
+
 
             <button
               onClick={onToggle}
