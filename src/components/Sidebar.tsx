@@ -1,5 +1,8 @@
 import {
   Archive,
+  ArrowUpRight,
+  ChevronRight,
+
   Calendar,
   Copy as CopyIcon,
   CreditCard,
@@ -164,7 +167,13 @@ export function Sidebar({
         : "text-sidebar-foreground hover:bg-sidebar-hover"
     }`;
 
-  const renderNavLink = (to: string, title: string, Icon: LucideIcon, active = isOn(to)) => (
+  const renderNavLink = (
+    to: string,
+    title: string,
+    Icon: LucideIcon,
+    active = isOn(to),
+    badge?: string,
+  ) => (
     <Link
       to={to as never}
       className={navItemClass(active)}
@@ -175,8 +184,14 @@ export function Sidebar({
     >
       <Icon className="h-[18px] w-[18px] shrink-0" />
       <span className={labelClass}>{title}</span>
+      {badge && !collapsed ? (
+        <span className="ml-auto rounded-full bg-sidebar-hover px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          {badge}
+        </span>
+      ) : null}
     </Link>
   );
+
 
   const q = searchQuery.trim().toLowerCase();
   const filtered = q
@@ -393,15 +408,17 @@ export function Sidebar({
             </div>
 
             {showSignedOut ? (
-              <Link
-                to="/library"
+              <button
+                type="button"
+                onClick={() => setSearchOpen((v) => !v)}
                 className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-md transition hover:bg-sidebar-hover active:scale-95 focus-visible:ring-2 focus-visible:ring-ring lg:flex"
-                aria-label="Library"
-                title="Library"
+                aria-label="Search chats"
+                title="Search chats"
               >
-                <FolderOpen className="h-[18px] w-[18px]" />
-              </Link>
+                <Search className="h-[18px] w-[18px]" />
+              </button>
             ) : null}
+
 
             <button
               onClick={onToggle}
@@ -455,13 +472,14 @@ export function Sidebar({
                 onNew();
                 closeAfterMobileNavigation();
               }}
-              className={navItemClass(false)}
+              className={navItemClass(isOn("/"))}
               aria-label="New chat"
               title="New chat"
             >
               <SquarePen className="h-[18px] w-[18px] shrink-0" />
               <span className={labelClass}>New chat</span>
             </button>
+
             {showSignedIn ? (
               <button
                 type="button"
@@ -477,9 +495,10 @@ export function Sidebar({
             {showSignedIn ? renderNavLink("/projects", "Projects", FolderKanban) : null}
             {showSignedIn ? renderNavLink("/library", "Library", FolderOpen) : null}
             {renderNavLink("/images", "Images", ImageIcon)}
-            {renderNavLink("/apps", "Apps", Blocks)}
+            {renderNavLink("/apps", "Plugins", Blocks)}
             {renderNavLink("/research-planner", "Deep research", Telescope)}
-            {renderNavLink("/maps", "Maps — preview", Map)}
+            {renderNavLink("/maps", "Maps", Map, isOn("/maps"), "New")}
+
             {showSignedIn && (tier === "plus" || tier === "pro")
               ? renderNavLink(
                   "/scheduled-tasks",
@@ -601,6 +620,9 @@ export function Sidebar({
                   >
                     <Sparkles className="h-[18px] w-[18px] shrink-0" />
                     <span className={labelClass}>See plans and pricing</span>
+                    {!collapsed ? (
+                      <ArrowUpRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
+                    ) : null}
                   </Link>
                   <button
                     onClick={() => {
@@ -625,7 +647,11 @@ export function Sidebar({
                   >
                     <LifeBuoy className="h-[18px] w-[18px] shrink-0" />
                     <span className={labelClass}>Help</span>
+                    {!collapsed ? (
+                      <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
+                    ) : null}
                   </button>
+
                 </div>
                 {!collapsed ? (
                   <div className="border-t border-border/60 px-4 pb-4 pt-4">

@@ -595,7 +595,7 @@ function KovaGPT() {
     [],
   );
 
-  const greeting = "What can I help with?";
+  const greeting = "What's on your mind today?";
 
   const updateNearBottom = useCallback(() => {
     const el = scrollRef.current;

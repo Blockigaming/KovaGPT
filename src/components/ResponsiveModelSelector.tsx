@@ -116,7 +116,18 @@ export function ResponsiveModelSelector({
     </div>
   ));
 
-  if (locked) return null;
+  // Guests see the brand label in the same position, but no switchable menu.
+  if (locked)
+    return (
+      <span
+        className={triggerClass + " pointer-events-none select-none text-muted-foreground"}
+        aria-hidden="true"
+      >
+        <span className="leading-none">KovaGPT</span>
+        <ChevronDown className="h-4 w-4" />
+      </span>
+    );
+
 
 
   return (

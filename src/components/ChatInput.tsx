@@ -15,7 +15,9 @@ import {
   Brain,
   AlertCircle,
   RotateCcw,
+  AudioLines,
   Mic,
+
   type LucideIcon,
 } from "lucide-react";
 
@@ -1015,21 +1017,21 @@ export function ChatInput({
               ) : (
                 <button
                   type="button"
-                  disabled
-                  className="kova-composer-button kova-send-button flex items-center justify-center rounded-full"
-                  aria-label="Send"
-                  title={disabled ? "Messaging is unavailable" : "Type a message to send"}
+                  onClick={toggleDictation}
+                  disabled={disabled}
+                  className="ml-1 flex h-9 items-center gap-1.5 rounded-full bg-foreground px-3.5 text-[13px] font-medium text-background transition hover:opacity-90 active:scale-95 disabled:opacity-50"
+                  aria-label="Start voice mode"
+                  title="Voice"
                 >
-                  <ArrowUp className="kova-send-icon" strokeWidth={2.5} />
+                  <AudioLines className="h-[18px] w-[18px]" strokeWidth={2} />
+                  <span>Voice</span>
                 </button>
               )}
             </div>
           </div>
         </div>
       </div>
-      <p className="mt-2 text-center text-[11px] text-muted-foreground">
-        KovaGPT can make mistakes. Check important information.
-      </p>
+
     </div>
   );
 }
