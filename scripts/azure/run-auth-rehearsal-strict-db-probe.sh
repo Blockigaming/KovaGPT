@@ -424,8 +424,27 @@ NODE
 [ -n "$PROBE_GZIP_B64" ] || fail "probe payload generation failed"
 [ "${#PROBE_GZIP_B64}" -lt 7000 ] || fail "probe payload exceeds guarded size limit"
 
-PROBE_STDIN_COMMAND="node -e \"eval(require('node:zlib').gunzipSync(Buffer.from('${PROBE_GZIP_B64}','base64')).toString('utf8'))\""
-[ "${#PROBE_STDIN_COMMAND}" -lt 7500 ] || fail "probe stdin command exceeds guarded size limit"
+PROBE_STDIN_CHUNK_SIZE=256
+
+PROBE_STDIN_COMMAND=$'stty -echo\nnode - <<\'NODE\'\nconst zlib = require("node:zlib");\nconst b64 = [\n'
+
+for ((offset = 0; offset < ${#PROBE_GZIP_B64}; offset += PROBE_STDIN_CHUNK_SIZE)); do
+  chunk="${PROBE_GZIP_B64:offset:PROBE_STDIN_CHUNK_SIZE}"
+  PROBE_STDIN_COMMAND+="  \"$chunk\","$'\n'
+done
+
+PROBE_STDIN_COMMAND+=$'].join("");\neval(zlib.gunzipSync(Buffer.from(b64, "base64")).toString("utf8"));\nNODE\nexit\n'
+
+MAX_PROBE_STDIN_LINE="$(
+  printf '%s\n' "$PROBE_STDIN_COMMAND" |
+    awk '{ if (length($0) > max) max = length($0) } END { print max + 0 }'
+)"
+
+[ "$MAX_PROBE_STDIN_LINE" -le 512 ] \
+  || fail "PTY probe transport contains an oversized input line"
+
+echo "PROBE_STDIN_CHUNK_SIZE=$PROBE_STDIN_CHUNK_SIZE"
+echo "PROBE_STDIN_MAX_LINE=$MAX_PROBE_STDIN_LINE"
 
 printf -v AZ_EXEC_COMMAND '%q ' \
   az containerapp exec \

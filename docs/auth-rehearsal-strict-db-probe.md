@@ -84,7 +84,7 @@ The wrapper also repeats the immutable-image, latest-ready revision, CA environm
 
 Azure Container Apps console access is interactive. The Azure CLI places the `--command` value on the WebSocket connection request, and testing against the exact rehearsal replica showed that short commands succeed while larger command payloads can fail during the WebSocket handshake. Directly piping stdin into `az containerapp exec` also fails because the CLI expects a TTY.
 
-To avoid both failure modes, the wrapper keeps the remote startup command tiny (`sh`), launches the Azure CLI through the local `script` utility to provide a pseudo-terminal, disables remote terminal echo, and sends the gzip/base64 probe command through the established PTY. The compressed probe is therefore not embedded in the `--command` URL. This transport still performs exactly one `az containerapp exec`, still targets the exact reviewed revision/replica/container, and does not alter the probe source or its strict TLS behavior.
+To avoid both failure modes, the wrapper keeps the remote startup command tiny (`sh`), launches the Azure CLI through the local `script` utility to provide a pseudo-terminal, and disables remote terminal echo. The compressed base64 probe is then framed as short 256-character lines inside a Node here-document before reconstruction and execution. This avoids both the Azure WebSocket command-URL limit and the PTY canonical-line truncation that occurs with one oversized input line. The compressed probe is therefore not embedded in the `--command` URL. This transport still performs exactly one `az containerapp exec`, still targets the exact reviewed revision/replica/container, and does not alter the probe source or its strict TLS behavior.
 
 ## What runs inside the container
 
@@ -148,6 +148,7 @@ The focused tests cover:
 - rejection of invalid revision/CA-state combinations before Azure access;
 - one-and-only-one `az containerapp exec` call;
 - PTY-backed stdin transport with a short `--command sh` startup command;
+- bounded 256-character PTY payload framing so no probe input line exceeds the terminal-safe limit;
 - absence of the compressed probe payload from the Azure `--command` argument;
 - probe-source SHA pinning;
 - secret-reference, CA-state, TLS-override, and model-provider gates;
