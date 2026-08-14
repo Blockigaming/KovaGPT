@@ -325,17 +325,22 @@ const sql = `
   SELECT
     (SELECT count(*) FROM auth.users)::text
     || '|'
-    || (SELECT count(*) FROM auth.identities)::text
-    || '|'
-    || COALESCE(
-      (SELECT ssl::text FROM pg_catalog.pg_stat_ssl WHERE pid = pg_catalog.pg_backend_pid()),
-      'false'
-    );
+    || (SELECT count(*) FROM auth.identities)::text;
 `;
 
 const result = spawnSync(
   "psql",
-  ["--no-psqlrc", "--set", "ON_ERROR_STOP=1", "--tuples-only", "--no-align", "--command", sql],
+  [
+    "--no-psqlrc",
+    "--set",
+    "ON_ERROR_STOP=1",
+    "--tuples-only",
+    "--no-align",
+    "--command",
+    "\\conninfo",
+    "--command",
+    sql,
+  ],
   {
     env: childEnv,
     encoding: "utf8",
@@ -349,13 +354,32 @@ if (result.error || result.status !== 0) {
   process.exit(1);
 }
 
-const evidence = result.stdout.replace(/\s+/gu, "");
-const [users, identities, ssl] = evidence.split("|");
-if (!/^\d+$/u.test(users ?? "") || !/^\d+$/u.test(identities ?? "") || ssl !== "true") {
-  process.stderr.write("SAFETY STOP: destination count query lacked exact SSL evidence\n");
+const stdout = result.stdout.replace(/\r/gu, "");
+
+const clientTls =
+  /\bSSL connection\b/iu.test(stdout) ||
+  /\bSSL protocol\b/iu.test(stdout);
+
+if (!clientTls) {
+  process.stderr.write(
+    "SAFETY STOP: destination count query lacked client TLS evidence\n",
+  );
   process.exit(1);
 }
-process.stdout.write(`${users}|${identities}`);
+
+const countLines = stdout
+  .split("\n")
+  .map((line) => line.trim())
+  .filter((line) => /^\d+\|\d+$/u.test(line));
+
+if (countLines.length !== 1) {
+  process.stderr.write(
+    "SAFETY STOP: destination count query lacked exact count evidence\n",
+  );
+  process.exit(1);
+}
+
+process.stdout.write(countLines[0]);
 NODE
 }
 

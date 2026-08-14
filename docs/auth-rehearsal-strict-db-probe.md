@@ -78,7 +78,7 @@ The wrapper hashes the local in-container probe before use and requires this rev
 b6279417f589848069354af93b49866ab297a89fba8c9410dfb21590499a36ba
 ```
 
-The wrapper also repeats the immutable-image, latest-ready revision, CA environment state, ingress, and `0|0` checks after the probe. Its count checks keep the database URL out of the `psql` command line, pass credentials only through a minimal child-process environment, force encrypted PostgreSQL transport with `PGSSLMODE=require`, suppress raw client errors, and require `pg_stat_ssl` to prove that the count-query connection is encrypted. The actual in-container diagnostic remains stricter: it verifies both the certificate chain and hostname.
+The wrapper also repeats the immutable-image, latest-ready revision, CA environment state, ingress, and `0|0` checks after the probe. Its count checks keep the database URL out of the `psql` command line, pass credentials only through a minimal child-process environment, force encrypted PostgreSQL transport with `PGSSLMODE=require`, suppress raw client errors, and run `\\conninfo` plus the count query in the same `psql` process and require client-side SSL evidence from `psql` without printing connection metadata. The actual in-container diagnostic remains stricter: it verifies both the certificate chain and hostname.
 
 ## What runs inside the container
 

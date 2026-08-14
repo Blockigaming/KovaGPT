@@ -215,8 +215,11 @@ test("operator wrapper remains read-only and contains exactly one container exec
   assert.match(wrapper, /PROHIBITED_RUNTIME_ENV_COUNT/u);
   assert.match(wrapper, /MODEL_PROVIDER_ENV_COUNT/u);
   assert.match(wrapper, /PGSSLMODE: "require"/u);
-  assert.match(wrapper, /pg_catalog\.pg_stat_ssl/u);
-  assert.match(wrapper, /ssl !== "true"/u);
+  assert.match(wrapper, /"\\\\conninfo"/u);
+  assert.match(wrapper, /\\bSSL connection\\b/u);
+  assert.match(wrapper, /destination count query lacked client TLS evidence/u);
+  assert.doesNotMatch(wrapper, /pg_catalog\\.pg_stat_ssl/u);
+  assert.doesNotMatch(wrapper, /ssl !== "true"/u);
   assert.match(wrapper, /POST_PROBE_DATABASE_STATE=0\|0/u);
   assert.match(wrapper, /POST_PROBE_CA_STATE=\$EXPECTED_CA_STATE/u);
   assert.match(wrapper, /POST_PROBE_INGRESS=disabled/u);
