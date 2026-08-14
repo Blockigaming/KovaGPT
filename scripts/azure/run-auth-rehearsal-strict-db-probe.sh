@@ -44,7 +44,7 @@ case "$EXPECTED_CA_STATE" in
     ;;
 esac
 
-for command in az jq node psql sha256sum openssl mktemp; do
+for command in az jq node psql sha256sum openssl mktemp script; do
   command -v "$command" >/dev/null 2>&1 || fail "required command is unavailable: $command"
 done
 
@@ -232,7 +232,7 @@ DB_URL="$(
 CA_PEM=""
 CA_FILE=""
 cleanup() {
-  unset DB_URL CA_PEM PROBE_GZIP_B64 REMOTE_COMMAND
+  unset DB_URL CA_PEM PROBE_GZIP_B64 PROBE_STDIN_COMMAND AZ_EXEC_COMMAND
   if [ -n "$CA_FILE" ]; then
     rm -f "$CA_FILE"
   fi
@@ -422,9 +422,19 @@ process.stdout.write(zlib.gzipSync(source + invocation, { level: 9 }).toString("
 NODE
 )"
 [ -n "$PROBE_GZIP_B64" ] || fail "probe payload generation failed"
-[ "${#PROBE_GZIP_B64}" -lt 7000 ] || fail "probe command exceeds guarded size limit"
+[ "${#PROBE_GZIP_B64}" -lt 7000 ] || fail "probe payload exceeds guarded size limit"
 
-REMOTE_COMMAND="node -e \"eval(require('node:zlib').gunzipSync(Buffer.from('${PROBE_GZIP_B64}','base64')).toString('utf8'))\""
+PROBE_STDIN_COMMAND="node -e \"eval(require('node:zlib').gunzipSync(Buffer.from('${PROBE_GZIP_B64}','base64')).toString('utf8'))\""
+[ "${#PROBE_STDIN_COMMAND}" -lt 7500 ] || fail "probe stdin command exceeds guarded size limit"
+
+printf -v AZ_EXEC_COMMAND '%q ' \
+  az containerapp exec \
+  --name "$APP" \
+  --resource-group "$RESOURCE_GROUP" \
+  --revision "$EXPECTED_REVISION" \
+  --replica "$REPLICA" \
+  --container "$CONTAINER" \
+  --command sh
 
 printf '%s\n' \
   "FINAL_PRECHECK=PASS" \
@@ -433,17 +443,17 @@ printf '%s\n' \
   "CA_STATE=$EXPECTED_CA_STATE" \
   "INGRESS=disabled" \
   "REVISION=$EXPECTED_REVISION" \
+  "PROBE_TRANSPORT=pty_stdin" \
   "STARTING_ONE_READ_ONLY_IN_CONTAINER_PROBE"
 
 set +e
-az containerapp exec \
-  --name "$APP" \
-  --resource-group "$RESOURCE_GROUP" \
-  --revision "$EXPECTED_REVISION" \
-  --replica "$REPLICA" \
-  --container "$CONTAINER" \
-  --command "$REMOTE_COMMAND"
-AZ_EXEC_STATUS=$?
+{
+  printf '%s\n' 'stty -echo'
+  printf '%s\n' "$PROBE_STDIN_COMMAND"
+  printf '%s\n' 'exit'
+} | script -qefc "$AZ_EXEC_COMMAND" /dev/null
+PIPE_STATUSES=("${PIPESTATUS[@]}")
+AZ_EXEC_STATUS="${PIPE_STATUSES[1]}"
 set -e
 
 POST_APP_JSON="$(

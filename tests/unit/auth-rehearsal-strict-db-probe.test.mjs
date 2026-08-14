@@ -220,6 +220,15 @@ test("operator wrapper remains read-only and contains exactly one container exec
   assert.match(wrapper, /destination count query lacked client TLS evidence/u);
   assert.doesNotMatch(wrapper, /pg_catalog\\.pg_stat_ssl/u);
   assert.doesNotMatch(wrapper, /ssl !== "true"/u);
+  assert.match(wrapper, /for command in az jq node psql sha256sum openssl mktemp script/u);
+  assert.match(wrapper, /PROBE_TRANSPORT=pty_stdin/u);
+  assert.match(wrapper, /PROBE_STDIN_COMMAND=/u);
+  assert.match(wrapper, /printf -v AZ_EXEC_COMMAND/u);
+  assert.match(wrapper, /--command sh/u);
+  assert.match(wrapper, /script -qefc "\$AZ_EXEC_COMMAND" \/dev\/null/u);
+  assert.match(wrapper, /stty -echo/u);
+  assert.doesNotMatch(wrapper, /REMOTE_COMMAND=/u);
+  assert.doesNotMatch(wrapper, /--command "\$REMOTE_COMMAND"/u);
   assert.match(wrapper, /POST_PROBE_DATABASE_STATE=0\|0/u);
   assert.match(wrapper, /POST_PROBE_CA_STATE=\$EXPECTED_CA_STATE/u);
   assert.match(wrapper, /POST_PROBE_INGRESS=disabled/u);
