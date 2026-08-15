@@ -450,7 +450,77 @@ set +e
   printf '%s\n' 'exit'
 } | {
   if [ "$(uname -s)" = "Darwin" ]; then
-    script -q -e /dev/null sh -c "$AZ_EXEC_COMMAND"
+    AZ_EXEC_COMMAND_FOR_PTY="$AZ_EXEC_COMMAND" python3 - <<'PYPTY'
+import os
+import pty
+import select
+import subprocess
+import sys
+
+command = os.environ["AZ_EXEC_COMMAND_FOR_PTY"]
+
+master_fd, slave_fd = pty.openpty()
+
+proc = subprocess.Popen(
+    ["/bin/sh", "-c", command],
+    stdin=slave_fd,
+    stdout=slave_fd,
+    stderr=slave_fd,
+    close_fds=True,
+)
+
+os.close(slave_fd)
+
+stdin_fd = sys.stdin.fileno()
+stdout_fd = sys.stdout.fileno()
+
+try:
+    while True:
+        read_fds = [master_fd]
+        if not sys.stdin.closed:
+            read_fds.append(stdin_fd)
+
+        ready, _, _ = select.select(read_fds, [], [], 0.25)
+
+        if stdin_fd in ready:
+            data = os.read(stdin_fd, 4096)
+            if data:
+                os.write(master_fd, data)
+            else:
+                try:
+                    os.close(stdin_fd)
+                except OSError:
+                    pass
+
+        if master_fd in ready:
+            try:
+                data = os.read(master_fd, 4096)
+            except OSError:
+                data = b""
+
+            if data:
+                os.write(stdout_fd, data)
+            elif proc.poll() is not None:
+                break
+
+        if proc.poll() is not None:
+            try:
+                while True:
+                    data = os.read(master_fd, 4096)
+                    if not data:
+                        break
+                    os.write(stdout_fd, data)
+            except OSError:
+                pass
+            break
+finally:
+    try:
+        os.close(master_fd)
+    except OSError:
+        pass
+
+sys.exit(proc.wait())
+PYPTY
   else
     script -qefc "$AZ_EXEC_COMMAND" /dev/null
   fi
