@@ -31,7 +31,7 @@ const [
 ]);
 
 test("KovaGPT uses one ChatGPT-style model chooser in the top bar", () => {
-  assert.match(route, /const greeting = "What can I help with\?";/);
+  assert.match(route, /const greeting = "What's on your mind today\?";/);
   assert.match(chatInput, /KovaGPT can make mistakes\. Check important information\./);
   assert.doesNotMatch(route, /ConversationOutline/);
   assert.equal((route.match(/canChangeAgent=\{false\}/g) ?? []).length, 2);
