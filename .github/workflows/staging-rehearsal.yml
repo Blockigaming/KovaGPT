@@ -13,7 +13,27 @@ jobs:
         with: { node-version: 24, cache: npm }
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run release:db:isolated
-      - run: npm run release:validate && npm run typecheck && npm run lint && npm run build
+      - name: Validate and build staging artifact
+        env:
+          VITE_SUPABASE_URL: "${{ secrets.STAGING_SUPABASE_URL }}"
+          VITE_SUPABASE_PUBLISHABLE_KEY: "${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY }}"
+        run: |
+          set -euo pipefail
+          staging_url="${VITE_SUPABASE_URL%/}"
+          if [[ "$staging_url" =~ ^https://([a-z0-9]{20})\.supabase\.co$ ]]; then
+            export VITE_SUPABASE_PROJECT_ID="${BASH_REMATCH[1]}"
+          else
+            echo "::error::STAGING_SUPABASE_URL must be an https://<project-ref>.supabase.co URL."
+            exit 1
+          fi
+          if [[ -z "$VITE_SUPABASE_PUBLISHABLE_KEY" ]]; then
+            echo "::error::STAGING_SUPABASE_PUBLISHABLE_KEY is required."
+            exit 1
+          fi
+          npm run release:validate
+          npm run typecheck
+          npm run lint
+          npm run build
       - run: npm run test:unit && npm run test:integration && npm run test:api && npm run test:a11y && npm run test:visual && npm run test:browser
       - name: Deploy approved staging commit
         run: npx wrangler deploy
