@@ -5,7 +5,7 @@ import test from "node:test";
 const workflow = readFileSync(new URL("../../.github/workflows/ci.yml", import.meta.url), "utf8");
 
 test("each browser group runs on a fresh runner without reducing coverage", () => {
-  assert.match(workflow, /browser:\n(?:    if: [^\n]+\n)?    name: Browser \(\$\{\{ matrix\.id \}\}\)/);
+  assert.match(
     workflow,
     /browser:\n(?:    if: [^\n]+\n)?    name: Browser \(\$\{\{ matrix\.id \}\}\)/,
   );
