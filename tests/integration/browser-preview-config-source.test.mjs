@@ -20,7 +20,10 @@ test("browser CI uses the Node preview without changing the production preset", 
   assert.match(viteConfig, /cloudflare: \{ nodeCompat: true, deployConfig: true \}/);
 
   assert.doesNotMatch(verifyJob, /KOVA_BROWSER_PREVIEW/);
-  assert.match(verifyJob, /- name: Production build\s+run: npm run build/);
+  assert.match(
+    verifyJob,
+    /- name: Production build\s+(?:if: [^\n]+\s+)?run: npm run build/,
+  );
   assert.match(browserJob, /env:\s+KOVA_BROWSER_PREVIEW: "node"/);
   assert.match(browserJob, /- name: Browser preview build\s+run: npm run build/);
   assert.match(
