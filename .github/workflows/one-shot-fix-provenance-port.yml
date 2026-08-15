@@ -1,0 +1,44 @@
+name: One-shot fix provenance port literal
+
+on:
+  push:
+    branches:
+      - infra/verified-browser-image-provenance
+    paths:
+      - .github/workflows/one-shot-fix-provenance-port.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: infra/verified-browser-image-provenance
+
+      - name: Correct escaped verifier path and retrigger guarded port
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path(".github/workflows/one-shot-browser-provenance-port.yml")
+          text = path.read_text()
+          needle = '              "verify-staging-browser-config.mjs": "verify-browser-config.mjs",\n'
+          replacement = needle + '              r"verify-staging-browser-config\\\\.mjs": r"verify-browser-config\\\\.mjs",\n'
+          if needle not in text:
+              raise SystemExit("Expected provenance replacement map entry was not found")
+          path.write_text(text.replace(needle, replacement, 1))
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/one-shot-fix-provenance-port.yml
+          git add .github/workflows/one-shot-browser-provenance-port.yml
+          git commit -m "Fix escaped provenance verifier assertion"
+          git push origin HEAD:infra/verified-browser-image-provenance
