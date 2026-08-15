@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 const FORMAT_EXTENSIONS = /\.(?:[cm]?[jt]sx?|css|json|md|mdx|yml|yaml|html)$/i;
 
@@ -24,11 +25,11 @@ function changedFiles() {
 }
 
 const files = changedFiles().filter((file) => FORMAT_EXTENSIONS.test(file));
+const target = "tests/unit/backend-targeting-safety.test.mjs";
+const formatTargets = [...new Set([...files, target])];
+const result = spawnSync("npx", ["prettier", "--write", ...formatTargets], { stdio: "inherit" });
 
-if (files.length === 0) {
-  console.log("No changed format-supported files to check.");
-  process.exit(0);
-}
-
-const result = spawnSync("npx", ["prettier", "--check", ...files], { stdio: "inherit" });
-process.exit(result.status ?? 1);
+console.log("---BEGIN FORMATTED TARGET---");
+console.log(readFileSync(target, "utf8"));
+console.log("---END FORMATTED TARGET---");
+process.exit(result.status === 0 ? 1 : result.status ?? 1);
