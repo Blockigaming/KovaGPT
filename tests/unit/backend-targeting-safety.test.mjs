@@ -34,7 +34,10 @@ test("remote migrations explicitly link the requested Supabase project before pu
 
 test("remote migrations use the package-local Supabase binary on every platform", () => {
   assert.match(migrationWrapper, /node_modules", "supabase", "bin"/);
-  assert.match(migrationWrapper, /process\.platform === "win32" \? "supabase\.exe" : "supabase"/);
+  assert.match(
+    migrationWrapper,
+    /process\.platform === "win32" \? "supabase\.exe" : "supabase"/,
+  );
   assert.doesNotMatch(migrationWrapper, /supabase\.cmd/);
   assert.doesNotMatch(migrationWrapper, /npx/);
 });
@@ -65,10 +68,7 @@ test("staging builds receive and validate staging browser credentials before Vit
 
 test("OAuth discovery follows the configured Supabase backend URL", () => {
   assert.match(oauthDiscoveryRoute, /import \{ resolveBackendUrl \}/);
-  assert.match(
-    oauthDiscoveryRoute,
-    /new URL\("\/auth\/v1", resolveBackendUrl\(\)\)\.toString\(\)/,
-  );
+  assert.match(oauthDiscoveryRoute, /new URL\("\/auth\/v1", resolveBackendUrl\(\)\)\.toString\(\)/);
   assert.doesNotMatch(oauthDiscoveryRoute, /project-ref-unset/);
 });
 
