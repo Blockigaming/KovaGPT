@@ -32,12 +32,9 @@ test("remote migrations explicitly link the requested Supabase project before pu
   assert.match(migrationWrapper, /argument\.startsWith\("--workdir="\)/);
 });
 
-test("remote migrations use the package-local Supabase binary on every platform", () => {
-  assert.match(migrationWrapper, /node_modules", "supabase", "bin"/);
-  assert.match(
-    migrationWrapper,
-    /process\.platform === "win32" \? "supabase\.exe" : "supabase"/,
-  );
+test("remote migrations use the package-local Supabase CLI entrypoint", () => {
+  assert.match(migrationWrapper, /node_modules", "supabase", "dist", "supabase\.js"/);
+  assert.match(migrationWrapper, /spawnSync\(process\.execPath, \[entrypoint, \.\.\.args\]/);
   assert.doesNotMatch(migrationWrapper, /supabase\.cmd/);
   assert.doesNotMatch(migrationWrapper, /npx/);
 });

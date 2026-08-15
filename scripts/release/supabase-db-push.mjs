@@ -45,31 +45,29 @@ if (forbiddenTargetFlags.length > 0) {
   process.exit(2);
 }
 
-function resolveLocalSupabaseExecutable() {
-  const binaryName = process.platform === "win32" ? "supabase.exe" : "supabase";
-  const candidates = [
-    resolve(process.cwd(), "node_modules", "supabase", "bin", binaryName),
-    resolve(process.cwd(), "node_modules", "supabase", "bin", "supabase"),
-    ...(process.platform === "win32"
-      ? []
-      : [resolve(process.cwd(), "node_modules", ".bin", "supabase")]),
-  ];
-  const executable = candidates.find((candidate) => existsSync(candidate));
+function resolveLocalSupabaseEntrypoint() {
+  const entrypoint = resolve(
+    process.cwd(),
+    "node_modules",
+    "supabase",
+    "dist",
+    "supabase.js",
+  );
 
-  if (!executable) {
+  if (!existsSync(entrypoint)) {
     console.error(
-      "The package-local Supabase CLI is unavailable. Run npm ci and do not use a global or automatically downloaded CLI for remote migrations.",
+      "The package-local Supabase CLI entrypoint is unavailable. Run npm ci and do not use a global or automatically downloaded CLI for remote migrations.",
     );
     process.exit(1);
   }
 
-  return executable;
+  return entrypoint;
 }
 
-const executable = resolveLocalSupabaseExecutable();
+const entrypoint = resolveLocalSupabaseEntrypoint();
 
 function runSupabase(args) {
-  const result = spawnSync(executable, args, {
+  const result = spawnSync(process.execPath, [entrypoint, ...args], {
     stdio: "inherit",
     env: process.env,
   });
