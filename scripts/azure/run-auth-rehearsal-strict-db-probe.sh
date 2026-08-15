@@ -44,7 +44,7 @@ case "$EXPECTED_CA_STATE" in
     ;;
 esac
 
-for command in az jq node psql sha256sum openssl mktemp script; do
+for command in az jq node sha256sum openssl mktemp script; do
   command -v "$command" >/dev/null 2>&1 || fail "required command is unavailable: $command"
 done
 
@@ -292,94 +292,72 @@ DB_KIND="$(
 
 read_counts() {
   DB_URL_FOR_COUNTS="$DB_URL" node - <<'NODE'
-const { spawnSync } = require("node:child_process");
+const pgModule = require("pg");
+const Client =
+  pgModule.Client ||
+  pgModule.default?.Client ||
+  pgModule.default?.default?.Client;
+
+if (typeof Client !== "function") {
+  process.stderr.write("SAFETY STOP: pg Client export is unavailable for count check\n");
+  process.exit(1);
+}
 
 let parsed;
-let username;
-let password;
 try {
   parsed = new URL(process.env.DB_URL_FOR_COUNTS);
-  username = decodeURIComponent(parsed.username);
-  password = decodeURIComponent(parsed.password);
 } catch {
   process.stderr.write("SAFETY STOP: database URL parsing failed for count check\n");
   process.exit(1);
 }
 
-const childEnv = {
-  PATH: process.env.PATH || "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-  HOME: process.env.HOME || "/tmp",
-  LANG: "C.UTF-8",
-  LC_ALL: "C.UTF-8",
-  PGHOST: parsed.hostname,
-  PGPORT: parsed.port || "5432",
-  PGDATABASE: parsed.pathname.replace(/^\//u, ""),
-  PGUSER: username,
-  PGPASSWORD: password,
-  PGAPPNAME: "auth-rehearsal-strict-db-probe-precheck",
-  PGCONNECT_TIMEOUT: "10",
-  PGSSLMODE: "require",
-};
-
-const sql = `
-  SELECT
-    (SELECT count(*) FROM auth.users)::text
-    || '|'
-    || (SELECT count(*) FROM auth.identities)::text;
-`;
-
-const result = spawnSync(
-  "psql",
-  [
-    "--no-psqlrc",
-    "--set",
-    "ON_ERROR_STOP=1",
-    "--tuples-only",
-    "--no-align",
-    "--command",
-    "\\conninfo",
-    "--command",
-    sql,
-  ],
-  {
-    env: childEnv,
-    encoding: "utf8",
-    timeout: 15_000,
-    maxBuffer: 64 * 1024,
+const client = new Client({
+  host: parsed.hostname,
+  port: Number(parsed.port || "5432"),
+  database: parsed.pathname.replace(/^\//u, ""),
+  user: decodeURIComponent(parsed.username),
+  password: decodeURIComponent(parsed.password),
+  ssl: {
+    rejectUnauthorized: false,
   },
-);
+  connectionTimeoutMillis: 10_000,
+  query_timeout: 10_000,
+  application_name: "auth-rehearsal-strict-db-probe-precheck",
+});
 
-if (result.error || result.status !== 0) {
-  process.stderr.write("SAFETY STOP: read-only destination count query failed\n");
-  process.exit(1);
-}
+(async () => {
+  try {
+    await client.connect();
 
-const stdout = result.stdout.replace(/\r/gu, "");
+    const result = await client.query(`
+      SELECT
+        (SELECT count(*) FROM auth.users)::text AS users_count,
+        (SELECT count(*) FROM auth.identities)::text AS identities_count
+    `);
 
-const clientTls =
-  /\bSSL connection\b/iu.test(stdout) ||
-  /\bSSL protocol\b/iu.test(stdout);
+    if (!result.rows || result.rows.length !== 1) {
+      throw new Error("unexpected_count_row_shape");
+    }
 
-if (!clientTls) {
-  process.stderr.write(
-    "SAFETY STOP: destination count query lacked client TLS evidence\n",
-  );
-  process.exit(1);
-}
+    const users = result.rows[0].users_count;
+    const identities = result.rows[0].identities_count;
 
-const countLines = stdout
-  .split("\n")
-  .map((line) => line.trim())
-  .filter((line) => /^\d+\|\d+$/u.test(line));
+    if (!/^\d+$/u.test(users) || !/^\d+$/u.test(identities)) {
+      throw new Error("invalid_count_values");
+    }
 
-if (countLines.length !== 1) {
-  process.stderr.write(
-    "SAFETY STOP: destination count query lacked exact count evidence\n",
-  );
-  process.exit(1);
-}
-
-process.stdout.write(countLines[0]);
+    process.stdout.write(`${users}|${identities}`);
+  } catch {
+    process.stderr.write("SAFETY STOP: read-only destination count query failed\n");
+    process.exitCode = 1;
+  } finally {
+    try {
+      await client.end();
+    } catch {
+      // Ignore cleanup failure after result classification.
+    }
+  }
+})();
 NODE
 }
 

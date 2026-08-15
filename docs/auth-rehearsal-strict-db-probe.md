@@ -163,3 +163,5 @@ node --test tests/unit/auth-rehearsal-strict-db-probe.test.mjs
 bash -n scripts/azure/run-auth-rehearsal-strict-db-probe.sh
 node --check scripts/azure/auth-rehearsal-strict-db-probe.cjs
 ```
+
+The operator wrapper uses the repository's bundled Node `pg` client for the read-only destination emptiness checks, avoiding a dependency on an external `psql` executable.
