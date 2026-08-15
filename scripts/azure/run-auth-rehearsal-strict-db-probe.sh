@@ -448,7 +448,13 @@ set +e
   printf '%s\n' 'stty -echo'
   printf '%s\n' "$PROBE_STDIN_COMMAND"
   printf '%s\n' 'exit'
-} | script -qefc "$AZ_EXEC_COMMAND" /dev/null
+} | {
+  if [ "$(uname -s)" = "Darwin" ]; then
+    script -q -e /dev/null sh -c "$AZ_EXEC_COMMAND"
+  else
+    script -qefc "$AZ_EXEC_COMMAND" /dev/null
+  fi
+}
 PIPE_STATUSES=("${PIPESTATUS[@]}")
 AZ_EXEC_STATUS="${PIPE_STATUSES[1]}"
 set -e

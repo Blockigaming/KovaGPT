@@ -242,6 +242,8 @@ test("operator wrapper remains read-only and contains exactly one container exec
   assert.match(wrapper, /\.join\(""\)/u);
   assert.doesNotMatch(wrapper, /Buffer\.from\('\$PROBE_GZIP_B64'/u);
   assert.match(wrapper, /printf -v AZ_EXEC_COMMAND/u);
+  assert.match(wrapper, /uname -s/u);
+  assert.match(wrapper, /script -q -e \/dev\/null sh -c "\$AZ_EXEC_COMMAND"/u);
   assert.match(wrapper, /script -qefc "\$AZ_EXEC_COMMAND" \/dev\/null/u);
   assert.match(wrapper, /stty -echo/u);
   assert.doesNotMatch(wrapper, /REMOTE_COMMAND=/u);
