@@ -87,6 +87,7 @@ jobs:
               r"verify-staging-browser-config\.mjs": r"verify-browser-config\.mjs",
               "KOVA_VERIFY_STAGING_BROWSER_CONFIG": "KOVA_VERIFY_BROWSER_CONFIG",
               "staging-browser-config-provenance.json": "browser-config-provenance.json",
+              r"staging-browser-config-provenance\.json": r"browser-config-provenance\.json",
               "verified staging builds": "verified candidate builds",
           }
           for old, new in replacements.items():
