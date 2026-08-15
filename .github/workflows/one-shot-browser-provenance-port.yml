@@ -1,0 +1,215 @@
+name: One-shot verified browser image provenance port
+
+on:
+  push:
+    branches:
+      - infra/verified-browser-image-provenance
+    paths:
+      - .github/workflows/one-shot-browser-provenance-port.yml
+
+permissions:
+  contents: write
+
+jobs:
+  port:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          ref: infra/verified-browser-image-provenance
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Port and validate the reviewed provenance implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch origin \
+            infra/azure-low-cost-staging \
+            infra/azure-staging-browser-provenance
+
+          git show origin/infra/azure-low-cost-staging:Dockerfile > /tmp/pr174-base.Dockerfile
+          if ! cmp -s Dockerfile /tmp/pr174-base.Dockerfile; then
+            echo "Current Dockerfile diverged from PR #174's reviewed base; refusing an automatic overwrite." >&2
+            git diff --no-index -- Dockerfile /tmp/pr174-base.Dockerfile || true
+            exit 1
+          fi
+
+          git show origin/infra/azure-staging-browser-provenance:Dockerfile > Dockerfile
+          git show \
+            origin/infra/azure-staging-browser-provenance:scripts/azure/verify-staging-browser-config.mjs \
+            > scripts/azure/verify-browser-config.mjs
+          git show \
+            origin/infra/azure-staging-browser-provenance:tests/unit/azure-staging-browser-config.test.mjs \
+            > tests/unit/azure-browser-config-provenance.test.mjs
+
+          python - <<'PY'
+          from pathlib import Path
+
+          dockerfile = Path("Dockerfile")
+          text = dockerfile.read_text()
+          text = text.replace("KOVA_VERIFY_STAGING_BROWSER_CONFIG", "KOVA_VERIFY_BROWSER_CONFIG")
+          text = text.replace("verify-staging-browser-config.mjs", "verify-browser-config.mjs")
+          text = text.replace(
+              "staging-browser-config-provenance.json",
+              "browser-config-provenance.json",
+          )
+          dockerfile.write_text(text)
+
+          verifier = Path("scripts/azure/verify-browser-config.mjs")
+          text = verifier.read_text()
+          replacements = {
+              "verifyStagingBrowserConfig": "verifyBrowserConfig",
+              "verified staging builds": "verified candidate builds",
+              "staging-browser-config-provenance.json": "browser-config-provenance.json",
+              "STAGING_BROWSER_CONFIG_PROJECT_REF": "BROWSER_CONFIG_PROJECT_REF",
+              "STAGING_BROWSER_BUNDLE_SHA256": "BROWSER_BUNDLE_SHA256",
+              "STAGING_BROWSER_CONFIG_PROVENANCE": "BROWSER_CONFIG_PROVENANCE",
+              "STAGING_BROWSER_CONFIG_VERIFICATION_FAILED": "BROWSER_CONFIG_VERIFICATION_FAILED",
+          }
+          for old, new in replacements.items():
+              text = text.replace(old, new)
+          verifier.write_text(text)
+
+          test_file = Path("tests/unit/azure-browser-config-provenance.test.mjs")
+          text = test_file.read_text()
+          replacements = {
+              "verifyStagingBrowserConfig": "verifyBrowserConfig",
+              "verify-staging-browser-config.mjs": "verify-browser-config.mjs",
+              "KOVA_VERIFY_STAGING_BROWSER_CONFIG": "KOVA_VERIFY_BROWSER_CONFIG",
+              "staging-browser-config-provenance.json": "browser-config-provenance.json",
+              "verified staging builds": "verified candidate builds",
+          }
+          for old, new in replacements.items():
+              text = text.replace(old, new)
+          text = text.replace(
+              '  const publicConfig = readFileSync("src/config/public-config.ts", "utf8");\n\n',
+              "",
+          )
+          marker = "\n  assert.match(publicConfig,"
+          if marker not in text:
+              raise SystemExit("Expected PR #174 public-config assertion block was not found")
+          text = text.split(marker, 1)[0] + "\n});\n"
+          test_file.write_text(text)
+          PY
+
+          cat > docs/azure/verified-browser-image-provenance.md <<'DOC'
+          # Verified browser image provenance
+
+          This gate proves that an immutable KovaGPT container image was compiled from an exact Git commit for one explicitly approved Supabase project. It is reusable for isolated staging and, after all release approvals, for the production candidate.
+
+          It does not deploy to Azure, change DNS, modify Supabase, migrate users, or authorize a production cutover.
+
+          ## What the gate proves
+
+          A verified build must establish all of the following:
+
+          - the expected Supabase project URL and browser-safe publishable key are present in deployable browser assets;
+          - no second Supabase project URL or publishable key is present in those assets;
+          - server-only output cannot satisfy the browser check;
+          - no OpenAI secret, Supabase secret key, PostgreSQL credential URL, or private-key PEM appears in browser assets;
+          - the exact source SHA and expected Supabase project ref are recorded in OCI labels;
+          - the image contains a key-free provenance document with a deterministic browser-bundle SHA-256;
+          - ordinary unverified builds remain possible but are clearly labeled `config-verified=false` and cannot be promoted.
+
+          ## Required build inputs
+
+          ```bash
+          set -euo pipefail
+
+          SOURCE_SHA="$(git rev-parse HEAD)"
+          TARGET_PROJECT_REF="<exact-20-character-project-ref>"
+          TARGET_SUPABASE_URL="https://${TARGET_PROJECT_REF}.supabase.co"
+          TARGET_PUBLISHABLE_KEY="<sb_publishable_browser_safe_key>"
+          FORBIDDEN_PROJECT_REFS="<comma-separated refs that must not appear>"
+          IMAGE_TAG="kovagpt-candidate:${SOURCE_SHA}"
+          ```
+
+          The source SHA must be the exact reviewed release commit. Keep the publishable key out of shared logs even though it is intentionally browser-visible.
+
+          ## Build
+
+          ```bash
+          docker build \
+            --build-arg KOVA_VERIFY_BROWSER_CONFIG=true \
+            --build-arg KOVA_SOURCE_SHA="$SOURCE_SHA" \
+            --build-arg KOVA_EXPECTED_SUPABASE_PROJECT_REF="$TARGET_PROJECT_REF" \
+            --build-arg KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS="$FORBIDDEN_PROJECT_REFS" \
+            --build-arg VITE_SUPABASE_URL="$TARGET_SUPABASE_URL" \
+            --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="$TARGET_PUBLISHABLE_KEY" \
+            --tag "$IMAGE_TAG" \
+            .
+          ```
+
+          The verifier scans deployable browser text assets after source maps are removed and excludes `dist/server`. It fails closed when the expected browser configuration is missing, duplicated, inconsistent, or unsafe.
+
+          ## Required OCI labels
+
+          Inspect the image:
+
+          ```bash
+          docker image inspect "$IMAGE_TAG" --format '{{json .Config.Labels}}'
+          ```
+
+          Promotion requires:
+
+          - `org.opencontainers.image.revision` equals the reviewed 40-character source SHA;
+          - `com.kovagpt.browser.supabase-project-ref` equals the approved target ref;
+          - `com.kovagpt.browser.config-verified` equals `true`;
+          - `com.kovagpt.browser.config-provenance` equals `/app/dist/browser-config-provenance.json`.
+
+          ## Provenance record
+
+          Extract `/app/dist/browser-config-provenance.json` from the image. It contains only:
+
+          - source SHA;
+          - project ref and URL;
+          - SHA-256 fingerprint of the publishable key, never the full key;
+          - deterministic browser-bundle SHA-256;
+          - scanned file and byte counts;
+          - discovered and forbidden project-ref evidence.
+
+          Pair this record with the immutable registry digest after an separately approved push. The digest, source SHA, project ref, OCI labels, and provenance hash form one promotion record.
+
+          ## Hard stops
+
+          Do not promote or deploy when any of these is true:
+
+          - verification was disabled;
+          - the source SHA is unknown, unverified, or differs from the reviewed release SHA;
+          - browser and server project identities differ;
+          - the provenance record is missing or contains a full credential;
+          - an unexpected project ref, publishable key, or secret pattern is detected;
+          - only a mutable image tag is available;
+          - the target project or environment has not been independently approved;
+          - health, readiness, rollback, authentication, or cross-user tests are incomplete.
+          DOC
+
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx prettier --write \
+            scripts/azure/verify-browser-config.mjs \
+            tests/unit/azure-browser-config-provenance.test.mjs \
+            docs/azure/verified-browser-image-provenance.md
+          node --test tests/unit/azure-browser-config-provenance.test.mjs
+          npm run typecheck
+          npm run build
+          git diff --check
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/one-shot-browser-provenance-port.yml
+          git add \
+            Dockerfile \
+            scripts/azure/verify-browser-config.mjs \
+            tests/unit/azure-browser-config-provenance.test.mjs \
+            docs/azure/verified-browser-image-provenance.md
+          git commit -m "Add verified browser image provenance gate"
+          git push origin HEAD:infra/verified-browser-image-provenance
