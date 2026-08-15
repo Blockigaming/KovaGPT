@@ -473,24 +473,26 @@ os.close(slave_fd)
 
 stdin_fd = sys.stdin.fileno()
 stdout_fd = sys.stdout.fileno()
+stdin_open = True
 
 try:
     while True:
         read_fds = [master_fd]
-        if not sys.stdin.closed:
+        if stdin_open:
             read_fds.append(stdin_fd)
 
         ready, _, _ = select.select(read_fds, [], [], 0.25)
 
-        if stdin_fd in ready:
-            data = os.read(stdin_fd, 4096)
+        if stdin_open and stdin_fd in ready:
+            try:
+                data = os.read(stdin_fd, 4096)
+            except OSError:
+                data = b""
+
             if data:
                 os.write(master_fd, data)
             else:
-                try:
-                    os.close(stdin_fd)
-                except OSError:
-                    pass
+                stdin_open = False
 
         if master_fd in ready:
             try:
