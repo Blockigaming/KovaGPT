@@ -426,7 +426,7 @@ NODE
 
 PROBE_STDIN_CHUNK_SIZE=256
 
-PROBE_STDIN_COMMAND=$'stty -echo\nnode - <<\'NODE\'\nconst zlib = require("node:zlib");\nconst b64 = [\n'
+PROBE_STDIN_COMMAND=$'node - <<\'NODE\'\nconst zlib = require("node:zlib");\nconst b64 = [\n'
 
 for ((offset = 0; offset < ${#PROBE_GZIP_B64}; offset += PROBE_STDIN_CHUNK_SIZE)); do
   chunk="${PROBE_GZIP_B64:offset:PROBE_STDIN_CHUNK_SIZE}"
@@ -453,7 +453,7 @@ printf -v AZ_EXEC_COMMAND '%q ' \
   --revision "$EXPECTED_REVISION" \
   --replica "$REPLICA" \
   --container "$CONTAINER" \
-  --command sh
+  --command "sh -c 'stty -echo; exec sh'"
 
 printf '%s\n' \
   "FINAL_PRECHECK=PASS" \

@@ -224,6 +224,8 @@ test("operator wrapper remains read-only and contains exactly one container exec
   assert.match(wrapper, /PROBE_TRANSPORT=pty_stdin/u);
   assert.match(wrapper, /PROBE_STDIN_COMMAND=/u);
   assert.match(wrapper, /PROBE_STDIN_CHUNK_SIZE=256/u);
+  assert.ok(wrapper.includes(`--command "sh -c 'stty -echo; exec sh'"`));
+  assert.ok(!wrapper.includes("PROBE_STDIN_COMMAND=$'stty -echo"));
   assert.match(wrapper, /MAX_PROBE_STDIN_LINE/u);
   assert.match(wrapper, /PTY probe transport contains an oversized input line/u);
   assert.match(wrapper, /node - <<\\'NODE\\'/u);
@@ -231,7 +233,6 @@ test("operator wrapper remains read-only and contains exactly one container exec
   assert.match(wrapper, /\.join\(""\)/u);
   assert.doesNotMatch(wrapper, /Buffer\.from\('\$PROBE_GZIP_B64'/u);
   assert.match(wrapper, /printf -v AZ_EXEC_COMMAND/u);
-  assert.match(wrapper, /--command sh/u);
   assert.match(wrapper, /script -qefc "\$AZ_EXEC_COMMAND" \/dev\/null/u);
   assert.match(wrapper, /stty -echo/u);
   assert.doesNotMatch(wrapper, /REMOTE_COMMAND=/u);
