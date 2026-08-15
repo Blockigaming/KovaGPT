@@ -450,19 +450,38 @@ set +e
   printf '%s\n' 'exit'
 } | {
   if [ "$(uname -s)" = "Darwin" ]; then
-    AZ_EXEC_COMMAND_FOR_PTY="$AZ_EXEC_COMMAND" python3 - <<'PYPTY'
+    MACOS_PTY_CODE="$(
+      cat <<'PYPTY'
 import os
 import pty
 import select
 import subprocess
 import sys
 
-command = os.environ["AZ_EXEC_COMMAND_FOR_PTY"]
+app, resource_group, revision, replica, container = sys.argv[1:6]
+
+argv = [
+    "az",
+    "containerapp",
+    "exec",
+    "--name",
+    app,
+    "--resource-group",
+    resource_group,
+    "--revision",
+    revision,
+    "--replica",
+    replica,
+    "--container",
+    container,
+    "--command",
+    "sh -c 'stty -echo; exec sh'",
+]
 
 master_fd, slave_fd = pty.openpty()
 
 proc = subprocess.Popen(
-    ["/bin/sh", "-c", command],
+    argv,
     stdin=slave_fd,
     stdout=slave_fd,
     stderr=slave_fd,
@@ -490,7 +509,10 @@ try:
                 data = b""
 
             if data:
-                os.write(master_fd, data)
+                try:
+                    os.write(master_fd, data)
+                except OSError:
+                    stdin_open = False
             else:
                 stdin_open = False
 
@@ -523,6 +545,14 @@ finally:
 
 sys.exit(proc.wait())
 PYPTY
+    )"
+
+    python3 -c "$MACOS_PTY_CODE" \
+      "$APP" \
+      "$RESOURCE_GROUP" \
+      "$EXPECTED_REVISION" \
+      "$REPLICA" \
+      "$CONTAINER"
   else
     script -qefc "$AZ_EXEC_COMMAND" /dev/null
   fi

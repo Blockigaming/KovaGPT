@@ -243,7 +243,12 @@ test("operator wrapper remains read-only and contains exactly one container exec
   assert.doesNotMatch(wrapper, /Buffer\.from\('\$PROBE_GZIP_B64'/u);
   assert.match(wrapper, /printf -v AZ_EXEC_COMMAND/u);
   assert.match(wrapper, /uname -s/u);
-  assert.match(wrapper, /AZ_EXEC_COMMAND_FOR_PTY/u);
+  assert.match(wrapper, /MACOS_PTY_CODE/u);
+  assert.match(wrapper, /python3 -c "\$MACOS_PTY_CODE"/u);
+  assert.match(wrapper, /"containerapp",/u);
+  assert.match(wrapper, /"exec",/u);
+  assert.match(wrapper, /app, resource_group, revision, replica, container = sys\.argv\[1:6\]/u);
+  assert.doesNotMatch(wrapper, /AZ_EXEC_COMMAND_FOR_PTY/u);
   assert.match(wrapper, /import pty/u);
   assert.match(wrapper, /pty\.openpty\(\)/u);
   assert.match(wrapper, /subprocess\.Popen/u);
