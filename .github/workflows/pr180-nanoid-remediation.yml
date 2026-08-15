@@ -1,0 +1,146 @@
+name: PR 180 nanoid audit remediation
+
+on:
+  push:
+    branches:
+      - fix/production-supabase-retarget-preflight
+    paths:
+      - .github/workflows/pr180-nanoid-remediation.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pr180-nanoid-remediation
+  cancel-in-progress: false
+
+jobs:
+  remediate:
+    if: >-
+      github.repository == 'Blockigaming/kovagpt-790c8a3a' &&
+      github.ref == 'refs/heads/fix/production-supabase-retarget-preflight'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out the exact branch revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 2
+
+      - name: Prove this is the expected one-file bootstrap commit
+        shell: bash
+        env:
+          EXPECTED_PARENT: e81504dc4ad1528f2c7bb88fef61e87bfd38d7f1
+          WORKFLOW_PATH: .github/workflows/pr180-nanoid-remediation.yml
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "$EXPECTED_PARENT"
+          test "$(git diff --name-only HEAD^ HEAD)" = "$WORKFLOW_PATH"
+          test "$(git diff --diff-filter=A --name-only HEAD^ HEAD)" = "$WORKFLOW_PATH"
+
+      - name: Set up locked Node toolchain
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply the minimal deterministic lockfile remediation
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const { execFileSync } = require('node:child_process');
+          const fs = require('node:fs');
+
+          const path = 'package-lock.json';
+          const raw = fs.readFileSync(path, 'utf8');
+          const before = JSON.parse(raw);
+          const lock = JSON.parse(raw);
+          const packageKey = 'node_modules/nanoid';
+          const entry = lock.packages?.[packageKey];
+
+          if (!entry) {
+            throw new Error(`Missing ${packageKey} in package-lock.json`);
+          }
+          if (entry.version !== '3.3.17') {
+            throw new Error(`Expected nanoid 3.3.17, found ${entry.version}`);
+          }
+          if (entry.resolved !== 'https://registry.npmjs.org/nanoid/-/nanoid-3.3.17.tgz') {
+            throw new Error(`Unexpected nanoid 3.3.17 tarball: ${entry.resolved}`);
+          }
+          if (entry.integrity !== 'sha512-xQLf0A3HOMlgHq0n247/LRuAOYmB7dXJ/DvAxGvsSBij45XtBSmQycu+F8ODbHwns/XyFZagyL1+J0Offw1E0g==') {
+            throw new Error('Unexpected nanoid 3.3.17 integrity; refusing to edit');
+          }
+
+          const targetVersion = '3.3.18';
+          const expectedTarball = `https://registry.npmjs.org/nanoid/-/nanoid-${targetVersion}.tgz`;
+          const registryTarball = execFileSync(
+            'npm',
+            ['view', `nanoid@${targetVersion}`, 'dist.tarball', '--silent'],
+            { encoding: 'utf8' },
+          ).trim();
+          const registryIntegrity = execFileSync(
+            'npm',
+            ['view', `nanoid@${targetVersion}`, 'dist.integrity', '--silent'],
+            { encoding: 'utf8' },
+          ).trim();
+
+          if (registryTarball !== expectedTarball) {
+            throw new Error(`Unexpected registry tarball: ${registryTarball}`);
+          }
+          if (!/^sha512-[A-Za-z0-9+/]+={0,2}$/.test(registryIntegrity)) {
+            throw new Error('Registry returned an invalid sha512 integrity value');
+          }
+
+          entry.version = targetVersion;
+          entry.resolved = registryTarball;
+          entry.integrity = registryIntegrity;
+
+          const normalized = JSON.parse(JSON.stringify(lock));
+          normalized.packages[packageKey].version = before.packages[packageKey].version;
+          normalized.packages[packageKey].resolved = before.packages[packageKey].resolved;
+          normalized.packages[packageKey].integrity = before.packages[packageKey].integrity;
+          if (JSON.stringify(normalized) !== JSON.stringify(before)) {
+            throw new Error('The proposed lockfile edit changes fields beyond the nanoid package identity');
+          }
+
+          fs.writeFileSync(path, `${JSON.stringify(lock, null, 2)}\n`);
+          NODE
+
+          git diff --check -- package-lock.json
+          test "$(git diff --name-only)" = "package-lock.json"
+          test "$(git diff --numstat -- package-lock.json)" = $'3\t3\tpackage-lock.json'
+          grep -Fq '"version": "3.3.18"' package-lock.json
+          grep -Fq 'nanoid-3.3.18.tgz' package-lock.json
+          if grep -Fq 'nanoid-3.3.17.tgz' package-lock.json; then
+            echo 'Old vulnerable nanoid tarball remains in package-lock.json' >&2
+            exit 1
+          fi
+
+      - name: Verify installation and production dependency audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-audit --no-fund
+          test "$(node -p "require('./node_modules/nanoid/package.json').version")" = "3.3.18"
+          npm audit --audit-level=high --omit=dev
+
+      - name: Commit only the verified lockfile and remove this workflow
+        shell: bash
+        env:
+          WORKFLOW_PATH: .github/workflows/pr180-nanoid-remediation.yml
+          BRANCH_NAME: fix/production-supabase-retarget-preflight
+        run: |
+          set -euo pipefail
+          rm "$WORKFLOW_PATH"
+
+          test "$(git diff --name-only | sort)" = $'.github/workflows/pr180-nanoid-remediation.yml\npackage-lock.json'
+          test "$(git diff --diff-filter=M --name-only)" = "package-lock.json"
+          test "$(git diff --diff-filter=D --name-only)" = "$WORKFLOW_PATH"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json "$WORKFLOW_PATH"
+          git commit -m "Fix nanoid audit advisory"
+          git push origin "HEAD:${BRANCH_NAME}"
