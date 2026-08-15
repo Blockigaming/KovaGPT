@@ -46,13 +46,7 @@ if (forbiddenTargetFlags.length > 0) {
 }
 
 function resolveLocalSupabaseEntrypoint() {
-  const entrypoint = resolve(
-    process.cwd(),
-    "node_modules",
-    "supabase",
-    "dist",
-    "supabase.js",
-  );
+  const entrypoint = resolve(process.cwd(), "node_modules", "supabase", "dist", "supabase.js");
 
   if (!existsSync(entrypoint)) {
     console.error(
