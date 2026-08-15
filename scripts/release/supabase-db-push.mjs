@@ -1,4 +1,6 @@
 import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 
 const projectRef = process.env.SUPABASE_PROJECT_REF?.trim() ?? "";
 const projectRefPattern = /^[a-z0-9]{20}$/;
@@ -25,9 +27,13 @@ const forwardedArgs = process.argv.slice(2).filter((argument) => argument !== "-
 const forbiddenTargetFlags = forwardedArgs.filter(
   (argument) =>
     argument === "--local" ||
+    argument.startsWith("--local=") ||
     argument === "--include-seed" ||
+    argument.startsWith("--include-seed=") ||
     argument === "--db-url" ||
-    argument.startsWith("--db-url="),
+    argument.startsWith("--db-url=") ||
+    argument === "--workdir" ||
+    argument.startsWith("--workdir="),
 );
 
 if (forbiddenTargetFlags.length > 0) {
@@ -39,7 +45,28 @@ if (forbiddenTargetFlags.length > 0) {
   process.exit(2);
 }
 
-const executable = process.platform === "win32" ? "supabase.cmd" : "supabase";
+function resolveLocalSupabaseExecutable() {
+  const binaryName = process.platform === "win32" ? "supabase.exe" : "supabase";
+  const candidates = [
+    resolve(process.cwd(), "node_modules", "supabase", "bin", binaryName),
+    resolve(process.cwd(), "node_modules", "supabase", "bin", "supabase"),
+    ...(process.platform === "win32"
+      ? []
+      : [resolve(process.cwd(), "node_modules", ".bin", "supabase")]),
+  ];
+  const executable = candidates.find((candidate) => existsSync(candidate));
+
+  if (!executable) {
+    console.error(
+      "The package-local Supabase CLI is unavailable. Run npm ci and do not use a global or automatically downloaded CLI for remote migrations.",
+    );
+    process.exit(1);
+  }
+
+  return executable;
+}
+
+const executable = resolveLocalSupabaseExecutable();
 
 function runSupabase(args) {
   const result = spawnSync(executable, args, {

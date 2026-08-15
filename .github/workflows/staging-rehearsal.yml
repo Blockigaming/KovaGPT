@@ -30,6 +30,7 @@ jobs:
             echo "::error::STAGING_SUPABASE_PUBLISHABLE_KEY is required."
             exit 1
           fi
+          node scripts/validate-public-build-env.mjs
           npm run release:validate
           npm run typecheck
           npm run lint
