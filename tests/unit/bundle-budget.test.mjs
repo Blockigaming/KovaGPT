@@ -49,18 +49,14 @@ test("bundle budgets fail closed when home-route evidence is missing or ambiguou
 test("bundle budgets enforce raw and gzip ceilings independently", () => {
   const rawOverflow = identifyBudgetChunks(
     validRows().map((item) =>
-      item.file === "index-home.js"
-        ? { ...item, raw: BUNDLE_BUDGETS.homeRoute.raw + 1 }
-        : item,
+      item.file === "index-home.js" ? { ...item, raw: BUNDLE_BUDGETS.homeRoute.raw + 1 } : item,
     ),
   );
   assert.match(evaluateBundleChecks(rawOverflow.chunks).failures.join("\n"), /raw bytes/u);
 
   const gzipOverflow = identifyBudgetChunks(
     validRows().map((item) =>
-      item.file === "index-home.js"
-        ? { ...item, gzip: BUNDLE_BUDGETS.homeRoute.gzip + 1 }
-        : item,
+      item.file === "index-home.js" ? { ...item, gzip: BUNDLE_BUDGETS.homeRoute.gzip + 1 } : item,
     ),
   );
   assert.match(evaluateBundleChecks(gzipOverflow.chunks).failures.join("\n"), /gzip bytes/u);
