@@ -38,14 +38,14 @@ test("RLS trigger privilege migration is a no-op when the function is absent", a
   }
 });
 
-test("browser-role revocation is idempotent while function and service access remain intact", async () => {
+test("browser-role revocation is idempotent while the live security-definer contract remains intact", async () => {
   const database = await createDatabase();
   try {
     await database.exec(`
       CREATE FUNCTION public.rls_auto_enable()
       RETURNS void
       LANGUAGE plpgsql
-      SECURITY INVOKER
+      SECURITY DEFINER
       SET search_path = pg_catalog
       AS $$ BEGIN NULL; END $$;
 
