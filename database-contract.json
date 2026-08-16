@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 71,
+  "migrationCount": 72,
   "tables": [
     "account_audit_entries",
     "agent_approvals",
@@ -844,6 +844,7 @@
     "EXECUTE ON FUNCTION public.projects_add_owner_member() FROM anon, PUBLIC",
     "EXECUTE ON FUNCTION public.read_email_batch(TEXT, INT, INT) FROM PUBLIC",
     "EXECUTE ON FUNCTION public.read_email_batch(TEXT, INT, INT) FROM PUBLIC",
+    "EXECUTE ON FUNCTION public.rls_auto_enable()\n      FROM PUBLIC, anon, authenticated",
     "EXECUTE ON FUNCTION public.save_writing_document(uuid, text, text, integer, text) FROM PUBLIC",
     "EXECUTE ON FUNCTION public.save_writing_document(uuid, text, text, integer, text) FROM anon",
     "EXECUTE ON FUNCTION public.try_add_storage_bytes(uuid, bigint, bigint) FROM PUBLIC, anon, authenticated",
@@ -896,5 +897,5 @@
     "execute on function public.has_active_subscription(uuid, text) from public, anon, authenticated",
     "execute on function public.kovagpt_schema_health() from public,anon,authenticated"
   ],
-  "sha256": "b5b005a071e29e60e1b4cb1bb87b146eb90d61384edadd1241ead80a17dfb2aa"
+  "sha256": "8b9b63960285c42206f5e6684e947bbaadb5523217c4f4dcf0afd3a99eaee72b"
 }

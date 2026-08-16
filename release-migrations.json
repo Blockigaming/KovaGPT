@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 71,
-  "latest": "20260805123909_98bb0463-448a-425d-ad2b-f91759cf12fa.sql",
+  "count": 72,
+  "latest": "20260815213024_rls_auto_enable_privilege_lockdown.sql",
   "migrations": [
     {
       "order": 1,
@@ -1455,6 +1455,20 @@
       "sha256": "ecf0d80667a3a6fdb35c5fbe93d5818d2f284bc521336ce1fb16ada70618acd9",
       "tables": [],
       "functions": ["is_project_member", "can_edit_project", "is_family_member"],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 72,
+      "filename": "20260815213024_rls_auto_enable_privilege_lockdown.sql",
+      "timestamp": "20260815213024",
+      "sha256": "4abaf919ac37d5aac40067f7b21a680eef00b80f04ac7d084fe1c0889a4f299c",
+      "tables": [],
+      "functions": [],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
