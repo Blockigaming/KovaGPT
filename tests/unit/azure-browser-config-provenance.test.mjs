@@ -185,6 +185,56 @@ test("legacy Supabase service-role JWTs fail without printing the token", () => 
   );
 });
 
+test("legacy Supabase anon JWTs for another project fail without printing the token", () => {
+  const token = fakeJwt({ role: "anon", ref: OTHER_PROJECT_REF });
+  withBundle(
+    {
+      "client/assets/app.js": browserSource(`const legacy=${JSON.stringify(token)};`),
+    },
+    ({ bundleDir }) => {
+      assert.throws(
+        () => verify(bundleDir),
+        (error) => {
+          assert.match(error.message, /anon JWT for an unexpected project/u);
+          assert.equal(error.message.includes(token), false);
+          return true;
+        },
+      );
+    },
+  );
+});
+
+test("even same-project legacy anon JWTs fail when a modern publishable key is required", () => {
+  const token = fakeJwt({ role: "anon", ref: PROJECT_REF });
+  withBundle(
+    {
+      "client/assets/app.js": browserSource(`const legacy=${JSON.stringify(token)};`),
+    },
+    ({ bundleDir }) => {
+      assert.throws(() => verify(bundleDir), /require the approved publishable key/u);
+    },
+  );
+});
+
+test("non-publishable Supabase user JWTs cannot be baked into browser assets", () => {
+  const token = fakeJwt({ role: "authenticated", ref: PROJECT_REF, sub: "user-id" });
+  withBundle(
+    {
+      "client/assets/app.js": browserSource(`const session=${JSON.stringify(token)};`),
+    },
+    ({ bundleDir }) => {
+      assert.throws(
+        () => verify(bundleDir),
+        (error) => {
+          assert.match(error.message, /Non-publishable Supabase JWT/u);
+          assert.equal(error.message.includes(token), false);
+          return true;
+        },
+      );
+    },
+  );
+});
+
 test("all served text formats are scanned", () => {
   withBundle(
     {
@@ -276,7 +326,7 @@ test("invalid URLs, project refs, keys, and source identities are rejected", () 
   );
 });
 
-test("Docker, Azure, and runbook contracts require exact archive provenance", () => {
+test("Docker, Azure, and runbook contracts require exact archive and digest provenance", () => {
   const dockerfile = readFileSync("Dockerfile", "utf8");
   const helper = readFileSync("scripts/azure/prepare-verified-build-context.sh", "utf8");
   const workflow = readFileSync(
@@ -286,6 +336,7 @@ test("Docker, Azure, and runbook contracts require exact archive provenance", ()
   const runbook = readFileSync("docs/azure/verified-browser-image-provenance.md", "utf8");
 
   assert.match(dockerfile, /ARG KOVA_VERIFY_BROWSER_CONFIG=false/u);
+  assert.match(dockerfile, /KOVA_BUILD_SHA="\$KOVA_SOURCE_SHA" npm run build/u);
   assert.match(dockerfile, /KOVA_BROWSER_BUNDLE_DIR=dist\/client/u);
   assert.match(dockerfile, /KOVA_SOURCE_ATTESTATION_PATH=\/app\/\.kova-source-attestation\.json/u);
   assert.match(dockerfile, /com\.kovagpt\.source\.tree/u);
@@ -296,9 +347,15 @@ test("Docker, Azure, and runbook contracts require exact archive provenance", ()
   assert.match(helper, /\.kova-source-attestation\.json/u);
 
   assert.match(workflow, /prepare-verified-build-context\.sh/u);
-  assert.match(workflow, /appSourcePath: \$\{\{ steps\.source-context\.outputs\.path \}\}/u);
-  assert.match(workflow, /KOVA_VERIFY_BROWSER_CONFIG=true/u);
-  assert.match(workflow, /KOVA_SOURCE_TREE=/u);
+  assert.match(workflow, /Verify existing server Supabase project before building/u);
+  assert.match(workflow, /server SUPABASE_URL does not match/u);
+  assert.match(workflow, /az acr repository show/u);
+  assert.match(workflow, /digest_image/u);
+  assert.match(workflow, /Deploy verified image by registry digest/u);
+  assert.match(workflow, /az containerapp update/u);
+  assert.match(workflow, /steps\.image\.outputs\.digest_image/u);
+  assert.match(workflow, /api\/version/u);
+  assert.doesNotMatch(workflow, /container-apps-deploy-action/u);
 
   assert.match(runbook, /clean `git archive`/u);
   assert.match(runbook, /"\$BUILD_CONTEXT"/u);
