@@ -7,13 +7,14 @@ Repository checks prove code and contracts. `/api/readyz` performs a bounded pro
 ## Pre-deployment
 
 1. Use Node 24 and the npm version bundled with it; install exactly with `npm ci`.
-2. Required: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, one of `SUPABASE_PUBLISHABLE_KEY`/`SUPABASE_ANON_KEY`, Clerk server or publishable configuration, and one of `KOVA_PUBLIC_URL`/`APP_URL`/`SITE_URL`. Optional subsystems require their provider variables reported by `/api/readyz`.
-3. Confirm the commit with `git rev-parse HEAD`, obtain a database backup, run `npm run release:manifest`, `npm run release:migrations`, and review `release-migrations.json`. Migrations are forward-only and applied lexically.
-4. Run `npm ci && npm run release:validate`, all configured tests, and review `artifacts/release/bundle-report.json`.
+2. Required runtime configuration: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, one of `SUPABASE_PUBLISHABLE_KEY`/`SUPABASE_ANON_KEY`, Clerk server or publishable configuration, and one of `KOVA_PUBLIC_URL`/`APP_URL`/`SITE_URL`. Optional subsystems require their provider variables reported by `/api/readyz`.
+3. Before a hosted migration, set `SUPABASE_PROJECT_REF` to the exact 20-character destination project reference. Non-interactive CI migration additionally requires `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD`; keep both secret and provide them only through the protected environment.
+4. Confirm the commit with `git rev-parse HEAD`, obtain a database backup, run `npm run release:manifest`, `npm run release:migrations`, and review `release-migrations.json`. Migrations are forward-only and applied lexically.
+5. Run `npm ci && npm run release:validate`, all configured tests, and review `artifacts/release/bundle-report.json`.
 
 ## Deployment
 
-1. Push migrations with the repository-supported command `npm run db:migrate`. Do not deploy application code if this fails.
+1. Push migrations with `SUPABASE_PROJECT_REF=<exact-project-ref> npm run db:migrate`. The wrapper links that exact project before pushing and refuses target-changing, seed, and work-directory flags. Do not deploy application code if this fails.
 2. Build with `npm run build`. Deploy the resulting Cloudflare/TanStack server using the deployment pipeline configured for `wrangler.jsonc`; this repository intentionally does not invent a provider-specific publish command.
 3. Verify `GET /api/livez` returns `200` and `status=alive`. Verify `GET /api/readyz` returns `200`; `503` means traffic must not be shifted.
 4. Run `KOVA_STAGING_SMOKE=1 KOVA_SMOKE_BASE_URL=https://staging.example npm run release:smoke`.

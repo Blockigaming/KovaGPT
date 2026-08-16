@@ -13,7 +13,7 @@ test("shared interaction styles cover composer, menus, motion, and narrow phones
   assert.match(styles, /\[role="menuitem"\]:focus-visible/);
   assert.match(styles, /@media \(max-width: 359px\)/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
-  assert.match(home, /What can I help with\?/);
+  assert.match(home, /What's on your mind today\?/);
   assert.match(home, /placement="topbar"/);
   assert.match(composer, /COMPOSER_TOOLS/);
   assert.match(composer, /PROMPT_SHORTCUTS/);

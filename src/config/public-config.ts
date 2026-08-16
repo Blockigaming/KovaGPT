@@ -6,8 +6,8 @@
 // environment files are absent, which previously made sign-in fail with
 // "authentication is not configured".
 
-export const PUBLIC_BACKEND_URL = "https://zrzwkqrwurgutrmvalri.supabase.co";
-export const PUBLIC_BACKEND_KEY = "sb_publishable_qX2ghqbNW2-TKxk-7ZeR0A_o3uzjipz";
-export const PUBLIC_BACKEND_PROJECT_ID = "zrzwkqrwurgutrmvalri";
+export const PUBLIC_BACKEND_URL = "https://mfbycmbjygcfkrsuepxf.supabase.co";
+export const PUBLIC_BACKEND_KEY = "sb_publishable_3_JjqZc2hdxn2Q0xAWwMOw_EaZsryWw";
+export const PUBLIC_BACKEND_PROJECT_ID = "mfbycmbjygcfkrsuepxf";
 export const PUBLIC_PAYMENTS_CLIENT_TOKEN =
   "pk_live_51TW1VcAHcChSIaIorYfT0qVyPHNE8XNhavohT2Rz2ripwYcPkZfmXBAWmhvuBb3UNxP66vntf5TIvgb9wjtjQvCJ009mu2Yl5z";
