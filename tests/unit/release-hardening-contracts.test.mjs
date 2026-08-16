@@ -52,22 +52,46 @@ test("migration preflight detects duplicates and reconciles remote history", () 
   });
 });
 
-test("RLS matrix is complete and production execution is prohibited", () => {
+test("RLS matrix is executable and production execution is prohibited", () => {
   const matrix = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     protectedTables: [
       {
         table: "projects",
         accessModel: "project_membership",
         operations: ["select", "update", "delete"],
-        fixture: null,
+        fixture: {
+          idColumn: "id",
+          row: { owner_id: "$USER_A", name: "fixture" },
+          updatePatch: { name: "mutated" },
+          bindings: { PROJECT_A: "id" },
+        },
       },
     ],
   };
   assert.deepEqual(validateRlsMatrix(matrix, { tables: ["projects"] }), {
     protectedTableCount: 1,
-    fixtureCount: 0,
+    fixtureCount: 1,
+    bindings: ["EMAIL_A", "EMAIL_B", "MARKER", "PROJECT_A", "USER_A", "USER_B"],
   });
+  assert.throws(
+    () =>
+      validateRlsMatrix(
+        {
+          schemaVersion: 2,
+          protectedTables: [
+            {
+              table: "projects",
+              accessModel: "project_membership",
+              operations: ["select", "update", "delete"],
+              fixture: null,
+            },
+          ],
+        },
+        { tables: ["projects"] },
+      ),
+    /fixture_missing/u,
+  );
   assert.throws(
     () =>
       assertSafeRlsTarget({
