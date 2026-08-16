@@ -38,14 +38,14 @@ test("RLS trigger privilege migration is a no-op when the function is absent", a
   }
 });
 
-test("browser roles lose execute while the function and service access remain intact", async () => {
+test("browser-role revocation is idempotent while function and service access remain intact", async () => {
   const database = await createDatabase();
   try {
     await database.exec(`
       CREATE FUNCTION public.rls_auto_enable()
       RETURNS void
       LANGUAGE plpgsql
-      SECURITY DEFINER
+      SECURITY INVOKER
       SET search_path = pg_catalog
       AS $$ BEGIN NULL; END $$;
 
@@ -57,7 +57,9 @@ test("browser roles lose execute while the function and service access remain in
       SELECT pg_get_functiondef('public.rls_auto_enable()'::regprocedure) AS definition
     `);
 
-    await database.exec(await loadMigration());
+    const migration = await loadMigration();
+    await database.exec(migration);
+    await database.exec(migration);
 
     const privileges = await database.query(`
       SELECT
@@ -110,5 +112,10 @@ test("migration changes privileges only", async () => {
   assert.doesNotMatch(migration, /CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION/iu);
   assert.doesNotMatch(migration, /ALTER\s+FUNCTION/iu);
   assert.doesNotMatch(migration, /DROP\s+FUNCTION/iu);
+  assert.doesNotMatch(migration, /(?:CREATE|ALTER|DROP)\s+EVENT\s+TRIGGER/iu);
   assert.doesNotMatch(migration, /GRANT\s+EXECUTE/iu);
+  assert.doesNotMatch(
+    migration,
+    /REVOKE\s+EXECUTE\s+ON\s+FUNCTION\s+public\.rls_auto_enable\(\)[\s\S]*?\bservice_role\b/iu,
+  );
 });
