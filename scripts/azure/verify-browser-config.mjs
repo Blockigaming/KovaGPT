@@ -40,6 +40,14 @@ const FORBIDDEN_SECRET_PATTERNS = [
     pattern: /\bsb_secret_[A-Za-z0-9_-]{16,}\b/u,
   },
   {
+    label: "Stripe secret key",
+    pattern: /\bsk_(?:live|test)_[A-Za-z0-9]{16,}\b/u,
+  },
+  {
+    label: "Stripe webhook signing secret",
+    pattern: /\bwhsec_[A-Za-z0-9]{16,}\b/u,
+  },
+  {
     label: "PostgreSQL credential URL",
     pattern: /\bpostgres(?:ql)?:\/\/[^\s"'`<>]+/iu,
   },

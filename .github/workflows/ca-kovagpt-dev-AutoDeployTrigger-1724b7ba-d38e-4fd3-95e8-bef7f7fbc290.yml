@@ -298,7 +298,7 @@ jobs:
             if curl --fail --silent --show-error \
               --max-time 10 \
               "https://${fqdn}/api/health" >/dev/null; then
-              runtime_sha="$(
+              if runtime_sha="$(
                 curl --fail --silent --show-error --max-time 10 \
                   "https://${fqdn}/api/version" |
                   node -e '
@@ -306,10 +306,11 @@ jobs:
                     const value = JSON.parse(fs.readFileSync(0, "utf8"));
                     process.stdout.write(typeof value.sha === "string" ? value.sha : "");
                   '
-              )"
-              if [[ "$runtime_sha" == "$GITHUB_SHA" ]]; then
-                echo "Azure health and exact runtime build identity checks passed."
-                exit 0
+              )"; then
+                if [[ "$runtime_sha" == "$GITHUB_SHA" ]]; then
+                  echo "Azure health and exact runtime build identity checks passed."
+                  exit 0
+                fi
               fi
             fi
 
