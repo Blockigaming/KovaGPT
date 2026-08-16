@@ -4,9 +4,6 @@ import { responsesStreamToChatStream } from "@/lib/ai/responses-compat.server.mj
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
 import { maximumServerOutputForModel, modelForPolicy } from "@/lib/ai/model-catalog.server";
 
-import { DEFAULT_MODELS } from "./model-config.mjs";
-
-
 export type JsonObject = Record<string, unknown>;
 
 export type ProviderCapability =
@@ -18,10 +15,7 @@ export type ProviderCapability =
   | "embeddings"
   | "image_generation"
   | "vision"
-  | "file_analysis"
-  | "speech_to_text"
-  | "text_to_speech"
-  | "realtime_voice";
+  | "file_analysis";
 
 export type ProviderErrorCode =
   | "provider_timeout"
@@ -37,9 +31,10 @@ export type ProviderErrorEnvelope = {
 };
 
 export type ProviderModelKind = "fast" | "balanced" | "deep";
+export type ProviderKind = "azure_openai" | "openai";
 
 export type ProviderConfig = {
-  provider: "openai";
+  provider: ProviderKind;
   baseUrl: string;
   chatModel: string;
   fastModel: string;
@@ -51,58 +46,14 @@ export type ProviderConfig = {
   configured: boolean;
 };
 
+type ProviderTarget = {
+  provider: ProviderKind;
+  baseUrl: string;
+  auth: "azure_api_key" | "azure_managed_identity" | "openai_api_key" | "missing";
+};
+
 const OPENAI_API_BASE_URL = "https://api.openai.com/v1";
-const LOVABLE_GATEWAY_BASE_URL = "https://ai.gateway.lovable.dev/v1";
-
-/**
- * Kova buys inference through the managed AI gateway when a gateway key is
- * present, and only falls back to a direct provider account otherwise. The
- * gateway namespaces every model id, so catalog ids are translated here and
- * nowhere else.
- */
-const GATEWAY_MODEL_IDS: Record<string, string> = {
-  "gpt-5.6-luna": "openai/gpt-5.6-luna",
-  "gpt-5.6-terra": "openai/gpt-5.6-terra",
-  "gpt-5.6-sol": "openai/gpt-5.6-sol",
-  "gpt-4.1-nano": "openai/gpt-5-nano",
-  "gpt-4.1-mini": "openai/gpt-5-mini",
-  "gpt-5-mini": "openai/gpt-5-mini",
-  "gpt-5": "openai/gpt-5",
-  "gpt-image-1": "openai/gpt-image-1-mini",
-  "text-embedding-3-small": "openai/text-embedding-3-small",
-  "text-embedding-3-large": "openai/text-embedding-3-large",
-};
-
-function usingGateway(): boolean {
-  return Boolean(env("LOVABLE_API_KEY"));
-}
-
-export function providerBaseUrl(): string {
-  return usingGateway() ? LOVABLE_GATEWAY_BASE_URL : OPENAI_API_BASE_URL;
-}
-
-/** Translates a catalog model id into the id the active provider accepts. */
-export function providerModelId(modelId: string): string {
-  if (!usingGateway()) return modelId;
-  if (modelId.includes("/")) return modelId;
-  return GATEWAY_MODEL_IDS[modelId] ?? "openai/gpt-5-mini";
-}
-
-function withProviderModel(body: JsonObject): JsonObject {
-  if (typeof body.model !== "string") return body;
-  return { ...body, model: providerModelId(body.model) };
-}
-
-// Model ids live in ONE place: src/lib/ai/model-config.mjs. This adapter only
-// mirrors the logical roles so nothing in the repository hardcodes a model.
-const OPENAI_MODELS = {
-  chat: DEFAULT_MODELS.DEFAULT_CHAT,
-  fast: DEFAULT_MODELS.UTILITY,
-  deep: DEFAULT_MODELS.PREMIUM_REASONING,
-  image: DEFAULT_MODELS.IMAGE_GENERATION,
-  embedding: DEFAULT_MODELS.EMBEDDING,
-};
-
+const AZURE_OPENAI_RESOURCE = "https://cognitiveservices.azure.com";
 const DEFAULT_TIMEOUT_MS = 45_000;
 const NO_STORE_HEADERS = { "Cache-Control": "no-store" } as const;
 const PROVIDER_FAILURE_CATEGORY = "model_provider_failure";
@@ -117,6 +68,14 @@ const DEFAULT_CAPABILITIES: ProviderCapability[] = [
   "vision",
   "file_analysis",
 ];
+
+let managedIdentityToken:
+  | {
+      accessToken: string;
+      expiresAtMs: number;
+    }
+  | undefined;
+let managedIdentityRequest: Promise<string> | undefined;
 
 export class AiProviderError extends Error {
   readonly code: ProviderErrorCode;
@@ -145,6 +104,93 @@ function env(name: string): string | undefined {
   return runtimeEnv(name);
 }
 
+function normalizeAzureOpenAiBaseUrl(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+
+  let endpoint: URL;
+  try {
+    endpoint = new URL(value);
+  } catch {
+    throw new Error("invalid_azure_openai_endpoint");
+  }
+
+  if (
+    endpoint.protocol !== "https:" ||
+    endpoint.username ||
+    endpoint.password ||
+    endpoint.port ||
+    endpoint.search ||
+    endpoint.hash
+  ) {
+    throw new Error("invalid_azure_openai_endpoint");
+  }
+
+  const allowedHost =
+    endpoint.hostname.endsWith(".openai.azure.com") ||
+    endpoint.hostname.endsWith(".services.ai.azure.com");
+  if (!allowedHost) throw new Error("invalid_azure_openai_endpoint");
+
+  const pathname = endpoint.pathname.replace(/\/+$/u, "");
+  if (pathname && pathname !== "/openai/v1") {
+    throw new Error("invalid_azure_openai_endpoint");
+  }
+
+  return `${endpoint.origin}/openai/v1`;
+}
+
+function providerTarget(): ProviderTarget {
+  const azureBaseUrl = normalizeAzureOpenAiBaseUrl(env("AZURE_OPENAI_ENDPOINT"));
+  if (azureBaseUrl) {
+    if (env("AZURE_OPENAI_API_KEY")) {
+      return { provider: "azure_openai", baseUrl: azureBaseUrl, auth: "azure_api_key" };
+    }
+    if (env("IDENTITY_ENDPOINT") && env("IDENTITY_HEADER")) {
+      return {
+        provider: "azure_openai",
+        baseUrl: azureBaseUrl,
+        auth: "azure_managed_identity",
+      };
+    }
+    return { provider: "azure_openai", baseUrl: azureBaseUrl, auth: "missing" };
+  }
+
+  return {
+    provider: "openai",
+    baseUrl: OPENAI_API_BASE_URL,
+    auth: env("OPENAI_API_KEY") ? "openai_api_key" : "missing",
+  };
+}
+
+export function providerBaseUrl(): string {
+  return providerTarget().baseUrl;
+}
+
+function azureDeploymentForModel(modelId: string, capability?: ProviderCapability): string {
+  if (capability === "image_generation") {
+    return env("AZURE_OPENAI_DEPLOYMENT_IMAGE") ?? modelId;
+  }
+  if (capability === "embeddings") {
+    return env("AZURE_OPENAI_DEPLOYMENT_EMBEDDING") ?? modelId;
+  }
+
+  const deepModel = modelForPolicy("deep").id;
+  const thinkingModel = modelForPolicy("thinking").id;
+  if (modelId === deepModel) return env("AZURE_OPENAI_DEPLOYMENT_DEEP") ?? modelId;
+  if (modelId === thinkingModel) return env("AZURE_OPENAI_DEPLOYMENT_THINKING") ?? modelId;
+  return env("AZURE_OPENAI_DEPLOYMENT_CHAT") ?? modelId;
+}
+
+export function providerModelId(modelId: string, capability?: ProviderCapability): string {
+  return providerTarget().provider === "azure_openai"
+    ? azureDeploymentForModel(modelId, capability)
+    : modelId;
+}
+
+function withProviderModel(body: JsonObject, capability: ProviderCapability): JsonObject {
+  if (typeof body.model !== "string") return body;
+  return { ...body, model: providerModelId(body.model, capability) };
+}
+
 function parseTimeout(value: string | undefined): number {
   if (!value) return DEFAULT_TIMEOUT_MS;
   const n = Number(value);
@@ -163,9 +209,10 @@ function parseCapabilities(value: string | undefined): ProviderCapability[] {
 }
 
 export function getAiProviderConfig(): ProviderConfig {
+  const target = providerTarget();
   return {
-    provider: "openai",
-    baseUrl: providerBaseUrl(),
+    provider: target.provider,
+    baseUrl: target.baseUrl,
     chatModel: modelForPolicy("normal").id,
     fastModel: modelForPolicy("instant").id,
     deepModel: modelForPolicy("deep").id,
@@ -173,7 +220,7 @@ export function getAiProviderConfig(): ProviderConfig {
     embeddingModel: env("KOVA_EMBEDDING_MODEL") ?? "text-embedding-3-small",
     timeoutMs: parseTimeout(env("KOVA_AI_TIMEOUT_MS")),
     capabilities: parseCapabilities(env("KOVA_AI_CAPABILITIES")),
-    configured: Boolean(env("LOVABLE_API_KEY") ?? env("OPENAI_API_KEY")),
+    configured: target.auth !== "missing",
   };
 }
 
@@ -197,7 +244,13 @@ export function validateAiProviderConfig(): ProviderErrorEnvelope | null {
       status: 503,
     };
   }
-  if (env("LOVABLE_API_KEY") || env("OPENAI_API_KEY")) return null;
+
+  try {
+    if (providerTarget().auth !== "missing") return null;
+  } catch {
+    // Invalid endpoints fail closed without exposing their value.
+  }
+
   return {
     error: "KovaGPT is temporarily unavailable. Please try again later.",
     code: "provider_unavailable",
@@ -247,13 +300,92 @@ export function missingAiProviderResponse(fallback?: JsonObject): Response | nul
   );
 }
 
-function headers(): Record<string, string> {
-  const key = env("LOVABLE_API_KEY") ?? env("OPENAI_API_KEY");
-  if (!key) throw new AiProviderError(validateAiProviderConfig()!);
-  return {
-    Authorization: `Bearer ${key}`,
-    "Content-Type": "application/json",
-  };
+function parseExpiry(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value > 10_000_000_000 ? value : value * 1000;
+  }
+  if (typeof value !== "string" || !value.trim()) return Date.now() + 5 * 60_000;
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) return numeric > 10_000_000_000 ? numeric : numeric * 1000;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : Date.now() + 5 * 60_000;
+}
+
+async function fetchManagedIdentityToken(): Promise<string> {
+  if (managedIdentityToken && managedIdentityToken.expiresAtMs - Date.now() > 120_000) {
+    return managedIdentityToken.accessToken;
+  }
+  if (managedIdentityRequest) return managedIdentityRequest;
+
+  managedIdentityRequest = (async () => {
+    const endpointValue = env("IDENTITY_ENDPOINT");
+    const identityHeader = env("IDENTITY_HEADER");
+    if (!endpointValue || !identityHeader) throw new Error("azure_managed_identity_unavailable");
+
+    let endpoint: URL;
+    try {
+      endpoint = new URL(endpointValue);
+    } catch {
+      throw new Error("azure_managed_identity_unavailable");
+    }
+    if (endpoint.protocol !== "http:" || endpoint.username || endpoint.password) {
+      throw new Error("azure_managed_identity_unavailable");
+    }
+
+    endpoint.searchParams.set("resource", AZURE_OPENAI_RESOURCE);
+    endpoint.searchParams.set("api-version", "2019-08-01");
+    const clientId = env("AZURE_CLIENT_ID");
+    if (clientId) endpoint.searchParams.set("client_id", clientId);
+
+    const response = await fetch(endpoint, {
+      method: "GET",
+      redirect: "error",
+      headers: { "X-IDENTITY-HEADER": identityHeader },
+    });
+    if (!response.ok) {
+      await response.body?.cancel().catch(() => undefined);
+      throw new Error("azure_managed_identity_unavailable");
+    }
+
+    const value = (await response.json()) as Record<string, unknown>;
+    const accessToken = typeof value.access_token === "string" ? value.access_token : "";
+    if (!accessToken) throw new Error("azure_managed_identity_unavailable");
+
+    managedIdentityToken = {
+      accessToken,
+      expiresAtMs: parseExpiry(value.expires_on),
+    };
+    return accessToken;
+  })();
+
+  try {
+    return await managedIdentityRequest;
+  } finally {
+    managedIdentityRequest = undefined;
+  }
+}
+
+async function providerHeaders(): Promise<Record<string, string>> {
+  const target = providerTarget();
+  if (target.auth === "azure_api_key") {
+    return {
+      "api-key": env("AZURE_OPENAI_API_KEY")!,
+      "Content-Type": "application/json",
+    };
+  }
+  if (target.auth === "azure_managed_identity") {
+    return {
+      Authorization: `Bearer ${await fetchManagedIdentityToken()}`,
+      "Content-Type": "application/json",
+    };
+  }
+  if (target.auth === "openai_api_key") {
+    return {
+      Authorization: `Bearer ${env("OPENAI_API_KEY")!}`,
+      "Content-Type": "application/json",
+    };
+  }
+  throw new AiProviderError(validateAiProviderConfig()!);
 }
 
 export function chatModel(kind: ProviderModelKind = "balanced") {
@@ -361,16 +493,16 @@ async function providerFetch(
   const config = getAiProviderConfig();
   const { signal, cleanup } = mergeSignals(init?.signal ?? undefined, config.timeoutMs);
   try {
-    return await fetch(`${providerBaseUrl()}${path}`, {
+    return await fetch(`${config.baseUrl}${path}`, {
       ...init,
       method: "POST",
       redirect: "error",
       signal,
       headers: {
         ...Object.fromEntries(new Headers(init?.headers).entries()),
-        ...headers(),
+        ...(await providerHeaders()),
       },
-      body: JSON.stringify(withProviderModel(body)),
+      body: JSON.stringify(withProviderModel(body, capability)),
     });
   } catch (error) {
     throw normalizeProviderError(error);
@@ -412,12 +544,6 @@ export async function streamingChatCompletions(
   return chatCompletions({ ...body, stream: true }, init);
 }
 
-/**
- * Kova's browser protocol intentionally remains the established Chat Completions
- * SSE shape. This adapter is the only compatibility boundary: OpenAI receives a
- * Responses API request and provider events are translated before leaving the
- * server. Consequently no UI code knows the provider or its wire format.
- */
 function toResponsesRequest(body: JsonObject): JsonObject {
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const instructions: string[] = [];
@@ -467,8 +593,6 @@ function toResponsesRequest(body: JsonObject): JsonObject {
   if (typeof body.max_completion_tokens === "number")
     request.max_output_tokens = Math.min(body.max_completion_tokens, serverOutputCeiling);
   if (request.max_output_tokens === undefined) request.max_output_tokens = serverOutputCeiling;
-  // Reasoning models default to medium effort, which makes ordinary chat slow
-  // and expensive. Kova asks for low effort unless a caller opts into more.
   request.reasoning =
     body.reasoning && typeof body.reasoning === "object"
       ? body.reasoning
