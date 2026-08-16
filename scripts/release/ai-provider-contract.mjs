@@ -10,15 +10,23 @@ export function verifyAiProviderContract({ provider, catalog, staging }) {
     /\/openai\/v1/u,
     /IDENTITY_ENDPOINT/u,
     /IDENTITY_HEADER/u,
-    /https:\/\/cognitiveservices\.azure\.com\/\.default/u,
+    /const AZURE_OPENAI_RESOURCE = "https:\/\/cognitiveservices\.azure\.com"/u,
+    /searchParams\.set\("resource", AZURE_OPENAI_RESOURCE\)/u,
+    /searchParams\.set\("api-version", "2019-08-01"\)/u,
     /redirect: "error"/u,
     /"\/responses"/u,
     /responsesStreamToChatStream/u,
     /AZURE_OPENAI_DEPLOYMENT_DEEP/u,
   ];
-  for (const pattern of requiredProviderPatterns) if (!pattern.test(provider)) failures.push(`provider:${pattern}`);
-  if (/lovable\.(?:app|dev)|LOVABLE_API_KEY|@lovable\.dev/iu.test(provider)) failures.push("provider:Lovable runtime present");
-  if (!/fallback: "gpt-5\.6-sol"/u.test(catalog)) failures.push("catalog:deep fallback is not GPT-5.6 Sol");
+  for (const pattern of requiredProviderPatterns) {
+    if (!pattern.test(provider)) failures.push(`provider:${pattern}`);
+  }
+  if (/lovable\.(?:app|dev)|LOVABLE_API_KEY|@lovable\.dev/iu.test(provider)) {
+    failures.push("provider:Lovable runtime present");
+  }
+  if (!/fallback: "gpt-5\.6-sol"/u.test(catalog)) {
+    failures.push("catalog:deep fallback is not GPT-5.6 Sol");
+  }
   if (!/id: "gpt-5\.6-sol"[\s\S]*reasoning: true[\s\S]*vision: true[\s\S]*tools: true/u.test(catalog)) {
     failures.push("catalog:GPT-5.6 Sol capability contract incomplete");
   }
@@ -41,5 +49,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.error(`AI provider contract failed:\n${failures.join("\n")}`);
     process.exit(1);
   }
-  console.log("AI_PROVIDER_CONTRACT=PASS primaryDeepModel=gpt-5.6-sol azureManagedIdentity=true liveSmokeRequired=true");
+  console.log(
+    "AI_PROVIDER_CONTRACT=PASS primaryDeepModel=gpt-5.6-sol azureManagedIdentity=true liveSmokeRequired=true",
+  );
 }
