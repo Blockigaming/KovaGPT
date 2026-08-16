@@ -1,0 +1,73 @@
+name: One-shot format final bundle gate
+
+on:
+  push:
+    branches:
+      - fix/production-supabase-retarget-preflight
+
+permissions:
+  contents: write
+
+concurrency:
+  group: one-shot-format-final-bundle-gate
+  cancel-in-progress: false
+
+jobs:
+  format-build-and-commit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: fix/production-supabase-retarget-preflight
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Apply canonical formatting
+        run: npx prettier --write tests/unit/bundle-budget.test.mjs vite.config.ts
+
+      - name: Run focused bundle contracts
+        run: node --test tests/unit/bundle-budget.test.mjs
+
+      - name: Build and enforce manifest-backed budgets
+        run: |
+          npm run build
+          npm run release:bundle
+
+      - name: Verify distinct route and entry accounting
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          const report = JSON.parse(await readFile("artifacts/release/bundle-report.json", "utf8"));
+          if (report.schemaVersion !== 3) throw new Error("Expected bundle report schema 3");
+          const initial = report.checks?.initial;
+          const main = report.checks?.main;
+          if (!initial?.file || !main?.file) throw new Error("Route or main entry accounting is missing");
+          if (initial.file === main.file) throw new Error("Route and shared entry must be distinct chunks");
+          if (main.actual.raw < 500000) throw new Error("The large shared entry was not selected");
+          if (report.failures?.length) throw new Error(`Bundle failures remained: ${report.failures.join(", ")}`);
+          NODE
+
+      - name: Commit verified formatting and remove one-shot workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/one-shot-format-final-bundle-gate.yml
+          git add tests/unit/bundle-budget.test.mjs vite.config.ts
+          git diff --cached --check
+          git config user.name "KovaGPT release automation"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "Verify manifest-backed browser bundle budgets"
+          git push origin HEAD:fix/production-supabase-retarget-preflight
