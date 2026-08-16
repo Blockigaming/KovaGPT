@@ -20,7 +20,7 @@ function getSupabase() {
 type StripeLineItemLike = {
   price?: {
     lookup_key?: string;
-    metadata?: { kova_plan?: string; lovable_external_id?: string };
+    metadata?: { kova_plan?: string };
     id?: string;
     product?: string;
   };
@@ -63,14 +63,7 @@ export function normalizeStripeEnvironment(value: string | null): StripeEnv | nu
 }
 
 function priceIdFrom(item: StripeLineItemLike | undefined): string | undefined {
-  const candidates = [
-    item?.price?.lookup_key,
-    item?.price?.metadata?.kova_plan,
-    // Temporary read-only compatibility for existing Stripe metadata. Remove
-    // after the dashboard metadata has been migrated to kova_plan.
-    item?.price?.metadata?.lovable_external_id,
-    item?.price?.id,
-  ];
+  const candidates = [item?.price?.lookup_key, item?.price?.metadata?.kova_plan, item?.price?.id];
   for (const candidate of candidates) {
     const plan = resolveBillingPlan(candidate);
     if (plan) return plan.lookupKey;
