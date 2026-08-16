@@ -1,48 +1,66 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
-test("AI provider uses fixed allowlisted endpoints and server-only credentials", async () => {
-  const [provider, diagnostics, envExample, azure] = await Promise.all([
-    readFile(new URL("../../src/lib/ai/provider.server.ts", import.meta.url), "utf8"),
-    readFile(new URL("../../src/lib/config/diagnostics.server.ts", import.meta.url), "utf8"),
-    readFile(new URL("../../.env.example", import.meta.url), "utf8"),
-    readFile(new URL("../../src/lib/azure-runtime-env.server.ts", import.meta.url), "utf8"),
-  ]);
-  assert.match(provider, /const OPENAI_API_BASE_URL = "https:\/\/api\.openai\.com\/v1"/);
-  assert.match(
-    provider,
-    /const LOVABLE_GATEWAY_BASE_URL = "https:\/\/ai\.gateway\.lovable\.dev\/v1"/,
-  );
-  assert.match(
-    provider,
-    /return usingGateway\(\) \? LOVABLE_GATEWAY_BASE_URL : OPENAI_API_BASE_URL/,
-  );
-  assert.doesNotMatch(
-    provider + envExample,
-    /OPENAI_BASE_URL|LOVABLE_AI_BASE_URL|AI_PROVIDER_(?:URL|API_KEY)|VITE_.*(?:OPENAI|LOVABLE).*KEY/,
-  );
-  assert.match(
-    provider,
-    /configured: Boolean\(env\("LOVABLE_API_KEY"\) \?\? env\("OPENAI_API_KEY"\)\)/,
-  );
-  assert.match(diagnostics, /aiProvider: feature\(\["LOVABLE_API_KEY", "OPENAI_API_KEY"\]\)/);
-  assert.match(azure, /environment\.OPENAI_API_KEY \|\| environment\.AZURE_OPENAI_ENDPOINT/);
-  assert.match(azure, /missing\(environment, \[/);
-  assert.doesNotMatch(azure, /function missing\(names[\s\S]{0,180}process\.env/);
-  assert.match(provider, /redirect: "error"/);
+const read = (path) => readFileSync(path, "utf8");
+
+test("AI runtime has no Lovable gateway, key, model namespace, or fallback", () => {
+  const files = [
+    "src/lib/ai/provider.server.ts",
+    "src/lib/ai/config.server.ts",
+    "src/lib/ai/registry.server.ts",
+    "src/lib/config/diagnostics.server.ts",
+    "src/lib/readiness.server.ts",
+    "src/lib/azure-runtime-env.server.ts",
+    ".env.example",
+  ];
+  const source = files.map(read).join("\n");
+  for (const pattern of [
+    /ai\.gateway\.lovable\.dev/iu,
+    /LOVABLE_API_KEY/u,
+    /LOVABLE_AI_BASE_URL/u,
+    /Lovable-API-Key/u,
+    /openai\/gpt-/u,
+  ]) {
+    assert.doesNotMatch(source, pattern);
+  }
 });
 
-test("managed email provider dependencies are restricted to server routes", async () => {
-  const [pkgText, webhook, queue] = await Promise.all([
-    readFile(new URL("../../package.json", import.meta.url), "utf8"),
-    readFile(new URL("../../src/routes/lovable/email/auth/webhook.ts", import.meta.url), "utf8"),
-    readFile(new URL("../../src/routes/lovable/email/queue/process.ts", import.meta.url), "utf8"),
-  ]);
-  const pkg = JSON.parse(pkgText);
-  assert.ok(pkg.dependencies["@lovable.dev/email-js"]);
-  assert.ok(pkg.dependencies["@lovable.dev/webhooks-js"]);
-  assert.match(webhook, /verifyWebhookRequest/);
-  assert.match(queue, /sendLovableEmail/);
-  assert.doesNotMatch(webhook + queue, /VITE_LOVABLE|VITE_OPENAI/);
+test("provider endpoint selection is restricted to direct OpenAI or validated Azure hosts", () => {
+  const provider = read("src/lib/ai/provider.server.ts");
+  assert.match(provider, /const OPENAI_API_BASE_URL = "https:\/\/api\.openai\.com\/v1"/u);
+  assert.match(provider, /\.openai\.azure\.com/u);
+  assert.match(provider, /\.services\.ai\.azure\.com/u);
+  assert.match(provider, /endpoint\.protocol !== "https:"/u);
+  assert.match(provider, /endpoint\.username/u);
+  assert.match(provider, /endpoint\.password/u);
+  assert.match(provider, /redirect: "error"/u);
+  assert.doesNotMatch(provider, /OPENAI_BASE_URL|AI_PROVIDER_(?:URL|API_KEY)/u);
+});
+
+test("Azure OpenAI supports API-key and Container Apps managed-identity authentication", () => {
+  const provider = read("src/lib/ai/provider.server.ts");
+  const azure = read("src/lib/azure-runtime-env.server.ts");
+  assert.match(provider, /"api-key": env\("AZURE_OPENAI_API_KEY"\)!/u);
+  assert.match(provider, /IDENTITY_ENDPOINT/u);
+  assert.match(provider, /IDENTITY_HEADER/u);
+  assert.match(provider, /X-IDENTITY-HEADER/u);
+  assert.match(provider, /https:\/\/cognitiveservices\.azure\.com/u);
+  assert.match(azure, /AZURE_OPENAI_API_KEY/u);
+  assert.match(azure, /Container Apps managed identity/u);
+});
+
+test("GPT-5.6 Sol remains the highest-capability deep default", () => {
+  const config = read("src/lib/ai/model-config.mjs");
+  const catalog = read("src/lib/ai/model-catalog.server.ts");
+  assert.match(config, /PREMIUM_REASONING\s*:\s*"gpt-5\.6-sol"/u);
+  assert.match(catalog, /deep\s*:[\s\S]*fallback\s*:\s*"gpt-5\.6-sol"/u);
+});
+
+test("provider and registry expose no voice-only capability contract", () => {
+  const source = read("src/lib/ai/provider.server.ts") + read("src/lib/ai/registry.server.ts");
+  assert.doesNotMatch(
+    source,
+    /speech_to_text|text_to_speech|realtime_voice|voiceMode|startListening|stopListening/u,
+  );
 });
