@@ -1,0 +1,77 @@
+name: One-shot reconcile RLS privilege lockdown
+
+on:
+  push:
+    branches:
+      - security/rls-auto-enable-lockdown
+
+permissions:
+  contents: write
+
+concurrency:
+  group: one-shot-reconcile-rls-lockdown
+  cancel-in-progress: false
+
+jobs:
+  generate-verify-and-commit:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: security/rls-auto-enable-lockdown
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Verify focused privilege contracts
+        run: node --test tests/unit/rls-auto-enable-privilege-migration.test.mjs
+
+      - name: Regenerate deterministic release manifests
+        run: |
+          npm run release:migrations
+          npm run release:manifest
+          npm run release:schema
+          npm run release:security
+
+      - name: Verify generated manifests are deterministic
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp release-migrations.json "$RUNNER_TEMP/release-migrations.json"
+          cp database-contract.json "$RUNNER_TEMP/database-contract.json"
+          npm run release:manifest
+          npm run release:schema
+          cmp --silent release-migrations.json "$RUNNER_TEMP/release-migrations.json"
+          cmp --silent database-contract.json "$RUNNER_TEMP/database-contract.json"
+
+      - name: Commit reconciled migration and remove one-shot workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/one-shot-reconcile-rls-lockdown.yml
+          git add \
+            supabase/migrations/20260815213024_rls_auto_enable_privilege_lockdown.sql \
+            tests/unit/rls-auto-enable-privilege-migration.test.mjs \
+            release-migrations.json \
+            database-contract.json
+          unexpected="$(git diff --cached --name-only | grep -Ev '^(supabase/migrations/20260815213024_rls_auto_enable_privilege_lockdown\.sql|tests/unit/rls-auto-enable-privilege-migration\.test\.mjs|release-migrations\.json|database-contract\.json|\.github/workflows/one-shot-reconcile-rls-lockdown\.yml)$' || true)"
+          if [[ -n "$unexpected" ]]; then
+            echo "::error::Unexpected files changed during RLS reconciliation:"
+            printf '%s\n' "$unexpected"
+            exit 1
+          fi
+          git diff --cached --check
+          git config user.name "KovaGPT release automation"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "Reconcile the RLS trigger privilege lockdown"
+          git push origin HEAD:security/rls-auto-enable-lockdown
