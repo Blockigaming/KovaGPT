@@ -102,6 +102,10 @@ jobs:
         if: steps.scope.outputs.run_ci == 'true'
         run: npm run build
 
+      - name: Bundle budget
+        if: steps.scope.outputs.run_ci == 'true'
+        run: npm run release:bundle
+
       - name: Integration tests
         id: integration
         if: steps.scope.outputs.run_ci == 'true'
@@ -138,7 +142,7 @@ jobs:
 
       - name: Release checks
         if: steps.scope.outputs.run_ci == 'true'
-        run: npm run release:bundle && npm run test:release
+        run: npm run test:release
 
       - name: Clean tree check
         if: steps.scope.outputs.run_ci == 'true'

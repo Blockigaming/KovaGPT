@@ -21,6 +21,17 @@ test("browser CI uses the Node preview without changing the production preset", 
 
   assert.doesNotMatch(verifyJob, /KOVA_BROWSER_PREVIEW/);
   assert.match(verifyJob, /- name: Production build(?:\s+if:[^\n]+)?\s+run: npm run build/);
+  assert.match(verifyJob, /- name: Bundle budget(?:\s+if:[^\n]+)?\s+run: npm run release:bundle/);
+  assert.match(verifyJob, /- name: Release checks(?:\s+if:[^\n]+)?\s+run: npm run test:release/);
+
+  // Inspect the production artifact before runtime tests are allowed to replace or remove dist.
+  const productionBuildIndex = verifyJob.indexOf("      - name: Production build");
+  const bundleBudgetIndex = verifyJob.indexOf("      - name: Bundle budget");
+  const integrationIndex = verifyJob.indexOf("      - name: Integration tests");
+  assert.ok(productionBuildIndex >= 0);
+  assert.ok(bundleBudgetIndex > productionBuildIndex);
+  assert.ok(integrationIndex > bundleBudgetIndex);
+
   assert.match(browserJob, /env:\s+KOVA_BROWSER_PREVIEW: "node"/);
   assert.match(browserJob, /- name: Browser preview build(?:\s+if:[^\n]+)?\s+run: npm run build/);
   assert.match(

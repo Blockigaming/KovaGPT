@@ -1901,9 +1901,6 @@ function KovaGPT() {
                 recentLibraryError={recentLibraryError}
                 onRecentLibraryRetry={loadRecentLibraryFiles}
               />
-              <p className="kova-disclaimer mt-2 select-none text-center text-[11px] leading-4 text-muted-foreground/80">
-                KovaGPT can make mistakes. Check important info.
-              </p>
             </div>
           </>
         )}

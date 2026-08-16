@@ -15,7 +15,6 @@ import {
   Brain,
   AlertCircle,
   RotateCcw,
-  Mic,
   type LucideIcon,
 } from "lucide-react";
 
@@ -172,78 +171,6 @@ export function ChatInput({
   const composingRef = useRef(false);
   const [uploadAnnouncement, setUploadAnnouncement] = useState("");
   const [recentQuery, setRecentQuery] = useState("");
-  const [dictating, setDictating] = useState(false);
-  const recognitionRef = useRef<{ stop: () => void } | null>(null);
-  const dictationBaseRef = useRef("");
-
-  useEffect(() => () => recognitionRef.current?.stop(), []);
-
-  const toggleDictation = async () => {
-    if (dictating) {
-      recognitionRef.current?.stop();
-      recognitionRef.current = null;
-      setDictating(false);
-      return;
-    }
-    const w = window as unknown as {
-      SpeechRecognition?: new () => never;
-      webkitSpeechRecognition?: new () => never;
-    };
-    const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
-    if (!Ctor) {
-      toast.error("Dictation is not supported in this browser. Try Chrome or Safari.");
-      return;
-    }
-
-    const recognition = new Ctor() as unknown as {
-      continuous: boolean;
-      interimResults: boolean;
-      lang: string;
-      start: () => void;
-      stop: () => void;
-      onresult: (event: {
-        resultIndex: number;
-        results: ArrayLike<{ 0: { transcript: string } }>;
-      }) => void;
-      onerror: (event: { error?: string }) => void;
-      onend: () => void;
-    };
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = navigator.language || "en-US";
-    dictationBaseRef.current = value ? `${value.replace(/\s+$/, "")} ` : "";
-    recognition.onresult = (event) => {
-      let transcript = "";
-      for (let i = 0; i < event.results.length; i += 1)
-        transcript += event.results[i][0].transcript;
-      onChange(`${dictationBaseRef.current}${transcript.trimStart()}`);
-    };
-    recognition.onerror = (event) => {
-      setDictating(false);
-      recognitionRef.current = null;
-      const code = event?.error;
-      if (code === "not-allowed" || code === "service-not-allowed")
-        toast.error(
-          "Microphone permission was not granted. Open KovaGPT in its own tab and retry.",
-        );
-      else if (code === "no-speech") toast.error("No speech detected. Try dictating again.");
-      else if (code === "network") toast.error("Dictation needs a network connection.");
-      else if (code && code !== "aborted") toast.error("Dictation stopped unexpectedly.");
-    };
-    recognition.onend = () => {
-      setDictating(false);
-      recognitionRef.current = null;
-    };
-    try {
-      recognition.start();
-    } catch {
-      toast.error("Dictation could not start. Try again in a moment.");
-      return;
-    }
-    recognitionRef.current = recognition;
-    setDictating(true);
-  };
-
   useEffect(() => {
     if (!plusOpen) return;
     const onDoc = (e: MouseEvent) => {
@@ -297,20 +224,22 @@ export function ChatInput({
     if (disabled || !showAddMenu) setPlusOpen(false);
   }, [disabled, showAddMenu]);
 
+  const blockedAttachment = attachments.find(
+    (attachment) => attachment.status === "uploading" || attachment.status === "failed",
+  );
+  const blockedAttachmentMessage = blockedAttachment
+    ? blockedAttachment.status === "uploading"
+      ? `Wait for ${blockedAttachment.name} to finish.`
+      : `Remove or retry ${blockedAttachment.name} before sending.`
+    : null;
+
   const triggerSubmit = () => {
     if (disabled || submittingRef.current || isStreaming) return;
     if (!online) return;
     if (!value.trim() && attachments.length === 0) return;
-    const blocked = attachments.find(
-      (attachment) => attachment.status === "uploading" || attachment.status === "failed",
-    );
-    if (blocked) {
-      const message =
-        blocked.status === "uploading"
-          ? `Wait for ${blocked.name} to finish.`
-          : `Remove or retry ${blocked.name} before sending.`;
-      setUploadAnnouncement(message);
-      toast.error(message);
+    if (blockedAttachmentMessage) {
+      setUploadAnnouncement(blockedAttachmentMessage);
+      toast.error(blockedAttachmentMessage);
       return;
     }
     submittingRef.current = true;
@@ -975,20 +904,6 @@ export function ChatInput({
                   <ModelSelector mode={mode} onChange={onModeChange} userTier={userTier} compact />
                 </div>
               )}
-              <button
-                type="button"
-                onClick={toggleDictation}
-                disabled={disabled}
-                className={`kova-composer-button flex items-center justify-center rounded-full ${
-                  dictating ? "text-destructive" : "text-foreground/70 hover:text-foreground"
-                }`}
-                aria-label={dictating ? "Stop dictation" : "Dictate message"}
-                aria-pressed={dictating}
-                title={dictating ? "Stop dictation" : "Dictate"}
-              >
-                <Mic className="h-[18px] w-[18px]" strokeWidth={2} />
-              </button>
-
               {isStreaming ? (
                 <button
                   type="button"
@@ -1000,10 +915,7 @@ export function ChatInput({
                 </button>
               ) : !disabled &&
                 (value.trim() || attachments.length > 0) &&
-                !attachments.some(
-                  (attachment) =>
-                    attachment.status === "uploading" || attachment.status === "failed",
-                ) ? (
+                !blockedAttachmentMessage ? (
                 <button
                   type="button"
                   onClick={triggerSubmit}
@@ -1015,10 +927,16 @@ export function ChatInput({
               ) : (
                 <button
                   type="button"
-                  disabled
+                  disabled={disabled || (!value.trim() && attachments.length === 0)}
+                  aria-disabled={blockedAttachmentMessage ? true : undefined}
+                  onClick={blockedAttachmentMessage ? triggerSubmit : undefined}
                   className="kova-composer-button kova-send-button flex items-center justify-center rounded-full"
-                  aria-label="Send"
-                  title={disabled ? "Messaging is unavailable" : "Type a message to send"}
+                  aria-label={blockedAttachmentMessage ?? "Send"}
+                  title={
+                    disabled
+                      ? "Messaging is unavailable"
+                      : (blockedAttachmentMessage ?? "Type a message to send")
+                  }
                 >
                   <ArrowUp className="kova-send-icon" strokeWidth={2.5} />
                 </button>
