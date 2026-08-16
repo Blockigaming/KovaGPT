@@ -25,18 +25,15 @@ test("AI provider adapter exposes typed capabilities and safe errors", () => {
   }
 });
 
-test("AI requests are locked to fixed approved provider endpoints", () => {
+test("AI requests are locked to approved OpenAI and Azure endpoints", () => {
   const source = read("src/lib/ai/provider.server.ts");
-  assert.match(source, /const OPENAI_API_BASE_URL = "https:\/\/api\.openai\.com\/v1"/);
-  assert.match(source, /provider: "openai"/);
-  assert.match(source, /redirect: "error"/);
-  assert.doesNotMatch(source, /OPENAI_BASE_URL|AI_PROVIDER_URL|AI_PROVIDER_API_KEY/);
-  assert.match(
-    source,
-    /const LOVABLE_GATEWAY_BASE_URL = "https:\/\/ai\.gateway\.lovable\.dev\/v1"/,
-  );
-  assert.match(source, /return usingGateway\(\) \? LOVABLE_GATEWAY_BASE_URL : OPENAI_API_BASE_URL/);
-  assert.doesNotMatch(source, /VITE_.*API_KEY/);
+  assert.match(source, /const OPENAI_API_BASE_URL = "https:\/\/api\.openai\.com\/v1"/u);
+  assert.match(source, /ProviderKind = "azure_openai" \| "openai"/u);
+  assert.match(source, /\.openai\.azure\.com/u);
+  assert.match(source, /\.services\.ai\.azure\.com/u);
+  assert.match(source, /redirect: "error"/u);
+  assert.doesNotMatch(source, /LOVABLE|OPENAI_BASE_URL|AI_PROVIDER_(?:URL|API_KEY)/u);
+  assert.doesNotMatch(source, /VITE_.*API_KEY/u);
 });
 
 test("provider failures expose only KovaGPT-generic non-cacheable envelopes", () => {
@@ -59,10 +56,11 @@ test("provider failures expose only KovaGPT-generic non-cacheable envelopes", ()
   assert.match(source, /response\.status === 402/);
 });
 
-test("AI provider environment knobs are documented without values that look like secrets", () => {
+test("AI provider environment knobs are documented without sample secrets", () => {
   const env = read(".env.example");
   assert.match(env, /^KOVA_AI_TIMEOUT_MS=45000$/m);
   assert.match(env, /^KOVA_AI_CAPABILITIES=$/m);
-  assert.doesNotMatch(env, /OPENAI_API_KEY=sk-/);
+  assert.match(env, /^AZURE_OPENAI_API_KEY=$/m);
+  assert.doesNotMatch(env, /(?:OPENAI|AZURE_OPENAI)_API_KEY=(?:sk-|[A-Za-z0-9]{16})/u);
   assert.doesNotMatch(env, /^OPENAI_BASE_URL=/m);
 });
