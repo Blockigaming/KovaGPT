@@ -6,13 +6,25 @@ import test from "node:test";
 const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), "utf8");
 
-test("managed email packages remain only while operational routes import them", () => {
-  const pkg = JSON.parse(read("package.json"));
-  const preview = read("src/routes/lovable/email/auth/webhook.ts");
-  const queue = read("src/routes/lovable/email/queue/process.ts");
-  for (const name of ["@lovable.dev/email-js", "@lovable.dev/webhooks-js"]) {
-    assert.ok(pkg.dependencies[name], `${name} must be pinned while runtime routes import it`);
-    assert.match(preview + queue, new RegExp(name.replaceAll(".", "\\.")));
+test("legacy Lovable email URLs are inert compatibility tombstones", () => {
+  const routes = [
+    "src/routes/lovable/email/auth/preview.ts",
+    "src/routes/lovable/email/auth/webhook.ts",
+    "src/routes/lovable/email/queue/process.ts",
+    "src/routes/lovable/email/suppression.ts",
+    "src/routes/lovable/email/transactional/preview.ts",
+    "src/routes/lovable/email/transactional/send.ts",
+  ];
+  const helper = read("src/lib/legacy-lovable-route.ts");
+  assert.match(helper, /status:\s*410/u);
+  assert.match(helper, /legacy_lovable_route_retired/u);
+  assert.match(helper, /performs no work/u);
+
+  for (const route of routes) {
+    const source = read(route);
+    assert.match(source, /legacyLovableRouteGone/u);
+    assert.doesNotMatch(source, /@lovable\.dev|LOVABLE_API_KEY|sendLovableEmail/u);
+    assert.doesNotMatch(source, /success:\s*true|queued:\s*true|processed:/u);
   }
 });
 
