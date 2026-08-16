@@ -34,7 +34,6 @@ const compatibilityRoutes = new Set([
   "src/routes/lovable/email/transactional/send.ts",
 ]);
 const legacyOauthRedirect = "src/routes/[.]lovable.oauth.consent.tsx";
-const stripeCompatibilityFile = "src/routes/api/public/payments/webhook.ts";
 const forbiddenPatterns = [
   { label: "Lovable SDK import", pattern: /@lovable\.dev\//iu },
   {
@@ -44,6 +43,10 @@ const forbiddenPatterns = [
   {
     label: "Lovable credential or runtime variable",
     pattern: /\b(?:VITE_)?LOVABLE_[A-Z0-9_]+\b|Lovable-API-Key/iu,
+  },
+  {
+    label: "Lovable billing metadata dependency",
+    pattern: /lovable_(?:external_id|managed)/iu,
   },
 ];
 
@@ -82,14 +85,9 @@ export function inspectPackageManifest(pkg) {
 }
 
 export function inspectLockRoot(lock) {
-  return Object.keys(lock.packages?.[""]?.dependencies ?? {}).filter((name) => /lovable/iu.test(name));
-}
-
-export function inspectStripeCompatibilitySource(source) {
-  const withoutAllowedMetadata = source.replaceAll("lovable_external_id", "kova_legacy_external_id");
-  return forbiddenPatterns
-    .filter((rule) => rule.pattern.test(withoutAllowedMetadata))
-    .map((rule) => rule.label);
+  return Object.keys(lock.packages?.[""]?.dependencies ?? {}).filter((name) =>
+    /lovable/iu.test(name),
+  );
 }
 
 export function auditZeroLovable({ files = trackedFiles() } = {}) {
@@ -118,28 +116,27 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
 
   for (const path of files) {
     if (ignoredPrefixes.some((prefix) => path.startsWith(prefix))) continue;
-    if (path === "package-lock.json") continue;
-    if (scannerDefinitionFiles.has(path)) continue;
+    if (path === "package-lock.json" || scannerDefinitionFiles.has(path)) continue;
     if (!readable.has(extname(path)) && !["Dockerfile", ".env.example"].includes(path)) continue;
     const source = read(path);
 
     if (compatibilityRoutes.has(path)) {
-      if (!/legacyLovableRouteGone/u.test(source) || /@lovable\.dev|LOVABLE_API_KEY|success:\s*true/iu.test(source)) {
+      if (
+        !/legacyLovableRouteGone/u.test(source) ||
+        /@lovable\.dev|LOVABLE_API_KEY|success:\s*true/iu.test(source)
+      ) {
         errors.push(`${path}: legacy route is not an inert 410 tombstone`);
       }
       continue;
     }
 
     if (path === legacyOauthRedirect) {
-      if (!/window\.location\.replace/u.test(source) || /supabase\.auth\.oauth|approveAuthorization|denyAuthorization/u.test(source)) {
+      if (
+        !/window\.location\.replace/u.test(source) ||
+        /supabase\.auth\.oauth|approveAuthorization|denyAuthorization/u.test(source)
+      ) {
         errors.push(`${path}: legacy OAuth path must only redirect to /oauth/consent`);
       }
-      continue;
-    }
-
-    if (path === stripeCompatibilityFile) {
-      const findings = inspectStripeCompatibilitySource(source);
-      for (const finding of findings) errors.push(`${path}: ${finding}`);
       continue;
     }
 
@@ -164,7 +161,10 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
     }
   }
 
-  return { errors: [...new Set(errors)].sort(), warnings: [...new Set(warnings)].sort() };
+  return {
+    errors: [...new Set(errors)].sort(),
+    warnings: [...new Set(warnings)].sort(),
+  };
 }
 
 function filesUnder(directory) {
