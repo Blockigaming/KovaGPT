@@ -11,7 +11,7 @@ const PROJECT_REF = "abcdefghijklmnopqrst";
 const OTHER_PROJECT_REF = "tsrqponmlkjihgfedcba";
 const SUPABASE_URL = `https://${PROJECT_REF}.supabase.co`;
 const PUBLISHABLE_KEY = "sb_publishable_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_abcd";
-const OTHER_PUBLISHABLE_KEY = "sb_publishable_zyxwvutsrqponmlkjihgfedcba9876543210";
+const OTHER_PUBLISHABLE_KEY = "sb_publishable_11223344556677889900_AABBCCDDEEFF";
 const SOURCE_SHA = "a".repeat(40);
 const SOURCE_TREE = "b".repeat(40);
 
