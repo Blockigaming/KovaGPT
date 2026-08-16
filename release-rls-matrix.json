@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "protectedTables": [
+    { "table": "projects", "accessModel": "project_membership", "operations": ["select", "update", "delete"], "fixture": null },
+    { "table": "project_chats", "accessModel": "project_membership", "operations": ["select", "update", "delete"], "fixture": null },
+    { "table": "project_files", "accessModel": "project_membership", "operations": ["select", "update", "delete"], "fixture": null },
+    { "table": "project_memory", "accessModel": "project_membership", "operations": ["select", "update", "delete"], "fixture": null },
+    { "table": "user_library_items", "accessModel": "direct_user", "operations": ["select", "update", "delete"], "fixture": null },
+    { "table": "user_preferences", "accessModel": "direct_user", "operations": ["select", "update", "delete"], "fixture": null },
+    { "table": "chat_memories", "accessModel": "direct_user", "operations": ["select", "update", "delete"], "fixture": null },
+    { "table": "shared_chats", "accessModel": "shared_resource", "operations": ["select", "update", "delete"], "fixture": null },
+    { "table": "connected_accounts", "accessModel": "direct_user", "operations": ["select", "update", "delete"], "fixture": null },
+    { "table": "financial_accounts", "accessModel": "direct_user", "operations": ["select", "update", "delete"], "fixture": null },
+    { "table": "subscriptions", "accessModel": "direct_user", "operations": ["select", "update", "delete"], "fixture": null },
+    { "table": "scheduled_tasks", "accessModel": "direct_user", "operations": ["select", "update", "delete"], "fixture": null },
+    { "table": "user_storage", "accessModel": "direct_user", "operations": ["select", "update", "delete"], "fixture": null },
+    { "table": "writing_documents", "accessModel": "direct_user", "operations": ["select", "update", "delete"], "fixture": null }
+  ]
+}

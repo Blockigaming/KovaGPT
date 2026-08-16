@@ -20,7 +20,7 @@ function getSupabase() {
 type StripeLineItemLike = {
   price?: {
     lookup_key?: string;
-    metadata?: { lovable_external_id?: string };
+    metadata?: { kova_plan?: string; lovable_external_id?: string };
     id?: string;
     product?: string;
   };
@@ -58,9 +58,16 @@ export function billingOutcome(type: string): string {
   return "observed";
 }
 
+export function normalizeStripeEnvironment(value: string | null): StripeEnv | null {
+  return value === "sandbox" || value === "live" ? value : null;
+}
+
 function priceIdFrom(item: StripeLineItemLike | undefined): string | undefined {
   const candidates = [
     item?.price?.lookup_key,
+    item?.price?.metadata?.kova_plan,
+    // Temporary read-only compatibility for existing Stripe metadata. Remove
+    // after the dashboard metadata has been migrated to kova_plan.
     item?.price?.metadata?.lovable_external_id,
     item?.price?.id,
   ];
@@ -187,7 +194,6 @@ export async function handleWebhook(
       ? (event as { created: number }).created
       : undefined;
 
-  // Idempotency: skip if this Stripe event id has already been processed.
   const eventId = event.id;
   const object = event.data.object as StripeLifecycleObject;
   if (eventId) {
@@ -198,7 +204,7 @@ export async function handleWebhook(
         type: event.type,
         environment: env,
         event_created_at: eventCreated ? new Date(eventCreated * 1000).toISOString() : null,
-        correlation_id: /^[0-9a-f-]{36}$/i.test(correlationId) ? correlationId : null,
+        correlation_id: /^[0-9a-f-]{36}$/iu.test(correlationId) ? correlationId : null,
         object_id: object.id ?? null,
         customer_id: typeof object.customer === "string" ? object.customer : null,
         subscription_id:
@@ -213,7 +219,6 @@ export async function handleWebhook(
         retryable: false,
       } as never);
     if (insertErr) {
-      // Unique-violation => already processed; any other error => log and bail safely.
       if ((insertErr as { code?: string }).code === "23505") return { duplicate: true };
       throw new Error("stripe_event_claim_failed");
     }
@@ -278,7 +283,6 @@ export async function handleWebhook(
         }
         break;
       }
-      // Checkout return is never trusted for entitlement. The verified subscription/invoice event is authoritative.
       case "checkout.session.completed":
       case "checkout.session.expired":
         break;
@@ -287,11 +291,10 @@ export async function handleWebhook(
       correlationId,
       category: "billing",
       operation: "stripe_webhook_processed",
-      metadata: { eventType: event.type },
+      metadata: { eventType: event.type, environment: env },
     });
     return { duplicate: false };
   } catch {
-    // Release the idempotency claim so Stripe can safely retry a transient failure.
     if (eventId)
       await getSupabase().from("processed_stripe_events").delete().eq("event_id", eventId);
     throw new Error("stripe_event_processing_failed");
@@ -303,12 +306,12 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
     handlers: {
       POST: async ({ request }) => {
         const correlationId = resolveCorrelationId(request.headers.get("x-correlation-id"));
-        const rawEnv = new URL(request.url).searchParams.get("env");
-        if (rawEnv !== "live") {
+        const environment = normalizeStripeEnvironment(new URL(request.url).searchParams.get("env"));
+        if (!environment) {
           return Response.json({ error: "invalid_environment", correlationId }, { status: 400 });
         }
         try {
-          const result = await handleWebhook(request, rawEnv, correlationId);
+          const result = await handleWebhook(request, environment, correlationId);
           return Response.json(
             { received: true, duplicate: result.duplicate, correlationId },
             { headers: correlationHeaders(correlationId) },
@@ -318,6 +321,7 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
             correlationId,
             category: "billing",
             operation: "stripe_webhook_rejected",
+            metadata: { environment },
           });
           return Response.json({ error: "webhook_rejected", correlationId }, { status: 400 });
         }
