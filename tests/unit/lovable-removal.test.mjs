@@ -16,7 +16,7 @@ test("managed email packages remain only while operational routes import them", 
   }
 });
 
-test("AI integration has no configurable provider endpoint escape hatch", () => {
+test("AI integration has no Lovable gateway or configurable endpoint escape hatch", () => {
   const files = [
     "package.json",
     "vite.config.ts",
@@ -27,10 +27,12 @@ test("AI integration has no configurable provider endpoint escape hatch", () => 
     "src/routes/api/write.ts",
     "src/lib/project-rag.server.ts",
     "src/lib/stripe.server.ts",
+    "src/lib/ai/provider.server.ts",
   ];
   const forbidden = [
     /connector-gateway\.lovable\.dev/,
-    /LOVABLE_AI_BASE_URL/i,
+    /ai\.gateway\.lovable\.dev/,
+    /LOVABLE_(?:API_KEY|AI_BASE_URL)/i,
     /Lovable-API-Key/i,
     /OPENAI_BASE_URL/,
     /AI_PROVIDER_(?:URL|API_KEY)/,
@@ -44,8 +46,9 @@ test("AI integration has no configurable provider endpoint escape hatch", () => 
   const provider = read("src/lib/ai/provider.server.ts");
   const env = read(".env.example");
   assert.match(provider, /OPENAI_API_KEY/);
-  assert.match(provider, /provider: "openai"/);
+  assert.match(provider, /ProviderKind = "azure_openai" \| "openai"/);
   assert.match(provider, /https:\/\/api\.openai\.com\/v1/);
+  assert.match(provider, /\.openai\.azure\.com/);
   assert.match(provider, /redirect: "error"/);
   assert.doesNotMatch(provider, /VITE_.*(?:LOVABLE|OPENAI).*API_KEY/);
   assert.doesNotMatch(env, /^OPENAI_BASE_URL=/m);
@@ -54,6 +57,7 @@ test("AI integration has no configurable provider endpoint escape hatch", () => 
 test("direct provider env example contains no secret values or duplicate settings", () => {
   const env = read(".env.example");
   assert.match(env, /^OPENAI_API_KEY=$/m);
+  assert.match(env, /^AZURE_OPENAI_API_KEY=$/m);
   assert.match(env, /^FIRECRAWL_API_KEY=$/m);
   assert.match(env, /^SUPABASE_SERVICE_ROLE_KEY=$/m);
   assert.equal(
