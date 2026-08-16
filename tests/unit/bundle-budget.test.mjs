@@ -91,9 +91,7 @@ test("bundle budgets fail closed when Vite entry metadata is missing or ambiguou
 test("the shared entry raw and gzip ceilings are enforced after selection", () => {
   const rawOverflow = identifyBudgetChunks(
     validRows().map((item) =>
-      item.file === "index-main-entry.js"
-        ? { ...item, raw: BUNDLE_BUDGETS.main.raw + 1 }
-        : item,
+      item.file === "index-main-entry.js" ? { ...item, raw: BUNDLE_BUDGETS.main.raw + 1 } : item,
     ),
     validManifest(),
   );
@@ -101,9 +99,7 @@ test("the shared entry raw and gzip ceilings are enforced after selection", () =
 
   const gzipOverflow = identifyBudgetChunks(
     validRows().map((item) =>
-      item.file === "index-main-entry.js"
-        ? { ...item, gzip: BUNDLE_BUDGETS.main.gzip + 1 }
-        : item,
+      item.file === "index-main-entry.js" ? { ...item, gzip: BUNDLE_BUDGETS.main.gzip + 1 } : item,
     ),
     validManifest(),
   );

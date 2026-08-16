@@ -38,9 +38,7 @@ export default defineConfig(({ mode }) => {
           serverDir: "dist/server",
           publicDir: "dist/client",
         },
-        ...(useNodeBrowserPreview
-          ? {}
-          : { cloudflare: { nodeCompat: true, deployConfig: true } }),
+        ...(useNodeBrowserPreview ? {} : { cloudflare: { nodeCompat: true, deployConfig: true } }),
       }),
       react(),
     ],
@@ -49,14 +47,8 @@ export default defineConfig(({ mode }) => {
     },
     resolve: {
       alias: {
-        "entities/lib/decode.js": path.resolve(
-          configDir,
-          "node_modules/entities/lib/decode.js",
-        ),
-        "entities/lib/encode.js": path.resolve(
-          configDir,
-          "node_modules/entities/lib/encode.js",
-        ),
+        "entities/lib/decode.js": path.resolve(configDir, "node_modules/entities/lib/decode.js"),
+        "entities/lib/encode.js": path.resolve(configDir, "node_modules/entities/lib/encode.js"),
         entities: path.resolve(configDir, "node_modules/entities"),
       },
     },
@@ -75,11 +67,7 @@ export default defineConfig(({ mode }) => {
               id.includes("/unist-")
             )
               return "vendor-markdown";
-            if (
-              id.includes("/@radix-ui/") ||
-              id.includes("/cmdk/") ||
-              id.includes("/vaul/")
-            )
+            if (id.includes("/@radix-ui/") || id.includes("/cmdk/") || id.includes("/vaul/"))
               return "vendor-overlays";
             if (id.includes("/@clerk/") || id.includes("/@supabase/")) {
               return "vendor-account";
