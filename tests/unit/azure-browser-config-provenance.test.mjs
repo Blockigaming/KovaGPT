@@ -361,3 +361,16 @@ test("Docker, Azure, and runbook contracts require exact archive and digest prov
   assert.match(runbook, /"\$BUILD_CONTEXT"/u);
   assert.match(runbook, /dist\/client/u);
 });
+
+test("PEM public assets are scanned before verification", () => {
+  withBundle(
+    {
+      "client/assets/app.js": browserSource(),
+      "client/client-key.pem":
+        "-----BEGIN PRIVATE KEY-----\nnot-a-real-key\n-----END PRIVATE KEY-----",
+    },
+    ({ bundleDir }) => {
+      assert.throws(() => verify(bundleDir), /private key material/u);
+    },
+  );
+});

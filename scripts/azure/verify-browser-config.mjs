@@ -22,6 +22,7 @@ const TEXT_EXTENSIONS = new Set([
   ".js",
   ".json",
   ".mjs",
+  ".pem",
   ".svg",
   ".txt",
   ".webmanifest",
