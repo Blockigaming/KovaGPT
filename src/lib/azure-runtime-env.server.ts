@@ -1,7 +1,5 @@
 const SECRET_NAME_PATTERN = /(SECRET|TOKEN|KEY|PASSWORD|PRIVATE|CONNECTION_STRING)/u;
 
-// Publishable/client-side identifiers are designed to ship in browser bundles.
-// They match the generic secret-name pattern above, so allow them explicitly.
 const PUBLIC_CLIENT_ALLOWLIST = new Set([
   "VITE_SUPABASE_PUBLISHABLE_KEY",
   "VITE_SUPABASE_ANON_KEY",
@@ -19,6 +17,7 @@ const optionalServerValues = [
   "GOOGLE_OAUTH_CLIENT_SECRET",
   "OPENAI_API_KEY",
   "AZURE_OPENAI_ENDPOINT",
+  "AZURE_OPENAI_API_KEY",
   "AZURE_FOUNDRY_ENDPOINT",
   "AZURE_CLIENT_ID",
 ] as const;
@@ -33,6 +32,10 @@ function booleanEnv(environment: NodeJS.ProcessEnv, name: string, fallback: bool
 
 function missing(environment: NodeJS.ProcessEnv, names: string[]): string[] {
   return names.filter((name) => !environment[name] || environment[name]?.trim() === "");
+}
+
+function azureIdentityReady(environment: NodeJS.ProcessEnv): boolean {
+  return Boolean(environment.IDENTITY_ENDPOINT?.trim() && environment.IDENTITY_HEADER?.trim());
 }
 
 export function validateAzureRuntimeEnv(environment = process.env): void {
@@ -50,26 +53,42 @@ export function validateAzureRuntimeEnv(environment = process.env): void {
     );
   }
 
-  // AI inference is an optional runtime capability. A deployment without model
-  // credentials must still boot so health, auth and non-AI routes remain
-  // reachable; explicitly enabling generation keeps the strict fail-closed
-  // credential validation below.
   const aiGenerationEnabled = booleanEnv(environment, "AI_GENERATION_ENABLED", false);
-  if (aiGenerationEnabled) {
-    const aiProviderReady = Boolean(
-      environment.OPENAI_API_KEY || environment.AZURE_OPENAI_ENDPOINT,
+  const azureEndpoint = environment.AZURE_OPENAI_ENDPOINT?.trim();
+  const azureCredentialsReady = Boolean(
+    environment.AZURE_OPENAI_API_KEY?.trim() || azureIdentityReady(environment),
+  );
+  const directOpenAiReady = Boolean(environment.OPENAI_API_KEY?.trim());
+
+  if (aiGenerationEnabled && !directOpenAiReady && !(azureEndpoint && azureCredentialsReady)) {
+    throw new Error(
+      "[env] AI_GENERATION_ENABLED=true requires OPENAI_API_KEY, or AZURE_OPENAI_ENDPOINT with AZURE_OPENAI_API_KEY or Container Apps managed identity. Set AI_GENERATION_ENABLED=false before model access is approved.",
     );
-    if (!aiProviderReady) {
-      throw new Error(
-        "[env] AI_GENERATION_ENABLED=true requires OPENAI_API_KEY for the direct OpenAI rollback path or AZURE_OPENAI_ENDPOINT for Azure OpenAI. Set AI_GENERATION_ENABLED=false for Azure staging before model quota is approved.",
-      );
-    }
   }
 
-  const azureEndpoint = environment.AZURE_OPENAI_ENDPOINT;
   if (azureEndpoint) {
+    let endpoint: URL;
+    try {
+      endpoint = new URL(azureEndpoint);
+    } catch {
+      throw new Error("[env] AZURE_OPENAI_ENDPOINT must be a valid HTTPS Azure OpenAI endpoint.");
+    }
+    const allowedHost =
+      endpoint.hostname.endsWith(".openai.azure.com") ||
+      endpoint.hostname.endsWith(".services.ai.azure.com");
+    if (
+      endpoint.protocol !== "https:" ||
+      !allowedHost ||
+      endpoint.username ||
+      endpoint.password ||
+      endpoint.port ||
+      endpoint.search ||
+      endpoint.hash
+    ) {
+      throw new Error("[env] AZURE_OPENAI_ENDPOINT must use an approved Azure OpenAI hostname.");
+    }
+
     const requiredAzureOpenAi = missing(environment, [
-      "AZURE_OPENAI_API_VERSION",
       "AZURE_OPENAI_DEPLOYMENT_CHAT",
       "AZURE_OPENAI_DEPLOYMENT_THINKING",
       "AZURE_OPENAI_DEPLOYMENT_DEEP",
