@@ -23,6 +23,23 @@ const capability = (configured: boolean, optional = true): Capability => ({
   optional,
 });
 
+function aiProviderConfigured(): boolean {
+  if (runtimeEnv("AZURE_OPENAI_ENDPOINT")) {
+    const authenticated =
+      Boolean(runtimeEnv("AZURE_OPENAI_API_KEY")) ||
+      present("IDENTITY_ENDPOINT", "IDENTITY_HEADER");
+    return (
+      authenticated &&
+      present(
+        "AZURE_OPENAI_DEPLOYMENT_CHAT",
+        "AZURE_OPENAI_DEPLOYMENT_THINKING",
+        "AZURE_OPENAI_DEPLOYMENT_DEEP",
+      )
+    );
+  }
+  return Boolean(runtimeEnv("OPENAI_API_KEY"));
+}
+
 export function structuralReadiness(): ReadinessReport {
   const capabilities: Record<string, Capability> = {
     productionUrl: capability(any("KOVA_PUBLIC_URL", "APP_URL", "SITE_URL"), false),
@@ -32,7 +49,7 @@ export function structuralReadiness(): ReadinessReport {
         any("SUPABASE_PUBLISHABLE_KEY", "SUPABASE_ANON_KEY"),
       false,
     ),
-    aiProvider: capability(any("LOVABLE_API_KEY", "OPENAI_API_KEY")),
+    aiProvider: capability(aiProviderConfigured()),
     agentRunner: capability(present("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY")),
     stripe: capability(present("STRIPE_LIVE_API_KEY", "PAYMENTS_LIVE_WEBHOOK_SECRET")),
     email: capability(any("RESEND_API_KEY", "EMAIL_API_KEY")),
@@ -43,7 +60,7 @@ export function structuralReadiness(): ReadinessReport {
       present("GITHUB_OAUTH_CLIENT_ID", "GITHUB_OAUTH_CLIENT_SECRET", "CONNECTOR_ENCRYPTION_KEY"),
     ),
     scheduledTasks: capability(any("CRON_SECRET", "SCHEDULED_TASK_SECRET")),
-    images: capability(any("LOVABLE_API_KEY", "OPENAI_API_KEY")),
+    images: capability(aiProviderConfigured()),
     research: capability(any("FIRECRAWL_API_KEY")),
     storage: capability(present("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY")),
     migrations: { state: "migration-required", optional: false },
