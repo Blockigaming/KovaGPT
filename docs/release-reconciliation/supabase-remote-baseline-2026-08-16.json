@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-08-16T19:50:00Z",
+  "projectRef": "mfbycmbjygcfkrsuepxf",
+  "projectStatus": "ACTIVE_HEALTHY",
+  "region": "us-west-2",
+  "postgresVersion": "17.6.1.155",
+  "repositoryMigrationCount": 72,
+  "remoteRepositoryMigrationCount": 0,
+  "pendingRepositoryMigrations": 72,
+  "unknownRemoteMigrations": 0,
+  "authUsers": 0,
+  "authIdentities": 0,
+  "publicApplicationTables": 0,
+  "storageBuckets": 0,
+  "storageObjects": 0,
+  "securityAdvisorWarnings": [
+    "anon can execute public.rls_auto_enable() SECURITY DEFINER function",
+    "authenticated can execute public.rls_auto_enable() SECURITY DEFINER function"
+  ],
+  "productionMutationPerformed": false,
+  "conclusion": "target is empty and healthy but not migration-ready until the full chain, fresh-database rehearsal, upgrade rehearsal, two-user RLS evidence, and backup evidence pass"
+}
