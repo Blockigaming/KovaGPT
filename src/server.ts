@@ -34,9 +34,8 @@ function hardenResponse(response: Response): Response {
     "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
     "Cross-Origin-Resource-Policy": "same-origin",
     "Origin-Agent-Cluster": "?1",
-    // Dictation is supported; full-duplex provider Voice remains intentionally excluded.
-    "Permissions-Policy":
-      "camera=(), geolocation=(self), microphone=(self), payment=(self), usb=()",
+    // Voice and browser dictation are intentionally absent from KovaGPT.
+    "Permissions-Policy": "camera=(), geolocation=(self), microphone=(), payment=(self), usb=()",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
     "X-Content-Type-Options": "nosniff",
@@ -100,8 +99,6 @@ function isCatastrophicSsrErrorBody(body: string, responseStatus: number): boole
   );
 }
 
-// h3 swallows in-handler throws into a normal 500 Response with body
-// {"unhandled":true,"message":"HTTPError"}  -  try/catch alone never fires for those.
 async function normalizeCatastrophicSsrResponse(response: Response): Promise<Response> {
   if (response.status < 500) return response;
   const contentType = response.headers.get("content-type") ?? "";

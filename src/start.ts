@@ -9,8 +9,8 @@ const SECURITY_HEADERS: Record<string, string> = {
   "X-Frame-Options": "SAMEORIGIN",
   "Referrer-Policy": "strict-origin-when-cross-origin",
   // Location is an explicit, user-triggered feature in Settings and Summary.
-  // Keep it same-origin while denying unrelated camera access and cross-origin use.
-  "Permissions-Policy": "camera=(self), geolocation=(self), microphone=(self), payment=(self)",
+  // Voice and dictation are intentionally absent, so microphone access is denied.
+  "Permissions-Policy": "camera=(self), geolocation=(self), microphone=(), payment=(self)",
   "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
   "Content-Security-Policy": [
     "default-src 'self'",
@@ -34,7 +34,6 @@ const SECURITY_HEADERS: Record<string, string> = {
 };
 
 function applySecurityHeaders(res: Response): Response {
-  // Don't mutate opaque/streaming responses unnecessarily; clone headers safely.
   const headers = new Headers(res.headers);
   for (const [k, v] of Object.entries(SECURITY_HEADERS)) {
     if (!headers.has(k)) headers.set(k, v);
@@ -60,9 +59,6 @@ const errorMiddleware = createMiddleware().server(async ({ next, request }) => {
       return applySecurityHeaders(Response.json({ error: "Request too large" }, { status: 413 }));
     }
     const result = await next();
-    // `next()` returns a context object; the framework writes the final Response
-    // separately. We attach headers here best-effort via the returned response
-    // when present.
     const contextResult = result as { response?: Response };
     const maybeResponse = contextResult.response;
     if (maybeResponse instanceof Response) {
