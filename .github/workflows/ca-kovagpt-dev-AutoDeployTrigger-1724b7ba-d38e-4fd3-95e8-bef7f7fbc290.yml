@@ -2,7 +2,8 @@ name: Deploy KovaGPT to Azure Container Apps
 
 # Deployment is deliberately manual. A verified image must come from an exact
 # Git archive, pass browser-configuration provenance checks, match the existing
-# server-side Supabase project, and be deployed by immutable registry digest.
+# server-side Supabase project, and be deployed by the digest captured from the
+# manifest actually pushed by Docker Buildx.
 on:
   workflow_dispatch:
     inputs:
@@ -132,8 +133,10 @@ jobs:
           source_tree="${{ steps.source-context.outputs.tree }}"
           image_tag="candidate-${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           tagged_image="${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${image_tag}"
+          metadata="$RUNNER_TEMP/buildx-metadata.json"
 
-          docker build \
+          docker buildx build \
+            --platform linux/amd64 \
             --file "$context/Dockerfile" \
             --build-arg KOVA_VERIFY_BROWSER_CONFIG=true \
             --build-arg KOVA_SOURCE_SHA="$GITHUB_SHA" \
@@ -143,11 +146,27 @@ jobs:
             --build-arg VITE_SUPABASE_URL="$VITE_SUPABASE_URL" \
             --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="$VITE_SUPABASE_PUBLISHABLE_KEY" \
             --tag "$tagged_image" \
+            --push \
+            --metadata-file "$metadata" \
             "$context"
 
-          docker push "$tagged_image"
-
           digest="$(
+            node - "$metadata" <<'NODE'
+          const fs = require("fs");
+          const value = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const digest =
+            value["containerimage.digest"] || value["containerimage.descriptor"]?.digest || "";
+          process.stdout.write(typeof digest === "string" ? digest : "");
+          NODE
+          )"
+          if [[ ! "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]; then
+            echo "::error::Docker Buildx did not return the digest of the manifest it pushed."
+            exit 1
+          fi
+
+          # This lookup is only a post-push consistency check. The trusted digest
+          # used below comes from Buildx metadata, not from this mutable tag lookup.
+          registry_digest="$(
             az acr repository show \
               --name "$ACR_NAME" \
               --image "${IMAGE_NAME}:${image_tag}" \
@@ -155,8 +174,8 @@ jobs:
               --output tsv \
               --only-show-errors
           )"
-          if [[ ! "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]; then
-            echo "::error::ACR did not return a valid immutable manifest digest."
+          if [[ "$registry_digest" != "$digest" ]]; then
+            echo "::error::The ACR tag no longer resolves to the manifest digest just pushed by Buildx."
             exit 1
           fi
 
@@ -244,35 +263,60 @@ jobs:
             --output none
 
       - name: Verify deployed revision is digest-bound
+        id: revision
         shell: bash
         run: |
           set -euo pipefail
           expected_image="${{ steps.image.outputs.digest_image }}"
-          deployed_image="$(
-            az containerapp show \
-              --name "$CONTAINER_APP_NAME" \
-              --resource-group "$RESOURCE_GROUP" \
-              --query properties.template.containers[0].image \
-              --output tsv \
-              --only-show-errors
-          )"
-          revision="$(
-            az containerapp show \
-              --name "$CONTAINER_APP_NAME" \
-              --resource-group "$RESOURCE_GROUP" \
-              --query properties.latestRevisionName \
-              --output tsv \
-              --only-show-errors
-          )"
+          revision=""
+          revision_fqdn=""
 
-          if [[ "$deployed_image" != "$expected_image" ]]; then
-            echo "::error::The Container App revision is not pinned to the verified registry digest."
+          for attempt in {1..30}; do
+            revision="$(
+              az containerapp show \
+                --name "$CONTAINER_APP_NAME" \
+                --resource-group "$RESOURCE_GROUP" \
+                --query properties.latestRevisionName \
+                --output tsv \
+                --only-show-errors
+            )"
+            if [[ -n "$revision" ]]; then
+              revision_image="$(
+                az containerapp revision show \
+                  --name "$CONTAINER_APP_NAME" \
+                  --resource-group "$RESOURCE_GROUP" \
+                  --revision "$revision" \
+                  --query properties.template.containers[0].image \
+                  --output tsv \
+                  --only-show-errors
+              )"
+              revision_fqdn="$(
+                az containerapp revision show \
+                  --name "$CONTAINER_APP_NAME" \
+                  --resource-group "$RESOURCE_GROUP" \
+                  --revision "$revision" \
+                  --query properties.fqdn \
+                  --output tsv \
+                  --only-show-errors
+              )"
+              if [[ "$revision_image" == "$expected_image" && -n "$revision_fqdn" ]]; then
+                break
+              fi
+            fi
+
+            revision=""
+            revision_fqdn=""
+            echo "Revision binding attempt ${attempt}/30 failed; retrying in 10 seconds."
+            sleep 10
+          done
+
+          if [[ -z "$revision" || -z "$revision_fqdn" ]]; then
+            echo "::error::Azure did not expose a revision-specific FQDN for the digest-bound candidate."
             exit 1
           fi
-          if [[ -z "$revision" ]]; then
-            echo "::error::Azure did not report a latest revision after deployment."
-            exit 1
-          fi
+
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+          echo "fqdn=$revision_fqdn" >> "$GITHUB_OUTPUT"
           echo "Deployed revision: $revision"
           echo "Immutable image digest: ${{ steps.image.outputs.digest }}"
 
@@ -280,37 +324,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          fqdn="$(
-            az containerapp show \
-              --name "$CONTAINER_APP_NAME" \
-              --resource-group "$RESOURCE_GROUP" \
-              --query properties.configuration.ingress.fqdn \
-              --output tsv \
-              --only-show-errors
-          )"
-
-          if [[ -z "$fqdn" ]]; then
-            echo "::error::Container Apps did not return an ingress FQDN."
-            exit 1
-          fi
+          revision_fqdn="${{ steps.revision.outputs.fqdn }}"
 
           for attempt in {1..30}; do
-            if curl --fail --silent --show-error \
-              --max-time 10 \
-              "https://${fqdn}/api/health" >/dev/null; then
-              if runtime_sha="$(
-                curl --fail --silent --show-error --max-time 10 \
-                  "https://${fqdn}/api/version" |
-                  node -e '
-                    const fs = require("fs");
-                    const value = JSON.parse(fs.readFileSync(0, "utf8"));
-                    process.stdout.write(typeof value.sha === "string" ? value.sha : "");
-                  '
-              )"; then
-                if [[ "$runtime_sha" == "$GITHUB_SHA" ]]; then
-                  echo "Azure health and exact runtime build identity checks passed."
-                  exit 0
-                fi
+            if health_response="$(
+              curl --fail --silent --show-error --max-time 10 \
+                "https://${revision_fqdn}/api/health"
+            )" && runtime_sha="$(
+              curl --fail --silent --show-error --max-time 10 \
+                "https://${revision_fqdn}/api/version" |
+                node -e '
+                  const fs = require("fs");
+                  const value = JSON.parse(fs.readFileSync(0, "utf8"));
+                  process.stdout.write(typeof value.sha === "string" ? value.sha : "");
+                '
+            )"; then
+              if [[ -n "$health_response" && "$runtime_sha" == "$GITHUB_SHA" ]]; then
+                echo "Exact Azure revision health and runtime build identity checks passed."
+                exit 0
               fi
             fi
 
@@ -318,5 +349,5 @@ jobs:
             sleep 10
           done
 
-          echo "::error::Azure did not serve the expected healthy build SHA after 30 attempts."
+          echo "::error::The digest-bound Azure revision did not serve the expected healthy build SHA."
           exit 1

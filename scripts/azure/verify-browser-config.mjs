@@ -41,7 +41,7 @@ const FORBIDDEN_SECRET_PATTERNS = [
   },
   {
     label: "Stripe secret key",
-    pattern: /\bsk_(?:live|test)_[A-Za-z0-9]{16,}\b/u,
+    pattern: /\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}\b/u,
   },
   {
     label: "Stripe webhook signing secret",
@@ -161,7 +161,6 @@ function assertNoLegacySupabaseJwt(text, expectedProjectRef, relativePath) {
     try {
       payload = JSON.parse(Buffer.from(match[0].split(".")[1], "base64url").toString("utf8"));
     } catch {
-      // Non-JWT text with a JWT-like shape is ignored.
       continue;
     }
 
@@ -201,10 +200,7 @@ function readSourceAttestation(path, expectedSourceSha, expectedSourceTree) {
     attestationPath,
     "KOVA_SOURCE_ATTESTATION_PATH is required for a verified browser image",
   );
-  assertCondition(
-    existsSync(attestationPath),
-    "The verified Git-archive source attestation is missing",
-  );
+  assertCondition(existsSync(attestationPath), "The verified Git-archive source attestation is missing");
 
   let attestation;
   try {
