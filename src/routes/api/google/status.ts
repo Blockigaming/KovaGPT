@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 import { getGoogleConnectionHealth } from "@/lib/google-oauth.server";
 import { enforceGoogleRateLimit } from "@/lib/google-rate-limit.server";
+import { safeConnectorError } from "@/lib/connectors.server";
 
 export const Route = createFileRoute("/api/google/status")({
   server: {
@@ -14,7 +15,7 @@ export const Route = createFileRoute("/api/google/status")({
         try {
           return Response.json(await getGoogleConnectionHealth(auth.userId));
         } catch (error) {
-          console.error("[google status]", error instanceof Error ? error.message : error);
+          console.error("[google status]", safeConnectorError(error));
           return Response.json(
             {
               connected: false,
@@ -28,7 +29,7 @@ export const Route = createFileRoute("/api/google/status")({
                 drive: false,
               },
             },
-            { status: 503 },
+            { status: 503, headers: { "Cache-Control": "no-store" } },
           );
         }
       },
