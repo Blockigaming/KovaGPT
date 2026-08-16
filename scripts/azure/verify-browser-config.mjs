@@ -11,11 +11,23 @@ import { dirname, extname, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const PROJECT_REF_PATTERN = /^[a-z0-9]{20}$/u;
-const SOURCE_SHA_PATTERN = /^[a-f0-9]{40}$/u;
+const GIT_OBJECT_PATTERN = /^[a-f0-9]{40}$/u;
 const PUBLISHABLE_KEY_PATTERN = /^sb_publishable_[A-Za-z0-9_-]{16,}$/u;
 const SUPABASE_URL_PATTERN = /https:\/\/([a-z0-9]{20})\.supabase\.co\b/gu;
 const PUBLISHABLE_KEY_SCAN_PATTERN = /\bsb_publishable_[A-Za-z0-9_-]{16,}\b/gu;
-const TEXT_EXTENSIONS = new Set([".css", ".html", ".js", ".json", ".mjs", ".svg"]);
+const JWT_CANDIDATE_PATTERN =
+  /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/gu;
+const TEXT_EXTENSIONS = new Set([
+  ".css",
+  ".html",
+  ".js",
+  ".json",
+  ".mjs",
+  ".svg",
+  ".txt",
+  ".webmanifest",
+  ".xml",
+]);
 const MAX_SCANNED_BYTES = 128 * 1024 * 1024;
 
 const FORBIDDEN_SECRET_PATTERNS = [
@@ -33,7 +45,7 @@ const FORBIDDEN_SECRET_PATTERNS = [
   },
   {
     label: "private key material",
-    pattern: /-----BEGIN (?:EC |OPENSSH |RSA )?PRIVATE KEY-----/u,
+    pattern: /-----BEGIN (?:[A-Z0-9][A-Z0-9 -]* )?PRIVATE KEY-----/u,
   },
 ];
 
@@ -79,13 +91,21 @@ function normalizeSupabaseUrl(value) {
   };
 }
 
-function normalizeSourceSha(value) {
-  const sourceSha = typeof value === "string" ? value.trim().toLowerCase() : "";
+function normalizeGitObject(value, variableName) {
+  const gitObject = typeof value === "string" ? value.trim().toLowerCase() : "";
   assertCondition(
-    SOURCE_SHA_PATTERN.test(sourceSha),
-    "KOVA_SOURCE_SHA must be the exact 40-character Git commit SHA",
+    GIT_OBJECT_PATTERN.test(gitObject),
+    `${variableName} must be an exact 40-character Git object identifier`,
   );
-  return sourceSha;
+  return gitObject;
+}
+
+function normalizeSourceSha(value) {
+  return normalizeGitObject(value, "KOVA_SOURCE_SHA");
+}
+
+function normalizeSourceTree(value) {
+  return normalizeGitObject(value, "KOVA_SOURCE_TREE");
 }
 
 function normalizePublishableKey(value) {
@@ -127,9 +147,58 @@ function readCommittedFallbackRefs(publicConfigPath) {
   return refs;
 }
 
-function isServerOnlyPath(relativePath) {
-  const segments = relativePath.split(sep).map((segment) => segment.toLowerCase());
-  return segments.includes("server") || segments.includes("node_modules");
+function containsLegacyServiceRoleJwt(text) {
+  for (const match of text.matchAll(JWT_CANDIDATE_PATTERN)) {
+    try {
+      const payload = JSON.parse(
+        Buffer.from(match[0].split(".")[1], "base64url").toString("utf8"),
+      );
+      if (payload && typeof payload === "object" && payload.role === "service_role") {
+        return true;
+      }
+    } catch {
+      // Non-JWT text with a JWT-like shape is ignored.
+    }
+  }
+  return false;
+}
+
+function readSourceAttestation(path, expectedSourceSha, expectedSourceTree) {
+  const attestationPath = typeof path === "string" ? path.trim() : "";
+  assertCondition(
+    attestationPath,
+    "KOVA_SOURCE_ATTESTATION_PATH is required for a verified browser image",
+  );
+  assertCondition(existsSync(attestationPath), "The verified Git-archive source attestation is missing");
+
+  let attestation;
+  try {
+    attestation = JSON.parse(readFileSync(attestationPath, "utf8"));
+  } catch {
+    throw new Error("The verified Git-archive source attestation is invalid");
+  }
+
+  assertCondition(
+    attestation?.schemaVersion === 1 && attestation?.context === "git-archive",
+    "The source attestation must identify a versioned Git archive context",
+  );
+
+  const sourceSha = normalizeSourceSha(attestation.sourceSha);
+  const sourceTree = normalizeSourceTree(attestation.sourceTree);
+  assertCondition(
+    sourceSha === expectedSourceSha,
+    "The source attestation commit does not match KOVA_SOURCE_SHA",
+  );
+  assertCondition(
+    sourceTree === expectedSourceTree,
+    "The source attestation tree does not match KOVA_SOURCE_TREE",
+  );
+
+  return {
+    context: "git-archive",
+    sourceSha,
+    sourceTree,
+  };
 }
 
 function collectBrowserFiles(bundleDir, provenancePath) {
@@ -151,7 +220,6 @@ function collectBrowserFiles(bundleDir, provenancePath) {
     if (!stat.isFile() || resolve(currentPath) === provenance) return;
 
     const relativePath = relative(root, currentPath);
-    if (isServerOnlyPath(relativePath)) return;
     if (currentPath.endsWith(".map") || !TEXT_EXTENSIONS.has(extname(currentPath).toLowerCase())) {
       return;
     }
@@ -177,10 +245,12 @@ function countOccurrences(source, expected) {
 }
 
 export function verifyBrowserConfig({
-  bundleDir = process.env.KOVA_BROWSER_BUNDLE_DIR || "dist",
+  bundleDir = process.env.KOVA_BROWSER_BUNDLE_DIR || "dist/client",
   supabaseUrl = process.env.VITE_SUPABASE_URL,
   publishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY,
   sourceSha = process.env.KOVA_SOURCE_SHA,
+  sourceTree = process.env.KOVA_SOURCE_TREE,
+  sourceAttestationPath = process.env.KOVA_SOURCE_ATTESTATION_PATH,
   expectedProjectRef = process.env.KOVA_EXPECTED_SUPABASE_PROJECT_REF,
   forbiddenProjectRefs = process.env.KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS,
   provenancePath,
@@ -190,6 +260,12 @@ export function verifyBrowserConfig({
   const { projectRef, normalizedUrl } = normalizeSupabaseUrl(supabaseUrl);
   const normalizedKey = normalizePublishableKey(publishableKey);
   const normalizedSourceSha = normalizeSourceSha(sourceSha);
+  const normalizedSourceTree = normalizeSourceTree(sourceTree);
+  const sourceAttestation = readSourceAttestation(
+    sourceAttestationPath,
+    normalizedSourceSha,
+    normalizedSourceTree,
+  );
   const normalizedExpectedRef = String(expectedProjectRef || projectRef)
     .trim()
     .toLowerCase();
@@ -207,14 +283,12 @@ export function verifyBrowserConfig({
   const resolvedProvenancePath = resolve(
     provenancePath ||
       process.env.KOVA_BROWSER_CONFIG_PROVENANCE_PATH ||
-      resolve(resolvedBundleDir, "browser-config-provenance.json"),
+      resolve(resolvedBundleDir, "..", "browser-config-provenance.json"),
   );
   const provenanceRelativePath = relative(resolvedBundleDir, resolvedProvenancePath);
   assertCondition(
-    provenanceRelativePath &&
-      provenanceRelativePath !== ".." &&
-      !provenanceRelativePath.startsWith(`..${sep}`),
-    "Browser configuration provenance must be written inside the deployable bundle",
+    provenanceRelativePath === ".." || provenanceRelativePath.startsWith(`..${sep}`),
+    "Browser configuration provenance must be written outside the public browser directory",
   );
 
   const forbiddenRefs = parseProjectRefs(forbiddenProjectRefs);
@@ -245,6 +319,18 @@ export function verifyBrowserConfig({
     for (const match of text.matchAll(PUBLISHABLE_KEY_SCAN_PATTERN)) {
       discoveredPublishableKeys.add(match[0]);
     }
+
+    for (const forbiddenRef of forbiddenRefs) {
+      assertCondition(
+        !text.includes(forbiddenRef),
+        `Forbidden Supabase project-ref literal detected in browser asset ${file.relativePath}`,
+      );
+    }
+
+    assertCondition(
+      !containsLegacyServiceRoleJwt(text),
+      `Supabase service-role JWT detected in browser asset ${file.relativePath}`,
+    );
 
     for (const forbidden of FORBIDDEN_SECRET_PATTERNS) {
       assertCondition(
@@ -292,9 +378,11 @@ export function verifyBrowserConfig({
   );
 
   const provenance = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     verification: "verified-build-time-browser-config",
     sourceSha: normalizedSourceSha,
+    sourceTree: normalizedSourceTree,
+    sourceContext: sourceAttestation.context,
     supabaseProjectRef: projectRef,
     supabaseUrl: normalizedUrl,
     publishableKeySha256: sha256(normalizedKey),

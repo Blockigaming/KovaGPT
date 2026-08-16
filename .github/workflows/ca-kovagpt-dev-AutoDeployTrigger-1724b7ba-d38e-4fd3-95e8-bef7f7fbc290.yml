@@ -1,9 +1,8 @@
 name: Deploy KovaGPT to Azure Container Apps
 
-# Deployment is deliberately manual. The prior push trigger spent hosted-runner
-# minutes on every main update even while the OIDC principal lacked ACR push
-# access. Re-enable automation only after a reviewed release policy and a proven
-# registry permission preflight exist.
+# Deployment is deliberately manual. A verified image must come from an exact
+# Git archive and must pass browser-configuration provenance checks before the
+# action can build, push, or deploy it.
 on:
   workflow_dispatch:
     inputs:
@@ -28,21 +27,64 @@ env:
   CONTAINER_APP_NAME: ca-kovagpt-dev
   RESOURCE_GROUP: rg-kovagpt-dev
   IMAGE_NAME: kovagpt-web
+  KOVA_EXPECTED_SUPABASE_PROJECT_REF: ${{ vars.KOVA_PRODUCTION_SUPABASE_PROJECT_REF }}
+  KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS: ${{ vars.KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS }}
+  VITE_SUPABASE_URL: ${{ vars.KOVA_PRODUCTION_SUPABASE_URL }}
+  VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.KOVA_PRODUCTION_SUPABASE_PUBLISHABLE_KEY }}
 
 jobs:
   build-and-deploy:
     if: github.ref == 'refs/heads/main' && inputs.confirm_deploy == true
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+          fetch-depth: 0
+
+      - name: Prepare exact Git archive build context
+        id: source-context
+        shell: bash
+        run: |
+          set -euo pipefail
+          context="$RUNNER_TEMP/kova-source-$GITHUB_SHA"
+          scripts/azure/prepare-verified-build-context.sh "$context"
+          source_tree="$(
+            node -e '
+              const fs = require("fs");
+              const value = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+              process.stdout.write(value.sourceTree);
+            ' "$context/.kova-source-attestation.json"
+          )"
+          echo "path=$context" >> "$GITHUB_OUTPUT"
+          echo "tree=$source_tree" >> "$GITHUB_OUTPUT"
+
+      - name: Validate verified browser build inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$KOVA_EXPECTED_SUPABASE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]; then
+            echo "::error::The production Supabase project ref is missing or invalid."
+            exit 1
+          fi
+          if [[ "$VITE_SUPABASE_URL" != "https://${KOVA_EXPECTED_SUPABASE_PROJECT_REF}.supabase.co" ]]; then
+            echo "::error::The production Supabase URL does not match the approved project ref."
+            exit 1
+          fi
+          if [[ "$VITE_SUPABASE_PUBLISHABLE_KEY" != sb_publishable_* ]]; then
+            echo "::error::The browser-safe Supabase publishable key is missing or invalid."
+            exit 1
+          fi
+          if [[ ! "${{ steps.source-context.outputs.tree }}" =~ ^[a-f0-9]{40}$ ]]; then
+            echo "::error::The exact Git tree identifier is missing or invalid."
+            exit 1
+          fi
 
       - name: Sign in to Azure with OIDC
-        uses: azure/login@v3
+        uses: azure/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca
         with:
           client-id: ${{ secrets.CAKOVAGPTDEV_AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.CAKOVAGPTDEV_AZURE_TENANT_ID }}
@@ -64,11 +106,19 @@ jobs:
             exit 1
           fi
 
-      - name: Build, push, and deploy container image
-        uses: azure/container-apps-deploy-action@v2
+      - name: Build, push, and deploy verified container image
+        uses: azure/container-apps-deploy-action@8dff69dac3367c32ceb2690d8f13adbeab462703
         with:
-          appSourcePath: ${{ github.workspace }}
+          appSourcePath: ${{ steps.source-context.outputs.path }}
           dockerfilePath: Dockerfile
+          buildArguments: >-
+            KOVA_VERIFY_BROWSER_CONFIG=true
+            KOVA_SOURCE_SHA=${{ github.sha }}
+            KOVA_SOURCE_TREE=${{ steps.source-context.outputs.tree }}
+            KOVA_EXPECTED_SUPABASE_PROJECT_REF=${{ env.KOVA_EXPECTED_SUPABASE_PROJECT_REF }}
+            KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS=${{ env.KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS }}
+            VITE_SUPABASE_URL=${{ env.VITE_SUPABASE_URL }}
+            VITE_SUPABASE_PUBLISHABLE_KEY=${{ env.VITE_SUPABASE_PUBLISHABLE_KEY }}
           acrName: ${{ env.ACR_NAME }}
           imageToBuild: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           containerAppName: ${{ env.CONTAINER_APP_NAME }}
@@ -79,13 +129,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          fqdn="$(az containerapp show \
-            --name "$CONTAINER_APP_NAME" \
-            --resource-group "$RESOURCE_GROUP" \
-            --query properties.configuration.ingress.fqdn \
-            --output tsv)"
+          fqdn="$(
+            az containerapp show \
+              --name "$CONTAINER_APP_NAME" \
+              --resource-group "$RESOURCE_GROUP" \
+              --query properties.configuration.ingress.fqdn \
+              --output tsv
+          )"
 
-          if [ -z "$fqdn" ]; then
+          if [[ -z "$fqdn" ]]; then
             echo "Container Apps did not return an ingress FQDN."
             exit 1
           fi

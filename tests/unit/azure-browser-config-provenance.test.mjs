@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import test from "node:test";
 
 import { verifyBrowserConfig } from "../../scripts/azure/verify-browser-config.mjs";
@@ -13,33 +13,56 @@ const SUPABASE_URL = `https://${PROJECT_REF}.supabase.co`;
 const PUBLISHABLE_KEY = "sb_publishable_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_abcd";
 const OTHER_PUBLISHABLE_KEY = "sb_publishable_zyxwvutsrqponmlkjihgfedcba9876543210";
 const SOURCE_SHA = "a".repeat(40);
+const SOURCE_TREE = "b".repeat(40);
 
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+function fakeJwt(payload) {
+  const encode = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
+  return `${encode({ alg: "HS256", typ: "JWT" })}.${encode(payload)}.${"s".repeat(32)}`;
+}
+
 function withBundle(files, run) {
   const root = mkdtempSync(join(tmpdir(), "kova-browser-config-"));
-  const bundleDir = join(root, "dist");
+  const distDir = join(root, "dist");
+  const bundleDir = join(distDir, "client");
+  const sourceAttestationPath = join(root, ".kova-source-attestation.json");
 
   try {
+    mkdirSync(bundleDir, { recursive: true });
+    writeFileSync(
+      sourceAttestationPath,
+      JSON.stringify({
+        schemaVersion: 1,
+        context: "git-archive",
+        sourceSha: SOURCE_SHA,
+        sourceTree: SOURCE_TREE,
+      }),
+    );
+
     for (const [relativePath, content] of Object.entries(files)) {
-      const target = join(bundleDir, relativePath);
-      mkdirSync(join(target, ".."), { recursive: true });
+      const target = join(distDir, relativePath);
+      mkdirSync(dirname(target), { recursive: true });
       writeFileSync(target, content);
     }
-    return run({ root, bundleDir });
+
+    return run({ root, distDir, bundleDir, sourceAttestationPath });
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
 }
 
 function verify(bundleDir, overrides = {}) {
+  const root = join(bundleDir, "..", "..");
   return verifyBrowserConfig({
     bundleDir,
     supabaseUrl: SUPABASE_URL,
     publishableKey: PUBLISHABLE_KEY,
     sourceSha: SOURCE_SHA,
+    sourceTree: SOURCE_TREE,
+    sourceAttestationPath: join(root, ".kova-source-attestation.json"),
     expectedProjectRef: PROJECT_REF,
     forbiddenProjectRefs: OTHER_PROJECT_REF,
     publicConfigPath: null,
@@ -47,12 +70,18 @@ function verify(bundleDir, overrides = {}) {
   });
 }
 
-test("verified browser assets create key-free deterministic provenance", () => {
+function browserSource(extra = "") {
+  return [
+    `const url="${SUPABASE_URL}";`,
+    `const key="${PUBLISHABLE_KEY}";`,
+    extra,
+  ].join("\n");
+}
+
+test("verified browser assets create key-free deterministic Git-archive provenance", () => {
   withBundle(
     {
-      "client/assets/app.js": `window.__config={url:${JSON.stringify(
-        SUPABASE_URL,
-      )},key:${JSON.stringify(PUBLISHABLE_KEY)}};`,
+      "client/assets/app.js": browserSource(),
       "server/index.mjs": [
         `const url = "https://${OTHER_PROJECT_REF}.supabase.co";`,
         `const key = "${OTHER_PUBLISHABLE_KEY}";`,
@@ -65,10 +94,13 @@ test("verified browser assets create key-free deterministic provenance", () => {
       const written = readFileSync(result.provenancePath, "utf8");
       const parsed = JSON.parse(written);
 
-      assert.deepEqual(result.browserFiles, ["client/assets/app.js"]);
+      assert.deepEqual(result.browserFiles, ["assets/app.js"]);
+      assert.equal(parsed.schemaVersion, 2);
       assert.equal(parsed.supabaseProjectRef, PROJECT_REF);
       assert.equal(parsed.supabaseUrl, SUPABASE_URL);
       assert.equal(parsed.sourceSha, SOURCE_SHA);
+      assert.equal(parsed.sourceTree, SOURCE_TREE);
+      assert.equal(parsed.sourceContext, "git-archive");
       assert.equal(parsed.publishableKeySha256, sha256(PUBLISHABLE_KEY));
       assert.match(parsed.browserBundleSha256, /^[a-f0-9]{64}$/u);
       assert.equal(parsed.scannedFiles, 1);
@@ -96,14 +128,25 @@ test("server-only configuration cannot satisfy browser verification", () => {
 test("a second Supabase project in browser assets fails closed", () => {
   withBundle(
     {
-      "client/assets/app.js": [
-        `const expected="${SUPABASE_URL}";`,
-        `const key="${PUBLISHABLE_KEY}";`,
+      "client/assets/app.js": browserSource(
         `const fallback="https://${OTHER_PROJECT_REF}.supabase.co";`,
-      ].join("\n"),
+      ),
     },
     ({ bundleDir }) => {
-      assert.throws(() => verify(bundleDir), /Unexpected Supabase project refs/u);
+      assert.throws(() => verify(bundleDir), /project-ref literal|Unexpected Supabase project/u);
+    },
+  );
+});
+
+test("a forbidden project ref assembled into a URL at runtime fails closed", () => {
+  withBundle(
+    {
+      "client/assets/app.js": browserSource(
+        `const forbiddenRef="${OTHER_PROJECT_REF}";const fallback="https://"+forbiddenRef+".supabase.co";`,
+      ),
+    },
+    ({ bundleDir }) => {
+      assert.throws(() => verify(bundleDir), /project-ref literal/u);
     },
   );
 });
@@ -111,11 +154,7 @@ test("a second Supabase project in browser assets fails closed", () => {
 test("a second publishable key in browser assets fails without printing either key", () => {
   withBundle(
     {
-      "client/assets/app.js": [
-        `const url="${SUPABASE_URL}";`,
-        `const expected="${PUBLISHABLE_KEY}";`,
-        `const fallback="${OTHER_PUBLISHABLE_KEY}";`,
-      ].join("\n"),
+      "client/assets/app.js": browserSource(`const fallback="${OTHER_PUBLISHABLE_KEY}";`),
     },
     ({ bundleDir }) => {
       assert.throws(
@@ -131,20 +170,52 @@ test("a second publishable key in browser assets fails without printing either k
   );
 });
 
-test("secret and database credential patterns fail the browser build", () => {
+test("legacy Supabase service-role JWTs fail without printing the token", () => {
+  const token = fakeJwt({ role: "service_role", ref: PROJECT_REF });
+  withBundle(
+    {
+      "client/assets/app.js": browserSource(`const legacy=${JSON.stringify(token)};`),
+    },
+    ({ bundleDir }) => {
+      assert.throws(
+        () => verify(bundleDir),
+        (error) => {
+          assert.match(error.message, /service-role JWT/u);
+          assert.equal(error.message.includes(token), false);
+          return true;
+        },
+      );
+    },
+  );
+});
+
+test("all served text formats are scanned", () => {
+  withBundle(
+    {
+      "client/assets/app.js": browserSource(),
+      "client/robots.txt": "postgresql://user:password@example.invalid/db",
+    },
+    ({ bundleDir }) => {
+      assert.throws(() => verify(bundleDir), /PostgreSQL credential URL/u);
+    },
+  );
+});
+
+test("secret, database credential, and private-key patterns fail the browser build", () => {
   for (const forbidden of [
     "sk-proj_abcdefghijklmnopqrstuvwxyz0123456789",
     "sb_secret_abcdefghijklmnopqrstuvwxyz0123456789",
     "postgresql://user:password@example.invalid/db",
     "-----BEGIN PRIVATE KEY-----",
+    "-----BEGIN ENCRYPTED PRIVATE KEY-----",
+    "-----BEGIN DSA PRIVATE KEY-----",
+    "-----BEGIN OPENSSH PRIVATE KEY-----",
   ]) {
     withBundle(
       {
-        "client/assets/app.js": [
-          `const url="${SUPABASE_URL}";`,
-          `const key="${PUBLISHABLE_KEY}";`,
+        "client/assets/app.js": browserSource(
           `const forbidden=${JSON.stringify(forbidden)};`,
-        ].join("\n"),
+        ),
       },
       ({ bundleDir }) => {
         assert.throws(() => verify(bundleDir), /detected in browser asset/u);
@@ -153,10 +224,44 @@ test("secret and database credential patterns fail the browser build", () => {
   }
 });
 
+test("source attestation commit and tree must match the build arguments", () => {
+  withBundle(
+    {
+      "client/assets/app.js": browserSource(),
+    },
+    ({ bundleDir, sourceAttestationPath }) => {
+      rmSync(sourceAttestationPath);
+      assert.throws(() => verify(bundleDir), /source attestation is missing/u);
+
+      writeFileSync(
+        sourceAttestationPath,
+        JSON.stringify({
+          schemaVersion: 1,
+          context: "git-archive",
+          sourceSha: "c".repeat(40),
+          sourceTree: SOURCE_TREE,
+        }),
+      );
+      assert.throws(() => verify(bundleDir), /commit does not match/u);
+
+      writeFileSync(
+        sourceAttestationPath,
+        JSON.stringify({
+          schemaVersion: 1,
+          context: "git-archive",
+          sourceSha: SOURCE_SHA,
+          sourceTree: "c".repeat(40),
+        }),
+      );
+      assert.throws(() => verify(bundleDir), /tree does not match/u);
+    },
+  );
+});
+
 test("invalid URLs, project refs, keys, and source identities are rejected", () => {
   withBundle(
     {
-      "client/assets/app.js": `const url="${SUPABASE_URL}";const key="${PUBLISHABLE_KEY}";`,
+      "client/assets/app.js": browserSource(),
     },
     ({ bundleDir }) => {
       assert.throws(
@@ -171,19 +276,43 @@ test("invalid URLs, project refs, keys, and source identities are rejected", () 
         () => verify(bundleDir, { publishableKey: "sb_secret_not_browser_safe" }),
         /sb_publishable_/u,
       );
-      assert.throws(() => verify(bundleDir, { sourceSha: "main" }), /40-character Git commit SHA/u);
+      assert.throws(() => verify(bundleDir, { sourceSha: "main" }), /Git object identifier/u);
+      assert.throws(() => verify(bundleDir, { sourceTree: "main" }), /Git object identifier/u);
     },
   );
 });
 
-test("Docker and public config preserve local defaults while enabling verified candidate builds", () => {
+test("Docker, Azure, and runbook contracts require exact archive provenance", () => {
   const dockerfile = readFileSync("Dockerfile", "utf8");
+  const helper = readFileSync("scripts/azure/prepare-verified-build-context.sh", "utf8");
+  const workflow = readFileSync(
+    ".github/workflows/ca-kovagpt-dev-AutoDeployTrigger-1724b7ba-d38e-4fd3-95e8-bef7f7fbc290.yml",
+    "utf8",
+  );
+  const runbook = readFileSync("docs/azure/verified-browser-image-provenance.md", "utf8");
+
   assert.match(dockerfile, /ARG KOVA_VERIFY_BROWSER_CONFIG=false/u);
-  assert.match(dockerfile, /ARG VITE_SUPABASE_URL=/u);
-  assert.match(dockerfile, /ARG VITE_SUPABASE_PUBLISHABLE_KEY=/u);
-  assert.match(dockerfile, /node scripts\/azure\/verify-browser-config\.mjs/u);
-  assert.match(dockerfile, /org\.opencontainers\.image\.revision/u);
-  assert.match(dockerfile, /com\.kovagpt\.browser\.supabase-project-ref/u);
-  assert.match(dockerfile, /com\.kovagpt\.browser\.config-verified/u);
+  assert.match(dockerfile, /KOVA_BROWSER_BUNDLE_DIR=dist\/client/u);
+  assert.match(
+    dockerfile,
+    /KOVA_SOURCE_ATTESTATION_PATH=\/app\/\.kova-source-attestation\.json/u,
+  );
+  assert.match(dockerfile, /com\.kovagpt\.source\.tree/u);
   assert.match(dockerfile, /browser-config-provenance\.json/u);
+
+  assert.match(helper, /git status --porcelain/u);
+  assert.match(helper, /git archive --format=tar/u);
+  assert.match(helper, /\.kova-source-attestation\.json/u);
+
+  assert.match(workflow, /prepare-verified-build-context\.sh/u);
+  assert.match(
+    workflow,
+    /appSourcePath: \$\{\{ steps\.source-context\.outputs\.path \}\}/u,
+  );
+  assert.match(workflow, /KOVA_VERIFY_BROWSER_CONFIG=true/u);
+  assert.match(workflow, /KOVA_SOURCE_TREE=/u);
+
+  assert.match(runbook, /clean `git archive`/u);
+  assert.match(runbook, /"\$BUILD_CONTEXT"/u);
+  assert.match(runbook, /dist\/client/u);
 });
