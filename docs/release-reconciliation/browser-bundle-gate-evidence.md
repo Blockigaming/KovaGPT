@@ -24,6 +24,15 @@ The client build now emits Vite's standard manifest. The release script:
 
 The shared-entry ceilings are 625,000 raw bytes and 181,000 gzip bytes. The route ceilings are 60,000 raw bytes and 20,000 gzip bytes. Those limits retain narrow headroom over the observed current-main-based build.
 
-## Verification required
+## Verification performed
 
-Targeted unit coverage proves selection occurs before budget comparison and that an oversized manifest entry fails. The normal required CI must still complete a production build and run `npm run release:bundle` on the current branch head before merge or release.
+One-shot workflow run `31917037978` completed successfully before committing canonical formatting in `0c1fb06d6e8272ff57d8b3229d6f622ba8656d44`. It:
+
+- passed the focused bundle-contract tests;
+- completed a production build;
+- passed `npm run release:bundle`;
+- proved the marked route and shared entry were distinct files;
+- proved the manifest-selected shared entry exceeded 500,000 raw bytes before applying its 625,000-byte ceiling;
+- reported no remaining bundle failures.
+
+Normal KovaGPT CI and Azure Container Readiness must still pass on the current user-authored branch head before PR #180 can be merged or the review finding can be considered closed.
