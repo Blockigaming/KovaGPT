@@ -13,10 +13,16 @@ test("shared interaction styles cover composer, menus, motion, and narrow phones
   assert.match(styles, /\[role="menuitem"\]:focus-visible/);
   assert.match(styles, /@media \(max-width: 359px\)/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
-  assert.match(home, /What's on your mind today\?/);
+  assert.match(home, /What can I help with\?/);
   assert.match(home, /placement="topbar"/);
   assert.match(composer, /COMPOSER_TOOLS/);
   assert.match(composer, /PROMPT_SHORTCUTS/);
+
+  // A blocked attachment may explain the blocker, but it must not submit the message.
+  assert.match(composer, /const blockedAttachmentMessage = blockedAttachment/);
+  assert.match(composer, /onClick=\{blockedAttachmentMessage \? triggerSubmit : undefined\}/);
+  assert.match(composer, /aria-disabled=\{blockedAttachmentMessage \? true : undefined\}/);
+  assert.match(composer, /blockedAttachmentMessage \?\? "Type a message to send"/);
 });
 
 test("core chat surfaces use shared workspace primitives", () => {
