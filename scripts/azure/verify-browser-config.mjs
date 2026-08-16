@@ -146,18 +146,44 @@ function readCommittedFallbackRefs(publicConfigPath) {
   return refs;
 }
 
-function containsLegacyServiceRoleJwt(text) {
+function assertNoLegacySupabaseJwt(text, expectedProjectRef, relativePath) {
   for (const match of text.matchAll(JWT_CANDIDATE_PATTERN)) {
+    let payload;
     try {
-      const payload = JSON.parse(Buffer.from(match[0].split(".")[1], "base64url").toString("utf8"));
-      if (payload && typeof payload === "object" && payload.role === "service_role") {
-        return true;
-      }
+      payload = JSON.parse(Buffer.from(match[0].split(".")[1], "base64url").toString("utf8"));
     } catch {
       // Non-JWT text with a JWT-like shape is ignored.
+      continue;
     }
+
+    if (!payload || typeof payload !== "object") continue;
+
+    const role = typeof payload.role === "string" ? payload.role : "";
+    const claimedRef = typeof payload.ref === "string" ? payload.ref.trim().toLowerCase() : "";
+    const looksLikeSupabaseJwt =
+      role === "anon" || role === "authenticated" || role === "service_role" || claimedRef !== "";
+    if (!looksLikeSupabaseJwt) continue;
+
+    if (role === "service_role") {
+      throw new Error(`Supabase service-role JWT detected in browser asset ${relativePath}`);
+    }
+
+    if (role === "anon") {
+      assertCondition(
+        PROJECT_REF_PATTERN.test(claimedRef),
+        `Legacy Supabase anon JWT without a valid project ref detected in browser asset ${relativePath}`,
+      );
+      assertCondition(
+        claimedRef === expectedProjectRef,
+        `Legacy Supabase anon JWT for an unexpected project detected in browser asset ${relativePath}`,
+      );
+      throw new Error(
+        `Legacy Supabase anon JWT detected in browser asset ${relativePath}; verified candidates require the approved publishable key`,
+      );
+    }
+
+    throw new Error(`Non-publishable Supabase JWT detected in browser asset ${relativePath}`);
   }
-  return false;
 }
 
 function readSourceAttestation(path, expectedSourceSha, expectedSourceTree) {
@@ -327,10 +353,7 @@ export function verifyBrowserConfig({
       );
     }
 
-    assertCondition(
-      !containsLegacyServiceRoleJwt(text),
-      `Supabase service-role JWT detected in browser asset ${file.relativePath}`,
-    );
+    assertNoLegacySupabaseJwt(text, projectRef, file.relativePath);
 
     for (const forbidden of FORBIDDEN_SECRET_PATTERNS) {
       assertCondition(
