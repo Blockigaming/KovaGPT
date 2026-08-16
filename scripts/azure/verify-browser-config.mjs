@@ -15,8 +15,7 @@ const GIT_OBJECT_PATTERN = /^[a-f0-9]{40}$/u;
 const PUBLISHABLE_KEY_PATTERN = /^sb_publishable_[A-Za-z0-9_-]{16,}$/u;
 const SUPABASE_URL_PATTERN = /https:\/\/([a-z0-9]{20})\.supabase\.co\b/gu;
 const PUBLISHABLE_KEY_SCAN_PATTERN = /\bsb_publishable_[A-Za-z0-9_-]{16,}\b/gu;
-const JWT_CANDIDATE_PATTERN =
-  /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/gu;
+const JWT_CANDIDATE_PATTERN = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/gu;
 const TEXT_EXTENSIONS = new Set([
   ".css",
   ".html",
@@ -150,9 +149,7 @@ function readCommittedFallbackRefs(publicConfigPath) {
 function containsLegacyServiceRoleJwt(text) {
   for (const match of text.matchAll(JWT_CANDIDATE_PATTERN)) {
     try {
-      const payload = JSON.parse(
-        Buffer.from(match[0].split(".")[1], "base64url").toString("utf8"),
-      );
+      const payload = JSON.parse(Buffer.from(match[0].split(".")[1], "base64url").toString("utf8"));
       if (payload && typeof payload === "object" && payload.role === "service_role") {
         return true;
       }
@@ -169,7 +166,10 @@ function readSourceAttestation(path, expectedSourceSha, expectedSourceTree) {
     attestationPath,
     "KOVA_SOURCE_ATTESTATION_PATH is required for a verified browser image",
   );
-  assertCondition(existsSync(attestationPath), "The verified Git-archive source attestation is missing");
+  assertCondition(
+    existsSync(attestationPath),
+    "The verified Git-archive source attestation is missing",
+  );
 
   let attestation;
   try {

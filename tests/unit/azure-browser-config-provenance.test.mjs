@@ -71,11 +71,7 @@ function verify(bundleDir, overrides = {}) {
 }
 
 function browserSource(extra = "") {
-  return [
-    `const url="${SUPABASE_URL}";`,
-    `const key="${PUBLISHABLE_KEY}";`,
-    extra,
-  ].join("\n");
+  return [`const url="${SUPABASE_URL}";`, `const key="${PUBLISHABLE_KEY}";`, extra].join("\n");
 }
 
 test("verified browser assets create key-free deterministic Git-archive provenance", () => {
@@ -213,9 +209,7 @@ test("secret, database credential, and private-key patterns fail the browser bui
   ]) {
     withBundle(
       {
-        "client/assets/app.js": browserSource(
-          `const forbidden=${JSON.stringify(forbidden)};`,
-        ),
+        "client/assets/app.js": browserSource(`const forbidden=${JSON.stringify(forbidden)};`),
       },
       ({ bundleDir }) => {
         assert.throws(() => verify(bundleDir), /detected in browser asset/u);
@@ -293,10 +287,7 @@ test("Docker, Azure, and runbook contracts require exact archive provenance", ()
 
   assert.match(dockerfile, /ARG KOVA_VERIFY_BROWSER_CONFIG=false/u);
   assert.match(dockerfile, /KOVA_BROWSER_BUNDLE_DIR=dist\/client/u);
-  assert.match(
-    dockerfile,
-    /KOVA_SOURCE_ATTESTATION_PATH=\/app\/\.kova-source-attestation\.json/u,
-  );
+  assert.match(dockerfile, /KOVA_SOURCE_ATTESTATION_PATH=\/app\/\.kova-source-attestation\.json/u);
   assert.match(dockerfile, /com\.kovagpt\.source\.tree/u);
   assert.match(dockerfile, /browser-config-provenance\.json/u);
 
@@ -305,10 +296,7 @@ test("Docker, Azure, and runbook contracts require exact archive provenance", ()
   assert.match(helper, /\.kova-source-attestation\.json/u);
 
   assert.match(workflow, /prepare-verified-build-context\.sh/u);
-  assert.match(
-    workflow,
-    /appSourcePath: \$\{\{ steps\.source-context\.outputs\.path \}\}/u,
-  );
+  assert.match(workflow, /appSourcePath: \$\{\{ steps\.source-context\.outputs\.path \}\}/u);
   assert.match(workflow, /KOVA_VERIFY_BROWSER_CONFIG=true/u);
   assert.match(workflow, /KOVA_SOURCE_TREE=/u);
 
