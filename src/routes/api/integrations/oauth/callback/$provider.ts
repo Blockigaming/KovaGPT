@@ -6,6 +6,7 @@ import {
   normalizeOAuthReturnPath,
   readOauthCookie,
   redirectClearingOauthCookie,
+  safeOAuthLogCode,
 } from "@/lib/oauth-security.server";
 
 export const Route = createFileRoute("/api/integrations/oauth/callback/$provider")({
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/api/integrations/oauth/callback/$provider
         if (providerError || !code || !state) {
           target.searchParams.set(
             "integration_error",
-            providerError ?? "missing_callback_parameters",
+            providerError ? "provider_denied" : "missing_callback_parameters",
           );
           return redirect(target);
         }
@@ -48,11 +49,7 @@ export const Route = createFileRoute("/api/integrations/oauth/callback/$provider
           safe.searchParams.set("integration_connected", provider);
           return redirect(safe);
         } catch (error) {
-          console.error(
-            "[oauth callback]",
-            provider,
-            error instanceof Error ? error.message : "failure",
-          );
+          console.error("[oauth callback]", provider, safeOAuthLogCode(error));
           target.searchParams.set("integration_error", "connection_failed");
           return redirect(target);
         }
