@@ -2,17 +2,17 @@
 
 This gate proves that an immutable KovaGPT container image was compiled from an exact Git commit and tree for one explicitly approved Supabase project. It is reusable for isolated staging and, after all release approvals, for the production candidate.
 
-It does not deploy to Azure, change DNS, modify Supabase, migrate users, or authorize a production cutover.
+The build gate itself does not deploy to Azure, change DNS, modify Supabase, migrate users, or authorize a production cutover. The separate production workflow remains manual and confirmation-gated.
 
 ## What the gate proves
 
 A verified build must establish all of the following:
 
 - the expected Supabase project URL and browser-safe publishable key are present in deployable browser assets;
-- no second Supabase project URL, project-ref literal, or publishable key is present in those assets;
+- no second Supabase project URL, project-ref literal, modern publishable key, or legacy Supabase JWT is present in those assets;
 - server-only output cannot satisfy the browser check;
 - every served text asset under `dist/client`, including `.txt`, web-manifest, and XML files, is scanned;
-- no OpenAI secret, Supabase secret key, legacy Supabase service-role JWT, PostgreSQL credential URL, or private-key PEM appears in browser assets;
+- no OpenAI secret, Supabase secret key, legacy Supabase service-role JWT, legacy anon JWT, user-session JWT, PostgreSQL credential URL, or private-key PEM appears in browser assets;
 - the exact source commit, source tree, and expected Supabase project ref are recorded in OCI labels;
 - the image contains a key-free provenance document with a deterministic browser-bundle SHA-256;
 - ordinary unverified builds remain possible but are labeled `config-verified=false` and cannot be promoted.
@@ -55,9 +55,18 @@ docker build \
   "$BUILD_CONTEXT"
 ```
 
-The verifier requires the Git-archive attestation and compares both immutable identifiers with the supplied build arguments. It scans only deployable browser text assets under `dist/client` after source maps are removed. The provenance document is written to `dist/browser-config-provenance.json`, outside the public browser directory but inside the final runtime artifact.
+The verifier requires the Git-archive attestation and compares both immutable identifiers with the supplied build arguments. It scans only deployable browser text assets under `dist/client` after source maps are removed. The provenance document is written to `dist/browser-config-provenance.json`, outside the public browser directory but inside the final runtime artifact. The source SHA is also compiled into `/api/version`, allowing the deployed runtime to prove which commit it is serving.
 
-The manual Azure workflow uses the same helper, passes the exact archive directory as `appSourcePath`, and fails before Azure sign-in when the approved production browser configuration is missing or inconsistent.
+## Azure promotion workflow
+
+The manual Azure workflow adds four independent hard stops before it accepts a deployment:
+
+1. It validates the approved project ref, URL, modern publishable key, source commit, and source tree.
+2. After Azure OIDC sign-in, it reads the existing Container App `SUPABASE_URL` and refuses to build when the server-side project does not match the approved browser project. It does not silently retarget the server.
+3. It builds from the clean archive, pushes a unique candidate tag, resolves the ACR manifest digest, re-pulls the digest, verifies OCI labels, and extracts the provenance record from that digest-bound image.
+4. It deploys `registry/repository@sha256:...`, verifies the Container App is pinned to that exact digest, and requires both `/api/health` and `/api/version` to report the expected source SHA.
+
+The unique candidate tag is only a transport handle. The immutable registry digest is the promotion and deployment identity.
 
 ## Required OCI labels
 
@@ -86,7 +95,7 @@ Extract `/app/dist/browser-config-provenance.json` from the image. It contains o
 - scanned file and byte counts;
 - discovered and forbidden project-ref evidence.
 
-Pair this record with the immutable registry digest after a separately approved push. The digest, source identifiers, project ref, OCI labels, and provenance hash form one promotion record.
+The workflow uploads that record as a retained GitHub Actions artifact and pairs it with the immutable ACR digest. The digest, source identifiers, project ref, OCI labels, and provenance hash form one promotion record.
 
 ## Hard stops
 
@@ -96,7 +105,10 @@ Do not promote or deploy when any of these is true:
 - the Git-archive source attestation is missing or its commit/tree differs from the reviewed release;
 - browser and server project identities differ;
 - the provenance record is missing or contains a full credential;
-- an unexpected project ref, publishable key, legacy service-role JWT, or secret pattern is detected;
+- an unexpected project ref, modern publishable key, legacy Supabase JWT, or secret pattern is detected;
 - only a mutable image tag is available;
+- the pushed image labels or extracted provenance do not match the requested source and project;
+- the Container App would not be pinned to the exact registry digest;
+- the deployed `/api/version` SHA differs from the workflow SHA;
 - the target project or environment has not been independently approved;
 - health, readiness, rollback, authentication, or cross-user tests are incomplete.
