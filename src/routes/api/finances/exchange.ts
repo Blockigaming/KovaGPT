@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireUser, getCallerTier } from "@/lib/api-auth.server";
 import { exchangeFinanceToken } from "@/finances/plaid.server";
+import { publicFinanceError } from "@/finances/public-errors.server";
+
 export const Route = createFileRoute("/api/finances/exchange")({
   server: {
     handlers: {
@@ -21,9 +23,11 @@ export const Route = createFileRoute("/api/finances/exchange")({
             { status: 201 },
           );
         } catch (error) {
+          const safe = publicFinanceError(error, "finance_exchange_failed");
+          console.error("[finance exchange]", safe.logCode);
           return Response.json(
-            { error: error instanceof Error ? error.message : "finance_exchange_failed" },
-            { status: 400 },
+            { error: safe.error },
+            { status: safe.status, headers: { "Cache-Control": "no-store" } },
           );
         }
       },
