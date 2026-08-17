@@ -228,7 +228,7 @@ jobs:
           const [path, sourceSha, sourceTree, projectRef] = process.argv.slice(2);
           const value = JSON.parse(fs.readFileSync(path, "utf8"));
           if (
-            value.schemaVersion !== 2 ||
+            value.schemaVersion !== 3 ||
             value.sourceSha !== sourceSha ||
             value.sourceTree !== sourceTree ||
             value.supabaseProjectRef !== projectRef ||
