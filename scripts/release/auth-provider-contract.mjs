@@ -4,9 +4,29 @@ import { extname, join, relative } from "node:path";
 
 const root = process.cwd();
 const strictLock = process.argv.includes("--strict-lock");
-const readable = new Set([".js", ".jsx", ".mjs", ".ts", ".tsx", ".json", ".yml", ".yaml"]);
+const readable = new Set([
+  ".cjs",
+  ".css",
+  ".html",
+  ".js",
+  ".json",
+  ".jsx",
+  ".map",
+  ".mjs",
+  ".sql",
+  ".svg",
+  ".toml",
+  ".ts",
+  ".tsx",
+  ".txt",
+  ".webmanifest",
+  ".xml",
+  ".yml",
+  ".yaml",
+]);
 const forbiddenCredentialPattern = /\b(?:VITE_)?CLERK_[A-Z0-9_]+\b/iu;
 const forbiddenImportPattern = /(?:from\s+|import\s*\()\s*["']@clerk\//u;
+const forbiddenRuntimePattern = /https?:\/\/(?:[a-z0-9-]+\.)?clerk\.(?:com|dev)\b/iu;
 
 function trackedFiles() {
   try {
@@ -29,6 +49,40 @@ function trackedFiles() {
   }
 }
 
+function inspectLockGraph(lock) {
+  const findings = new Set();
+  for (const [path, entry] of Object.entries(lock.packages ?? {})) {
+    if (/(?:^|\/)@clerk\//u.test(path)) findings.add(`package:${path}`);
+    for (const group of [
+      "dependencies",
+      "devDependencies",
+      "optionalDependencies",
+      "peerDependencies",
+    ]) {
+      for (const name of Object.keys(entry?.[group] ?? {})) {
+        if (name.startsWith("@clerk/")) findings.add(`${path || "root"}:${group}:${name}`);
+      }
+    }
+  }
+  return [...findings].sort();
+}
+
+function inspectText(path, source, errors) {
+  if (forbiddenImportPattern.test(source)) errors.push(`${path}:Clerk runtime import`);
+  if (forbiddenCredentialPattern.test(source)) errors.push(`${path}:Clerk credential variable`);
+  if (forbiddenRuntimePattern.test(source)) errors.push(`${path}:Clerk hosted runtime`);
+}
+
+function filesUnder(directory) {
+  const files = [];
+  for (const name of readdirSync(directory)) {
+    const path = join(directory, name);
+    if (statSync(path).isDirectory()) files.push(...filesUnder(path));
+    else files.push(path);
+  }
+  return files;
+}
+
 export function inspectAuthProviderContract({ files = trackedFiles(), requireCleanLock = false } = {}) {
   const errors = [];
   const warnings = [];
@@ -44,22 +98,30 @@ export function inspectAuthProviderContract({ files = trackedFiles(), requireCle
     if (requireCleanLock) errors.push("package-lock.json:missing");
   } else {
     const lock = JSON.parse(readFileSync(lockPath, "utf8"));
-    const stale = Object.keys(lock.packages?.[""]?.dependencies ?? {}).filter((name) =>
-      name.startsWith("@clerk/"),
-    );
-    for (const name of stale) {
-      const finding = `package-lock.json:root:${name}`;
-      if (requireCleanLock) errors.push(finding);
-      else warnings.push(`${finding}:regenerate package-lock.json before final candidate`);
+    for (const finding of inspectLockGraph(lock)) {
+      const message = `package-lock.json:${finding}`;
+      if (requireCleanLock) errors.push(message);
+      else warnings.push(`${message}:regenerate package-lock.json before final candidate`);
     }
   }
 
   for (const path of files) {
     if (path.startsWith("docs/") || path.startsWith("tests/") || path === "package-lock.json") continue;
     if (!readable.has(extname(path)) && !["Dockerfile", ".env.example"].includes(path)) continue;
-    const source = readFileSync(join(root, path), "utf8");
-    if (forbiddenImportPattern.test(source)) errors.push(`${path}:Clerk runtime import`);
-    if (forbiddenCredentialPattern.test(source)) errors.push(`${path}:Clerk credential variable`);
+    inspectText(path, readFileSync(join(root, path), "utf8"), errors);
+  }
+
+  for (const bundleRoot of ["dist/client", "dist/server"]) {
+    const absoluteRoot = join(root, bundleRoot);
+    if (!existsSync(absoluteRoot)) continue;
+    for (const path of filesUnder(absoluteRoot)) {
+      if (!readable.has(extname(path))) continue;
+      inspectText(relative(root, path).replaceAll("\\", "/"), readFileSync(path, "utf8"), errors);
+    }
+  }
+
+  if (existsSync(join(root, "node_modules", "@clerk"))) {
+    errors.push("node_modules/@clerk is installed");
   }
 
   const shim = readFileSync(join(root, "src/components/auth/ClerkSafe.tsx"), "utf8");
