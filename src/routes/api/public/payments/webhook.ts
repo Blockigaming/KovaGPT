@@ -71,11 +71,19 @@ function priceIdFrom(item: StripeLineItemLike | undefined): string | undefined {
   return undefined;
 }
 
+function stripeEventIso(eventCreated: number): string {
+  return new Date(eventCreated * 1000).toISOString();
+}
+
+function currentEventFilter(eventCreated: number): string {
+  return `last_stripe_event_created_at.is.null,last_stripe_event_created_at.lte.${stripeEventIso(eventCreated)}`;
+}
+
 async function handleSubscriptionCreated(
   subscription: StripeSubscriptionLike,
   env: StripeEnv,
-  eventCreated?: number,
-  eventId?: string,
+  eventCreated: number,
+  eventId: string,
 ) {
   const userId = subscription.metadata?.userId;
   if (!userId) throw new Error("stripe_customer_mapping_missing");
@@ -104,28 +112,26 @@ async function handleSubscriptionCreated(
         current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
         environment: env,
         updated_at: new Date().toISOString(),
-        last_stripe_event_created_at: eventCreated
-          ? new Date(eventCreated * 1000).toISOString()
-          : null,
-        last_stripe_event_id: eventId ?? null,
+        last_stripe_event_created_at: stripeEventIso(eventCreated),
+        last_stripe_event_id: eventId,
       },
-      { onConflict: "stripe_subscription_id" },
+      { onConflict: "stripe_subscription_id,environment" },
     );
 }
 
 export function isStripeEventCurrent(
-  incomingSeconds: number | undefined,
+  incomingSeconds: number,
   persisted: string | null | undefined,
 ): boolean {
-  if (!incomingSeconds || !persisted) return true;
+  if (!persisted) return true;
   return incomingSeconds * 1000 >= Date.parse(persisted);
 }
 
 async function handleSubscriptionUpdated(
   subscription: StripeSubscriptionLike,
   env: StripeEnv,
-  eventCreated?: number,
-  eventId?: string,
+  eventCreated: number,
+  eventId: string,
 ) {
   const item = subscription.items?.data?.[0];
   const periodStart = item?.current_period_start ?? subscription.current_period_start;
@@ -141,39 +147,31 @@ async function handleSubscriptionUpdated(
       current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
       cancel_at_period_end: subscription.cancel_at_period_end || false,
       updated_at: new Date().toISOString(),
-      last_stripe_event_created_at: eventCreated
-        ? new Date(eventCreated * 1000).toISOString()
-        : null,
-      last_stripe_event_id: eventId ?? null,
+      last_stripe_event_created_at: stripeEventIso(eventCreated),
+      last_stripe_event_id: eventId,
     })
     .eq("stripe_subscription_id", subscription.id)
     .eq("environment", env)
-    .or(
-      `last_stripe_event_created_at.is.null,last_stripe_event_created_at.lte.${eventCreated ? new Date(eventCreated * 1000).toISOString() : new Date().toISOString()}`,
-    );
+    .or(currentEventFilter(eventCreated));
 }
 
 async function handleSubscriptionDeleted(
   subscription: StripeSubscriptionLike,
   env: StripeEnv,
-  eventCreated?: number,
-  eventId?: string,
+  eventCreated: number,
+  eventId: string,
 ) {
   await getSupabase()
     .from("subscriptions")
     .update({
       status: "canceled",
       updated_at: new Date().toISOString(),
-      last_stripe_event_created_at: eventCreated
-        ? new Date(eventCreated * 1000).toISOString()
-        : null,
-      last_stripe_event_id: eventId ?? null,
+      last_stripe_event_created_at: stripeEventIso(eventCreated),
+      last_stripe_event_id: eventId,
     })
     .eq("stripe_subscription_id", subscription.id)
     .eq("environment", env)
-    .or(
-      `last_stripe_event_created_at.is.null,last_stripe_event_created_at.lte.${eventCreated ? new Date(eventCreated * 1000).toISOString() : new Date().toISOString()}`,
-    );
+    .or(currentEventFilter(eventCreated));
 }
 
 export async function handleWebhook(
@@ -182,39 +180,34 @@ export async function handleWebhook(
   correlationId: string = crypto.randomUUID(),
 ) {
   const event = await verifyWebhook(req, env);
-  const eventCreated =
-    typeof (event as { created?: unknown }).created === "number"
-      ? (event as { created: number }).created
-      : undefined;
-
+  const eventCreated = event.created;
   const eventId = event.id;
   const object = event.data.object as StripeLifecycleObject;
-  if (eventId) {
-    const { error: insertErr } = await getSupabase()
-      .from("processed_stripe_events")
-      .insert({
-        event_id: eventId,
-        type: event.type,
-        environment: env,
-        event_created_at: eventCreated ? new Date(eventCreated * 1000).toISOString() : null,
-        correlation_id: /^[0-9a-f-]{36}$/iu.test(correlationId) ? correlationId : null,
-        object_id: object.id ?? null,
-        customer_id: typeof object.customer === "string" ? object.customer : null,
-        subscription_id:
-          typeof object.subscription === "string"
-            ? object.subscription
-            : event.type.startsWith("customer.subscription.")
-              ? object.id
-              : null,
-        invoice_id: event.type.startsWith("invoice.") ? object.id : null,
-        checkout_session_id: event.type.startsWith("checkout.session.") ? object.id : null,
-        outcome: billingOutcome(event.type),
-        retryable: false,
-      } as never);
-    if (insertErr) {
-      if ((insertErr as { code?: string }).code === "23505") return { duplicate: true };
-      throw new Error("stripe_event_claim_failed");
-    }
+
+  const { error: insertErr } = await getSupabase()
+    .from("processed_stripe_events")
+    .insert({
+      event_id: eventId,
+      type: event.type,
+      environment: env,
+      event_created_at: stripeEventIso(eventCreated),
+      correlation_id: /^[0-9a-f-]{36}$/iu.test(correlationId) ? correlationId : null,
+      object_id: object.id ?? null,
+      customer_id: typeof object.customer === "string" ? object.customer : null,
+      subscription_id:
+        typeof object.subscription === "string"
+          ? object.subscription
+          : event.type.startsWith("customer.subscription.")
+            ? object.id
+            : null,
+      invoice_id: event.type.startsWith("invoice.") ? object.id : null,
+      checkout_session_id: event.type.startsWith("checkout.session.") ? object.id : null,
+      outcome: billingOutcome(event.type),
+      retryable: false,
+    } as never);
+  if (insertErr) {
+    if ((insertErr as { code?: string }).code === "23505") return { duplicate: true };
+    throw new Error("stripe_event_claim_failed");
   }
 
   try {
@@ -267,12 +260,15 @@ export async function handleWebhook(
                 : "past_due";
           await getSupabase()
             .from("subscriptions")
-            .update({ status, updated_at: new Date().toISOString() })
+            .update({
+              status,
+              updated_at: new Date().toISOString(),
+              last_stripe_event_created_at: stripeEventIso(eventCreated),
+              last_stripe_event_id: eventId,
+            })
             .eq("stripe_subscription_id", invoice.subscription)
             .eq("environment", env)
-            .or(
-              `last_stripe_event_created_at.is.null,last_stripe_event_created_at.lte.${eventCreated ? new Date(eventCreated * 1000).toISOString() : new Date().toISOString()}`,
-            );
+            .or(currentEventFilter(eventCreated));
         }
         break;
       }
@@ -288,8 +284,11 @@ export async function handleWebhook(
     });
     return { duplicate: false };
   } catch {
-    if (eventId)
-      await getSupabase().from("processed_stripe_events").delete().eq("event_id", eventId);
+    await getSupabase()
+      .from("processed_stripe_events")
+      .delete()
+      .eq("event_id", eventId)
+      .eq("environment", env);
     throw new Error("stripe_event_processing_failed");
   }
 }
