@@ -24,6 +24,11 @@ function fakeJwt(payload) {
   return `${encode({ alg: "HS256", typ: "JWT" })}.${encode(payload)}.${"s".repeat(32)}`;
 }
 
+function utf16le(value, withBom = true) {
+  const encoded = Buffer.from(value, "utf16le");
+  return withBom ? Buffer.concat([Buffer.from([0xff, 0xfe]), encoded]) : encoded;
+}
+
 function withBundle(files, run) {
   const root = mkdtempSync(join(tmpdir(), "kova-browser-config-"));
   const distDir = join(root, "dist");
@@ -91,7 +96,7 @@ test("verified browser assets create key-free deterministic Git-archive provenan
       const parsed = JSON.parse(written);
 
       assert.deepEqual(result.browserFiles, ["assets/app.js"]);
-      assert.equal(parsed.schemaVersion, 2);
+      assert.equal(parsed.schemaVersion, 3);
       assert.equal(parsed.supabaseProjectRef, PROJECT_REF);
       assert.equal(parsed.supabaseUrl, SUPABASE_URL);
       assert.equal(parsed.sourceSha, SOURCE_SHA);
@@ -100,6 +105,9 @@ test("verified browser assets create key-free deterministic Git-archive provenan
       assert.equal(parsed.publishableKeySha256, sha256(PUBLISHABLE_KEY));
       assert.match(parsed.browserBundleSha256, /^[a-f0-9]{64}$/u);
       assert.equal(parsed.scannedFiles, 1);
+      assert.equal(parsed.executableFiles, 1);
+      assert.ok(parsed.executableExpectedUrlOccurrences > 0);
+      assert.ok(parsed.executableExpectedKeyOccurrences > 0);
       assert.deepEqual(parsed.discoveredSupabaseProjectRefs, [PROJECT_REF]);
       assert.doesNotMatch(written, new RegExp(PUBLISHABLE_KEY, "u"));
     },
@@ -115,7 +123,22 @@ test("server-only configuration cannot satisfy browser verification", () => {
     ({ bundleDir }) => {
       assert.throws(
         () => verify(bundleDir),
-        /intended Supabase URL was not found in deployable browser assets/u,
+        /intended Supabase URL was not found in executable browser assets/u,
+      );
+    },
+  );
+});
+
+test("informational assets cannot satisfy positive browser configuration evidence", () => {
+  withBundle(
+    {
+      "client/assets/app.js": "console.log('browser bundle has no backend config');",
+      "client/llms.txt": browserSource(),
+    },
+    ({ bundleDir }) => {
+      assert.throws(
+        () => verify(bundleDir),
+        /intended Supabase URL was not found in executable browser assets/u,
       );
     },
   );
@@ -139,6 +162,19 @@ test("a forbidden project ref assembled into a URL at runtime fails closed", () 
     {
       "client/assets/app.js": browserSource(
         `const forbiddenRef="${OTHER_PROJECT_REF}";const fallback="https://"+forbiddenRef+".supabase.co";`,
+      ),
+    },
+    ({ bundleDir }) => {
+      assert.throws(() => verify(bundleDir), /project-ref literal/u);
+    },
+  );
+});
+
+test("forbidden project refs are matched case-insensitively", () => {
+  withBundle(
+    {
+      "client/assets/app.js": browserSource(
+        `const forbiddenRef="${OTHER_PROJECT_REF.toUpperCase()}";const fallback="https://"+forbiddenRef+".supabase.co";`,
       ),
     },
     ({ bundleDir }) => {
@@ -243,6 +279,35 @@ test("all served text formats are scanned", () => {
     },
     ({ bundleDir }) => {
       assert.throws(() => verify(bundleDir), /PostgreSQL credential URL/u);
+    },
+  );
+});
+
+test("BOM-marked UTF-16 assets are decoded before secret scanning", () => {
+  withBundle(
+    {
+      "client/assets/app.js": browserSource(),
+      "client/payment-debug.txt": utf16le(
+        "credential=sk_live_abcdefghijklmnopqrstuvwxyz012345",
+      ),
+    },
+    ({ bundleDir }) => {
+      assert.throws(() => verify(bundleDir), /Stripe secret key/u);
+    },
+  );
+});
+
+test("unmarked NUL-delimited text assets fail closed", () => {
+  withBundle(
+    {
+      "client/assets/app.js": browserSource(),
+      "client/payment-debug.txt": utf16le(
+        "credential=sk_live_abcdefghijklmnopqrstuvwxyz012345",
+        false,
+      ),
+    },
+    ({ bundleDir }) => {
+      assert.throws(() => verify(bundleDir), /NUL bytes without a supported text BOM/u);
     },
   );
 });
