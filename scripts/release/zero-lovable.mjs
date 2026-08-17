@@ -11,11 +11,16 @@ const readable = new Set([
   ".js",
   ".json",
   ".jsx",
+  ".map",
   ".mjs",
   ".sql",
+  ".svg",
   ".toml",
   ".ts",
   ".tsx",
+  ".txt",
+  ".webmanifest",
+  ".xml",
   ".yaml",
   ".yml",
 ]);
@@ -90,6 +95,24 @@ export function inspectLockRoot(lock) {
   );
 }
 
+export function inspectLockGraph(lock) {
+  const findings = new Set();
+  for (const [path, entry] of Object.entries(lock.packages ?? {})) {
+    if (/lovable/iu.test(path)) findings.add(`package:${path}`);
+    for (const group of [
+      "dependencies",
+      "devDependencies",
+      "optionalDependencies",
+      "peerDependencies",
+    ]) {
+      for (const name of Object.keys(entry?.[group] ?? {})) {
+        if (/lovable/iu.test(name)) findings.add(`${path || "root"}:${group}:${name}`);
+      }
+    }
+  }
+  return [...findings].sort();
+}
+
 export function auditZeroLovable({ files = trackedFiles() } = {}) {
   const errors = [];
   const warnings = [];
@@ -106,9 +129,13 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
   }
 
   if (existsSync(join(root, "package-lock.json"))) {
-    const stale = inspectLockRoot(JSON.parse(read("package-lock.json")));
-    if (stale.length) {
-      const message = `package-lock root still references removed Lovable packages: ${stale.join(", ")}`;
+    const lock = JSON.parse(read("package-lock.json"));
+    const staleRoot = inspectLockRoot(lock);
+    const staleGraph = inspectLockGraph(lock);
+    if (staleRoot.length || staleGraph.length) {
+      const message = `package-lock still references removed Lovable packages: ${[
+        ...new Set([...staleRoot.map((name) => `root:${name}`), ...staleGraph]),
+      ].join(", ")}`;
       if (strictLock) errors.push(message);
       else warnings.push(`${message}; regenerate package-lock.json with npm before final release`);
     }
