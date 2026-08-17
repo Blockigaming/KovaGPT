@@ -5,6 +5,7 @@ const root = process.cwd();
 const sourceRoots = ["src/components", "src/routes"];
 const visibleCoreFiles = [
   "src/components/ChatInput.tsx",
+  "src/components/ChatMessage.tsx",
   "src/components/Sidebar.tsx",
   "src/components/MobileTopBar.tsx",
   "src/components/SettingsDialog.tsx",
@@ -13,6 +14,7 @@ const visibleCoreFiles = [
 ];
 const voiceCriticalFiles = [
   "src/components/ChatInput.tsx",
+  "src/components/ChatMessage.tsx",
   "src/components/Sidebar.tsx",
   "src/components/MobileTopBar.tsx",
   "src/components/CommandPalette.tsx",
@@ -30,14 +32,18 @@ const deadControlPatterns = [
 const voicePatterns = [
   /\bSpeechRecognition\b/u,
   /\bwebkitSpeechRecognition\b/u,
+  /\bSpeechSynthesisUtterance\b/u,
+  /\bspeechSynthesis\b/u,
   /\bstartListening\b/u,
   /\bstopListening\b/u,
   /\bisListening\b/u,
   /\bvoiceMode\b/u,
   /\bDictate\b/u,
   /\bdictation\b/iu,
+  /\bRead aloud\b/iu,
   /\bmicrophone\b/iu,
   /<Mic(?:\s|\/|>)/u,
+  /<Volume2(?:\s|\/|>)/u,
 ];
 
 function filesUnder(directory) {
@@ -60,11 +66,12 @@ function read(path) {
 
 export function auditUiTruthfulness() {
   const errors = [];
+  const visibleFiles = sourceRoots.flatMap(filesUnder);
   for (const path of visibleCoreFiles) {
     if (!existsSync(join(root, path))) errors.push(`${path}: required visible surface missing`);
   }
 
-  for (const path of sourceRoots.flatMap(filesUnder)) {
+  for (const path of visibleFiles) {
     const source = read(path);
     for (const rule of deadControlPatterns) {
       if (rule.pattern.test(source)) errors.push(`${path}: ${rule.label}`);
@@ -88,8 +95,20 @@ export function auditUiTruthfulness() {
     .filter((path) => existsSync(join(root, path)))
     .map(read)
     .join("\n");
-  for (const state of ["loading", "empty", "offline", "retry", "permission", "rate", "expired", "unavailable", "error"]) {
-    if (!new RegExp(state, "iu").test(stateSources)) errors.push(`operational state coverage missing: ${state}`);
+  for (const state of [
+    "loading",
+    "empty",
+    "offline",
+    "retry",
+    "permission-denied",
+    "rate-limited",
+    "expired-auth",
+    "unavailable",
+    "error",
+  ]) {
+    if (!new RegExp(state, "iu").test(stateSources)) {
+      errors.push(`operational state coverage missing: ${state}`);
+    }
   }
 
   const chatInput = existsSync(join(root, "src/components/ChatInput.tsx"))
@@ -106,7 +125,7 @@ export function auditUiTruthfulness() {
     if (!sidebar.includes(contract)) errors.push(`Sidebar contract missing: ${contract}`);
   }
 
-  return { errors: [...new Set(errors)].sort(), checkedFiles: sourceRoots.flatMap(filesUnder).length };
+  return { errors: [...new Set(errors)].sort(), checkedFiles: visibleFiles.length };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

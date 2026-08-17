@@ -50,12 +50,20 @@ test("Google OAuth routes use the documented configuration, exact redirect, and 
 test("voice stays disabled without adding provider secrets or billing claims", () => {
   const matrix = read("docs/kova-final-completion-matrix.md");
   const chat = read("src/components/ChatInput.tsx");
+  const message = read("src/components/ChatMessage.tsx");
   const pricing = read("src/routes/pricing.tsx");
   const start = read("src/start.ts");
+  const server = read("src/server.ts");
 
   assert.match(matrix, /Voice: INTENTIONALLY DISABLED/);
-  assert.doesNotMatch(chat, /Start voice input|createSpeechRecognition|MicOff/);
-  assert.match(start, /microphone=\(self\)/g);
+  for (const source of [chat, message]) {
+    assert.doesNotMatch(
+      source,
+      /SpeechRecognition|webkitSpeechRecognition|speechSynthesis|SpeechSynthesisUtterance|Start voice input|Read aloud|MicOff|Dictate|dictation/i,
+    );
+  }
+  assert.match(start, /microphone=\(\)/g);
+  assert.match(server, /microphone=\(\)/g);
   assert.doesNotMatch(pricing, /voice generations|voice, and advanced/i);
 });
 

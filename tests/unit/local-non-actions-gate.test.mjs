@@ -15,6 +15,10 @@ test("the consolidated local gate covers the complete source/build suite without
     "test:release",
     "test:a11y",
     "test:visual",
+    "release:auth-provider",
+    "release:security",
+    "release:ui-truthfulness",
+    "release:visible-controls",
     "release:zero-lovable:strict",
     "release:migrations",
     "release:migration-preflight",
@@ -25,7 +29,7 @@ test("the consolidated local gate covers the complete source/build suite without
     "azure:staging:validate",
     "build",
   ]) {
-    assert.match(source, new RegExp(command.replaceAll(":", "\\:"), "u"));
+    assert.ok(source.includes(command), `local gate must include ${command}`);
   }
   assert.doesNotMatch(source, /gh\s+workflow|workflow_dispatch|actions\/runs|repository_dispatch/u);
   assert.match(source, /LOCAL_NON_ACTIONS_GATE=FAIL/u);

@@ -18,12 +18,12 @@ const SECURITY_HEADERS: Record<string, string> = {
     "object-src 'none'",
     "frame-ancestors 'self'",
     "form-action 'self' https://checkout.stripe.com",
-    "script-src 'self' 'unsafe-inline' https://js.stripe.com https://*.clerk.accounts.dev https://*.clerk.com",
+    "script-src 'self' 'unsafe-inline' https://js.stripe.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data: https://fonts.gstatic.com",
-    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.clerk.accounts.dev https://*.clerk.com",
-    "frame-src https://js.stripe.com https://hooks.stripe.com https://*.clerk.accounts.dev https://*.clerk.com",
+    "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com",
+    "frame-src https://js.stripe.com https://hooks.stripe.com",
     "worker-src 'self' blob:",
     "media-src 'self' blob:",
     "upgrade-insecure-requests",
@@ -35,8 +35,8 @@ const SECURITY_HEADERS: Record<string, string> = {
 
 function applySecurityHeaders(res: Response): Response {
   const headers = new Headers(res.headers);
-  for (const [k, v] of Object.entries(SECURITY_HEADERS)) {
-    if (!headers.has(k)) headers.set(k, v);
+  for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+    if (!headers.has(key)) headers.set(key, value);
   }
   return new Response(res.body, {
     status: res.status,
@@ -46,9 +46,6 @@ function applySecurityHeaders(res: Response): Response {
 }
 
 const errorMiddleware = createMiddleware().server(async ({ next, request }) => {
-  const url = new URL(request.url);
-  if (url.pathname.startsWith("/lovable/")) return next();
-
   try {
     if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
       const rejected = rejectCrossSiteRequest(request);
@@ -69,7 +66,9 @@ const errorMiddleware = createMiddleware().server(async ({ next, request }) => {
     if (error != null && typeof error === "object" && "statusCode" in error) {
       throw error;
     }
-    console.error(error);
+    console.error("[start] request failed", {
+      name: error instanceof Error ? error.name : "UnknownError",
+    });
     return applySecurityHeaders(
       new Response(renderErrorPage(), {
         status: 500,

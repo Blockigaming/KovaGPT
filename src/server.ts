@@ -16,12 +16,12 @@ const CONTENT_SECURITY_POLICY = [
   "object-src 'none'",
   "frame-ancestors 'self'",
   "form-action 'self' https://checkout.stripe.com",
-  "script-src 'self' 'unsafe-inline' https://js.stripe.com https://*.clerk.accounts.dev https://*.clerk.com",
+  "script-src 'self' 'unsafe-inline' https://js.stripe.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data: https://fonts.gstatic.com",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.clerk.accounts.dev https://*.clerk.com",
-  "frame-src https://js.stripe.com https://hooks.stripe.com https://*.clerk.accounts.dev https://*.clerk.com",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com",
+  "frame-src https://js.stripe.com https://hooks.stripe.com",
   "worker-src 'self' blob:",
   "media-src 'self' blob:",
   "upgrade-insecure-requests",
@@ -57,7 +57,8 @@ let serverEntryPromise: Promise<ServerEntry> | undefined;
 async function getServerEntry(): Promise<ServerEntry> {
   if (!serverEntryPromise) {
     const pending = import("@tanstack/react-start/server-entry").then(
-      (m) => (m as { default?: ServerEntry }).default ?? (m as unknown as ServerEntry),
+      (module) =>
+        (module as { default?: ServerEntry }).default ?? (module as unknown as ServerEntry),
     );
     serverEntryPromise = pending;
     void pending.catch(() => {

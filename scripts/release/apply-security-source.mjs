@@ -41,21 +41,29 @@ function occurrences(source, needle) {
   return source.split(needle).length - 1;
 }
 
+function replacementState(source, replacement) {
+  const beforeCount = occurrences(source, replacement.before);
+  const afterCount = occurrences(source, replacement.after);
+  const afterContainsBefore = replacement.after.includes(replacement.before);
+  const applied = afterCount === 1 && beforeCount === (afterContainsBefore ? 1 : 0);
+  const pending = afterCount === 0 && beforeCount === 1;
+  return { applied, pending, beforeCount, afterCount };
+}
+
 export function applySecuritySource({ check = checkOnly } = {}) {
   const files = new Map();
   const changed = new Set();
 
   for (const replacement of replacements) {
     const source = files.get(replacement.path) ?? readFileSync(replacement.path, "utf8");
-    const beforeCount = occurrences(source, replacement.before);
-    const afterCount = occurrences(source, replacement.after);
-    if (beforeCount === 0 && afterCount === 1) {
+    const state = replacementState(source, replacement);
+    if (state.applied) {
       files.set(replacement.path, source);
       continue;
     }
-    if (beforeCount !== 1 || afterCount !== 0) {
+    if (!state.pending) {
       throw new Error(
-        `security_source_drift:${replacement.path}:before=${beforeCount}:after=${afterCount}`,
+        `security_source_drift:${replacement.path}:before=${state.beforeCount}:after=${state.afterCount}`,
       );
     }
     files.set(replacement.path, source.replace(replacement.before, replacement.after));

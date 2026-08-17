@@ -23,6 +23,13 @@ const capability = (configured: boolean, optional = true): Capability => ({
   optional,
 });
 
+function supabaseConfigured(): boolean {
+  return (
+    present("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY") &&
+    any("SUPABASE_PUBLISHABLE_KEY", "SUPABASE_ANON_KEY")
+  );
+}
+
 function aiProviderConfigured(): boolean {
   if (runtimeEnv("AZURE_OPENAI_ENDPOINT")) {
     const authenticated =
@@ -43,12 +50,8 @@ function aiProviderConfigured(): boolean {
 export function structuralReadiness(): ReadinessReport {
   const capabilities: Record<string, Capability> = {
     productionUrl: capability(any("KOVA_PUBLIC_URL", "APP_URL", "SITE_URL"), false),
-    clerk: capability(any("CLERK_SECRET_KEY", "VITE_CLERK_PUBLISHABLE_KEY"), false),
-    supabase: capability(
-      present("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY") &&
-        any("SUPABASE_PUBLISHABLE_KEY", "SUPABASE_ANON_KEY"),
-      false,
-    ),
+    auth: capability(supabaseConfigured(), false),
+    supabase: capability(supabaseConfigured(), false),
     aiProvider: capability(aiProviderConfigured()),
     agentRunner: capability(present("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY")),
     stripe: capability(present("STRIPE_LIVE_API_KEY", "PAYMENTS_LIVE_WEBHOOK_SECRET")),
@@ -108,6 +111,7 @@ export async function runtimeReadiness(timeoutMs = 1500): Promise<ReadinessRepor
     report.capabilities.supabase.state = controller.signal.aborted
       ? "database-timeout"
       : "degraded";
+    report.capabilities.auth.state = report.capabilities.supabase.state;
     report.status = "unavailable";
   } finally {
     clearTimeout(timer);

@@ -16,6 +16,10 @@ const gates = [
   ["release", "npm", ["run", "test:release"]],
   ["accessibility", "npm", ["run", "test:a11y"]],
   ["visual-source", "npm", ["run", "test:visual"]],
+  ["auth-provider", "npm", ["run", "release:auth-provider"]],
+  ["security", "npm", ["run", "release:security"]],
+  ["ui-truthfulness", "npm", ["run", "release:ui-truthfulness"]],
+  ["visible-controls", "npm", ["run", "release:visible-controls"]],
   ["zero-lovable", "npm", ["run", "release:zero-lovable"]],
   ["zero-lovable-strict", "npm", ["run", "release:zero-lovable:strict"]],
   ["migrations", "npm", ["run", "release:migrations"]],
@@ -26,10 +30,12 @@ const gates = [
   ["azure", "npm", ["run", "azure:validate"]],
   ["azure-staging", "npm", ["run", "azure:staging:validate"]],
   ["build", "npm", ["run", "build"]],
+  ["security-built", "npm", ["run", "release:security"]],
+  ["zero-lovable-built", "npm", ["run", "release:zero-lovable:strict"]],
 ];
 
 const report = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   startedAt: new Date().toISOString(),
   node: process.version,
   gates: [],

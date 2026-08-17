@@ -41,10 +41,8 @@ const secretRules = [
     pattern: /\b(?:VITE_|NEXT_PUBLIC_)[A-Z0-9_]*(?:SECRET|SERVICE_ROLE|PRIVATE_KEY|API_KEY|ACCESS_TOKEN|REFRESH_TOKEN)\b/u,
   },
 ];
-const unsafeLoggingRules = [
-  /console\.(?:log|info|warn|error|debug)\([^)]{0,800}\b(?:authorization|cookie|request\.headers|process\.env|access_token|refresh_token|service_role|client_secret|api[_-]?key|password)\b/iu,
-  /logOperationalEvent\([\s\S]{0,800}\b(?:authorization|cookie|access_token|refresh_token|service_role|client_secret|api[_-]?key|password)\b/iu,
-];
+const sensitiveLoggingExpression =
+  /\b(?:authorization|cookie|request\s*\.\s*headers|process\s*\.\s*env|access_token|refresh_token|service_role|client_secret|api[_-]?key|password)\b/iu;
 const forbiddenTrackedArtifacts = [
   /^\.env(?:\.|$)(?!example$)/u,
   /(?:^|\/)\.DS_Store$/u,
@@ -80,17 +78,80 @@ function isFixture(path) {
   return fixturePrefixes.some((prefix) => path === prefix || path.startsWith(prefix));
 }
 
+function stripQuotedText(source) {
+  let output = "";
+  let quote = "";
+  let escaped = false;
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === quote) quote = "";
+      output += " ";
+      continue;
+    }
+    if (char === '"' || char === "'" || char === "`") {
+      quote = char;
+      output += " ";
+      continue;
+    }
+    output += char;
+  }
+  return output;
+}
+
+function loggingCallArguments(source) {
+  const calls = [];
+  const matcher = /(?:console\.(?:log|info|warn|error|debug)|logOperationalEvent)\s*\(/gu;
+  for (const match of source.matchAll(matcher)) {
+    const start = match.index + match[0].length;
+    let depth = 1;
+    let quote = "";
+    let escaped = false;
+    for (let index = start; index < source.length && index - start < 12_000; index += 1) {
+      const char = source[index];
+      if (quote) {
+        if (escaped) escaped = false;
+        else if (char === "\\") escaped = true;
+        else if (char === quote) quote = "";
+        continue;
+      }
+      if (char === '"' || char === "'" || char === "`") {
+        quote = char;
+        continue;
+      }
+      if (char === "(") depth += 1;
+      else if (char === ")") {
+        depth -= 1;
+        if (depth === 0) {
+          calls.push(source.slice(start, index));
+          break;
+        }
+      }
+    }
+  }
+  return calls;
+}
+
 function inspectText(path, source, violations, { built = false } = {}) {
   const fixture = isFixture(path);
   if (!fixture) {
     for (const rule of secretRules) {
       if (rule.pattern.test(source)) violations.push(`${path}:${rule.label}`);
     }
+    if (!built) {
+      for (const args of loggingCallArguments(source)) {
+        if (sensitiveLoggingExpression.test(stripQuotedText(args))) {
+          violations.push(`${path}:unsafe credential logging`);
+          break;
+        }
+      }
+    }
   }
-  for (const rule of unsafeLoggingRules) {
-    if (!fixture && rule.test(source)) violations.push(`${path}:unsafe credential logging`);
+  if (built && /\bdebugger\s*;/u.test(source)) {
+    violations.push(`${path}:debugger statement in built output`);
   }
-  if (built && /\bdebugger\s*;/u.test(source)) violations.push(`${path}:debugger statement in built output`);
 
   for (const name of [
     "OPENAI_API_KEY",
@@ -117,8 +178,9 @@ export function runReleaseSecurityAudit({ files = trackedFiles() } = {}) {
       if (rule.test(path)) violations.push(`${path}:forbidden tracked artifact`);
     }
     const extension = extname(path).toLowerCase();
-    if (!readable.has(extension) && !["Dockerfile", ".env.example", "wrangler.jsonc"].includes(path))
+    if (!readable.has(extension) && !["Dockerfile", ".env.example", "wrangler.jsonc"].includes(path)) {
       continue;
+    }
     inspectText(path, readFileSync(join(root, path), "utf8"), violations);
   }
 
