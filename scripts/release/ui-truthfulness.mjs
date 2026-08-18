@@ -27,7 +27,10 @@ const deadControlPatterns = [
   { label: "undefined click handler", pattern: /onClick\s*=\s*\{\s*\(\)\s*=>\s*undefined\s*\}/u },
   { label: "hash-only link", pattern: /(?:href|to)\s*=\s*["']#["']/u },
   { label: "javascript link", pattern: /href\s*=\s*["']javascript:/iu },
-  { label: "fake coming-soon success", pattern: /(?:toast|alert)\s*\(\s*["'](?:coming soon|not implemented|placeholder)/iu },
+  {
+    label: "fake coming-soon success",
+    pattern: /(?:toast|alert)\s*\(\s*["'](?:coming soon|not implemented|placeholder)/iu,
+  },
 ];
 const voicePatterns = [
   /\bSpeechRecognition\b/u,
@@ -115,7 +118,8 @@ export function auditUiTruthfulness() {
     ? read("src/components/ChatInput.tsx")
     : "";
   for (const contract of ["textarea", "attachment", "stream", "send"]) {
-    if (!new RegExp(contract, "iu").test(chatInput)) errors.push(`ChatInput contract missing: ${contract}`);
+    if (!new RegExp(contract, "iu").test(chatInput))
+      errors.push(`ChatInput contract missing: ${contract}`);
   }
 
   const sidebar = existsSync(join(root, "src/components/Sidebar.tsx"))

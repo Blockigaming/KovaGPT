@@ -23,7 +23,6 @@ export function hasTrustedBrowserOrigin(request: Request): boolean {
   // that rewritten URL.
   if (fetchSite === "same-origin" || fetchSite === "same-site") return true;
 
-
   const origin = request.headers.get("origin");
   if (!origin) return true;
   try {

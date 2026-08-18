@@ -202,7 +202,10 @@ function readSourceAttestation(path, expectedSourceSha, expectedSourceTree) {
     attestationPath,
     "KOVA_SOURCE_ATTESTATION_PATH is required for a verified browser image",
   );
-  assertCondition(existsSync(attestationPath), "The verified Git-archive source attestation is missing");
+  assertCondition(
+    existsSync(attestationPath),
+    "The verified Git-archive source attestation is missing",
+  );
 
   let attestation;
   try {
@@ -290,9 +293,7 @@ function decodeBrowserText(bytes, relativePath) {
   try {
     text = new TextDecoder(encoding, { fatal: true }).decode(bytes.subarray(offset));
   } catch {
-    throw new Error(
-      `Browser text asset ${relativePath} must be valid UTF-8 or BOM-marked UTF-16`,
-    );
+    throw new Error(`Browser text asset ${relativePath} must be valid UTF-8 or BOM-marked UTF-16`);
   }
 
   assertCondition(

@@ -29,11 +29,19 @@ function trackedFiles() {
   }
 }
 
-export function inspectAuthProviderContract({ files = trackedFiles(), requireCleanLock = false } = {}) {
+export function inspectAuthProviderContract({
+  files = trackedFiles(),
+  requireCleanLock = false,
+} = {}) {
   const errors = [];
   const warnings = [];
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
-  for (const group of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"]) {
+  for (const group of [
+    "dependencies",
+    "devDependencies",
+    "optionalDependencies",
+    "peerDependencies",
+  ]) {
     for (const name of Object.keys(pkg[group] ?? {})) {
       if (name.startsWith("@clerk/")) errors.push(`package.json:${group}:${name}`);
     }
@@ -55,7 +63,8 @@ export function inspectAuthProviderContract({ files = trackedFiles(), requireCle
   }
 
   for (const path of files) {
-    if (path.startsWith("docs/") || path.startsWith("tests/") || path === "package-lock.json") continue;
+    if (path.startsWith("docs/") || path.startsWith("tests/") || path === "package-lock.json")
+      continue;
     if (!readable.has(extname(path)) && !["Dockerfile", ".env.example"].includes(path)) continue;
     const source = readFileSync(join(root, path), "utf8");
     if (forbiddenImportPattern.test(source)) errors.push(`${path}:Clerk runtime import`);
@@ -63,9 +72,12 @@ export function inspectAuthProviderContract({ files = trackedFiles(), requireCle
   }
 
   const shim = readFileSync(join(root, "src/components/auth/ClerkSafe.tsx"), "utf8");
-  if (!/Auth shim backed by Supabase auth/u.test(shim)) errors.push("ClerkSafe:Supabase ownership comment missing");
-  if (!/from "@supabase\/supabase-js"/u.test(shim)) errors.push("ClerkSafe:Supabase client types missing");
-  if (!/from "@\/integrations\/supabase\/client"/u.test(shim)) errors.push("ClerkSafe:Supabase client missing");
+  if (!/Auth shim backed by Supabase auth/u.test(shim))
+    errors.push("ClerkSafe:Supabase ownership comment missing");
+  if (!/from "@supabase\/supabase-js"/u.test(shim))
+    errors.push("ClerkSafe:Supabase client types missing");
+  if (!/from "@\/integrations\/supabase\/client"/u.test(shim))
+    errors.push("ClerkSafe:Supabase client missing");
   if (/from\s+["']@clerk\//u.test(shim)) errors.push("ClerkSafe:Clerk runtime import present");
 
   return { errors: [...new Set(errors)].sort(), warnings: [...new Set(warnings)].sort() };

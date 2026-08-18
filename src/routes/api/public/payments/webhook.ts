@@ -299,7 +299,9 @@ export const Route = createFileRoute("/api/public/payments/webhook")({
     handlers: {
       POST: async ({ request }) => {
         const correlationId = resolveCorrelationId(request.headers.get("x-correlation-id"));
-        const environment = normalizeStripeEnvironment(new URL(request.url).searchParams.get("env"));
+        const environment = normalizeStripeEnvironment(
+          new URL(request.url).searchParams.get("env"),
+        );
         if (!environment) {
           return Response.json({ error: "invalid_environment", correlationId }, { status: 400 });
         }

@@ -93,7 +93,7 @@ test("Azure promotion trusts the digest emitted by the Buildx push", () => {
   assert.match(workflow, /--push/u);
   assert.match(workflow, /--metadata-file "\$metadata"/u);
   assert.match(workflow, /value\["containerimage\.digest"\]/u);
-  assert.match(workflow, /registry_digest.*!=.*digest/us);
+  assert.match(workflow, /registry_digest.*!=.*digest/su);
   assert.match(workflow, /digest_image="\$\{ACR_LOGIN_SERVER\}\/\$\{IMAGE_NAME\}@\$\{digest\}"/u);
   assert.match(workflow, /--image "\$\{\{ steps\.image\.outputs\.digest_image \}\}"/u);
 });

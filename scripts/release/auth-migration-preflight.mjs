@@ -8,7 +8,8 @@ function integer(value, name) {
 }
 
 export function validateAuthMigrationEvidence(value) {
-  if (!value || value.schemaVersion !== 1) throw new Error("auth_migration_evidence_schema_invalid");
+  if (!value || value.schemaVersion !== 1)
+    throw new Error("auth_migration_evidence_schema_invalid");
   const sourceUsers = integer(value.sourceUsers, "source_users");
   const sourceIdentities = integer(value.sourceIdentities, "source_identities");
   const destinationUsersBefore = integer(value.destinationUsersBefore, "destination_users_before");
@@ -26,7 +27,10 @@ export function validateAuthMigrationEvidence(value) {
   if (duplicateProviderSubjects !== 0) {
     throw new Error("auth_migration_duplicate_provider_subjects_present");
   }
-  if (!Array.isArray(value.expectedUserUuids) || !value.expectedUserUuids.every((id) => UUID.test(id))) {
+  if (
+    !Array.isArray(value.expectedUserUuids) ||
+    !value.expectedUserUuids.every((id) => UUID.test(id))
+  ) {
     throw new Error("auth_migration_expected_uuids_invalid");
   }
   if (value.expectedUserUuids.length !== sourceUsers) {
@@ -49,7 +53,8 @@ export function validateAuthMigrationEvidence(value) {
   if (destinationUsersBefore !== 0 || destinationIdentitiesBefore !== 0) {
     throw new Error("auth_migration_destination_not_empty_or_complete");
   }
-  if (value.exactlyOnceApproved !== true) throw new Error("auth_migration_exactly_once_not_approved");
+  if (value.exactlyOnceApproved !== true)
+    throw new Error("auth_migration_exactly_once_not_approved");
   if (typeof value.backupReference !== "string" || !value.backupReference.trim()) {
     throw new Error("auth_migration_backup_reference_missing");
   }

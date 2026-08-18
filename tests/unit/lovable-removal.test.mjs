@@ -42,7 +42,12 @@ test("Supabase OAuth consent uses a Kova route and the legacy path only redirect
 
 test("active package declarations and package-manager policy contain no Lovable dependency", () => {
   const pkg = JSON.parse(read("package.json"));
-  for (const group of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"]) {
+  for (const group of [
+    "dependencies",
+    "devDependencies",
+    "optionalDependencies",
+    "peerDependencies",
+  ]) {
     for (const name of Object.keys(pkg[group] ?? {})) assert.doesNotMatch(name, /lovable/iu);
   }
   assert.equal(existsSync(join(root, ".lovable")), false);
@@ -75,7 +80,8 @@ test("AI integration has no Lovable gateway or configurable endpoint escape hatc
   ];
   for (const file of files) {
     const text = read(file);
-    for (const pattern of forbidden) assert.equal(pattern.test(text), false, `${file} contains ${pattern}`);
+    for (const pattern of forbidden)
+      assert.equal(pattern.test(text), false, `${file} contains ${pattern}`);
   }
   const provider = read("src/lib/ai/provider.server.ts");
   const env = read(".env.example");
@@ -94,7 +100,11 @@ test("provider env example contains no secret values or duplicate settings", () 
   assert.match(env, /^AZURE_OPENAI_API_KEY=$/mu);
   assert.match(env, /^FIRECRAWL_API_KEY=$/mu);
   assert.match(env, /^SUPABASE_SERVICE_ROLE_KEY=$/mu);
-  assert.equal(/pk_[A-Za-z0-9_-]+/u.test(env), false, "example env should not contain publishable third-party sample secrets");
+  assert.equal(
+    /pk_[A-Za-z0-9_-]+/u.test(env),
+    false,
+    "example env should not contain publishable third-party sample secrets",
+  );
 
   const names = [...env.matchAll(/^([A-Z][A-Z0-9_]*)=/gmu)].map((match) => match[1]);
   assert.deepEqual(names, [...new Set(names)], "example env should define each setting once");

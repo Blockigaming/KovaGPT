@@ -5,12 +5,18 @@ const groups = [
 ];
 const missing = [
   ...required.filter((key) => !process.env[key]),
-  ...groups.filter((group) => !group.some((key) => process.env[key])).map((group) => group.join("|")),
+  ...groups
+    .filter((group) => !group.some((key) => process.env[key]))
+    .map((group) => group.join("|")),
 ];
 const mode = process.env.KOVA_RELEASE_ENV === "production" ? "production" : "repository";
 console.log(
   JSON.stringify(
-    { mode, valid: missing.length === 0, missing: missing.map((_, index) => `requirement-${index + 1}`) },
+    {
+      mode,
+      valid: missing.length === 0,
+      missing: missing.map((_, index) => `requirement-${index + 1}`),
+    },
     null,
     2,
   ),

@@ -11,10 +11,7 @@ import {
 export const Route = createFileRoute("/~oauth/callback")({
   component: OAuthCallbackPage,
   head: () => ({
-    meta: [
-      { title: "KovaGPT Login" },
-      { name: "robots", content: "noindex, nofollow" },
-    ],
+    meta: [{ title: "KovaGPT Login" }, { name: "robots", content: "noindex, nofollow" }],
   }),
 });
 

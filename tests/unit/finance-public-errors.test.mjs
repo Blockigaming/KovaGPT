@@ -9,19 +9,25 @@ test("finance APIs expose only approved public error codes", () => {
     status: 503,
     logCode: "plaid_not_configured",
   });
-  assert.deepEqual(publicFinanceError(new Error("finance_region_ineligible"), "finance_unavailable"), {
-    error: "finance_region_ineligible",
-    status: 400,
-    logCode: "finance_region_ineligible",
-  });
+  assert.deepEqual(
+    publicFinanceError(new Error("finance_region_ineligible"), "finance_unavailable"),
+    {
+      error: "finance_region_ineligible",
+      status: 400,
+      logCode: "finance_region_ineligible",
+    },
+  );
   assert.deepEqual(publicFinanceError(new Error("plaid_401"), "finance_exchange_failed"), {
     error: "finance_provider_unavailable",
     status: 502,
     logCode: "plaid_401",
   });
-  assert.deepEqual(publicFinanceError(new Error("secret=do-not-return"), "finance_exchange_failed"), {
-    error: "finance_exchange_failed",
-    status: 500,
-    logCode: "finance_failure",
-  });
+  assert.deepEqual(
+    publicFinanceError(new Error("secret=do-not-return"), "finance_exchange_failed"),
+    {
+      error: "finance_exchange_failed",
+      status: 500,
+      logCode: "finance_failure",
+    },
+  );
 });

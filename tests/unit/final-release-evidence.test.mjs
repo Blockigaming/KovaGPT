@@ -64,9 +64,10 @@ test("100% completion requires exact-SHA production evidence for every final gat
   assert.deepEqual(validateFinalReleaseEvidence(valid), []);
   assert.ok(validateFinalReleaseEvidence({ ...valid, ciSha: "c".repeat(40) }).includes("ciSha"));
   assert.ok(
-    validateFinalReleaseEvidence({ ...valid, gates: { ...allGates, rollbackExercised: false } }).includes(
-      "gates.rollbackExercised",
-    ),
+    validateFinalReleaseEvidence({
+      ...valid,
+      gates: { ...allGates, rollbackExercised: false },
+    }).includes("gates.rollbackExercised"),
   );
   assert.ok(validateFinalReleaseEvidence({ ...valid, knownP1: 1 }).includes("knownP1"));
 });

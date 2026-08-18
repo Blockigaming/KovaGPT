@@ -64,13 +64,7 @@ export const Route = createFileRoute("/omega")({
   }),
 });
 type Tab =
-  | "collaboration"
-  | "execution"
-  | "enterprise"
-  | "mcp"
-  | "providers"
-  | "agents"
-  | "pipelines";
+  "collaboration" | "execution" | "enterprise" | "mcp" | "providers" | "agents" | "pipelines";
 const tabs: [Tab, string, typeof Activity][] = [
   ["collaboration", "Collaboration", Network],
   ["execution", "Execution", Activity],

@@ -35,7 +35,10 @@ test("ChatGPT parity transformer is exact and idempotent", () => {
     const first = applyChatGptParitySource({ check: false });
     assert.deepEqual(first.changed, Object.keys(fixtures).sort());
     assert.match(readFileSync("src/components/ChatInput.tsx", "utf8"), /deep_research/u);
-    assert.match(readFileSync("src/components/ChatInput.tsx", "utf8"), /data-testid="send-button"/u);
+    assert.match(
+      readFileSync("src/components/ChatInput.tsx", "utf8"),
+      /data-testid="send-button"/u,
+    );
     assert.match(readFileSync("src/routes/index.tsx", "utf8"), /data-chat-transcript/u);
     assert.match(readFileSync("src/components/Sidebar.tsx", "utf8"), /kova-nav-row/u);
     assert.deepEqual(applyChatGptParitySource({ check: true }).changed, []);
@@ -52,7 +55,10 @@ test("ChatGPT parity transformer fails closed on source drift", () => {
     for (const [path, source] of Object.entries(fixtures)) {
       const target = join(root, path);
       mkdirSync(dirname(target), { recursive: true });
-      writeFileSync(target, path.endsWith("ChatInput.tsx") ? source.replace("Search the Web", "Web") : source);
+      writeFileSync(
+        target,
+        path.endsWith("ChatInput.tsx") ? source.replace("Search the Web", "Web") : source,
+      );
     }
     process.chdir(root);
     assert.throws(() => applyChatGptParitySource({ check: false }), /source_drift/u);

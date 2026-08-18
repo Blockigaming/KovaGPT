@@ -24,7 +24,11 @@ export function validateFinalReleaseEvidence(value) {
   if (value?.primaryModel !== "gpt-5.6-sol") errors.push("primaryModel");
   if (!Array.isArray(value?.requiredChecks) || value.requiredChecks.length === 0) {
     errors.push("requiredChecks");
-  } else if (value.requiredChecks.some((check) => check?.status !== "success" || check?.sha !== value.releaseSha)) {
+  } else if (
+    value.requiredChecks.some(
+      (check) => check?.status !== "success" || check?.sha !== value.releaseSha,
+    )
+  ) {
     errors.push("requiredChecksExactSha");
   }
 

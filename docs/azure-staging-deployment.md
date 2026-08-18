@@ -10,7 +10,7 @@ This staging template creates a low-cost Azure Container Apps environment for a 
 - The runtime reads `AZURE_OPENAI_ENDPOINT` from that exact account and selects the identity through `AZURE_CLIENT_ID`.
 - No OpenAI or Azure OpenAI API key is accepted by the template.
 - Key Vault is used only for the Supabase service-role key.
-- Generation defaults off throu`h both `AI_GENERATION_ENABLED=false` and `KOVA_GENERATION_DISABLED=true`.
+- Generation defaults off throu`h both `AI_GENERATION_ENABLED=false`and`KOVA_GENERATION_DISABLED=true`.
 - The synthetic staging browser configuration must be compiled into the image; runtime `VITE_SUPABASE_*` values are prohibited.
 - The environment uses single-revision mode, HTTPS-only ingress, bounded scale, health probes, Application Insights, and a Log Analytics daily cap.
 

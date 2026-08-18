@@ -22,26 +22,17 @@
   },
   "resolutions": {
     "sitemap": {
-      "reported": [
-        24,
-        64
-      ],
+      "reported": [24, 64],
       "final": 23,
       "source": "src/lib/seo-policy.mjs"
     },
     "developerTopics": {
-      "reportedIndexable": [
-        0,
-        15
-      ],
+      "reportedIndexable": [0, 15],
       "finalIndexable": 0,
       "total": 19
     },
     "tests": {
-      "reported": [
-        295,
-        276
-      ],
+      "reported": [295, 276],
       "availablePassing": 277,
       "unavailableAssertionsNotInvented": true,
       "integration": {

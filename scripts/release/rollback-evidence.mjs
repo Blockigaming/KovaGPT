@@ -8,10 +8,20 @@ export function validateRollbackEvidence(value) {
   if (!SHA.test(value?.releaseSha ?? "")) errors.push("releaseSha");
   if (!DIGEST.test(value?.candidateImageDigest ?? "")) errors.push("candidateImageDigest");
   if (!DIGEST.test(value?.previousImageDigest ?? "")) errors.push("previousImageDigest");
-  for (const name of ["candidateRevision", "previousRevision", "backupReference", "databaseCompatibility", "authMigrationState", "cloudflareOriginState", "restoreCommand", "verificationCommand"]) {
+  for (const name of [
+    "candidateRevision",
+    "previousRevision",
+    "backupReference",
+    "databaseCompatibility",
+    "authMigrationState",
+    "cloudflareOriginState",
+    "restoreCommand",
+    "verificationCommand",
+  ]) {
     if (typeof value?.[name] !== "string" || !value[name].trim()) errors.push(name);
   }
-  if (value?.candidateImageDigest === value?.previousImageDigest) errors.push("distinctImageDigests");
+  if (value?.candidateImageDigest === value?.previousImageDigest)
+    errors.push("distinctImageDigests");
   return errors;
 }
 

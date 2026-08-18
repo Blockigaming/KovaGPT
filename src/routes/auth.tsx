@@ -176,7 +176,10 @@ function AuthPage() {
 
         {magicSent ? (
           <div className="space-y-3">
-            <Button className="h-14 w-full rounded-full text-[15px]" onClick={() => setMagicSent(false)}>
+            <Button
+              className="h-14 w-full rounded-full text-[15px]"
+              onClick={() => setMagicSent(false)}
+            >
               Use a different email
             </Button>
           </div>

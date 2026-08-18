@@ -21,5 +21,5 @@ test("operational state component has accessible copy and retry boundaries", () 
   assert.match(source, /role=\{urgent \? "alert" : "status"\}/u);
   assert.match(source, /data-operational-state=\{state\}/u);
   assert.match(source, /"rate-limited"/u);
-  assert.match(source, />Retry</u);
+  assert.match(source, />\s*Retry\s*</u);
 });

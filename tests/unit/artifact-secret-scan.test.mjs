@@ -17,6 +17,8 @@ test("generated artifact scan reports secret classes without echoing their value
   assert.deepEqual(scanArtifactSecrets({ roots: [clean] }), { filesScanned: 1, findings: [] });
   const result = scanArtifactSecrets({ roots: [dirty] });
   assert.equal(result.filesScanned, 1);
-  assert.deepEqual(result.findings, [{ path: result.findings[0].path, label: "OpenAI secret key" }]);
+  assert.deepEqual(result.findings, [
+    { path: result.findings[0].path, label: "OpenAI secret key" },
+  ]);
   assert.doesNotMatch(JSON.stringify(result), /abcdefghijklmnopqrstuvwxyz123456/u);
 });

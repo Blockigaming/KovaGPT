@@ -27,7 +27,6 @@ export function NovaLogo({
     />
   );
 
-
   if (pulse) {
     return (
       <span className="relative inline-flex">

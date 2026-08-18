@@ -56,9 +56,9 @@ const replacements = [
   {
     path: "src/components/Sidebar.tsx",
     before:
-      'relative flex h-9 items-center rounded-lg py-1 text-sm transition-colors duration-100 ${iconOnly} ${',
+      "relative flex h-9 items-center rounded-lg py-1 text-sm transition-colors duration-100 ${iconOnly} ${",
     after:
-      'kova-nav-row relative flex h-9 items-center rounded-lg py-1 text-sm transition-colors duration-100 ${iconOnly} ${',
+      "kova-nav-row relative flex h-9 items-center rounded-lg py-1 text-sm transition-colors duration-100 ${iconOnly} ${",
   },
   {
     path: "tests/e2e/parity-helpers.ts",

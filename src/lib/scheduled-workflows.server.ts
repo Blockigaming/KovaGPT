@@ -6,20 +6,9 @@ export type ScheduledTaskType =
   | "conditional_monitor"
   | "connector_task";
 export type ScheduledTaskStatus =
-  | "active"
-  | "paused"
-  | "running"
-  | "completed"
-  | "failed"
-  | "disabled"
-  | "awaiting_authorization";
+  "active" | "paused" | "running" | "completed" | "failed" | "disabled" | "awaiting_authorization";
 export type TaskRunStatus =
-  | "scheduled"
-  | "running"
-  | "complete"
-  | "failed"
-  | "canceled"
-  | "skipped_duplicate";
+  "scheduled" | "running" | "complete" | "failed" | "canceled" | "skipped_duplicate";
 export type DeliveryChannel = "in_app" | "email";
 export type TaskNotification = {
   delivery: DeliveryChannel[];

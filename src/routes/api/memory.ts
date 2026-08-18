@@ -71,7 +71,6 @@ async function summarize(messages: Array<{ role: "user" | "assistant"; content: 
     .map((message) => `${message.role === "user" ? "User" : "KovaGPT"}: ${message.content}`)
     .join("\n");
   const response = await chatCompletions({
-
     model: modelForRole("UTILITY"),
     max_completion_tokens: UTILITY_MAX_OUTPUT_TOKENS,
 

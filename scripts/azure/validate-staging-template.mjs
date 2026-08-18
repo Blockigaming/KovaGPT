@@ -101,11 +101,7 @@ export function validateAzureStagingTemplate({
   }
 
   requireMatch(template, /7f951dda-4ed3-4680-a7ca-43fe172d538d/u, "AcrPull missing");
-  requireMatch(
-    template,
-    /4633458b-17de-408a-b874-0445c86b69e6/u,
-    "Key Vault Secrets User missing",
-  );
+  requireMatch(template, /4633458b-17de-408a-b874-0445c86b69e6/u, "Key Vault Secrets User missing");
 
   for (const model of ["gpt-5.6-luna", "gpt-5.6-terra", "gpt-5.6-sol"]) {
     requireMatch(template, new RegExp(model.replaceAll(".", "\\."), "u"), `${model} missing`);

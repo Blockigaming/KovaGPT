@@ -39,7 +39,10 @@ export default defineConfig({
   fullyParallel: true,
   retries: 0,
   workers: process.env.CI ? 3 : 4,
-  reporter: [["list"], ["html", { outputFolder: "artifacts/release-browser-report", open: "never" }]],
+  reporter: [
+    ["list"],
+    ["html", { outputFolder: "artifacts/release-browser-report", open: "never" }],
+  ],
   webServer: {
     command: "npm run preview -- --host 127.0.0.1 --port 8080",
     url: "http://127.0.0.1:8080",

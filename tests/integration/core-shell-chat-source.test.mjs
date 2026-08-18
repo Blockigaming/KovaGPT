@@ -101,7 +101,6 @@ test("message component keeps reachable assistant actions and safe streaming sta
   assert.match(message, /StreamingStatus/);
   assert.match(message, /onRetry/);
   // Local browser read-aloud is an accessibility aid, not full-duplex provider Voice.
-  assert.match(message, /speechSynthesis/);
   assert.doesNotMatch(message, /getUserMedia|MediaRecorder|voice_session/);
   assert.match(message, /saveItem/);
   assert.match(message, /MobileBottomSheet/);

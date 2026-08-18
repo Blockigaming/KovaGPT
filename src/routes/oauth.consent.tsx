@@ -226,12 +226,15 @@ function ConsentRoute() {
           still decide what it can read or change.
         </p>
         <p className="mt-3 text-xs text-muted-foreground">
-          Signed in as <span className="text-foreground">{session.user.email ?? session.user.id}</span>
+          Signed in as{" "}
+          <span className="text-foreground">{session.user.email ?? session.user.id}</span>
         </p>
 
         {redirectUri ? (
           <div className="mt-4 w-full rounded-2xl border border-border bg-card p-3 text-left">
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Redirects to</div>
+            <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+              Redirects to
+            </div>
             <div className="mt-1 break-all text-[13px]">{redirectUri}</div>
           </div>
         ) : null}

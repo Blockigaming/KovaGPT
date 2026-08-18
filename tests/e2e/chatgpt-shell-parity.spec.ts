@@ -19,21 +19,24 @@ async function verifyConversationShell(page: Page, width: number, theme: (typeof
   expect(overflow.document, `${width}px ${theme}: document overflow`).toBeLessThanOrEqual(1);
   expect(overflow.body, `${width}px ${theme}: body overflow`).toBeLessThanOrEqual(1);
 
-  const unnamedVisibleButtons = await page.locator("button:visible").evaluateAll((buttons) =>
-    buttons.filter((button) => {
-      const label =
-        button.getAttribute("aria-label") ??
-        button.getAttribute("title") ??
-        button.textContent ??
-        "";
-      return !label.trim();
-    }).length,
+  const unnamedVisibleButtons = await page.locator("button:visible").evaluateAll(
+    (buttons) =>
+      buttons.filter((button) => {
+        const label =
+          button.getAttribute("aria-label") ??
+          button.getAttribute("title") ??
+          button.textContent ??
+          "";
+        return !label.trim();
+      }).length,
   );
   expect(unnamedVisibleButtons, `${width}px ${theme}: unnamed visible buttons`).toBe(0);
 }
 
 test.describe("ChatGPT-like Kova conversation shell", () => {
-  test("signed-out shell is responsive, accessible, restrained, and voice-free", async ({ page }) => {
+  test("signed-out shell is responsive, accessible, restrained, and voice-free", async ({
+    page,
+  }) => {
     for (const theme of themes) {
       for (const width of widths) await verifyConversationShell(page, width, theme);
     }

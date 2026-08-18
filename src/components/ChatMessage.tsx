@@ -348,7 +348,10 @@ function ChatMessageInner({
             {message.attachments && message.attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2 justify-end">
                 {message.attachments
-                  .filter((attachment): attachment is Extract<typeof attachment, { kind: "image" }> => attachment.kind === "image")
+                  .filter(
+                    (attachment): attachment is Extract<typeof attachment, { kind: "image" }> =>
+                      attachment.kind === "image",
+                  )
                   .map((attachment, index) => (
                     <img
                       key={index}

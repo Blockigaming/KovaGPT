@@ -25,9 +25,15 @@ test("primary CI avoids duplicate branch runs and gates expensive work", async (
     workflow,
     /release-e2e:\s+if: github\.event_name == 'push' \|\| github\.event_name == 'workflow_dispatch'/u,
   );
-  assert.match(workflow, /name: Upload integration test log\s+if: steps\.integration\.outcome == 'failure'/u);
+  assert.match(
+    workflow,
+    /name: Upload integration test log\s+if: steps\.integration\.outcome == 'failure'/u,
+  );
   assert.match(workflow, /name: Upload Playwright report\s+if: failure\(\)/u);
-  assert.match(workflow, /git diff --exit-code -- release-migrations\.json database-contract\.json/u);
+  assert.match(
+    workflow,
+    /git diff --exit-code -- release-migrations\.json database-contract\.json/u,
+  );
 });
 
 test("Azure readiness preserves required-check visibility while skipping irrelevant heavy stages", async () => {
@@ -43,7 +49,6 @@ test("Azure readiness preserves required-check visibility while skipping irrelev
   assert.match(workflow, /npm ci --ignore-scripts --no-audit --no-fund/u);
   assert.match(workflow, /if: steps\.scope\.outputs\.run == 'true'/u);
 });
-
 
 test("production Azure deployment is manual and confirmation-gated", async () => {
   const workflow = await read(

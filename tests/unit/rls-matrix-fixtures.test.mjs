@@ -25,5 +25,8 @@ test("project fixtures are ordered before their dependent rows", () => {
   const names = matrix.protectedTables.map((entry) => entry.table);
   const projectIndex = names.indexOf("projects");
   for (const child of ["project_chats", "project_files", "project_memory"])
-    assert.ok(projectIndex >= 0 && names.indexOf(child) > projectIndex, `${child} must follow projects`);
+    assert.ok(
+      projectIndex >= 0 && names.indexOf(child) > projectIndex,
+      `${child} must follow projects`,
+    );
 });

@@ -1,12 +1,7 @@
 import type { ModelRole } from "./model-config.d.mts";
 
 export type RouterTask =
-  | "chat"
-  | "utility"
-  | "deep_research"
-  | "image_generation"
-  | "image_analysis"
-  | "embedding";
+  "chat" | "utility" | "deep_research" | "image_generation" | "image_analysis" | "embedding";
 
 export type UtilityTask =
   | "chat_title"
@@ -49,11 +44,7 @@ export type RouteDecision = {
 };
 
 export function approxTokens(chars: number): number;
-export function estimateCostUsd(
-  modelId: string,
-  inputTokens: number,
-  outputTokens: number,
-): number;
+export function estimateCostUsd(modelId: string, inputTokens: number, outputTokens: number): number;
 export function scoreComplexity(
   text: string,
   signals?: {

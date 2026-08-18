@@ -28,12 +28,7 @@ export type ProviderId = "openai_compatible" | "firecrawl" | "kova_orchestrator"
 export type SpeedClass = "fast" | "balanced" | "deep";
 export type CostClass = "low" | "standard" | "high";
 export type ModelUse =
-  | "normal_chat"
-  | "advanced_chat"
-  | "deep_research"
-  | "image_generation"
-  | "embedding"
-  | "utility";
+  "normal_chat" | "advanced_chat" | "deep_research" | "image_generation" | "embedding" | "utility";
 
 export type ProviderModelDefinition = {
   providerId: ProviderId;

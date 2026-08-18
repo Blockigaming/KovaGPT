@@ -1,11 +1,6 @@
 declare module "@/lib/github-connector.mjs" {
   export type GitHubJson =
-    | null
-    | boolean
-    | number
-    | string
-    | GitHubJson[]
-    | { [key: string]: GitHubJson };
+    null | boolean | number | string | GitHubJson[] | { [key: string]: GitHubJson };
   export type GitHubFetch = typeof fetch;
   export type GitHubClientOptions = {
     token: string;

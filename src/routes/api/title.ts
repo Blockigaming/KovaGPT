@@ -105,7 +105,6 @@ export const Route = createFileRoute("/api/title")({
           }
 
           const upstream = await chatCompletions({
-
             model: modelForRole("UTILITY"),
             max_completion_tokens: UTILITY_MAX_OUTPUT_TOKENS,
 

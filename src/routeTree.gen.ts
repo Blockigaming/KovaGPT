@@ -78,6 +78,7 @@ import { Route as CheckoutReturnRouteImport } from './routes/checkout.return'
 import { Route as DevelopersIndexRouteImport } from './routes/developers.index'
 import { Route as DevelopersDocSlugRouteImport } from './routes/developers.$docSlug'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
+import { Route as OauthConsentRouteImport } from './routes/oauth.consent'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
 import { Route as Char126oauthCallbackRouteImport } from './routes/~oauth.callback'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
@@ -464,6 +465,11 @@ const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
   path: '/email/unsubscribe',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OauthConsentRoute = OauthConsentRouteImport.update({
+  id: '/oauth/consent',
+  path: '/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
   id: '/$projectId',
   path: '/$projectId',
@@ -723,6 +729,7 @@ export interface FileRoutesByFullPath {
   '/checkout/return': typeof CheckoutReturnRoute
   '/developers/$docSlug': typeof DevelopersDocSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers/': typeof DevelopersIndexRoute
@@ -830,6 +837,7 @@ export interface FileRoutesByTo {
   '/checkout/return': typeof CheckoutReturnRoute
   '/developers/$docSlug': typeof DevelopersDocSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers': typeof DevelopersIndexRoute
@@ -938,6 +946,7 @@ export interface FileRoutesById {
   '/checkout/return': typeof CheckoutReturnRoute
   '/developers/$docSlug': typeof DevelopersDocSlugRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/oauth/consent': typeof OauthConsentRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
   '/~oauth/callback': typeof Char126oauthCallbackRoute
   '/developers/': typeof DevelopersIndexRoute
@@ -1047,6 +1056,7 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/developers/$docSlug'
     | '/email/unsubscribe'
+    | '/oauth/consent'
     | '/projects/$projectId'
     | '/~oauth/callback'
     | '/developers/'
@@ -1154,6 +1164,7 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/developers/$docSlug'
     | '/email/unsubscribe'
+    | '/oauth/consent'
     | '/projects/$projectId'
     | '/~oauth/callback'
     | '/developers'
@@ -1261,6 +1272,7 @@ export interface FileRouteTypes {
     | '/checkout/return'
     | '/developers/$docSlug'
     | '/email/unsubscribe'
+    | '/oauth/consent'
     | '/projects/$projectId'
     | '/~oauth/callback'
     | '/developers/'
@@ -1368,6 +1380,7 @@ export interface RootRouteChildren {
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   DevelopersDocSlugRoute: typeof DevelopersDocSlugRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
+  OauthConsentRoute: typeof OauthConsentRoute
   Char126oauthCallbackRoute: typeof Char126oauthCallbackRoute
   DevelopersIndexRoute: typeof DevelopersIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
@@ -1889,6 +1902,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmailUnsubscribeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/oauth/consent': {
+      id: '/oauth/consent'
+      path: '/oauth/consent'
+      fullPath: '/oauth/consent'
+      preLoaderRoute: typeof OauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/projects/$projectId': {
       id: '/projects/$projectId'
       path: '/$projectId'
@@ -2259,6 +2279,7 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutReturnRoute: CheckoutReturnRoute,
   DevelopersDocSlugRoute: DevelopersDocSlugRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
+  OauthConsentRoute: OauthConsentRoute,
   Char126oauthCallbackRoute: Char126oauthCallbackRoute,
   DevelopersIndexRoute: DevelopersIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,

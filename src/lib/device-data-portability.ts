@@ -60,19 +60,19 @@ function validateConversation(value: unknown): value is Conversation {
   if (typeof value.createdAt !== "number" || !Number.isFinite(value.createdAt)) return false;
   if (typeof value.updatedAt !== "number" || !Number.isFinite(value.updatedAt)) return false;
   if (
-    !([
-      "instant",
-      "medium",
-      "thinking",
-      "high",
-      "extra_high",
-      "pro",
-      "kova_5_5",
-      "kova_5_4",
-      "kova_o3",
-    ] as unknown[]).includes(
-      value.mode,
-    )
+    !(
+      [
+        "instant",
+        "medium",
+        "thinking",
+        "high",
+        "extra_high",
+        "pro",
+        "kova_5_5",
+        "kova_5_4",
+        "kova_o3",
+      ] as unknown[]
+    ).includes(value.mode)
   )
     return false;
   return true;

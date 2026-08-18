@@ -21,7 +21,12 @@ async function measure(page) {
       if (!(element instanceof HTMLElement)) return false;
       const style = getComputedStyle(element);
       const rect = element.getBoundingClientRect();
-      return style.visibility !== "hidden" && style.display !== "none" && rect.width > 0 && rect.height > 0;
+      return (
+        style.visibility !== "hidden" &&
+        style.display !== "none" &&
+        rect.width > 0 &&
+        rect.height > 0
+      );
     };
     const textarea = [...document.querySelectorAll("textarea")].find(visible);
     const nav = [...document.querySelectorAll("aside,nav")].find(visible);
@@ -42,7 +47,11 @@ async function measure(page) {
       main: rect(main),
       visibleButtonCount: buttons.length,
       unnamedVisibleButtons: buttons.filter((button) => {
-        const label = button.getAttribute("aria-label") ?? button.getAttribute("title") ?? button.textContent ?? "";
+        const label =
+          button.getAttribute("aria-label") ??
+          button.getAttribute("title") ??
+          button.textContent ??
+          "";
         return !label.trim();
       }).length,
       voiceTextVisible: /\b(?:Voice|Dictate)\b/u.test(document.body.innerText),
@@ -62,7 +71,10 @@ function geometryDelta(reference, kova) {
       continue;
     }
     result[field] = Object.fromEntries(
-      ["x", "y", "width", "height"].map((key) => [key, Math.round(kova[field][key] - reference[field][key])]),
+      ["x", "y", "width", "height"].map((key) => [
+        key,
+        Math.round(kova[field][key] - reference[field][key]),
+      ]),
     );
   }
   return result;
@@ -73,7 +85,8 @@ const report = {
   generatedAt: new Date().toISOString(),
   referenceOrigin,
   kovaOrigin,
-  notice: "Rendered screenshots and geometry only. No reference source code or protected assets are copied.",
+  notice:
+    "Rendered screenshots and geometry only. No reference source code or protected assets are copied.",
   cases: [],
 };
 
@@ -82,14 +95,20 @@ for (const [engineName, engine] of Object.entries(engines)) {
   try {
     for (const theme of themes) {
       for (const width of widths) {
-        const context = await browser.newContext({ viewport: { width, height: width < 768 ? 812 : 900 }, colorScheme: theme });
+        const context = await browser.newContext({
+          viewport: { width, height: width < 768 ? 812 : 900 },
+          colorScheme: theme,
+        });
         const reference = await context.newPage();
         const kova = await context.newPage();
         const caseName = `${engineName}-${theme}-${width}`;
         try {
           await reference.goto(referenceOrigin, { waitUntil: "domcontentloaded", timeout: 45_000 });
           await kova.goto(kovaOrigin, { waitUntil: "domcontentloaded", timeout: 45_000 });
-          await reference.screenshot({ path: join(outputRoot, `${caseName}-reference.png`), fullPage: true });
+          await reference.screenshot({
+            path: join(outputRoot, `${caseName}-reference.png`),
+            fullPage: true,
+          });
           await kova.screenshot({ path: join(outputRoot, `${caseName}-kova.png`), fullPage: true });
           const referenceMetrics = await measure(reference);
           const kovaMetrics = await measure(kova);
@@ -99,12 +118,29 @@ for (const [engineName, engine] of Object.entries(engines)) {
             theme,
             width,
             status: "captured",
-            reference: { ...referenceMetrics, textarea: roundBox(referenceMetrics.textarea), navigation: roundBox(referenceMetrics.navigation), main: roundBox(referenceMetrics.main) },
-            kova: { ...kovaMetrics, textarea: roundBox(kovaMetrics.textarea), navigation: roundBox(kovaMetrics.navigation), main: roundBox(kovaMetrics.main) },
+            reference: {
+              ...referenceMetrics,
+              textarea: roundBox(referenceMetrics.textarea),
+              navigation: roundBox(referenceMetrics.navigation),
+              main: roundBox(referenceMetrics.main),
+            },
+            kova: {
+              ...kovaMetrics,
+              textarea: roundBox(kovaMetrics.textarea),
+              navigation: roundBox(kovaMetrics.navigation),
+              main: roundBox(kovaMetrics.main),
+            },
             geometryDelta: geometryDelta(referenceMetrics, kovaMetrics),
           });
         } catch (error) {
-          report.cases.push({ caseName, engine: engineName, theme, width, status: "failed", error: error instanceof Error ? error.message : String(error) });
+          report.cases.push({
+            caseName,
+            engine: engineName,
+            theme,
+            width,
+            status: "failed",
+            error: error instanceof Error ? error.message : String(error),
+          });
         } finally {
           await context.close();
         }
@@ -118,7 +154,9 @@ for (const [engineName, engine] of Object.entries(engines)) {
 writeFileSync(join(outputRoot, "report.json"), `${JSON.stringify(report, null, 2)}\n`);
 const failed = report.cases.filter((entry) => entry.status !== "captured");
 if (failed.length) {
-  console.error(`CHATGPT_REFERENCE_AUDIT=PARTIAL failed=${failed.length} total=${report.cases.length}`);
+  console.error(
+    `CHATGPT_REFERENCE_AUDIT=PARTIAL failed=${failed.length} total=${report.cases.length}`,
+  );
   process.exit(2);
 }
 console.log(`CHATGPT_REFERENCE_AUDIT=PASS cases=${report.cases.length}`);

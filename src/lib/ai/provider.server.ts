@@ -18,10 +18,7 @@ export type ProviderCapability =
   | "file_analysis";
 
 export type ProviderErrorCode =
-  | "provider_timeout"
-  | "provider_rate_limited"
-  | "provider_unavailable"
-  | "provider_bad_response";
+  "provider_timeout" | "provider_rate_limited" | "provider_unavailable" | "provider_bad_response";
 
 export type ProviderErrorEnvelope = {
   error: string;

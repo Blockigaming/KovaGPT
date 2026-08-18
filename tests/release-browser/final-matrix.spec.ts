@@ -15,7 +15,11 @@ for (const theme of themes) {
 
     const bodyText = await page.locator("body").innerText();
     expect(bodyText).not.toMatch(/\b(?:Voice mode|Dictate|Start listening|Stop listening)\b/iu);
-    await expect(page.locator('button[aria-label*="voice" i], button[aria-label*="microphone" i], button[aria-label*="dictate" i]')).toHaveCount(0);
+    await expect(
+      page.locator(
+        'button[aria-label*="voice" i], button[aria-label*="microphone" i], button[aria-label*="dictate" i]',
+      ),
+    ).toHaveCount(0);
 
     const dimensions = await page.evaluate(() => ({
       documentWidth: document.documentElement.scrollWidth,
@@ -26,13 +30,16 @@ for (const theme of themes) {
     expect(dimensions.documentHeight).toBeGreaterThan(0);
 
     await textarea.focus();
-    const composerFocus = await page.locator(".kova-composer").first().evaluate((element) => {
-      const style = getComputedStyle(element);
-      return {
-        outlineStyle: style.outlineStyle,
-        outlineWidth: Number.parseFloat(style.outlineWidth || "0"),
-      };
-    });
+    const composerFocus = await page
+      .locator(".kova-composer")
+      .first()
+      .evaluate((element) => {
+        const style = getComputedStyle(element);
+        return {
+          outlineStyle: style.outlineStyle,
+          outlineWidth: Number.parseFloat(style.outlineWidth || "0"),
+        };
+      });
     expect(composerFocus.outlineStyle).not.toBe("none");
     expect(composerFocus.outlineWidth).toBeGreaterThanOrEqual(2);
 

@@ -24,9 +24,13 @@ const voicePatterns = [
 ];
 
 function trackedProductSource() {
-  return execFileSync("git", ["ls-files", "src/components", "src/routes", "src/lib", "src/platform"], {
-    cwd: root,
-  })
+  return execFileSync(
+    "git",
+    ["ls-files", "src/components", "src/routes", "src/lib", "src/platform"],
+    {
+      cwd: root,
+    },
+  )
     .toString("utf8")
     .split("\n")
     .filter((path) => path && scannedExtensions.has(extname(path)));

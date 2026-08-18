@@ -36,13 +36,7 @@ export type WorkTemplate = {
   updatedAt: number;
 };
 export type AgentRunStatus =
-  | "draft"
-  | "ready"
-  | "handed_off"
-  | "approval_needed"
-  | "paused"
-  | "failed"
-  | "completed";
+  "draft" | "ready" | "handed_off" | "approval_needed" | "paused" | "failed" | "completed";
 export type AgentRun = {
   id: string;
   name: string;

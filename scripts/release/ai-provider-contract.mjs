@@ -27,10 +27,15 @@ export function verifyAiProviderContract({ provider, catalog, staging }) {
   if (!/fallback: "gpt-5\.6-sol"/u.test(catalog)) {
     failures.push("catalog:deep fallback is not GPT-5.6 Sol");
   }
-  if (!/id: "gpt-5\.6-sol"[\s\S]*reasoning: true[\s\S]*vision: true[\s\S]*tools: true/u.test(catalog)) {
+  if (
+    !/id: "gpt-5\.6-sol"[\s\S]*reasoning: true[\s\S]*vision: true[\s\S]*tools: true/u.test(catalog)
+  ) {
     failures.push("catalog:GPT-5.6 Sol capability contract incomplete");
   }
-  if (!/Cognitive Services OpenAI User/iu.test(staging) && !/5e0bd9bd-7b93-4f28-af87-19fc36ad61bd/u.test(staging)) {
+  if (
+    !/Cognitive Services OpenAI User/iu.test(staging) &&
+    !/5e0bd9bd-7b93-4f28-af87-19fc36ad61bd/u.test(staging)
+  ) {
     failures.push("staging:Azure OpenAI user RBAC missing");
   }
   if (!/name: 'AZURE_CLIENT_ID'/u.test(staging) || !/AZURE_OPENAI_DEPLOYMENT_DEEP/u.test(staging)) {

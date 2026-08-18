@@ -20,13 +20,28 @@ function safeDatabaseUrl(value, productionRef) {
 
 export function evidenceQueries() {
   return [
-    ["tables", "select schemaname, tablename, rowsecurity from pg_tables where schemaname in ('public','storage') order by 1,2"],
-    ["policies", "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by 1,2,3"],
-    ["functions", "select n.nspname as schema, p.proname, p.prosecdef as security_definer, pg_get_userbyid(p.proowner) as owner, p.proacl::text as acl from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' order by 1,2"],
-    ["triggers", "select event_object_schema, event_object_table, trigger_name, action_timing, event_manipulation from information_schema.triggers where event_object_schema='public' order by 1,2,3"],
+    [
+      "tables",
+      "select schemaname, tablename, rowsecurity from pg_tables where schemaname in ('public','storage') order by 1,2",
+    ],
+    [
+      "policies",
+      "select schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check from pg_policies where schemaname in ('public','storage') order by 1,2,3",
+    ],
+    [
+      "functions",
+      "select n.nspname as schema, p.proname, p.prosecdef as security_definer, pg_get_userbyid(p.proowner) as owner, p.proacl::text as acl from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname='public' order by 1,2",
+    ],
+    [
+      "triggers",
+      "select event_object_schema, event_object_table, trigger_name, action_timing, event_manipulation from information_schema.triggers where event_object_schema='public' order by 1,2,3",
+    ],
     ["extensions", "select extname, extversion from pg_extension order by 1"],
     ["migrations", "select version from supabase_migrations.schema_migrations order by version"],
-    ["rls_disabled", "select n.nspname as schema, c.relname as table_name from pg_class c join pg_namespace n on n.oid=c.relnamespace where c.relkind='r' and n.nspname in ('public','storage') and not c.relrowsecurity order by 1,2"],
+    [
+      "rls_disabled",
+      "select n.nspname as schema, c.relname as table_name from pg_class c join pg_namespace n on n.oid=c.relnamespace where c.relkind='r' and n.nspname in ('public','storage') and not c.relrowsecurity order by 1,2",
+    ],
   ];
 }
 

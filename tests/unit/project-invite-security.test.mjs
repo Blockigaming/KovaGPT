@@ -106,10 +106,9 @@ test("invite RPCs are recipient-bound, atomic, and idempotent", async () => {
     );
 
     await setUser(database, inviteeId);
-    const accepted = await database.query(
-      "SELECT public.accept_project_invite($1) AS project_id",
-      [acceptInviteId],
-    );
+    const accepted = await database.query("SELECT public.accept_project_invite($1) AS project_id", [
+      acceptInviteId,
+    ]);
     assert.deepEqual(accepted.rows, [{ project_id: projectId }]);
     assert.deepEqual(
       (
@@ -134,10 +133,9 @@ test("invite RPCs are recipient-bound, atomic, and idempotent", async () => {
       /invite_not_pending/u,
     );
 
-    const declined = await database.query(
-      "SELECT public.decline_project_invite($1) AS declined",
-      [declineInviteId],
-    );
+    const declined = await database.query("SELECT public.decline_project_invite($1) AS declined", [
+      declineInviteId,
+    ]);
     assert.deepEqual(declined.rows, [{ declined: true }]);
     assert.deepEqual(
       (

@@ -11,9 +11,15 @@ test("new migrations avoid unsupported CREATE POLICY IF NOT EXISTS syntax", () =
     "supabase/migrations/20260722130000_product_completeness_reliability.sql",
   ]) {
     const sql = read(path);
-    assert.doesNotMatch(sql, /create\s+policy\s+if\s+not\s+exists/i, `${path} uses unsupported policy syntax`);
+    assert.doesNotMatch(
+      sql,
+      /create\s+policy\s+if\s+not\s+exists/i,
+      `${path} uses unsupported policy syntax`,
+    );
   }
-  const connectors = read("supabase/migrations/20260722123000_connectors_tasks_sharing_settings_audit.sql");
+  const connectors = read(
+    "supabase/migrations/20260722123000_connectors_tasks_sharing_settings_audit.sql",
+  );
   assert.match(connectors, /drop policy if exists "connected accounts owner read"/i);
   assert.match(connectors, /create policy "audit owner read"/i);
 });
@@ -71,10 +77,18 @@ test("sitemap excludes private and noindex workflows", () => {
     "/reset-password",
     "/unsubscribe",
   ]) {
-    assert.equal(sitemapPolicy.includes('{ path: "' + path + '",'), false, path + " must not be advertised in the public sitemap");
+    assert.equal(
+      sitemapPolicy.includes('{ path: "' + path + '",'),
+      false,
+      path + " must not be advertised in the public sitemap",
+    );
   }
   for (const path of ["/", "/pricing", "/study-assistant", "/privacy"]) {
-    assert.equal(sitemapPolicy.includes('{ path: "' + path + '",'), true, path + " should remain in the public sitemap");
+    assert.equal(
+      sitemapPolicy.includes('{ path: "' + path + '",'),
+      true,
+      path + " should remain in the public sitemap",
+    );
   }
 });
 
@@ -94,9 +108,13 @@ test("model selectors only advertise backed intelligence modes", () => {
   const shell = read("src/routes/index.tsx");
   assert.match(desktop, /ResponsiveModelSelector/);
   assert.match(responsive, /versionGroupsForTier\(userTier\)/);
-  for (const selector of [desktop, responsive]) assert.doesNotMatch(selector, /KOVA_VERSIONS|kova-version|KovaGPT version|Kova 3\.[345]/);
+  for (const selector of [desktop, responsive])
+    assert.doesNotMatch(selector, /KOVA_VERSIONS|kova-version|KovaGPT version|Kova 3\.[345]/);
   assert.doesNotMatch(shell, /kovaVersion|kova-version/);
-  assert.doesNotMatch(chat, /kovaVersion|KOVA_VERSION|IS_LEGACY_KOVA|previous-generation model|Math\.random\(\) \* 4000/);
+  assert.doesNotMatch(
+    chat,
+    /kovaVersion|KOVA_VERSION|IS_LEGACY_KOVA|previous-generation model|Math\.random\(\) \* 4000/,
+  );
   assert.match(chat, /if \(m\.reasoning\)/);
   assert.equal(existsSync("src/lib/kova-version.ts"), false);
 });
@@ -138,7 +156,10 @@ test("scheduled task surfaces stay truthful while the runner is disabled", () =>
   assert.match(sidebar, /Scheduled tasks status/);
   assert.match(palette, /Scheduled Tasks status/);
   assert.match(capabilities, /label: "Scheduled Tasks status"/);
-  assert.match(capabilityRegistry, /Background scheduled execution is unavailable in this deployment/);
+  assert.match(
+    capabilityRegistry,
+    /Background scheduled execution is unavailable in this deployment/,
+  );
   assert.match(capabilityRegistry, /Previously saved task records can still be managed/);
   assert.doesNotMatch(help, /image generation, scheduled tasks/);
   assert.doesNotMatch(study, /scheduled reminders/i);
@@ -157,10 +178,13 @@ test("billing checkout and entitlements use exact supported plan keys", () => {
   assert.match(plans, /pro_monthly:[\s\S]*tier: "pro"[\s\S]*trialPeriodDays: 0/);
   assert.match(plans, /export const BILLING_ENV = "live" as const/);
   assert.match(plans, /Object\.prototype\.hasOwnProperty\.call\(BILLING_PLANS, value\)/);
-  assert.ok(checkout.indexOf("resolveBillingPlan(data.priceId)") < checkout.indexOf("stripe.prices.list"));
+  assert.ok(
+    checkout.indexOf("resolveBillingPlan(data.priceId)") < checkout.indexOf("stripe.prices.list"),
+  );
   assert.match(checkout, /lookup_keys: \[plan\.lookupKey\]/);
   assert.match(checkout, /trial_period_days: plan\.trialPeriodDays/);
-  for (const source of [checkout, apiAuth, clientTier]) assert.doesNotMatch(source, /\.includes\(["'](?:plus|pro)["']\)/);
+  for (const source of [checkout, apiAuth, clientTier])
+    assert.doesNotMatch(source, /\.includes\(["'](?:plus|pro)["']\)/);
   assert.match(apiAuth, /tierForLookupKey\(row\.price_id\)/);
   assert.match(clientTier, /tierForLookupKey\(row\.price_id\)/);
   assert.match(webhook, /resolveBillingPlan\(candidate\)/);

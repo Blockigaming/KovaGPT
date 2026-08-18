@@ -10,7 +10,6 @@ import {
   unsubscribeLinkState,
 } from "@/lib/endpoint-reliability.mjs";
 
-
 const MAX_UNSUBSCRIBE_BODY_BYTES = 8 * 1024;
 const MAX_TOKEN_CHARS = 1024;
 

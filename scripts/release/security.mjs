@@ -31,14 +31,19 @@ const secretRules = [
   { label: "Stripe webhook secret", pattern: /\bwhsec_[A-Za-z0-9]{16,}\b/u },
   { label: "GitHub token", pattern: /\bgh(?:p|o|u|s|r)_[A-Za-z0-9]{20,}\b/u },
   { label: "Google OAuth client secret", pattern: /\bGOCSPX-[A-Za-z0-9_-]{20,}\b/u },
-  { label: "private key material", pattern: /-----BEGIN (?:[A-Z0-9][A-Z0-9 -]* )?PRIVATE KEY-----/u },
+  {
+    label: "private key material",
+    pattern: /-----BEGIN (?:[A-Z0-9][A-Z0-9 -]* )?PRIVATE KEY-----/u,
+  },
   {
     label: "credential-bearing database URL",
-    pattern: /\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis):\/\/[^\s"'`<>:@]+:[^\s"'`<>@]+@/iu,
+    pattern:
+      /\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis):\/\/[^\s"'`<>:@]+:[^\s"'`<>@]+@/iu,
   },
   {
     label: "public secret environment variable",
-    pattern: /\b(?:VITE_|NEXT_PUBLIC_)[A-Z0-9_]*(?:SECRET|SERVICE_ROLE|PRIVATE_KEY|API_KEY|ACCESS_TOKEN|REFRESH_TOKEN)\b/u,
+    pattern:
+      /\b(?:VITE_|NEXT_PUBLIC_)[A-Z0-9_]*(?:SECRET|SERVICE_ROLE|PRIVATE_KEY|API_KEY|ACCESS_TOKEN|REFRESH_TOKEN)\b/u,
   },
 ];
 const sensitiveLoggingExpression =
@@ -178,7 +183,10 @@ export function runReleaseSecurityAudit({ files = trackedFiles() } = {}) {
       if (rule.test(path)) violations.push(`${path}:forbidden tracked artifact`);
     }
     const extension = extname(path).toLowerCase();
-    if (!readable.has(extension) && !["Dockerfile", ".env.example", "wrangler.jsonc"].includes(path)) {
+    if (
+      !readable.has(extension) &&
+      !["Dockerfile", ".env.example", "wrangler.jsonc"].includes(path)
+    ) {
       continue;
     }
     inspectText(path, readFileSync(join(root, path), "utf8"), violations);

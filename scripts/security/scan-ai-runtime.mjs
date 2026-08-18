@@ -21,8 +21,7 @@ const secretPatterns = [
   /VITE_(?:OPENAI|LOVABLE|FIRECRAWL|ANTHROPIC)[A-Z0-9_]*(?:KEY|SECRET|TOKEN)/,
   /NEXT_PUBLIC_(?:OPENAI|LOVABLE|FIRECRAWL|ANTHROPIC)[A-Z0-9_]*(?:KEY|SECRET|TOKEN)/,
 ];
-const lovableRuntime =
-  /ai\.gateway\.lovable\.dev|LOVABLE_(?:API_KEY|AI_BASE_URL)|Lovable-API-Key/;
+const lovableRuntime = /ai\.gateway\.lovable\.dev|LOVABLE_(?:API_KEY|AI_BASE_URL)|Lovable-API-Key/;
 const browserProvider =
   /https:\/\/(?:api\.openai\.com|[^/]+\.(?:openai\.azure\.com|services\.ai\.azure\.com))\/[^\s"']*(?:responses|chat\/completions|images|embeddings)/;
 const unsafeLogging =

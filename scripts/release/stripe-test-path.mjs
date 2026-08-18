@@ -6,14 +6,22 @@ export function normalizeStripeEnvironmentValue(value) {
 
 export function verifyStripeTestPath({ webhookSource, stripeSource, planSource }) {
   const failures = [];
-  if (!/normalizeStripeEnvironment/u.test(webhookSource)) failures.push("webhook environment parser missing");
-  if (!/value === "sandbox" \|\| value === "live"/u.test(webhookSource)) failures.push("sandbox/live allowlist missing");
-  if (!/processed_stripe_events/u.test(webhookSource) || !/23505/u.test(webhookSource)) failures.push("webhook idempotency missing");
-  if (!/PAYMENTS_SANDBOX_WEBHOOK_SECRET/u.test(stripeSource)) failures.push("sandbox webhook secret missing");
-  if (!/PAYMENTS_LIVE_WEBHOOK_SECRET/u.test(stripeSource)) failures.push("live webhook secret missing");
-  if (!/timingSafeEqual/u.test(stripeSource)) failures.push("constant-time signature verification missing");
-  if (!/plus_monthly/u.test(planSource) || !/pro_monthly/u.test(planSource)) failures.push("lookup-key plans missing");
-  if (/unit_amount|1400|1600|8900/u.test(planSource)) failures.push("source hard-codes Stripe price amounts");
+  if (!/normalizeStripeEnvironment/u.test(webhookSource))
+    failures.push("webhook environment parser missing");
+  if (!/value === "sandbox" \|\| value === "live"/u.test(webhookSource))
+    failures.push("sandbox/live allowlist missing");
+  if (!/processed_stripe_events/u.test(webhookSource) || !/23505/u.test(webhookSource))
+    failures.push("webhook idempotency missing");
+  if (!/PAYMENTS_SANDBOX_WEBHOOK_SECRET/u.test(stripeSource))
+    failures.push("sandbox webhook secret missing");
+  if (!/PAYMENTS_LIVE_WEBHOOK_SECRET/u.test(stripeSource))
+    failures.push("live webhook secret missing");
+  if (!/timingSafeEqual/u.test(stripeSource))
+    failures.push("constant-time signature verification missing");
+  if (!/plus_monthly/u.test(planSource) || !/pro_monthly/u.test(planSource))
+    failures.push("lookup-key plans missing");
+  if (/unit_amount|1400|1600|8900/u.test(planSource))
+    failures.push("source hard-codes Stripe price amounts");
   return failures;
 }
 

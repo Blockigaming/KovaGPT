@@ -287,9 +287,7 @@ test("BOM-marked UTF-16 assets are decoded before secret scanning", () => {
   withBundle(
     {
       "client/assets/app.js": browserSource(),
-      "client/payment-debug.txt": utf16le(
-        "credential=sk_live_abcdefghijklmnopqrstuvwxyz012345",
-      ),
+      "client/payment-debug.txt": utf16le("credential=sk_live_abcdefghijklmnopqrstuvwxyz012345"),
     },
     ({ bundleDir }) => {
       assert.throws(() => verify(bundleDir), /Stripe secret key/u);

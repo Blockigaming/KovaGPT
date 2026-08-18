@@ -1,11 +1,5 @@
 export type AgentRole =
-  | "planner"
-  | "research"
-  | "browser"
-  | "file"
-  | "coding"
-  | "writing"
-  | "review";
+  "planner" | "research" | "browser" | "file" | "coding" | "writing" | "review";
 export type AgentTaskInput = {
   key: string;
   role: AgentRole;
