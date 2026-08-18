@@ -8,12 +8,13 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, extname, relative, resolve, sep } from "node:path";
+import { TextDecoder } from "node:util";
 import { pathToFileURL } from "node:url";
 
 const PROJECT_REF_PATTERN = /^[a-z0-9]{20}$/u;
 const GIT_OBJECT_PATTERN = /^[a-f0-9]{40}$/u;
 const PUBLISHABLE_KEY_PATTERN = /^sb_publishable_[A-Za-z0-9_-]{16,}$/u;
-const SUPABASE_URL_PATTERN = /https:\/\/([a-z0-9]{20})\.supabase\.co\b/gu;
+const SUPABASE_URL_PATTERN = /https:\/\/([a-z0-9]{20})\.supabase\.co\b/giu;
 const PUBLISHABLE_KEY_SCAN_PATTERN = /\bsb_publishable_[A-Za-z0-9_-]{16,}\b/gu;
 const JWT_CANDIDATE_PATTERN = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/gu;
 const TEXT_EXTENSIONS = new Set([
@@ -28,6 +29,7 @@ const TEXT_EXTENSIONS = new Set([
   ".webmanifest",
   ".xml",
 ]);
+const EXECUTABLE_BROWSER_EXTENSIONS = new Set([".js", ".mjs"]);
 const MAX_SCANNED_BYTES = 128 * 1024 * 1024;
 
 const FORBIDDEN_SECRET_PATTERNS = [
@@ -151,7 +153,7 @@ function readCommittedFallbackRefs(publicConfigPath) {
   const source = readFileSync(publicConfigPath, "utf8");
   const refs = new Set();
 
-  for (const match of source.matchAll(SUPABASE_URL_PATTERN)) refs.add(match[1]);
+  for (const match of source.matchAll(SUPABASE_URL_PATTERN)) refs.add(match[1].toLowerCase());
   return refs;
 }
 
@@ -251,16 +253,53 @@ function collectBrowserFiles(bundleDir, provenancePath) {
     if (!stat.isFile() || resolve(currentPath) === provenance) return;
 
     const relativePath = relative(root, currentPath);
-    if (currentPath.endsWith(".map") || !TEXT_EXTENSIONS.has(extname(currentPath).toLowerCase())) {
-      return;
-    }
-    files.push({ absolutePath: currentPath, relativePath });
+    const extension = extname(currentPath).toLowerCase();
+    if (currentPath.endsWith(".map") || !TEXT_EXTENSIONS.has(extension)) return;
+    files.push({
+      absolutePath: currentPath,
+      relativePath,
+      executable: EXECUTABLE_BROWSER_EXTENSIONS.has(extension),
+    });
   }
 
   visit(root);
   files.sort((left, right) => left.relativePath.localeCompare(right.relativePath));
   assertCondition(files.length > 0, "No deployable browser text assets were found to verify");
+  assertCondition(
+    files.some((file) => file.executable),
+    "No executable browser assets were found to verify",
+  );
   return files;
+}
+
+function decodeBrowserText(bytes, relativePath) {
+  let encoding = "utf-8";
+  let offset = 0;
+
+  if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
+    offset = 3;
+  } else if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) {
+    encoding = "utf-16le";
+    offset = 2;
+  } else if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
+    encoding = "utf-16be";
+    offset = 2;
+  }
+
+  let text;
+  try {
+    text = new TextDecoder(encoding, { fatal: true }).decode(bytes.subarray(offset));
+  } catch {
+    throw new Error(
+      `Browser text asset ${relativePath} must be valid UTF-8 or BOM-marked UTF-16`,
+    );
+  }
+
+  assertCondition(
+    !(encoding === "utf-8" && text.includes("\0")),
+    `Browser text asset ${relativePath} contains NUL bytes without a supported text BOM`,
+  );
+  return text;
 }
 
 function countOccurrences(source, expected) {
@@ -333,6 +372,8 @@ export function verifyBrowserConfig({
   let scannedBytes = 0;
   let expectedUrlOccurrences = 0;
   let expectedKeyOccurrences = 0;
+  let executableExpectedUrlOccurrences = 0;
+  let executableExpectedKeyOccurrences = 0;
 
   for (const file of browserFiles) {
     const bytes = readFileSync(file.absolutePath);
@@ -342,18 +383,27 @@ export function verifyBrowserConfig({
       "Browser configuration scan exceeded the 128 MiB safety limit",
     );
 
-    const text = bytes.toString("utf8");
-    expectedUrlOccurrences += countOccurrences(text, normalizedUrl);
-    expectedKeyOccurrences += countOccurrences(text, normalizedKey);
+    const text = decodeBrowserText(bytes, file.relativePath);
+    const lowerText = text.toLowerCase();
+    const urlOccurrences = countOccurrences(text, normalizedUrl);
+    const keyOccurrences = countOccurrences(text, normalizedKey);
+    expectedUrlOccurrences += urlOccurrences;
+    expectedKeyOccurrences += keyOccurrences;
+    if (file.executable) {
+      executableExpectedUrlOccurrences += urlOccurrences;
+      executableExpectedKeyOccurrences += keyOccurrences;
+    }
 
-    for (const match of text.matchAll(SUPABASE_URL_PATTERN)) discoveredProjectRefs.add(match[1]);
+    for (const match of text.matchAll(SUPABASE_URL_PATTERN)) {
+      discoveredProjectRefs.add(match[1].toLowerCase());
+    }
     for (const match of text.matchAll(PUBLISHABLE_KEY_SCAN_PATTERN)) {
       discoveredPublishableKeys.add(match[0]);
     }
 
     for (const forbiddenRef of forbiddenRefs) {
       assertCondition(
-        !text.includes(forbiddenRef),
+        !lowerText.includes(forbiddenRef),
         `Forbidden Supabase project-ref literal detected in browser asset ${file.relativePath}`,
       );
     }
@@ -375,12 +425,12 @@ export function verifyBrowserConfig({
   }
 
   assertCondition(
-    expectedUrlOccurrences > 0,
-    "The intended Supabase URL was not found in deployable browser assets",
+    executableExpectedUrlOccurrences > 0,
+    "The intended Supabase URL was not found in executable browser assets",
   );
   assertCondition(
-    expectedKeyOccurrences > 0,
-    "The intended Supabase publishable key was not found in deployable browser assets",
+    executableExpectedKeyOccurrences > 0,
+    "The intended Supabase publishable key was not found in executable browser assets",
   );
 
   const unexpectedRefs = [...discoveredProjectRefs].filter((ref) => ref !== projectRef);
@@ -406,7 +456,7 @@ export function verifyBrowserConfig({
   );
 
   const provenance = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     verification: "verified-build-time-browser-config",
     sourceSha: normalizedSourceSha,
     sourceTree: normalizedSourceTree,
@@ -416,9 +466,12 @@ export function verifyBrowserConfig({
     publishableKeySha256: sha256(normalizedKey),
     browserBundleSha256: bundleHash.digest("hex"),
     scannedFiles: browserFiles.length,
+    executableFiles: browserFiles.filter((file) => file.executable).length,
     scannedBytes,
     expectedUrlOccurrences,
     expectedKeyOccurrences,
+    executableExpectedUrlOccurrences,
+    executableExpectedKeyOccurrences,
     discoveredSupabaseProjectRefs: [...discoveredProjectRefs].sort(),
     forbiddenProjectRefsChecked: [...forbiddenRefs].sort(),
   };
