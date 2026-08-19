@@ -8,6 +8,15 @@ param location string = resourceGroup().location
 @maxLength(24)
 param namePrefix string = 'kovagpt-prod'
 
+@description('Existing production Container Apps managed environment.')
+param managedEnvironmentName string = 'cae-kovagpt-prod'
+
+@description('Existing production user-assigned managed identity.')
+param managedIdentityName string = 'id-kovagpt-prod'
+
+@description('Existing production Log Analytics workspace.')
+param logAnalyticsWorkspaceName string = 'log-kovagpt-prod'
+
 @description('Immutable ACR image reference built and verified with the production browser Supabase configuration. Supply repository@sha256:digest, never a mutable tag.')
 param imageReference string
 
@@ -99,10 +108,7 @@ param tags object = {
   costCenter: 'kovagpt-production'
 }
 
-var environmentName = '${namePrefix}-env'
 var webAppName = '${namePrefix}-web'
-var identityName = '${namePrefix}-identity'
-var workspaceName = '${namePrefix}-logs'
 var appInsightsName = '${namePrefix}-insights'
 var budgetName = '${namePrefix}-monthly-budget'
 var acrPullRoleDefinitionId = subscriptionResourceId(
@@ -133,60 +139,15 @@ resource azureOpenAi 'Microsoft.CognitiveServices/accounts@2024-10-01' existing 
   scope: resourceGroup(azureOpenAiResourceGroupName)
 }
 
-resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: identityName
-  location: location
-  tags: tags
+resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
+  name: managedIdentityName
 }
 
-resource acrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(acr.id, identity.id, acrPullRoleDefinitionId)
-  scope: acr
-  properties: {
-    principalId: identity.properties.principalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: acrPullRoleDefinitionId
-  }
-}
 
-resource keyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(keyVault.id, identity.id, keyVaultSecretsUserRoleDefinitionId)
-  scope: keyVault
-  properties: {
-    principalId: identity.properties.principalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: keyVaultSecretsUserRoleDefinitionId
-  }
-}
 
-resource azureOpenAiUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(azureOpenAi.id, identity.id, cognitiveServicesOpenAiUserRoleDefinitionId)
-  scope: azureOpenAi
-  properties: {
-    principalId: identity.properties.principalId
-    principalType: 'ServicePrincipal'
-    roleDefinitionId: cognitiveServicesOpenAiUserRoleDefinitionId
-  }
-}
 
-resource workspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
-  name: workspaceName
-  location: location
-  tags: tags
-  properties: {
-    retentionInDays: logRetentionDays
-    features: {
-      enableLogAccessUsingOnlyResourcePermissions: true
-    }
-    publicNetworkAccessForIngestion: 'Enabled'
-    publicNetworkAccessForQuery: 'Enabled'
-    workspaceCapping: {
-      dailyQuotaGb: logDailyQuotaGb
-    }
-  }
-  sku: {
-    name: 'PerGB2018'
-  }
+resource workspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
+  name: logAnalyticsWorkspaceName
 }
 
 resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
@@ -203,20 +164,8 @@ resource appInsights 'Microsoft.Insights/components@2020-02-02' = {
   }
 }
 
-resource environment 'Microsoft.App/managedEnvironments@2025-01-01' = {
-  name: environmentName
-  location: location
-  tags: tags
-  properties: {
-    zoneRedundant: false
-    appLogsConfiguration: {
-      destination: 'log-analytics'
-      logAnalyticsConfiguration: {
-        customerId: workspace.properties.customerId
-        sharedKey: listKeys(workspace.id, workspace.apiVersion).primarySharedKey
-      }
-    }
-  }
+resource environment 'Microsoft.App/managedEnvironments@2025-01-01' existing = {
+  name: managedEnvironmentName
 }
 
 resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
@@ -402,11 +351,6 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
       }
     }
   }
-  dependsOn: [
-    acrPull
-    keyVaultSecretsUser
-    azureOpenAiUser
-  ]
 }
 
 resource budget 'Microsoft.Consumption/budgets@2024-08-01' = if (deployBudget) {
