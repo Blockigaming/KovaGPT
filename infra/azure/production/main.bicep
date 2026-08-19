@@ -36,6 +36,10 @@ param keyVaultResourceGroupName string = resourceGroup().name
 @secure()
 param supabaseServiceRoleSecretUri string
 
+@description('Versioned Key Vault secret URI for anonymous generation IP hashing.')
+@secure()
+param kovaIpHashSecretUri string
+
 @description('Existing Azure OpenAI account name. The production identity receives only Cognitive Services OpenAI User on this resource.')
 param azureOpenAiAccountName string
 
@@ -206,6 +210,11 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
           keyVaultUrl: supabaseServiceRoleSecretUri
           identity: identity.id
         }
+          {
+            name: 'kova-ip-hash-secret'
+            keyVaultUrl: kovaIpHashSecretUri
+            identity: identity.id
+          }
       ]
     }
     template: {
@@ -281,6 +290,10 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
             {
               name: 'KOVA_GENERATION_DISABLED'
               value: generationEnabled ? 'false' : 'true'
+            }
+            {
+              name: 'KOVA_IP_HASH_SECRET'
+              secretRef: 'kova-ip-hash-secret'
             }
             {
               name: 'KOVA_INSTANT_MODEL'
