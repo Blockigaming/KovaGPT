@@ -124,7 +124,8 @@ function normalizeAzureOpenAiBaseUrl(value: string | undefined): string | undefi
 
   const allowedHost =
     endpoint.hostname.endsWith(".openai.azure.com") ||
-    endpoint.hostname.endsWith(".services.ai.azure.com");
+    endpoint.hostname.endsWith(".services.ai.azure.com") ||
+    endpoint.hostname.endsWith(".cognitiveservices.azure.com");
   if (!allowedHost) throw new Error("invalid_azure_openai_endpoint");
 
   const pathname = endpoint.pathname.replace(/\/+$/u, "");

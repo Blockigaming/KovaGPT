@@ -75,7 +75,8 @@ export function validateAzureRuntimeEnv(environment = process.env): void {
     }
     const allowedHost =
       endpoint.hostname.endsWith(".openai.azure.com") ||
-      endpoint.hostname.endsWith(".services.ai.azure.com");
+      endpoint.hostname.endsWith(".services.ai.azure.com") ||
+      endpoint.hostname.endsWith(".cognitiveservices.azure.com");
     if (
       endpoint.protocol !== "https:" ||
       !allowedHost ||
