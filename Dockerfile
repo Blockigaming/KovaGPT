@@ -25,6 +25,8 @@ ENV NODE_ENV=production \
     AI_GENERATION_ENABLED=false
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+RUN SHA="$KOVA_SOURCE_SHA" TREE="$KOVA_SOURCE_TREE" node -e "require('fs').writeFileSync('/app/.kova-source-attestation.json', JSON.stringify({schemaVersion:1,context:'acr-git',sourceSha:process.env.SHA,sourceTree:process.env.TREE}))"
 RUN KOVA_BUILD_SHA="$KOVA_SOURCE_SHA" npm run build \
     && find dist -name '*.map' -type f -delete \
     && if [ "$KOVA_VERIFY_BROWSER_CONFIG" = "true" ]; then \
