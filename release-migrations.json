@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 72,
-  "latest": "20260815213024_rls_auto_enable_privilege_lockdown.sql",
+  "count": 74,
+  "latest": "20260820220000_ai_accounting_canonicalization.sql",
   "migrations": [
     {
       "order": 1,
@@ -1470,6 +1470,34 @@
       "tables": [],
       "functions": [],
       "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 73,
+      "filename": "20260816213000_project_invite_acceptance_hardening.sql",
+      "timestamp": "20260816213000",
+      "sha256": "d23e502741d770d71ff33275da0bfde1cd59d3ada4a013e63f34096e28e47d3c",
+      "tables": [],
+      "functions": ["accept_project_invite", "decline_project_invite"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 74,
+      "filename": "20260820220000_ai_accounting_canonicalization.sql",
+      "timestamp": "20260820220000",
+      "sha256": "6521066cbc5a91d7bd22c064e2efbe6ed45832bc83a7f8d7f1d2184931f724a3",
+      "tables": [],
+      "functions": [],
+      "destructive": true,
       "dataBackfill": false,
       "reversible": false,
       "rls": [],
