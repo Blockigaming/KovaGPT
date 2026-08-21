@@ -1,0 +1,116 @@
+name: Day 10 Hydration Diagnostic
+
+on:
+  push:
+    branches:
+      - fix/day10-browser-release-gates
+    paths:
+      - .github/workflows/day10-hydration-diagnostic.yml
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      CI: "true"
+      HOST: 127.0.0.1
+      PORT: 8080
+      AI_GENERATION_ENABLED: "false"
+      KOVA_GENERATION_DISABLED: "true"
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start development server
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run dev -- --host 127.0.0.1 --port 8080 > /tmp/kova-dev.log 2>&1 &
+          echo $! > /tmp/kova-dev.pid
+          for attempt in {1..60}; do
+            if curl -fsS http://127.0.0.1:8080/api/health >/tmp/kova-health.json; then
+              cat /tmp/kova-health.json
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/kova-dev.log
+          exit 1
+
+      - name: Capture unminified hydration diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { chromium } from "@playwright/test";
+
+          const browser = await chromium.launch({ headless: true });
+          const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+          const page = await context.newPage();
+          const messages = [];
+          page.on("console", (message) => {
+            if (message.type() === "error" || /hydration|hydrated|server rendered/i.test(message.text())) {
+              messages.push(`[console:${message.type()}] ${message.text()}`);
+            }
+          });
+          page.on("pageerror", (error) => messages.push(`[pageerror] ${error.stack || error.message}`));
+
+          const response = await page.goto("http://127.0.0.1:8080/", { waitUntil: "domcontentloaded" });
+          console.log(`HOME_STATUS=${response?.status()}`);
+          await page.waitForTimeout(3000);
+          console.log(`HOME_HYDRATION=${await page.locator("html").getAttribute("data-kova-hydration")}`);
+          console.log(`HOME_HTML_CLASS=${await page.locator("html").getAttribute("class")}`);
+          console.log("HOME_MESSAGES_BEGIN");
+          console.log(messages.join("\n") || "NO_ERRORS");
+          console.log("HOME_MESSAGES_END");
+
+          messages.length = 0;
+          await page.addInitScript(() => {
+            localStorage.setItem("kova-theme-mode", "dark");
+            localStorage.setItem("nova-gpt-settings-v1:guest", JSON.stringify({ mode: "dark" }));
+          });
+          const themed = await page.goto("http://127.0.0.1:8080/images", { waitUntil: "domcontentloaded" });
+          console.log(`THEME_STATUS=${themed?.status()}`);
+          await page.waitForTimeout(3000);
+          console.log(`THEME_HYDRATION=${await page.locator("html").getAttribute("data-kova-hydration")}`);
+          console.log(`THEME_HTML_CLASS=${await page.locator("html").getAttribute("class")}`);
+          console.log("THEME_MESSAGES_BEGIN");
+          console.log(messages.join("\n") || "NO_ERRORS");
+          console.log("THEME_MESSAGES_END");
+
+          await browser.close();
+          NODE
+
+      - name: Show development server log
+        if: always()
+        run: cat /tmp/kova-dev.log || true
+
+      - name: Stop development server
+        if: always()
+        run: kill "$(cat /tmp/kova-dev.pid)" 2>/dev/null || true
+
+      - name: Publish diagnostic run ID
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "day10-hydration-diagnostic-$GITHUB_SHA" \
+            --body "run_id=$GITHUB_RUN_ID"
