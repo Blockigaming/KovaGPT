@@ -27,4 +27,4 @@ jobs:
           name: day10-source-${{ github.sha }}
           path: day10-source.tar.gz
           if-no-files-found: error
-          retention-days: 3
+          retention-days: 4
