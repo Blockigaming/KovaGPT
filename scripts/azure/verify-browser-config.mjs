@@ -215,8 +215,7 @@ function readSourceAttestation(path, expectedSourceSha, expectedSourceTree) {
   }
 
   assertCondition(
-    attestation?.schemaVersion === 1 &&
-      ["git-archive", "acr-git"].includes(attestation?.context),
+    attestation?.schemaVersion === 1 && ["git-archive", "acr-git"].includes(attestation?.context),
     "The source attestation must identify an approved versioned source context",
   );
 

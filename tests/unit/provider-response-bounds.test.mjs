@@ -225,11 +225,7 @@ test("SSE wrapper returns before the upstream stream completes", async () => {
   const upstream = new Response(
     new ReadableStream({
       start(controller) {
-        controller.enqueue(
-          encoder.encode(
-            'data: {"choices":[{"delta":{"content":"hello"}}]}\n\n'
-          )
-        );
+        controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"hello"}}]}\n\n'));
 
         release = () => {
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
@@ -241,20 +237,14 @@ test("SSE wrapper returns before the upstream stream completes", async () => {
       headers: {
         "Content-Type": "text/event-stream; charset=utf-8",
       },
-    }
+    },
   );
 
   const timeout = new Promise((_, reject) =>
-    setTimeout(
-      () => reject(new Error("SSE wrapper blocked waiting for stream completion")),
-      250
-    )
+    setTimeout(() => reject(new Error("SSE wrapper blocked waiting for stream completion")), 250),
   );
 
-  const wrapped = await Promise.race([
-    createBoundedProviderSseStream(upstream, 4096),
-    timeout,
-  ]);
+  const wrapped = await Promise.race([createBoundedProviderSseStream(upstream, 4096), timeout]);
 
   assert.ok(wrapped instanceof ReadableStream);
 
