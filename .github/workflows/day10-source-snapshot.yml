@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   snapshot:
@@ -28,3 +29,12 @@ jobs:
           path: day10-source.tar.gz
           if-no-files-found: error
           retention-days: 4
+
+      - name: Publish snapshot run ID
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "day10-source-snapshot-$GITHUB_SHA" \
+            --body "run_id=$GITHUB_RUN_ID"
