@@ -5,7 +5,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import { TEMPLATES } from "@/lib/email-templates/registry";
 import type { Database } from "@/integrations/supabase/types";
-import { resolveBackendUrl } from "@/lib/backend-url"
+import { resolveBackendUrl } from "@/lib/backend-url";
 
 const SITE_NAME = "KovaGPT";
 const SENDER_DOMAIN = "notify.kovagpt.com";
@@ -104,7 +104,6 @@ async function enqueueFixedRecipient(args: {
   });
   if (error) throw new Error(error.message);
 }
-
 
 // Simple in-memory IP rate limiter: max 5 submissions per hour per IP.
 // In-memory state is per-worker-instance, so this is a best-effort guard

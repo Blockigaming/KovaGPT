@@ -215,7 +215,6 @@ export function AuthDialog({
                 <NovaLogo mark className="h-11 w-11 text-foreground" />
               </div>
 
-
               <h1 className="text-[26px] leading-tight font-semibold tracking-tight">
                 {step === "magic-sent"
                   ? "Check your email"
@@ -317,7 +316,6 @@ export function AuthDialog({
                     className="w-full h-14 rounded-xl border border-border bg-background hover:bg-accent transition flex items-center justify-center gap-3 text-[15px] font-medium disabled:opacity-60"
                   >
                     Email me a sign-in link
-
                   </button>
                 </>
               )}

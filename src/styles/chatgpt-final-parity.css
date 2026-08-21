@@ -1,0 +1,56 @@
+/* Final ChatGPT-first corrections. Keep this file small and evidence-driven. */
+
+/* The earlier parity layer accidentally removed its own accessibility ring in
+ * a later override. Keep the quiet border treatment, but always expose a
+ * visible two-pixel focus indicator around the complete composer. */
+.kova-composer:focus-within {
+  outline: 2px solid var(--parity-focus) !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important;
+}
+
+/* Current ChatGPT navigation uses a quiet background change rather than a
+ * horizontal slide. Avoid shifting labels or icons during pointer movement. */
+.kova-sidebar :is(a, button) {
+  transform: none !important;
+}
+.kova-sidebar :is(a, button):hover,
+.kova-sidebar :is(a, button):active {
+  transform: none !important;
+}
+
+/* Preserve a stable transcript/composer axis at every required viewport. */
+[data-chat-transcript] {
+  scroll-padding-bottom: max(9rem, calc(var(--safe-bottom) + 8rem));
+  overscroll-behavior-y: contain;
+}
+
+/* Interactive controls on touch layouts remain at least 44 CSS pixels without
+ * inflating desktop density. */
+@media (pointer: coarse), (max-width: 1023px) {
+  .kova-sidebar :is(a, button),
+  .kova-topbar button,
+  .kova-composer button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Do not let a long Kova/model name push mobile actions off screen. */
+.kova-topbar [data-testid="model-selector-trigger"] {
+  max-width: min(58vw, 18rem);
+}
+
+@media (max-width: 390px) {
+  .kova-topbar-inner {
+    grid-template-columns: 3.25rem minmax(0, 1fr) 5.5rem !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kova-sidebar :is(a, button),
+  .kova-composer,
+  .kova-composer button {
+    transition: none !important;
+  }
+}

@@ -19,14 +19,7 @@ import { DAILY_CHAT_LIMIT_BY_TIER } from "@/lib/modes";
 import { modelForRole } from "@/lib/ai/model-router.server";
 
 type Action =
-  | "improve"
-  | "expand"
-  | "shorten"
-  | "grammar"
-  | "continue"
-  | "tone"
-  | "outline"
-  | "custom";
+  "improve" | "expand" | "shorten" | "grammar" | "continue" | "tone" | "outline" | "custom";
 
 type Body = {
   text?: string;

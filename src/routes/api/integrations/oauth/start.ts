@@ -2,7 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { requireUser } from "@/lib/api-auth.server";
 import { beginOAuth } from "@/integrations/oauth-lifecycle.server";
 import { OAUTH_PROVIDERS, type OAuthProviderId } from "@/integrations/oauth-providers.server";
-import { INTEGRATION_OAUTH_COOKIE, serializeOauthCookie } from "@/lib/oauth-security.server";
+import {
+  INTEGRATION_OAUTH_COOKIE,
+  publicOAuthErrorCode,
+  safeOAuthLogCode,
+  serializeOauthCookie,
+} from "@/lib/oauth-security.server";
 
 export const Route = createFileRoute("/api/integrations/oauth/start")({
   server: {
@@ -33,7 +38,8 @@ export const Route = createFileRoute("/api/integrations/oauth/start")({
             },
           });
         } catch (error) {
-          const code = error instanceof Error ? error.message : "oauth_start_failed";
+          const code = publicOAuthErrorCode(error, "oauth_start_failed");
+          console.error("[oauth start]", body.provider, safeOAuthLogCode(error));
           return Response.json(
             { error: code },
             { status: code === "provider_not_configured" ? 503 : 400 },

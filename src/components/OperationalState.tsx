@@ -17,6 +17,18 @@ const copy: Partial<Record<ClientCapabilityState, [string, string]>> = {
     "Provider timed out",
     "The provider did not respond in time. Your work was not submitted.",
   ],
+  "expired-auth": [
+    "Session expired",
+    "Your sign-in session expired. Sign in again, then retry this action.",
+  ],
+  "permission-denied": [
+    "Permission denied",
+    "You do not have permission to use this resource or complete this action.",
+  ],
+  "rate-limited": [
+    "Too many requests",
+    "The service is receiving too many requests. Wait briefly, then retry.",
+  ],
   "plan-required": ["Plan required", "This capability is not included in the current plan."],
   "quota-exhausted": ["Usage limit reached", "The current usage allowance has been reached."],
   "authentication-required": ["Sign in required", "Sign in to use this account-backed capability."],
@@ -58,12 +70,17 @@ export function OperationalState({
     "Try again later or continue with another workspace.",
   ];
   const retryable =
-    onRetry && ["degraded", "unavailable", "provider-timeout", "database-timeout"].includes(state);
+    onRetry &&
+    ["degraded", "unavailable", "provider-timeout", "database-timeout", "rate-limited"].includes(
+      state,
+    );
+  const urgent = ["expired-auth", "permission-denied", "rate-limited"].includes(state);
   return (
     <div
-      role="status"
-      aria-live="polite"
+      role={urgent ? "alert" : "status"}
+      aria-live={urgent ? "assertive" : "polite"}
       className="rounded-lg border border-border bg-muted/40 p-4 text-sm"
+      data-operational-state={state}
     >
       <div className="flex items-start gap-3">
         {state === "degraded" ? (

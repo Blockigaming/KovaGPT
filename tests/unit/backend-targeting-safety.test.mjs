@@ -10,7 +10,7 @@ const oauthDiscoveryRoute = readFileSync(
   "src/routes/[.well-known]/oauth-protected-resource.ts",
   "utf8",
 );
-const mcpManifest = JSON.parse(readFileSync(".lovable/mcp/manifest.json", "utf8"));
+const oauthConsent = readFileSync("src/routes/oauth.consent.tsx", "utf8");
 
 test("remote migrations explicitly link the requested Supabase project before pushing", () => {
   assert.equal(packageJson.scripts["db:migrate"], "node scripts/release/supabase-db-push.mjs");
@@ -69,7 +69,10 @@ test("OAuth discovery follows the configured Supabase backend URL", () => {
   assert.doesNotMatch(oauthDiscoveryRoute, /project-ref-unset/);
 });
 
-test("the checked-in MCP OAuth issuer follows the production Supabase project", () => {
-  assert.equal(mcpManifest.auth.issuer, "https://mfbycmbjygcfkrsuepxf.supabase.co/auth/v1");
-  assert.doesNotMatch(JSON.stringify(mcpManifest), /zrzwkqrwurgutrmvalri/);
+test("OAuth consent is Kova-owned and no checked-in Lovable MCP manifest is required", () => {
+  assert.match(oauthConsent, /createFileRoute\("\/oauth\/consent"\)/);
+  assert.match(oauthConsent, /getAuthorizationDetails/);
+  assert.match(oauthConsent, /approveAuthorization/);
+  assert.match(oauthConsent, /denyAuthorization/);
+  assert.doesNotMatch(oauthConsent, /lovable\.dev|lovable\.app|LOVABLE_API_KEY/iu);
 });

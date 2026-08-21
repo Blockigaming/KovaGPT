@@ -35,8 +35,8 @@ export const EmailChangeEmail = ({
         <BrandHeader />
         <Heading style={styles.h1}>Confirm your new email</Heading>
         <Text style={styles.text}>
-          You asked to change your {siteName} email from {oldEmail} to{" "}
-          {newEmail}. Confirm the change below.
+          You asked to change your {siteName} email from {oldEmail} to {newEmail}. Confirm the
+          change below.
         </Text>
         <Section style={styles.buttonWrap}>
           <Button style={styles.button} href={confirmationUrl}>

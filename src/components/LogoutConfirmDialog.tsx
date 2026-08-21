@@ -21,7 +21,6 @@ export function LogoutConfirmDialog({
       <DialogContent className="sm:max-w-[440px] p-0 border-0 bg-transparent shadow-none [&>button.absolute]:hidden">
         <DialogTitle className="sr-only">Log out</DialogTitle>
         <div className="rounded-3xl border border-border/60 bg-card shadow-2xl p-7 animate-in fade-in-0 zoom-in-95 duration-200">
-
           <h2 className="text-center text-[22px] leading-tight font-semibold tracking-tight">
             Are you sure you want to log out?
           </h2>

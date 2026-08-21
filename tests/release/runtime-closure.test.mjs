@@ -19,8 +19,8 @@ test("client readiness deduplicates, caches, invalidates, and exposes normalized
 });
 test("operational state is accessible and correlation safe", async () => {
   const source = await read("src/components/OperationalState.tsx");
-  assert.match(source, /role="status"/);
-  assert.match(source, /aria-live="polite"/);
+  assert.ok(source.includes('role={urgent ? "alert" : "status"}'));
+  assert.ok(source.includes('aria-live={urgent ? "assertive" : "polite"}'));
   assert.match(source, /Reference:/);
   assert.match(source, /Retry/);
 });

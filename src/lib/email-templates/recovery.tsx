@@ -18,10 +18,7 @@ interface RecoveryEmailProps {
   confirmationUrl: string;
 }
 
-export const RecoveryEmail = ({
-  siteName,
-  confirmationUrl,
-}: RecoveryEmailProps) => (
+export const RecoveryEmail = ({ siteName, confirmationUrl }: RecoveryEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>Reset your {siteName} password</Preview>
@@ -30,8 +27,8 @@ export const RecoveryEmail = ({
         <BrandHeader />
         <Heading style={styles.h1}>Reset your password</Heading>
         <Text style={styles.text}>
-          Use the button below to choose a new password for your {siteName}
-          {" "}account. This link expires shortly.
+          Use the button below to choose a new password for your {siteName} account. This link
+          expires shortly.
         </Text>
         <Section style={styles.buttonWrap}>
           <Button style={styles.button} href={confirmationUrl}>

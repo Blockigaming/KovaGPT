@@ -11,11 +11,7 @@ import {
 import { BILLING_PLANS, type BillingLookupKey } from "@/lib/billing-plans";
 
 export type CapabilityAvailability =
-  | "available"
-  | "limited"
-  | "provider-dependent"
-  | "unavailable"
-  | "excluded";
+  "available" | "limited" | "provider-dependent" | "unavailable" | "excluded";
 
 export type CapabilityId =
   | "webSearch"
@@ -90,7 +86,6 @@ const MODE_PUBLIC_COPY: Record<ModeId, string> = {
   kova_5_5: "Previous generation Kova with balanced response instructions.",
   kova_5_4: "Older generation Kova kept for consistency with past work.",
   kova_o3: "Oldest available Kova generation.",
-
 };
 
 const modes: readonly PublishedMode[] = MODES.map((mode) => ({
@@ -150,7 +145,6 @@ function planFeatures(tier: Tier): readonly string[] {
   }
   return features;
 }
-
 
 export const CAPABILITY_REGISTRY = Object.freeze({
   voiceScope: "excluded",

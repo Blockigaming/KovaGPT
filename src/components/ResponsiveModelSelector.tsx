@@ -5,7 +5,6 @@ import { useLayout } from "@/hooks/use-mobile";
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { useUser } from "@/components/auth/ClerkSafe";
 
-
 /**
  * Adaptive model selector with a stable trigger element.
  *
@@ -128,8 +127,6 @@ export function ResponsiveModelSelector({
       </span>
     );
 
-
-
   return (
     <div
       ref={containerRef}
@@ -152,7 +149,13 @@ export function ResponsiveModelSelector({
         className={triggerClass}
       >
         <span className={(useSheet ? "truncate " : "") + "leading-none text-muted-foreground"}>
-          {compact ? current.label : <>KovaGPT<span className="ml-1 font-normal">· {current.label}</span></>}
+          {compact ? (
+            current.label
+          ) : (
+            <>
+              KovaGPT<span className="ml-1 font-normal">· {current.label}</span>
+            </>
+          )}
         </span>
 
         <ChevronDown

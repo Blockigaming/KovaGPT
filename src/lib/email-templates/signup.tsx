@@ -20,11 +20,7 @@ interface SignupEmailProps {
   confirmationUrl: string;
 }
 
-export const SignupEmail = ({
-  siteName,
-  recipient,
-  confirmationUrl,
-}: SignupEmailProps) => (
+export const SignupEmail = ({ siteName, recipient, confirmationUrl }: SignupEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>Confirm your email for {siteName}</Preview>
@@ -33,8 +29,7 @@ export const SignupEmail = ({
         <BrandHeader />
         <Heading style={styles.h1}>Confirm your email</Heading>
         <Text style={styles.text}>
-          Welcome to {siteName}. Confirm {recipient} to finish setting up your
-          account.
+          Welcome to {siteName}. Confirm {recipient} to finish setting up your account.
         </Text>
         <Section style={styles.buttonWrap}>
           <Button style={styles.button} href={confirmationUrl}>

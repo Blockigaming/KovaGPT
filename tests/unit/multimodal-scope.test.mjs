@@ -6,7 +6,7 @@ import test from "node:test";
 const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), "utf8");
 
-test("provider voice remains disabled while local browser read-aloud needs no AI secret", () => {
+test("provider voice and browser read-aloud remain absent", () => {
   const matrix = read("docs/kova-final-completion-matrix.md");
   const chatInput = read("src/components/ChatInput.tsx");
   const chatMessage = read("src/components/ChatMessage.tsx");
@@ -14,12 +14,15 @@ test("provider voice remains disabled while local browser read-aloud needs no AI
   const server = read("src/server.ts");
 
   assert.match(matrix, /Voice: INTENTIONALLY DISABLED/);
-  assert.doesNotMatch(chatInput, /createSpeechRecognition|Start voice input|MicOff/);
-  assert.match(chatMessage, /speechSynthesis/);
-  assert.match(chatMessage, /Read aloud/);
+  for (const source of [chatInput, chatMessage]) {
+    assert.doesNotMatch(
+      source,
+      /SpeechRecognition|webkitSpeechRecognition|speechSynthesis|SpeechSynthesisUtterance|Start voice input|Read aloud|MicOff|Dictate|dictation/i,
+    );
+  }
   assert.doesNotMatch(chatMessage, /OPENAI_API_KEY|audio\/speech|realtime/);
-  assert.match(start, /microphone=\(self\)/g);
-  assert.match(server, /microphone=\(self\)/g);
+  assert.match(start, /microphone=\(\)/g);
+  assert.match(server, /microphone=\(\)/g);
 });
 
 test("image workflow maps settings to provider payload and metadata", () => {

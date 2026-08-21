@@ -211,20 +211,33 @@ export async function createBoundedProviderSseStream(source, maxBytes, signal) {
   const reader = bounded.getReader();
   const decoder = new TextDecoder("utf-8", { fatal: true });
   const encoder = new TextEncoder();
+
+  let pendingText = "";
   let finished = false;
 
+  const reject = async (controller, error) => {
+    if (finished) return;
+    finished = true;
+    await reader.cancel("provider_sse_rejected").catch(() => undefined);
+    controller.error(
+      error instanceof ProviderResponseError
+        ? error
+        : new ProviderResponseError("invalid_provider_sse"),
+    );
+  };
+
   return new ReadableStream({
-    async start(controller) {
-      let pendingText = "";
+    async pull(controller) {
+      if (finished) return;
+
       try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          pendingText += decoder.decode(value, { stream: true });
+        while (!finished) {
           let newlineIndex = pendingText.indexOf("\n");
-          while (newlineIndex !== -1) {
+
+          if (newlineIndex !== -1) {
             const line = pendingText.slice(0, newlineIndex + 1);
             pendingText = pendingText.slice(newlineIndex + 1);
+
             if (line.replace(/\r?\n$/u, "") === "data: [DONE]") {
               controller.enqueue(encoder.encode("data: [DONE]\n\n"));
               finished = true;
@@ -232,26 +245,30 @@ export async function createBoundedProviderSseStream(source, maxBytes, signal) {
               controller.close();
               return;
             }
+
             controller.enqueue(encoder.encode(line));
-            newlineIndex = pendingText.indexOf("\n");
+            return;
           }
+
+          const { done, value } = await reader.read();
+
+          if (done) {
+            pendingText += decoder.decode();
+
+            if (pendingText.length > 0) {
+              throw new ProviderResponseError("provider_sse_incomplete_line");
+            }
+
+            throw new ProviderResponseError("provider_sse_missing_done");
+          }
+
+          pendingText += decoder.decode(value, { stream: true });
         }
-        pendingText += decoder.decode();
-        if (pendingText.length > 0) {
-          throw new ProviderResponseError("provider_sse_incomplete_line");
-        }
-        throw new ProviderResponseError("provider_sse_missing_done");
       } catch (error) {
-        if (finished) return;
-        finished = true;
-        await reader.cancel("provider_sse_rejected").catch(() => undefined);
-        controller.error(
-          error instanceof ProviderResponseError
-            ? error
-            : new ProviderResponseError("invalid_provider_sse"),
-        );
+        await reject(controller, error);
       }
     },
+
     async cancel(reason) {
       if (finished) return;
       finished = true;

@@ -16,12 +16,7 @@ declare module "@/lib/deliverable-content.mjs" {
     truncated: boolean;
   };
   export type DiffValue =
-    | null
-    | boolean
-    | number
-    | string
-    | DiffValue[]
-    | { [key: string]: DiffValue };
+    null | boolean | number | string | DiffValue[] | { [key: string]: DiffValue };
   export const PREVIEW_LIMITS: PreviewLimits;
   export function sanitizeMarkup(value: string): string;
   export function parseCsv(text: string, limits?: PreviewLimits): CsvPreview;

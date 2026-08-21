@@ -10,6 +10,9 @@ export type ClientCapabilityState =
   | "schema-drift"
   | "database-timeout"
   | "authentication-required"
+  | "expired-auth"
+  | "permission-denied"
+  | "rate-limited"
   | "plan-required"
   | "quota-exhausted"
   | "provider-timeout"
@@ -25,6 +28,15 @@ export type ClientReadiness = {
   checkedAt: string;
   capabilities: Record<string, { state: ClientCapabilityState; optional: boolean }>;
 };
+
+export function operationalStateForHttpStatus(status: number): ClientCapabilityState {
+  if (status === 401) return "expired-auth";
+  if (status === 403) return "permission-denied";
+  if (status === 429) return "rate-limited";
+  if (status === 408 || status === 504) return "provider-timeout";
+  if (status >= 500) return "unavailable";
+  return "degraded";
+}
 
 const TTL_MS = 15_000;
 let snapshot: ClientReadiness | undefined;
@@ -67,6 +79,7 @@ export function useReadiness() {
   const [error, setError] = useState(false);
   const refresh = useCallback(() => {
     invalidateReadiness();
+    setError(false);
     const controller = new AbortController();
     void getReadiness(controller.signal)
       .then(setValue)

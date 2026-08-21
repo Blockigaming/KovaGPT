@@ -82,7 +82,9 @@ function ConnectPage() {
   return (
     <>
       <main className="mx-auto max-w-3xl px-6 py-16">
-        <h1 className="mb-3 text-4xl font-bold tracking-tight">Connect KovaGPT to your assistant</h1>
+        <h1 className="mb-3 text-4xl font-bold tracking-tight">
+          Connect KovaGPT to your assistant
+        </h1>
         <p className="mb-10 text-muted-foreground">
           Link KovaGPT to ChatGPT, Claude, Claude Code, or another AI assistant so it can work with
           your projects, tasks, and notes directly from your chat.

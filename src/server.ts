@@ -16,12 +16,12 @@ const CONTENT_SECURITY_POLICY = [
   "object-src 'none'",
   "frame-ancestors 'self'",
   "form-action 'self' https://checkout.stripe.com",
-  "script-src 'self' 'unsafe-inline' https://js.stripe.com https://*.clerk.accounts.dev https://*.clerk.com",
+  "script-src 'self' 'unsafe-inline' https://js.stripe.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data: https://fonts.gstatic.com",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.clerk.accounts.dev https://*.clerk.com",
-  "frame-src https://js.stripe.com https://hooks.stripe.com https://*.clerk.accounts.dev https://*.clerk.com",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com",
+  "frame-src https://js.stripe.com https://hooks.stripe.com",
   "worker-src 'self' blob:",
   "media-src 'self' blob:",
   "upgrade-insecure-requests",
@@ -34,9 +34,8 @@ function hardenResponse(response: Response): Response {
     "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
     "Cross-Origin-Resource-Policy": "same-origin",
     "Origin-Agent-Cluster": "?1",
-    // Dictation is supported; full-duplex provider Voice remains intentionally excluded.
-    "Permissions-Policy":
-      "camera=(), geolocation=(self), microphone=(self), payment=(self), usb=()",
+    // Voice and browser dictation are intentionally absent from KovaGPT.
+    "Permissions-Policy": "camera=(), geolocation=(self), microphone=(), payment=(self), usb=()",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
     "X-Content-Type-Options": "nosniff",
@@ -58,7 +57,8 @@ let serverEntryPromise: Promise<ServerEntry> | undefined;
 async function getServerEntry(): Promise<ServerEntry> {
   if (!serverEntryPromise) {
     const pending = import("@tanstack/react-start/server-entry").then(
-      (m) => (m as { default?: ServerEntry }).default ?? (m as unknown as ServerEntry),
+      (module) =>
+        (module as { default?: ServerEntry }).default ?? (module as unknown as ServerEntry),
     );
     serverEntryPromise = pending;
     void pending.catch(() => {
@@ -100,8 +100,6 @@ function isCatastrophicSsrErrorBody(body: string, responseStatus: number): boole
   );
 }
 
-// h3 swallows in-handler throws into a normal 500 Response with body
-// {"unhandled":true,"message":"HTTPError"}  -  try/catch alone never fires for those.
 async function normalizeCatastrophicSsrResponse(response: Response): Promise<Response> {
   if (response.status < 500) return response;
   const contentType = response.headers.get("content-type") ?? "";

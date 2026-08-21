@@ -2,7 +2,6 @@ import {
   Archive,
   ArrowUpRight,
   ChevronRight,
-
   Calendar,
   Copy as CopyIcon,
   CreditCard,
@@ -191,7 +190,6 @@ export function Sidebar({
       ) : null}
     </Link>
   );
-
 
   const q = searchQuery.trim().toLowerCase();
   const filtered = q
@@ -418,7 +416,6 @@ export function Sidebar({
                 <Search className="h-[18px] w-[18px]" />
               </button>
             ) : null}
-
 
             <button
               onClick={onToggle}
@@ -651,7 +648,6 @@ export function Sidebar({
                       <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
                     ) : null}
                   </button>
-
                 </div>
                 {!collapsed ? (
                   <div className="border-t border-border/60 px-4 pb-4 pt-4">

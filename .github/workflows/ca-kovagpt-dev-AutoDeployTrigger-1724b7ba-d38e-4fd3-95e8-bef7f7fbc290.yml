@@ -1,14 +1,14 @@
 name: Deploy KovaGPT to Azure Container Apps
 
-# Deployment is deliberately manual. The prior push trigger spent hosted-runner
-# minutes on every main update even while the OIDC principal lacked ACR push
-# access. Re-enable automation only after a reviewed release policy and a proven
-# registry permission preflight exist.
+# Deployment is deliberately manual. A verified image must come from an exact
+# Git archive, pass browser-configuration provenance checks, match the existing
+# server-side Supabase project, and be deployed by the digest captured from the
+# manifest actually pushed by Docker Buildx.
 on:
   workflow_dispatch:
     inputs:
       confirm_deploy:
-        description: Confirm that CI is green and the OIDC principal has AcrPush on kovagptacr
+        description: Confirm CI is green, the runtime Supabase project is approved, and AcrPush is granted
         required: true
         default: false
         type: boolean
@@ -28,80 +28,326 @@ env:
   CONTAINER_APP_NAME: ca-kovagpt-dev
   RESOURCE_GROUP: rg-kovagpt-dev
   IMAGE_NAME: kovagpt-web
+  KOVA_EXPECTED_SUPABASE_PROJECT_REF: ${{ vars.KOVA_PRODUCTION_SUPABASE_PROJECT_REF }}
+  KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS: ${{ vars.KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS }}
+  VITE_SUPABASE_URL: ${{ vars.KOVA_PRODUCTION_SUPABASE_URL }}
+  VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.KOVA_PRODUCTION_SUPABASE_PUBLISHABLE_KEY }}
 
 jobs:
   build-and-deploy:
     if: github.ref == 'refs/heads/main' && inputs.confirm_deploy == true
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+          fetch-depth: 0
+
+      - name: Prepare exact Git archive build context
+        id: source-context
+        shell: bash
+        run: |
+          set -euo pipefail
+          context="$RUNNER_TEMP/kova-source-$GITHUB_SHA"
+          scripts/azure/prepare-verified-build-context.sh "$context"
+          source_tree="$(
+            node -e '
+              const fs = require("fs");
+              const value = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+              process.stdout.write(value.sourceTree);
+            ' "$context/.kova-source-attestation.json"
+          )"
+          echo "path=$context" >> "$GITHUB_OUTPUT"
+          echo "tree=$source_tree" >> "$GITHUB_OUTPUT"
+
+      - name: Validate verified browser build inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$KOVA_EXPECTED_SUPABASE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]; then
+            echo "::error::The production Supabase project ref is missing or invalid."
+            exit 1
+          fi
+          if [[ "$VITE_SUPABASE_URL" != "https://${KOVA_EXPECTED_SUPABASE_PROJECT_REF}.supabase.co" ]]; then
+            echo "::error::The production Supabase URL does not match the approved project ref."
+            exit 1
+          fi
+          if [[ "$VITE_SUPABASE_PUBLISHABLE_KEY" != sb_publishable_* ]]; then
+            echo "::error::The browser-safe Supabase publishable key is missing or invalid."
+            exit 1
+          fi
+          if [[ ! "${{ steps.source-context.outputs.tree }}" =~ ^[a-f0-9]{40}$ ]]; then
+            echo "::error::The exact Git tree identifier is missing or invalid."
+            exit 1
+          fi
 
       - name: Sign in to Azure with OIDC
-        uses: azure/login@v3
+        uses: azure/login@f5d393ae46f8fde4be8b75f32e3fc50e654ad0ca
         with:
           client-id: ${{ secrets.CAKOVAGPTDEV_AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.CAKOVAGPTDEV_AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.CAKOVAGPTDEV_AZURE_SUBSCRIPTION_ID }}
 
+      - name: Verify existing server Supabase project before building
+        shell: bash
+        run: |
+          set -euo pipefail
+          runtime_url="$(
+            az containerapp show \
+              --name "$CONTAINER_APP_NAME" \
+              --resource-group "$RESOURCE_GROUP" \
+              --query "properties.template.containers[0].env[?name=='SUPABASE_URL'].value | [0]" \
+              --output tsv \
+              --only-show-errors
+          )"
+
+          if [[ -z "$runtime_url" ]]; then
+            echo "::error::The Container App does not expose a directly verifiable SUPABASE_URL value."
+            exit 1
+          fi
+          if [[ "$runtime_url" != "$VITE_SUPABASE_URL" ]]; then
+            echo "::error::The server SUPABASE_URL does not match the approved browser Supabase project."
+            exit 1
+          fi
+
       - name: Verify ACR push access before building
         shell: bash
         run: |
           set -euo pipefail
-          if ! az acr login \
-            --name "$ACR_NAME" \
-            --expose-token \
-            --query accessToken \
-            --output tsv \
-            --only-show-errors >/dev/null; then
-            echo "::error::The GitHub OIDC service principal cannot obtain an ACR access token."
+          if ! az acr login --name "$ACR_NAME" --only-show-errors >/dev/null; then
+            echo "::error::The GitHub OIDC service principal cannot authenticate Docker to ACR."
             echo "Grant AcrPush at the registry scope before starting another deployment."
             echo "Use scripts/azure/grant-acr-push.sh from an authorized Azure shell."
             exit 1
           fi
 
-      - name: Build, push, and deploy container image
-        uses: azure/container-apps-deploy-action@v2
-        with:
-          appSourcePath: ${{ github.workspace }}
-          dockerfilePath: Dockerfile
-          acrName: ${{ env.ACR_NAME }}
-          imageToBuild: ${{ env.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          containerAppName: ${{ env.CONTAINER_APP_NAME }}
-          resourceGroup: ${{ env.RESOURCE_GROUP }}
-          disableTelemetry: true
-
-      - name: Verify Azure health endpoint
+      - name: Build and push verified container image
+        id: image
         shell: bash
         run: |
           set -euo pipefail
-          fqdn="$(az containerapp show \
-            --name "$CONTAINER_APP_NAME" \
-            --resource-group "$RESOURCE_GROUP" \
-            --query properties.configuration.ingress.fqdn \
-            --output tsv)"
+          context="${{ steps.source-context.outputs.path }}"
+          source_tree="${{ steps.source-context.outputs.tree }}"
+          image_tag="candidate-${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          tagged_image="${ACR_LOGIN_SERVER}/${IMAGE_NAME}:${image_tag}"
+          metadata="$RUNNER_TEMP/buildx-metadata.json"
 
-          if [ -z "$fqdn" ]; then
-            echo "Container Apps did not return an ingress FQDN."
+          docker buildx build \
+            --platform linux/amd64 \
+            --file "$context/Dockerfile" \
+            --build-arg KOVA_VERIFY_BROWSER_CONFIG=true \
+            --build-arg KOVA_SOURCE_SHA="$GITHUB_SHA" \
+            --build-arg KOVA_SOURCE_TREE="$source_tree" \
+            --build-arg KOVA_EXPECTED_SUPABASE_PROJECT_REF="$KOVA_EXPECTED_SUPABASE_PROJECT_REF" \
+            --build-arg KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS="$KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS" \
+            --build-arg VITE_SUPABASE_URL="$VITE_SUPABASE_URL" \
+            --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="$VITE_SUPABASE_PUBLISHABLE_KEY" \
+            --tag "$tagged_image" \
+            --push \
+            --metadata-file "$metadata" \
+            "$context"
+
+          digest="$(
+            node - "$metadata" <<'NODE'
+          const fs = require("fs");
+          const value = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const digest =
+            value["containerimage.digest"] || value["containerimage.descriptor"]?.digest || "";
+          process.stdout.write(typeof digest === "string" ? digest : "");
+          NODE
+          )"
+          if [[ ! "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]; then
+            echo "::error::Docker Buildx did not return the digest of the manifest it pushed."
             exit 1
           fi
 
+          # This lookup is only a post-push consistency check. The trusted digest
+          # used below comes from Buildx metadata, not from this mutable tag lookup.
+          registry_digest="$(
+            az acr repository show \
+              --name "$ACR_NAME" \
+              --image "${IMAGE_NAME}:${image_tag}" \
+              --query digest \
+              --output tsv \
+              --only-show-errors
+          )"
+          if [[ "$registry_digest" != "$digest" ]]; then
+            echo "::error::The ACR tag no longer resolves to the manifest digest just pushed by Buildx."
+            exit 1
+          fi
+
+          digest_image="${ACR_LOGIN_SERVER}/${IMAGE_NAME}@${digest}"
+          docker pull "$digest_image" >/dev/null
+
+          revision_label="$(
+            docker image inspect "$digest_image" \
+              --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}'
+          )"
+          tree_label="$(
+            docker image inspect "$digest_image" \
+              --format '{{ index .Config.Labels "com.kovagpt.source.tree" }}'
+          )"
+          project_label="$(
+            docker image inspect "$digest_image" \
+              --format '{{ index .Config.Labels "com.kovagpt.browser.supabase-project-ref" }}'
+          )"
+          verified_label="$(
+            docker image inspect "$digest_image" \
+              --format '{{ index .Config.Labels "com.kovagpt.browser.config-verified" }}'
+          )"
+
+          [[ "$revision_label" == "$GITHUB_SHA" ]] || {
+            echo "::error::The pushed image revision label does not match the workflow SHA."
+            exit 1
+          }
+          [[ "$tree_label" == "$source_tree" ]] || {
+            echo "::error::The pushed image tree label does not match the archived Git tree."
+            exit 1
+          }
+          [[ "$project_label" == "$KOVA_EXPECTED_SUPABASE_PROJECT_REF" ]] || {
+            echo "::error::The pushed image Supabase project label is incorrect."
+            exit 1
+          }
+          [[ "$verified_label" == "true" ]] || {
+            echo "::error::The pushed image is not marked as browser-config verified."
+            exit 1
+          }
+
+          provenance="$RUNNER_TEMP/browser-config-provenance.json"
+          container_id="$(docker create "$digest_image")"
+          trap 'docker rm -f "$container_id" >/dev/null 2>&1 || true' EXIT
+          docker cp "$container_id:/app/dist/browser-config-provenance.json" "$provenance"
+          docker rm "$container_id" >/dev/null
+          trap - EXIT
+
+          node - "$provenance" "$GITHUB_SHA" "$source_tree" "$KOVA_EXPECTED_SUPABASE_PROJECT_REF" <<'NODE'
+          const fs = require("fs");
+          const [path, sourceSha, sourceTree, projectRef] = process.argv.slice(2);
+          const value = JSON.parse(fs.readFileSync(path, "utf8"));
+          if (
+            value.schemaVersion !== 3 ||
+            value.sourceSha !== sourceSha ||
+            value.sourceTree !== sourceTree ||
+            value.supabaseProjectRef !== projectRef ||
+            value.sourceContext !== "git-archive"
+          ) {
+            throw new Error("The extracted browser provenance does not match the verified image inputs");
+          }
+          NODE
+
+          echo "tagged_image=$tagged_image" >> "$GITHUB_OUTPUT"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "digest_image=$digest_image" >> "$GITHUB_OUTPUT"
+          echo "provenance=$provenance" >> "$GITHUB_OUTPUT"
+
+      - name: Upload immutable image provenance
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: verified-image-provenance-${{ github.sha }}
+          path: ${{ steps.image.outputs.provenance }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Deploy verified image by registry digest
+        shell: bash
+        run: |
+          set -euo pipefail
+          az containerapp update \
+            --name "$CONTAINER_APP_NAME" \
+            --resource-group "$RESOURCE_GROUP" \
+            --image "${{ steps.image.outputs.digest_image }}" \
+            --only-show-errors \
+            --output none
+
+      - name: Verify deployed revision is digest-bound
+        id: revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected_image="${{ steps.image.outputs.digest_image }}"
+          revision=""
+          revision_fqdn=""
+
           for attempt in {1..30}; do
-            if curl --fail --silent --show-error \
-              --max-time 10 \
-              "https://${fqdn}/api/health"; then
-              echo
-              echo "Azure health check passed."
-              exit 0
+            revision="$(
+              az containerapp show \
+                --name "$CONTAINER_APP_NAME" \
+                --resource-group "$RESOURCE_GROUP" \
+                --query properties.latestRevisionName \
+                --output tsv \
+                --only-show-errors
+            )"
+            if [[ -n "$revision" ]]; then
+              revision_image="$(
+                az containerapp revision show \
+                  --name "$CONTAINER_APP_NAME" \
+                  --resource-group "$RESOURCE_GROUP" \
+                  --revision "$revision" \
+                  --query properties.template.containers[0].image \
+                  --output tsv \
+                  --only-show-errors
+              )"
+              revision_fqdn="$(
+                az containerapp revision show \
+                  --name "$CONTAINER_APP_NAME" \
+                  --resource-group "$RESOURCE_GROUP" \
+                  --revision "$revision" \
+                  --query properties.fqdn \
+                  --output tsv \
+                  --only-show-errors
+              )"
+              if [[ "$revision_image" == "$expected_image" && -n "$revision_fqdn" ]]; then
+                break
+              fi
             fi
 
-            echo "Health check attempt ${attempt}/30 failed; retrying in 10 seconds."
+            revision=""
+            revision_fqdn=""
+            echo "Revision binding attempt ${attempt}/30 failed; retrying in 10 seconds."
             sleep 10
           done
 
-          echo "Azure health check failed after 30 attempts."
+          if [[ -z "$revision" || -z "$revision_fqdn" ]]; then
+            echo "::error::Azure did not expose a revision-specific FQDN for the digest-bound candidate."
+            exit 1
+          fi
+
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+          echo "fqdn=$revision_fqdn" >> "$GITHUB_OUTPUT"
+          echo "Deployed revision: $revision"
+          echo "Immutable image digest: ${{ steps.image.outputs.digest }}"
+
+      - name: Verify Azure health and exact runtime build identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          revision_fqdn="${{ steps.revision.outputs.fqdn }}"
+
+          for attempt in {1..30}; do
+            if health_response="$(
+              curl --fail --silent --show-error --max-time 10 \
+                "https://${revision_fqdn}/api/health"
+            )" && runtime_sha="$(
+              curl --fail --silent --show-error --max-time 10 \
+                "https://${revision_fqdn}/api/version" |
+                node -e '
+                  const fs = require("fs");
+                  const value = JSON.parse(fs.readFileSync(0, "utf8"));
+                  process.stdout.write(typeof value.sha === "string" ? value.sha : "");
+                '
+            )"; then
+              if [[ -n "$health_response" && "$runtime_sha" == "$GITHUB_SHA" ]]; then
+                echo "Exact Azure revision health and runtime build identity checks passed."
+                exit 0
+              fi
+            fi
+
+            echo "Candidate verification attempt ${attempt}/30 failed; retrying in 10 seconds."
+            sleep 10
+          done
+
+          echo "::error::The digest-bound Azure revision did not serve the expected healthy build SHA."
           exit 1

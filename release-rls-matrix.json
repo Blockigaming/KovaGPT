@@ -1,0 +1,223 @@
+{
+  "schemaVersion": 2,
+  "protectedTables": [
+    {
+      "table": "projects",
+      "accessModel": "project_membership",
+      "operations": ["select", "update", "delete"],
+      "fixture": {
+        "idColumn": "id",
+        "row": {
+          "owner_id": "$USER_A",
+          "name": "RLS project $MARKER",
+          "description": "Two-user rehearsal fixture"
+        },
+        "updatePatch": { "description": "Cross-user mutation $MARKER" },
+        "bindings": { "PROJECT_A": "id" }
+      }
+    },
+    {
+      "table": "project_chats",
+      "accessModel": "project_membership",
+      "operations": ["select", "update", "delete"],
+      "fixture": {
+        "idColumn": "id",
+        "row": {
+          "project_id": "$PROJECT_A",
+          "title": "RLS project chat $MARKER",
+          "snapshot": { "messages": [] },
+          "created_by": "$USER_A"
+        },
+        "updatePatch": { "title": "Cross-user chat mutation $MARKER" }
+      }
+    },
+    {
+      "table": "project_files",
+      "accessModel": "project_membership",
+      "operations": ["select", "update", "delete"],
+      "fixture": {
+        "idColumn": "id",
+        "row": {
+          "project_id": "$PROJECT_A",
+          "name": "rls-$MARKER.txt",
+          "storage_path": "$PROJECT_A/rls-$MARKER.txt",
+          "mime_type": "text/plain",
+          "size_bytes": 1,
+          "kind": "file",
+          "uploaded_by": "$USER_A"
+        },
+        "updatePatch": { "name": "cross-user-$MARKER.txt" }
+      }
+    },
+    {
+      "table": "project_memory",
+      "accessModel": "project_membership",
+      "operations": ["select", "update", "delete"],
+      "fixture": {
+        "idColumn": "id",
+        "row": {
+          "project_id": "$PROJECT_A",
+          "content": "RLS memory $MARKER",
+          "created_by": "$USER_A"
+        },
+        "updatePatch": { "content": "Cross-user memory mutation $MARKER" }
+      }
+    },
+    {
+      "table": "user_library_items",
+      "accessModel": "direct_user",
+      "operations": ["select", "update", "delete"],
+      "fixture": {
+        "idColumn": "id",
+        "row": {
+          "user_id": "$USER_A",
+          "title": "RLS library item $MARKER",
+          "item_type": "other",
+          "source": "manual",
+          "content_text": "RLS fixture"
+        },
+        "updatePatch": { "title": "Cross-user library mutation $MARKER" }
+      }
+    },
+    {
+      "table": "user_preferences",
+      "accessModel": "direct_user",
+      "operations": ["select", "update", "delete"],
+      "fixture": {
+        "idColumn": "user_id",
+        "row": { "user_id": "$USER_A", "settings": { "rlsMarker": "$MARKER" } },
+        "updatePatch": { "settings": { "rlsMarker": "cross-user-$MARKER" } }
+      }
+    },
+    {
+      "table": "chat_memories",
+      "accessModel": "direct_user",
+      "operations": ["select", "update", "delete"],
+      "fixture": {
+        "idColumn": "id",
+        "row": {
+          "user_id": "$USER_A",
+          "chat_id": "rls-$MARKER",
+          "title": "RLS memory",
+          "summary": "RLS memory summary",
+          "message_count": 1
+        },
+        "updatePatch": { "title": "Cross-user memory mutation $MARKER" }
+      }
+    },
+    {
+      "table": "shared_chats",
+      "accessModel": "shared_resource",
+      "operations": ["select", "update", "delete"],
+      "fixture": {
+        "idColumn": "id",
+        "row": {
+          "owner_user_id": "$USER_A",
+          "recipient_email": "$EMAIL_A",
+          "local_chat_reference": "rls-$MARKER",
+          "title": "RLS shared chat $MARKER",
+          "snapshot": { "messages": [] },
+          "permission": "view",
+          "status": "pending"
+        },
+        "updatePatch": { "title": "Cross-user share mutation $MARKER" }
+      }
+    },
+    {
+      "table": "connected_accounts",
+      "accessModel": "server_managed",
+      "operations": ["select", "update", "delete"],
+      "fixture": {
+        "idColumn": "id",
+        "row": {
+          "user_id": "$USER_A",
+          "provider": "google",
+          "status": "connected",
+          "account_email": "$EMAIL_A",
+          "safe_identity": "rls-$MARKER",
+          "granted_scopes": []
+        },
+        "updatePatch": { "status": "error" }
+      }
+    },
+    {
+      "table": "financial_accounts",
+      "accessModel": "server_managed",
+      "operations": ["select", "update", "delete"],
+      "fixture": {
+        "idColumn": "id",
+        "row": {
+          "user_id": "$USER_A",
+          "account_name": "RLS account $MARKER",
+          "account_type": "depository",
+          "institution_name": "RLS Bank",
+          "current_balance": 10,
+          "currency": "USD"
+        },
+        "updatePatch": { "account_name": "Cross-user account mutation $MARKER" }
+      }
+    },
+    {
+      "table": "subscriptions",
+      "accessModel": "server_managed",
+      "operations": ["select", "update", "delete"],
+      "fixture": {
+        "idColumn": "id",
+        "row": {
+          "user_id": "$USER_A",
+          "stripe_subscription_id": "sub_rls_$MARKER",
+          "stripe_customer_id": "cus_rls_$MARKER",
+          "product_id": "prod_rls",
+          "price_id": "plus_monthly",
+          "status": "active",
+          "environment": "sandbox",
+          "current_period_end": "2099-01-01T00:00:00Z"
+        },
+        "updatePatch": { "status": "past_due" }
+      }
+    },
+    {
+      "table": "scheduled_tasks",
+      "accessModel": "direct_user",
+      "operations": ["select", "update", "delete"],
+      "fixture": {
+        "idColumn": "id",
+        "row": {
+          "user_id": "$USER_A",
+          "title": "RLS scheduled task $MARKER",
+          "prompt": "RLS fixture",
+          "run_at": "2099-01-01T00:00:00Z",
+          "repeat": "none",
+          "status": "scheduled"
+        },
+        "updatePatch": { "title": "Cross-user task mutation $MARKER" }
+      }
+    },
+    {
+      "table": "user_storage",
+      "accessModel": "server_managed",
+      "operations": ["select", "update", "delete"],
+      "fixture": {
+        "idColumn": "user_id",
+        "row": { "user_id": "$USER_A", "bytes_used": 1 },
+        "updatePatch": { "bytes_used": 999 }
+      }
+    },
+    {
+      "table": "writing_documents",
+      "accessModel": "direct_user",
+      "operations": ["select", "update", "delete"],
+      "fixture": {
+        "idColumn": "id",
+        "row": {
+          "owner_id": "$USER_A",
+          "title": "RLS document $MARKER",
+          "content": "RLS fixture",
+          "content_format": "markdown",
+          "metadata": { "rlsMarker": "$MARKER" }
+        },
+        "updatePatch": { "title": "Cross-user document mutation $MARKER" }
+      }
+    }
+  ]
+}

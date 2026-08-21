@@ -29,6 +29,7 @@ test("user-facing source exposes no browser voice or dictation implementation", 
     /\bstopListening\b/u,
     /\bisListening\b/u,
     /\bvoiceMode\b/u,
+    /Dictation is supported/iu,
   ]) {
     assert.doesNotMatch(source, forbidden);
   }
@@ -38,4 +39,14 @@ test("user-facing source exposes no browser voice or dictation implementation", 
   assert.doesNotMatch(composer, /aria-label=.*(?:voice|dictat)/iu);
   assert.doesNotMatch(composer, /title=.*(?:Voice|Dictate)/u);
   assert.doesNotMatch(composer, /<Mic\b|<AudioLines\b/u);
+
+  for (const entry of ["src/start.ts", "src/server.ts"]) {
+    const securitySource = await readFile(entry, "utf8");
+    assert.match(securitySource, /microphone=\(\)/u, `${entry} must deny microphone access`);
+    assert.doesNotMatch(
+      securitySource,
+      /microphone=\(self\)/u,
+      `${entry} must not grant browser microphone access`,
+    );
+  }
 });

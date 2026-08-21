@@ -18,10 +18,7 @@ interface MagicLinkEmailProps {
   confirmationUrl: string;
 }
 
-export const MagicLinkEmail = ({
-  siteName,
-  confirmationUrl,
-}: MagicLinkEmailProps) => (
+export const MagicLinkEmail = ({ siteName, confirmationUrl }: MagicLinkEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
     <Preview>Your login link for {siteName}</Preview>
@@ -30,8 +27,8 @@ export const MagicLinkEmail = ({
         <BrandHeader />
         <Heading style={styles.h1}>Your login link</Heading>
         <Text style={styles.text}>
-          Use the button below to log in to {siteName}. This link expires
-          shortly and can only be used once.
+          Use the button below to log in to {siteName}. This link expires shortly and can only be
+          used once.
         </Text>
         <Section style={styles.buttonWrap}>
           <Button style={styles.button} href={confirmationUrl}>

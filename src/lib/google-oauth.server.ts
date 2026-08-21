@@ -56,7 +56,6 @@ function admin(): SupabaseClient<Database> {
   });
 }
 
-
 export function googleRedirectUri(_request: Request): string {
   const configured = process.env.GOOGLE_REDIRECT_URI?.trim();
   if (!configured) throw new Error("GOOGLE_REDIRECT_URI is not configured");
@@ -366,8 +365,6 @@ export async function getValidGoogleAccessToken(userId: string): Promise<string>
     return decryptGoogleToken(data.access_token);
   return refreshAccessToken(userId);
 }
-
-
 
 export async function logAudit(opts: {
   userId: string;

@@ -11,9 +11,7 @@ export type ProviderCapability =
   | "image_generation"
   | "embeddings"
   | "search"
-  | "deep_research"
-  | "speech_to_text"
-  | "text_to_speech";
+  | "deep_research";
 
 export type ProviderErrorCode =
   | "PROVIDER_NOT_CONFIGURED"
@@ -27,16 +25,10 @@ export type ProviderErrorCode =
   | "EMBEDDING_UNAVAILABLE";
 
 export type ProviderId = "openai_compatible" | "firecrawl" | "kova_orchestrator";
-export type SpeedClass = "fast" | "balanced" | "deep" | "realtime";
+export type SpeedClass = "fast" | "balanced" | "deep";
 export type CostClass = "low" | "standard" | "high";
 export type ModelUse =
-  | "normal_chat"
-  | "advanced_chat"
-  | "deep_research"
-  | "image_generation"
-  | "embedding"
-  | "utility"
-  | "speech";
+  "normal_chat" | "advanced_chat" | "deep_research" | "image_generation" | "embedding" | "utility";
 
 export type ProviderModelDefinition = {
   providerId: ProviderId;
@@ -96,7 +88,6 @@ const capabilityAliases: Record<string, ProviderCapability> = {
   web_search: "search",
   reasoning: "structured_output",
   file_analysis: "vision",
-  realtime_voice: "speech_to_text",
 };
 
 export function normalizeCapability(value: string): ProviderCapability | null {
@@ -111,8 +102,6 @@ export function normalizeCapability(value: string): ProviderCapability | null {
     "embeddings",
     "search",
     "deep_research",
-    "speech_to_text",
-    "text_to_speech",
   ];
   return all.includes(normalized as ProviderCapability) ? (normalized as ProviderCapability) : null;
 }

@@ -1,16 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { legacyLovableRouteGone } from "@/lib/legacy-lovable-route";
 
 export const Route = createFileRoute("/lovable/email/suppression")({
-  server: {
-    handlers: {
-      POST: async () =>
-        Response.json(
-          {
-            error:
-              "Legacy suppression webhook disabled. Use the configured direct email-provider webhook endpoint.",
-          },
-          { status: 410 },
-        ),
-    },
-  },
+  server: { handlers: { GET: legacyLovableRouteGone, POST: legacyLovableRouteGone } },
 });

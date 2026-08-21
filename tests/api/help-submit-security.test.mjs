@@ -26,8 +26,11 @@ test("support payload remains bounded and retains the reply address", () => {
   assert.match(route, /data:\s*body/);
 });
 
-test("authenticated dynamic-recipient email remains restricted to the verified owner", () => {
-  assert.match(authenticatedSend, /user\.email_confirmed_at/);
-  assert.match(authenticatedSend, /requested !== ownEmail/);
-  assert.match(authenticatedSend, /You can only send this template to your own email address/);
+test("legacy Lovable transactional email route is an inert compatibility tombstone", () => {
+  assert.match(authenticatedSend, /legacyLovableRouteGone/);
+  assert.match(authenticatedSend, /GET:\s*legacyLovableRouteGone/);
+  assert.match(authenticatedSend, /POST:\s*legacyLovableRouteGone/);
+  assert.doesNotMatch(authenticatedSend, /user\.email_confirmed_at/);
+  assert.doesNotMatch(authenticatedSend, /requested !== ownEmail/);
+  assert.doesNotMatch(authenticatedSend, /sendLovableEmail|@lovable\.dev|LOVABLE_API_KEY/);
 });

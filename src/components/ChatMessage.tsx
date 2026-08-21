@@ -17,7 +17,6 @@ import {
   Globe,
   Mail,
   FileText,
-  Volume2,
   ThumbsUp,
   ThumbsDown,
 } from "lucide-react";
@@ -119,9 +118,6 @@ function cleanAssistantText(text: string): string {
   return text.replace(/\r\n?/g, "\n");
 }
 
-// Short status label shown while the assistant is streaming but has no text yet.
-// Derives from the latest running/last activity tool, so users see
-// "Searching", "Reading Files", "Interacting with Gmail", etc.
 function StreamingStatus({ activities }: { activities?: import("@/lib/chat-store").Activity[] }) {
   const last = activities && activities.length > 0 ? activities[activities.length - 1] : null;
   const tool = (last?.tool ?? "").toLowerCase();
@@ -266,10 +262,7 @@ function ChatMessageInner({
   };
 
   const saveItem = async () => {
-    // Guests can save to a local-only library (kept in localStorage). The
-    // ClerkSafe sign-in prompt is no longer shown here.
-
-    // Duplicate-safe: stable per-message id stored in localStorage avoids re-saves.
+    // Guests can save to a local-only library while signed-in users persist through Supabase.
     const dedupKey = principalResolved
       ? principalScopedStorageKey("kovagpt-saved-message-ids", userKey)
       : null;
@@ -299,11 +292,9 @@ function ChatMessageInner({
       const content = message.content.trim();
       const codeRatio = (content.match(/```/g)?.length ?? 0) >= 2;
       let title: string;
-      if (codeRatio) {
-        title = "Saved code response";
-      } else if (content.length > 1200) {
-        title = "Saved writing draft";
-      } else {
+      if (codeRatio) title = "Saved code response";
+      else if (content.length > 1200) title = "Saved writing draft";
+      else {
         const firstSentence = content.split(/(?<=[.!?])\s+/)[0] ?? content;
         const words = firstSentence.replace(/\s+/g, " ").split(" ").slice(0, 10).join(" ");
         title = words ? words.slice(0, 120) : "Saved chat response";
@@ -314,16 +305,13 @@ function ChatMessageInner({
         source: "chat" as const,
         content_text: message.content.slice(0, 100_000),
       };
-      if (isSignedIn) {
-        await saveFn({ data: payload });
-      } else {
+      if (isSignedIn) await saveFn({ data: payload });
+      else {
         const { saveGuestItem } = await import("@/lib/guest-library");
         if (!isCurrent()) return;
         saveGuestItem(payload);
       }
-
       if (!isCurrent()) return;
-
       if (message.id) {
         try {
           savedIds.push(message.id);
@@ -340,8 +328,8 @@ function ChatMessageInner({
       setTimeout(() => {
         if (isCurrent()) setSaved(false);
       }, 2000);
-    } catch (e) {
-      if (isCurrent()) toast.error(e instanceof Error ? e.message : "Could not save");
+    } catch (error) {
+      if (isCurrent()) toast.error(error instanceof Error ? error.message : "Could not save");
     } finally {
       if (isCurrent()) setSaving(false);
     }
@@ -360,11 +348,14 @@ function ChatMessageInner({
             {message.attachments && message.attachments.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-2 justify-end">
                 {message.attachments
-                  .filter((a): a is Extract<typeof a, { kind: "image" }> => a.kind === "image")
-                  .map((a, i) => (
+                  .filter(
+                    (attachment): attachment is Extract<typeof attachment, { kind: "image" }> =>
+                      attachment.kind === "image",
+                  )
+                  .map((attachment, index) => (
                     <img
-                      key={i}
-                      src={a.dataUrl}
+                      key={index}
+                      src={attachment.dataUrl}
                       alt={
                         message.content?.trim()
                           ? `User-uploaded image: ${message.content.slice(0, 120)}`
@@ -436,31 +427,31 @@ function ChatMessageInner({
             onTouchEnd={cancelLongPress}
             onTouchMove={cancelLongPress}
             onTouchCancel={cancelLongPress}
-            onContextMenu={(e) => {
+            onContextMenu={(event) => {
               if (isMobile) {
-                e.preventDefault();
+                event.preventDefault();
                 setMobileSheetOpen(true);
               }
             }}
           >
             {message.activities && message.activities.length > 0 && (
               <div className="mb-2 flex flex-wrap gap-1.5">
-                {message.activities.map((a, i) => (
+                {message.activities.map((activity, index) => (
                   <span
-                    key={i}
+                    key={index}
                     className="inline-flex items-center gap-1.5 rounded-full border border-border bg-accent/40 px-2.5 py-1 text-xs text-muted-foreground"
                   >
                     <Check className="w-3 h-3 text-primary" />
-                    {a.label}
+                    {activity.label}
                   </span>
                 ))}
               </div>
             )}
             <div className="prose-chat">
-              {message.pendingConfirms?.map((pc) => (
+              {message.pendingConfirms?.map((confirm) => (
                 <ToolConfirmCard
-                  key={pc.actionId}
-                  confirm={pc}
+                  key={confirm.actionId}
+                  confirm={confirm}
                   onUpdate={(next) => onUpdatePendingConfirm?.(message.id, next)}
                 />
               ))}
@@ -500,31 +491,31 @@ function ChatMessageInner({
                 (() => {
                   const cleaned = cleanAssistantText(message.content);
                   const parts = extractCharts(cleaned);
-                  const hasChart = parts.some((p) => p.kind === "chart");
-                  const md = hasChart ? (
+                  const hasChart = parts.some((part) => part.kind === "chart");
+                  const markdown = hasChart ? (
                     <div className="space-y-2">
-                      {parts.map((p, i) =>
-                        p.kind === "chart" ? (
-                          <Suspense key={i} fallback={null}>
-                            <ChatChart spec={p.spec} />
+                      {parts.map((part, index) =>
+                        part.kind === "chart" ? (
+                          <Suspense key={index} fallback={null}>
+                            <ChatChart spec={part.spec} />
                           </Suspense>
-                        ) : p.value.trim() ? (
-                          <MarkdownContent key={i}>{p.value}</MarkdownContent>
+                        ) : part.value.trim() ? (
+                          <MarkdownContent key={index}>{part.value}</MarkdownContent>
                         ) : null,
                       )}
                     </div>
                   ) : (
                     <MarkdownContent>{cleaned}</MarkdownContent>
                   );
-                  if (artifactKind || streaming) return md;
+                  if (artifactKind || streaming) return markdown;
                   const chip = detectInfoChip(cleaned);
                   if (chip)
                     return (
                       <InfoChip kind={chip} rawText={cleaned}>
-                        {md}
+                        {markdown}
                       </InfoChip>
                     );
-                  return md;
+                  return markdown;
                 })()
               )}
               {streaming && message.content && <span className="cursor-blink" />}
@@ -536,7 +527,6 @@ function ChatMessageInner({
         <div className={isUser ? "flex justify-end" : "flex justify-start"}>
           {!streaming && !isUser && message.content && (
             <div className="kova-message-actions mt-1 max-w-full overflow-x-auto">
-              {/* Visible: Copy, Share */}
               <button
                 onClick={copy}
                 className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-accent transition-colors duration-100"
@@ -636,7 +626,6 @@ function ChatMessageInner({
                 </button>
               )}
 
-              {/* Everything else lives behind the 3-dot menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
@@ -661,14 +650,6 @@ function ChatMessageInner({
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={onBranch} disabled={!onBranch}>
                     <GitBranch className="mr-2 h-4 w-4" /> Branch into new chat
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      window.speechSynthesis.cancel();
-                      window.speechSynthesis.speak(new SpeechSynthesisUtterance(message.content));
-                    }}
-                  >
-                    <Volume2 className="mr-2 h-4 w-4" /> Read aloud
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -766,9 +747,9 @@ function ChatMessageInner({
                 label: "Search the web",
                 icon: Globe,
                 onClick: () => {
-                  const q = encodeURIComponent(message.content.slice(0, 300));
+                  const query = encodeURIComponent(message.content.slice(0, 300));
                   window.open(
-                    `https://www.google.com/search?q=${q}`,
+                    `https://www.google.com/search?q=${query}`,
                     "_blank",
                     "noopener,noreferrer",
                   );
@@ -783,14 +764,14 @@ function ChatMessageInner({
                   setMobileSheetOpen(false);
                 },
               },
-            ].map((a) => (
+            ].map((action) => (
               <button
-                key={a.label}
-                onClick={a.onClick}
+                key={action.label}
+                onClick={action.onClick}
                 className="flex items-center gap-3 px-4 py-3 text-left text-[15px] rounded-lg hover:bg-accent active:bg-accent/70 transition"
               >
-                <a.icon className="w-5 h-5 text-muted-foreground shrink-0" />
-                <span className="flex-1">{a.label}</span>
+                <action.icon className="w-5 h-5 text-muted-foreground shrink-0" />
+                <span className="flex-1">{action.label}</span>
               </button>
             ))}
           </div>

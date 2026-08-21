@@ -12,19 +12,21 @@ const migration = readFileSync(
 const config = readFileSync("src/lib/ai/config.server.ts", "utf8");
 const catalog = readFileSync("src/lib/ai/model-catalog.server.ts", "utf8");
 
-test("normal AI calls use the official Responses API through the server adapter", () => {
+test("normal AI calls use the Responses API through the approved direct provider adapter", () => {
   assert.match(provider, /providerFetch\(\s*"\/responses"/);
   assert.match(provider, /https:\/\/api\.openai\.com\/v1/);
-  assert.match(
-    provider,
-    /const LOVABLE_GATEWAY_BASE_URL = "https:\/\/ai\.gateway\.lovable\.dev\/v1"/,
-  );
+  assert.match(provider, /\.openai\.azure\.com/);
+  assert.match(provider, /\.services\.ai\.azure\.com/);
+  assert.match(provider, /responsesStreamToChatStream/);
+  assert.doesNotMatch(provider, /lovable\.(?:app|dev)|LOVABLE_|@lovable\.dev/iu);
   assert.doesNotMatch(provider, /OPENAI_BASE_URL|AI_PROVIDER_URL|VITE_.*API_KEY/);
 });
 
-test("provider fails closed for missing key and kill switch", () => {
-  assert.match(config, /AI_GENERATION_ENABLED/);
+test("provider fails closed for missing credentials and the Kova generation kill switch", () => {
+  assert.match(config, /KOVA_GENERATION_DISABLED/);
   assert.match(provider, /OPENAI_API_KEY/);
+  assert.match(provider, /AZURE_OPENAI_API_KEY/);
+  assert.match(provider, /IDENTITY_ENDPOINT/);
   assert.match(provider, /status:\s*503/);
   assert.doesNotMatch(env, /VITE_OPENAI|VITE_LOVABLE|OPENAI_API_KEY=sk-/);
 });

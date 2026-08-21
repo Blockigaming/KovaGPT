@@ -1,10 +1,5 @@
 export type RealtimeConnectionState =
-  | "unsupported"
-  | "connecting"
-  | "connected"
-  | "reconnecting"
-  | "offline"
-  | "failed";
+  "unsupported" | "connecting" | "connected" | "reconnecting" | "offline" | "failed";
 export type VoiceSessionState =
   | "idle"
   | "permission_required"

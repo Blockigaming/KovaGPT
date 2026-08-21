@@ -12,7 +12,7 @@ import { PUBLIC_BACKEND_URL } from "@/config/public-config";
 export function resolveBackendUrl(): string {
   const runtime = typeof process !== "undefined" && process.env ? process.env : {};
   return (
-    runtime['SUPABASE_URL'] ||
+    runtime["SUPABASE_URL"] ||
     (import.meta.env.VITE_SUPABASE_URL as string | undefined) ||
     PUBLIC_BACKEND_URL
   );

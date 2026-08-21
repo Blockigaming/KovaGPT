@@ -315,9 +315,7 @@ function PlanCard({
       )}
       <div className="mb-3 flex items-center gap-2.5">
         {Icon ? (
-          <span
-            className={`grid h-9 w-9 place-items-center rounded-xl bg-muted`}
-          >
+          <span className={`grid h-9 w-9 place-items-center rounded-xl bg-muted`}>
             <Icon className="h-4 w-4" />
           </span>
         ) : null}
@@ -329,16 +327,12 @@ function PlanCard({
           <span className="text-sm leading-5 text-muted-foreground">{period}</span>
         </div>
       </div>
-      <p className="mb-6 text-sm text-muted-foreground">
-        {description}
-      </p>
+      <p className="mb-6 text-sm text-muted-foreground">{description}</p>
       <button
         onClick={onCta}
         disabled={ctaDisabled}
         className={`mb-6 w-full rounded-full border py-2.5 text-sm font-medium transition ${
-          enterprise
-            ? "border-foreground/40 hover:bg-accent"
-            : "border-border hover:bg-accent"
+          enterprise ? "border-foreground/40 hover:bg-accent" : "border-border hover:bg-accent"
         } ${ctaDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
       >
         {cta}

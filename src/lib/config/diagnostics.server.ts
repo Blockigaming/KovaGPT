@@ -43,9 +43,31 @@ function oneOf(names: string[]): FeatureStatus {
   return { configured, missing: configured ? [] : [names.join(" or ")] };
 }
 
+function oneOfGroups(groups: string[][]): FeatureStatus {
+  const configured = groups.some((group) => group.every((name) => hasEnv(name)));
+  return {
+    configured,
+    missing: configured ? [] : [groups.map((group) => group.join(" + ")).join(" or ")],
+  };
+}
+
 function allGroups(groups: FeatureStatus[]): FeatureStatus {
   const missing = groups.flatMap((group) => group.missing);
   return { configured: missing.length === 0, missing };
+}
+
+function aiProviderStatus(): FeatureStatus {
+  if (hasEnv("AZURE_OPENAI_ENDPOINT")) {
+    return allGroups([
+      oneOfGroups([["AZURE_OPENAI_API_KEY"], ["IDENTITY_ENDPOINT", "IDENTITY_HEADER"]]),
+      feature([
+        "AZURE_OPENAI_DEPLOYMENT_CHAT",
+        "AZURE_OPENAI_DEPLOYMENT_THINKING",
+        "AZURE_OPENAI_DEPLOYMENT_DEEP",
+      ]),
+    ]);
+  }
+  return feature(["OPENAI_API_KEY"]);
 }
 
 function nullableEnv(name: string): string | null {
@@ -87,7 +109,7 @@ export function safeDiagnostics(): SafeDiagnostics {
         oneOf(["SUPABASE_PUBLISHABLE_KEY", "SUPABASE_ANON_KEY"]),
         oneOf(["SUPABASE_SERVICE_ROLE_KEY"]),
       ]),
-      aiProvider: feature(["LOVABLE_API_KEY", "OPENAI_API_KEY"]),
+      aiProvider: aiProviderStatus(),
       search: feature(["FIRECRAWL_API_KEY"]),
       googleOAuth: feature([
         "GOOGLE_OAUTH_CLIENT_ID",

@@ -139,7 +139,6 @@ const policies: Record<
   },
 };
 
-
 export function modelForPolicy(policy: ModelPolicy): CatalogModel & { outputCeiling: number } {
   const definition = policies[policy];
   const id = runtimeEnv(definition.env) ?? definition.fallback;

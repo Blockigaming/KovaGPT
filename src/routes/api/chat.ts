@@ -14,7 +14,6 @@ import {
   enforceStorage,
   getCallerTier,
   optionalUser,
-  
 } from "@/lib/api-auth.server";
 import {
   getAvailableGoogleTools,
@@ -69,8 +68,7 @@ import {
 } from "@/lib/provider-response.server.mjs";
 
 type ChatContentPart =
-  | { type: "text"; text: string }
-  | { type: "image_url"; image_url: { url: string } };
+  { type: "text"; text: string } | { type: "image_url"; image_url: { url: string } };
 
 type ToolCall = {
   id: string;
@@ -88,9 +86,7 @@ type ToolResultMsg = {
   content: string;
 };
 type ChatMsg =
-  | { role: string; content: unknown; [key: string]: unknown }
-  | AssistantMsg
-  | ToolResultMsg;
+  { role: string; content: unknown; [key: string]: unknown } | AssistantMsg | ToolResultMsg;
 
 type ChainableQueryLike = {
   select: (columns: string) => ChainableQueryLike;

@@ -5,8 +5,8 @@ const positiveInteger = (fallback: number, maximum: number) =>
   z.coerce.number().int().positive().max(maximum).default(fallback);
 
 const ConfigSchema = z.object({
-  // Generation is on unless an operator explicitly disables it. Kova ships with
-  // a managed gateway key, so a missing flag must never look like an outage.
+  // Generation is on unless an operator explicitly disables it. Provider
+  // credentials remain server-only and are validated independently.
   generationEnabled: z
     .enum(["true", "false"])
     .default("true")
@@ -30,10 +30,7 @@ let cached: AiRuntimeConfig | undefined;
 export function getAiRuntimeConfig(): AiRuntimeConfig {
   if (cached) return cached;
   cached = ConfigSchema.parse({
-    // Generation runs by default. AI_GENERATION_ENABLED can only turn it ON
-    // explicitly; KOVA_GENERATION_DISABLED is the operator kill switch.
     generationEnabled: runtimeEnv("KOVA_GENERATION_DISABLED") === "true" ? "false" : "true",
-
     maxCostUsdPerRequest: runtimeEnv("KOVA_MAX_COST_USD_PER_REQUEST"),
     maxTokensPerUserDay: runtimeEnv("KOVA_MAX_TOKENS_PER_USER_DAY"),
     maxTokensPerUserMonth: runtimeEnv("KOVA_MAX_TOKENS_PER_USER_MONTH"),

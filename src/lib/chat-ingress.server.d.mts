@@ -17,12 +17,7 @@ export type ChatModeId =
   | "kova_5_4"
   | "kova_o3";
 export type ChatClientTool =
-  | "web_search"
-  | "deep_research"
-  | "image"
-  | "study"
-  | "data_analysis"
-  | "file_analysis";
+  "web_search" | "deep_research" | "image" | "study" | "data_analysis" | "file_analysis";
 
 export type ChatUserContext = {
   name?: string;

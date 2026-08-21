@@ -21,9 +21,9 @@ const secretPatterns = [
   /VITE_(?:OPENAI|LOVABLE|FIRECRAWL|ANTHROPIC)[A-Z0-9_]*(?:KEY|SECRET|TOKEN)/,
   /NEXT_PUBLIC_(?:OPENAI|LOVABLE|FIRECRAWL|ANTHROPIC)[A-Z0-9_]*(?:KEY|SECRET|TOKEN)/,
 ];
-const managedRuntime = /ai\.gateway\.lovable\.dev|LOVABLE_AI_BASE_URL|Lovable-API-Key/;
+const lovableRuntime = /ai\.gateway\.lovable\.dev|LOVABLE_(?:API_KEY|AI_BASE_URL)|Lovable-API-Key/;
 const browserProvider =
-  /https:\/\/api\.openai\.com\/v1\/(?:responses|chat\/completions|images|embeddings)/;
+  /https:\/\/(?:api\.openai\.com|[^/]+\.(?:openai\.azure\.com|services\.ai\.azure\.com))\/[^\s"']*(?:responses|chat\/completions|images|embeddings)/;
 const unsafeLogging =
   /console\.(?:log|info|warn|error)\([^)]{0,500}(?:authorization|request\.headers|process\.env)/i;
 const violations = [];
@@ -35,13 +35,13 @@ function inspect(file, scope) {
   const source = readFileSync(file, "utf8");
   for (const rule of secretPatterns)
     if (rule.test(source)) violations.push(`${rel}: credential pattern`);
-  if (managedRuntime.test(source) && !/^(?:docs|tests|scripts\/security)\//.test(rel))
-    violations.push(`${rel}: Lovable managed AI runtime`);
+  if (lovableRuntime.test(source) && !/^(?:docs|tests|scripts\/security)\//.test(rel))
+    violations.push(`${rel}: Lovable AI production path`);
   if (scope === "browser" && browserProvider.test(source))
     violations.push(`${rel}: direct browser provider request`);
   if (scope !== "fixtures" && unsafeLogging.test(source))
     violations.push(`${rel}: unsafe authorization/environment logging`);
-  for (const name of ["OPENAI_API_KEY", "FIRECRAWL_API_KEY", "LOVABLE_API_KEY"]) {
+  for (const name of ["OPENAI_API_KEY", "AZURE_OPENAI_API_KEY", "FIRECRAWL_API_KEY"]) {
     const value = process.env[name];
     if (value && value.length >= 16 && source.includes(value))
       violations.push(`${rel}: injected ${name} value`);
