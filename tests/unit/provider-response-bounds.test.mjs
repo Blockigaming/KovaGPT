@@ -217,3 +217,61 @@ test("bounded provider SSE rejects content type, missing terminator, and overflo
   });
   assert.equal(overflowCancelled, true);
 });
+
+test("SSE wrapper returns before the upstream stream completes", async () => {
+  const encoder = new TextEncoder();
+  let release;
+
+  const upstream = new Response(
+    new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(
+            'data: {"choices":[{"delta":{"content":"hello"}}]}\n\n'
+          )
+        );
+
+        release = () => {
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+        };
+      },
+    }),
+    {
+      headers: {
+        "Content-Type": "text/event-stream; charset=utf-8",
+      },
+    }
+  );
+
+  const timeout = new Promise((_, reject) =>
+    setTimeout(
+      () => reject(new Error("SSE wrapper blocked waiting for stream completion")),
+      250
+    )
+  );
+
+  const wrapped = await Promise.race([
+    createBoundedProviderSseStream(upstream, 4096),
+    timeout,
+  ]);
+
+  assert.ok(wrapped instanceof ReadableStream);
+
+  const reader = wrapped.getReader();
+  const first = await reader.read();
+
+  assert.equal(first.done, false);
+  assert.match(new TextDecoder().decode(first.value), /data:/);
+
+  release();
+
+  let text = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    text += new TextDecoder().decode(value);
+  }
+
+  assert.match(text, /\[DONE\]/);
+});
