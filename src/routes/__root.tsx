@@ -267,28 +267,13 @@ function RootShell({ children }: { children: React.ReactNode }) {
 }
 
 function HydrationInteractionGuard({ children }: { children: React.ReactNode }) {
-  const [hydrated, setHydrated] = useState(false);
-
   useEffect(() => {
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
     document.documentElement.dataset.kovaHydration = "ready";
     document.documentElement.removeAttribute("aria-busy");
     window.dispatchEvent(new Event(HYDRATION_READY_EVENT));
-  }, [hydrated]);
+  }, []);
 
-  return (
-    <fieldset
-      disabled={!hydrated}
-      data-kova-interaction-guard={hydrated ? "ready" : "pending"}
-      className="contents"
-    >
-      {children}
-    </fieldset>
-  );
+  return <>{children}</>;
 }
 
 function RootThemeManager() {
