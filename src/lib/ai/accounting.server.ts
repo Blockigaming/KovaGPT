@@ -102,7 +102,17 @@ export async function acquireGeneration(input: {
     p_period_start: periodStart,
     p_period_end: periodEnd,
   });
-  if (error || !Array.isArray(data) || !data[0]) throw new Error("ai_accounting_unavailable");
+  if (error || !Array.isArray(data) || !data[0]) {
+    console.error("[ai-accounting] acquire failed", {
+      code: error?.code ?? null,
+      message: error?.message ?? null,
+      details: error?.details ?? null,
+      hint: error?.hint ?? null,
+      hasData: Array.isArray(data),
+      rows: Array.isArray(data) ? data.length : 0,
+    });
+    throw new Error("ai_accounting_unavailable");
+  }
   const row = data[0] as { event_id: string | null; decision: string };
   return row.event_id ? { eventId: row.event_id } : { rejection: row.decision };
 }
