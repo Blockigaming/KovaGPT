@@ -1,0 +1,30 @@
+name: Day 10 Source Snapshot
+
+on:
+  push:
+    branches:
+      - fix/day10-browser-release-gates
+    paths:
+      - .github/workflows/day10-source-snapshot.yml
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Archive tracked source
+        run: git archive --format=tar.gz --output=day10-source.tar.gz HEAD
+
+      - name: Upload source archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: day10-source-${{ github.sha }}
+          path: day10-source.tar.gz
+          if-no-files-found: error
+          retention-days: 3
