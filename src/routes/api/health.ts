@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { BUILD_IDENTITY } from "@/lib/build-identity";
 
 export const Route = createFileRoute("/api/health")({
   server: {
@@ -11,6 +12,7 @@ export const Route = createFileRoute("/api/health")({
             status: "ok",
             service: "kovagpt-web",
             environment: process.env.AZURE_ENVIRONMENT || process.env.NODE_ENV || "development",
+            build: BUILD_IDENTITY.sha,
             timestamp: new Date().toISOString(),
           },
           {
