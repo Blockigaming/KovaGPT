@@ -17,6 +17,7 @@ import {
   logAudit,
 } from "@/lib/google-oauth.server";
 import { validateSupportedGoogleWrite } from "@/lib/google-write-validation.server.mjs";
+import { safeConnectorError } from "@/lib/connectors.server";
 
 // OpenAI-compatible function tool schema.
 export type ToolDef = {
@@ -570,8 +571,9 @@ export async function runGoogleTool(
 
     return { error: "unknown_tool", name };
   } catch (e) {
-    console.error(`[tool ${name}] failed`, e);
-    return { error: "tool_failed", message: (e as Error).message };
+    const safeMessage = safeConnectorError(e);
+    console.error(`[tool ${name}] failed`, safeMessage);
+    return { error: "tool_failed", message: safeMessage };
   }
 }
 
@@ -688,7 +690,10 @@ export async function stagePendingAction(
     .select("id")
     .single();
   if (error || !data) {
-    console.error("[stagePendingAction] insert failed", error);
+    console.error(
+      "[stagePendingAction] insert failed",
+      safeConnectorError(error?.message ?? "database write failed"),
+    );
     throw new Error("Could not stage pending action");
   }
   return {
