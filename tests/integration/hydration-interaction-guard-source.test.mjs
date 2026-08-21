@@ -5,21 +5,28 @@ import vm from "node:vm";
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
-test("the server shell keeps native controls disabled until hydration is complete", async () => {
+test("the server shell reports hydration state without globally disabling controls", async () => {
   const source = await read("src/routes/__root.tsx");
 
   assert.match(source, /data-kova-hydration="pending"/);
   assert.match(source, /aria-busy="true"/);
-  assert.match(source, /<fieldset\s+[\s\S]*?disabled=\{!hydrated\}/);
-  assert.match(source, /data-kova-interaction-guard=\{hydrated \? "ready" : "pending"\}/);
-  assert.match(source, /className="contents"/);
+
+  assert.doesNotMatch(source, /<fieldset\s+[\s\S]*?disabled=\{!hydrated\}/);
+
+  assert.doesNotMatch(source, /data-kova-interaction-guard=\{hydrated \? "ready" : "pending"\}/);
+
   assert.match(source, /document\.documentElement\.dataset\.kovaHydration = "ready"/);
+
   assert.match(source, /document\.documentElement\.removeAttribute\("aria-busy"\)/);
+
   assert.match(source, /window\.dispatchEvent\(new Event\(HYDRATION_READY_EVENT\)\)/);
+
+  assert.match(source, /return <>\{children\}<\/>;/);
 
   const bootstrapIndex = source.indexOf("<ScriptOnce>{EARLY_SHORTCUT_BOOTSTRAP}</ScriptOnce>");
   const guardIndex = source.indexOf("<HydrationInteractionGuard>{children}");
   const clientScriptsIndex = source.indexOf("<Scripts />", guardIndex);
+
   assert.ok(bootstrapIndex > -1 && bootstrapIndex < guardIndex);
   assert.ok(guardIndex < clientScriptsIndex);
 });
