@@ -314,9 +314,14 @@ export function WorkspaceIntelligence() {
             Real activity from your account and this device.
           </p>
         </div>
-        <Link to="/library" className="text-sm font-medium hover:underline">
-          View full library
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link to="/brain" className="text-sm font-medium hover:underline">
+            Open Kova Brain
+          </Link>
+          <Link to="/library" className="text-sm font-medium hover:underline">
+            View full library
+          </Link>
+        </div>
       </div>
       {loading ? (
         <div className="grid gap-3 sm:grid-cols-2" aria-label="Loading workspace intelligence">
