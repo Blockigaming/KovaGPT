@@ -27,6 +27,7 @@ import { Route as ContactSupportRouteImport } from './routes/contact-support'
 import { Route as ContextPacksRouteImport } from './routes/context-packs'
 import { Route as FilesRouteImport } from './routes/files'
 import { Route as GettingStartedRouteImport } from './routes/getting-started'
+import { Route as GoalsRouteImport } from './routes/goals'
 import { Route as HelpRouteImport } from './routes/help'
 import { Route as HumanizeAiTextRouteImport } from './routes/humanize-ai-text'
 import { Route as ImagesRouteImport } from './routes/images'
@@ -204,6 +205,11 @@ const FilesRoute = FilesRouteImport.update({
 const GettingStartedRoute = GettingStartedRouteImport.update({
   id: '/getting-started',
   path: '/getting-started',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GoalsRoute = GoalsRouteImport.update({
+  id: '/goals',
+  path: '/goals',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HelpRoute = HelpRouteImport.update({
@@ -679,6 +685,7 @@ export interface FileRoutesByFullPath {
   '/context-packs': typeof ContextPacksRoute
   '/files': typeof FilesRoute
   '/getting-started': typeof GettingStartedRoute
+  '/goals': typeof GoalsRoute
   '/help': typeof HelpRoute
   '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
@@ -787,6 +794,7 @@ export interface FileRoutesByTo {
   '/context-packs': typeof ContextPacksRoute
   '/files': typeof FilesRoute
   '/getting-started': typeof GettingStartedRoute
+  '/goals': typeof GoalsRoute
   '/help': typeof HelpRoute
   '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
@@ -896,6 +904,7 @@ export interface FileRoutesById {
   '/context-packs': typeof ContextPacksRoute
   '/files': typeof FilesRoute
   '/getting-started': typeof GettingStartedRoute
+  '/goals': typeof GoalsRoute
   '/help': typeof HelpRoute
   '/humanize-ai-text': typeof HumanizeAiTextRoute
   '/images': typeof ImagesRoute
@@ -1006,6 +1015,7 @@ export interface FileRouteTypes {
     | '/context-packs'
     | '/files'
     | '/getting-started'
+    | '/goals'
     | '/help'
     | '/humanize-ai-text'
     | '/images'
@@ -1114,6 +1124,7 @@ export interface FileRouteTypes {
     | '/context-packs'
     | '/files'
     | '/getting-started'
+    | '/goals'
     | '/help'
     | '/humanize-ai-text'
     | '/images'
@@ -1222,6 +1233,7 @@ export interface FileRouteTypes {
     | '/context-packs'
     | '/files'
     | '/getting-started'
+    | '/goals'
     | '/help'
     | '/humanize-ai-text'
     | '/images'
@@ -1331,6 +1343,7 @@ export interface RootRouteChildren {
   ContextPacksRoute: typeof ContextPacksRoute
   FilesRoute: typeof FilesRoute
   GettingStartedRoute: typeof GettingStartedRoute
+  GoalsRoute: typeof GoalsRoute
   HelpRoute: typeof HelpRoute
   HumanizeAiTextRoute: typeof HumanizeAiTextRoute
   ImagesRoute: typeof ImagesRoute
@@ -1543,6 +1556,13 @@ declare module '@tanstack/react-router' {
       path: '/getting-started'
       fullPath: '/getting-started'
       preLoaderRoute: typeof GettingStartedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/goals': {
+      id: '/goals'
+      path: '/goals'
+      fullPath: '/goals'
+      preLoaderRoute: typeof GoalsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/help': {
@@ -2229,6 +2249,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContextPacksRoute: ContextPacksRoute,
   FilesRoute: FilesRoute,
   GettingStartedRoute: GettingStartedRoute,
+  GoalsRoute: GoalsRoute,
   HelpRoute: HelpRoute,
   HumanizeAiTextRoute: HumanizeAiTextRoute,
   ImagesRoute: ImagesRoute,

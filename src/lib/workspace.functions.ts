@@ -261,7 +261,8 @@ export type WorkspaceSignal = {
     | "context_pack"
     | "research"
     | "automation"
-    | "prompt";
+    | "prompt"
+    | "goal";
   title: string;
   subtitle: string;
   href: string;
@@ -274,7 +275,7 @@ export type WorkspaceSignal = {
 export const listWorkspaceIntelligence = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<WorkspaceSignal[]> => {
-    const [projects, chats, files, library, memory, packs, research, tasks, prompts] =
+    const [projects, chats, files, library, memory, packs, research, tasks, prompts, goals] =
       await Promise.all([
         table(context.supabase, "projects")
           .select("id,name,description,updated_at,pinned_at")
@@ -317,8 +318,24 @@ export const listWorkspaceIntelligence = createServerFn({ method: "GET" })
           .eq("user_id", context.userId)
           .order("updated_at", { ascending: false })
           .limit(40),
+        table(context.supabase, "goals")
+          .select("id,title,status,priority,progress,target_date,updated_at")
+          .eq("owner_id", context.userId)
+          .order("updated_at", { ascending: false })
+          .limit(40),
       ]);
-    const results = [projects, chats, files, library, memory, packs, research, tasks, prompts];
+    const results = [
+      projects,
+      chats,
+      files,
+      library,
+      memory,
+      packs,
+      research,
+      tasks,
+      prompts,
+      goals,
+    ];
     if (results.some((result) => result.error))
       throw new Error("Workspace intelligence could not be loaded");
     const signals: WorkspaceSignal[] = [];
@@ -419,6 +436,16 @@ export const listWorkspaceIntelligence = createServerFn({ method: "GET" })
         subtitle: `${String(row.folder ?? "Unfiled")} · ${Number(row.use_count ?? 0)} launches`,
         href: "/prompt-studio",
         updatedAt: String(row.last_used_at ?? row.updated_at),
+      });
+    for (const row of (goals.data ?? []) as Record<string, unknown>[])
+      signals.push({
+        id: String(row.id),
+        kind: "goal",
+        title: String(row.title),
+        subtitle: `${String(row.priority ?? "medium")} priority · ${Number(row.progress ?? 0)}% complete`,
+        href: "/goals",
+        updatedAt: String(row.updated_at),
+        status: String(row.status),
       });
     return signals.sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
   });

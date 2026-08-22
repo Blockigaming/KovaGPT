@@ -12,6 +12,7 @@ import {
   MessageSquare,
   FlaskConical,
   Sparkles,
+  Target,
 } from "lucide-react";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { chatStoragePrincipal, loadConversations, savePendingActive } from "@/lib/chat-store";
@@ -30,6 +31,7 @@ const iconByKind = {
   research: Sparkles,
   automation: ListTodo,
   prompt: FlaskConical,
+  goal: Target,
   work: BriefcaseBusiness,
   chat: MessageSquare,
 } as const;
