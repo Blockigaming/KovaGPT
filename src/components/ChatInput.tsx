@@ -711,7 +711,17 @@ export function ChatInput({
           </p>
         ) : null}
         <span className="sr-only">Drop files to attach</span>
-        <div className={`kova-composer overflow-visible ${isStreaming ? "is-streaming" : ""}`}>
+        <div
+          style={{
+            outlineWidth: "2px",
+            outlineStyle: "solid",
+            outlineColor: "currentColor",
+            outlineOffset: "2px",
+          }}
+
+          tabIndex={-1}
+          className={`kova-composer overflow-visible ${isStreaming ? "is-streaming" : ""}`}
+        >
           {attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 p-3 pb-0" aria-label="Attachments">
               {attachments.map((a, i) => (

@@ -39,7 +39,7 @@ const LimitReachedDialog = lazy(() =>
 const ShareChatDialog = lazy(() =>
   import("@/components/ShareChatDialog").then((m) => ({ default: m.ShareChatDialog })),
 );
-import { applyThemeMode } from "@/lib/theme";
+import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings, settingsKey } from "@/lib/use-nova-settings";
 import {
   blockMemoryWrites,
@@ -383,7 +383,7 @@ function KovaGPT() {
     const loaded = loadSettings(userKey, { migrateLegacyGuest: userKey === null });
     setSettings(loaded);
     setSettingsPrincipal(storagePrincipal);
-    applyThemeMode(loaded.mode ?? "system");
+    applyThemeMode(userKey === null ? loadThemeMode() : (loaded.mode ?? "system"));
     // Keep each signed-in account and the guest workspace in a separate
     // browser namespace. Switching accounts must render empty until the new
     // principal's data has loaded.
@@ -400,10 +400,13 @@ function KovaGPT() {
     }
   }, [isLoaded, userKey, isSignedIn, storagePrincipal]);
 
-  // Re-apply theme mode whenever it changes
+  // Re-apply theme only after this principal's settings are ready.
+  // Guest mode is canonical in kova-theme-mode and must not be
+  // overwritten by the default settings state during hydration.
   useEffect(() => {
-    applyThemeMode(settings.mode ?? "system");
-  }, [settings.mode]);
+    if (!settingsReady) return;
+    applyThemeMode(userKey === null ? loadThemeMode() : (settings.mode ?? "system"));
+  }, [settings.mode, settingsReady, userKey]);
 
   // Debounced persistence - avoid JSON.stringify on every keystroke / stream token,
   // which was the main source of typing/streaming lag.

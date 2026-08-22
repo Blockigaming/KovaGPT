@@ -373,6 +373,9 @@ html :is(input, textarea, select):focus-visible {
   border-color: color-mix(in oklab, var(--foreground) 32%, transparent) !important;
 }
 .kova-composer:focus-within {
-  outline: none !important;
+  outline-width: 2px !important;
+  outline-style: solid !important;
+  outline-color: currentColor !important;
+  outline-offset: 2px !important;
   box-shadow: none !important;
 }
