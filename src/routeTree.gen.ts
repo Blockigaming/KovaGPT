@@ -105,6 +105,7 @@ import { Route as ApiGoogleDriveRouteImport } from './routes/api/google/drive'
 import { Route as ApiGoogleGmailRouteImport } from './routes/api/google/gmail'
 import { Route as ApiGoogleStatusRouteImport } from './routes/api/google/status'
 import { Route as ApiIntegrationsAccountsRouteImport } from './routes/api/integrations/accounts'
+import { Route as ApiInternalScheduledExecutionRouteImport } from './routes/api/internal/scheduled-execution'
 import { Route as ApiPublicHelpSubmitRouteImport } from './routes/api/public/help-submit'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as ApiIntegrationsOauthDisconnectRouteImport } from './routes/api/integrations/oauth/disconnect'
@@ -603,6 +604,12 @@ const ApiIntegrationsAccountsRoute = ApiIntegrationsAccountsRouteImport.update({
   path: '/api/integrations/accounts',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiInternalScheduledExecutionRoute =
+  ApiInternalScheduledExecutionRouteImport.update({
+    id: '/api/internal/scheduled-execution',
+    path: '/api/internal/scheduled-execution',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicHelpSubmitRoute = ApiPublicHelpSubmitRouteImport.update({
   id: '/api/public/help-submit',
   path: '/api/public/help-submit',
@@ -769,6 +776,7 @@ export interface FileRoutesByFullPath {
   '/api/google/gmail': typeof ApiGoogleGmailRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
+  '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
@@ -879,6 +887,7 @@ export interface FileRoutesByTo {
   '/api/google/gmail': typeof ApiGoogleGmailRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
+  '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
@@ -990,6 +999,7 @@ export interface FileRoutesById {
   '/api/google/gmail': typeof ApiGoogleGmailRoute
   '/api/google/status': typeof ApiGoogleStatusRoute
   '/api/integrations/accounts': typeof ApiIntegrationsAccountsRoute
+  '/api/internal/scheduled-execution': typeof ApiInternalScheduledExecutionRoute
   '/api/public/help-submit': typeof ApiPublicHelpSubmitRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/api/integrations/oauth/disconnect': typeof ApiIntegrationsOauthDisconnectRoute
@@ -1102,6 +1112,7 @@ export interface FileRouteTypes {
     | '/api/google/gmail'
     | '/api/google/status'
     | '/api/integrations/accounts'
+    | '/api/internal/scheduled-execution'
     | '/api/public/help-submit'
     | '/lovable/email/suppression'
     | '/api/integrations/oauth/disconnect'
@@ -1212,6 +1223,7 @@ export interface FileRouteTypes {
     | '/api/google/gmail'
     | '/api/google/status'
     | '/api/integrations/accounts'
+    | '/api/internal/scheduled-execution'
     | '/api/public/help-submit'
     | '/lovable/email/suppression'
     | '/api/integrations/oauth/disconnect'
@@ -1322,6 +1334,7 @@ export interface FileRouteTypes {
     | '/api/google/gmail'
     | '/api/google/status'
     | '/api/integrations/accounts'
+    | '/api/internal/scheduled-execution'
     | '/api/public/help-submit'
     | '/lovable/email/suppression'
     | '/api/integrations/oauth/disconnect'
@@ -1430,6 +1443,7 @@ export interface RootRouteChildren {
   ApiGoogleGmailRoute: typeof ApiGoogleGmailRoute
   ApiGoogleStatusRoute: typeof ApiGoogleStatusRoute
   ApiIntegrationsAccountsRoute: typeof ApiIntegrationsAccountsRoute
+  ApiInternalScheduledExecutionRoute: typeof ApiInternalScheduledExecutionRoute
   ApiPublicHelpSubmitRoute: typeof ApiPublicHelpSubmitRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiIntegrationsOauthDisconnectRoute: typeof ApiIntegrationsOauthDisconnectRoute
@@ -2117,6 +2131,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiIntegrationsAccountsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/internal/scheduled-execution': {
+      id: '/api/internal/scheduled-execution'
+      path: '/api/internal/scheduled-execution'
+      fullPath: '/api/internal/scheduled-execution'
+      preLoaderRoute: typeof ApiInternalScheduledExecutionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/help-submit': {
       id: '/api/public/help-submit'
       path: '/api/public/help-submit'
@@ -2345,6 +2366,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGoogleGmailRoute: ApiGoogleGmailRoute,
   ApiGoogleStatusRoute: ApiGoogleStatusRoute,
   ApiIntegrationsAccountsRoute: ApiIntegrationsAccountsRoute,
+  ApiInternalScheduledExecutionRoute: ApiInternalScheduledExecutionRoute,
   ApiPublicHelpSubmitRoute: ApiPublicHelpSubmitRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiIntegrationsOauthDisconnectRoute: ApiIntegrationsOauthDisconnectRoute,
