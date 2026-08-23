@@ -1605,7 +1605,7 @@ function ConnectorRow({
   onConnect: (p: LinkedProvider) => void;
   onDisconnect: (p: LinkedProvider) => void;
 }) {
-  const isLive = item.status === "live" && !!item.legacyProvider;
+  const isLive = isConnectorActionable(item);
   const connected = isLive && linked.includes(item.legacyProvider as LinkedProvider);
   return (
     <div className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
@@ -1619,9 +1619,12 @@ function ConnectorRow({
         </div>
       </div>
       {!isLive ? (
-        <Button variant="outline" size="sm" className="h-8 shrink-0" disabled>
-          Notify me
-        </Button>
+        <span
+          className="shrink-0 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
+          title={connectorUnavailableReason(item)}
+        >
+          {connectorUnavailableLabel(item)}
+        </span>
       ) : connected ? (
         <div className="flex items-center gap-2 shrink-0">
           <span className="inline-flex items-center gap-1 text-xs text-foreground">
