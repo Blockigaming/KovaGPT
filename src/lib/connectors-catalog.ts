@@ -2953,12 +2953,32 @@ export function getConnector(id: string): ConnectorItem | undefined {
 }
 
 /**
+ * The single source of truth for connectors reachable through the Google
+ * account OAuth flow. `google-calendar` has no `legacyProvider` row of its own
+ * but is genuinely connectable through the same Google grant.
+ */
+export const GOOGLE_CONNECT_IDS: ReadonlySet<string> = new Set([
+  "google",
+  "gmail",
+  "google-drive",
+  "google-calendar",
+]);
+
+/** The connect mechanism actually implemented for an entry, if any. */
+export function connectorConnectFlow(item: ConnectorItem): "google-oauth" | "github-app" | null {
+  if (item.status !== "live" && item.status !== "setup_required") return null;
+  if (GOOGLE_CONNECT_IDS.has(item.id)) return "google-oauth";
+  if (item.id === "github") return "github-app";
+  return null;
+}
+
+/**
  * True only when this app can complete a connect flow for the entry right now.
- * A "live" entry without a `legacyProvider` has no wired flow, so it is not
- * actionable regardless of its label.
+ * A "live" entry with no implemented flow is not actionable regardless of its
+ * label, and "setup_required" entries need deployment credentials first.
  */
 export function isConnectorActionable(item: ConnectorItem): boolean {
-  return item.status === "live" && !!item.legacyProvider;
+  return item.status === "live" && connectorConnectFlow(item) !== null;
 }
 
 /** Short, non-misleading label for a connector that cannot be connected yet. */
