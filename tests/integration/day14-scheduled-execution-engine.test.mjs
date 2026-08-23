@@ -10,8 +10,8 @@ test("trusted execution engine uses service-role database access", () => {
   assert.match(source, /supabaseAdmin/);
   assert.match(source, /claim_due_scheduled_tasks/);
   assert.match(source, /recover_expired_scheduled_task_leases/);
-  assert.match(source, /complete_scheduled_task_execution/);
-  assert.match(source, /fail_scheduled_task_execution/);
+  assert.match(source, /settle_scheduled_task_success/);
+  assert.match(source, /settle_scheduled_task_failure/);
 });
 
 test("scheduled execution uses the existing AI provider", () => {
@@ -28,10 +28,15 @@ test("execution produces durable run and notification evidence", () => {
   const source = read("src/lib/scheduled-execution.server.ts");
 
   assert.match(source, /scheduled_task_runs/);
-  assert.match(source, /app_notifications/);
-  assert.match(source, /notification_deliveries/);
-  assert.match(source, /task_result/);
-  assert.match(source, /task_failure/);
+  assert.match(source, /settle_scheduled_task_success/);
+  assert.match(source, /settle_scheduled_task_failure/);
+
+  const settlement = read("supabase/migrations/20260823113000_day14_atomic_settlement.sql");
+
+  assert.match(settlement, /app_notifications/);
+  assert.match(settlement, /notification_deliveries/);
+  assert.match(settlement, /task_result/);
+  assert.match(settlement, /task_failure/);
 });
 
 test("failure handling is classified and bounded by database settlement", () => {

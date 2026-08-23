@@ -25,6 +25,16 @@ export type ScheduledExecutionResult = {
   retryAt: string | null;
 };
 
+type SuccessSettlementRow = {
+  next_run_at: string | null;
+  delivery_status: string;
+};
+
+type FailureSettlementRow = {
+  retry_at: string | null;
+  delivery_status: string;
+};
+
 type RpcResult<T> = {
   data: T | null;
   error: { message: string } | null;
@@ -230,105 +240,6 @@ async function executePrompt(task: ClaimedScheduledTask): Promise<string> {
   return content.slice(0, 12000);
 }
 
-async function notify(
-  task: ClaimedScheduledTask,
-  runIdValue: string,
-  type: "task_result" | "task_failure",
-  title: string,
-  preview: string,
-): Promise<void> {
-  const safePreview = preview
-    .replace(/[\r\n\t]+/g, " ")
-    .trim()
-    .slice(0, 220);
-
-  const appNotification = await admin.from("app_notifications").insert({
-    owner_id: task.user_id,
-    type,
-    title: title.slice(0, 240),
-    safe_preview: safePreview || "Scheduled task update.",
-    action_url: "/scheduled-tasks",
-    source_entity: `scheduled_task:${task.id}`,
-    delivery_state: "delivered",
-  });
-
-  if (appNotification.error) {
-    throw new Error(`Could not create app notification: ${appNotification.error.message}`);
-  }
-
-  const delivery = await admin.from("notification_deliveries").insert({
-    user_id: task.user_id,
-    task_run_id: runIdValue,
-    channel: "in_app",
-    status: "sent",
-    preview: safePreview || "Scheduled task update.",
-    delivered_at: new Date().toISOString(),
-  });
-
-  if (delivery.error) {
-    throw new Error(`Could not record notification delivery: ${delivery.error.message}`);
-  }
-}
-
-async function markRunComplete(
-  task: ClaimedScheduledTask,
-  runIdValue: string,
-  result: string,
-  nextRunAt: string | null,
-): Promise<void> {
-  const update = await admin
-    .from("scheduled_task_runs")
-    .update({
-      status: "complete",
-      completed_at: new Date().toISOString(),
-      result_summary: result,
-      delivery_status: "sent",
-      failure_type: null,
-      retry_eligible: false,
-      next_run_at: nextRunAt,
-      safe_logs: ["Scheduled task completed successfully.", "In-app notification recorded."],
-    })
-    .eq("id", runIdValue)
-    .eq("task_id", task.id)
-    .select("id")
-    .single();
-
-  if (update.error) {
-    throw new Error(`Could not settle scheduled run: ${update.error.message}`);
-  }
-}
-
-async function markRunFailed(
-  task: ClaimedScheduledTask,
-  runIdValue: string,
-  failureType: FailureType,
-  message: string,
-  retryAt: string | null,
-): Promise<void> {
-  const update = await admin
-    .from("scheduled_task_runs")
-    .update({
-      status: "failed",
-      completed_at: new Date().toISOString(),
-      delivery_status: "sent",
-      failure_type: failureType,
-      retry_eligible: retryAt !== null,
-      next_run_at: retryAt,
-      safe_logs: [
-        message,
-        retryAt ? "A bounded automatic retry was scheduled." : "No automatic retry is scheduled.",
-      ],
-    })
-    .eq("id", runIdValue)
-    .eq("task_id", task.id)
-    .select("id")
-    .single();
-
-  if (update.error) {
-    throw new Error(`Could not record scheduled-task failure: ${update.error.message}`);
-  }
-}
-
 async function executeClaimedTask(
   task: ClaimedScheduledTask,
   workerId: string,
@@ -338,10 +249,11 @@ async function executeClaimedTask(
   try {
     const result = await executePrompt(task);
 
-    const settlement = await admin.rpc<string | null>("complete_scheduled_task_execution", {
+    const settlement = await admin.rpc<SuccessSettlementRow[]>("settle_scheduled_task_success", {
       p_task_id: task.id,
       p_worker_id: workerId,
       p_scheduled_for: scheduledFor(task),
+      p_run_id: id,
       p_result: result,
     });
 
@@ -349,11 +261,11 @@ async function executeClaimedTask(
       throw new Error(`Task completion settlement failed: ${settlement.error.message}`);
     }
 
-    const nextRunAt = settlement.data ?? null;
+    const row = settlement.data?.[0];
 
-    await notify(task, id, "task_result", `Completed: ${task.title}`, result);
-
-    await markRunComplete(task, id, result, nextRunAt);
+    if (!row) {
+      throw new Error("Task completion settlement returned no result.");
+    }
 
     return {
       taskId: task.id,
@@ -365,9 +277,10 @@ async function executeClaimedTask(
     const failure = classifyFailure(reason);
     const message = safeError(reason);
 
-    const settlement = await admin.rpc<string | null>("fail_scheduled_task_execution", {
+    const settlement = await admin.rpc<FailureSettlementRow[]>("settle_scheduled_task_failure", {
       p_task_id: task.id,
       p_worker_id: workerId,
+      p_run_id: id,
       p_failure_type: failure.type,
       p_safe_error: message,
       p_retryable: failure.retryable,
@@ -379,23 +292,19 @@ async function executeClaimedTask(
       });
     }
 
-    const retryAt = settlement.data ?? null;
+    const row = settlement.data?.[0];
 
-    await notify(
-      task,
-      id,
-      "task_failure",
-      `Task issue: ${task.title}`,
-      retryAt ? `${message} KovaGPT will retry automatically.` : message,
-    );
-
-    await markRunFailed(task, id, failure.type, message, retryAt);
+    if (!row) {
+      throw new Error("Task failure settlement returned no result.", {
+        cause: reason,
+      });
+    }
 
     return {
       taskId: task.id,
       runId: id,
       status: "failed",
-      retryAt,
+      retryAt: row.retry_at,
     };
   }
 }

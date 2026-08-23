@@ -78,10 +78,7 @@ export const Route = createFileRoute("/api/internal/scheduled-execution")({
             },
           );
         } catch (error) {
-          console.error(
-            "[scheduled-execution]",
-            error instanceof Error ? error.message : "Unknown worker failure",
-          );
+          console.error("[scheduled-execution] worker batch failed");
 
           return Response.json(
             {
