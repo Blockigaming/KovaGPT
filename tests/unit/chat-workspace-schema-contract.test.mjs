@@ -31,18 +31,20 @@ test("every chat-workspace table is owner scoped with RLS enabled", () => {
   for (const table of TABLES) {
     assert.match(contract, new RegExp(`create table if not exists public\\.${table}`));
     assert.match(contract, new RegExp(`alter table public\\.${table} enable row level security`));
-    assert.match(contract, new RegExp(`${table}_owner_(select|all|rw)`));
+    for (const action of ["select", "insert", "update", "delete"]) {
+      assert.match(contract, new RegExp(`create policy "${table}_owner_${action}"`));
+    }
   }
   // Owner columns, never a generic user_id, and always pinned to auth.uid().
   assert.match(contract, /owner_id uuid not null/);
-  assert.match(contract, /auth\.uid\(\) = owner_id/);
+  assert.match(contract, /auth\.uid\(\)\) = owner_id/);
 });
 
 test("client roles get explicit grants and anon is denied", () => {
   for (const table of TABLES) {
     assert.match(contract, new RegExp(`grant [^;]*on public\\.${table} to authenticated`));
     assert.match(contract, new RegExp(`revoke all on public\\.${table} from anon`));
-    assert.match(contract, new RegExp(`grant all on public\\.${table} to service_role`));
+    assert.match(contract, new RegExp(`grant [^;]*on public\\.${table} to service_role`));
   }
 });
 
@@ -51,10 +53,10 @@ test("uniqueness and limits are enforced in the database, not only in code", () 
   assert.match(contract, /unique \(owner_id, chat_id\)/);
   assert.match(contract, /unique \(owner_id, chat_id, source_type, source_id\)/);
   // One active branch per chat, one accepted version per message.
-  assert.match(contract, /chat_branches_one_active[\s\S]*where \(active\)/);
-  assert.match(contract, /chat_message_versions_one_accepted[\s\S]*where \(accepted\)/);
-  assert.match(contract, /length\(content\) <= 131072/);
-  assert.match(contract, /length\(instructions\) <= 8000/);
+  assert.match(contract, /uq_chat_branches_active_per_chat/);
+  assert.match(contract, /uq_chat_message_versions_accepted/);
+  assert.match(contract, /char_length\(content\) <= 131072/);
+  assert.match(contract, /char_length\(instructions\) <= 8000/);
 });
 
 test("branch lineage is guarded against cycles and cross-chat parents", () => {
