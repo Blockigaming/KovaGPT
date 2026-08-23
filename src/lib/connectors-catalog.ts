@@ -1,6 +1,16 @@
 // Catalog of connectable services shown in Apps and Settings.
+//
+// TRUTHFULNESS CONTRACT
+// `status` must describe what a signed-in user can actually do today:
+//   - "live"            an end-to-end connect/disconnect flow exists in this app
+//                       and works against the production deployment.
+//   - "setup_required"  the integration code exists but the deployment must
+//                       supply credentials before a user can connect.
+//   - "planned"         catalog listing only. No connect flow exists. The UI
+//                       must never render an actionable control for these.
+// Never mark an entry "live" to make the catalog look bigger.
 
-export type ConnectorStatus = "live";
+export type ConnectorStatus = "live" | "setup_required" | "planned";
 
 export type ConnectorCategory =
   | "Productivity"
