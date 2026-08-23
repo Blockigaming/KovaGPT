@@ -1010,6 +1010,21 @@ export const Route = createFileRoute("/api/chat")({
               }
             }
 
+            // Chat-scoped workspace context: per-chat rules and pinned files.
+            // Read server-side from owner-scoped rows so a client cannot inject
+            // rules text or pin a file it does not own. Skipped for guests and
+            // for Temporary Chat.
+            let chatWorkspaceBlock = "";
+            if (auth && typeof chatId === "string" && chatId && !temporary) {
+              const { buildChatWorkspaceBlock } = await import("@/lib/chat-workspace-context.server");
+              const workspace = await buildChatWorkspaceBlock(auth.supabaseAdmin, {
+                userId: auth.userId,
+                chatId,
+                temporary: Boolean(temporary),
+              });
+              chatWorkspaceBlock = workspace.block;
+            }
+
             const toolInstruction =
               clientTool === "deep_research"
                 ? "\n\nDEEP RESEARCH MODE: Create a structured research report. Use live web results above as sources when present, state uncertainty clearly, compare sources, and include a concise sources section with domains and URLs. If live results are unavailable, say exactly that and proceed without fabricated citations."
@@ -1050,6 +1065,7 @@ export const Route = createFileRoute("/api/chat")({
                     personalityBlock +
                     memoryBlock +
                     projectBlock +
+                    chatWorkspaceBlock +
                     webBlock +
                     toolInstruction +
                     (callerTier === "plus" || callerTier === "pro"
