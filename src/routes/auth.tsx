@@ -36,6 +36,8 @@ export const Route = createFileRoute("/auth")({
   }),
 });
 
+const RESEND_COOLDOWN_SECONDS = 45;
+
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
@@ -53,12 +55,19 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [magicSent, setMagicSent] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   const submittingRef = useRef(false);
 
   useEffect(() => {
     setEmail(search.email ?? "");
     setEditingEmail(!search.email);
   }, [search.email]);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setTimeout(() => setCooldown((value) => Math.max(0, value - 1)), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
 
   const emailValid = isValidEmail(email);
 
@@ -122,11 +131,12 @@ function AuthPage() {
     }
   };
 
-  const sendMagicLink = async () => {
+  const sendMagicLink = async (resend = false) => {
     if (!emailValid) {
       toast.error("Enter a valid email first.");
       return;
     }
+    if (cooldown > 0) return;
     if (!guard()) return;
     try {
       const { error } = await supabase.auth.signInWithOtp({
@@ -135,6 +145,8 @@ function AuthPage() {
       });
       if (error) throw error;
       setMagicSent(true);
+      setCooldown(RESEND_COOLDOWN_SECONDS);
+      if (resend) toast.success("Another link was requested.");
     } catch (err) {
       console.error("[KovaAuth] Magic-link request failed", {
         error: err instanceof Error ? err.name : "unknown_error",
@@ -162,14 +174,15 @@ function AuthPage() {
           <NovaLogo mark className="mb-6 h-10 w-10 text-foreground" />
           <h1 className="text-[30px] font-semibold leading-tight tracking-tight">
             {magicSent
-              ? "Check your email"
+              ? "Sign-in link requested"
               : isSignUp
                 ? "Create your account"
                 : "Enter your password"}
           </h1>
           {magicSent ? (
             <p className="mt-3 text-[15px] text-muted-foreground">
-              We sent a sign-in link to {email}. Open it on this device to continue.
+              We asked our email provider to send a sign-in link to {email}. Delivery can take a
+              few minutes — check your spam folder too, then open the link on this device.
             </p>
           ) : null}
         </div>
@@ -177,8 +190,20 @@ function AuthPage() {
         {magicSent ? (
           <div className="space-y-3">
             <Button
+              variant="outline"
+              disabled={loading || cooldown > 0}
               className="h-14 w-full rounded-full text-[15px]"
-              onClick={() => setMagicSent(false)}
+              onClick={() => void sendMagicLink(true)}
+            >
+              {cooldown > 0 ? `Resend available in ${cooldown}s` : "Resend the link"}
+            </Button>
+            <Button
+              variant="ghost"
+              className="h-12 w-full rounded-full text-sm text-muted-foreground"
+              onClick={() => {
+                setMagicSent(false);
+                setCooldown(0);
+              }}
             >
               Use a different email
             </Button>
@@ -265,7 +290,7 @@ function AuthPage() {
 
             <button
               type="button"
-              onClick={sendMagicLink}
+              onClick={() => void sendMagicLink(false)}
               disabled={loading}
               className="h-12 w-full rounded-full text-sm text-muted-foreground transition hover:text-foreground"
             >
