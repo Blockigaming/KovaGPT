@@ -154,6 +154,7 @@ function ChatMessageInner({
   onUpdatePendingConfirm,
   userKey,
   principalResolved,
+  chatId,
 }: {
   message: Message;
   streaming?: boolean;
@@ -164,6 +165,8 @@ function ChatMessageInner({
   onUpdatePendingConfirm?: (messageId: string, next: PendingConfirm) => void;
   userKey: string | null;
   principalResolved: boolean;
+  /** Enables durable, per-message edit history in Canvas when signed in. */
+  chatId?: string | null;
 }) {
   const principal = principalResolved ? browserStoragePrincipal(userKey) : null;
   const principalRef = useRef(principal);
@@ -666,6 +669,8 @@ function ChatMessageInner({
             kind={artifactKind}
             onImprove={onFollowUp}
             initialMode={editorMode}
+            chatId={chatId ?? null}
+            messageId={message.id ?? null}
           />
         </Suspense>
       )}

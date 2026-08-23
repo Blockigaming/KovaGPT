@@ -1707,6 +1707,7 @@ function KovaGPT() {
                   <ChatMessage
                     key={m.id}
                     message={m}
+                    chatId={active.id}
                     userKey={userKey}
                     principalResolved={isLoaded}
                     streaming={isStreaming && isLastAssistant}
