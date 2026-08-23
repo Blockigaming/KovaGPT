@@ -156,6 +156,11 @@ function toBranch(row: BranchRow): ChatBranchDto {
   };
 }
 
+/** RPC arguments are optional in the generated types; null means "unset". */
+function orUndefined<T>(value: T | null): T | undefined {
+  return value === null ? undefined : value;
+}
+
 /** Map opaque database errors onto messages a person can act on. */
 function rpcError(message: string): Error {
   if (message.includes("not_authenticated")) return new Error("Please sign in again.");
@@ -210,9 +215,9 @@ export const saveMessageVersion = createServerFn({ method: "POST" })
       p_message_id: data.messageId,
       p_source: data.source,
       p_content: data.content,
-      p_branch_id: data.branchId,
-      p_edit_instruction: data.editInstruction,
-      p_original_content: data.originalContent,
+      p_branch_id: orUndefined(data.branchId),
+      p_edit_instruction: orUndefined(data.editInstruction),
+      p_original_content: orUndefined(data.originalContent),
       p_accepted: data.accepted,
       p_max_versions: MAX_VERSIONS_PER_MESSAGE,
     });
@@ -258,12 +263,12 @@ export const createChatBranch = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<ChatBranchDto> => {
     const { data: row, error } = await context.supabase.rpc("kova_create_chat_branch", {
       p_chat_id: data.chatId,
-      p_parent_branch_id: data.parentBranchId,
-      p_branch_from_parent_message_id: data.branchFromParentMessageId,
-      p_branch_from_message_id: data.branchFromMessageId,
-      p_branch_from_message_index: data.branchFromMessageIndex,
+      p_parent_branch_id: orUndefined(data.parentBranchId),
+      p_branch_from_parent_message_id: orUndefined(data.branchFromParentMessageId),
+      p_branch_from_message_id: orUndefined(data.branchFromMessageId),
+      p_branch_from_message_index: orUndefined(data.branchFromMessageIndex),
       p_message_ids: data.messageIds,
-      p_label: data.label,
+      p_label: orUndefined(data.label),
       p_activate: data.active,
       p_max_branches: MAX_BRANCHES_PER_CHAT,
     });
@@ -295,7 +300,7 @@ export const updateChatBranchMessages = createServerFn({ method: "POST" })
     const { data: row, error } = await context.supabase.rpc("kova_update_chat_branch_messages", {
       p_branch_id: data.branchId,
       p_message_ids: data.messageIds,
-      p_label: data.label,
+      p_label: orUndefined(data.label),
     });
     if (error) throw rpcError(error.message);
     return toBranch(row as unknown as BranchRow);
