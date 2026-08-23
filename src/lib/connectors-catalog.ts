@@ -1,6 +1,16 @@
 // Catalog of connectable services shown in Apps and Settings.
+//
+// TRUTHFULNESS CONTRACT
+// `status` must describe what a signed-in user can actually do today:
+//   - "live"            an end-to-end connect/disconnect flow exists in this app
+//                       and works against the production deployment.
+//   - "setup_required"  the integration code exists but the deployment must
+//                       supply credentials before a user can connect.
+//   - "planned"         catalog listing only. No connect flow exists. The UI
+//                       must never render an actionable control for these.
+// Never mark an entry "live" to make the catalog look bigger.
 
-export type ConnectorStatus = "live";
+export type ConnectorStatus = "live" | "setup_required" | "planned";
 
 export type ConnectorCategory =
   | "Productivity"
@@ -57,7 +67,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "YouTube",
     description: "Reference your YouTube activity.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "youtube.com",
     legacyProvider: "youtube",
   },
@@ -66,7 +76,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Apple",
     description: "Sign in with your Apple ID.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "apple.com",
     legacyProvider: "apple",
   },
@@ -75,7 +85,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Outlook",
     description: "Read Microsoft Outlook mail.",
     category: "Email",
-    status: "live",
+    status: "planned",
     domain: "outlook.com",
   },
   {
@@ -83,7 +93,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "iCloud Mail",
     description: "Read iCloud mail.",
     category: "Email",
-    status: "live",
+    status: "planned",
     domain: "icloud.com",
   },
   {
@@ -91,7 +101,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Yahoo Mail",
     description: "Read Yahoo mail.",
     category: "Email",
-    status: "live",
+    status: "planned",
     domain: "yahoo.com",
   },
   {
@@ -99,7 +109,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Proton Mail",
     description: "Read Proton mail.",
     category: "Email",
-    status: "live",
+    status: "planned",
     domain: "proton.me",
   },
   {
@@ -107,7 +117,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "OneDrive",
     description: "Reference files from OneDrive.",
     category: "Storage & Files",
-    status: "live",
+    status: "planned",
     domain: "onedrive.live.com",
   },
   {
@@ -115,7 +125,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Dropbox",
     description: "Reference files from Dropbox.",
     category: "Storage & Files",
-    status: "live",
+    status: "planned",
     domain: "dropbox.com",
   },
   {
@@ -123,7 +133,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "iCloud Drive",
     description: "Reference files from iCloud.",
     category: "Storage & Files",
-    status: "live",
+    status: "planned",
     domain: "icloud.com",
   },
   {
@@ -131,7 +141,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Box",
     description: "Reference files from Box.",
     category: "Storage & Files",
-    status: "live",
+    status: "planned",
     domain: "box.com",
   },
   {
@@ -147,7 +157,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Outlook Calendar",
     description: "Read and create events.",
     category: "Calendar",
-    status: "live",
+    status: "planned",
     domain: "outlook.com",
   },
   {
@@ -155,7 +165,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Apple Calendar",
     description: "Read and create events.",
     category: "Calendar",
-    status: "live",
+    status: "planned",
     domain: "apple.com",
   },
   {
@@ -163,7 +173,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Notion",
     description: "Read and update Notion pages.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "notion.so",
   },
   {
@@ -171,7 +181,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Google Docs",
     description: "Read and edit Docs.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "docs.google.com",
   },
   {
@@ -179,7 +189,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Google Sheets",
     description: "Read and update Sheets.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "sheets.google.com",
   },
   {
@@ -187,7 +197,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Microsoft Word",
     description: "Read and edit Word docs.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "microsoft.com",
   },
   {
@@ -195,7 +205,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Microsoft Excel",
     description: "Read and update Excel.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "microsoft.com",
   },
   {
@@ -203,7 +213,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Evernote",
     description: "Read Evernote notes.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "evernote.com",
   },
   {
@@ -211,7 +221,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Obsidian",
     description: "Sync Obsidian vaults.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "obsidian.md",
   },
   {
@@ -219,7 +229,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Apple Notes",
     description: "Read Apple Notes.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "apple.com",
   },
   {
@@ -227,7 +237,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Slack",
     description: "Read channels and DMs you allow.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "slack.com",
   },
   {
@@ -235,7 +245,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Microsoft Teams",
     description: "Read Teams chats.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "teams.microsoft.com",
   },
   {
@@ -243,7 +253,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Discord",
     description: "Read allowed Discord servers.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "discord.com",
   },
   {
@@ -251,7 +261,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "WhatsApp",
     description: "Connect WhatsApp Business.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "whatsapp.com",
   },
   {
@@ -259,7 +269,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Telegram",
     description: "Connect Telegram bot.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "telegram.org",
   },
   {
@@ -267,7 +277,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Zoom",
     description: "Read meeting transcripts.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "zoom.us",
   },
   {
@@ -275,7 +285,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Trello",
     description: "Read your boards.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "trello.com",
   },
   {
@@ -283,7 +293,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Asana",
     description: "Read tasks and projects.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "asana.com",
   },
   {
@@ -291,7 +301,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Linear",
     description: "Read issues and projects.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "linear.app",
   },
   {
@@ -299,7 +309,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Todoist",
     description: "Read and update tasks.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "todoist.com",
   },
   {
@@ -307,7 +317,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Monday.com",
     description: "Read your boards.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "monday.com",
   },
   {
@@ -315,7 +325,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Jira",
     description: "Read issues and sprints.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "atlassian.com",
   },
   {
@@ -323,7 +333,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "ClickUp",
     description: "Read tasks and docs.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "clickup.com",
   },
   {
@@ -331,7 +341,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Google Classroom",
     description: "Read assignments and classes.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "classroom.google.com",
   },
   {
@@ -339,7 +349,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Canvas LMS",
     description: "Read courses and grades.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "instructure.com",
   },
   {
@@ -347,7 +357,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Schoology",
     description: "Read courses and grades.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "schoology.com",
   },
   {
@@ -355,7 +365,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "PowerSchool",
     description: "Read grades and schedules.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "powerschool.com",
   },
   {
@@ -363,7 +373,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Khan Academy",
     description: "Sync progress and recommendations.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "khanacademy.org",
   },
   {
@@ -371,7 +381,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Duolingo",
     description: "Sync your learning streak.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "duolingo.com",
   },
   {
@@ -379,7 +389,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Quizlet",
     description: "Read study sets.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "quizlet.com",
   },
   {
@@ -387,7 +397,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "TikTok",
     description: "Reference saved content.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "tiktok.com",
   },
   {
@@ -395,7 +405,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Instagram",
     description: "Reference saved posts.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "instagram.com",
   },
   {
@@ -403,7 +413,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "X (Twitter)",
     description: "Reference bookmarks.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "x.com",
   },
   {
@@ -411,7 +421,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Reddit",
     description: "Reference saved posts.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "reddit.com",
   },
   {
@@ -419,7 +429,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "LinkedIn",
     description: "Reference your profile.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "linkedin.com",
   },
   {
@@ -427,7 +437,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Spotify",
     description: "Reference your playlists.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "spotify.com",
   },
   {
@@ -435,7 +445,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Apple Music",
     description: "Reference your library.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "music.apple.com",
   },
   {
@@ -443,7 +453,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Pinterest",
     description: "Reference your boards.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "pinterest.com",
   },
   {
@@ -451,7 +461,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "GitHub",
     description: "Read repos and issues.",
     category: "Development",
-    status: "live",
+    status: "setup_required",
     domain: "github.com",
   },
   {
@@ -459,7 +469,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "GitLab",
     description: "Read repos and issues.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "gitlab.com",
   },
   {
@@ -467,7 +477,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Vercel",
     description: "Read deployments.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "vercel.com",
   },
   {
@@ -475,7 +485,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Stripe",
     description: "Read payment summaries.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "stripe.com",
   },
   {
@@ -483,7 +493,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Clever",
     description: "Check class apps, assignments, and school resources.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "clever.com",
   },
   {
@@ -491,7 +501,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "ClassLink",
     description: "Check LaunchPad apps, classes, and school tasks.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "classlink.com",
   },
   {
@@ -499,7 +509,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Blackboard Learn",
     description: "Check courses, assignments, grades, and messages.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "blackboard.com",
   },
   {
@@ -507,7 +517,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Moodle",
     description: "Check courses, assignments, grades, and feedback.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "moodle.org",
   },
   {
@@ -515,7 +525,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "D2L Brightspace",
     description: "Check coursework, grades, quizzes, and due dates.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "d2l.com",
   },
   {
@@ -523,7 +533,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Edmodo",
     description: "Check class posts, assignments, and resources.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "edmodo.com",
   },
   {
@@ -531,7 +541,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Seesaw",
     description: "Check student activities, messages, and class work.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "seesaw.me",
   },
   {
@@ -539,7 +549,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Edpuzzle",
     description: "Check video lessons, questions, and class assignments.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "edpuzzle.com",
   },
   {
@@ -547,7 +557,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Nearpod",
     description: "Check interactive lessons and assigned activities.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "nearpod.com",
   },
   {
@@ -555,7 +565,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Pear Deck",
     description: "Check interactive classroom lessons and assignments.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "peardeck.com",
   },
   {
@@ -563,7 +573,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Formative",
     description: "Check class activities, quizzes, and teacher feedback.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "goformative.com",
   },
   {
@@ -571,7 +581,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Newsela",
     description: "Check reading assignments and class articles.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "newsela.com",
   },
   {
@@ -579,7 +589,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "CommonLit",
     description: "Check reading lessons, assignments, and progress.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "commonlit.org",
   },
   {
@@ -587,7 +597,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "ReadWorks",
     description: "Check reading passages, assignments, and questions.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "readworks.org",
   },
   {
@@ -595,7 +605,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Achieve3000",
     description: "Check literacy assignments and progress.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "achieve3000.com",
   },
   {
@@ -603,7 +613,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "IXL",
     description: "Check skill practice, recommendations, and progress.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "ixl.com",
   },
   {
@@ -611,7 +621,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "i Ready",
     description: "Check lessons, diagnostics, and assignments.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "i-ready.com",
   },
   {
@@ -619,7 +629,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Renaissance",
     description: "Check Accelerated Reader, STAR, and learning progress.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "renaissance.com",
   },
   {
@@ -627,7 +637,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "myON",
     description: "Check reading lists, assignments, and progress.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "myon.com",
   },
   {
@@ -635,7 +645,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Epic",
     description: "Check student reading, collections, and progress.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "getepic.com",
   },
   {
@@ -643,7 +653,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "BrainPOP",
     description: "Check videos, quizzes, and class activities.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "brainpop.com",
   },
   {
@@ -651,7 +661,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Discovery Education",
     description: "Check digital lessons, videos, and assignments.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "discoveryeducation.com",
   },
   {
@@ -659,7 +669,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "CK 12",
     description: "Check FlexBooks, practice, and lessons.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "ck12.org",
   },
   {
@@ -667,7 +677,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Desmos",
     description: "Check math activities and classroom assignments.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "desmos.com",
   },
   {
@@ -675,7 +685,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "DeltaMath",
     description: "Check math assignments, practice, and due dates.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "deltamath.com",
   },
   {
@@ -683,7 +693,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Mathspace",
     description: "Check math tasks, lessons, and feedback.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "mathspace.co",
   },
   {
@@ -691,7 +701,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Big Ideas Math",
     description: "Check math homework, lessons, and resources.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "bigideasmath.com",
   },
   {
@@ -699,7 +709,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Savvas Realize",
     description: "Check class assignments, books, and assessments.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "savvasrealize.com",
   },
   {
@@ -707,7 +717,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Pearson Realize",
     description: "Check Pearson coursework and digital assignments.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "pearsonrealize.com",
   },
   {
@@ -715,7 +725,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "McGraw Hill Connect",
     description: "Check coursework, homework, and grades.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "mheducation.com",
   },
   {
@@ -723,7 +733,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "HMH Ed",
     description: "Check HMH assignments, lessons, and resources.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "hmhco.com",
   },
   {
@@ -731,7 +741,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "StudySync",
     description: "Check ELA lessons, assignments, and feedback.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "studysync.com",
   },
   {
@@ -739,7 +749,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Edmentum",
     description: "Check online courses, assignments, and progress.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "edmentum.com",
   },
   {
@@ -747,7 +757,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Apex Learning",
     description: "Check courses, quizzes, and remaining work.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "apexlearning.com",
   },
   {
@@ -755,7 +765,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Florida Virtual School",
     description: "Check online classes, assignments, and grades.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "flvs.net",
   },
   {
@@ -763,7 +773,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Edgenuity",
     description: "Check courses, activities, and progress.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "edgenuity.com",
   },
   {
@@ -771,7 +781,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Imagine Learning",
     description: "Check lessons, assessments, and progress.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "imaginelearning.com",
   },
   {
@@ -779,7 +789,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Naviance",
     description: "Check college planning tasks and school goals.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "naviance.com",
   },
   {
@@ -787,7 +797,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "SchooLinks",
     description: "Check college and career planning tasks.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "schoolinks.com",
   },
   {
@@ -795,7 +805,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "MajorClarity",
     description: "Check career planning lessons and assignments.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "majorclarity.com",
   },
   {
@@ -803,7 +813,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Scoir",
     description: "Check college planning steps and messages.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "scoir.com",
   },
   {
@@ -811,7 +821,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Xello",
     description: "Check career lessons, plans, and assigned tasks.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "xello.world",
   },
   {
@@ -819,7 +829,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Turnitin",
     description: "Check submissions, feedback, and originality reports.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "turnitin.com",
   },
   {
@@ -827,7 +837,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Gradescope",
     description: "Check submissions, rubrics, and grading feedback.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "gradescope.com",
   },
   {
@@ -835,7 +845,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "ExamSoft",
     description: "Check exams, results, and assessment tasks.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "examsoft.com",
   },
   {
@@ -843,7 +853,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Respondus",
     description: "Check online testing tools and assessment requirements.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "respondus.com",
   },
   {
@@ -851,7 +861,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "LockDown Browser",
     description: "Check secure testing requirements.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "respondus.com",
   },
   {
@@ -859,7 +869,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "College Board",
     description: "Check AP, SAT, and assignment resources.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "collegeboard.org",
   },
   {
@@ -867,7 +877,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "AP Classroom",
     description: "Check AP assignments, progress checks, and resources.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "apclassroom.collegeboard.org",
   },
   {
@@ -875,7 +885,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "ACT",
     description: "Check test prep, registration, and score resources.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "act.org",
   },
   {
@@ -883,7 +893,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "SAT Suite",
     description: "Check SAT practice and readiness tasks.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "satsuite.collegeboard.org",
   },
   {
@@ -891,7 +901,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "PBIS Rewards",
     description: "Check school behavior points and goals.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "pbisrewards.com",
   },
   {
@@ -899,7 +909,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "ClassDojo",
     description: "Check class messages, points, and student updates.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "classdojo.com",
   },
   {
@@ -907,7 +917,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Remind",
     description: "Check school messages, announcements, and tasks.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "remind.com",
   },
   {
@@ -915,7 +925,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "ParentSquare",
     description: "Check school announcements, messages, and forms.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "parentsquare.com",
   },
   {
@@ -923,7 +933,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Bloomz",
     description: "Check class updates, events, and messages.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "bloomz.com",
   },
   {
@@ -931,7 +941,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "TalkingPoints",
     description: "Check teacher messages and school updates.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "talkingpts.org",
   },
   {
@@ -939,7 +949,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Skyward",
     description: "Check grades, attendance, and missing work.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "skyward.com",
   },
   {
@@ -947,7 +957,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Infinite Campus",
     description: "Check grades, attendance, and classwork.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "infinitecampus.com",
   },
   {
@@ -955,7 +965,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Aeries",
     description: "Check grades, attendance, and assignments.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "aeries.com",
   },
   {
@@ -963,7 +973,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "eSchoolPLUS",
     description: "Check grades, attendance, and schedules.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "powerschool.com",
   },
   {
@@ -971,7 +981,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "StudentVUE",
     description: "Check grades, attendance, and missing assignments.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "edupoint.com",
   },
   {
@@ -979,7 +989,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "ParentVUE",
     description: "Check student grades, attendance, and assignments.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "edupoint.com",
   },
   {
@@ -987,7 +997,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "FACTS SIS",
     description: "Check school grades, assignments, and billing.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "factsmgt.com",
   },
   {
@@ -995,7 +1005,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Alma SIS",
     description: "Check grades, assignments, and school updates.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "getalma.com",
   },
   {
@@ -1003,7 +1013,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Jupiter Ed",
     description: "Check grades, assignments, and class messages.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "jupitered.com",
   },
   {
@@ -1011,7 +1021,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "TeacherEase",
     description: "Check grades, assignments, and standards progress.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "teacherease.com",
   },
   {
@@ -1019,7 +1029,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "ClassTag",
     description: "Check classroom updates, events, and messages.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "classtag.com",
   },
   {
@@ -1027,7 +1037,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Kickboard",
     description: "Check behavior progress and classroom goals.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "kickboardforschools.com",
   },
   {
@@ -1035,7 +1045,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "GoGuardian",
     description: "Check school device learning activity and reports.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "goguardian.com",
   },
   {
@@ -1043,7 +1053,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Hapara",
     description: "Check digital classroom tasks and resources.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "hapara.com",
   },
   {
@@ -1051,7 +1061,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Socrative",
     description: "Check quizzes, exit tickets, and classroom activities.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "socrative.com",
   },
   {
@@ -1059,7 +1069,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Kahoot",
     description: "Check assigned games and study challenges.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "kahoot.com",
   },
   {
@@ -1067,7 +1077,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Blooket",
     description: "Check study games and class assignments.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "blooket.com",
   },
   {
@@ -1075,7 +1085,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Gimkit",
     description: "Check class kits, assignments, and progress.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "gimkit.com",
   },
   {
@@ -1083,7 +1093,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Flocabulary",
     description: "Check vocabulary videos, quizzes, and lessons.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "flocabulary.com",
   },
   {
@@ -1091,7 +1101,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Quill",
     description: "Check writing and grammar assignments.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "quill.org",
   },
   {
@@ -1099,7 +1109,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "NoRedInk",
     description: "Check writing practice, quizzes, and assignments.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "noredink.com",
   },
   {
@@ -1107,7 +1117,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Typing.com",
     description: "Check keyboarding lessons and progress.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "typing.com",
   },
   {
@@ -1115,7 +1125,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Code.org",
     description: "Check coding lessons, projects, and progress.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "code.org",
   },
   {
@@ -1123,7 +1133,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Scratch",
     description: "Check coding projects and class studios.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "scratch.mit.edu",
   },
   {
@@ -1131,7 +1141,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "CodeHS",
     description: "Check coding courses, assignments, and grades.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "codehs.com",
   },
   {
@@ -1139,7 +1149,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Replit",
     description: "Check coding projects and classroom assignments.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "replit.com",
   },
   {
@@ -1147,7 +1157,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Tinkercad",
     description: "Check design projects and classroom activities.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "tinkercad.com",
   },
   {
@@ -1155,7 +1165,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "TypingClub",
     description: "Check typing lessons, assignments, and progress.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "typingclub.com",
   },
   {
@@ -1163,7 +1173,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Membean",
     description: "Check vocabulary sessions and assignments.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "membean.com",
   },
   {
@@ -1171,7 +1181,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Vocabulary.com",
     description: "Check word lists, practice, and assignments.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "vocabulary.com",
   },
   {
@@ -1179,7 +1189,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Gale",
     description: "Check research databases and saved sources.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "gale.com",
   },
   {
@@ -1187,7 +1197,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "JSTOR",
     description: "Check research sources and saved materials.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "jstor.org",
   },
   {
@@ -1195,7 +1205,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "ProQuest",
     description: "Check research databases and saved sources.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "proquest.com",
   },
   {
@@ -1203,7 +1213,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "EBSCO",
     description: "Check research articles and saved folders.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "ebsco.com",
   },
   {
@@ -1211,7 +1221,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "World Book",
     description: "Check research articles and student resources.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "worldbookonline.com",
   },
   {
@@ -1219,7 +1229,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Britannica School",
     description: "Check encyclopedia research and assignments.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "britannica.com",
   },
   {
@@ -1227,7 +1237,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Sora",
     description: "Check school ebooks, audiobooks, and assignments.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "soraapp.com",
   },
   {
@@ -1235,7 +1245,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "MackinVIA",
     description: "Check school library books and resources.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "mackinvia.com",
   },
   {
@@ -1243,7 +1253,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Follett Destiny",
     description: "Check school library resources and checkouts.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "follettdestiny.com",
   },
   {
@@ -1251,7 +1261,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Pear Deck Tutor",
     description: "Check tutoring sessions and learning support.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "peardecktutor.com",
   },
   {
@@ -1259,7 +1269,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Paper",
     description: "Check tutoring help and writing feedback.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "paper.co",
   },
   {
@@ -1267,7 +1277,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Brainly",
     description: "Check homework help and study answers.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "brainly.com",
   },
   {
@@ -1275,7 +1285,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Chegg",
     description: "Check study help, textbooks, and homework support.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "chegg.com",
   },
   {
@@ -1283,7 +1293,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Course Hero",
     description: "Check study guides, documents, and resources.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "coursehero.com",
   },
   {
@@ -1291,7 +1301,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Airtable",
     description: "Reference bases, records, and team workflows.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "airtable.com",
   },
   {
@@ -1299,7 +1309,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Figma",
     description: "Reference design files, comments, and prototypes.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "figma.com",
   },
   {
@@ -1307,7 +1317,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Miro",
     description: "Reference boards, diagrams, and brainstorming notes.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "miro.com",
   },
   {
@@ -1315,7 +1325,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Canva",
     description: "Reference designs, brand assets, and presentations.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "canva.com",
   },
   {
@@ -1323,7 +1333,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Adobe",
     description: "Reference creative files and document assets.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "adobe.com",
   },
   {
@@ -1331,7 +1341,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Zapier",
     description: "Reference automations and connected workflows.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "zapier.com",
   },
   {
@@ -1339,7 +1349,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Make",
     description: "Reference automations, scenarios, and workflow runs.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "make.com",
   },
   {
@@ -1347,7 +1357,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "HubSpot",
     description: "Reference contacts, companies, and deal context.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "hubspot.com",
   },
   {
@@ -1355,7 +1365,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Salesforce",
     description: "Reference CRM accounts, contacts, and opportunities.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "salesforce.com",
   },
   {
@@ -1363,7 +1373,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Zendesk",
     description: "Reference tickets, users, and support history.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "zendesk.com",
   },
   {
@@ -1371,7 +1381,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Intercom",
     description: "Reference conversations, leads, and support context.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "intercom.com",
   },
   {
@@ -1379,7 +1389,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Freshdesk",
     description: "Reference tickets and customer support context.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "freshdesk.com",
   },
   {
@@ -1387,7 +1397,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Front",
     description: "Reference shared inboxes and customer messages.",
     category: "Email",
-    status: "live",
+    status: "planned",
     domain: "front.com",
   },
   {
@@ -1395,7 +1405,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Superhuman",
     description: "Reference email context from Superhuman.",
     category: "Email",
-    status: "live",
+    status: "planned",
     domain: "superhuman.com",
   },
   {
@@ -1403,7 +1413,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "HEY",
     description: "Reference email context from HEY.",
     category: "Email",
-    status: "live",
+    status: "planned",
     domain: "hey.com",
   },
   {
@@ -1411,7 +1421,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Fastmail",
     description: "Reference messages and mailbox context.",
     category: "Email",
-    status: "live",
+    status: "planned",
     domain: "fastmail.com",
   },
   {
@@ -1419,7 +1429,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Mailchimp",
     description: "Reference campaigns, audiences, and reports.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "mailchimp.com",
   },
   {
@@ -1427,7 +1437,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Constant Contact",
     description: "Reference email campaigns and audience lists.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "constantcontact.com",
   },
   {
@@ -1435,7 +1445,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Brevo",
     description: "Reference campaigns, automations, and contacts.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "brevo.com",
   },
   {
@@ -1443,7 +1453,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Klaviyo",
     description: "Reference customer segments and campaign performance.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "klaviyo.com",
   },
   {
@@ -1451,7 +1461,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Shopify",
     description: "Reference products, orders, and storefront activity.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "shopify.com",
   },
   {
@@ -1459,7 +1469,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "WooCommerce",
     description: "Reference store orders, products, and customers.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "woocommerce.com",
   },
   {
@@ -1467,7 +1477,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Square",
     description: "Reference sales, customers, and payment activity.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "squareup.com",
   },
   {
@@ -1475,7 +1485,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "PayPal",
     description: "Reference payments, invoices, and account activity.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "paypal.com",
   },
   {
@@ -1483,7 +1493,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "QuickBooks",
     description: "Reference invoices, expenses, and accounting summaries.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "quickbooks.intuit.com",
   },
   {
@@ -1491,7 +1501,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Xero",
     description: "Reference accounting records and business finances.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "xero.com",
   },
   {
@@ -1499,7 +1509,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Wave",
     description: "Reference invoices, receipts, and accounting data.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "waveapps.com",
   },
   {
@@ -1507,7 +1517,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Plaid",
     description: "Reference connected financial account summaries.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "plaid.com",
   },
   {
@@ -1515,7 +1525,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Robinhood",
     description: "Reference brokerage watchlists and portfolio context.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "robinhood.com",
   },
   {
@@ -1523,7 +1533,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Coinbase",
     description: "Reference crypto account activity and watchlists.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "coinbase.com",
   },
   {
@@ -1531,7 +1541,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Kraken",
     description: "Reference crypto portfolio and account activity.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "kraken.com",
   },
   {
@@ -1539,7 +1549,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Notion Calendar",
     description: "Reference calendar events and schedules.",
     category: "Calendar",
-    status: "live",
+    status: "planned",
     domain: "calendar.notion.so",
   },
   {
@@ -1547,7 +1557,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Calendly",
     description: "Reference scheduled meetings and event links.",
     category: "Calendar",
-    status: "live",
+    status: "planned",
     domain: "calendly.com",
   },
   {
@@ -1555,7 +1565,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Acuity Scheduling",
     description: "Reference appointments, calendars, and availability.",
     category: "Calendar",
-    status: "live",
+    status: "planned",
     domain: "acuityscheduling.com",
   },
   {
@@ -1563,7 +1573,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Google Keep",
     description: "Reference notes, lists, and reminders.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "keep.google.com",
   },
   {
@@ -1571,7 +1581,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Coda",
     description: "Reference docs, tables, and team workflows.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "coda.io",
   },
   {
@@ -1579,7 +1589,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Quip",
     description: "Reference team docs and collaborative notes.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "quip.com",
   },
   {
@@ -1587,7 +1597,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Slite",
     description: "Reference team docs and workspace knowledge.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "slite.com",
   },
   {
@@ -1595,7 +1605,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Confluence",
     description: "Reference pages, spaces, and team knowledge.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "atlassian.com",
   },
   {
@@ -1603,7 +1613,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Dropbox Paper",
     description: "Reference collaborative docs and notes.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "dropbox.com",
   },
   {
@@ -1611,7 +1621,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Mattermost",
     description: "Reference channels, threads, and messages.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "mattermost.com",
   },
   {
@@ -1619,7 +1629,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Signal",
     description: "Reference secure messages and conversations.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "signal.org",
   },
   {
@@ -1627,7 +1637,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Google Chat",
     description: "Reference spaces, threads, and messages.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "chat.google.com",
   },
   {
@@ -1635,7 +1645,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Webex",
     description: "Reference meetings, transcripts, and messages.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "webex.com",
   },
   {
@@ -1643,7 +1653,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Google Meet",
     description: "Reference meetings, captions, and notes.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "meet.google.com",
   },
   {
@@ -1651,7 +1661,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Loom",
     description: "Reference videos, transcripts, and team updates.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "loom.com",
   },
   {
@@ -1659,7 +1669,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Otter",
     description: "Reference meeting transcripts and notes.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "otter.ai",
   },
   {
@@ -1667,7 +1677,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Fireflies.ai",
     description: "Reference call transcripts and meeting summaries.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "fireflies.ai",
   },
   {
@@ -1675,7 +1685,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Fathom",
     description: "Reference meeting recordings and summaries.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "fathom.video",
   },
   {
@@ -1683,7 +1693,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Basecamp",
     description: "Reference projects, messages, and to dos.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "basecamp.com",
   },
   {
@@ -1691,7 +1701,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Smartsheet",
     description: "Reference sheets, projects, and reports.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "smartsheet.com",
   },
   {
@@ -1699,7 +1709,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Wrike",
     description: "Reference tasks, projects, and timelines.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "wrike.com",
   },
   {
@@ -1707,7 +1717,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Height",
     description: "Reference tasks, projects, and product plans.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "height.app",
   },
   {
@@ -1715,7 +1725,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Shortcut",
     description: "Reference stories, epics, and engineering plans.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "shortcut.com",
   },
   {
@@ -1723,7 +1733,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Pivotal Tracker",
     description: "Reference stories, epics, and backlog status.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "pivotaltracker.com",
   },
   {
@@ -1731,7 +1741,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Azure DevOps",
     description: "Reference boards, repos, and pipelines.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "dev.azure.com",
   },
   {
@@ -1739,7 +1749,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Bitbucket",
     description: "Reference repositories, pull requests, and issues.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "bitbucket.org",
   },
   {
@@ -1747,7 +1757,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Sentry",
     description: "Reference issues, releases, and error context.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "sentry.io",
   },
   {
@@ -1755,7 +1765,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Datadog",
     description: "Reference dashboards, logs, and incidents.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "datadoghq.com",
   },
   {
@@ -1763,7 +1773,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "New Relic",
     description: "Reference observability dashboards and incidents.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "newrelic.com",
   },
   {
@@ -1771,7 +1781,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "PagerDuty",
     description: "Reference incidents, services, and on call schedules.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "pagerduty.com",
   },
   {
@@ -1779,7 +1789,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Opsgenie",
     description: "Reference alerts, incidents, and schedules.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "atlassian.com",
   },
   {
@@ -1787,7 +1797,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "CircleCI",
     description: "Reference builds, workflows, and deployments.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "circleci.com",
   },
   {
@@ -1795,7 +1805,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "GitHub Actions",
     description: "Reference workflow runs and deployment checks.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "github.com",
   },
   {
@@ -1803,7 +1813,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Jenkins",
     description: "Reference builds, jobs, and deployment logs.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "jenkins.io",
   },
   {
@@ -1811,7 +1821,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Docker Hub",
     description: "Reference images, repositories, and tags.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "hub.docker.com",
   },
   {
@@ -1819,7 +1829,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "AWS",
     description: "Reference cloud resources, billing, and operational context.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "aws.amazon.com",
   },
   {
@@ -1827,7 +1837,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Google Cloud",
     description: "Reference cloud resources, logs, and billing.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "cloud.google.com",
   },
   {
@@ -1835,7 +1845,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Microsoft Azure",
     description: "Reference cloud resources, logs, and billing.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "azure.microsoft.com",
   },
   {
@@ -1843,7 +1853,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Cloudflare",
     description: "Reference DNS, traffic, and security events.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "cloudflare.com",
   },
   {
@@ -1851,7 +1861,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Netlify",
     description: "Reference sites, deploys, and forms.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "netlify.com",
   },
   {
@@ -1859,7 +1869,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "DigitalOcean",
     description: "Reference projects, droplets, and billing.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "digitalocean.com",
   },
   {
@@ -1867,7 +1877,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Heroku",
     description: "Reference apps, pipelines, and logs.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "heroku.com",
   },
   {
@@ -1875,7 +1885,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "MongoDB",
     description: "Reference databases, clusters, and performance.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "mongodb.com",
   },
   {
@@ -1883,7 +1893,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "PostgreSQL",
     description: "Reference database metadata and operational context.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "postgresql.org",
   },
   {
@@ -1891,7 +1901,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "MySQL",
     description: "Reference database metadata and operational context.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "mysql.com",
   },
   {
@@ -1899,7 +1909,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Redis",
     description: "Reference cache, queues, and database context.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "redis.io",
   },
   {
@@ -1907,7 +1917,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Supabase",
     description: "Reference backend tables, auth, and storage context.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "supabase.com",
   },
   {
@@ -1915,7 +1925,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Firebase",
     description: "Reference app analytics, auth, and database context.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "firebase.google.com",
   },
   {
@@ -1923,7 +1933,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "PostHog",
     description: "Reference product analytics and event funnels.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "posthog.com",
   },
   {
@@ -1931,7 +1941,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Mixpanel",
     description: "Reference analytics events, cohorts, and funnels.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "mixpanel.com",
   },
   {
@@ -1939,7 +1949,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Amplitude",
     description: "Reference product analytics and experiment data.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "amplitude.com",
   },
   {
@@ -1947,7 +1957,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Google Analytics",
     description: "Reference website analytics and acquisition context.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "analytics.google.com",
   },
   {
@@ -1955,7 +1965,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Google Ads",
     description: "Reference campaigns, keywords, and performance.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "ads.google.com",
   },
   {
@@ -1963,7 +1973,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Meta Ads",
     description: "Reference campaigns, audiences, and reports.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "facebook.com",
   },
   {
@@ -1971,7 +1981,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "TikTok Ads",
     description: "Reference campaigns, audiences, and reports.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "ads.tiktok.com",
   },
   {
@@ -1979,7 +1989,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "LinkedIn Ads",
     description: "Reference campaigns, audiences, and reports.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "linkedin.com",
   },
   {
@@ -1987,7 +1997,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "YouTube Studio",
     description: "Reference channel analytics, comments, and content.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "studio.youtube.com",
   },
   {
@@ -1995,7 +2005,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Facebook",
     description: "Reference pages, posts, and saved content.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "facebook.com",
   },
   {
@@ -2003,7 +2013,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Threads",
     description: "Reference posts, profile context, and activity.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "threads.net",
   },
   {
@@ -2011,7 +2021,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Mastodon",
     description: "Reference posts, bookmarks, and profile activity.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "joinmastodon.org",
   },
   {
@@ -2019,7 +2029,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Medium",
     description: "Reference drafts, posts, and reading lists.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "medium.com",
   },
   {
@@ -2027,7 +2037,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Substack",
     description: "Reference newsletters, posts, and subscribers.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "substack.com",
   },
   {
@@ -2035,7 +2045,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Twitch",
     description: "Reference streams, clips, and channel activity.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "twitch.tv",
   },
   {
@@ -2043,7 +2053,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Vimeo",
     description: "Reference videos, analytics, and libraries.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "vimeo.com",
   },
   {
@@ -2051,7 +2061,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "SoundCloud",
     description: "Reference playlists, tracks, and account activity.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "soundcloud.com",
   },
   {
@@ -2059,7 +2069,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "GitHub Classroom",
     description: "Check coding assignments and classroom repositories.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "classroom.github.com",
   },
   {
@@ -2067,7 +2077,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Acme Workspace",
     description: "Reference tasks, records, and workspace updates.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "acme.com",
   },
   {
@@ -2075,7 +2085,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "TutorBird",
     description: "Reference messages, labels, and mailbox context.",
     category: "Email",
-    status: "live",
+    status: "planned",
     domain: "tutorbird.com",
   },
   {
@@ -2083,7 +2093,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "MyStudyLife",
     description: "Reference files, folders, and recent changes.",
     category: "Storage & Files",
-    status: "live",
+    status: "planned",
     domain: "mystudylife.com",
   },
   {
@@ -2091,7 +2101,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "StudySmarter",
     description: "Reference events, due dates, and schedules.",
     category: "Calendar",
-    status: "live",
+    status: "planned",
     domain: "studysmarter.com",
   },
   {
@@ -2099,7 +2109,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Brilliant",
     description: "Reference documents, notes, and shared knowledge.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "brilliant.org",
   },
   {
@@ -2107,7 +2117,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Coursera",
     description: "Reference messages, channels, and conversation context.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "coursera.org",
   },
   {
@@ -2115,7 +2125,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "edX",
     description: "Reference posts, saved content, and creator activity.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "edx.org",
   },
   {
@@ -2123,7 +2133,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Udemy",
     description: "Reference repos, issues, logs, and deployment context.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "udemy.com",
   },
   {
@@ -2131,7 +2141,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Skillshare",
     description: "Reference assignments, grades, remaining work, and class updates.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "skillshare.com",
   },
   {
@@ -2139,7 +2149,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "LinkedIn Learning",
     description: "Reference tasks, records, and workspace updates.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "learning.linkedin.com",
   },
   {
@@ -2147,7 +2157,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "OpenStax",
     description: "Reference messages, labels, and mailbox context.",
     category: "Email",
-    status: "live",
+    status: "planned",
     domain: "openstax.org",
   },
   {
@@ -2155,7 +2165,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Wolfram Alpha",
     description: "Reference files, folders, and recent changes.",
     category: "Storage & Files",
-    status: "live",
+    status: "planned",
     domain: "wolframalpha.com",
   },
   {
@@ -2163,7 +2173,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Symbolab",
     description: "Reference events, due dates, and schedules.",
     category: "Calendar",
-    status: "live",
+    status: "planned",
     domain: "symbolab.com",
   },
   {
@@ -2171,7 +2181,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "GeoGebra",
     description: "Reference documents, notes, and shared knowledge.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "geogebra.org",
   },
   {
@@ -2179,7 +2189,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Mathway",
     description: "Reference messages, channels, and conversation context.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "mathway.com",
   },
   {
@@ -2187,7 +2197,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Photomath",
     description: "Reference posts, saved content, and creator activity.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "photomath.com",
   },
   {
@@ -2195,7 +2205,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Grammarly",
     description: "Reference repos, issues, logs, and deployment context.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "grammarly.com",
   },
   {
@@ -2203,7 +2213,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Perplexity",
     description: "Reference assignments, grades, remaining work, and class updates.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "perplexity.ai",
   },
   {
@@ -2211,7 +2221,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Claude",
     description: "Reference tasks, records, and workspace updates.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "claude.ai",
   },
   {
@@ -2219,7 +2229,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "ChatGPT",
     description: "Reference messages, labels, and mailbox context.",
     category: "Email",
-    status: "live",
+    status: "planned",
     domain: "chatgpt.com",
   },
   {
@@ -2227,7 +2237,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Gemini",
     description: "Reference files, folders, and recent changes.",
     category: "Storage & Files",
-    status: "live",
+    status: "planned",
     domain: "gemini.google.com",
   },
   {
@@ -2235,7 +2245,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Poe",
     description: "Reference events, due dates, and schedules.",
     category: "Calendar",
-    status: "live",
+    status: "planned",
     domain: "poe.com",
   },
   {
@@ -2243,7 +2253,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Dropbox Sign",
     description: "Reference documents, notes, and shared knowledge.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "dropboxsign.com",
   },
   {
@@ -2251,7 +2261,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "DocuSign",
     description: "Reference messages, channels, and conversation context.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "docusign.com",
   },
   {
@@ -2259,7 +2269,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Adobe Acrobat",
     description: "Reference posts, saved content, and creator activity.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "acrobat.adobe.com",
   },
   {
@@ -2267,7 +2277,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "PDFescape",
     description: "Reference repos, issues, logs, and deployment context.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "pdfescape.com",
   },
   {
@@ -2275,7 +2285,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Smallpdf",
     description: "Reference assignments, grades, remaining work, and class updates.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "smallpdf.com",
   },
   {
@@ -2283,7 +2293,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "WeTransfer",
     description: "Reference tasks, records, and workspace updates.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "wetransfer.com",
   },
   {
@@ -2291,7 +2301,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "MEGA",
     description: "Reference messages, labels, and mailbox context.",
     category: "Email",
-    status: "live",
+    status: "planned",
     domain: "mega.io",
   },
   {
@@ -2299,7 +2309,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "pCloud",
     description: "Reference files, folders, and recent changes.",
     category: "Storage & Files",
-    status: "live",
+    status: "planned",
     domain: "pcloud.com",
   },
   {
@@ -2307,7 +2317,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Sync",
     description: "Reference events, due dates, and schedules.",
     category: "Calendar",
-    status: "live",
+    status: "planned",
     domain: "sync.com",
   },
   {
@@ -2315,7 +2325,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Microsoft To Do",
     description: "Reference documents, notes, and shared knowledge.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "todo.microsoft.com",
   },
   {
@@ -2323,7 +2333,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Things",
     description: "Reference messages, channels, and conversation context.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "culturedcode.com",
   },
   {
@@ -2331,7 +2341,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "OmniFocus",
     description: "Reference posts, saved content, and creator activity.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "omnigroup.com",
   },
   {
@@ -2339,7 +2349,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Remember The Milk",
     description: "Reference repos, issues, logs, and deployment context.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "rememberthemilk.com",
   },
   {
@@ -2347,7 +2357,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Habitica",
     description: "Reference assignments, grades, remaining work, and class updates.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "habitica.com",
   },
   {
@@ -2355,7 +2365,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Forest",
     description: "Reference tasks, records, and workspace updates.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "forestapp.cc",
   },
   {
@@ -2363,7 +2373,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "RescueTime",
     description: "Reference messages, labels, and mailbox context.",
     category: "Email",
-    status: "live",
+    status: "planned",
     domain: "rescuetime.com",
   },
   {
@@ -2371,7 +2381,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Toggl",
     description: "Reference files, folders, and recent changes.",
     category: "Storage & Files",
-    status: "live",
+    status: "planned",
     domain: "toggl.com",
   },
   {
@@ -2379,7 +2389,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Clockify",
     description: "Reference events, due dates, and schedules.",
     category: "Calendar",
-    status: "live",
+    status: "planned",
     domain: "clockify.me",
   },
   {
@@ -2387,7 +2397,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Harvest",
     description: "Reference documents, notes, and shared knowledge.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "getharvest.com",
   },
   {
@@ -2395,7 +2405,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Notability",
     description: "Reference messages, channels, and conversation context.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "notability.com",
   },
   {
@@ -2403,7 +2413,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Goodnotes",
     description: "Reference posts, saved content, and creator activity.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "goodnotes.com",
   },
   {
@@ -2411,7 +2421,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "OneNote",
     description: "Reference repos, issues, logs, and deployment context.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "onenote.com",
   },
   {
@@ -2419,7 +2429,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Roam Research",
     description: "Reference assignments, grades, remaining work, and class updates.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "roamresearch.com",
   },
   {
@@ -2427,7 +2437,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Logseq",
     description: "Reference tasks, records, and workspace updates.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "logseq.com",
   },
   {
@@ -2435,7 +2445,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Readwise",
     description: "Reference messages, labels, and mailbox context.",
     category: "Email",
-    status: "live",
+    status: "planned",
     domain: "readwise.io",
   },
   {
@@ -2443,7 +2453,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Pocket",
     description: "Reference files, folders, and recent changes.",
     category: "Storage & Files",
-    status: "live",
+    status: "planned",
     domain: "getpocket.com",
   },
   {
@@ -2451,7 +2461,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Instapaper",
     description: "Reference events, due dates, and schedules.",
     category: "Calendar",
-    status: "live",
+    status: "planned",
     domain: "instapaper.com",
   },
   {
@@ -2459,7 +2469,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Raindrop.io",
     description: "Reference documents, notes, and shared knowledge.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "raindrop.io",
   },
   {
@@ -2467,7 +2477,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Feedly",
     description: "Reference messages, channels, and conversation context.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "feedly.com",
   },
   {
@@ -2475,7 +2485,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Inoreader",
     description: "Reference posts, saved content, and creator activity.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "inoreader.com",
   },
   {
@@ -2483,7 +2493,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "DEV Community",
     description: "Reference repos, issues, logs, and deployment context.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "dev.to",
   },
   {
@@ -2491,7 +2501,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Stack Overflow",
     description: "Reference assignments, grades, remaining work, and class updates.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "stackoverflow.com",
   },
   {
@@ -2499,7 +2509,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Product Hunt",
     description: "Reference tasks, records, and workspace updates.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "producthunt.com",
   },
   {
@@ -2507,7 +2517,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Dribbble",
     description: "Reference messages, labels, and mailbox context.",
     category: "Email",
-    status: "live",
+    status: "planned",
     domain: "dribbble.com",
   },
   {
@@ -2515,7 +2525,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Behance",
     description: "Reference files, folders, and recent changes.",
     category: "Storage & Files",
-    status: "live",
+    status: "planned",
     domain: "behance.net",
   },
   {
@@ -2523,7 +2533,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Unsplash",
     description: "Reference events, due dates, and schedules.",
     category: "Calendar",
-    status: "live",
+    status: "planned",
     domain: "unsplash.com",
   },
   {
@@ -2531,7 +2541,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Pexels",
     description: "Reference documents, notes, and shared knowledge.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "pexels.com",
   },
   {
@@ -2539,7 +2549,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "FigJam",
     description: "Reference messages, channels, and conversation context.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "figma.com",
   },
   {
@@ -2547,7 +2557,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Framer",
     description: "Reference posts, saved content, and creator activity.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "framer.com",
   },
   {
@@ -2555,7 +2565,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Webflow",
     description: "Reference repos, issues, logs, and deployment context.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "webflow.com",
   },
   {
@@ -2563,7 +2573,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "WordPress",
     description: "Reference assignments, grades, remaining work, and class updates.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "wordpress.com",
   },
   {
@@ -2571,7 +2581,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Ghost",
     description: "Reference tasks, records, and workspace updates.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "ghost.org",
   },
   {
@@ -2579,7 +2589,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Wix",
     description: "Reference messages, labels, and mailbox context.",
     category: "Email",
-    status: "live",
+    status: "planned",
     domain: "wix.com",
   },
   {
@@ -2587,7 +2597,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Squarespace",
     description: "Reference files, folders, and recent changes.",
     category: "Storage & Files",
-    status: "live",
+    status: "planned",
     domain: "squarespace.com",
   },
   {
@@ -2595,7 +2605,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Typeform",
     description: "Reference events, due dates, and schedules.",
     category: "Calendar",
-    status: "live",
+    status: "planned",
     domain: "typeform.com",
   },
   {
@@ -2603,7 +2613,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Jotform",
     description: "Reference documents, notes, and shared knowledge.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "jotform.com",
   },
   {
@@ -2611,7 +2621,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Google Forms",
     description: "Reference messages, channels, and conversation context.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "forms.google.com",
   },
   {
@@ -2619,7 +2629,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "SurveyMonkey",
     description: "Reference posts, saved content, and creator activity.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "surveymonkey.com",
   },
   {
@@ -2627,7 +2637,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Qualtrics",
     description: "Reference repos, issues, logs, and deployment context.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "qualtrics.com",
   },
   {
@@ -2635,7 +2645,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Doodle",
     description: "Reference assignments, grades, remaining work, and class updates.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "doodle.com",
   },
   {
@@ -2643,7 +2653,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "When2meet",
     description: "Reference tasks, records, and workspace updates.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "when2meet.com",
   },
   {
@@ -2651,7 +2661,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Linear Docs",
     description: "Reference messages, labels, and mailbox context.",
     category: "Email",
-    status: "live",
+    status: "planned",
     domain: "linear.app",
   },
   {
@@ -2659,7 +2669,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Raycast",
     description: "Reference files, folders, and recent changes.",
     category: "Storage & Files",
-    status: "live",
+    status: "planned",
     domain: "raycast.com",
   },
   {
@@ -2667,7 +2677,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Alfred",
     description: "Reference events, due dates, and schedules.",
     category: "Calendar",
-    status: "live",
+    status: "planned",
     domain: "alfredapp.com",
   },
   {
@@ -2675,7 +2685,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "1Password",
     description: "Reference documents, notes, and shared knowledge.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "1password.com",
   },
   {
@@ -2683,7 +2693,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "LastPass",
     description: "Reference messages, channels, and conversation context.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "lastpass.com",
   },
   {
@@ -2691,7 +2701,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Bitwarden",
     description: "Reference posts, saved content, and creator activity.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "bitwarden.com",
   },
   {
@@ -2699,7 +2709,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Dashlane",
     description: "Reference repos, issues, logs, and deployment context.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "dashlane.com",
   },
   {
@@ -2707,7 +2717,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Zapier Tables",
     description: "Reference assignments, grades, remaining work, and class updates.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "zapier.com",
   },
   {
@@ -2715,7 +2725,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Google Tasks",
     description: "Reference tasks, records, and workspace updates.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "tasks.google.com",
   },
   {
@@ -2723,7 +2733,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Apple Reminders",
     description: "Reference messages, labels, and mailbox context.",
     category: "Email",
-    status: "live",
+    status: "planned",
     domain: "icloud.com",
   },
   {
@@ -2731,7 +2741,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Milanote",
     description: "Reference files, folders, and recent changes.",
     category: "Storage & Files",
-    status: "live",
+    status: "planned",
     domain: "milanote.com",
   },
   {
@@ -2739,7 +2749,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Whimsical",
     description: "Reference events, due dates, and schedules.",
     category: "Calendar",
-    status: "live",
+    status: "planned",
     domain: "whimsical.com",
   },
   {
@@ -2747,7 +2757,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Lucidchart",
     description: "Reference documents, notes, and shared knowledge.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "lucid.co",
   },
   {
@@ -2755,7 +2765,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "draw.io",
     description: "Reference messages, channels, and conversation context.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "drawio.com",
   },
   {
@@ -2763,7 +2773,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "PlantUML",
     description: "Reference posts, saved content, and creator activity.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "plantuml.com",
   },
   {
@@ -2771,7 +2781,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Mermaid",
     description: "Reference repos, issues, logs, and deployment context.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "mermaid.js.org",
   },
   {
@@ -2779,7 +2789,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "OpenAI",
     description: "Reference assignments, grades, remaining work, and class updates.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "openai.com",
   },
   {
@@ -2787,7 +2797,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Anthropic",
     description: "Reference tasks, records, and workspace updates.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "anthropic.com",
   },
   {
@@ -2795,7 +2805,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Hugging Face",
     description: "Reference messages, labels, and mailbox context.",
     category: "Email",
-    status: "live",
+    status: "planned",
     domain: "huggingface.co",
   },
   {
@@ -2803,7 +2813,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Kaggle",
     description: "Reference files, folders, and recent changes.",
     category: "Storage & Files",
-    status: "live",
+    status: "planned",
     domain: "kaggle.com",
   },
   {
@@ -2811,7 +2821,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Google Colab",
     description: "Reference events, due dates, and schedules.",
     category: "Calendar",
-    status: "live",
+    status: "planned",
     domain: "colab.research.google.com",
   },
   {
@@ -2819,7 +2829,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Jupyter",
     description: "Reference documents, notes, and shared knowledge.",
     category: "Notes & Docs",
-    status: "live",
+    status: "planned",
     domain: "jupyter.org",
   },
   {
@@ -2827,7 +2837,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Observable",
     description: "Reference messages, channels, and conversation context.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "observablehq.com",
   },
   {
@@ -2835,7 +2845,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Tableau",
     description: "Reference posts, saved content, and creator activity.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "tableau.com",
   },
   {
@@ -2843,7 +2853,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Power BI",
     description: "Reference repos, issues, logs, and deployment context.",
     category: "Development",
-    status: "live",
+    status: "planned",
     domain: "powerbi.microsoft.com",
   },
   {
@@ -2851,7 +2861,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Looker",
     description: "Reference assignments, grades, remaining work, and class updates.",
     category: "Education",
-    status: "live",
+    status: "planned",
     domain: "lookerstudio.google.com",
   },
   {
@@ -2859,7 +2869,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Metabase",
     description: "Reference tasks, records, and workspace updates.",
     category: "Productivity",
-    status: "live",
+    status: "planned",
     domain: "metabase.com",
   },
   {
@@ -2867,75 +2877,18 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Mode",
     description: "Reference messages, labels, and mailbox context.",
     category: "Email",
-    status: "live",
+    status: "planned",
     domain: "mode.com",
   },
 
   // --- Top popular picks across four sections ---
-  // Productivity
-  {
-    id: "airtable",
-    label: "Airtable",
-    description: "Reference bases, records, and views.",
-    category: "Productivity",
-    status: "live",
-    domain: "airtable.com",
-  },
-  {
-    id: "coda",
-    label: "Coda",
-    description: "Reference Coda docs and tables.",
-    category: "Productivity",
-    status: "live",
-    domain: "coda.io",
-  },
-  {
-    id: "confluence",
-    label: "Confluence",
-    description: "Reference team wiki pages.",
-    category: "Productivity",
-    status: "live",
-    domain: "atlassian.com",
-  },
-  {
-    id: "basecamp",
-    label: "Basecamp",
-    description: "Reference projects and to-dos.",
-    category: "Productivity",
-    status: "live",
-    domain: "basecamp.com",
-  },
-  {
-    id: "hubspot",
-    label: "HubSpot",
-    description: "Reference CRM contacts and deals.",
-    category: "Productivity",
-    status: "live",
-    domain: "hubspot.com",
-  },
-  // Communication
-  {
-    id: "signal",
-    label: "Signal",
-    description: "Reference Signal message context.",
-    category: "Communication",
-    status: "live",
-    domain: "signal.org",
-  },
-  {
-    id: "webex",
-    label: "Webex",
-    description: "Reference Webex meetings.",
-    category: "Communication",
-    status: "live",
-    domain: "webex.com",
-  },
+  // Productivity,
   {
     id: "google-meet",
     label: "Google Meet",
     description: "Reference Meet calls and recaps.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "meet.google.com",
   },
   {
@@ -2943,7 +2896,7 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "FaceTime",
     description: "Reference FaceTime calls.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "apple.com",
   },
   {
@@ -2951,90 +2904,25 @@ export const CONNECTOR_CATALOG: ConnectorItem[] = [
     label: "Messenger",
     description: "Reference Messenger chats.",
     category: "Communication",
-    status: "live",
+    status: "planned",
     domain: "messenger.com",
   },
-  // Social & Media
+  // Social & Media,
   {
     id: "youtube-music",
     label: "YouTube Music",
     description: "Reference your playlists and history.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "music.youtube.com",
-  },
-  {
-    id: "soundcloud",
-    label: "SoundCloud",
-    description: "Reference tracks and likes.",
-    category: "Social & Media",
-    status: "live",
-    domain: "soundcloud.com",
-  },
-  {
-    id: "twitch",
-    label: "Twitch",
-    description: "Reference streams and followed channels.",
-    category: "Social & Media",
-    status: "live",
-    domain: "twitch.tv",
   },
   {
     id: "snapchat",
     label: "Snapchat",
     description: "Reference memories and saved content.",
     category: "Social & Media",
-    status: "live",
+    status: "planned",
     domain: "snapchat.com",
-  },
-  {
-    id: "threads",
-    label: "Threads",
-    description: "Reference posts and replies.",
-    category: "Social & Media",
-    status: "live",
-    domain: "threads.net",
-  },
-  // Development
-  {
-    id: "bitbucket",
-    label: "Bitbucket",
-    description: "Read repos and pull requests.",
-    category: "Development",
-    status: "live",
-    domain: "bitbucket.org",
-  },
-  {
-    id: "netlify",
-    label: "Netlify",
-    description: "Read deployments and sites.",
-    category: "Development",
-    status: "live",
-    domain: "netlify.com",
-  },
-  {
-    id: "cloudflare",
-    label: "Cloudflare",
-    description: "Read Workers and Pages projects.",
-    category: "Development",
-    status: "live",
-    domain: "cloudflare.com",
-  },
-  {
-    id: "aws",
-    label: "AWS",
-    description: "Read resource summaries.",
-    category: "Development",
-    status: "live",
-    domain: "aws.amazon.com",
-  },
-  {
-    id: "sentry",
-    label: "Sentry",
-    description: "Read error reports and issues.",
-    category: "Development",
-    status: "live",
-    domain: "sentry.io",
   },
 ];
 
@@ -3049,3 +2937,60 @@ export const CONNECTOR_CATEGORIES: ConnectorCategory[] = [
   "Social & Media",
   "Development",
 ];
+
+/** Connectors a user can actually connect today. */
+export const LIVE_CONNECTOR_IDS: ReadonlySet<string> = new Set(
+  CONNECTOR_CATALOG.filter((item) => item.status === "live").map((item) => item.id),
+);
+
+/** Connectors whose code ships but need deployment credentials first. */
+export const SETUP_REQUIRED_CONNECTOR_IDS: ReadonlySet<string> = new Set(
+  CONNECTOR_CATALOG.filter((item) => item.status === "setup_required").map((item) => item.id),
+);
+
+export function getConnector(id: string): ConnectorItem | undefined {
+  return CONNECTOR_CATALOG.find((item) => item.id === id);
+}
+
+/**
+ * The single source of truth for connectors reachable through the Google
+ * account OAuth flow. `google-calendar` has no `legacyProvider` row of its own
+ * but is genuinely connectable through the same Google grant.
+ */
+export const GOOGLE_CONNECT_IDS: ReadonlySet<string> = new Set([
+  "google",
+  "gmail",
+  "google-drive",
+  "google-calendar",
+]);
+
+/** The connect mechanism actually implemented for an entry, if any. */
+export function connectorConnectFlow(item: ConnectorItem): "google-oauth" | "github-app" | null {
+  if (item.status !== "live" && item.status !== "setup_required") return null;
+  if (GOOGLE_CONNECT_IDS.has(item.id)) return "google-oauth";
+  if (item.id === "github") return "github-app";
+  return null;
+}
+
+/**
+ * True only when this app can complete a connect flow for the entry right now.
+ * A "live" entry with no implemented flow is not actionable regardless of its
+ * label, and "setup_required" entries need deployment credentials first.
+ */
+export function isConnectorActionable(item: ConnectorItem): boolean {
+  return item.status === "live" && connectorConnectFlow(item) !== null;
+}
+
+/** Short, non-misleading label for a connector that cannot be connected yet. */
+export function connectorUnavailableLabel(item: ConnectorItem): string {
+  if (item.status === "setup_required") return "Requires setup";
+  return "Not available yet";
+}
+
+/** Longer explanation, used for tooltips and screen-reader descriptions. */
+export function connectorUnavailableReason(item: ConnectorItem): string {
+  if (item.status === "setup_required") {
+    return `${item.label} is implemented but this deployment has not been given ${item.label} credentials yet.`;
+  }
+  return `${item.label} is listed in the catalog. KovaGPT does not have a ${item.label} connection yet.`;
+}

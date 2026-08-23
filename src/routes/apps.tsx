@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useUser, SignInButton } from "@/components/auth/ClerkSafe";
 import {
   CONNECTOR_CATALOG,
+  GOOGLE_CONNECT_IDS,
   type ConnectorItem,
   type ConnectorCategory,
 } from "@/lib/connectors-catalog";
@@ -57,7 +58,8 @@ import {
   writePrincipalHandoff,
 } from "@/lib/principal-browser-storage.mjs";
 
-const GOOGLE_IDS = new Set(["google", "gmail", "google-drive", "google-calendar"]);
+// The catalog owns which ids the Google grant actually covers.
+const GOOGLE_IDS = GOOGLE_CONNECT_IDS;
 
 // Apps that are actually wired up end-to-end today. Non-working connectors are
 // intentionally hidden so navigation never exposes fake or decorative controls.

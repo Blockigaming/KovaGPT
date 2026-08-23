@@ -61,6 +61,9 @@ import {
 import {
   CONNECTOR_CATALOG,
   CONNECTOR_CATEGORIES,
+  connectorUnavailableLabel,
+  connectorUnavailableReason,
+  isConnectorActionable,
   type ConnectorItem,
 } from "@/lib/connectors-catalog";
 import { toast } from "sonner";
@@ -1605,8 +1608,12 @@ function ConnectorRow({
   onConnect: (p: LinkedProvider) => void;
   onDisconnect: (p: LinkedProvider) => void;
 }) {
-  const isLive = item.status === "live" && !!item.legacyProvider;
-  const connected = isLive && linked.includes(item.legacyProvider as LinkedProvider);
+  const actionable = isConnectorActionable(item);
+  // Some genuinely connectable entries (e.g. Google Calendar) are covered by a
+  // broader account grant and have no standalone row of their own, so they are
+  // managed from the Apps page rather than toggled here.
+  const provider = item.legacyProvider ?? null;
+  const connected = actionable && !!provider && linked.includes(provider);
   return (
     <div className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
       <div className="flex items-center gap-3 min-w-0">
@@ -1618,9 +1625,16 @@ function ConnectorRow({
           <div className="text-xs text-muted-foreground truncate">{item.description}</div>
         </div>
       </div>
-      {!isLive ? (
-        <Button variant="outline" size="sm" className="h-8 shrink-0" disabled>
-          Notify me
+      {!actionable ? (
+        <span
+          className="shrink-0 rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground"
+          title={connectorUnavailableReason(item)}
+        >
+          {connectorUnavailableLabel(item)}
+        </span>
+      ) : !provider ? (
+        <Button asChild variant="outline" size="sm" className="h-8 shrink-0">
+          <Link to="/apps">Manage in Apps</Link>
         </Button>
       ) : connected ? (
         <div className="flex items-center gap-2 shrink-0">
@@ -1631,7 +1645,7 @@ function ConnectorRow({
             variant="ghost"
             size="sm"
             className="h-8 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-            onClick={() => onDisconnect(item.legacyProvider as LinkedProvider)}
+            onClick={() => onDisconnect(provider)}
           >
             Disconnect
           </Button>
@@ -1642,7 +1656,7 @@ function ConnectorRow({
           size="sm"
           className="h-8 shrink-0"
           disabled={!canConnect}
-          onClick={() => onConnect(item.legacyProvider as LinkedProvider)}
+          onClick={() => onConnect(provider)}
         >
           Connect
         </Button>
