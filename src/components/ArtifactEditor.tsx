@@ -20,12 +20,20 @@ import {
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { saveToLibrary } from "@/lib/library.functions";
+import { listMessageVersions, saveMessageVersion } from "@/lib/chat-workspace.functions";
 import { useUser, useClerkSafe } from "@/components/auth/ClerkSafe";
 import { addToContextPack, continueInResearch, openInWork } from "@/lib/workspace-handoffs";
 import { RealtimeReadiness } from "@/components/RealtimeReadiness";
 import { buildPreviewDoc, type ArtifactKind } from "./artifact-utils";
 
-type SessionVersion = { id: number; content: string; savedAt: number; label: string };
+type SessionVersion = {
+  id: number;
+  content: string;
+  savedAt: number;
+  label: string;
+  /** True when this entry is stored server-side and survives closing Canvas. */
+  durable?: boolean;
+};
 
 function documentOutline(value: string, isCode: boolean) {
   const lines = value.split("\n");
@@ -50,6 +58,8 @@ export function ArtifactEditor({
   kind,
   onImprove,
   initialMode = "edit",
+  chatId,
+  messageId,
 }: {
   open: boolean;
   onClose: () => void;
@@ -57,6 +67,12 @@ export function ArtifactEditor({
   kind: ArtifactKind;
   onImprove?: (prompt: string) => void;
   initialMode?: "edit" | "preview";
+  /**
+   * When both ids are present and the user is signed in, edits are recorded as
+   * durable message versions instead of session-only history.
+   */
+  chatId?: string | null;
+  messageId?: string | null;
 }) {
   const LONG_THRESHOLD = 50_000;
   const canTruncate = kind === "writing" && initialContent.length > LONG_THRESHOLD;
@@ -81,6 +97,10 @@ export function ArtifactEditor({
   const userKey = user?.id ?? null;
   const clerk = useClerkSafe();
   const saveFn = useServerFn(saveToLibrary);
+  const listVersionsFn = useServerFn(listMessageVersions);
+  const saveVersionFn = useServerFn(saveMessageVersion);
+  const canPersistVersions = Boolean(isSignedIn && chatId && messageId);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const artifactTitle =
     kind === "code"
       ? "Code artifact"
@@ -120,8 +140,42 @@ export function ArtifactEditor({
       setVersions([
         { id: Date.now(), content: initialContent, savedAt: Date.now(), label: "Original" },
       ]);
+      setHistoryError(null);
     }
   }, [open, initialContent, initialMode, canTruncate, kind]);
+
+  // Load durable versions for this message so history survives closing Canvas.
+  useEffect(() => {
+    if (!open || !canPersistVersions || !chatId || !messageId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const rows = await listVersionsFn({ data: { chatId, messageId } });
+        if (cancelled) return;
+        const durable = rows
+          .slice()
+          .reverse()
+          .map((row) => ({
+            id: new Date(row.createdAt).getTime() + row.version,
+            content: row.content,
+            savedAt: new Date(row.createdAt).getTime(),
+            label: `Saved v${row.version}${row.accepted ? " (current)" : ""}`,
+            durable: true,
+          }));
+        if (durable.length > 0) {
+          setVersions((current) => [...durable, ...current].slice(0, 30));
+        }
+      } catch (error) {
+        if (cancelled) return;
+        setHistoryError(
+          error instanceof Error ? error.message : "Saved versions could not be loaded.",
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, canPersistVersions, chatId, messageId, listVersionsFn]);
 
   useEffect(() => {
     if (!open) return;
@@ -167,17 +221,66 @@ export function ArtifactEditor({
   useEffect(() => {
     if (!open || saveState !== "unsaved") return;
     setSaveState("saving");
+    let cancelled = false;
     const timer = window.setTimeout(() => {
-      setVersions((current) =>
-        [
-          { id: Date.now(), content: value, savedAt: Date.now(), label: "Autosaved" },
-          ...current,
-        ].slice(0, 20),
-      );
-      setSaveState("saved");
+      void (async () => {
+        // Persist first, then label the entry honestly: only a resolved server
+        // write may be shown as saved beyond this session.
+        let durable = false;
+        if (canPersistVersions && chatId && messageId && value.trim()) {
+          try {
+            await saveVersionFn({
+              data: {
+                chatId,
+                messageId,
+                source: "inline_edit",
+                content: value,
+                originalContent: initialContent,
+                accepted: true,
+              },
+            });
+            durable = true;
+            if (!cancelled) setHistoryError(null);
+          } catch (error) {
+            if (!cancelled) {
+              setHistoryError(
+                error instanceof Error
+                  ? error.message
+                  : "This edit is only kept for the current session.",
+              );
+            }
+          }
+        }
+        if (cancelled) return;
+        setVersions((current) =>
+          [
+            {
+              id: Date.now(),
+              content: value,
+              savedAt: Date.now(),
+              label: durable ? "Saved to this chat" : "Session only",
+              durable,
+            },
+            ...current,
+          ].slice(0, 30),
+        );
+        setSaveState("saved");
+      })();
     }, 900);
-    return () => window.clearTimeout(timer);
-  }, [open, saveState, value]);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [
+    open,
+    saveState,
+    value,
+    canPersistVersions,
+    chatId,
+    messageId,
+    initialContent,
+    saveVersionFn,
+  ]);
 
   if (!open) return null;
 
@@ -438,15 +541,29 @@ export function ArtifactEditor({
             >
               <h2 className="mb-1 text-sm font-semibold">Version history</h2>
               <p className="mb-3 text-xs text-muted-foreground">
-                Session versions are kept while this Canvas is open.
+                {canPersistVersions
+                  ? "Edits are saved to this chat and stay available after you close Canvas."
+                  : "Versions are kept only while this Canvas is open."}
               </p>
+              {historyError ? (
+                <p role="alert" className="mb-3 text-xs text-destructive">
+                  {historyError}
+                </p>
+              ) : null}
               <div className="space-y-2">
                 {versions.map((version) => (
                   <div
                     key={version.id}
                     className="rounded-lg border border-border bg-background p-2"
                   >
-                    <div className="text-xs font-medium">{version.label}</div>
+                    <div className="flex items-center gap-1.5 text-xs font-medium">
+                      {version.label}
+                      {version.durable ? null : (
+                        <span className="rounded bg-muted px-1 py-px text-[10px] font-normal text-muted-foreground">
+                          not saved
+                        </span>
+                      )}
+                    </div>
                     <div className="text-[11px] text-muted-foreground">
                       {new Date(version.savedAt).toLocaleTimeString()}
                     </div>
