@@ -286,8 +286,6 @@ export function describePinStatus(status) {
   }
 }
 
-export type_placeholder_removed = undefined; // eslint-disable-line
-
 /**
  * Precedence for prompt assembly: global custom instructions, then project
  * instructions, then per-chat rules. Later entries win on conflict because the
