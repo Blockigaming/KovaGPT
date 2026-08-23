@@ -127,42 +127,56 @@ export type Database = {
       }
       chat_branches: {
         Row: {
+          active: boolean
+          branch_from_message_id: string | null
+          branch_from_message_index: number | null
+          branch_from_parent_message_id: string | null
           chat_id: string
           created_at: string
           id: string
-          is_active: boolean
           label: string | null
-          origin_message_id: string | null
-          parent_message_id: string | null
-          position: number
+          message_ids: string[]
+          owner_id: string
+          parent_branch_id: string | null
           updated_at: string
-          user_id: string
         }
         Insert: {
+          active?: boolean
+          branch_from_message_id?: string | null
+          branch_from_message_index?: number | null
+          branch_from_parent_message_id?: string | null
           chat_id: string
           created_at?: string
           id?: string
-          is_active?: boolean
           label?: string | null
-          origin_message_id?: string | null
-          parent_message_id?: string | null
-          position?: number
+          message_ids?: string[]
+          owner_id: string
+          parent_branch_id?: string | null
           updated_at?: string
-          user_id: string
         }
         Update: {
+          active?: boolean
+          branch_from_message_id?: string | null
+          branch_from_message_index?: number | null
+          branch_from_parent_message_id?: string | null
           chat_id?: string
           created_at?: string
           id?: string
-          is_active?: boolean
           label?: string | null
-          origin_message_id?: string | null
-          parent_message_id?: string | null
-          position?: number
+          message_ids?: string[]
+          owner_id?: string
+          parent_branch_id?: string | null
           updated_at?: string
-          user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "chat_branches_parent_branch_id_fkey"
+            columns: ["parent_branch_id"]
+            isOneToOne: false
+            referencedRelation: "chat_branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       chat_custom_rules: {
         Row: {
@@ -170,27 +184,27 @@ export type Database = {
           created_at: string
           enabled: boolean
           id: string
-          rules: string
+          instructions: string
+          owner_id: string
           updated_at: string
-          user_id: string
         }
         Insert: {
           chat_id: string
           created_at?: string
           enabled?: boolean
           id?: string
-          rules?: string
+          instructions?: string
+          owner_id: string
           updated_at?: string
-          user_id: string
         }
         Update: {
           chat_id?: string
           created_at?: string
           enabled?: boolean
           id?: string
-          rules?: string
+          instructions?: string
+          owner_id?: string
           updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }
@@ -229,82 +243,92 @@ export type Database = {
       }
       chat_message_versions: {
         Row: {
+          accepted: boolean
+          branch_id: string | null
           chat_id: string
           content: string
           created_at: string
+          edit_instruction: string | null
           id: string
-          instruction: string | null
           message_id: string
-          selection_end: number | null
-          selection_start: number | null
-          user_id: string
+          original_content: string | null
+          owner_id: string
+          source: string
           version: number
         }
         Insert: {
+          accepted?: boolean
+          branch_id?: string | null
           chat_id: string
           content: string
           created_at?: string
+          edit_instruction?: string | null
           id?: string
-          instruction?: string | null
           message_id: string
-          selection_end?: number | null
-          selection_start?: number | null
-          user_id: string
-          version?: number
+          original_content?: string | null
+          owner_id: string
+          source: string
+          version: number
         }
         Update: {
+          accepted?: boolean
+          branch_id?: string | null
           chat_id?: string
           content?: string
           created_at?: string
+          edit_instruction?: string | null
           id?: string
-          instruction?: string | null
           message_id?: string
-          selection_end?: number | null
-          selection_start?: number | null
-          user_id?: string
+          original_content?: string | null
+          owner_id?: string
+          source?: string
           version?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "chat_message_versions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "chat_branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       chat_pinned_files: {
         Row: {
           chat_id: string
           created_at: string
-          file_id: string | null
-          file_name: string | null
           id: string
-          position: number
+          owner_id: string
           project_id: string | null
-          user_id: string
+          source_id: string
+          source_type: string
+          status: string
+          updated_at: string
         }
         Insert: {
           chat_id: string
           created_at?: string
-          file_id?: string | null
-          file_name?: string | null
           id?: string
-          position?: number
+          owner_id: string
           project_id?: string | null
-          user_id: string
+          source_id: string
+          source_type: string
+          status?: string
+          updated_at?: string
         }
         Update: {
           chat_id?: string
           created_at?: string
-          file_id?: string | null
-          file_name?: string | null
           id?: string
-          position?: number
+          owner_id?: string
           project_id?: string | null
-          user_id?: string
+          source_id?: string
+          source_type?: string
+          status?: string
+          updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "chat_pinned_files_file_id_fkey"
-            columns: ["file_id"]
-            isOneToOne: false
-            referencedRelation: "project_files"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "chat_pinned_files_project_id_fkey"
             columns: ["project_id"]
@@ -1580,8 +1604,12 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
-      kova_can_use_project_file: {
-        Args: { p_file_id: string }
+      kova_can_pin_source: {
+        Args: {
+          p_project_id: string
+          p_source_id: string
+          p_source_type: string
+        }
         Returns: boolean
       }
       match_project_chunks: {
