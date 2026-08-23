@@ -41,9 +41,14 @@ test("catalog ids are unique so Apps and Settings cannot render duplicates", () 
   assert.deepEqual(duplicates, [], `duplicate connector ids: ${duplicates.join(", ")}`);
 });
 
+const GOOGLE_CONNECT_IDS = new Set(["google", "gmail", "google-drive", "google-calendar"]);
+
 test("only connectors with a wired provider flow may claim live status", () => {
   const dishonest = entries()
-    .filter((item) => item.status === "live" && !item.legacyProvider)
+    .filter(
+      (item) =>
+        item.status === "live" && !item.legacyProvider && !GOOGLE_CONNECT_IDS.has(item.id),
+    )
     .map((item) => item.id);
   assert.deepEqual(
     dishonest,
@@ -70,4 +75,15 @@ test("no UI surface offers a fake notification signup for unavailable connectors
       `${file} must not promise notifications it never sends`,
     );
   }
+});
+
+test("the catalog owns the Google connect id set instead of each UI redeclaring it", () => {
+  const catalog = readFileSync("src/lib/connectors-catalog.ts", "utf8");
+  assert.match(catalog, /export const GOOGLE_CONNECT_IDS/);
+  assert.match(catalog, /export function connectorConnectFlow/);
+  assert.match(
+    readFileSync("src/routes/apps.tsx", "utf8"),
+    /GOOGLE_CONNECT_IDS/,
+    "the Apps page must reuse the catalog's Google id set",
+  );
 });
