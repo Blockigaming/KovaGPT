@@ -2937,3 +2937,40 @@ export const CONNECTOR_CATEGORIES: ConnectorCategory[] = [
   "Social & Media",
   "Development",
 ];
+
+/** Connectors a user can actually connect today. */
+export const LIVE_CONNECTOR_IDS: ReadonlySet<string> = new Set(
+  CONNECTOR_CATALOG.filter((item) => item.status === "live").map((item) => item.id),
+);
+
+/** Connectors whose code ships but need deployment credentials first. */
+export const SETUP_REQUIRED_CONNECTOR_IDS: ReadonlySet<string> = new Set(
+  CONNECTOR_CATALOG.filter((item) => item.status === "setup_required").map((item) => item.id),
+);
+
+export function getConnector(id: string): ConnectorItem | undefined {
+  return CONNECTOR_CATALOG.find((item) => item.id === id);
+}
+
+/**
+ * True only when this app can complete a connect flow for the entry right now.
+ * A "live" entry without a `legacyProvider` has no wired flow, so it is not
+ * actionable regardless of its label.
+ */
+export function isConnectorActionable(item: ConnectorItem): boolean {
+  return item.status === "live" && !!item.legacyProvider;
+}
+
+/** Short, non-misleading label for a connector that cannot be connected yet. */
+export function connectorUnavailableLabel(item: ConnectorItem): string {
+  if (item.status === "setup_required") return "Requires setup";
+  return "Not available yet";
+}
+
+/** Longer explanation, used for tooltips and screen-reader descriptions. */
+export function connectorUnavailableReason(item: ConnectorItem): string {
+  if (item.status === "setup_required") {
+    return `${item.label} is implemented but this deployment has not been given ${item.label} credentials yet.`;
+  }
+  return `${item.label} is listed in the catalog. KovaGPT does not have a ${item.label} connection yet.`;
+}
