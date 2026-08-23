@@ -61,6 +61,9 @@ import {
 import {
   CONNECTOR_CATALOG,
   CONNECTOR_CATEGORIES,
+  connectorUnavailableLabel,
+  connectorUnavailableReason,
+  isConnectorActionable,
   type ConnectorItem,
 } from "@/lib/connectors-catalog";
 import { toast } from "sonner";
