@@ -1,18 +1,45 @@
 // Validation contract for the durable chat-workspace tables.
 //
-// Kept in a plain .mjs module so both the server functions and the Node test
-// suite validate against exactly the same rules. Every limit here is enforced
-// server-side; the client only mirrors them for nicer messages.
+// This mirrors the exact production schema: every table is owner-scoped
+// (`owner_id`), rules live in `instructions`, message history is versioned with
+// an explicit `source`, and pins reference a `source_type`/`source_id` pair.
+//
+// Kept as a plain .mjs module so the server functions and the Node test suite
+// validate against exactly the same rules. Every limit here is also enforced by
+// database CHECK constraints; the client only mirrors them for nicer messages.
 
 export const MAX_CHAT_ID_LENGTH = 128;
-export const MAX_MESSAGE_CONTENT_LENGTH = 200_000;
-export const MAX_INSTRUCTION_LENGTH = 2_000;
+export const MAX_MESSAGE_ID_LENGTH = 256;
+export const MAX_MESSAGE_CONTENT_LENGTH = 131_072;
+export const MAX_EDIT_INSTRUCTION_LENGTH = 4_000;
 export const MAX_RULES_LENGTH = 8_000;
 export const MAX_LABEL_LENGTH = 120;
-export const MAX_FILE_NAME_LENGTH = 260;
 export const MAX_VERSIONS_PER_MESSAGE = 50;
 export const MAX_BRANCHES_PER_CHAT = 40;
 export const MAX_PINS_PER_CHAT = 25;
+export const MAX_BRANCH_MESSAGE_IDS = 2_000;
+
+export const MESSAGE_VERSION_SOURCES = Object.freeze([
+  "original",
+  "inline_edit",
+  "branch_edit",
+  "regeneration",
+]);
+
+export const PIN_SOURCE_TYPES = Object.freeze(["library", "project_file"]);
+
+export const PIN_STATUSES = Object.freeze([
+  "ready",
+  "indexing",
+  "failed",
+  "deleted",
+  "permission_lost",
+]);
+
+/** Total characters of pinned-file content injected into one prompt. */
+export const MAX_PINNED_CONTEXT_CHARS = 24_000;
+/** Per-item ceiling so one large file cannot consume the whole budget. */
+export const MAX_PINNED_ITEM_CHARS = 8_000;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -26,11 +53,25 @@ export function parseChatId(value) {
   return trimmed;
 }
 
+export function parseMessageId(value, label = "message id") {
+  if (typeof value !== "string") throw new Error(`A ${label} is required.`);
+  const trimmed = value.trim();
+  if (!trimmed) throw new Error(`A ${label} is required.`);
+  if (trimmed.length > MAX_MESSAGE_ID_LENGTH) throw new Error(`That ${label} is too long.`);
+  if (!/^[A-Za-z0-9._:-]+$/.test(trimmed)) throw new Error(`That ${label} is not valid.`);
+  return trimmed;
+}
+
 export function parseUuid(value, label = "id") {
   if (typeof value !== "string" || !UUID_RE.test(value.trim())) {
     throw new Error(`That ${label} is not valid.`);
   }
   return value.trim();
+}
+
+function optionalUuid(value, label) {
+  if (value === undefined || value === null || value === "") return null;
+  return parseUuid(value, label);
 }
 
 function optionalText(value, max, label) {
@@ -45,7 +86,7 @@ function optionalText(value, max, label) {
 function optionalIndex(value, label) {
   if (value === undefined || value === null) return null;
   if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
-    throw new Error(`${label} must be a whole number of characters.`);
+    throw new Error(`${label} must be a whole number.`);
   }
   return value;
 }
@@ -53,68 +94,196 @@ function optionalIndex(value, label) {
 export function parseMessageVersionInput(input) {
   const source = input ?? {};
   const chatId = parseChatId(source.chatId);
-  const messageId = parseChatId(source.messageId);
+  const messageId = parseMessageId(source.messageId);
+
+  if (typeof source.source !== "string" || !MESSAGE_VERSION_SOURCES.includes(source.source)) {
+    throw new Error("That version source is not valid.");
+  }
   if (typeof source.content !== "string" || !source.content.trim()) {
     throw new Error("Edited text cannot be empty.");
   }
   if (source.content.length > MAX_MESSAGE_CONTENT_LENGTH) {
     throw new Error("That edit is too long to save.");
   }
-  const selectionStart = optionalIndex(source.selectionStart, "Selection start");
-  const selectionEnd = optionalIndex(source.selectionEnd, "Selection end");
-  if (selectionStart !== null && selectionEnd !== null && selectionEnd < selectionStart) {
-    throw new Error("That selection range is not valid.");
+  if (
+    source.originalContent !== undefined &&
+    source.originalContent !== null &&
+    (typeof source.originalContent !== "string" ||
+      source.originalContent.length > MAX_MESSAGE_CONTENT_LENGTH)
+  ) {
+    throw new Error("The original text is too long to save.");
   }
+
   return {
     chatId,
     messageId,
+    branchId: optionalUuid(source.branchId, "branch"),
+    source: source.source,
+    editInstruction: optionalText(
+      source.editInstruction,
+      MAX_EDIT_INSTRUCTION_LENGTH,
+      "Edit instruction",
+    ),
     content: source.content,
-    instruction: optionalText(source.instruction, MAX_INSTRUCTION_LENGTH, "Instruction"),
-    selectionStart,
-    selectionEnd,
+    originalContent:
+      source.originalContent === undefined || source.originalContent === null
+        ? null
+        : source.originalContent,
+    accepted: source.accepted !== false,
   };
+}
+
+export function parseMessageIds(value) {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) throw new Error("Branch messages must be a list.");
+  if (value.length > MAX_BRANCH_MESSAGE_IDS) throw new Error("That branch has too many messages.");
+  return value.map((entry) => parseMessageId(entry, "branch message id"));
 }
 
 export function parseBranchInput(input) {
   const source = input ?? {};
   return {
     chatId: parseChatId(source.chatId),
+    parentBranchId: optionalUuid(source.parentBranchId, "parent branch"),
+    branchFromParentMessageId: source.branchFromParentMessageId
+      ? parseMessageId(source.branchFromParentMessageId, "message id")
+      : null,
+    branchFromMessageId: source.branchFromMessageId
+      ? parseMessageId(source.branchFromMessageId, "message id")
+      : null,
+    branchFromMessageIndex: optionalIndex(source.branchFromMessageIndex, "Message index"),
+    messageIds: parseMessageIds(source.messageIds),
     label: optionalText(source.label, MAX_LABEL_LENGTH, "Branch name"),
-    parentMessageId: source.parentMessageId ? parseChatId(source.parentMessageId) : null,
-    originMessageId: source.originMessageId ? parseChatId(source.originMessageId) : null,
-    isActive: source.isActive !== false,
+    active: source.active !== false,
+  };
+}
+
+export function parseBranchActivationInput(input) {
+  const source = input ?? {};
+  return {
+    chatId: parseChatId(source.chatId),
+    branchId: parseUuid(source.branchId, "branch"),
   };
 }
 
 export function parseCustomRulesInput(input) {
   const source = input ?? {};
-  const rules = typeof source.rules === "string" ? source.rules : "";
-  if (rules.length > MAX_RULES_LENGTH) {
-    throw new Error(`Chat rules must be ${MAX_RULES_LENGTH} characters or fewer.`);
+  const instructions = typeof source.instructions === "string" ? source.instructions : "";
+  if (instructions.length > MAX_RULES_LENGTH) {
+    throw new Error(`Chat instructions must be ${MAX_RULES_LENGTH} characters or fewer.`);
   }
   return {
     chatId: parseChatId(source.chatId),
-    rules,
+    instructions,
     enabled: source.enabled !== false,
   };
 }
 
 export function parsePinInput(input) {
   const source = input ?? {};
-  const fileId = source.fileId ? parseUuid(source.fileId, "file") : null;
-  const fileName = optionalText(source.fileName, MAX_FILE_NAME_LENGTH, "File name");
-  if (!fileId && !fileName) throw new Error("A file is required to pin.");
+  if (typeof source.sourceType !== "string" || !PIN_SOURCE_TYPES.includes(source.sourceType)) {
+    throw new Error("That pin source type is not valid.");
+  }
+  const sourceId = parseUuid(source.sourceId, "source");
+  const projectId = optionalUuid(source.projectId, "project");
+  if (source.sourceType === "library" && projectId) {
+    throw new Error("Library pins cannot belong to a project.");
+  }
+  if (source.sourceType === "project_file" && !projectId) {
+    throw new Error("A project is required to pin a project file.");
+  }
+  const status = source.status === undefined || source.status === null ? "ready" : source.status;
+  if (typeof status !== "string" || !PIN_STATUSES.includes(status)) {
+    throw new Error("That pin status is not valid.");
+  }
   return {
     chatId: parseChatId(source.chatId),
-    fileId,
-    fileName,
-    projectId: source.projectId ? parseUuid(source.projectId, "project") : null,
+    sourceType: source.sourceType,
+    sourceId,
+    projectId,
+    status,
+  };
+}
+
+export function parsePinStatusInput(input) {
+  const source = input ?? {};
+  if (typeof source.status !== "string" || !PIN_STATUSES.includes(source.status)) {
+    throw new Error("That pin status is not valid.");
+  }
+  return {
+    chatId: parseChatId(source.chatId),
+    pinId: parseUuid(source.pinId, "pin"),
+    status: source.status,
   };
 }
 
 export function parseUnpinInput(input) {
   const source = input ?? {};
   return { chatId: parseChatId(source.chatId), pinId: parseUuid(source.pinId, "pin") };
+}
+
+/**
+ * Clamp pinned-file content to a bounded prompt budget. Returns per-item
+ * truncation flags plus totals so callers can disclose exactly what was cut.
+ */
+export function budgetPinnedContext(items, options = {}) {
+  const totalBudget = Math.max(1, options.totalChars ?? MAX_PINNED_CONTEXT_CHARS);
+  const itemBudget = Math.max(1, options.itemChars ?? MAX_PINNED_ITEM_CHARS);
+  const maxItems = Math.max(1, options.maxItems ?? MAX_PINS_PER_CHAT);
+
+  const included = [];
+  let usedChars = 0;
+  let skipped = 0;
+  let truncatedCount = 0;
+
+  for (const item of items ?? []) {
+    if (included.length >= maxItems) {
+      skipped += 1;
+      continue;
+    }
+    if (item.status !== "ready" || typeof item.content !== "string" || !item.content) {
+      // Unavailable items are still disclosed, but carry no content.
+      included.push({ ...item, content: "", truncated: false, includedChars: 0 });
+      continue;
+    }
+    const remaining = totalBudget - usedChars;
+    if (remaining <= 0) {
+      skipped += 1;
+      continue;
+    }
+    const limit = Math.min(itemBudget, remaining);
+    const truncated = item.content.length > limit;
+    const content = truncated ? item.content.slice(0, limit) : item.content;
+    usedChars += content.length;
+    if (truncated) truncatedCount += 1;
+    included.push({ ...item, content, truncated, includedChars: content.length });
+  }
+
+  return {
+    items: included,
+    usedChars,
+    totalBudget,
+    truncatedCount,
+    skippedCount: skipped,
+    truncated: truncatedCount > 0 || skipped > 0,
+  };
+}
+
+export function describePinStatus(status) {
+  switch (status) {
+    case "ready":
+      return "available";
+    case "indexing":
+      return "still being processed";
+    case "failed":
+      return "could not be read";
+    case "deleted":
+      return "no longer exists";
+    case "permission_lost":
+      return "no longer accessible to you";
+    default:
+      return "in an unknown state";
+  }
 }
 
 /**

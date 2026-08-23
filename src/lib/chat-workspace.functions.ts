@@ -1,42 +1,60 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
+  budgetPinnedContext,
+  parseBranchActivationInput,
   parseBranchInput,
   parseChatId,
   parseCustomRulesInput,
+  parseMessageId,
+  parseMessageIds,
   parseMessageVersionInput,
   parsePinInput,
+  parsePinStatusInput,
   parseUnpinInput,
+  parseUuid,
   MAX_BRANCHES_PER_CHAT,
+  MAX_PINNED_CONTEXT_CHARS,
+  MAX_PINNED_ITEM_CHARS,
   MAX_PINS_PER_CHAT,
   MAX_VERSIONS_PER_MESSAGE,
+  type MessageVersionSource,
+  type PinSourceType,
+  type PinStatus,
 } from "@/lib/chat-workspace-contract.mjs";
 
 export type MessageVersionDto = {
   id: string;
+  chatId: string;
   messageId: string;
+  branchId: string | null;
   version: number;
+  source: MessageVersionSource;
+  editInstruction: string | null;
   content: string;
-  instruction: string | null;
-  selectionStart: number | null;
-  selectionEnd: number | null;
+  originalContent: string | null;
+  accepted: boolean;
   createdAt: string;
 };
 
 export type ChatBranchDto = {
   id: string;
   chatId: string;
+  parentBranchId: string | null;
+  branchFromParentMessageId: string | null;
+  branchFromMessageId: string | null;
+  branchFromMessageIndex: number | null;
+  messageIds: string[];
   label: string | null;
-  parentMessageId: string | null;
-  originMessageId: string | null;
-  position: number;
-  isActive: boolean;
+  active: boolean;
   createdAt: string;
+  updatedAt: string;
 };
 
 export type ChatCustomRulesDto = {
+  id: string;
   chatId: string;
-  rules: string;
+  instructions: string;
   enabled: boolean;
   updatedAt: string;
 };
@@ -44,101 +62,184 @@ export type ChatCustomRulesDto = {
 export type ChatPinnedFileDto = {
   id: string;
   chatId: string;
-  fileId: string | null;
-  fileName: string | null;
+  sourceType: PinSourceType;
+  sourceId: string;
   projectId: string | null;
-  position: number;
+  status: PinStatus;
+  createdAt: string;
 };
 
+export type PinnedContextDto = {
+  items: {
+    pinId: string;
+    sourceType: PinSourceType;
+    sourceId: string;
+    projectId: string | null;
+    status: PinStatus;
+    statusLabel: string;
+    name: string;
+    content: string;
+    truncated: boolean;
+    includedChars: number;
+  }[];
+  usedChars: number;
+  totalBudget: number;
+  truncatedCount: number;
+  skippedCount: number;
+  truncated: boolean;
+};
+
+const VERSION_COLUMNS =
+  "id, chat_id, message_id, branch_id, version, source, edit_instruction, content, original_content, accepted, created_at";
+const BRANCH_COLUMNS =
+  "id, chat_id, parent_branch_id, branch_from_parent_message_id, branch_from_message_id, branch_from_message_index, message_ids, label, active, created_at, updated_at";
+const RULES_COLUMNS = "id, chat_id, instructions, enabled, updated_at";
+const PIN_COLUMNS = "id, chat_id, source_type, source_id, project_id, status, created_at";
+
+type VersionRow = {
+  id: string;
+  chat_id: string;
+  message_id: string;
+  branch_id: string | null;
+  version: number;
+  source: string;
+  edit_instruction: string | null;
+  content: string;
+  original_content: string | null;
+  accepted: boolean;
+  created_at: string;
+};
+
+type BranchRow = {
+  id: string;
+  chat_id: string;
+  parent_branch_id: string | null;
+  branch_from_parent_message_id: string | null;
+  branch_from_message_id: string | null;
+  branch_from_message_index: number | null;
+  message_ids: string[] | null;
+  label: string | null;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+function toVersion(row: VersionRow): MessageVersionDto {
+  return {
+    id: row.id,
+    chatId: row.chat_id,
+    messageId: row.message_id,
+    branchId: row.branch_id,
+    version: row.version,
+    source: row.source as MessageVersionSource,
+    editInstruction: row.edit_instruction,
+    content: row.content,
+    originalContent: row.original_content,
+    accepted: row.accepted,
+    createdAt: row.created_at,
+  };
+}
+
+function toBranch(row: BranchRow): ChatBranchDto {
+  return {
+    id: row.id,
+    chatId: row.chat_id,
+    parentBranchId: row.parent_branch_id,
+    branchFromParentMessageId: row.branch_from_parent_message_id,
+    branchFromMessageId: row.branch_from_message_id,
+    branchFromMessageIndex: row.branch_from_message_index,
+    messageIds: row.message_ids ?? [],
+    label: row.label,
+    active: row.active,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+/** RPC arguments are optional in the generated types; null means "unset". */
+function orUndefined<T>(value: T | null): T | undefined {
+  return value === null ? undefined : value;
+}
+
+/** Map opaque database errors onto messages a person can act on. */
+function rpcError(message: string): Error {
+  if (message.includes("not_authenticated")) return new Error("Please sign in again.");
+  if (message.includes("branch_limit_reached")) {
+    return new Error(`This chat already has the maximum of ${MAX_BRANCHES_PER_CHAT} branches.`);
+  }
+  if (message.includes("parent_branch_not_found")) {
+    return new Error("That parent branch is not part of this chat.");
+  }
+  if (message.includes("branch_not_found")) return new Error("That branch no longer exists.");
+  if (message.includes("version_not_found")) return new Error("That version no longer exists.");
+  if (message.includes("lineage cycle")) return new Error("Branches cannot form a loop.");
+  return new Error(message);
+}
+
 /* ------------------------------------------------------------------ *
- * Message versions — durable history for edited assistant/user text.
+ * Message versions — durable, concurrency-safe edit history.
  * ------------------------------------------------------------------ */
 
 export const listMessageVersions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { chatId: string; messageId?: string }) => ({
     chatId: parseChatId(input?.chatId),
-    messageId: input?.messageId ? parseChatId(input.messageId) : null,
+    messageId: input?.messageId ? parseMessageId(input.messageId) : null,
   }))
   .handler(async ({ data, context }): Promise<MessageVersionDto[]> => {
     let query = context.supabase
       .from("chat_message_versions")
-      .select("id, message_id, version, content, instruction, selection_start, selection_end, created_at")
-      .eq("user_id", context.userId)
+      .select(VERSION_COLUMNS)
+      .eq("owner_id", context.userId)
       .eq("chat_id", data.chatId)
+      .order("message_id", { ascending: true })
       .order("version", { ascending: true })
       .limit(MAX_VERSIONS_PER_MESSAGE * 20);
     if (data.messageId) query = query.eq("message_id", data.messageId);
     const { data: rows, error } = await query;
     if (error) throw new Error(error.message);
-    return (rows ?? []).map((row) => ({
-      id: row.id,
-      messageId: row.message_id,
-      version: row.version,
-      content: row.content,
-      instruction: row.instruction,
-      selectionStart: row.selection_start,
-      selectionEnd: row.selection_end,
-      createdAt: row.created_at,
-    }));
+    return (rows ?? []).map((row) => toVersion(row as VersionRow));
   });
 
+/**
+ * Allocation of the next version number happens inside a locked RPC, so
+ * simultaneous edits of the same message can never collide on the
+ * (owner, chat, message, version) unique constraint or leave two accepted rows.
+ */
 export const saveMessageVersion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(parseMessageVersionInput)
   .handler(async ({ data, context }): Promise<MessageVersionDto> => {
-    const { data: latest, error: latestError } = await context.supabase
-      .from("chat_message_versions")
-      .select("version")
-      .eq("user_id", context.userId)
-      .eq("chat_id", data.chatId)
-      .eq("message_id", data.messageId)
-      .order("version", { ascending: false })
-      .limit(1);
-    if (latestError) throw new Error(latestError.message);
+    const { data: row, error } = await context.supabase.rpc("kova_record_message_version", {
+      p_chat_id: data.chatId,
+      p_message_id: data.messageId,
+      p_source: data.source,
+      p_content: data.content,
+      p_branch_id: orUndefined(data.branchId),
+      p_edit_instruction: orUndefined(data.editInstruction),
+      p_original_content: orUndefined(data.originalContent),
+      p_accepted: data.accepted,
+      p_max_versions: MAX_VERSIONS_PER_MESSAGE,
+    });
+    if (error) throw rpcError(error.message);
+    return toVersion(row as unknown as VersionRow);
+  });
 
-    const nextVersion = (latest?.[0]?.version ?? 0) + 1;
-    const { data: row, error } = await context.supabase
-      .from("chat_message_versions")
-      .insert({
-        user_id: context.userId,
-        chat_id: data.chatId,
-        message_id: data.messageId,
-        content: data.content,
-        version: nextVersion,
-        instruction: data.instruction,
-        selection_start: data.selectionStart,
-        selection_end: data.selectionEnd,
-      })
-      .select("id, message_id, version, content, instruction, selection_start, selection_end, created_at")
-      .single();
-    if (error) throw new Error(error.message);
-
-    // Bound growth per message; keep the newest MAX_VERSIONS_PER_MESSAGE.
-    if (nextVersion > MAX_VERSIONS_PER_MESSAGE) {
-      await context.supabase
-        .from("chat_message_versions")
-        .delete()
-        .eq("user_id", context.userId)
-        .eq("chat_id", data.chatId)
-        .eq("message_id", data.messageId)
-        .lte("version", nextVersion - MAX_VERSIONS_PER_MESSAGE);
-    }
-
-    return {
-      id: row.id,
-      messageId: row.message_id,
-      version: row.version,
-      content: row.content,
-      instruction: row.instruction,
-      selectionStart: row.selection_start,
-      selectionEnd: row.selection_end,
-      createdAt: row.created_at,
-    };
+export const acceptMessageVersion = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { versionId: string }) => ({
+    versionId: parseUuid(input?.versionId, "version"),
+  }))
+  .handler(async ({ data, context }): Promise<MessageVersionDto> => {
+    const { data: row, error } = await context.supabase.rpc("kova_accept_message_version", {
+      p_version_id: data.versionId,
+    });
+    if (error) throw rpcError(error.message);
+    return toVersion(row as unknown as VersionRow);
   });
 
 /* ------------------------------------------------------------------ *
- * Branches — durable chat tree.
+ * Branches — durable chat tree with a single active branch per chat.
  * ------------------------------------------------------------------ */
 
 export const listChatBranches = createServerFn({ method: "GET" })
@@ -147,88 +248,72 @@ export const listChatBranches = createServerFn({ method: "GET" })
   .handler(async ({ data, context }): Promise<ChatBranchDto[]> => {
     const { data: rows, error } = await context.supabase
       .from("chat_branches")
-      .select("id, chat_id, label, parent_message_id, origin_message_id, position, is_active, created_at")
-      .eq("user_id", context.userId)
+      .select(BRANCH_COLUMNS)
+      .eq("owner_id", context.userId)
       .eq("chat_id", data.chatId)
-      .order("position", { ascending: true })
+      .order("created_at", { ascending: true })
       .limit(MAX_BRANCHES_PER_CHAT);
     if (error) throw new Error(error.message);
-    return (rows ?? []).map((row) => ({
-      id: row.id,
-      chatId: row.chat_id,
-      label: row.label,
-      parentMessageId: row.parent_message_id,
-      originMessageId: row.origin_message_id,
-      position: row.position,
-      isActive: row.is_active,
-      createdAt: row.created_at,
-    }));
+    return (rows ?? []).map((row) => toBranch(row as BranchRow));
   });
 
-export const recordChatBranch = createServerFn({ method: "POST" })
+export const createChatBranch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(parseBranchInput)
   .handler(async ({ data, context }): Promise<ChatBranchDto> => {
-    const { count, error: countError } = await context.supabase
-      .from("chat_branches")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", context.userId)
-      .eq("chat_id", data.chatId);
-    if (countError) throw new Error(countError.message);
-    if ((count ?? 0) >= MAX_BRANCHES_PER_CHAT) {
-      throw new Error(`This chat already has the maximum of ${MAX_BRANCHES_PER_CHAT} branches.`);
-    }
-
-    if (data.isActive) {
-      await context.supabase
-        .from("chat_branches")
-        .update({ is_active: false })
-        .eq("user_id", context.userId)
-        .eq("chat_id", data.chatId);
-    }
-
-    const { data: row, error } = await context.supabase
-      .from("chat_branches")
-      .insert({
-        user_id: context.userId,
-        chat_id: data.chatId,
-        label: data.label,
-        parent_message_id: data.parentMessageId,
-        origin_message_id: data.originMessageId,
-        position: count ?? 0,
-        is_active: data.isActive,
-      })
-      .select("id, chat_id, label, parent_message_id, origin_message_id, position, is_active, created_at")
-      .single();
-    if (error) throw new Error(error.message);
-    return {
-      id: row.id,
-      chatId: row.chat_id,
-      label: row.label,
-      parentMessageId: row.parent_message_id,
-      originMessageId: row.origin_message_id,
-      position: row.position,
-      isActive: row.is_active,
-      createdAt: row.created_at,
-    };
+    const { data: row, error } = await context.supabase.rpc("kova_create_chat_branch", {
+      p_chat_id: data.chatId,
+      p_parent_branch_id: orUndefined(data.parentBranchId),
+      p_branch_from_parent_message_id: orUndefined(data.branchFromParentMessageId),
+      p_branch_from_message_id: orUndefined(data.branchFromMessageId),
+      p_branch_from_message_index: orUndefined(data.branchFromMessageIndex),
+      p_message_ids: data.messageIds,
+      p_label: orUndefined(data.label),
+      p_activate: data.active,
+      p_max_branches: MAX_BRANCHES_PER_CHAT,
+    });
+    if (error) throw rpcError(error.message);
+    return toBranch(row as unknown as BranchRow);
   });
 
+/** Deactivate-then-activate happens in one locked statement pair server-side. */
 export const activateChatBranch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { chatId: string; branchId: string }) => ({
-    chatId: parseChatId(input?.chatId),
-    branchId: parseChatId(input?.branchId),
+  .inputValidator(parseBranchActivationInput)
+  .handler(async ({ data, context }): Promise<ChatBranchDto> => {
+    const { data: row, error } = await context.supabase.rpc("kova_activate_chat_branch", {
+      p_chat_id: data.chatId,
+      p_branch_id: data.branchId,
+    });
+    if (error) throw rpcError(error.message);
+    return toBranch(row as unknown as BranchRow);
+  });
+
+export const updateChatBranchMessages = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { branchId: string; messageIds: string[]; label?: string }) => ({
+    branchId: parseUuid(input?.branchId, "branch"),
+    messageIds: parseMessageIds(input?.messageIds),
+    label: input?.label ? String(input.label).slice(0, 120) : null,
   }))
+  .handler(async ({ data, context }): Promise<ChatBranchDto> => {
+    const { data: row, error } = await context.supabase.rpc("kova_update_chat_branch_messages", {
+      p_branch_id: data.branchId,
+      p_message_ids: data.messageIds,
+      p_label: orUndefined(data.label),
+    });
+    if (error) throw rpcError(error.message);
+    return toBranch(row as unknown as BranchRow);
+  });
+
+export const deleteChatBranch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(parseBranchActivationInput)
   .handler(async ({ data, context }) => {
-    await context.supabase
-      .from("chat_branches")
-      .update({ is_active: false })
-      .eq("user_id", context.userId)
-      .eq("chat_id", data.chatId);
     const { error } = await context.supabase
       .from("chat_branches")
-      .update({ is_active: true })
-      .eq("user_id", context.userId)
+      .delete()
+      .eq("owner_id", context.userId)
       .eq("chat_id", data.chatId)
       .eq("id", data.branchId);
     if (error) throw new Error(error.message);
@@ -245,16 +330,17 @@ export const getChatCustomRules = createServerFn({ method: "GET" })
   .handler(async ({ data, context }): Promise<ChatCustomRulesDto | null> => {
     const { data: rows, error } = await context.supabase
       .from("chat_custom_rules")
-      .select("chat_id, rules, enabled, updated_at")
-      .eq("user_id", context.userId)
+      .select(RULES_COLUMNS)
+      .eq("owner_id", context.userId)
       .eq("chat_id", data.chatId)
       .limit(1);
     if (error) throw new Error(error.message);
     const row = rows?.[0];
     if (!row) return null;
     return {
+      id: row.id,
       chatId: row.chat_id,
-      rules: row.rules,
+      instructions: row.instructions,
       enabled: row.enabled,
       updatedAt: row.updated_at,
     };
@@ -268,23 +354,62 @@ export const saveChatCustomRules = createServerFn({ method: "POST" })
       .from("chat_custom_rules")
       .upsert(
         {
-          user_id: context.userId,
+          owner_id: context.userId,
           chat_id: data.chatId,
-          rules: data.rules,
+          instructions: data.instructions,
           enabled: data.enabled,
           updated_at: new Date().toISOString(),
         },
-        { onConflict: "user_id,chat_id" },
+        { onConflict: "owner_id,chat_id" },
       )
-      .select("chat_id, rules, enabled, updated_at")
+      .select(RULES_COLUMNS)
       .single();
     if (error) throw new Error(error.message);
     return {
+      id: row.id,
       chatId: row.chat_id,
-      rules: row.rules,
+      instructions: row.instructions,
       enabled: row.enabled,
       updatedAt: row.updated_at,
     };
+  });
+
+export const setChatCustomRulesEnabled = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { chatId: string; enabled: boolean }) => ({
+    chatId: parseChatId(input?.chatId),
+    enabled: input?.enabled === true,
+  }))
+  .handler(async ({ data, context }): Promise<ChatCustomRulesDto | null> => {
+    const { data: rows, error } = await context.supabase
+      .from("chat_custom_rules")
+      .update({ enabled: data.enabled })
+      .eq("owner_id", context.userId)
+      .eq("chat_id", data.chatId)
+      .select(RULES_COLUMNS);
+    if (error) throw new Error(error.message);
+    const row = rows?.[0];
+    if (!row) return null;
+    return {
+      id: row.id,
+      chatId: row.chat_id,
+      instructions: row.instructions,
+      enabled: row.enabled,
+      updatedAt: row.updated_at,
+    };
+  });
+
+export const resetChatCustomRules = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { chatId: string }) => ({ chatId: parseChatId(input?.chatId) }))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("chat_custom_rules")
+      .delete()
+      .eq("owner_id", context.userId)
+      .eq("chat_id", data.chatId);
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
   });
 
 /* ------------------------------------------------------------------ *
@@ -297,19 +422,20 @@ export const listChatPinnedFiles = createServerFn({ method: "GET" })
   .handler(async ({ data, context }): Promise<ChatPinnedFileDto[]> => {
     const { data: rows, error } = await context.supabase
       .from("chat_pinned_files")
-      .select("id, chat_id, file_id, file_name, project_id, position")
-      .eq("user_id", context.userId)
+      .select(PIN_COLUMNS)
+      .eq("owner_id", context.userId)
       .eq("chat_id", data.chatId)
-      .order("position", { ascending: true })
+      .order("created_at", { ascending: true })
       .limit(MAX_PINS_PER_CHAT);
     if (error) throw new Error(error.message);
     return (rows ?? []).map((row) => ({
       id: row.id,
       chatId: row.chat_id,
-      fileId: row.file_id,
-      fileName: row.file_name,
+      sourceType: row.source_type as PinSourceType,
+      sourceId: row.source_id,
       projectId: row.project_id,
-      position: row.position,
+      status: row.status as PinStatus,
+      createdAt: row.created_at,
     }));
   });
 
@@ -320,34 +446,57 @@ export const pinChatFile = createServerFn({ method: "POST" })
     const { count, error: countError } = await context.supabase
       .from("chat_pinned_files")
       .select("id", { count: "exact", head: true })
-      .eq("user_id", context.userId)
+      .eq("owner_id", context.userId)
       .eq("chat_id", data.chatId);
     if (countError) throw new Error(countError.message);
     if ((count ?? 0) >= MAX_PINS_PER_CHAT) {
       throw new Error(`You can pin up to ${MAX_PINS_PER_CHAT} files per chat.`);
     }
 
+    // Ownership/visibility is proven again by RLS: the insert policy calls
+    // kova_can_pin_source, so an unauthorized source id is rejected by Postgres.
     const { data: row, error } = await context.supabase
       .from("chat_pinned_files")
-      .insert({
-        user_id: context.userId,
-        chat_id: data.chatId,
-        file_id: data.fileId,
-        file_name: data.fileName,
-        project_id: data.projectId,
-        position: count ?? 0,
-      })
-      .select("id, chat_id, file_id, file_name, project_id, position")
+      .upsert(
+        {
+          owner_id: context.userId,
+          chat_id: data.chatId,
+          source_type: data.sourceType,
+          source_id: data.sourceId,
+          project_id: data.projectId,
+          status: data.status,
+        },
+        { onConflict: "owner_id,chat_id,source_type,source_id" },
+      )
+      .select(PIN_COLUMNS)
       .single();
-    if (error) throw new Error(error.message);
+    if (error) {
+      if (error.code === "42501") throw new Error("You do not have access to that file.");
+      throw new Error(error.message);
+    }
     return {
       id: row.id,
       chatId: row.chat_id,
-      fileId: row.file_id,
-      fileName: row.file_name,
+      sourceType: row.source_type as PinSourceType,
+      sourceId: row.source_id,
       projectId: row.project_id,
-      position: row.position,
+      status: row.status as PinStatus,
+      createdAt: row.created_at,
     };
+  });
+
+export const setChatPinnedFileStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(parsePinStatusInput)
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("chat_pinned_files")
+      .update({ status: data.status })
+      .eq("owner_id", context.userId)
+      .eq("chat_id", data.chatId)
+      .eq("id", data.pinId);
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
   });
 
 export const unpinChatFile = createServerFn({ method: "POST" })
@@ -357,9 +506,143 @@ export const unpinChatFile = createServerFn({ method: "POST" })
     const { error } = await context.supabase
       .from("chat_pinned_files")
       .delete()
-      .eq("user_id", context.userId)
+      .eq("owner_id", context.userId)
       .eq("chat_id", data.chatId)
       .eq("id", data.pinId);
     if (error) throw new Error(error.message);
     return { ok: true as const };
+  });
+
+/**
+ * Resolve pinned files into bounded prompt context.
+ *
+ * Only metadata and already-extracted text are read — file bytes are never
+ * duplicated. Sources the caller can no longer see are reported as
+ * permission_lost/deleted and their pin status is corrected in place.
+ */
+export const resolvePinnedContext = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { chatId: string; totalChars?: number }) => ({
+    chatId: parseChatId(input?.chatId),
+    totalChars:
+      typeof input?.totalChars === "number" && input.totalChars > 0
+        ? Math.min(Math.floor(input.totalChars), MAX_PINNED_CONTEXT_CHARS)
+        : MAX_PINNED_CONTEXT_CHARS,
+  }))
+  .handler(async ({ data, context }): Promise<PinnedContextDto> => {
+    const { describePinStatus } = await import("@/lib/chat-workspace-contract.mjs");
+
+    const { data: pins, error } = await context.supabase
+      .from("chat_pinned_files")
+      .select(PIN_COLUMNS)
+      .eq("owner_id", context.userId)
+      .eq("chat_id", data.chatId)
+      .order("created_at", { ascending: true })
+      .limit(MAX_PINS_PER_CHAT);
+    if (error) throw new Error(error.message);
+
+    const resolved: {
+      pinId: string;
+      sourceType: PinSourceType;
+      sourceId: string;
+      projectId: string | null;
+      status: PinStatus;
+      name: string;
+      content: string;
+    }[] = [];
+
+    for (const pin of pins ?? []) {
+      const sourceType = pin.source_type as PinSourceType;
+      const base = {
+        pinId: pin.id,
+        sourceType,
+        sourceId: pin.source_id,
+        projectId: pin.project_id,
+      };
+
+      if (sourceType === "library") {
+        const { data: item } = await context.supabase
+          .from("user_library_items")
+          .select("id, title, content_text, file_name")
+          .eq("id", pin.source_id)
+          .maybeSingle();
+        if (!item) {
+          resolved.push({ ...base, status: "deleted", name: "Removed item", content: "" });
+          continue;
+        }
+        const text = item.content_text ?? "";
+        resolved.push({
+          ...base,
+          status: text ? "ready" : "indexing",
+          name: item.title || item.file_name || "Library item",
+          content: text,
+        });
+        continue;
+      }
+
+      // project_file: visibility is enforced by project_files RLS (membership).
+      const { data: file } = await context.supabase
+        .from("project_files")
+        .select("id, name, project_id")
+        .eq("id", pin.source_id)
+        .maybeSingle();
+      if (!file) {
+        const { data: project } = await context.supabase
+          .from("projects")
+          .select("id")
+          .eq("id", pin.project_id ?? "")
+          .maybeSingle();
+        resolved.push({
+          ...base,
+          status: project ? "deleted" : "permission_lost",
+          name: "Unavailable file",
+          content: "",
+        });
+        continue;
+      }
+
+      const { data: chunks } = await context.supabase
+        .from("project_file_chunks")
+        .select("content, chunk_index")
+        .eq("file_id", pin.source_id)
+        .order("chunk_index", { ascending: true })
+        .limit(20);
+      const text = (chunks ?? []).map((chunk) => chunk.content).join("\n\n");
+      resolved.push({
+        ...base,
+        status: text ? "ready" : "indexing",
+        name: file.name,
+        content: text,
+      });
+    }
+
+    // Persist corrected statuses so the UI can show the truth without recomputing.
+    for (const item of resolved) {
+      const previous = (pins ?? []).find((pin) => pin.id === item.pinId)?.status;
+      if (previous && previous !== item.status) {
+        await context.supabase
+          .from("chat_pinned_files")
+          .update({ status: item.status })
+          .eq("owner_id", context.userId)
+          .eq("id", item.pinId);
+      }
+    }
+
+    const budgeted = budgetPinnedContext(resolved, {
+      totalChars: data.totalChars,
+      itemChars: MAX_PINNED_ITEM_CHARS,
+      maxItems: MAX_PINS_PER_CHAT,
+    });
+
+    return {
+      items: budgeted.items.map((item) => ({
+        ...item,
+        statusLabel: describePinStatus(item.status),
+      })),
+      usedChars: budgeted.usedChars,
+      totalBudget: budgeted.totalBudget,
+      truncatedCount: budgeted.truncatedCount,
+      skippedCount: budgeted.skippedCount,
+      truncated: budgeted.truncated,
+    };
   });
