@@ -1604,6 +1604,52 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      kova_accept_message_version: {
+        Args: { p_version_id: string }
+        Returns: {
+          accepted: boolean
+          branch_id: string | null
+          chat_id: string
+          content: string
+          created_at: string
+          edit_instruction: string | null
+          id: string
+          message_id: string
+          original_content: string | null
+          owner_id: string
+          source: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "chat_message_versions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      kova_activate_chat_branch: {
+        Args: { p_branch_id: string; p_chat_id: string }
+        Returns: {
+          active: boolean
+          branch_from_message_id: string | null
+          branch_from_message_index: number | null
+          branch_from_parent_message_id: string | null
+          chat_id: string
+          created_at: string
+          id: string
+          label: string | null
+          message_ids: string[]
+          owner_id: string
+          parent_branch_id: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "chat_branches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       kova_can_pin_source: {
         Args: {
           p_project_id: string
@@ -1611,6 +1657,95 @@ export type Database = {
           p_source_type: string
         }
         Returns: boolean
+      }
+      kova_create_chat_branch: {
+        Args: {
+          p_activate?: boolean
+          p_branch_from_message_id?: string
+          p_branch_from_message_index?: number
+          p_branch_from_parent_message_id?: string
+          p_chat_id: string
+          p_label?: string
+          p_max_branches?: number
+          p_message_ids?: string[]
+          p_parent_branch_id?: string
+        }
+        Returns: {
+          active: boolean
+          branch_from_message_id: string | null
+          branch_from_message_index: number | null
+          branch_from_parent_message_id: string | null
+          chat_id: string
+          created_at: string
+          id: string
+          label: string | null
+          message_ids: string[]
+          owner_id: string
+          parent_branch_id: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "chat_branches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      kova_record_message_version: {
+        Args: {
+          p_accepted?: boolean
+          p_branch_id?: string
+          p_chat_id: string
+          p_content: string
+          p_edit_instruction?: string
+          p_max_versions?: number
+          p_message_id: string
+          p_original_content?: string
+          p_source: string
+        }
+        Returns: {
+          accepted: boolean
+          branch_id: string | null
+          chat_id: string
+          content: string
+          created_at: string
+          edit_instruction: string | null
+          id: string
+          message_id: string
+          original_content: string | null
+          owner_id: string
+          source: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "chat_message_versions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      kova_update_chat_branch_messages: {
+        Args: { p_branch_id: string; p_label?: string; p_message_ids: string[] }
+        Returns: {
+          active: boolean
+          branch_from_message_id: string | null
+          branch_from_message_index: number | null
+          branch_from_parent_message_id: string | null
+          chat_id: string
+          created_at: string
+          id: string
+          label: string | null
+          message_ids: string[]
+          owner_id: string
+          parent_branch_id: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "chat_branches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       match_project_chunks: {
         Args: {
