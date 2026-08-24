@@ -19,6 +19,8 @@ import {
   FileText,
   ThumbsUp,
   ThumbsDown,
+  History,
+  TextSelect,
 } from "lucide-react";
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MobileBottomSheet } from "./MobileBottomSheet";
@@ -55,6 +57,16 @@ const ChatChart = lazy(() =>
 );
 const ArtifactEditor = lazy(() =>
   import("./ArtifactEditor").then(({ ArtifactEditor }) => ({ default: ArtifactEditor })),
+);
+const SelectionEditDialog = lazy(() =>
+  import("./SelectionEditDialog").then(({ SelectionEditDialog }) => ({
+    default: SelectionEditDialog,
+  })),
+);
+const MessageVersionHistoryDialog = lazy(() =>
+  import("./MessageVersionHistoryDialog").then(({ MessageVersionHistoryDialog }) => ({
+    default: MessageVersionHistoryDialog,
+  })),
 );
 
 function MarkdownCode({ className, children }: React.ComponentProps<"code">) {
@@ -155,6 +167,8 @@ function ChatMessageInner({
   userKey,
   principalResolved,
   chatId,
+  temporary = false,
+  onReplaceContent,
 }: {
   message: Message;
   streaming?: boolean;
@@ -167,6 +181,10 @@ function ChatMessageInner({
   principalResolved: boolean;
   /** Enables durable, per-message edit history in Canvas when signed in. */
   chatId?: string | null;
+  /** Temporary chats never persist edits or versions. */
+  temporary?: boolean;
+  /** Applies an accepted selection edit / restored version to this message. */
+  onReplaceContent?: (messageId: string, nextContent: string) => void;
 }) {
   const principal = principalResolved ? browserStoragePrincipal(userKey) : null;
   const principalRef = useRef(principal);
@@ -220,7 +238,43 @@ function ChatMessageInner({
   const [saved, setSaved] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorMode, setEditorMode] = useState<"edit" | "preview">("edit");
+  const [selectionTarget, setSelectionTarget] = useState<{
+    source: string;
+    start: number;
+    end: number;
+  } | null>(null);
+  const [selectionOpen, setSelectionOpen] = useState(false);
+  const [versionsOpen, setVersionsOpen] = useState(false);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const lastSelectionRef = useRef<string>("");
   const { isSignedIn } = useUser();
+
+  // Remember the rendered selection while the user still has it: opening a menu
+  // clears the DOM selection in most browsers.
+  const rememberSelection = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) return;
+    const container = bodyRef.current;
+    if (container && selection.anchorNode && !container.contains(selection.anchorNode)) return;
+    lastSelectionRef.current = selection.toString();
+  }, []);
+
+  const openSelectionEdit = useCallback(async () => {
+    const { locateSelection } = await import("@/lib/selection-edit.mjs");
+    const picked =
+      (typeof window !== "undefined" ? (window.getSelection()?.toString() ?? "") : "") ||
+      lastSelectionRef.current;
+    try {
+      const range = locateSelection(message.content, picked);
+      setSelectionTarget({ source: message.content, start: range.start, end: range.end });
+      setSelectionOpen(true);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Select some text in the response first.",
+      );
+    }
+  }, [message.content]);
 
   const saveFn = useServerFn(saveToLibrary);
 
@@ -425,7 +479,10 @@ function ChatMessageInner({
       ) : (
         <div className="kova-assistant-message mx-auto flex max-w-[48rem] items-start justify-start">
           <div
+            ref={bodyRef}
             className="flex-1 min-w-0 min-h-8 [[data-sidebar=closed]_&]:min-h-9 flex flex-col justify-center select-text"
+            onMouseUp={rememberSelection}
+            onKeyUp={rememberSelection}
             onTouchStart={startLongPress}
             onTouchEnd={cancelLongPress}
             onTouchMove={cancelLongPress}
@@ -651,6 +708,21 @@ function ChatMessageInner({
                   >
                     <Globe className="mr-2 h-4 w-4" /> View sources
                   </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={(event) => {
+                      event.preventDefault();
+                      void openSelectionEdit();
+                    }}
+                    disabled={!onReplaceContent}
+                  >
+                    <TextSelect className="mr-2 h-4 w-4" /> Edit selection
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => setVersionsOpen(true)}
+                    disabled={!chatId || !message.id}
+                  >
+                    <History className="mr-2 h-4 w-4" /> Version history
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={onBranch} disabled={!onBranch}>
                     <GitBranch className="mr-2 h-4 w-4" /> Branch into new chat
                   </DropdownMenuItem>
@@ -672,6 +744,34 @@ function ChatMessageInner({
             chatId={chatId ?? null}
             messageId={message.id ?? null}
           />
+        </Suspense>
+      )}
+      {!isUser && (selectionOpen || versionsOpen) && (
+        <Suspense fallback={null}>
+          {selectionOpen && (
+            <SelectionEditDialog
+              open={selectionOpen}
+              onOpenChange={(open) => {
+                setSelectionOpen(open);
+                if (!open) setSelectionTarget(null);
+              }}
+              target={selectionTarget}
+              chatId={chatId ?? null}
+              messageId={message.id ?? null}
+              temporary={temporary}
+              onApply={(next) => onReplaceContent?.(message.id, next)}
+            />
+          )}
+          {versionsOpen && (
+            <MessageVersionHistoryDialog
+              open={versionsOpen}
+              onOpenChange={setVersionsOpen}
+              chatId={chatId ?? null}
+              messageId={message.id ?? null}
+              currentContent={message.content}
+              onRestore={(next) => onReplaceContent?.(message.id, next)}
+            />
+          )}
         </Suspense>
       )}
       {!isUser && message.content && (
@@ -712,6 +812,30 @@ function ChatMessageInner({
                   }
                 },
               },
+              ...(onReplaceContent
+                ? [
+                    {
+                      label: "Edit selection",
+                      icon: TextSelect,
+                      onClick: () => {
+                        setMobileSheetOpen(false);
+                        void openSelectionEdit();
+                      },
+                    },
+                  ]
+                : []),
+              ...(chatId && message.id
+                ? [
+                    {
+                      label: "Version history",
+                      icon: History,
+                      onClick: () => {
+                        setMobileSheetOpen(false);
+                        setVersionsOpen(true);
+                      },
+                    },
+                  ]
+                : []),
               ...(onEdit
                 ? [
                     {

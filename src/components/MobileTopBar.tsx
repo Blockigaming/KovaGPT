@@ -1,4 +1,4 @@
-import { Menu, MessageSquareDashed, SquarePen } from "lucide-react";
+import { Menu, MessageSquareDashed, Sliders, SquarePen } from "lucide-react";
 import { useUser, SignInButton, clerkEnabled } from "@/components/auth/ClerkSafe";
 import { ResponsiveModelSelector } from "@/components/ResponsiveModelSelector";
 import type { ModeId, Tier } from "@/lib/modes";
@@ -20,6 +20,8 @@ export function MobileTopBar({
   userTier = "free",
   temporaryChat = false,
   onTemporaryChatChange,
+  onOpenChatSettings,
+  chatRulesActive = false,
 }: {
   onOpenSidebar: () => void;
   onNewChat: () => void;
@@ -29,6 +31,9 @@ export function MobileTopBar({
   userTier?: Tier;
   temporaryChat?: boolean;
   onTemporaryChatChange?: (enabled: boolean) => void;
+  /** Opens per-chat rules and pinned files; omitted when there is no chat yet. */
+  onOpenChatSettings?: () => void;
+  chatRulesActive?: boolean;
 }) {
   const { isLoaded, isSignedIn } = useUser();
   const showAuth = isLoaded && clerkEnabled && !isSignedIn;
@@ -68,6 +73,21 @@ export function MobileTopBar({
           </SignInButton>
         ) : (
           <div className="flex items-center justify-end">
+            {onOpenChatSettings ? (
+              <button
+                type="button"
+                onClick={onOpenChatSettings}
+                aria-label={chatRulesActive ? "Chat settings, rules active" : "Chat settings"}
+                title="Chat settings"
+                className={`kova-action h-11 w-11 ${
+                  chatRulesActive
+                    ? "bg-primary/15 text-primary"
+                    : "text-foreground hover:bg-accent/60"
+                }`}
+              >
+                <Sliders className="h-5 w-5" />
+              </button>
+            ) : null}
             {isSignedIn && onTemporaryChatChange ? (
               <button
                 type="button"

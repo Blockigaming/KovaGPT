@@ -97,7 +97,8 @@ export function ShareChatDialog({
           </div>
           <p className="text-[11px] text-muted-foreground">
             The recipient needs a KovaGPT account using this email to view the chat. Sharing creates
-            a view-only snapshot. Future replies in your chat won't update theirs.
+            a view-only snapshot of the branch you are currently viewing — other branches are not
+            included. Future replies in your chat won't update theirs.
           </p>
         </div>
         <div className="flex justify-end gap-2 pt-2">

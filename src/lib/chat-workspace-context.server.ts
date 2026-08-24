@@ -42,6 +42,19 @@ export type WorkspaceQueryClient = {
 
 type Row = Record<string, unknown>;
 
+/**
+ * Minimal chainable shape of a Supabase query builder. Awaiting it yields
+ * `{ data, error }`, which `runQuery` normalizes.
+ */
+type QueryBuilderLike = {
+  select: (columns: string) => QueryBuilderLike;
+  eq: (column: string, value: unknown) => QueryBuilderLike;
+  in: (column: string, values: unknown[]) => QueryBuilderLike;
+  order: (column: string, options?: { ascending?: boolean }) => QueryBuilderLike;
+  limit: (count: number) => QueryBuilderLike;
+  maybeSingle: () => QueryBuilderLike;
+};
+
 async function runQuery(builder: unknown): Promise<Row[]> {
   const result = (await builder) as { data?: unknown; error?: unknown } | null;
   const data = result?.data;
@@ -76,7 +89,10 @@ export async function loadChatCustomRules(
   const supabase = client as {
     from: (table: string) => {
       select: (cols: string) => {
-        eq: (c: string, v: unknown) => { eq: (c: string, v: unknown) => { limit: (n: number) => unknown } };
+        eq: (
+          c: string,
+          v: unknown,
+        ) => { eq: (c: string, v: unknown) => { limit: (n: number) => unknown } };
       };
     };
   };
@@ -142,8 +158,10 @@ export async function loadPinnedContext(
   };
   if (!args.userId || !args.chatId || args.temporary) return empty;
 
+  // Structural view over the generated Supabase client: this module only needs
+  // a chainable query builder, not the full generated table typings.
   const supabase = client as {
-    from: (table: string) => any;
+    from: (table: string) => QueryBuilderLike;
     rpc?: (fn: string, params: Record<string, unknown>) => Promise<{ data: unknown }>;
   };
 
@@ -321,9 +339,7 @@ export function renderChatWorkspaceBlock(input: {
   if (input.pinned.unavailable.length > 0) {
     parts.push(
       "Pinned files that could not be read right now (tell the user plainly if they matter):\n" +
-        input.pinned.unavailable
-          .map((item) => `- ${item.name}: ${item.statusLabel}`)
-          .join("\n"),
+        input.pinned.unavailable.map((item) => `- ${item.name}: ${item.statusLabel}`).join("\n"),
     );
   }
 

@@ -11,7 +11,15 @@ import {
   type SetStateAction,
 } from "react";
 import { SignUpPrompt } from "@/components/SignUpPrompt";
-import { PanelLeft, Search, MessageSquareDashed, Check, Share2, Download } from "lucide-react";
+import {
+  PanelLeft,
+  Search,
+  MessageSquareDashed,
+  Check,
+  Share2,
+  Download,
+  Sliders,
+} from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 
 import { ChatMessage } from "@/components/ChatMessage";
@@ -24,6 +32,8 @@ import {
 import { MobileTopBar } from "@/components/MobileTopBar";
 import { CommandPalette } from "@/components/CommandPalette";
 import { ResponsiveModelSelector } from "@/components/ResponsiveModelSelector";
+import { ChatBranchBar } from "@/components/ChatBranchBar";
+import { useChatBranches } from "@/hooks/useChatBranches";
 
 import { type Settings, DEFAULT_SETTINGS } from "@/components/SettingsDialog";
 
@@ -38,6 +48,9 @@ const LimitReachedDialog = lazy(() =>
 );
 const ShareChatDialog = lazy(() =>
   import("@/components/ShareChatDialog").then((m) => ({ default: m.ShareChatDialog })),
+);
+const ChatWorkspaceDialog = lazy(() =>
+  import("@/components/ChatWorkspaceDialog").then((m) => ({ default: m.ChatWorkspaceDialog })),
 );
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings, settingsKey } from "@/lib/use-nova-settings";
@@ -329,6 +342,8 @@ function KovaGPT() {
     navigate({ to: "/help" as never });
   }, [navigate]);
   const [shareChatId, setShareChatId] = useState<string | null>(null);
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [chatRulesActive, setChatRulesActive] = useState(false);
 
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [settingsPrincipal, setSettingsPrincipal] = useState<string | null>(null);
@@ -584,6 +599,31 @@ function KovaGPT() {
   useEffect(() => {
     if (activeTemporary !== null) setTempChat(activeTemporary);
   }, [activeTemporary]);
+
+  const branchState = useChatBranches(active?.id ?? null, Boolean(active?.temporary));
+
+  /**
+   * Applies an accepted inline edit or a restored version to a message. The
+   * original text is kept in the durable version chain, so nothing is lost.
+   */
+  const replaceMessageContent = useCallback(
+    (conversationId: string, messageId: string, nextContent: string) => {
+      setConversations((prev) =>
+        prev.map((conversation) =>
+          conversation.id !== conversationId
+            ? conversation
+            : {
+                ...conversation,
+                updatedAt: Date.now(),
+                messages: conversation.messages.map((message) =>
+                  message.id === messageId ? { ...message, content: nextContent } : message,
+                ),
+              },
+        ),
+      );
+    },
+    [setConversations],
+  );
 
   useEffect(() => {
     activeIdRef.current = activeId;
@@ -1463,6 +1503,8 @@ function KovaGPT() {
           userTier={tier}
           temporaryChat={tempChat}
           onTemporaryChatChange={setTemporaryChatEnabled}
+          onOpenChatSettings={active ? () => setWorkspaceOpen(true) : undefined}
+          chatRulesActive={chatRulesActive}
         />
         <header className="kova-topbar relative hidden h-[52px] items-center gap-1 px-3 lg:flex">
           <div
@@ -1549,6 +1591,18 @@ function KovaGPT() {
                   </button>
                 ) : null}
               </>
+            )}
+            {active && (
+              <button
+                type="button"
+                onClick={() => setWorkspaceOpen(true)}
+                className="hidden lg:inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-medium text-foreground hover:bg-accent"
+                aria-label="Chat settings: rules and pinned files"
+                title="Chat settings"
+              >
+                <Sliders className="h-4 w-4" />
+                <span>{chatRulesActive ? "Rules on" : "Chat settings"}</span>
+              </button>
             )}
             {isLoaded && isSignedIn && (
               <button
@@ -1696,6 +1750,30 @@ function KovaGPT() {
                   </button>
                 </div>
               )}
+              <ChatBranchBar
+                branches={branchState.branches}
+                activeBranch={branchState.activeBranch}
+                loading={branchState.loading}
+                error={branchState.error}
+                onActivate={branchState.activate}
+                onRetry={branchState.refresh}
+                durableHint={
+                  isSignedIn
+                    ? "Branching keeps the original path; sharing snapshots the active branch only."
+                    : "Branches are stored on this device until you sign in."
+                }
+              />
+              {chatRulesActive && (
+                <div className="mx-auto flex w-full max-w-[48rem] px-3 pt-2 lg:px-0">
+                  <button
+                    type="button"
+                    onClick={() => setWorkspaceOpen(true)}
+                    className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
+                  >
+                    <Sliders className="h-3.5 w-3.5" /> Chat rules are active
+                  </button>
+                </div>
+              )}
               {active.messages.map((m, i) => {
                 const isLastAssistant = m.role === "assistant" && i === active.messages.length - 1;
                 // Find the user message that prompted this assistant reply (immediately before).
@@ -1708,6 +1786,12 @@ function KovaGPT() {
                     key={m.id}
                     message={m}
                     chatId={active.id}
+                    temporary={Boolean(active.temporary)}
+                    onReplaceContent={
+                      m.role === "assistant" && !isStreaming
+                        ? (messageId, next) => replaceMessageContent(active.id, messageId, next)
+                        : undefined
+                    }
                     userKey={userKey}
                     principalResolved={isLoaded}
                     streaming={isStreaming && isLastAssistant}
@@ -1837,6 +1921,23 @@ function KovaGPT() {
                         setConversations((prev) => [branched, ...prev]);
                         setActiveId(branched.id);
                         toast.success("Branched into a new chat");
+                        // The original path is untouched; record the branch point
+                        // so it survives a reload for signed-in users.
+                        void branchState
+                          .createBranch({
+                            branchFromMessageId: m.id,
+                            branchFromMessageIndex: i,
+                            messageIds: active.messages.slice(0, i + 1).map((msg) => msg.id),
+                            label: branched.title?.slice(0, 120) ?? null,
+                            parentBranchId: branchState.activeBranch?.id ?? null,
+                          })
+                          .catch((error) => {
+                            toast.error(
+                              error instanceof Error
+                                ? error.message
+                                : "The branch point could not be saved.",
+                            );
+                          });
                       } catch (error) {
                         toast.error(
                           error instanceof Error ? error.message : "Could not branch chat",
@@ -1948,6 +2049,16 @@ function KovaGPT() {
         )}
 
         <OnboardingDialog />
+
+        {workspaceOpen && (
+          <ChatWorkspaceDialog
+            open={workspaceOpen}
+            onOpenChange={setWorkspaceOpen}
+            chatId={active?.id ?? null}
+            temporary={Boolean(active?.temporary)}
+            onRulesActiveChange={setChatRulesActive}
+          />
+        )}
 
         {shareChatId !== null && (
           <ShareChatDialog
