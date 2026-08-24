@@ -30,7 +30,11 @@ test("rejects a selection that is not in the source", () => {
 
 test("rejects empty and oversized selections", () => {
   assert.throws(() => locateSelection(SOURCE, "   "), /Select some text/);
-  assert.throws(() => locateSelection("a".repeat(MAX_SELECTION_CHARS + 10), "a".repeat(MAX_SELECTION_CHARS + 5)), /characters or fewer/);
+  assert.throws(
+    () =>
+      locateSelection("a".repeat(MAX_SELECTION_CHARS + 10), "a".repeat(MAX_SELECTION_CHARS + 5)),
+    /characters or fewer/,
+  );
 });
 
 test("validates explicit ranges and exposes untouched prefix/suffix", () => {
@@ -68,18 +72,22 @@ test("a rewrite that would unbalance code fences is rejected", () => {
 });
 
 test("model preamble and stray fences are stripped for prose selections", () => {
-  assert.equal(normalizeRewrite("Here is the rewrite: Cleaner text.", "Old text."), "Cleaner text.");
+  assert.equal(
+    normalizeRewrite("Here is the rewrite: Cleaner text.", "Old text."),
+    "Cleaner text.",
+  );
   assert.equal(normalizeRewrite("```\nCleaner text.\n```", "Old text."), "Cleaner text.");
   // A fenced selection keeps its fences.
-  assert.equal(
-    normalizeRewrite("```js\nx\n```", "```js\ny\n```"),
-    "```js\nx\n```",
-  );
+  assert.equal(normalizeRewrite("```js\nx\n```", "```js\ny\n```"), "```js\nx\n```");
 });
 
 test("rewrite instruction is bounded and carries surrounding context", () => {
   const context = selectionContext(SOURCE, 18, 49, 10);
-  const prompt = buildRewriteInstruction("make it punchier", "The middle sentence needs work.", context);
+  const prompt = buildRewriteInstruction(
+    "make it punchier",
+    "The middle sentence needs work.",
+    context,
+  );
   assert.ok(prompt.includes("make it punchier"));
   assert.ok(prompt.includes("Do not wrap the result in a code fence."));
   assert.throws(() => buildRewriteInstruction("   ", "x"), /Describe how/);

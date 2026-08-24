@@ -36,7 +36,10 @@ test("guest edit versions persist per message and stay bounded", () => {
   }
   const versions = localVersions(storage, "chat-1", "msg-1");
   assert.equal(versions.length, LOCAL_MAX_VERSIONS_PER_MESSAGE);
-  assert.equal(versions.every((entry) => entry.durable === false), true);
+  assert.equal(
+    versions.every((entry) => entry.durable === false),
+    true,
+  );
   assert.equal(versions[versions.length - 1].content, `edit ${LOCAL_MAX_VERSIONS_PER_MESSAGE + 5}`);
   // Versions are scoped per message and per chat.
   assert.deepEqual(localVersions(storage, "chat-1", "msg-2"), []);
@@ -55,7 +58,8 @@ test("guest rules round-trip, clear, and respect the length bound", () => {
   assert.equal(saved.instructions, "Be terse");
   assert.equal(localRules(storage, "chat-1").enabled, true);
   assert.throws(
-    () => saveLocalRules(storage, "chat-1", { instructions: "x".repeat(LOCAL_MAX_RULES_CHARS + 1) }),
+    () =>
+      saveLocalRules(storage, "chat-1", { instructions: "x".repeat(LOCAL_MAX_RULES_CHARS + 1) }),
     /characters or fewer/,
   );
   clearLocalRules(storage, "chat-1");
