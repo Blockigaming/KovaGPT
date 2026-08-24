@@ -75,6 +75,11 @@ function read(path) {
   return readFileSync(join(root, path), "utf8");
 }
 
+/** Tracked-but-deleted paths must not crash the audit before the deletion is committed. */
+function readIfPresent(path) {
+  return existsSync(join(root, path)) ? read(path) : null;
+}
+
 export function inspectPackageManifest(pkg) {
   const groups = ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"];
   return groups.flatMap((group) =>
@@ -100,7 +105,10 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
   }
 
   for (const prohibited of [".lovable", "bun.lock", "bunfig.toml"]) {
-    if (files.some((path) => path === prohibited || path.startsWith(`${prohibited}/`))) {
+    const tracked = files.some((path) => path === prohibited || path.startsWith(`${prohibited}/`));
+    // A tracked path that no longer exists on disk is a pending deletion, not a
+    // violation; only artifacts actually present in the tree fail the audit.
+    if (tracked && existsSync(join(root, prohibited))) {
       errors.push(`prohibited tracked artifact: ${prohibited}`);
     }
   }
@@ -118,7 +126,8 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
     if (ignoredPrefixes.some((prefix) => path.startsWith(prefix))) continue;
     if (path === "package-lock.json" || scannerDefinitionFiles.has(path)) continue;
     if (!readable.has(extname(path)) && !["Dockerfile", ".env.example"].includes(path)) continue;
-    const source = read(path);
+    const source = readIfPresent(path);
+    if (source === null) continue;
 
     if (compatibilityRoutes.has(path)) {
       if (

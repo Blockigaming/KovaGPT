@@ -68,8 +68,16 @@ test("guest rules round-trip, clear, and respect the length bound", () => {
 
 test("only one guest branch is active at a time", () => {
   const storage = memoryStorage();
-  saveLocalBranch(storage, "chat-1", { id: "b1", branchFromMessageId: "m1" });
-  saveLocalBranch(storage, "chat-1", { id: "b2", branchFromMessageId: "m2" });
+  saveLocalBranch(storage, "chat-1", {
+    id: "b1",
+    conversationId: "conv-1",
+    branchFromMessageId: "m1",
+  });
+  saveLocalBranch(storage, "chat-1", {
+    id: "b2",
+    conversationId: "conv-2",
+    branchFromMessageId: "m2",
+  });
   let branches = localBranches(storage, "chat-1");
   assert.equal(branches.filter((branch) => branch.active).length, 1);
   assert.equal(branches.find((branch) => branch.active).id, "b2");
@@ -78,8 +86,17 @@ test("only one guest branch is active at a time", () => {
   branches = localBranches(storage, "chat-1");
   assert.equal(branches.filter((branch) => branch.active).length, 1);
   assert.equal(branches.find((branch) => branch.active).id, "b1");
-  // Activating an unknown id reports nothing rather than a fake success.
+  // Every guest branch maps to a real local conversation, so activation can
+  // switch what is displayed instead of only flipping a flag.
+  assert.equal(branches.find((branch) => branch.id === "b1").conversationId, "conv-1");
+  assert.throws(() => saveLocalBranch(storage, "chat-1", { id: "b3" }), /conversation is required/);
+  // Activating an unknown id reports nothing rather than a fake success, and it
+  // must not deactivate the branch that is genuinely active.
   assert.equal(activateLocalBranch(storage, "chat-1", "missing"), null);
+  assert.equal(
+    localBranches(storage, "chat-1").filter((branch) => branch.active).length,
+    1,
+  );
 });
 
 test("missing storage never throws and reports empty state", () => {

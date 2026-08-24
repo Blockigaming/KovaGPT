@@ -30,9 +30,11 @@ export type MessageVersionDto = {
   branchId: string | null;
   version: number;
   source: MessageVersionSource;
-  editInstruction: string | null;
+  instruction: string | null;
   content: string;
   originalContent: string | null;
+  selectionStart: number | null;
+  selectionEnd: number | null;
   accepted: boolean;
   createdAt: string;
 };
@@ -40,6 +42,8 @@ export type MessageVersionDto = {
 export type ChatBranchDto = {
   id: string;
   chatId: string;
+  /** Conversation this branch actually displays; a root row maps to the original. */
+  conversationId: string;
   parentBranchId: string | null;
   branchFromParentMessageId: string | null;
   branchFromMessageId: string | null;
@@ -90,9 +94,9 @@ export type PinnedContextDto = {
 };
 
 const VERSION_COLUMNS =
-  "id, chat_id, message_id, branch_id, version, source, edit_instruction, content, original_content, accepted, created_at";
+  "id, chat_id, message_id, branch_id, version, source, instruction, content, original_content, selection_start, selection_end, accepted, created_at";
 const BRANCH_COLUMNS =
-  "id, chat_id, parent_branch_id, branch_from_parent_message_id, branch_from_message_id, branch_from_message_index, message_ids, label, active, created_at, updated_at";
+  "id, chat_id, conversation_id, parent_branch_id, branch_from_parent_message_id, branch_from_message_id, branch_from_message_index, message_ids, label, active, created_at, updated_at";
 const RULES_COLUMNS = "id, chat_id, instructions, enabled, updated_at";
 const PIN_COLUMNS = "id, chat_id, source_type, source_id, project_id, status, created_at";
 
@@ -103,9 +107,11 @@ type VersionRow = {
   branch_id: string | null;
   version: number;
   source: string;
-  edit_instruction: string | null;
+  instruction: string | null;
   content: string;
   original_content: string | null;
+  selection_start: number | null;
+  selection_end: number | null;
   accepted: boolean;
   created_at: string;
 };
@@ -113,6 +119,7 @@ type VersionRow = {
 type BranchRow = {
   id: string;
   chat_id: string;
+  conversation_id: string;
   parent_branch_id: string | null;
   branch_from_parent_message_id: string | null;
   branch_from_message_id: string | null;
@@ -132,9 +139,11 @@ function toVersion(row: VersionRow): MessageVersionDto {
     branchId: row.branch_id,
     version: row.version,
     source: row.source as MessageVersionSource,
-    editInstruction: row.edit_instruction,
+    instruction: row.instruction,
     content: row.content,
     originalContent: row.original_content,
+    selectionStart: row.selection_start,
+    selectionEnd: row.selection_end,
     accepted: row.accepted,
     createdAt: row.created_at,
   };
@@ -144,6 +153,7 @@ function toBranch(row: BranchRow): ChatBranchDto {
   return {
     id: row.id,
     chatId: row.chat_id,
+    conversationId: row.conversation_id,
     parentBranchId: row.parent_branch_id,
     branchFromParentMessageId: row.branch_from_parent_message_id,
     branchFromMessageId: row.branch_from_message_id,
@@ -173,7 +183,27 @@ function rpcError(message: string): Error {
   if (message.includes("branch_not_found")) return new Error("That branch no longer exists.");
   if (message.includes("version_not_found")) return new Error("That version no longer exists.");
   if (message.includes("lineage cycle")) return new Error("Branches cannot form a loop.");
-  return new Error(message);
+  if (message.includes("branch_conversation_exists")) {
+    return new Error("That conversation is already saved as a branch.");
+  }
+  if (message.includes("conversation_required")) {
+    return new Error("A conversation is required to save a branch.");
+  }
+  if (message.includes("invalid_source")) return new Error("That version source is not valid.");
+  if (message.includes("too_many_messages")) {
+    return new Error("That branch has too many messages.");
+  }
+  // Anything else is an unexpected database or provider fault: never surface raw
+  // SQL, constraint names or connection details to a person.
+  return new Error("Something went wrong saving that. Please try again.");
+}
+
+/** Table reads/writes go through the same safe-message funnel as the RPCs. */
+function dbError(message: string): Error {
+  if (/permission denied|42501/i.test(message)) {
+    return new Error("You do not have access to that.");
+  }
+  return new Error("Something went wrong. Please try again.");
 }
 
 /* ------------------------------------------------------------------ *
@@ -197,7 +227,7 @@ export const listMessageVersions = createServerFn({ method: "GET" })
       .limit(MAX_VERSIONS_PER_MESSAGE * 20);
     if (data.messageId) query = query.eq("message_id", data.messageId);
     const { data: rows, error } = await query;
-    if (error) throw new Error(error.message);
+    if (error) throw dbError(error.message);
     return (rows ?? []).map((row) => toVersion(row as VersionRow));
   });
 
@@ -216,8 +246,10 @@ export const saveMessageVersion = createServerFn({ method: "POST" })
       p_source: data.source,
       p_content: data.content,
       p_branch_id: orUndefined(data.branchId),
-      p_edit_instruction: orUndefined(data.editInstruction),
+      p_instruction: orUndefined(data.instruction),
       p_original_content: orUndefined(data.originalContent),
+      p_selection_start: orUndefined(data.selectionStart),
+      p_selection_end: orUndefined(data.selectionEnd),
       p_accepted: data.accepted,
       p_max_versions: MAX_VERSIONS_PER_MESSAGE,
     });
@@ -253,7 +285,7 @@ export const listChatBranches = createServerFn({ method: "GET" })
       .eq("chat_id", data.chatId)
       .order("created_at", { ascending: true })
       .limit(MAX_BRANCHES_PER_CHAT);
-    if (error) throw new Error(error.message);
+    if (error) throw dbError(error.message);
     return (rows ?? []).map((row) => toBranch(row as BranchRow));
   });
 
@@ -263,6 +295,7 @@ export const createChatBranch = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<ChatBranchDto> => {
     const { data: row, error } = await context.supabase.rpc("kova_create_chat_branch", {
       p_chat_id: data.chatId,
+      p_conversation_id: data.conversationId,
       p_parent_branch_id: orUndefined(data.parentBranchId),
       p_branch_from_parent_message_id: orUndefined(data.branchFromParentMessageId),
       p_branch_from_message_id: orUndefined(data.branchFromMessageId),
@@ -310,13 +343,15 @@ export const deleteChatBranch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(parseBranchActivationInput)
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
+    const { data: rows, error } = await context.supabase
       .from("chat_branches")
       .delete()
       .eq("owner_id", context.userId)
       .eq("chat_id", data.chatId)
-      .eq("id", data.branchId);
-    if (error) throw new Error(error.message);
+      .eq("id", data.branchId)
+      .select("id");
+    if (error) throw dbError(error.message);
+    if (!rows?.length) throw new Error("That branch no longer exists.");
     return { ok: true as const };
   });
 
@@ -334,7 +369,7 @@ export const getChatCustomRules = createServerFn({ method: "GET" })
       .eq("owner_id", context.userId)
       .eq("chat_id", data.chatId)
       .limit(1);
-    if (error) throw new Error(error.message);
+    if (error) throw dbError(error.message);
     const row = rows?.[0];
     if (!row) return null;
     return {
@@ -364,7 +399,7 @@ export const saveChatCustomRules = createServerFn({ method: "POST" })
       )
       .select(RULES_COLUMNS)
       .single();
-    if (error) throw new Error(error.message);
+    if (error) throw dbError(error.message);
     return {
       id: row.id,
       chatId: row.chat_id,
@@ -387,7 +422,7 @@ export const setChatCustomRulesEnabled = createServerFn({ method: "POST" })
       .eq("owner_id", context.userId)
       .eq("chat_id", data.chatId)
       .select(RULES_COLUMNS);
-    if (error) throw new Error(error.message);
+    if (error) throw dbError(error.message);
     const row = rows?.[0];
     if (!row) return null;
     return {
@@ -403,12 +438,14 @@ export const resetChatCustomRules = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { chatId: string }) => ({ chatId: parseChatId(input?.chatId) }))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
+    const { data: rows, error } = await context.supabase
       .from("chat_custom_rules")
       .delete()
       .eq("owner_id", context.userId)
-      .eq("chat_id", data.chatId);
-    if (error) throw new Error(error.message);
+      .eq("chat_id", data.chatId)
+      .select("id");
+    if (error) throw dbError(error.message);
+    if (!rows?.length) throw new Error("There were no saved rules for this chat.");
     return { ok: true as const };
   });
 
@@ -427,7 +464,7 @@ export const listChatPinnedFiles = createServerFn({ method: "GET" })
       .eq("chat_id", data.chatId)
       .order("created_at", { ascending: true })
       .limit(MAX_PINS_PER_CHAT);
-    if (error) throw new Error(error.message);
+    if (error) throw dbError(error.message);
     return (rows ?? []).map((row) => ({
       id: row.id,
       chatId: row.chat_id,
@@ -448,7 +485,7 @@ export const pinChatFile = createServerFn({ method: "POST" })
       .select("id", { count: "exact", head: true })
       .eq("owner_id", context.userId)
       .eq("chat_id", data.chatId);
-    if (countError) throw new Error(countError.message);
+    if (countError) throw dbError(countError.message);
     if ((count ?? 0) >= MAX_PINS_PER_CHAT) {
       throw new Error(`You can pin up to ${MAX_PINS_PER_CHAT} files per chat.`);
     }
@@ -489,13 +526,15 @@ export const setChatPinnedFileStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(parsePinStatusInput)
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
+    const { data: rows, error } = await context.supabase
       .from("chat_pinned_files")
       .update({ status: data.status })
       .eq("owner_id", context.userId)
       .eq("chat_id", data.chatId)
-      .eq("id", data.pinId);
-    if (error) throw new Error(error.message);
+      .eq("id", data.pinId)
+      .select("id");
+    if (error) throw dbError(error.message);
+    if (!rows?.length) throw new Error("That pinned file no longer exists.");
     return { ok: true as const };
   });
 
@@ -503,13 +542,15 @@ export const unpinChatFile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(parseUnpinInput)
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
+    const { data: rows, error } = await context.supabase
       .from("chat_pinned_files")
       .delete()
       .eq("owner_id", context.userId)
       .eq("chat_id", data.chatId)
-      .eq("id", data.pinId);
-    if (error) throw new Error(error.message);
+      .eq("id", data.pinId)
+      .select("id");
+    if (error) throw dbError(error.message);
+    if (!rows?.length) throw new Error("That pinned file no longer exists.");
     return { ok: true as const };
   });
 
@@ -539,7 +580,7 @@ export const resolvePinnedContext = createServerFn({ method: "POST" })
       .eq("chat_id", data.chatId)
       .order("created_at", { ascending: true })
       .limit(MAX_PINS_PER_CHAT);
-    if (error) throw new Error(error.message);
+    if (error) throw dbError(error.message);
 
     const resolved: {
       pinId: string;
@@ -564,6 +605,7 @@ export const resolvePinnedContext = createServerFn({ method: "POST" })
         const { data: item } = await context.supabase
           .from("user_library_items")
           .select("id, title, content_text, file_name")
+          .eq("user_id", context.userId)
           .eq("id", pin.source_id)
           .maybeSingle();
         if (!item) {
@@ -573,7 +615,7 @@ export const resolvePinnedContext = createServerFn({ method: "POST" })
         const text = item.content_text ?? "";
         resolved.push({
           ...base,
-          status: text ? "ready" : "indexing",
+          status: text ? "active" : "indexing",
           name: item.title || item.file_name || "Library item",
           content: text,
         });
@@ -584,6 +626,7 @@ export const resolvePinnedContext = createServerFn({ method: "POST" })
       const { data: file } = await context.supabase
         .from("project_files")
         .select("id, name, project_id")
+        .eq("project_id", pin.project_id ?? "")
         .eq("id", pin.source_id)
         .maybeSingle();
       if (!file) {
@@ -610,7 +653,7 @@ export const resolvePinnedContext = createServerFn({ method: "POST" })
       const text = (chunks ?? []).map((chunk) => chunk.content).join("\n\n");
       resolved.push({
         ...base,
-        status: text ? "ready" : "indexing",
+        status: text ? "active" : "indexing",
         name: file.name,
         content: text,
       });

@@ -16,6 +16,8 @@ import { safeBrowserStorage } from "@/lib/principal-browser-storage.mjs";
 
 export type BranchView = {
   id: string;
+  /** The conversation this branch displays; equals the root chat id for the original. */
+  conversationId: string;
   label: string | null;
   branchFromMessageId: string | null;
   branchFromMessageIndex: number | null;
@@ -29,6 +31,7 @@ export type BranchView = {
 function fromDto(row: ChatBranchDto): BranchView {
   return {
     id: row.id,
+    conversationId: row.conversationId,
     label: row.label,
     branchFromMessageId: row.branchFromMessageId,
     branchFromMessageIndex: row.branchFromMessageIndex,
@@ -43,8 +46,12 @@ function fromDto(row: ChatBranchDto): BranchView {
  * Durable chat branches for signed-in users, with a bounded device-only
  * fallback for guests. Temporary Chat records nothing and reports an empty tree
  * so the UI can say so honestly.
+ *
+ * `rootChatId` is the stable root conversation id of the branch family: every
+ * branch row (including the original) maps to a real conversation id, so the
+ * caller can switch what is actually displayed rather than only flip a flag.
  */
-export function useChatBranches(chatId: string | null, temporary = false) {
+export function useChatBranches(rootChatId: string | null, temporary = false) {
   const { isSignedIn } = useUser();
   const listFn = useServerFn(listChatBranches);
   const createFn = useServerFn(createChatBranch);
@@ -54,10 +61,10 @@ export function useChatBranches(chatId: string | null, temporary = false) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const persistent = Boolean(chatId) && !temporary;
+  const persistent = Boolean(rootChatId) && !temporary;
 
   const refresh = useCallback(async () => {
-    if (!chatId || temporary) {
+    if (!rootChatId || temporary) {
       setBranches([]);
       return;
     }
@@ -65,11 +72,11 @@ export function useChatBranches(chatId: string | null, temporary = false) {
     setError(null);
     try {
       if (isSignedIn) {
-        const rows = await listFn({ data: { chatId } });
+        const rows = await listFn({ data: { chatId: rootChatId } });
         setBranches(rows.map(fromDto));
       } else {
         setBranches(
-          localBranches(safeBrowserStorage("localStorage"), chatId).map((row) => ({
+          localBranches(safeBrowserStorage("localStorage"), rootChatId).map((row) => ({
             ...row,
             durable: false as const,
           })),
@@ -80,73 +87,123 @@ export function useChatBranches(chatId: string | null, temporary = false) {
     } finally {
       setLoading(false);
     }
-  }, [chatId, isSignedIn, listFn, temporary]);
+  }, [isSignedIn, listFn, rootChatId, temporary]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
+  const persistBranch = useCallback(
+    async (input: {
+      conversationId: string;
+      branchFromMessageId?: string | null;
+      branchFromMessageIndex?: number;
+      messageIds?: string[];
+      label?: string | null;
+      parentBranchId?: string | null;
+      active?: boolean;
+    }): Promise<BranchView | null> => {
+      if (!persistent || !rootChatId) return null;
+      if (isSignedIn) {
+        const row = await createFn({
+          data: {
+            chatId: rootChatId,
+            conversationId: input.conversationId,
+            branchFromMessageId: input.branchFromMessageId ?? null,
+            branchFromMessageIndex: input.branchFromMessageIndex,
+            messageIds: input.messageIds ?? [],
+            label: input.label ?? null,
+            parentBranchId: input.parentBranchId ?? null,
+            active: input.active !== false,
+          },
+        });
+        const view = fromDto(row);
+        setBranches((prev) => {
+          const others = prev
+            .filter((branch) => branch.id !== view.id)
+            .map((branch) => (view.active ? { ...branch, active: false } : branch));
+          return [...others, view];
+        });
+        return view;
+      }
+      const saved = saveLocalBranch(safeBrowserStorage("localStorage"), rootChatId, {
+        id: `local-${Date.now().toString(36)}`,
+        conversationId: input.conversationId,
+        label: input.label ?? null,
+        branchFromMessageId: input.branchFromMessageId ?? null,
+        branchFromMessageIndex: input.branchFromMessageIndex ?? null,
+        parentBranchId: input.parentBranchId ?? null,
+        active: input.active !== false,
+      });
+      await refresh();
+      return saved ? { ...saved, durable: false } : null;
+    },
+    [createFn, isSignedIn, persistent, refresh, rootChatId],
+  );
+
+  /**
+   * Guarantees the original conversation has its own branch row, so the branch
+   * list can always offer a truthful way back to the unbranched path.
+   */
+  const ensureRootBranch = useCallback(async (): Promise<BranchView | null> => {
+    if (!persistent || !rootChatId) return null;
+    const existing = branches.find((branch) => branch.conversationId === rootChatId);
+    if (existing) return existing;
+    return persistBranch({
+      conversationId: rootChatId,
+      label: "Original",
+      active: true,
+    });
+  }, [branches, persistBranch, persistent, rootChatId]);
+
   const createBranch = useCallback(
     async (input: {
+      conversationId: string;
       branchFromMessageId: string;
       branchFromMessageIndex?: number;
       messageIds?: string[];
       label?: string | null;
       parentBranchId?: string | null;
     }): Promise<BranchView | null> => {
-      if (!persistent || !chatId) return null;
-      if (isSignedIn) {
-        const row = await createFn({
-          data: {
-            chatId,
-            branchFromMessageId: input.branchFromMessageId,
-            branchFromMessageIndex: input.branchFromMessageIndex,
-            messageIds: input.messageIds ?? [],
-            label: input.label ?? null,
-            parentBranchId: input.parentBranchId ?? null,
-            active: true,
-          },
-        });
-        const view = fromDto(row);
-        setBranches((prev) => [
-          ...prev.map((branch) => ({ ...branch, active: false })).filter((b) => b.id !== view.id),
-          view,
-        ]);
-        return view;
-      }
-      const saved = saveLocalBranch(safeBrowserStorage("localStorage"), chatId, {
-        id: `local-${Date.now().toString(36)}`,
-        label: input.label ?? null,
-        branchFromMessageId: input.branchFromMessageId,
-        branchFromMessageIndex: input.branchFromMessageIndex ?? null,
-        parentBranchId: input.parentBranchId ?? null,
+      const root = await ensureRootBranch();
+      return persistBranch({
+        ...input,
+        parentBranchId: input.parentBranchId ?? root?.id ?? null,
         active: true,
       });
-      await refresh();
-      return saved ? { ...saved, durable: false } : null;
     },
-    [chatId, createFn, isSignedIn, persistent, refresh],
+    [ensureRootBranch, persistBranch],
   );
 
   const activate = useCallback(
     async (branchId: string) => {
-      if (!persistent || !chatId) return null;
+      if (!persistent || !rootChatId) return null;
       if (!branchId) throw new Error("Select a branch first.");
       if (isSignedIn) {
-        const row = await activateFn({ data: { chatId, branchId } });
+        const row = await activateFn({ data: { chatId: rootChatId, branchId } });
         const view = fromDto(row);
         setBranches((prev) => prev.map((branch) => ({ ...branch, active: branch.id === view.id })));
         return view;
       }
-      const saved = activateLocalBranch(safeBrowserStorage("localStorage"), chatId, branchId);
+      const saved = activateLocalBranch(safeBrowserStorage("localStorage"), rootChatId, branchId);
       if (!saved) throw new Error("That branch no longer exists on this device.");
       await refresh();
       return { ...saved, durable: false as const };
     },
-    [activateFn, chatId, isSignedIn, persistent, refresh],
+    [activateFn, isSignedIn, persistent, refresh, rootChatId],
   );
 
   const activeBranch = useMemo(() => branches.find((branch) => branch.active) ?? null, [branches]);
 
-  return { branches, activeBranch, loading, error, refresh, createBranch, activate, persistent };
+  return {
+    branches,
+    activeBranch,
+    loading,
+    error,
+    refresh,
+    createBranch,
+    activate,
+    persistent,
+    rootChatId,
+  };
 }

@@ -29,7 +29,7 @@ test("chat ids must be present and shape-safe", () => {
   assert.throws(() => parseChatId(""), /chat id is required/);
   assert.throws(() => parseChatId(undefined), /chat id is required/);
   assert.throws(() => parseChatId("chat id"), /not valid/);
-  assert.throws(() => parseChatId("a".repeat(200)), /too long/);
+  assert.throws(() => parseChatId("a".repeat(300)), /too long/);
 });
 
 test("message ids are validated separately with a longer ceiling", () => {
@@ -44,12 +44,16 @@ test("message versions require a known source and non-empty content", () => {
     messageId: "m1",
     source: "inline_edit",
     content: "Revised paragraph.",
-    editInstruction: "  make it shorter  ",
+    instruction: "  make it shorter  ",
+    selectionStart: 4,
+    selectionEnd: 9,
     originalContent: "Long original.",
     branchId: UUID,
   });
   assert.equal(parsed.source, "inline_edit");
-  assert.equal(parsed.editInstruction, "make it shorter");
+  assert.equal(parsed.instruction, "make it shorter");
+  assert.equal(parsed.selectionStart, 4);
+  assert.equal(parsed.selectionEnd, 9);
   assert.equal(parsed.branchId, UUID);
   assert.equal(parsed.accepted, true);
 
@@ -92,6 +96,7 @@ test("message versions require a known source and non-empty content", () => {
 test("branch input mirrors the production lineage columns", () => {
   const parsed = parseBranchInput({
     chatId: "c1",
+    conversationId: "conv-1",
     parentBranchId: UUID,
     branchFromParentMessageId: "m3",
     branchFromMessageId: "m4",
@@ -99,15 +104,23 @@ test("branch input mirrors the production lineage columns", () => {
     messageIds: ["m1", "m2"],
     label: "   ",
   });
+  assert.equal(parsed.conversationId, "conv-1");
   assert.equal(parsed.parentBranchId, UUID);
   assert.equal(parsed.branchFromMessageIndex, 2);
   assert.deepEqual(parsed.messageIds, ["m1", "m2"]);
   assert.equal(parsed.label, null);
   assert.equal(parsed.active, true);
-  assert.equal(parseBranchInput({ chatId: "c1", active: false }).active, false);
-  assert.throws(() => parseBranchInput({ chatId: "c1", parentBranchId: "nope" }), /not valid/);
+  assert.equal(
+    parseBranchInput({ chatId: "c1", conversationId: "conv-1", active: false }).active,
+    false,
+  );
+  assert.throws(() => parseBranchInput({ chatId: "c1" }), /conversation id is required/);
   assert.throws(
-    () => parseBranchInput({ chatId: "c1", branchFromMessageIndex: -1 }),
+    () => parseBranchInput({ chatId: "c1", conversationId: "conv-1", parentBranchId: "nope" }),
+    /not valid/,
+  );
+  assert.throws(
+    () => parseBranchInput({ chatId: "c1", conversationId: "conv-1", branchFromMessageIndex: -1 }),
     /whole number/,
   );
   assert.deepEqual(parseMessageIds(null), []);
@@ -134,7 +147,7 @@ test("custom rules use the instructions column and stay length bounded", () => {
 test("pins validate source type, project pairing and status", () => {
   const libraryPin = parsePinInput({ chatId: "c1", sourceType: "library", sourceId: UUID });
   assert.equal(libraryPin.projectId, null);
-  assert.equal(libraryPin.status, "ready");
+  assert.equal(libraryPin.status, "active");
 
   const filePin = parsePinInput({
     chatId: "c1",
@@ -171,9 +184,9 @@ test("pins validate source type, project pairing and status", () => {
 test("pinned context is clamped per item and in total, and reports what was cut", () => {
   const budget = budgetPinnedContext(
     [
-      { pinId: "p1", status: "ready", name: "a.txt", content: "a".repeat(50) },
-      { pinId: "p2", status: "ready", name: "b.txt", content: "b".repeat(50) },
-      { pinId: "p3", status: "ready", name: "c.txt", content: "c".repeat(50) },
+      { pinId: "p1", status: "active", name: "a.txt", content: "a".repeat(50) },
+      { pinId: "p2", status: "active", name: "b.txt", content: "b".repeat(50) },
+      { pinId: "p3", status: "active", name: "c.txt", content: "c".repeat(50) },
     ],
     { totalChars: 60, itemChars: 40 },
   );
@@ -192,14 +205,14 @@ test("pinned context is clamped per item and in total, and reports what was cut"
   assert.equal(unavailable.truncated, false);
 
   const small = budgetPinnedContext([
-    { pinId: "p1", status: "ready", name: "x", content: "short" },
+    { pinId: "p1", status: "active", name: "x", content: "short" },
   ]);
   assert.equal(small.items[0].truncated, false);
   assert.ok(MAX_PINNED_ITEM_CHARS > 0);
 });
 
 test("pin statuses are described in plain language", () => {
-  assert.equal(describePinStatus("ready"), "available");
+  assert.equal(describePinStatus("active"), "available");
   assert.match(describePinStatus("permission_lost"), /no longer accessible/);
   assert.match(describePinStatus("indexing"), /still being processed/);
   assert.match(describePinStatus("whatever"), /unknown/);

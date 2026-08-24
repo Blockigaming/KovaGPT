@@ -600,7 +600,31 @@ function KovaGPT() {
     if (activeTemporary !== null) setTempChat(activeTemporary);
   }, [activeTemporary]);
 
-  const branchState = useChatBranches(active?.id ?? null, Boolean(active?.temporary));
+  // Branch rows are keyed by the family's root conversation, so a branched chat
+  // and its original share one durable branch tree.
+  const branchRootId = active ? (active.branchRootId ?? active.id) : null;
+  const branchState = useChatBranches(branchRootId, Boolean(active?.temporary));
+
+  /**
+   * Switching a branch must switch what the person is actually reading. If the
+   * mapped conversation is not on this device we say so instead of pretending.
+   */
+  const activateBranch = useCallback(
+    async (branchId: string) => {
+      const target = branchState.branches.find((branch) => branch.id === branchId);
+      if (!target) throw new Error("That branch no longer exists.");
+      const exists = conversations.some(
+        (conversation) => conversation.id === target.conversationId,
+      );
+      if (!exists) {
+        throw new Error("That branch's conversation isn't available on this device.");
+      }
+      await branchState.activate(branchId);
+      setActiveId(target.conversationId);
+      return target;
+    },
+    [branchState, conversations, setActiveId],
+  );
 
   /**
    * Applies an accepted inline edit or a restored version to a message. The
@@ -1755,7 +1779,7 @@ function KovaGPT() {
                 activeBranch={branchState.activeBranch}
                 loading={branchState.loading}
                 error={branchState.error}
-                onActivate={branchState.activate}
+                onActivate={activateBranch}
                 onRetry={branchState.refresh}
                 durableHint={
                   isSignedIn
@@ -1925,6 +1949,7 @@ function KovaGPT() {
                         // so it survives a reload for signed-in users.
                         void branchState
                           .createBranch({
+                            conversationId: branched.id,
                             branchFromMessageId: m.id,
                             branchFromMessageIndex: i,
                             messageIds: active.messages.slice(0, i + 1).map((msg) => msg.id),

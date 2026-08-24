@@ -108,8 +108,8 @@ export function saveLocalVersion(storage, chatId, messageId, input) {
         typeof input?.originalContent === "string"
           ? input.originalContent.slice(0, LOCAL_MAX_CONTENT_CHARS)
           : null,
-      editInstruction:
-        typeof input?.editInstruction === "string" ? input.editInstruction.slice(0, 2_000) : null,
+      instruction:
+        typeof input?.instruction === "string" ? input.instruction.slice(0, 2_000) : null,
       source: typeof input?.source === "string" ? input.source : "inline_edit",
       createdAt: new Date().toISOString(),
       durable: false,
@@ -157,10 +157,15 @@ export function localBranches(storage, chatId) {
 }
 
 export function saveLocalBranch(storage, chatId, branch) {
+  const conversationId = String(branch.conversationId ?? "").trim();
+  if (!conversationId) throw new Error("A conversation is required to save a branch.");
   const entry = mutate(storage, chatId, (current) => {
-    const branches = current.branches.filter((item) => item.id !== branch.id);
+    const branches = current.branches.filter(
+      (item) => item.id !== branch.id && item.conversationId !== conversationId,
+    );
     branches.push({
       id: String(branch.id),
+      conversationId,
       label: branch.label ? String(branch.label).slice(0, 120) : null,
       branchFromMessageId: branch.branchFromMessageId ? String(branch.branchFromMessageId) : null,
       branchFromMessageIndex:
@@ -182,6 +187,8 @@ export function saveLocalBranch(storage, chatId, branch) {
 }
 
 export function activateLocalBranch(storage, chatId, branchId) {
+  const existing = localBranches(storage, chatId).some((item) => item.id === branchId);
+  if (!existing) return null;
   const entry = mutate(storage, chatId, (current) => ({
     ...current,
     branches: current.branches.map((item) => ({ ...item, active: item.id === branchId })),
