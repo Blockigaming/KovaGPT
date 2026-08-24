@@ -45,6 +45,8 @@ export const PIN_STATUS_AVAILABLE = "active";
 export const MAX_PINNED_CONTEXT_CHARS = 24_000;
 /** Per-item ceiling so one large file cannot consume the whole budget. */
 export const MAX_PINNED_ITEM_CHARS = 8_000;
+/** Absolute ceiling a caller may request for the pinned-context budget. */
+export const MAX_PINNED_CONTEXT_CHARS_LIMIT = 48_000;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -257,7 +259,10 @@ export function parseUnpinInput(input) {
  * truncation flags plus totals so callers can disclose exactly what was cut.
  */
 export function budgetPinnedContext(items, options = {}) {
-  const totalBudget = Math.max(1, options.totalChars ?? MAX_PINNED_CONTEXT_CHARS);
+  const totalBudget = Math.min(
+    MAX_PINNED_CONTEXT_CHARS_LIMIT,
+    Math.max(1, options.totalChars ?? MAX_PINNED_CONTEXT_CHARS),
+  );
   const itemBudget = Math.max(1, options.itemChars ?? MAX_PINNED_ITEM_CHARS);
   const maxItems = Math.max(1, options.maxItems ?? MAX_PINS_PER_CHAT);
 
