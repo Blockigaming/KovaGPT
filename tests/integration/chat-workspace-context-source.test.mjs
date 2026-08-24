@@ -60,7 +60,10 @@ test("context loading never breaks a chat turn", () => {
 test("server functions scope every workspace table to owner_id", () => {
   const ownerScoped = functions.match(/\.eq\("owner_id", context\.userId\)/g) ?? [];
   assert.ok(ownerScoped.length >= 8, `expected owner_id scoping on reads/writes, saw ${ownerScoped.length}`);
-  assert.doesNotMatch(functions, /\.eq\("user_id"/);
+  // The only user_id filter allowed is the library-ownership re-check, because
+  // user_library_items is keyed by user_id rather than owner_id.
+  const userIdFilters = functions.match(/\.eq\("user_id", context\.userId\)/g) ?? [];
+  assert.equal(userIdFilters.length, (functions.match(/\.eq\("user_id"/g) ?? []).length);
   // Ownership for atomic operations is pinned inside the RPCs, not passed in.
   assert.doesNotMatch(functions, /p_owner_id/);
 });
