@@ -93,10 +93,7 @@ test("only one guest branch is active at a time", () => {
   // Activating an unknown id reports nothing rather than a fake success, and it
   // must not deactivate the branch that is genuinely active.
   assert.equal(activateLocalBranch(storage, "chat-1", "missing"), null);
-  assert.equal(
-    localBranches(storage, "chat-1").filter((branch) => branch.active).length,
-    1,
-  );
+  assert.equal(localBranches(storage, "chat-1").filter((branch) => branch.active).length, 1);
 });
 
 test("missing storage never throws and reports empty state", () => {

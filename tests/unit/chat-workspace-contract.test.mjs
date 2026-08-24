@@ -161,8 +161,7 @@ test("pins validate source type, project pairing and status", () => {
 
   assert.throws(() => parsePinInput({ chatId: "c1", sourceId: UUID }), /source type is not valid/);
   assert.throws(
-    () =>
-      parsePinInput({ chatId: "c1", sourceType: "library", sourceId: UUID, projectId: UUID_B }),
+    () => parsePinInput({ chatId: "c1", sourceType: "library", sourceId: UUID, projectId: UUID_B }),
     /cannot belong to a project/,
   );
   assert.throws(
@@ -174,7 +173,10 @@ test("pins validate source type, project pairing and status", () => {
     /status is not valid/,
   );
   assert.throws(() => parseUnpinInput({ chatId: "c1", pinId: "nope" }), /not valid/);
-  assert.equal(parsePinStatusInput({ chatId: "c1", pinId: UUID, status: "failed" }).status, "failed");
+  assert.equal(
+    parsePinStatusInput({ chatId: "c1", pinId: UUID, status: "failed" }).status,
+    "failed",
+  );
   assert.throws(
     () => parsePinStatusInput({ chatId: "c1", pinId: UUID, status: "gone" }),
     /status is not valid/,

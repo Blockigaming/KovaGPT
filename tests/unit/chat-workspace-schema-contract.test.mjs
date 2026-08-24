@@ -20,12 +20,7 @@ const contract = readMigration("chat_workspace_production_contract");
 const rpcs = readMigration("chat_workspace_atomic_rpcs");
 const hardening = readMigration("client_privilege_hardening");
 
-const TABLES = [
-  "chat_branches",
-  "chat_custom_rules",
-  "chat_message_versions",
-  "chat_pinned_files",
-];
+const TABLES = ["chat_branches", "chat_custom_rules", "chat_message_versions", "chat_pinned_files"];
 
 test("every chat-workspace table is owner scoped with RLS enabled", () => {
   for (const table of TABLES) {
@@ -78,13 +73,19 @@ test("atomic RPCs allocate under a lock and pin the owner to the caller", () => 
     "kova_update_chat_branch_messages",
   ]) {
     assert.match(rpcs, new RegExp(`function public\\.${fn}`));
-    assert.match(rpcs, new RegExp(`revoke all on function public\\.${fn}[\\s\\S]*?from (public|anon)`));
+    assert.match(
+      rpcs,
+      new RegExp(`revoke all on function public\\.${fn}[\\s\\S]*?from (public|anon)`),
+    );
   }
 });
 
 test("browser roles cannot maintain tables or rewrite sequences", () => {
   assert.match(hardening, /revoke truncate, trigger, references on %s from anon, authenticated/);
   assert.match(hardening, /revoke update on sequence %s from anon, authenticated/);
-  assert.match(hardening, /alter default privileges[\s\S]*revoke all on tables from anon, authenticated/);
+  assert.match(
+    hardening,
+    /alter default privileges[\s\S]*revoke all on tables from anon, authenticated/,
+  );
   assert.match(hardening, /no_client_access/);
 });

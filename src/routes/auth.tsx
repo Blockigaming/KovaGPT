@@ -181,8 +181,8 @@ function AuthPage() {
           </h1>
           {magicSent ? (
             <p className="mt-3 text-[15px] text-muted-foreground">
-              We asked our email provider to send a sign-in link to {email}. Delivery can take a
-              few minutes — check your spam folder too, then open the link on this device.
+              We asked our email provider to send a sign-in link to {email}. Delivery can take a few
+              minutes — check your spam folder too, then open the link on this device.
             </p>
           ) : null}
         </div>
