@@ -22,7 +22,12 @@ import {
   type PinSourceType,
   type PinStatus,
 } from "@/lib/chat-workspace-contract.mjs";
-import { callWorkspaceRpc, definedArgs, isMissingFunction, type RpcClient } from "@/lib/chat-workspace-rpc";
+import {
+  callWorkspaceRpc,
+  definedArgs,
+  isMissingFunction,
+  type RpcClient,
+} from "@/lib/chat-workspace-rpc";
 
 export type MessageVersionDto = {
   id: string;
