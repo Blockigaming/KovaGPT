@@ -45,9 +45,9 @@ test("branch UI is backed by durable branches with a local guest fallback", () =
 
 test("per-chat rules and pinned files have a real management surface", () => {
   const dialog = read("src/components/ChatWorkspaceDialog.tsx");
-  assert.match(dialog, /getChatRules/u);
-  assert.match(dialog, /saveChatRules/u);
-  assert.match(dialog, /listChatPins/u);
+  assert.match(dialog, /getChatCustomRules/u);
+  assert.match(dialog, /saveChatCustomRules/u);
+  assert.match(dialog, /listChatPinnedFiles/u);
   assert.match(dialog, /pinChatFile/u);
   assert.match(dialog, /unpinChatFile/u);
   assert.match(dialog, /listMyLibrary/u);
