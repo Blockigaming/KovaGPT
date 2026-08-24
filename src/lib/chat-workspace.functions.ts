@@ -351,13 +351,16 @@ export const createChatBranch = createServerFn({ method: "POST" })
     // the owner's own row afterwards. If that write is rejected the branch is
     // still real, and the caller keeps the conversation id it already knows.
     if (!branchRow.conversation_id) {
+      const mapping = {
+        conversation_id: data.conversationId,
+        branch_from_message_index: data.branchFromMessageIndex,
+        message_ids: data.messageIds,
+      };
       const { data: mapped } = await context.supabase
         .from("chat_branches")
-        .update({
-          conversation_id: data.conversationId,
-          branch_from_message_index: data.branchFromMessageIndex,
-          message_ids: data.messageIds,
-        })
+        // The generated types lag the production columns; the migration in this
+        // release adds them, so the shape is checked by the schema contract test.
+        .update(mapping as never)
         .eq("owner_id", context.userId)
         .eq("id", branchRow.id)
         .select(BRANCH_COLUMNS)
