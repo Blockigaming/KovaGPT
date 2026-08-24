@@ -167,11 +167,6 @@ function toBranch(row: BranchRow): ChatBranchDto {
   };
 }
 
-/** RPC arguments are optional in the generated types; null means "unset". */
-function orUndefined<T>(value: T | null): T | undefined {
-  return value === null ? undefined : value;
-}
-
 /** Map opaque database errors onto messages a person can act on. */
 function rpcError(message: string): Error {
   if (message.includes("not_authenticated")) return new Error("Please sign in again.");
