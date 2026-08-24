@@ -228,7 +228,7 @@ export const listMessageVersions = createServerFn({ method: "GET" })
     if (data.messageId) query = query.eq("message_id", data.messageId);
     const { data: rows, error } = await query;
     if (error) throw dbError(error.message);
-    return (rows ?? []).map((row) => toVersion(row as VersionRow));
+    return (rows ?? []).map((row) => toVersion(row as unknown as VersionRow));
   });
 
 /**
@@ -286,7 +286,7 @@ export const listChatBranches = createServerFn({ method: "GET" })
       .order("created_at", { ascending: true })
       .limit(MAX_BRANCHES_PER_CHAT);
     if (error) throw dbError(error.message);
-    return (rows ?? []).map((row) => toBranch(row as BranchRow));
+    return (rows ?? []).map((row) => toBranch(row as unknown as BranchRow));
   });
 
 export const createChatBranch = createServerFn({ method: "POST" })
