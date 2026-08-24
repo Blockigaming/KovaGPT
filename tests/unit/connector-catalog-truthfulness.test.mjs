@@ -46,8 +46,7 @@ const GOOGLE_CONNECT_IDS = new Set(["google", "gmail", "google-drive", "google-c
 test("only connectors with a wired provider flow may claim live status", () => {
   const dishonest = entries()
     .filter(
-      (item) =>
-        item.status === "live" && !item.legacyProvider && !GOOGLE_CONNECT_IDS.has(item.id),
+      (item) => item.status === "live" && !item.legacyProvider && !GOOGLE_CONNECT_IDS.has(item.id),
     )
     .map((item) => item.id);
   assert.deepEqual(
@@ -61,10 +60,7 @@ test("the vast majority of catalog entries are honestly marked as not yet availa
   const items = entries();
   const live = items.filter((item) => item.status === "live");
   assert.ok(live.length > 0, "at least one connector must actually work");
-  assert.ok(
-    live.length < 20,
-    `only genuinely wired connectors may be live, found ${live.length}`,
-  );
+  assert.ok(live.length < 20, `only genuinely wired connectors may be live, found ${live.length}`);
 });
 
 test("no UI surface offers a fake notification signup for unavailable connectors", () => {

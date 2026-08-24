@@ -18,7 +18,7 @@ type Entry = {
   id: string;
   version: number;
   content: string;
-  editInstruction: string | null;
+  instruction: string | null;
   createdAt: string;
   durable: boolean;
 };
@@ -67,7 +67,7 @@ export function MessageVersionHistoryDialog({
             id: row.id,
             version: row.version,
             content: row.content,
-            editInstruction: row.editInstruction,
+            instruction: row.instruction,
             createdAt: row.createdAt,
             durable: true,
           })),
@@ -78,7 +78,7 @@ export function MessageVersionHistoryDialog({
             id: row.id,
             version: row.version,
             content: row.content,
-            editInstruction: row.editInstruction,
+            instruction: row.instruction,
             createdAt: row.createdAt,
             durable: false,
           })),
@@ -191,9 +191,9 @@ export function MessageVersionHistoryDialog({
                       </button>
                     </div>
                   </div>
-                  {entry.editInstruction && (
+                  {entry.instruction && (
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Instruction: {entry.editInstruction}
+                      Instruction: {entry.instruction}
                     </p>
                   )}
                   {expanded === entry.id && (

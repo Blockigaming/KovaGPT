@@ -177,7 +177,7 @@ export function SelectionEditDialog({
             source: "inline_edit",
             content: merged,
             originalContent: target.source,
-            editInstruction: instruction.trim() || null,
+            instruction: instruction.trim() || null,
             accepted: true,
           },
         });
@@ -187,7 +187,7 @@ export function SelectionEditDialog({
         saveLocalVersion(safeBrowserStorage("localStorage"), chatId, messageId, {
           content: merged,
           originalContent: target.source,
-          editInstruction: instruction.trim() || null,
+          instruction: instruction.trim() || null,
           source: "inline_edit",
         });
         onApply(merged);

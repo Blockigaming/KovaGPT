@@ -205,7 +205,7 @@ export async function loadPinnedContext(
       const text = str(item["content_text"]);
       resolved.push({
         ...base,
-        status: text ? "ready" : "indexing",
+        status: text ? "active" : "indexing",
         name: str(item["title"]) || str(item["file_name"]) || "Library item",
         content: text,
       });
@@ -264,7 +264,7 @@ export async function loadPinnedContext(
       .join("\n\n");
     resolved.push({
       ...base,
-      status: text ? "ready" : "indexing",
+      status: text ? "active" : "indexing",
       name: str(file["name"]) || "Project file",
       content: text,
     });
@@ -282,9 +282,9 @@ export async function loadPinnedContext(
   })[];
 
   return {
-    items: items.filter((item) => item.status === "ready"),
+    items: items.filter((item) => item.status === "active"),
     unavailable: items
-      .filter((item) => item.status !== "ready")
+      .filter((item) => item.status !== "active")
       .map((item) => ({
         name: item.name,
         status: item.status,

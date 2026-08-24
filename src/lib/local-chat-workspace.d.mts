@@ -16,7 +16,7 @@ export type LocalVersion = {
   version: number;
   content: string;
   originalContent: string | null;
-  editInstruction: string | null;
+  instruction: string | null;
   source: string;
   createdAt: string;
   durable: false;
@@ -26,6 +26,7 @@ export type LocalRules = { instructions: string; enabled: boolean; updatedAt: st
 
 export type LocalBranch = {
   id: string;
+  conversationId: string;
   label: string | null;
   branchFromMessageId: string | null;
   branchFromMessageIndex: number | null;
@@ -52,7 +53,7 @@ export function saveLocalVersion(
   input: {
     content: string;
     originalContent?: string | null;
-    editInstruction?: string | null;
+    instruction?: string | null;
     source?: string;
   },
 ): LocalVersion;
@@ -67,7 +68,7 @@ export function localBranches(storage: LocalStorageLike | null, chatId: string):
 export function saveLocalBranch(
   storage: LocalStorageLike | null,
   chatId: string,
-  branch: Partial<LocalBranch> & { id: string },
+  branch: Partial<LocalBranch> & { id: string; conversationId: string },
 ): LocalBranch | null;
 export function activateLocalBranch(
   storage: LocalStorageLike | null,

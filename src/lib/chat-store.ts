@@ -46,6 +46,12 @@ export type Conversation = {
   pinned?: boolean;
   pinnedAt?: number;
   temporary?: boolean;
+  /**
+   * Stable root chat id shared by a conversation and every branch taken from it.
+   * Durable branch rows are keyed by this, so switching branches can resolve a
+   * real conversation instead of only toggling metadata.
+   */
+  branchRootId?: string;
   branchOrigin?: {
     conversationId: string;
     messageId: string;
@@ -395,6 +401,7 @@ export function branchConversation(source: Conversation, throughMessageId: strin
   return {
     ...source,
     id: newId(),
+    branchRootId: source.branchRootId ?? source.id,
     title: `${source.title.replace(/ \(branch\)$/, "")} (branch)`,
     messages: source.messages.slice(0, index + 1).map((message) => ({
       ...message,

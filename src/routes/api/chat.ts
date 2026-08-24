@@ -1016,7 +1016,8 @@ export const Route = createFileRoute("/api/chat")({
             // for Temporary Chat.
             let chatWorkspaceBlock = "";
             if (auth && typeof chatId === "string" && chatId && !temporary) {
-              const { buildChatWorkspaceBlock } = await import("@/lib/chat-workspace-context.server");
+              const { buildChatWorkspaceBlock } =
+                await import("@/lib/chat-workspace-context.server");
               const workspace = await buildChatWorkspaceBlock(auth.supabaseAdmin, {
                 userId: auth.userId,
                 chatId,

@@ -8,10 +8,11 @@
 // validate against exactly the same rules. Every limit here is also enforced by
 // database CHECK constraints; the client only mirrors them for nicer messages.
 
-export const MAX_CHAT_ID_LENGTH = 128;
+export const MAX_CHAT_ID_LENGTH = 256;
 export const MAX_MESSAGE_ID_LENGTH = 256;
 export const MAX_MESSAGE_CONTENT_LENGTH = 131_072;
 export const MAX_EDIT_INSTRUCTION_LENGTH = 4_000;
+export const MAX_CONVERSATION_ID_LENGTH = 256;
 export const MAX_RULES_LENGTH = 8_000;
 export const MAX_LABEL_LENGTH = 120;
 export const MAX_VERSIONS_PER_MESSAGE = 50;
@@ -19,22 +20,26 @@ export const MAX_BRANCHES_PER_CHAT = 40;
 export const MAX_PINS_PER_CHAT = 25;
 export const MAX_BRANCH_MESSAGE_IDS = 2_000;
 
+// Exactly the values the database CHECK constraint allows.
 export const MESSAGE_VERSION_SOURCES = Object.freeze([
   "original",
   "inline_edit",
+  "retry",
   "branch_edit",
-  "regeneration",
 ]);
 
 export const PIN_SOURCE_TYPES = Object.freeze(["library", "project_file"]);
 
+// `active` is the usable state; the rest are disclosure-only states.
 export const PIN_STATUSES = Object.freeze([
-  "ready",
+  "active",
   "indexing",
   "failed",
-  "deleted",
   "permission_lost",
+  "deleted",
 ]);
+
+export const PIN_STATUS_AVAILABLE = "active";
 
 /** Total characters of pinned-file content injected into one prompt. */
 export const MAX_PINNED_CONTEXT_CHARS = 24_000;
@@ -59,6 +64,18 @@ export function parseMessageId(value, label = "message id") {
   if (!trimmed) throw new Error(`A ${label} is required.`);
   if (trimmed.length > MAX_MESSAGE_ID_LENGTH) throw new Error(`That ${label} is too long.`);
   if (!/^[A-Za-z0-9._:-]+$/.test(trimmed)) throw new Error(`That ${label} is not valid.`);
+  return trimmed;
+}
+
+/** Conversation ids map a branch row onto a real conversation in the chat store. */
+export function parseConversationId(value) {
+  if (typeof value !== "string") throw new Error("A conversation id is required.");
+  const trimmed = value.trim();
+  if (!trimmed) throw new Error("A conversation id is required.");
+  if (trimmed.length > MAX_CONVERSATION_ID_LENGTH) {
+    throw new Error("That conversation id is too long.");
+  }
+  if (!/^[A-Za-z0-9._:-]+$/.test(trimmed)) throw new Error("That conversation id is not valid.");
   return trimmed;
 }
 
@@ -114,13 +131,24 @@ export function parseMessageVersionInput(input) {
     throw new Error("The original text is too long to save.");
   }
 
+  const selectionStart = optionalIndex(source.selectionStart, "Selection start");
+  const selectionEnd = optionalIndex(source.selectionEnd, "Selection end");
+  if ((selectionStart === null) !== (selectionEnd === null)) {
+    throw new Error("A selection needs both a start and an end.");
+  }
+  if (selectionStart !== null && selectionEnd !== null && selectionEnd < selectionStart) {
+    throw new Error("That selection range is not valid.");
+  }
+
   return {
     chatId,
     messageId,
     branchId: optionalUuid(source.branchId, "branch"),
+    selectionStart,
+    selectionEnd,
     source: source.source,
-    editInstruction: optionalText(
-      source.editInstruction,
+    instruction: optionalText(
+      source.instruction ?? source.editInstruction,
       MAX_EDIT_INSTRUCTION_LENGTH,
       "Edit instruction",
     ),
@@ -144,6 +172,7 @@ export function parseBranchInput(input) {
   const source = input ?? {};
   return {
     chatId: parseChatId(source.chatId),
+    conversationId: parseConversationId(source.conversationId),
     parentBranchId: optionalUuid(source.parentBranchId, "parent branch"),
     branchFromParentMessageId: source.branchFromParentMessageId
       ? parseMessageId(source.branchFromParentMessageId, "message id")
@@ -192,7 +221,8 @@ export function parsePinInput(input) {
   if (source.sourceType === "project_file" && !projectId) {
     throw new Error("A project is required to pin a project file.");
   }
-  const status = source.status === undefined || source.status === null ? "ready" : source.status;
+  const status =
+    source.status === undefined || source.status === null ? PIN_STATUS_AVAILABLE : source.status;
   if (typeof status !== "string" || !PIN_STATUSES.includes(status)) {
     throw new Error("That pin status is not valid.");
   }
@@ -241,7 +271,7 @@ export function budgetPinnedContext(items, options = {}) {
       skipped += 1;
       continue;
     }
-    if (item.status !== "ready" || typeof item.content !== "string" || !item.content) {
+    if (item.status !== PIN_STATUS_AVAILABLE || typeof item.content !== "string" || !item.content) {
       // Unavailable items are still disclosed, but carry no content.
       included.push({ ...item, content: "", truncated: false, includedChars: 0 });
       continue;
@@ -271,7 +301,7 @@ export function budgetPinnedContext(items, options = {}) {
 
 export function describePinStatus(status) {
   switch (status) {
-    case "ready":
+    case "active":
       return "available";
     case "indexing":
       return "still being processed";
