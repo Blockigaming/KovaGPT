@@ -10,6 +10,7 @@ export const MAX_PINS_PER_CHAT: number;
 export const MAX_BRANCH_MESSAGE_IDS: number;
 export const MAX_PINNED_CONTEXT_CHARS: number;
 export const MAX_PINNED_ITEM_CHARS: number;
+export const MAX_PINNED_CONTEXT_CHARS_LIMIT: number;
 export const MAX_CONVERSATION_ID_LENGTH: number;
 export const PIN_STATUS_AVAILABLE: "active";
 

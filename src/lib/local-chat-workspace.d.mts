@@ -4,6 +4,8 @@ export const LOCAL_MAX_VERSIONS_PER_MESSAGE: number;
 export const LOCAL_MAX_CONTENT_CHARS: number;
 export const LOCAL_MAX_RULES_CHARS: number;
 export const LOCAL_MAX_BRANCHES_PER_CHAT: number;
+export const LOCAL_MAX_PINS_PER_CHAT: number;
+export const LOCAL_MAX_TOTAL_BYTES: number;
 
 export type LocalStorageLike = {
   getItem(key: string): string | null;
@@ -75,3 +77,32 @@ export function activateLocalBranch(
   chatId: string,
   branchId: string,
 ): LocalBranch | null;
+
+export type LocalPin = {
+  id: string;
+  sourceType: "library" | "project_file";
+  sourceId: string;
+  projectId: string | null;
+  name: string;
+  status: "active";
+  createdAt: string;
+  durable: false;
+};
+
+export function localPins(storage: LocalStorageLike | null, chatId: string): LocalPin[];
+export function pinLocalSource(
+  storage: LocalStorageLike | null,
+  chatId: string,
+  pin: {
+    id?: string;
+    sourceType: "library" | "project_file";
+    sourceId: string;
+    projectId?: string | null;
+    name?: string | null;
+  },
+): LocalPin | null;
+export function unpinLocalSource(
+  storage: LocalStorageLike | null,
+  chatId: string,
+  pinId: string,
+): boolean;

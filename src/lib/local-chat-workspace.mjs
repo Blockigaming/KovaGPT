@@ -7,11 +7,14 @@
 
 export const LOCAL_WORKSPACE_STORAGE_KEY = "kova-local-chat-workspace";
 
-export const LOCAL_MAX_CHATS = 20;
-export const LOCAL_MAX_VERSIONS_PER_MESSAGE = 20;
+export const LOCAL_MAX_CHATS = 150;
+export const LOCAL_MAX_VERSIONS_PER_MESSAGE = 40;
 export const LOCAL_MAX_CONTENT_CHARS = 40_000;
 export const LOCAL_MAX_RULES_CHARS = 8_000;
-export const LOCAL_MAX_BRANCHES_PER_CHAT = 20;
+export const LOCAL_MAX_BRANCHES_PER_CHAT = 24;
+export const LOCAL_MAX_PINS_PER_CHAT = 20;
+/** Hard ceiling on the serialized guest workspace (1.5 MB). */
+export const LOCAL_MAX_TOTAL_BYTES = 1_500_000;
 
 function emptyState() {
   return { chats: {} };
@@ -37,10 +40,11 @@ function chatEntry(state, chatId) {
       rules: existing.rules ?? null,
       versions: existing.versions ?? {},
       branches: Array.isArray(existing.branches) ? existing.branches : [],
+      pins: Array.isArray(existing.pins) ? existing.pins : [],
       touchedAt: existing.touchedAt ?? 0,
     };
   }
-  return { rules: null, versions: {}, branches: [], touchedAt: 0 };
+  return { rules: null, versions: {}, branches: [], pins: [], touchedAt: 0 };
 }
 
 /** Evict the least recently touched chats so storage stays bounded. */
@@ -64,10 +68,33 @@ export function readWorkspace(storage) {
   }
 }
 
+/**
+ * Serialize within the total byte bound, evicting the least recently touched
+ * chats until the payload fits. Returns null when even one chat is too large.
+ */
+function serializeBounded(state) {
+  let current = prune(state);
+  let payload = JSON.stringify(current);
+  while (payload.length > LOCAL_MAX_TOTAL_BYTES) {
+    const ids = Object.keys(current.chats);
+    if (ids.length <= 1) return null;
+    const oldest = ids.sort(
+      (a, b) => (current.chats[a]?.touchedAt ?? 0) - (current.chats[b]?.touchedAt ?? 0),
+    )[0];
+    const chats = { ...current.chats };
+    delete chats[oldest];
+    current = { chats };
+    payload = JSON.stringify(current);
+  }
+  return payload;
+}
+
 export function writeWorkspace(storage, state) {
   if (!storage) return false;
+  const payload = serializeBounded(state);
+  if (payload === null) return false;
   try {
-    storage.setItem(LOCAL_WORKSPACE_STORAGE_KEY, JSON.stringify(prune(state)));
+    storage.setItem(LOCAL_WORKSPACE_STORAGE_KEY, payload);
     return true;
   } catch {
     return false;
@@ -194,4 +221,56 @@ export function activateLocalBranch(storage, chatId, branchId) {
     branches: current.branches.map((item) => ({ ...item, active: item.id === branchId })),
   }));
   return entry.branches.find((item) => item.id === branchId) ?? null;
+}
+
+/* ---------------- pinned sources ---------------- */
+
+export function localPins(storage, chatId) {
+  return chatEntry(readWorkspace(storage), chatId).pins;
+}
+
+export function pinLocalSource(storage, chatId, pin) {
+  const sourceId = String(pin?.sourceId ?? "").trim();
+  const sourceType = pin?.sourceType === "project_file" ? "project_file" : "library";
+  if (!sourceId) throw new Error("A source is required to pin a file.");
+  if (sourceType === "project_file" && !pin?.projectId) {
+    throw new Error("A project is required to pin a project file.");
+  }
+  const existing = localPins(storage, chatId);
+  if (
+    existing.length >= LOCAL_MAX_PINS_PER_CHAT &&
+    !existing.some((item) => item.sourceId === sourceId && item.sourceType === sourceType)
+  ) {
+    throw new Error(`You can pin up to ${LOCAL_MAX_PINS_PER_CHAT} files per chat on this device.`);
+  }
+  const entry = mutate(storage, chatId, (current) => {
+    const pins = current.pins.filter(
+      (item) => !(item.sourceId === sourceId && item.sourceType === sourceType),
+    );
+    pins.push({
+      id: pin?.id ? String(pin.id) : `local-pin-${chatId}-${sourceType}-${sourceId}`,
+      sourceType,
+      sourceId,
+      projectId: pin?.projectId ? String(pin.projectId) : null,
+      name: pin?.name ? String(pin.name).slice(0, 200) : sourceId,
+      status: "active",
+      createdAt: new Date().toISOString(),
+      durable: false,
+    });
+    return { ...current, pins: pins.slice(-LOCAL_MAX_PINS_PER_CHAT) };
+  });
+  return (
+    entry.pins.find((item) => item.sourceId === sourceId && item.sourceType === sourceType) ?? null
+  );
+}
+
+/** Returns false when nothing matched, so callers never report a fake success. */
+export function unpinLocalSource(storage, chatId, pinId) {
+  const before = localPins(storage, chatId);
+  if (!before.some((item) => item.id === pinId)) return false;
+  mutate(storage, chatId, (current) => ({
+    ...current,
+    pins: current.pins.filter((item) => item.id !== pinId),
+  }));
+  return true;
 }
