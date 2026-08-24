@@ -22,6 +22,7 @@ import {
   type PinSourceType,
   type PinStatus,
 } from "@/lib/chat-workspace-contract.mjs";
+import { callWorkspaceRpc, definedArgs, isMissingFunction, type RpcClient } from "@/lib/chat-workspace-rpc";
 
 export type MessageVersionDto = {
   id: string;
@@ -240,20 +241,42 @@ export const saveMessageVersion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(parseMessageVersionInput)
   .handler(async ({ data, context }): Promise<MessageVersionDto> => {
-    const { data: row, error } = await context.supabase.rpc("kova_record_message_version", {
-      p_chat_id: data.chatId,
-      p_message_id: data.messageId,
-      p_source: data.source,
-      p_content: data.content,
-      p_branch_id: orUndefined(data.branchId),
-      p_instruction: orUndefined(data.instruction),
-      p_original_content: orUndefined(data.originalContent),
-      p_selection_start: orUndefined(data.selectionStart),
-      p_selection_end: orUndefined(data.selectionEnd),
-      p_accepted: data.accepted,
-      p_max_versions: MAX_VERSIONS_PER_MESSAGE,
-    });
+    const { data: row, error } = await callWorkspaceRpc(
+      context.supabase as unknown as RpcClient,
+      {
+        name: "create_chat_message_version",
+        args: definedArgs({
+          p_chat_id: data.chatId,
+          p_message_id: data.messageId,
+          p_content: data.content,
+          p_original_content: data.originalContent,
+          p_instruction: data.instruction,
+          p_source: data.source,
+          p_branch_id: data.branchId,
+          p_selection_start: data.selectionStart,
+          p_selection_end: data.selectionEnd,
+          p_accept: data.accepted,
+        }),
+      },
+      {
+        name: "kova_record_message_version",
+        args: definedArgs({
+          p_chat_id: data.chatId,
+          p_message_id: data.messageId,
+          p_source: data.source,
+          p_content: data.content,
+          p_branch_id: data.branchId,
+          p_instruction: data.instruction,
+          p_original_content: data.originalContent,
+          p_selection_start: data.selectionStart,
+          p_selection_end: data.selectionEnd,
+          p_accepted: data.accepted,
+          p_max_versions: MAX_VERSIONS_PER_MESSAGE,
+        }),
+      },
+    );
     if (error) throw rpcError(error.message);
+    if (!row) throw new Error("That edit could not be saved. Please try again.");
     return toVersion(row as unknown as VersionRow);
   });
 
@@ -263,10 +286,13 @@ export const acceptMessageVersion = createServerFn({ method: "POST" })
     versionId: parseUuid(input?.versionId, "version"),
   }))
   .handler(async ({ data, context }): Promise<MessageVersionDto> => {
-    const { data: row, error } = await context.supabase.rpc("kova_accept_message_version", {
-      p_version_id: data.versionId,
-    });
+    const { data: row, error } = await callWorkspaceRpc(
+      context.supabase as unknown as RpcClient,
+      { name: "accept_chat_message_version", args: { p_version_id: data.versionId } },
+      { name: "kova_accept_message_version", args: { p_version_id: data.versionId } },
+    );
     if (error) throw rpcError(error.message);
+    if (!row) throw new Error("That version no longer exists.");
     return toVersion(row as unknown as VersionRow);
   });
 
@@ -293,20 +319,58 @@ export const createChatBranch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(parseBranchInput)
   .handler(async ({ data, context }): Promise<ChatBranchDto> => {
-    const { data: row, error } = await context.supabase.rpc("kova_create_chat_branch", {
-      p_chat_id: data.chatId,
-      p_conversation_id: data.conversationId,
-      p_parent_branch_id: orUndefined(data.parentBranchId),
-      p_branch_from_parent_message_id: orUndefined(data.branchFromParentMessageId),
-      p_branch_from_message_id: orUndefined(data.branchFromMessageId),
-      p_branch_from_message_index: orUndefined(data.branchFromMessageIndex),
-      p_message_ids: data.messageIds,
-      p_label: orUndefined(data.label),
-      p_activate: data.active,
-      p_max_branches: MAX_BRANCHES_PER_CHAT,
-    });
+    const { data: row, error } = await callWorkspaceRpc(
+      context.supabase as unknown as RpcClient,
+      {
+        name: "create_chat_branch",
+        args: definedArgs({
+          p_chat_id: data.chatId,
+          p_parent_branch_id: data.parentBranchId,
+          p_branch_from_message_id: data.branchFromMessageId,
+          p_branch_from_parent_message_id: data.branchFromParentMessageId,
+          p_label: data.label,
+          p_activate: data.active,
+        }),
+      },
+      {
+        name: "kova_create_chat_branch",
+        args: definedArgs({
+          p_chat_id: data.chatId,
+          p_conversation_id: data.conversationId,
+          p_parent_branch_id: data.parentBranchId,
+          p_branch_from_parent_message_id: data.branchFromParentMessageId,
+          p_branch_from_message_id: data.branchFromMessageId,
+          p_branch_from_message_index: data.branchFromMessageIndex,
+          p_message_ids: data.messageIds,
+          p_label: data.label,
+          p_activate: data.active,
+          p_max_branches: MAX_BRANCHES_PER_CHAT,
+        }),
+      },
+    );
     if (error) throw rpcError(error.message);
-    return toBranch(row as unknown as BranchRow);
+    if (!row) throw new Error("That branch could not be created. Please try again.");
+    const branchRow = row as unknown as BranchRow;
+
+    // The canonical RPC does not take a conversation mapping, so persist it on
+    // the owner's own row afterwards. If that write is rejected the branch is
+    // still real, and the caller keeps the conversation id it already knows.
+    if (!branchRow.conversation_id) {
+      const { data: mapped } = await context.supabase
+        .from("chat_branches")
+        .update({
+          conversation_id: data.conversationId,
+          branch_from_message_index: data.branchFromMessageIndex,
+          message_ids: data.messageIds,
+        })
+        .eq("owner_id", context.userId)
+        .eq("id", branchRow.id)
+        .select(BRANCH_COLUMNS)
+        .maybeSingle();
+      if (mapped) return toBranch(mapped as unknown as BranchRow);
+      return toBranch({ ...branchRow, conversation_id: data.conversationId });
+    }
+    return toBranch(branchRow);
   });
 
 /** Deactivate-then-activate happens in one locked statement pair server-side. */
@@ -314,12 +378,19 @@ export const activateChatBranch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(parseBranchActivationInput)
   .handler(async ({ data, context }): Promise<ChatBranchDto> => {
-    const { data: row, error } = await context.supabase.rpc("kova_activate_chat_branch", {
-      p_chat_id: data.chatId,
-      p_branch_id: data.branchId,
-    });
+    const { data: row, error } = await callWorkspaceRpc(
+      context.supabase as unknown as RpcClient,
+      { name: "activate_chat_branch", args: { p_branch_id: data.branchId } },
+      {
+        name: "kova_activate_chat_branch",
+        args: { p_chat_id: data.chatId, p_branch_id: data.branchId },
+      },
+    );
     if (error) throw rpcError(error.message);
-    return toBranch(row as unknown as BranchRow);
+    if (!row) throw new Error("That branch no longer exists.");
+    const activated = row as unknown as BranchRow;
+    if (activated.chat_id !== data.chatId) throw new Error("That branch is not part of this chat.");
+    return toBranch(activated);
   });
 
 export const updateChatBranchMessages = createServerFn({ method: "POST" })
@@ -330,12 +401,15 @@ export const updateChatBranchMessages = createServerFn({ method: "POST" })
     label: input?.label ? String(input.label).slice(0, 120) : null,
   }))
   .handler(async ({ data, context }): Promise<ChatBranchDto> => {
-    const { data: row, error } = await context.supabase.rpc("kova_update_chat_branch_messages", {
-      p_branch_id: data.branchId,
-      p_message_ids: data.messageIds,
-      p_label: orUndefined(data.label),
-    });
-    if (error) throw rpcError(error.message);
+    const { data: rows, error } = await context.supabase
+      .from("chat_branches")
+      .update({ message_ids: data.messageIds, label: data.label })
+      .eq("owner_id", context.userId)
+      .eq("id", data.branchId)
+      .select(BRANCH_COLUMNS);
+    if (error) throw dbError(error.message);
+    const row = rows?.[0];
+    if (!row) throw new Error("That branch no longer exists.");
     return toBranch(row as unknown as BranchRow);
   });
 
@@ -385,6 +459,35 @@ export const saveChatCustomRules = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(parseCustomRulesInput)
   .handler(async ({ data, context }): Promise<ChatCustomRulesDto> => {
+    const { data: rpcRow, error: rpcFailure } = await callWorkspaceRpc(
+      context.supabase as unknown as RpcClient,
+      {
+        name: "save_chat_custom_rules",
+        args: {
+          p_chat_id: data.chatId,
+          p_instructions: data.instructions,
+          p_enabled: data.enabled,
+        },
+      },
+    );
+    if (rpcFailure && !isMissingFunction(rpcFailure)) throw rpcError(rpcFailure.message);
+    if (!rpcFailure && rpcRow) {
+      const saved = rpcRow as unknown as {
+        id: string;
+        chat_id: string;
+        instructions: string;
+        enabled: boolean;
+        updated_at: string;
+      };
+      return {
+        id: saved.id,
+        chatId: saved.chat_id,
+        instructions: saved.instructions,
+        enabled: saved.enabled,
+        updatedAt: saved.updated_at,
+      };
+    }
+
     const { data: row, error } = await context.supabase
       .from("chat_custom_rules")
       .upsert(
