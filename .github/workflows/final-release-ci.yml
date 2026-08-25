@@ -1,0 +1,147 @@
+name: KovaGPT Final Release CI
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact 40-character production release SHA
+        required: true
+        type: string
+      production_base_url:
+        description: Exact production HTTPS origin
+        required: true
+        default: https://kovagpt.com
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kova-final-release-${{ inputs.release_sha }}
+  cancel-in-progress: false
+
+jobs:
+  exact-release:
+    name: Exact-SHA source and deployed-production gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    environment: production-release
+    env:
+      CI: "true"
+      KOVA_EXPECTED_RELEASE_SHA: ${{ inputs.release_sha }}
+      KOVA_EXPECTED_SHA: ${{ inputs.release_sha }}
+      KOVA_PRODUCTION_BASE_URL: ${{ inputs.production_base_url }}
+      PLAYWRIGHT_BASE_URL: ${{ inputs.production_base_url }}
+      KOVA_NITRO_PRESET: node-server
+      KOVA_REQUIRE_CLOUDFLARE: "1"
+      KOVA_RUN_GENERATION_SMOKE: "1"
+      KOVA_RUN_TOOL_SMOKE: "1"
+      KOVA_RUN_RESEARCH_SMOKE: "1"
+      KOVA_RUN_IMAGE_SMOKE: "1"
+      KOVA_PRODUCTION_ACCESS_TOKEN: ${{ secrets.KOVA_PRODUCTION_ACCESS_TOKEN }}
+      KOVA_READINESS_TOKEN: ${{ secrets.KOVA_READINESS_TOKEN }}
+      KOVA_RELEASE_AUTH_STATE_B64: ${{ secrets.KOVA_RELEASE_AUTH_STATE_B64 }}
+    steps:
+      - name: Validate requested release inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$KOVA_EXPECTED_RELEASE_SHA" =~ ^[a-f0-9]{40}$ ]] || {
+            echo "release_sha must be an exact lowercase 40-character commit SHA" >&2
+            exit 1
+          }
+          [[ "$KOVA_PRODUCTION_BASE_URL" =~ ^https://[^/]+$ ]] || {
+            echo "production_base_url must be one HTTPS origin without a path" >&2
+            exit 1
+          }
+          test -n "$KOVA_PRODUCTION_ACCESS_TOKEN"
+          test -n "$KOVA_READINESS_TOKEN"
+          test -n "$KOVA_RELEASE_AUTH_STATE_B64"
+
+      - name: Check out the exact release
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Prove exact checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$KOVA_EXPECTED_RELEASE_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Install browser engines
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Decode protected signed-in browser state
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          AUTH_STATE="$RUNNER_TEMP/kova-release-auth-state.json"
+          printf '%s' "$KOVA_RELEASE_AUTH_STATE_B64" | base64 --decode > "$AUTH_STATE"
+          node -e 'JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"))' "$AUTH_STATE"
+          echo "KOVA_RELEASE_AUTH_STATE=$AUTH_STATE" >> "$GITHUB_ENV"
+
+      - name: Legacy repository formatting audit
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run format:check
+
+      - name: Run exact-source release gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Formatting changed files is enforced by the repository-wide format gate.
+          npm run format:check
+          npm run lint
+          npm run typecheck
+          npm run test:unit
+          npm run test:api
+          npm run test:integration
+          npm run test:a11y
+          npm run test:visual
+          npm run release:day16:source
+          npm run release:db:isolated
+          # Production build
+          npm run build
+          node scripts/release/artifact-secret-scan.mjs
+
+      - name: Verify the deployed exact SHA, AI streaming, and tools
+        run: npm run release:production:verify
+
+      - name: Run signed-out production browser matrix
+        run: npm run test:e2e:release:signed-out
+
+      - name: Run signed-in production browser matrix
+        run: npm run test:e2e:release:signed-in
+
+      - name: Prove the candidate remained exact and clean
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$KOVA_EXPECTED_RELEASE_SHA"
+          git diff --exit-code
+          git diff --cached --exit-code
+
+      - name: Upload non-secret evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: kova-final-release-${{ inputs.release_sha }}
+          path: artifacts/release/
+          if-no-files-found: warn
+          retention-days: 7

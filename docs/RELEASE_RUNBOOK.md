@@ -1,41 +1,37 @@
-# KovaGPT release and rollback runbook
+# KovaGPT final release and rollback runbook
 
-## Repository readiness versus production readiness
+The authoritative Day 16 release procedure is split into:
 
-Repository checks prove code and contracts. `/api/readyz` performs a bounded production dependency check. Optional providers are reported independently and never probed with paid requests. A release is not production-validated until an operator runs the staging smoke check with real staging configuration.
+- `docs/day16/README.md`
+- `docs/day16/azure-production-runbook.md`
+- `docs/day16/cloudflare-edge-only.md`
+- `docs/day16/supabase-backup-recovery.md`
+- `docs/day16/final-release-evidence.md`
 
-## Pre-deployment
+The production runtime is Microsoft Azure Container Apps. Cloudflare is DNS/proxy/security only. Supabase owns auth/database/storage. Azure managed identity accesses the approved Azure OpenAI-compatible deployments, with `gpt-5.6-sol` as KovaGPT's highest logical model. Lovable has no active role.
 
-1. Use Node 24 and the npm version bundled with it; install exactly with `npm ci`.
-2. Required runtime configuration: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, one of `SUPABASE_PUBLISHABLE_KEY`/`SUPABASE_ANON_KEY`, Clerk server or publishable configuration, and one of `KOVA_PUBLIC_URL`/`APP_URL`/`SITE_URL`. Optional subsystems require their provider variables reported by `/api/readyz`.
-3. Before a hosted migration, set `SUPABASE_PROJECT_REF` to the exact 20-character destination project reference. Non-interactive CI migration additionally requires `SUPABASE_ACCESS_TOKEN` and `SUPABASE_DB_PASSWORD`; keep both secret and provide them only through the protected environment.
-4. Confirm the commit with `git rev-parse HEAD`, obtain a database backup, run `npm run release:manifest`, `npm run release:migrations`, and review `release-migrations.json`. Migrations are forward-only and applied lexically.
-5. Run `npm ci && npm run release:validate`, all configured tests, and review `artifacts/release/bundle-report.json`.
+Run local validation before deployment, deploy only an immutable ACR digest from a clean exact SHA, preserve rollback evidence, and declare completion only after live production verification.
 
-## Deployment
+## Guarded Supabase migration inputs
 
-1. Push migrations with `SUPABASE_PROJECT_REF=<exact-project-ref> npm run db:migrate`. The wrapper links that exact project before pushing and refuses target-changing, seed, and work-directory flags. Do not deploy application code if this fails.
-2. Build with `npm run build`. Deploy the resulting Cloudflare/TanStack server using the deployment pipeline configured for `wrangler.jsonc`; this repository intentionally does not invent a provider-specific publish command.
-3. Verify `GET /api/livez` returns `200` and `status=alive`. Verify `GET /api/readyz` returns `200`; `503` means traffic must not be shifted.
-4. Run `KOVA_STAGING_SMOKE=1 KOVA_SMOKE_BASE_URL=https://staging.example npm run release:smoke`.
-5. Verify Clerk sign-in, Supabase owner-scoped reads, Stripe webhook delivery/signature results, runner `/readyz`, scheduled executor logs, and optional provider states without paid calls.
+Remote Supabase migration and reconciliation operations are intentionally fail-closed. Before any guarded remote migration is run, explicitly provide and verify the following deployment inputs:
 
-## Rollback and incidents
+- `SUPABASE_PROJECT_REF`: the exact target Supabase project reference.
+- `SUPABASE_ACCESS_TOKEN`: the authenticated CLI access token used only by the local Supabase CLI process.
+- `SUPABASE_DB_PASSWORD`: the target project's database password when required by the migration command.
+- `KOVA_EXPECTED_SUPABASE_PROJECT_REF`: the independently expected production project reference used to prevent accidental targeting of the wrong backend.
+- `VITE_SUPABASE_URL`: must resolve to the same expected project reference.
+- `VITE_SUPABASE_PUBLISHABLE_KEY`: the browser-safe publishable key for the same expected project.
 
-- Roll back application code to the prior immutable commit through the hosting platform. Never reverse a migration containing data changes blindly; use a reviewed forward-fix migration.
-- Disable affected optional capability configuration while retaining the application shell. Preserve all user rows and idempotency records.
-- Agent failure: stop workers, preserve run/event rows, release expired leases using existing recovery procedures, then resume only after readiness is green.
-- Webhook failure: retain provider events and correlation IDs, repair the handler, and replay from Stripe. Duplicate event claims are idempotent; failed processing releases its claim.
-- Clerk outage: retain signed-out access and do not bypass authentication. Provider outage: disable only that capability. Database outage: remove readiness from service and do not accept writes.
+The migration tooling must explicitly link the requested `SUPABASE_PROJECT_REF`, verify it against the expected production project identity, and stop before applying remote changes if the identities do not match. Production migrations must never infer a target from an already-linked local CLI state.
+The local deploy and rollback entrypoints are `npm run azure:production:deploy` and `npm run azure:production:rollback -- <deployment-evidence>`.
 
-## Post-deployment
+### Exact guarded remote migration invocation
 
-Run the non-destructive smoke suite, inspect structured error categories/correlation IDs, latency and error rate, migration state, worker queue health, scheduled-task execution, billing reconciliation, optional-provider readiness, and annotate the release commit. Paid provider/Agent smoke is a separate explicit operator action and is disabled by default.
+For an intentional guarded remote migration, explicitly provide the verified target Supabase project reference in the invocation:
 
-## Schema, diagnostics, and staging rehearsal
+```bash
+SUPABASE_PROJECT_REF=<exact-project-ref> npm run db:migrate
+```
 
-- CI executes `npm run release:db:isolated` against a disposable local Supabase stack, dumps the resulting schema, regenerates `database-contract.json`, and fails on contract drift. Local machines without Docker can run `npm run release:db:dry` but must not call that database validation.
-- The schema marker expected by `/api/readyz` is `20260803120000-v1`; any missing RPC, older marker, incomplete critical object set, timeout, or database failure keeps readiness closed.
-- Detailed diagnostics are disabled until `KOVA_ADMIN_USER_IDS` is configured server-side. Values are authenticated user IDs, never emails or client claims. `GET /api/admin/diagnostics` is no-store and rate-limited.
-- The manual `KovaGPT staging rehearsal` GitHub workflow requires the protected `staging` environment, an approved Cloudflare token, two disposable staging access tokens, staging Supabase configuration, and an explicitly allowlisted staging hostname. It never shifts production traffic.
-- Authenticated smoke records use the `__kova_smoke_` prefix, verify second-owner isolation, and delete created resources in `finally`. Production-like hostnames are refused unless `KOVA_ALLOW_PRODUCTION_SMOKE=1` is additionally set.
+Replace `<exact-project-ref>` with the independently verified target project reference. The migration tooling must fail closed if the requested target does not match the expected deployment identity.

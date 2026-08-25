@@ -6,7 +6,7 @@ const supabaseClient = await readFile("src/integrations/supabase/client.ts", "ut
 const clerkSafe = await readFile("src/components/auth/ClerkSafe.tsx", "utf8");
 const authMiddleware = await readFile("src/integrations/supabase/auth-middleware.ts", "utf8");
 const rootRoute = await readFile("src/routes/__root.tsx", "utf8");
-const workflow = await readFile(".github/workflows/ci.yml", "utf8");
+const workflow = await readFile(".github/workflows/final-release-ci.yml", "utf8");
 const packageJson = await readFile("package.json", "utf8");
 const changedFormat = await readFile("scripts/check-format-changed.mjs", "utf8");
 

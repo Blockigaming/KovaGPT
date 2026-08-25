@@ -213,7 +213,7 @@ function dbError(message: string): Error {
 
 export const listMessageVersions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { chatId: string; messageId?: string }) => ({
+  .validator((input: { chatId: string; messageId?: string }) => ({
     chatId: parseChatId(input?.chatId),
     messageId: input?.messageId ? parseMessageId(input.messageId) : null,
   }))
@@ -239,7 +239,7 @@ export const listMessageVersions = createServerFn({ method: "GET" })
  */
 export const saveMessageVersion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(parseMessageVersionInput)
+  .validator(parseMessageVersionInput)
   .handler(async ({ data, context }): Promise<MessageVersionDto> => {
     const { data: row, error } = await callWorkspaceRpc(
       context.supabase as unknown as RpcClient,
@@ -282,7 +282,7 @@ export const saveMessageVersion = createServerFn({ method: "POST" })
 
 export const acceptMessageVersion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { versionId: string }) => ({
+  .validator((input: { versionId: string }) => ({
     versionId: parseUuid(input?.versionId, "version"),
   }))
   .handler(async ({ data, context }): Promise<MessageVersionDto> => {
@@ -302,7 +302,7 @@ export const acceptMessageVersion = createServerFn({ method: "POST" })
 
 export const listChatBranches = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { chatId: string }) => ({ chatId: parseChatId(input?.chatId) }))
+  .validator((input: { chatId: string }) => ({ chatId: parseChatId(input?.chatId) }))
   .handler(async ({ data, context }): Promise<ChatBranchDto[]> => {
     const { data: rows, error } = await context.supabase
       .from("chat_branches")
@@ -317,7 +317,7 @@ export const listChatBranches = createServerFn({ method: "GET" })
 
 export const createChatBranch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(parseBranchInput)
+  .validator(parseBranchInput)
   .handler(async ({ data, context }): Promise<ChatBranchDto> => {
     const { data: row, error } = await callWorkspaceRpc(
       context.supabase as unknown as RpcClient,
@@ -379,7 +379,7 @@ export const createChatBranch = createServerFn({ method: "POST" })
 /** Deactivate-then-activate happens in one locked statement pair server-side. */
 export const activateChatBranch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(parseBranchActivationInput)
+  .validator(parseBranchActivationInput)
   .handler(async ({ data, context }): Promise<ChatBranchDto> => {
     const { data: row, error } = await callWorkspaceRpc(
       context.supabase as unknown as RpcClient,
@@ -398,7 +398,7 @@ export const activateChatBranch = createServerFn({ method: "POST" })
 
 export const updateChatBranchMessages = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { branchId: string; messageIds: string[]; label?: string }) => ({
+  .validator((input: { branchId: string; messageIds: string[]; label?: string }) => ({
     branchId: parseUuid(input?.branchId, "branch"),
     messageIds: parseMessageIds(input?.messageIds),
     label: input?.label ? String(input.label).slice(0, 120) : null,
@@ -418,7 +418,7 @@ export const updateChatBranchMessages = createServerFn({ method: "POST" })
 
 export const deleteChatBranch = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(parseBranchActivationInput)
+  .validator(parseBranchActivationInput)
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("chat_branches")
@@ -438,7 +438,7 @@ export const deleteChatBranch = createServerFn({ method: "POST" })
 
 export const getChatCustomRules = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { chatId: string }) => ({ chatId: parseChatId(input?.chatId) }))
+  .validator((input: { chatId: string }) => ({ chatId: parseChatId(input?.chatId) }))
   .handler(async ({ data, context }): Promise<ChatCustomRulesDto | null> => {
     const { data: rows, error } = await context.supabase
       .from("chat_custom_rules")
@@ -460,7 +460,7 @@ export const getChatCustomRules = createServerFn({ method: "GET" })
 
 export const saveChatCustomRules = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(parseCustomRulesInput)
+  .validator(parseCustomRulesInput)
   .handler(async ({ data, context }): Promise<ChatCustomRulesDto> => {
     const { data: rpcRow, error: rpcFailure } = await callWorkspaceRpc(
       context.supabase as unknown as RpcClient,
@@ -517,7 +517,7 @@ export const saveChatCustomRules = createServerFn({ method: "POST" })
 
 export const setChatCustomRulesEnabled = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { chatId: string; enabled: boolean }) => ({
+  .validator((input: { chatId: string; enabled: boolean }) => ({
     chatId: parseChatId(input?.chatId),
     enabled: input?.enabled === true,
   }))
@@ -542,7 +542,7 @@ export const setChatCustomRulesEnabled = createServerFn({ method: "POST" })
 
 export const resetChatCustomRules = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { chatId: string }) => ({ chatId: parseChatId(input?.chatId) }))
+  .validator((input: { chatId: string }) => ({ chatId: parseChatId(input?.chatId) }))
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("chat_custom_rules")
@@ -561,7 +561,7 @@ export const resetChatCustomRules = createServerFn({ method: "POST" })
 
 export const listChatPinnedFiles = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { chatId: string }) => ({ chatId: parseChatId(input?.chatId) }))
+  .validator((input: { chatId: string }) => ({ chatId: parseChatId(input?.chatId) }))
   .handler(async ({ data, context }): Promise<ChatPinnedFileDto[]> => {
     const { data: rows, error } = await context.supabase
       .from("chat_pinned_files")
@@ -584,7 +584,7 @@ export const listChatPinnedFiles = createServerFn({ method: "GET" })
 
 export const pinChatFile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(parsePinInput)
+  .validator(parsePinInput)
   .handler(async ({ data, context }): Promise<ChatPinnedFileDto> => {
     const { count, error: countError } = await context.supabase
       .from("chat_pinned_files")
@@ -630,7 +630,7 @@ export const pinChatFile = createServerFn({ method: "POST" })
 
 export const setChatPinnedFileStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(parsePinStatusInput)
+  .validator(parsePinStatusInput)
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("chat_pinned_files")
@@ -646,7 +646,7 @@ export const setChatPinnedFileStatus = createServerFn({ method: "POST" })
 
 export const unpinChatFile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(parseUnpinInput)
+  .validator(parseUnpinInput)
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("chat_pinned_files")
@@ -669,7 +669,7 @@ export const unpinChatFile = createServerFn({ method: "POST" })
  */
 export const resolvePinnedContext = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { chatId: string; totalChars?: number }) => ({
+  .validator((input: { chatId: string; totalChars?: number }) => ({
     chatId: parseChatId(input?.chatId),
     totalChars:
       typeof input?.totalChars === "number" && input.totalChars > 0

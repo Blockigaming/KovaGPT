@@ -1,7 +1,7 @@
-# Cloudflare edge security contract
+# Production edge security contract
 
-`src/server.ts` is authoritative for response hardening. The release check requires CSP, HSTS, nosniff, referrer, permissions, clickjacking, CSRF-origin, and 16 MiB request-body controls. `wrangler.jsonc` disables source-map upload.
+Cloudflare provides the public DNS/proxy/security edge; Azure Container Apps provides the application runtime. Azure ingress must allow only Cloudflare's current published CIDRs after cutover. There is no Worker, Pages, Wrangler, or Cloudflare-hosted application deployment.
 
-The CSP permits only integrations already used by the product: Clerk scripts/frames/connectivity (`*.clerk.com`, `*.clerk.accounts.dev`), Stripe scripts/frames/API (`js.stripe.com`, `hooks.stripe.com`, `api.stripe.com`), Supabase HTTPS/WebSocket connectivity (`*.supabase.co`), and Google font styles/files. Images allow HTTPS because generated/provider image URLs are external. No wildcard script source is allowed.
+`src/server.ts` remains authoritative for application response hardening: CSP, HSTS, nosniff, referrer policy, permissions policy, clickjacking protection, CSRF/origin checks, bounded request bodies, safe CORS, and no sensitive caching. `npm run release:edge` verifies the application contract. `npm run cloudflare:edge:verify` verifies the live Cloudflare/Azure boundary and writes sanitized evidence.
 
-Run `npm run release:edge` for the local source contract. A deployed probe requires both `KOVA_EDGE_BASE_URL=https://…` and an exact hostname in `KOVA_EDGE_ALLOWED_HOSTS`; it checks safe GET response headers only. Production probing is never implicit.
+See `docs/day16/cloudflare-edge-only.md` for the complete final configuration.

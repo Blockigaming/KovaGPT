@@ -82,34 +82,3 @@ test("served browser assets reject Stripe secret and webhook credentials", () =>
     );
   }
 });
-
-test("Azure promotion trusts the digest emitted by the Buildx push", () => {
-  const workflow = readFileSync(
-    ".github/workflows/ca-kovagpt-dev-AutoDeployTrigger-1724b7ba-d38e-4fd3-95e8-bef7f7fbc290.yml",
-    "utf8",
-  );
-
-  assert.match(workflow, /docker buildx build/u);
-  assert.match(workflow, /--push/u);
-  assert.match(workflow, /--metadata-file "\$metadata"/u);
-  assert.match(workflow, /value\["containerimage\.digest"\]/u);
-  assert.match(workflow, /registry_digest.*!=.*digest/su);
-  assert.match(workflow, /digest_image="\$\{ACR_LOGIN_SERVER\}\/\$\{IMAGE_NAME\}@\$\{digest\}"/u);
-  assert.match(workflow, /--image "\$\{\{ steps\.image\.outputs\.digest_image \}\}"/u);
-});
-
-test("Azure health and identity probes target the exact digest-bound revision", () => {
-  const workflow = readFileSync(
-    ".github/workflows/ca-kovagpt-dev-AutoDeployTrigger-1724b7ba-d38e-4fd3-95e8-bef7f7fbc290.yml",
-    "utf8",
-  );
-
-  assert.match(workflow, /az containerapp revision show/u);
-  assert.match(workflow, /--query properties\.fqdn/u);
-  assert.match(workflow, /revision_fqdn="\$\{\{ steps\.revision\.outputs\.fqdn \}\}"/u);
-  assert.match(workflow, /https:\/\/\$\{revision_fqdn\}\/api\/health/u);
-  assert.match(workflow, /https:\/\/\$\{revision_fqdn\}\/api\/version/u);
-  assert.doesNotMatch(workflow, /properties\.configuration\.ingress\.fqdn/u);
-  assert.match(workflow, /for attempt in \{1\.\.30\}; do/u);
-  assert.match(workflow, /Candidate verification attempt \$\{attempt\}\/30 failed; retrying/u);
-});

@@ -7,7 +7,13 @@ import tailwindcss from "@tailwindcss/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 
-const useNodeBrowserPreview = process.env.KOVA_BROWSER_PREVIEW === "node";
+const requestedNitroPreset = process.env.KOVA_NITRO_PRESET?.trim();
+if (requestedNitroPreset && requestedNitroPreset !== "node-server") {
+  throw new Error(
+    "KOVA_NITRO_PRESET may only be node-server. KovaGPT production runs on Azure Container Apps, not a Cloudflare Worker runtime.",
+  );
+}
+
 const buildSha = process.env.KOVA_BUILD_SHA || process.env.GITHUB_SHA || "unknown";
 const buildTime = process.env.KOVA_BUILD_TIME || new Date().toISOString();
 const appVersion = process.env.npm_package_version || "0.0.0";
@@ -32,13 +38,12 @@ export default defineConfig(({ mode }) => {
       // Production deploys the generated Nitro Cloudflare module. Browser CI
       // uses Nitro's in-process Node preview to avoid Wrangler's dev-only proxy.
       nitro({
-        preset: useNodeBrowserPreview ? "node-server" : "cloudflare-module",
+        preset: "node-server",
         output: {
           dir: "dist",
           serverDir: "dist/server",
           publicDir: "dist/client",
         },
-        ...(useNodeBrowserPreview ? {} : { cloudflare: { nodeCompat: true, deployConfig: true } }),
       }),
       react(),
     ],

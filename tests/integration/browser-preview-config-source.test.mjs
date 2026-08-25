@@ -2,40 +2,23 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
-
-test("browser CI uses the Node preview without changing the production preset", async () => {
-  const [viteConfig, workflow] = await Promise.all([
-    read("vite.config.ts"),
-    read(".github/workflows/ci.yml"),
+test("browser and production builds use the same Azure-compatible Node runtime", async () => {
+  const [vite, workflow, releaseConfig] = await Promise.all([
+    readFile("vite.config.ts", "utf8"),
+    readFile(".github/workflows/final-release-ci.yml", "utf8"),
+    readFile("playwright.release.config.ts", "utf8"),
   ]);
-  const verifyJob = workflow.slice(workflow.indexOf("  verify:"), workflow.indexOf("\n  browser:"));
-  const browserJob = workflow.slice(workflow.indexOf("\n  browser:"));
-
-  assert.match(
-    viteConfig,
-    /const useNodeBrowserPreview = process\.env\.KOVA_BROWSER_PREVIEW === "node";/,
-  );
-  assert.match(viteConfig, /preset: useNodeBrowserPreview \? "node-server" : "cloudflare-module"/);
-  assert.match(viteConfig, /cloudflare: \{ nodeCompat: true, deployConfig: true \}/);
-
-  assert.doesNotMatch(verifyJob, /KOVA_BROWSER_PREVIEW/);
-  assert.match(verifyJob, /- name: Production build(?:\s+if:[^\n]+)?\s+run: npm run build/);
-  assert.match(verifyJob, /- name: Bundle budget(?:\s+if:[^\n]+)?\s+run: npm run release:bundle/);
-  assert.match(verifyJob, /- name: Release checks(?:\s+if:[^\n]+)?\s+run: npm run test:release/);
-
-  // Inspect the production artifact before runtime tests are allowed to replace or remove dist.
-  const productionBuildIndex = verifyJob.indexOf("      - name: Production build");
-  const bundleBudgetIndex = verifyJob.indexOf("      - name: Bundle budget");
-  const integrationIndex = verifyJob.indexOf("      - name: Integration tests");
-  assert.ok(productionBuildIndex >= 0);
-  assert.ok(bundleBudgetIndex > productionBuildIndex);
-  assert.ok(integrationIndex > bundleBudgetIndex);
-
-  assert.match(browserJob, /env:\s+KOVA_BROWSER_PREVIEW: "node"/);
-  assert.match(browserJob, /- name: Browser preview build(?:\s+if:[^\n]+)?\s+run: npm run build/);
-  assert.match(
-    browserJob,
-    /run: npm run test:e2e -- \$\{\{ matrix\.projects \}\} --shard=\$\{\{ matrix\.shard \}\}/,
-  );
+  assert.match(vite, /preset:\s*"node-server"/u);
+  assert.doesNotMatch(vite, /KOVA_BROWSER_PREVIEW|cloudflare-module/u);
+  assert.match(workflow, /npm run test:e2e/u);
+  for (const width of [320, 375, 390, 768, 1024, 1280, 1440, 1728]) {
+    assert.match(
+      releaseConfig,
+      new RegExp(`width:\\s*${width}`, "u"),
+      `missing ${width}px viewport`,
+    );
+  }
+  assert.match(releaseConfig, /chromium/iu);
+  assert.match(releaseConfig, /firefox/iu);
+  assert.match(releaseConfig, /webkit/iu);
 });

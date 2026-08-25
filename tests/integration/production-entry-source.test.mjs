@@ -1,24 +1,16 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
-const viteConfig = await readFile("vite.config.ts", "utf8");
-const packageJson = await readFile("package.json", "utf8");
-const wranglerConfig = await readFile("wrangler.jsonc", "utf8");
+const vite = readFileSync("vite.config.ts", "utf8");
+const dockerfile = readFileSync("Dockerfile", "utf8");
+const production = readFileSync("infra/azure/production/main.bicep", "utf8");
 
-test("production uses the repository server entry and emits Nitro's Worker contract", () => {
-  assert.doesNotMatch(viteConfig, /@lovable\.dev\/vite-tanstack-config/);
-  assert.doesNotMatch(packageJson, /@lovable\.dev\/vite-tanstack-config/);
-  assert.match(viteConfig, /tanstackStart\(\{ server: \{ entry: "server" \} \}\)/);
-  assert.match(
-    viteConfig,
-    /preset:\s*useNodeBrowserPreview \? "node-server" : "cloudflare-module"/,
-  );
-  assert.match(viteConfig, /serverDir: "dist\/server"/);
-  assert.match(viteConfig, /publicDir: "dist\/client"/);
-  assert.match(viteConfig, /cloudflare: \{ nodeCompat: true, deployConfig: true \}/);
-
-  // The source config is Nitro's input. Production must deploy the generated
-  // dist/server/wrangler.json, which the artifact/runtime tests validate.
-  assert.match(wranglerConfig, /"main": "src\/server\.ts"/);
+test("production emits a Node server for Azure Container Apps only", () => {
+  assert.match(vite, /tanstackStart\(\{ server: \{ entry: "server" \} \}\)/u);
+  assert.match(vite, /preset:\s*"node-server"/u);
+  assert.doesNotMatch(vite, /cloudflare-module|@cloudflare\/vite-plugin|wrangler/u);
+  assert.match(dockerfile, /CMD \["node", "dist\/server\/index\.mjs"\]/u);
+  assert.match(production, /KOVA_RUNTIME_PLATFORM'[\s\S]*azure-container-apps/u);
+  assert.equal(existsSync("wrangler.jsonc"), false);
 });

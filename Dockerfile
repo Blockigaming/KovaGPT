@@ -21,7 +21,7 @@ ARG VITE_SUPABASE_URL=
 ARG VITE_SUPABASE_PUBLISHABLE_KEY=
 WORKDIR /app
 ENV NODE_ENV=production \
-    KOVA_BROWSER_PREVIEW=node \
+    KOVA_NITRO_PRESET=node-server \
     AI_GENERATION_ENABLED=false
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .

@@ -62,9 +62,14 @@ const forbiddenTrackedArtifacts = [
 ];
 
 function trackedFiles() {
-  return execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" })
+  return execFileSync("git", ["ls-files", "-z"], {
+    cwd: root,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  })
     .split("\0")
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((path) => existsSync(join(root, path)));
 }
 
 function filesUnder(directory) {
@@ -183,10 +188,7 @@ export function runReleaseSecurityAudit({ files = trackedFiles() } = {}) {
       if (rule.test(path)) violations.push(`${path}:forbidden tracked artifact`);
     }
     const extension = extname(path).toLowerCase();
-    if (
-      !readable.has(extension) &&
-      !["Dockerfile", ".env.example", "wrangler.jsonc"].includes(path)
-    ) {
+    if (!readable.has(extension) && !["Dockerfile", ".env.example"].includes(path)) {
       continue;
     }
     inspectText(path, readFileSync(join(root, path), "utf8"), violations);

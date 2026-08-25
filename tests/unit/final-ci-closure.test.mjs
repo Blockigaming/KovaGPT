@@ -1,49 +1,41 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 
-test("production Worker smoke test disables unavailable AI providers without weakening runtime validation", async () => {
-  const source = await readFile("tests/integration/production-worker-artifact.test.mjs", "utf8");
-  assert.match(source, /"--var",\s*"AI_GENERATION_ENABLED:false"/u);
-  assert.match(source, /"--var",\s*"AZURE_ENVIRONMENT:ci"/u);
-  assert.doesNotMatch(source, /AI_GENERATION_ENABLED:\s*"false"/u);
-  assert.match(source, /Worker did not become healthy/u);
-});
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+}
 
-test("Azure readiness blocks changed-file formatting regressions and keeps the legacy audit informational", async () => {
-  const workflow = await readFile(".github/workflows/azure-container-ci.yml", "utf8");
-  assert.match(workflow, /fetch-depth: 0/u);
-  assert.match(workflow, /run: npm run format:check:changed/u);
-  assert.match(
-    workflow,
-    /name: Legacy repository formatting audit[\s\S]{0,160}continue-on-error: true[\s\S]{0,160}run: npm run format:check/u,
+test("final CI covers exact source, deployed production, full browsers, security, and fresh database once", () => {
+  const workflowFiles = readdirSync(".github/workflows").filter((name) => /\.ya?ml$/u.test(name));
+  assert.deepEqual(
+    workflowFiles,
+    ["final-release-ci.yml"],
+    "only one manual exact-SHA workflow may remain",
   );
-});
-
-test("Playwright report aggregation exits cleanly when source jobs produce no blob reports", async () => {
-  const workflow = await readFile(".github/workflows/ci.yml", "utf8");
-  assert.match(workflow, /name: Detect blob reports/u);
-  assert.match(workflow, /find blob-reports -type f -name '\*\.zip'/u);
-  assert.match(
-    workflow,
-    /name: Merge Playwright reports\s+if: steps\.reports\.outputs\.available == 'true'/u,
-  );
-  assert.match(
-    workflow,
-    /name: Upload merged Playwright report\s+if: steps\.reports\.outputs\.available == 'true'/u,
-  );
-});
-
-test("generated database contracts must remain committed and deterministic", async () => {
-  const workflow = await readFile(".github/workflows/ci.yml", "utf8");
-  assert.match(
-    workflow,
-    /git diff --exit-code -- release-migrations\.json database-contract\.json/u,
-  );
-});
-
-test("Supabase CLI state and generated local secrets cannot be committed accidentally", async () => {
-  const ignore = await readFile(".gitignore", "utf8");
-  assert.match(ignore, /^supabase\/\.temp\/$/mu);
-  assert.match(ignore, /^supabase\/\.branches\/$/mu);
+  const workflow = readFileSync(".github/workflows/final-release-ci.yml", "utf8");
+  for (const proof of [
+    "format:check",
+    "typecheck",
+    "test:unit",
+    "test:api",
+    "test:integration",
+    "test:a11y",
+    "test:visual",
+    "release:db:isolated",
+    "release:day16:source",
+    "release:production:verify",
+    "test:e2e:release:signed-out",
+    "test:e2e:release:signed-in",
+    "artifact-secret-scan",
+    "KOVA_RELEASE_AUTH_STATE_B64",
+    "KOVA_RUN_TOOL_SMOKE",
+    "KOVA_READINESS_TOKEN",
+    "KOVA_RUN_IMAGE_SMOKE",
+    "KOVA_RUN_RESEARCH_SMOKE",
+    "KOVA_RUN_GENERATION_SMOKE",
+  ])
+    assert.match(workflow, new RegExp(escapeRegExp(proof), "u"), proof);
+  assert.doesNotMatch(workflow, /^  (?:push|pull_request|schedule):/mu);
+  assert.doesNotMatch(workflow, /az containerapp|wrangler deploy|git push/iu);
 });

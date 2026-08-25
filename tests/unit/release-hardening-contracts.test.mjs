@@ -135,9 +135,18 @@ test("Azure provider contract requires GPT-5.6 Sol and managed identity", () => 
     'type ProviderKind = "azure_openai" | "openai"; https://api.openai.com/v1 .openai.azure.com .services.ai.azure.com /openai/v1 IDENTITY_ENDPOINT IDENTITY_HEADER const AZURE_OPENAI_RESOURCE = "https://cognitiveservices.azure.com" searchParams.set("resource", AZURE_OPENAI_RESOURCE) searchParams.set("api-version", "2019-08-01") redirect: "error" "/responses" responsesStreamToChatStream AZURE_OPENAI_DEPLOYMENT_DEEP';
   const catalog =
     'id: "gpt-5.6-sol", reasoning: true, vision: true, tools: true fallback: "gpt-5.6-sol"';
-  const staging =
-    "Cognitive Services OpenAI User name: 'AZURE_CLIENT_ID' AZURE_OPENAI_DEPLOYMENT_DEEP";
-  assert.deepEqual(verifyAiProviderContract({ provider, catalog, staging }), []);
+  const environment =
+    "Cognitive Services OpenAI User name: 'AZURE_CLIENT_ID' name: 'AZURE_OPENAI_USE_MANAGED_IDENTITY' value: 'true' AZURE_OPENAI_DEPLOYMENT_DEEP name: 'KOVA_DEEP_MODEL' value: 'gpt-5.6-sol' generationEnabled KOVA_GENERATION_DISABLED";
+
+  assert.deepEqual(
+    verifyAiProviderContract({
+      provider,
+      catalog,
+      staging: environment,
+      production: environment,
+    }),
+    [],
+  );
 });
 
 test("rollback evidence rejects placeholders and accepts distinct immutable images", () => {

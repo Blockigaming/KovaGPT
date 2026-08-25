@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { extname } from "node:path";
 
 const root = process.cwd();
@@ -33,7 +33,7 @@ function trackedProductSource() {
   )
     .toString("utf8")
     .split("\n")
-    .filter((path) => path && scannedExtensions.has(extname(path)));
+    .filter((path) => path && scannedExtensions.has(extname(path)) && existsSync(path));
 }
 
 export function inspectVisibleControlContract({ files = trackedProductSource() } = {}) {

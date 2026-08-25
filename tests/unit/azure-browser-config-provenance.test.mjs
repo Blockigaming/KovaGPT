@@ -389,42 +389,6 @@ test("invalid URLs, project refs, keys, and source identities are rejected", () 
   );
 });
 
-test("Docker, Azure, and runbook contracts require exact archive and digest provenance", () => {
-  const dockerfile = readFileSync("Dockerfile", "utf8");
-  const helper = readFileSync("scripts/azure/prepare-verified-build-context.sh", "utf8");
-  const workflow = readFileSync(
-    ".github/workflows/ca-kovagpt-dev-AutoDeployTrigger-1724b7ba-d38e-4fd3-95e8-bef7f7fbc290.yml",
-    "utf8",
-  );
-  const runbook = readFileSync("docs/azure/verified-browser-image-provenance.md", "utf8");
-
-  assert.match(dockerfile, /ARG KOVA_VERIFY_BROWSER_CONFIG=false/u);
-  assert.match(dockerfile, /KOVA_BUILD_SHA="\$KOVA_SOURCE_SHA" npm run build/u);
-  assert.match(dockerfile, /KOVA_BROWSER_BUNDLE_DIR=dist\/client/u);
-  assert.match(dockerfile, /KOVA_SOURCE_ATTESTATION_PATH=\/app\/\.kova-source-attestation\.json/u);
-  assert.match(dockerfile, /com\.kovagpt\.source\.tree/u);
-  assert.match(dockerfile, /browser-config-provenance\.json/u);
-
-  assert.match(helper, /git status --porcelain/u);
-  assert.match(helper, /git archive --format=tar/u);
-  assert.match(helper, /\.kova-source-attestation\.json/u);
-
-  assert.match(workflow, /prepare-verified-build-context\.sh/u);
-  assert.match(workflow, /Verify existing server Supabase project before building/u);
-  assert.match(workflow, /server SUPABASE_URL does not match/u);
-  assert.match(workflow, /az acr repository show/u);
-  assert.match(workflow, /digest_image/u);
-  assert.match(workflow, /Deploy verified image by registry digest/u);
-  assert.match(workflow, /az containerapp update/u);
-  assert.match(workflow, /steps\.image\.outputs\.digest_image/u);
-  assert.match(workflow, /api\/version/u);
-  assert.doesNotMatch(workflow, /container-apps-deploy-action/u);
-
-  assert.match(runbook, /clean `git archive`/u);
-  assert.match(runbook, /"\$BUILD_CONTEXT"/u);
-  assert.match(runbook, /dist\/client/u);
-});
-
 test("PEM public assets are scanned before verification", () => {
   withBundle(
     {

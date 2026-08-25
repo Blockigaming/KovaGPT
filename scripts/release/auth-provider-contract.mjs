@@ -10,10 +10,14 @@ const forbiddenImportPattern = /(?:from\s+|import\s*\()\s*["']@clerk\//u;
 
 function trackedFiles() {
   try {
-    return execFileSync("git", ["ls-files", "-z"], { cwd: root })
+    return execFileSync("git", ["ls-files", "-z"], {
+      cwd: root,
+      stdio: ["ignore", "pipe", "ignore"],
+    })
       .toString("utf8")
       .split("\0")
-      .filter(Boolean);
+      .filter(Boolean)
+      .filter((path) => existsSync(join(root, path)));
   } catch {
     const files = [];
     const walk = (directory) => {

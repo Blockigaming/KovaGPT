@@ -23,22 +23,15 @@ const ignoredPrefixes = ["artifacts/", "docs/", "tests/"];
 const scannerDefinitionFiles = new Set([
   "scripts/release/zero-lovable.mjs",
   "scripts/release/ai-provider-contract.mjs",
+  "scripts/release/architecture-contract.mjs",
   "scripts/security/scan-ai-runtime.mjs",
 ]);
-const compatibilityRoutes = new Set([
-  "src/routes/lovable/email/auth/preview.ts",
-  "src/routes/lovable/email/auth/webhook.ts",
-  "src/routes/lovable/email/queue/process.ts",
-  "src/routes/lovable/email/suppression.ts",
-  "src/routes/lovable/email/transactional/preview.ts",
-  "src/routes/lovable/email/transactional/send.ts",
-]);
-const legacyOauthRedirect = "src/routes/[.]lovable.oauth.consent.tsx";
 const forbiddenPatterns = [
   { label: "Lovable SDK import", pattern: /@lovable\.dev\//iu },
   {
     label: "Lovable hosted runtime",
-    pattern: /(?:ai|connector)-gateway\.lovable\.dev|lovable\.(?:app|dev)/iu,
+    pattern:
+      /(?:ai|connector)-gateway\.lovable\.dev|(?:^|[^a-z])lovable\.(?:app|dev)(?:[^a-z]|$)/iu,
   },
   {
     label: "Lovable credential or runtime variable",
@@ -48,19 +41,29 @@ const forbiddenPatterns = [
     label: "Lovable billing metadata dependency",
     pattern: /lovable_(?:external_id|managed)/iu,
   },
+  {
+    label: "Lovable runtime route",
+    pattern:
+      /create(?:Root)?FileRoute\(["']\/(?:\.?lovable)(?:\/|["'])|["']\/(?:\.?lovable)(?:\/|["'])/iu,
+  },
 ];
+const forbiddenBuiltRoute = /(?:\/|\\u002f)(?:\.?lovable)(?:\/|\\u002f|["'])/iu;
 
 function trackedFiles() {
   try {
-    return execFileSync("git", ["ls-files", "-z"], { cwd: root })
-      .toString("utf8")
+    return execFileSync("git", ["ls-files", "-z"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    })
       .split("\0")
-      .filter(Boolean);
+      .filter(Boolean)
+      .filter((path) => existsSync(join(root, path)));
   } catch {
     const files = [];
     const walk = (directory) => {
       for (const name of readdirSync(directory)) {
-        if ([".git", "node_modules"].includes(name)) continue;
+        if ([".git", "node_modules", "dist"].includes(name)) continue;
         const path = join(directory, name);
         if (statSync(path).isDirectory()) walk(path);
         else files.push(relative(root, path).replaceAll("\\", "/"));
@@ -75,11 +78,6 @@ function read(path) {
   return readFileSync(join(root, path), "utf8");
 }
 
-/** Tracked-but-deleted paths must not crash the audit before the deletion is committed. */
-function readIfPresent(path) {
-  return existsSync(join(root, path)) ? read(path) : null;
-}
-
 export function inspectPackageManifest(pkg) {
   const groups = ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"];
   return groups.flatMap((group) =>
@@ -90,9 +88,21 @@ export function inspectPackageManifest(pkg) {
 }
 
 export function inspectLockRoot(lock) {
-  return Object.keys(lock.packages?.[""]?.dependencies ?? {}).filter((name) =>
-    /lovable/iu.test(name),
-  );
+  const rootPackage = lock.packages?.[""] ?? {};
+  return [
+    ...Object.keys(rootPackage.dependencies ?? {}),
+    ...Object.keys(rootPackage.devDependencies ?? {}),
+    ...Object.keys(rootPackage.optionalDependencies ?? {}),
+  ].filter((name) => /lovable/iu.test(name));
+}
+
+function isIgnored(path) {
+  return ignoredPrefixes.some((prefix) => path.startsWith(prefix));
+}
+
+function isForbiddenActivePath(path) {
+  if (scannerDefinitionFiles.has(path) || isIgnored(path)) return false;
+  return /(?:^|\/)lovable(?:\/|\.|$)|(?:^|\/)\[\.\]lovable\./iu.test(path);
 }
 
 export function auditZeroLovable({ files = trackedFiles() } = {}) {
@@ -105,50 +115,31 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
   }
 
   for (const prohibited of [".lovable", "bun.lock", "bunfig.toml"]) {
-    const tracked = files.some((path) => path === prohibited || path.startsWith(`${prohibited}/`));
-    // A tracked path that no longer exists on disk is a pending deletion, not a
-    // violation; only artifacts actually present in the tree fail the audit.
-    if (tracked && existsSync(join(root, prohibited))) {
+    if (files.some((path) => path === prohibited || path.startsWith(`${prohibited}/`))) {
       errors.push(`prohibited tracked artifact: ${prohibited}`);
     }
+  }
+
+  for (const path of files.filter(isForbiddenActivePath)) {
+    errors.push(`${path}: prohibited active Lovable path`);
   }
 
   if (existsSync(join(root, "package-lock.json"))) {
     const stale = inspectLockRoot(JSON.parse(read("package-lock.json")));
     if (stale.length) {
-      const message = `package-lock root still references removed Lovable packages: ${stale.join(", ")}`;
+      const message = `package-lock root still references removed Lovable packages: ${[
+        ...new Set(stale),
+      ].join(", ")}`;
       if (strictLock) errors.push(message);
       else warnings.push(`${message}; regenerate package-lock.json with npm before final release`);
     }
   }
 
   for (const path of files) {
-    if (ignoredPrefixes.some((prefix) => path.startsWith(prefix))) continue;
-    if (path === "package-lock.json" || scannerDefinitionFiles.has(path)) continue;
+    if (isIgnored(path) || path === "package-lock.json" || scannerDefinitionFiles.has(path))
+      continue;
     if (!readable.has(extname(path)) && !["Dockerfile", ".env.example"].includes(path)) continue;
-    const source = readIfPresent(path);
-    if (source === null) continue;
-
-    if (compatibilityRoutes.has(path)) {
-      if (
-        !/legacyLovableRouteGone/u.test(source) ||
-        /@lovable\.dev|LOVABLE_API_KEY|success:\s*true/iu.test(source)
-      ) {
-        errors.push(`${path}: legacy route is not an inert 410 tombstone`);
-      }
-      continue;
-    }
-
-    if (path === legacyOauthRedirect) {
-      if (
-        !/window\.location\.replace/u.test(source) ||
-        /supabase\.auth\.oauth|approveAuthorization|denyAuthorization/u.test(source)
-      ) {
-        errors.push(`${path}: legacy OAuth path must only redirect to /oauth/consent`);
-      }
-      continue;
-    }
-
+    const source = read(path);
     for (const rule of forbiddenPatterns) {
       if (rule.pattern.test(source)) errors.push(`${path}: ${rule.label}`);
     }
@@ -162,10 +153,12 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
     for (const path of filesUnder(join(root, bundleRoot))) {
       if (!readable.has(extname(path))) continue;
       const source = readFileSync(path, "utf8");
+      const relativePath = relative(root, path).replaceAll("\\", "/");
       for (const rule of forbiddenPatterns) {
-        if (rule.pattern.test(source)) {
-          errors.push(`${relative(root, path).replaceAll("\\", "/")}: ${rule.label}`);
-        }
+        if (rule.pattern.test(source)) errors.push(`${relativePath}: ${rule.label}`);
+      }
+      if (forbiddenBuiltRoute.test(source) || /lovable\.oauth/iu.test(relativePath)) {
+        errors.push(`${relativePath}: Lovable route emitted in production build`);
       }
     }
   }
@@ -178,6 +171,7 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
 
 function filesUnder(directory) {
   const files = [];
+  if (!existsSync(directory)) return files;
   for (const name of readdirSync(directory)) {
     const path = join(directory, name);
     if (statSync(path).isDirectory()) files.push(...filesUnder(path));

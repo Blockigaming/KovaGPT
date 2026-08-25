@@ -2,83 +2,56 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "location": {
-      "value": "eastus"
-    },
-    "namePrefix": {
-      "value": "kovagpt-stg"
-    },
+    "location": { "value": "eastus" },
+    "namePrefix": { "value": "kovagpt-stg" },
     "imageReference": {
-      "value": "kovagptacr-dte9hugbhjghcyb8.azurecr.io/kovagpt-web@sha256:REPLACE_WITH_64_HEX_DIGEST"
+      "value": "REPLACE_ACR.azurecr.io/kovagpt-web@sha256:REPLACE_WITH_64_HEX_DIGEST"
     },
-    "acrName": {
-      "value": "kovagptacr"
-    },
-    "acrResourceGroupName": {
-      "value": "rg-kovagpt-dev"
-    },
-    "keyVaultName": {
-      "value": "REPLACE_WITH_STAGING_KEY_VAULT"
-    },
-    "keyVaultResourceGroupName": {
-      "value": "rg-kovagpt-dev"
-    },
+    "sourceSha": { "value": "REPLACE_WITH_40_CHARACTER_RELEASE_SHA" },
+    "sourceTree": { "value": "REPLACE_WITH_40_CHARACTER_GIT_TREE" },
+    "expectedSupabaseProjectRef": { "value": "REPLACE20CHARSTAGINGRF" },
+    "acrName": { "value": "REPLACE_WITH_ACR_NAME" },
+    "acrResourceGroupName": { "value": "rg-kovagpt-stg" },
+    "keyVaultName": { "value": "REPLACE_WITH_STAGING_KEY_VAULT" },
+    "keyVaultResourceGroupName": { "value": "rg-kovagpt-stg" },
     "supabaseServiceRoleSecretUri": {
       "value": "https://REPLACE_WITH_STAGING_KEY_VAULT.vault.azure.net/secrets/supabase-service-role-key/REPLACE_WITH_VERSION"
     },
-    "azureOpenAiAccountName": {
-      "value": "REPLACE_WITH_AZURE_OPENAI_ACCOUNT"
+    "kovaIpHashSecretUri": {
+      "value": "https://REPLACE_WITH_STAGING_KEY_VAULT.vault.azure.net/secrets/kova-ip-hash-secret/REPLACE_WITH_VERSION"
     },
-    "azureOpenAiResourceGroupName": {
-      "value": "rg-kovagpt-dev"
+    "scheduledExecutionSecretUri": {
+      "value": "https://REPLACE_WITH_STAGING_KEY_VAULT.vault.azure.net/secrets/scheduled-execution-secret/REPLACE_WITH_VERSION"
     },
-    "azureOpenAiChatDeployment": {
-      "value": "kova-chat"
-    },
-    "azureOpenAiThinkingDeployment": {
-      "value": "kova-think"
-    },
-    "azureOpenAiDeepDeployment": {
-      "value": "kova-deep"
-    },
-    "azureOpenAiImageDeployment": {
-      "value": "kova-image"
-    },
-    "azureOpenAiEmbeddingDeployment": {
-      "value": "kova-embedding"
-    },
-    "supabaseUrl": {
-      "value": "https://REPLACE_WITH_SYNTHETIC_STAGING_PROJECT.supabase.co"
-    },
-    "supabasePublishableKey": {
-      "value": "REPLACE_WITH_SYNTHETIC_STAGING_PUBLISHABLE_KEY"
-    },
-    "generationEnabled": {
-      "value": false
-    },
-    "minReplicas": {
-      "value": 0
-    },
-    "maxReplicas": {
-      "value": 2
-    },
-    "logRetentionDays": {
-      "value": 30
-    },
-    "logDailyQuotaGb": {
-      "value": 1
-    },
-    "deployBudget": {
-      "value": false
-    },
-    "monthlyBudgetAmount": {
-      "value": 25
-    },
-    "budgetStartDate": {
-      "value": "2026-08-01T00:00:00Z"
-    },
-    "budgetContactEmails": {
-      "value": []
-    }
+    "additionalKeyVaultSecretBindings": { "value": {} },
+    "additionalEnvironmentVariables": { "value": {} },
+    "azureOpenAiAccountName": { "value": "REPLACE_WITH_AZURE_OPENAI_ACCOUNT" },
+    "azureOpenAiResourceGroupName": { "value": "rg-kovagpt-stg" },
+    "azureOpenAiChatDeployment": { "value": "kova-chat" },
+    "azureOpenAiThinkingDeployment": { "value": "kova-think" },
+    "azureOpenAiDeepDeployment": { "value": "kova-deep" },
+    "azureOpenAiImageDeployment": { "value": "kova-image" },
+    "azureOpenAiEmbeddingDeployment": { "value": "kova-embedding" },
+    "supabaseUrl": { "value": "https://REPLACE20CHARSTAGINGRF.supabase.co" },
+    "supabasePublishableKey": { "value": "REPLACE_WITH_STAGING_PUBLISHABLE_KEY" },
+    "publicBaseUrl": { "value": "https://staging.kovagpt.com" },
+    "generationEnabled": { "value": false },
+    "minReplicas": { "value": 0 },
+    "maxReplicas": { "value": 2 },
+    "restrictIngress": { "value": false },
+    "allowedIngressCidrs": { "value": [] },
+    "bindCustomDomains": { "value": false },
+    "customDomains": { "value": [] },
+    "customDomainCertificateSecretUri": { "value": "" },
+    "deployScheduledJob": { "value": false },
+    "schedulerCronExpression": { "value": "*/5 * * * *" },
+    "schedulerTimeoutSeconds": { "value": 300 },
+    "schedulerRetryLimit": { "value": 2 },
+    "logRetentionDays": { "value": 30 },
+    "logDailyQuotaGb": { "value": 1 },
+    "deployBudget": { "value": false },
+    "monthlyBudgetAmount": { "value": 25 },
+    "budgetStartDate": { "value": "2026-09-01T00:00:00Z" },
+    "budgetContactEmails": { "value": [] }
   }
 }

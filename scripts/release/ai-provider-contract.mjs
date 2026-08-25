@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-export function verifyAiProviderContract({ provider, catalog, staging }) {
+export function verifyAiProviderContract({ provider, catalog, staging, production }) {
   const failures = [];
   const requiredProviderPatterns = [
     /ProviderKind = "azure_openai" \| "openai"/u,
@@ -32,14 +32,34 @@ export function verifyAiProviderContract({ provider, catalog, staging }) {
   ) {
     failures.push("catalog:GPT-5.6 Sol capability contract incomplete");
   }
-  if (
-    !/Cognitive Services OpenAI User/iu.test(staging) &&
-    !/5e0bd9bd-7b93-4f28-af87-19fc36ad61bd/u.test(staging)
-  ) {
-    failures.push("staging:Azure OpenAI user RBAC missing");
+
+  for (const [environment, template] of [
+    ["staging", staging],
+    ["production", production],
+  ]) {
+    if (
+      !/Cognitive Services OpenAI User/iu.test(template) &&
+      !/5e0bd9bd-7b93-4f28-af87-19fc36ad61bd/u.test(template)
+    ) {
+      failures.push(`${environment}:Azure OpenAI user RBAC missing`);
+    }
+    if (
+      !/name: 'AZURE_CLIENT_ID'/u.test(template) ||
+      !/name: 'AZURE_OPENAI_USE_MANAGED_IDENTITY'[\s\S]*value: 'true'/u.test(template) ||
+      !/AZURE_OPENAI_DEPLOYMENT_DEEP/u.test(template)
+    ) {
+      failures.push(`${environment}:managed identity or deep deployment mapping missing`);
+    }
+    if (!/name: 'KOVA_DEEP_MODEL'[\s\S]*value: 'gpt-5\.6-sol'/u.test(template)) {
+      failures.push(`${environment}:GPT-5.6 Sol logical model mapping missing`);
+    }
   }
-  if (!/name: 'AZURE_CLIENT_ID'/u.test(staging) || !/AZURE_OPENAI_DEPLOYMENT_DEEP/u.test(staging)) {
-    failures.push("staging:managed identity or deep deployment mapping missing");
+
+  if (/AZURE_OPENAI_API_KEY|OPENAI_API_KEY/u.test(production)) {
+    failures.push("production:AI API-key path must not be provisioned");
+  }
+  if (!/generationEnabled/u.test(production) || !/KOVA_GENERATION_DISABLED/u.test(production)) {
+    failures.push("production:generation cutover must fail closed");
   }
   return failures;
 }
@@ -49,12 +69,13 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     provider: readFileSync("src/lib/ai/provider.server.ts", "utf8"),
     catalog: readFileSync("src/lib/ai/model-catalog.server.ts", "utf8"),
     staging: readFileSync("infra/azure/staging/main.bicep", "utf8"),
+    production: readFileSync("infra/azure/production/main.bicep", "utf8"),
   });
   if (failures.length) {
     console.error(`AI provider contract failed:\n${failures.join("\n")}`);
     process.exit(1);
   }
   console.log(
-    "AI_PROVIDER_CONTRACT=PASS primaryDeepModel=gpt-5.6-sol azureManagedIdentity=true liveSmokeRequired=true",
+    "AI_PROVIDER_CONTRACT=PASS primaryDeepModel=gpt-5.6-sol azureManagedIdentity=true productionApiKey=false liveSmokeRequired=true",
   );
 }
