@@ -24,6 +24,7 @@ const scannerDefinitionFiles = new Set([
   "scripts/release/zero-lovable.mjs",
   "scripts/release/ai-provider-contract.mjs",
   "scripts/release/architecture-contract.mjs",
+  "scripts/release/production-system-verifier.mjs",
   "scripts/security/scan-ai-runtime.mjs",
 ]);
 const forbiddenPatterns = [
