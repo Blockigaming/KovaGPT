@@ -1,13 +1,10 @@
 /* Final ChatGPT-first corrections. Keep this file small and evidence-driven. */
 
-/* The earlier parity layer accidentally removed its own accessibility ring in
- * a later override. Keep the quiet border treatment, but always expose a
- * visible two-pixel focus indicator around the complete composer. */
-.kova-composer:focus-within {
-  outline: 2px solid var(--parity-focus) !important;
-  outline-offset: 2px !important;
-  box-shadow: none !important;
-}
+/*
+ * Composer focus remains clearly perceivable without a heavy debug-style ring.
+ * The authoritative Day 16 treatment uses a quiet border shift and subtle
+ * surrounding shadow while preserving keyboard focus visibility.
+ */
 
 /* Current ChatGPT navigation uses a quiet background change rather than a
  * horizontal slide. Avoid shifting labels or icons during pointer movement. */
@@ -53,4 +50,11 @@
   .kova-composer button {
     transition: none !important;
   }
+}
+
+/* DAY16_COMPOSER_FOCUS_AUTHORITY */
+.kova-composer:focus-within {
+  outline: none !important;
+  border-color: color-mix(in oklab, var(--foreground) 24%, transparent) !important;
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--foreground) 5%, transparent) !important;
 }

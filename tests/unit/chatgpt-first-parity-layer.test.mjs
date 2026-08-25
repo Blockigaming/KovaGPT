@@ -2,13 +2,21 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
+const finalParityCss = readFileSync(
+  new URL("../../src/styles/chatgpt-final-parity.css", import.meta.url),
+  "utf8",
+);
+
 const runtime = readFileSync("src/components/PlatformRuntime.tsx", "utf8");
 const parity = readFileSync("src/styles/chatgpt-final-parity.css", "utf8");
 const sidebar = readFileSync("src/components/Sidebar.tsx", "utf8");
 
 test("the final ChatGPT-first parity layer is loaded in every application route", () => {
   assert.match(runtime, /import "@\/styles\/chatgpt-final-parity\.css"/u);
-  assert.match(parity, /\.kova-composer:focus-within[\s\S]*outline: 2px solid/u);
+  assert.match(
+    finalParityCss,
+    /\.kova-composer:focus-within[\s\S]*outline:\s*none\s*!important;[\s\S]*border-color:[\s\S]*box-shadow:/u,
+  );
   assert.match(parity, /\[data-chat-transcript\]/u);
   assert.match(parity, /min-width: 44px/u);
   assert.match(parity, /max-width: min\(58vw, 18rem\)/u);

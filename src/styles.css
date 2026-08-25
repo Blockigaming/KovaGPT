@@ -1801,13 +1801,6 @@ body {
     border-color: color-mix(in oklab, var(--foreground) 10%, transparent) !important;
   }
 
-  .kova-composer:focus-within {
-    border-color: color-mix(in oklab, var(--foreground) 7%, transparent) !important;
-    outline: 2px solid currentColor !important;
-    outline-offset: 2px !important;
-    box-shadow: none !important;
-  }
-
   .kova-composer.is-streaming {
     border-color: color-mix(in oklab, var(--foreground) 10%, transparent) !important;
   }
@@ -2171,25 +2164,9 @@ body {
   }
 }
 
-/* DAY10 composer focus contract */
+/* DAY16_COMPOSER_FOCUS_AUTHORITY */
 .kova-composer:focus-within {
-  outline: 2px solid var(--ring) !important;
-  outline-offset: 2px !important;
-}
-
-/* FINAL composer keyboard focus contract */
-.kova-composer:focus-within,
-.kova-composer:has(textarea:focus),
-.kova-composer:has(textarea:focus-visible) {
-  outline: 2px solid var(--ring) !important;
-  outline-offset: 2px !important;
-  outline-style: solid !important;
-}
-
-/* Day 10 final accessibility focus contract */
-.kova-composer:focus-within {
-  outline-width: 2px !important;
-  outline-style: solid !important;
-  outline-color: currentColor !important;
-  outline-offset: 2px !important;
+  outline: none !important;
+  border-color: color-mix(in oklab, var(--foreground) 24%, transparent) !important;
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--foreground) 5%, transparent) !important;
 }

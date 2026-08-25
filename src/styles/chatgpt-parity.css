@@ -91,12 +91,7 @@
 .kova-composer:hover {
   border-color: color-mix(in oklab, var(--foreground) 8%, transparent) !important;
 }
-.kova-composer:focus-within {
-  outline: 2px solid var(--parity-focus) !important;
-  outline-offset: 2px;
-  border-color: color-mix(in oklab, var(--foreground) 12%, transparent) !important;
-  box-shadow: none !important;
-}
+
 .kova-composer-button {
   transition:
     color 100ms ease,
@@ -372,10 +367,10 @@ html :is(input, textarea, select):focus-visible {
   box-shadow: none !important;
   border-color: color-mix(in oklab, var(--foreground) 32%, transparent) !important;
 }
+
+/* DAY16_COMPOSER_FOCUS_AUTHORITY */
 .kova-composer:focus-within {
-  outline-width: 2px !important;
-  outline-style: solid !important;
-  outline-color: currentColor !important;
-  outline-offset: 2px !important;
-  box-shadow: none !important;
+  outline: none !important;
+  border-color: color-mix(in oklab, var(--foreground) 24%, transparent) !important;
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--foreground) 5%, transparent) !important;
 }

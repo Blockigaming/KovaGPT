@@ -64,6 +64,7 @@ type ComposerAction = {
 
 const COMPOSER_TOOLS: readonly ComposerAction[] = [
   { id: "web_search", label: "Search the Web", icon: Globe },
+  { id: "deep_research", label: "Deep research", icon: Telescope },
   { id: "image", label: "Create Image", icon: ImagePlus },
 ];
 
@@ -712,14 +713,8 @@ export function ChatInput({
         ) : null}
         <span className="sr-only">Drop files to attach</span>
         <div
-          style={{
-            outlineWidth: "2px",
-            outlineStyle: "solid",
-            outlineColor: "currentColor",
-            outlineOffset: "2px",
-          }}
-
           tabIndex={-1}
+
           className={`kova-composer overflow-visible ${isStreaming ? "is-streaming" : ""}`}
         >
           {attachments.length > 0 && (
