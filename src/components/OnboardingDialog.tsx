@@ -13,6 +13,7 @@ import { getOnboarding, saveOnboarding, skipOnboarding } from "@/lib/onboarding.
 import { useUser } from "@/components/auth/ClerkSafe";
 import { Sparkles } from "lucide-react";
 
+import { recordGrowthEvent } from "@/lib/growth-events";
 const USES = [
   { id: "school", label: "School & studying" },
   { id: "writing", label: "Writing" },
@@ -53,7 +54,7 @@ const STARTERS: Record<string, string[]> = {
     "Explain what this error message means and how to fix it",
     "Write a Python script that renames files by date",
     "Review this function and suggest improvements",
-    "Help me design a REST API for a todo app",
+    "Plan and build a clean REST API for a task manager",
     "Convert this SQL query into a Prisma call",
     "What is the best way to debounce a React input?",
   ],
@@ -120,6 +121,13 @@ export function OnboardingDialog() {
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
+    void recordGrowthEvent("onboarding_viewed", {
+      surface: "onboarding",
+    });
+  }, [isLoaded, isSignedIn]);
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
     let cancelled = false;
     (async () => {
       try {
@@ -144,6 +152,8 @@ export function OnboardingDialog() {
   const persistOnboarding = async () => {
     if (!primaryUse) return;
     await doSave({ data: { primary_use: primaryUse, response_style: style } });
+
+    void recordGrowthEvent("onboarding_completed", { surface: "onboarding" });
   };
 
   const finish = async (starter?: string) => {
@@ -168,6 +178,8 @@ export function OnboardingDialog() {
     setSaving(true);
     try {
       await doSkip();
+
+      void recordGrowthEvent("onboarding_skipped", { surface: "onboarding" });
       setOpen(false);
     } finally {
       setSaving(false);
@@ -176,7 +188,7 @@ export function OnboardingDialog() {
 
   const titles: Record<number, { title: string; desc: string }> = {
     1: {
-      title: "Welcome to KovaGPT",
+      title: "Welcome to Kova",
       desc: "What will you mainly use KovaGPT for? This helps us personalize suggestions.",
     },
     2: {

@@ -4,6 +4,8 @@ import { Link } from "@tanstack/react-router";
 import { Sparkles, Clock } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { recordGrowthEvent } from "@/lib/growth-events";
+import { trackFeatureBeforeUpgrade } from "@/lib/feature-analytics";
 function formatCountdown(ms: number): string {
   if (ms <= 0) return "any moment now";
   const totalSec = Math.floor(ms / 1000);
@@ -97,7 +99,7 @@ export function LimitReachedDialog({
             </Button>
             <Button asChild className="flex-1">
               <Link to="/pricing" onClick={() => onOpenChange(false)}>
-                Claim 1 month free
+                trackFeatureBeforeUpgrade("limit_reached"); Claim 1 month free
               </Link>
             </Button>
           </div>

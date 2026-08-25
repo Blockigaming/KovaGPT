@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { NovaLogo } from "@/components/NovaLogo";
 
+import { recordGrowthEvent } from "@/lib/growth-events";
+import { useEffect } from "react";
 export const Route = createFileRoute("/checkout/return")({
   validateSearch: (s: Record<string, unknown>): { session_id?: string } => ({
     session_id: typeof s.session_id === "string" ? s.session_id : undefined,
@@ -29,6 +31,12 @@ export const Route = createFileRoute("/checkout/return")({
 });
 
 function CheckoutReturn() {
+  useEffect(() => {
+    void recordGrowthEvent("checkout_completed", {
+      surface: "checkout_return",
+    });
+  }, []);
+
   const { session_id } = Route.useSearch();
   return (
     <div className="min-h-screen bg-background text-foreground flex items-center justify-center px-4">

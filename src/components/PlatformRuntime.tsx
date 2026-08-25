@@ -4,6 +4,7 @@ import "@/styles/chatgpt-final-parity.css";
 import { platformEvents } from "@/platform/events";
 import { recordMetric } from "@/platform/observability";
 
+import { GrowthAttribution } from "@/components/GrowthAttribution";
 const DeveloperConsole = import.meta.env.DEV
   ? lazy(() =>
       import("./DeveloperConsole").then((module) => ({ default: module.DeveloperConsole })),

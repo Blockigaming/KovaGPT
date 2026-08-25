@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Check, ArrowLeft, Sparkles, Zap, Crown, X, Building2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NovaLogo } from "@/components/NovaLogo";
 import { useUser, useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
@@ -8,6 +8,8 @@ import { EnterpriseContactDialog } from "@/components/EnterpriseContactDialog";
 import { PublicFooter } from "@/components/PublicFooter";
 import { CAPABILITY_REGISTRY } from "@/lib/capability-registry";
 
+import { recordGrowthEvent } from "@/lib/growth-events";
+import { trackFeatureBeforeUpgrade } from "@/lib/feature-analytics";
 const PRICING_TIERS = ["free", "plus", "pro"] as const;
 
 function displayPrice(monthlyPriceUsd: number): string {
@@ -127,6 +129,8 @@ function PricingPage() {
       }
       return;
     }
+    trackFeatureBeforeUpgrade("pricing");
+    void recordGrowthEvent("upgrade_started", { surface: "pricing" });
     openCheckout({
       priceId,
       customerEmail: user?.email,
@@ -134,6 +138,12 @@ function PricingPage() {
       returnUrl: `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
     });
   };
+
+  useEffect(() => {
+    void recordGrowthEvent("pricing_viewed", {
+      surface: "pricing",
+    });
+  }, []);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -152,7 +162,9 @@ function PricingPage() {
 
       <main className="kova-secondary-page kova-pricing-page max-w-6xl mx-auto px-6 py-16">
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">Upgrade your plan</h1>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
+            Choose the Kova plan that fits your work
+          </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Choose the plan that fits how you work. Provider-dependent features require their
             services to be configured and available.
@@ -247,7 +259,8 @@ function PricingPage() {
           <div className="rounded-xl border border-border bg-card/50 p-5">
             <h3 className="font-medium mb-1">What happens if I hit my limit?</h3>
             <p className="text-muted-foreground">
-              You can wait until your limit resets or upgrade to a higher plan for more usage.
+              You can wait for your usage window to reset or choose a higher plan for additional
+              capacity.
             </p>
           </div>
           <div className="rounded-xl border border-border bg-card/50 p-5">

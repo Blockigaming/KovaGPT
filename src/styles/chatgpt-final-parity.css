@@ -58,3 +58,208 @@
   border-color: color-mix(in oklab, var(--foreground) 24%, transparent) !important;
   box-shadow: 0 0 0 1px color-mix(in oklab, var(--foreground) 5%, transparent) !important;
 }
+
+/* DAY16_UI_SYSTEM_START */
+
+/*
+ * Final Day 16 application UI authority.
+ * Neutral, dense, calm, ChatGPT-class workspace ergonomics with
+ * Kova branding. Scoped to application surfaces so public/legal pages
+ * retain their own presentation.
+ */
+
+:root {
+  --kova-content-max: 48rem;
+  --kova-wide-max: 76rem;
+  --kova-sidebar-width: 16.25rem;
+  --kova-sidebar-collapsed: 4rem;
+  --kova-header-height: 3.5rem;
+  --kova-composer-max: 48rem;
+  --kova-radius-panel: 1rem;
+  --kova-radius-control: 0.75rem;
+  --kova-surface-soft: color-mix(in oklab, var(--background) 92%, var(--foreground) 8%);
+  --kova-border-soft: color-mix(in oklab, var(--foreground) 12%, transparent);
+  --kova-hover-soft: color-mix(in oklab, var(--foreground) 7%, transparent);
+}
+
+.kova-app,
+.kova-shell,
+[data-kova-app-shell] {
+  min-height: 100dvh;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.kova-shell main,
+[data-kova-app-shell] main {
+  min-width: 0;
+}
+
+.kova-sidebar {
+  background: color-mix(in oklab, var(--background) 96%, var(--foreground) 4%);
+  border-color: var(--kova-border-soft);
+}
+
+.kova-sidebar a,
+.kova-sidebar button {
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    opacity 120ms ease;
+}
+
+.kova-sidebar a:hover,
+.kova-sidebar button:hover {
+  background: var(--kova-hover-soft);
+}
+
+.kova-sidebar [aria-current="page"],
+.kova-sidebar [data-active="true"] {
+  background: color-mix(in oklab, var(--foreground) 9%, transparent);
+  color: var(--foreground);
+}
+
+.kova-composer {
+  width: min(100%, var(--kova-composer-max));
+  border-radius: 1.55rem !important;
+  border-color: var(--kova-border-soft) !important;
+  background: color-mix(in oklab, var(--background) 97%, var(--foreground) 3%) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--foreground) 2%, transparent),
+    0 8px 28px color-mix(in oklab, black 8%, transparent);
+}
+
+.dark .kova-composer {
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, white 2%, transparent),
+    0 12px 36px color-mix(in oklab, black 28%, transparent);
+}
+
+.kova-composer textarea {
+  line-height: 1.5;
+}
+
+.kova-composer button {
+  flex: 0 0 auto;
+}
+
+.kova-composer:focus-within {
+  outline: none !important;
+  border-color: color-mix(in oklab, var(--foreground) 22%, transparent) !important;
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--foreground) 6%, transparent),
+    0 10px 30px color-mix(in oklab, black 9%, transparent) !important;
+}
+
+[data-workspace-page],
+.kova-workspace-page {
+  width: 100%;
+  max-width: var(--kova-wide-max);
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 2.5vw, 2rem);
+}
+
+[data-workspace-header],
+.kova-workspace-header {
+  margin-bottom: 1.5rem;
+}
+
+[data-workspace-header] h1,
+.kova-workspace-header h1 {
+  letter-spacing: -0.025em;
+  line-height: 1.12;
+}
+
+.kova-empty-state {
+  width: min(100%, 42rem);
+  margin-inline: auto;
+}
+
+.kova-empty-state h1,
+.kova-empty-state h2 {
+  letter-spacing: -0.025em;
+}
+
+.kova-message-list {
+  width: min(100%, var(--kova-content-max));
+  margin-inline: auto;
+}
+
+.kova-message-list pre,
+.kova-message-list table,
+.kova-message-list img,
+.kova-message-list video,
+.kova-message-list canvas,
+.kova-message-list svg {
+  max-width: 100%;
+}
+
+.kova-message-list pre,
+.kova-message-list table {
+  overflow-x: auto;
+}
+
+.kova-message-list img {
+  height: auto;
+}
+
+@media (max-width: 1023px) {
+  :root {
+    --kova-header-height: 3.25rem;
+  }
+
+  .kova-sidebar {
+    width: min(90vw, 20rem);
+  }
+
+  .kova-composer {
+    border-radius: 1.4rem !important;
+  }
+
+  [data-workspace-page],
+  .kova-workspace-page {
+    padding-inline: max(1rem, env(safe-area-inset-left));
+  }
+}
+
+@media (max-width: 480px) {
+  .kova-composer {
+    width: 100%;
+  }
+
+  .kova-message-list {
+    width: 100%;
+  }
+
+  [data-workspace-page],
+  .kova-workspace-page {
+    padding-inline: 0.875rem;
+  }
+
+  [role="dialog"] {
+    max-width: calc(100vw - 1rem);
+  }
+}
+
+@media (max-width: 360px) {
+  .kova-composer {
+    border-radius: 1.25rem !important;
+  }
+
+  [data-workspace-page],
+  .kova-workspace-page {
+    padding-inline: 0.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kova-sidebar *,
+  .kova-composer * {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* DAY16_UI_SYSTEM_END */
