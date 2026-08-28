@@ -1,0 +1,182 @@
+{
+  "currentState": {
+    "status": "truthful_non_executing",
+    "auditedCommit": "cd2f9772db1496c96ab0915f643cd63a8a06e4e4",
+    "executionImplemented": false,
+    "deploymentInspected": false,
+    "persistence": "Existing owner rows are durable and can be listed, paused, or deleted; new creation and paused-task resume/retry fail before persistence because availability is hard-coded false.",
+    "database": "scheduled_tasks, scheduled_task_runs, notification delivery tables, owner RLS, and service-role claim/recovery/settlement RPCs exist.",
+    "engine": "A dormant secret-protected HTTP ingress and sequential database-leased AI execution batch exist at source level.",
+    "ui": "Paid owners see truthful unavailable messaging, historical task rows, pause/delete, and disabled resume/retry; creation and Automation Builder are hidden.",
+    "cloudflareRole": "Existing edge/web deployment only; no approved scheduling role.",
+    "lovableDependency": "No Lovable runtime or service is part of the proposed execution path."
+  },
+  "rootBlockers": [
+    "No Azure timer, Container Apps Job, Function, queue dispatcher, or deployed worker invokes the dormant engine.",
+    "scheduledExecutionAvailable is hard-coded false, intentionally blocking creation and resume.",
+    "Azure Bicep provisions the web Container App only and does not wire scheduler identity, secrets, job policy, or alerts.",
+    "Claim and run-start persistence are split, retries overwrite one occurrence history row, and leases have no heartbeat.",
+    "Direct authenticated task UPDATE/DELETE permits unsafe execution-state and cancellation races.",
+    "Entitlement is not rechecked atomically at claim and scheduled use is not proven to share canonical AI cost accounting.",
+    "Recurrence stores an instant plus coarse repeat value, not an IANA-zone wall-clock rule; DST is not production-safe.",
+    "Availability readiness checks credentials rather than a fresh successful scheduler heartbeat."
+  ],
+  "chosenArchitecture": {
+    "trigger": "Azure Container Apps scheduled Job every minute in UTC",
+    "compute": "Dedicated non-HTTP scheduled-worker image built from this repository and pinned by immutable ACR digest",
+    "state": "Supabase Postgres is authoritative for owners, schedules, entitlements-at-claim, occurrences, attempts, leases, settlement, outbox, and RLS",
+    "identity": "Azure managed identity for ACR, Key Vault, Azure OpenAI, and monitoring; worker-only Supabase service credential from Key Vault",
+    "observability": "Container Apps logs plus Log Analytics and Application Insights metrics/alerts, with a Supabase heartbeat used for product availability",
+    "executionModel": "At-least-once claims with transactional occurrence/attempt idempotency, lease heartbeat, bounded pool, atomic settlement, and read-only prompts",
+    "cloudflare": "DNS/approved edge only; no triggering or execution",
+    "lovable": "zero runtime/service dependency",
+    "rationale": "It reuses existing Container Apps, ACR, identity, Key Vault, Azure OpenAI, Log Analytics, and Application Insights while avoiding a redundant broker and public HTTP scheduler dependency."
+  },
+  "alternativesRejected": [
+    {
+      "name": "Azure Functions timer",
+      "reason": "Adds Function host, storage account, packaging, and deployment machinery absent from the repo; database idempotency is still required."
+    },
+    {
+      "name": "Azure Service Bus",
+      "reason": "Requires dispatcher, namespace/queue, consumer, outbox publishing, and reconciliation while Supabase already provides the durable due queue; reserve for measured fan-out needs."
+    },
+    {
+      "name": "Azure Storage Queues",
+      "reason": "Still adds dual-system dispatch and poison/reconciliation logic with fewer controls than Service Bus and no current scale justification."
+    },
+    {
+      "name": "Always-on Container App",
+      "reason": "Adds polling leadership and idle compute; a finite scheduled Job matches the current batch."
+    },
+    {
+      "name": "Supabase pg_cron or Edge Functions",
+      "reason": "Conflicts with the finalized Azure execution and observability boundary."
+    },
+    {
+      "name": "Cloudflare Cron",
+      "reason": "Cloudflare is restricted to approved DNS/edge responsibilities and must not execute scheduled work."
+    },
+    {
+      "name": "Production HTTP bearer invocation",
+      "reason": "Depends on public web ingress and a shared secret; direct non-HTTP Job execution is smaller in trust surface."
+    }
+  ],
+  "databaseChanges": [
+    "Add versioned IANA timezone-aware recurrence, enabled/state_version, cancellation, soft-delete, missed-run, and entitlement-pause fields to scheduled_tasks.",
+    "Backfill legacy rows to UTC-derived rules but keep them disabled until explicit owner confirmation.",
+    "Make scheduled_task_runs immutable occurrence records with missed/skipped outcomes and stable unique task/scheduled_for identity.",
+    "Create scheduled_task_attempts for every try, heartbeat, lease-token hash, safe failure, timing, provider correlation, and usage evidence.",
+    "Create scheduled_task_delivery_outbox with channel/event idempotency and retry leases.",
+    "Create environment-specific scheduler heartbeat state and restricted readiness RPC.",
+    "Add composite owner constraints and due, lease, history, outbox, and heartbeat indexes.",
+    "Replace split claim/run-start and v1 settlement with atomic occurrence/attempt-aware service-role RPCs.",
+    "Add owner lifecycle RPCs and revoke broad authenticated writes to execution-owned columns/tables.",
+    "Use expand/migrate/contract; preserve v1 compatibility through the rollback window."
+  ],
+  "backendChanges": [
+    "Replace hard-coded availability with operator flag plus fresh environment/build/schema heartbeat and provider/database readiness.",
+    "Use one canonical server entitlement and atomic task-limit decision for create, resume, retry, and claim.",
+    "Provide owner RPC facades for create, edit, disable, resume, cancel/soft-delete, retry, paginated history, and safe results.",
+    "Integrate scheduled execution with canonical AI usage reservation and settlement.",
+    "Make the internal HTTP route diagnostic-only or remove it from production scheduling.",
+    "Consolidate divergent scheduled-workflow types into one canonical contract."
+  ],
+  "workerChanges": [
+    "Add a dedicated minimal non-HTTP scheduled-worker image/entry point; do not repurpose the unavailable generic agent worker.",
+    "Atomically claim occurrence plus attempt with an opaque lease token.",
+    "Heartbeat active leases and observe cancellation/state-version changes.",
+    "Execute with pool size 2, batch size 10, one live occurrence per task and initially one per owner.",
+    "Use bounded provider timeout, classified retry, Retry-After, deterministic jitter, and maximum four application attempts.",
+    "Settle task, occurrence, attempt, accounting, and delivery outbox transactionally and idempotently.",
+    "Drain in-app delivery outbox without allowing delivery failure to reverse execution success.",
+    "Emit content-free structured logs/metrics and exit with meaningful Job status."
+  ],
+  "azureChanges": [
+    "Add Container Apps scheduled Job resources to staging and production Bicep using the existing managed environments.",
+    "Use a dedicated managed identity where approved and least-privilege ACR, Key Vault, Azure OpenAI, and monitoring access.",
+    "Configure UTC minute cron, parallelism 1, completion count 1, bounded timeout, and only startup/fatal Job retries.",
+    "Reference immutable ACR digest and Key Vault worker secrets; expose no ingress.",
+    "Add Log Analytics/Application Insights metrics, dashboard queries, alerts, and operator-supplied Action Group.",
+    "Extend protected CI/deployment to build, scan, attest, push, validate Bicep, deploy by digest, and verify exact SHA.",
+    "Keep Cloudflare deployment and DNS unchanged for scheduling."
+  ],
+  "uiChanges": [
+    "Enable authoring/resume only when the backend proves a fresh scheduler heartbeat.",
+    "Add timezone-aware create/edit recurrence controls and document DST policy.",
+    "Represent disable, cancel-in-progress, soft-delete, retry eligibility, missed, and entitlement-paused states truthfully.",
+    "Add paginated occurrence/attempt history, safe failure and delivery state, and next retry.",
+    "Preserve principal isolation/reset and accessible live status/error behavior.",
+    "Require explicit owner confirmation before legacy tasks are enabled."
+  ],
+  "securityRequirements": [
+    "No public worker ingress, Cloudflare execution, or Lovable runtime/service dependency.",
+    "Worker secrets only in Key Vault references; never browser variables, image layers, logs, arguments, outputs, or artifacts.",
+    "Service-role RPCs verify role and opaque lease token, pin search_path, bound inputs, and revoke public/anon/authenticated execution.",
+    "Owner RPCs derive auth.uid and never accept owner identity; explicit owner SELECT RLS and composite ownership constraints remain.",
+    "Restrict initial scheduled tasks to model generation/read-only behavior until side-effect tools have authorization and idempotency contracts.",
+    "Never log prompt, result, raw user ID, email, provider body, auth header, or secret; use keyed pseudonymous identifiers.",
+    "Recheck entitlement/quota at claim and account for usage atomically.",
+    "Run strict zero-Lovable and artifact secret scans before release."
+  ],
+  "observabilityRequirements": [
+    "Fresh successful scheduler heartbeat bound to environment, build SHA, and schema version.",
+    "Job start/success/failure, due/claimed/completed/failed/retried/missed/skipped/canceled counters.",
+    "Oldest due age, claim latency, execution duration percentiles, active/expired/recovered leases, and settlement conflicts.",
+    "Provider status/rate-limit/timeout and token/cost metrics.",
+    "Outbox depth/age and delivery result metrics.",
+    "Alerts for heartbeat age, lag, consecutive Job failures, lease expiry, terminal failure rate, provider errors, delivery lag, and budget.",
+    "Authorized readiness exposes only safe capability state; scheduler outage degrades Scheduled Tasks, not web liveness."
+  ],
+  "testRequirements": [
+    "Fresh and upgrade migration rehearsals including legacy running/failed/scheduled rows and generated contract validation.",
+    "Recurrence golden tests for zones, DST gap/fold, month end, leap year, invalid zones, and edits.",
+    "Concurrent claim, overlap, ordering, fairness, lease heartbeat/recovery, stale token, and cancellation race tests.",
+    "Idempotent claim/heartbeat/settlement/outbox replay and crash-boundary fault injection.",
+    "Retry classification, backoff/jitter/Retry-After, max attempts, and missed-run coalescing tests.",
+    "Entitlement, plan-limit, quota accounting, downgrade-at-claim, and refund tests.",
+    "Two-user RLS, forged identity, direct mutation denial, worker RPC denial, and secret/log redaction tests.",
+    "UI unavailable/degraded/ready, lifecycle/history, accessibility, responsive, and truthful-error tests.",
+    "Bicep lint/build/what-if and identity, secret, no-ingress, cron, limits, digest, logs, alerts tests.",
+    "Seven-day isolated staging soak plus rollback drill with zero duplicates and zero cross-user access.",
+    "Existing typecheck, lint, build, unit, integration, API, release, migration, and strict zero-Lovable suites."
+  ],
+  "rolloutPlan": [
+    "Phase 1: expand schema/RPC/RLS contracts and disable-backed legacy migration.",
+    "Phase 2: implement worker, recurrence, entitlement/accounting, heartbeat, outbox, and telemetry behind flag off.",
+    "Phase 3: provision Azure staging Job/image/identity/logging/alerts only.",
+    "Phase 4: isolated fault-injected staging verification and minimum seven-day soak.",
+    "Phase 5: ship UI and controlled internal/small paid cohort enablement gated by heartbeat.",
+    "Phase 6: protected production readiness/canary, gradual enablement, runbooks, and later v1 contract cleanup."
+  ],
+  "rollbackPlan": [
+    "Turn off the server-side execution flag so create/resume fail closed.",
+    "Suspend the Azure scheduled Job without deleting it.",
+    "Request cancellation, wait a lease window, and use audited recovery rather than blanket status reset.",
+    "Roll worker/web to prior immutable ACR digests while retaining expand-only schema.",
+    "Disable outbox drain independently if notification delivery is faulty.",
+    "Preserve history/logs, reconcile occurrences with an approved script, and rotate suspected credentials.",
+    "Success requires no new claims/live leases/duplicates, owner isolation, web availability, and truthful unavailable UI."
+  ],
+  "estimatedImplementationPhases": 6,
+  "dependencies": [
+    "Approved Azure subscription/resource group and existing Container Apps environment, ACR, Key Vault, Azure OpenAI, Log Analytics, and Application Insights",
+    "Worker-specific managed identity/security decision and protected CI/OIDC deployment workflow",
+    "Isolated staging Supabase project with migrations and two-user fixtures",
+    "Canonical subscription entitlement and AI accounting contract",
+    "Operator Action Group and approved SLO/cost thresholds",
+    "Product approval for missed-run, DST, concurrency, retention, legacy enablement, and delivery policies"
+  ],
+  "unresolvedQuestions": [
+    "Should Plus and Pro have different per-owner execution concurrency, or launch at one for all?",
+    "Approve 24-hour grace and coalesce/latest missed-run behavior?",
+    "Approve first-valid-time DST gap, earlier-offset DST fold, and last-day month-end policies?",
+    "What are run/result/attempt/log retention and soft-delete purge periods?",
+    "Must every legacy schedule require explicit owner re-enable (recommended yes)?",
+    "Is email delivery excluded from initial launch (recommended yes)?",
+    "What scheduler heartbeat/lag SLO and per-plan token/cost ceilings are approved?",
+    "Will production use a dedicated worker managed identity (recommended) or the existing identity?",
+    "Which protected workflow owns production Azure Job deployment?",
+    "Can the target Supabase plan provide a narrower worker credential than service_role?"
+  ]
+}
