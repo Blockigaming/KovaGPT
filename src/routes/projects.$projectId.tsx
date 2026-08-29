@@ -113,6 +113,7 @@ function ProjectDetailPage() {
   const [invites, setInvites] = useState<ProjectInvite[]>([]);
   const [chats, setChats] = useState<ProjectChatSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [tab, setTab] = useState("overview");
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -126,6 +127,8 @@ function ProjectDetailPage() {
 
   const refresh = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
+
     try {
       const [p, m, i, c] = await Promise.all([
         fnGet({ data: { id: projectId } }),
@@ -133,12 +136,18 @@ function ProjectDetailPage() {
         fnListInvites({ data: { project_id: projectId } }),
         fnListChats({ data: { project_id: projectId } }),
       ]);
+
       setProject(p as never);
       setMembers(m);
       setInvites(i);
       setChats(c);
-    } catch {
-      toast.error("Failed to load project");
+    } catch (error) {
+      setProject(null);
+      const message =
+        error instanceof Error && error.message.trim()
+          ? error.message
+          : "This project could not be loaded.";
+      setLoadError(message);
     } finally {
       setLoading(false);
     }
@@ -166,13 +175,40 @@ function ProjectDetailPage() {
       </AppShell>
     );
   }
-  if (loading || !project) {
+  if (loading) {
     return (
       <AppShell>
-        <div className="p-8 flex items-center gap-2 text-muted-foreground">
+        <div className="p-8 flex items-center gap-2 text-muted-foreground" role="status">
           <Loader2 className="w-4 h-4 animate-spin" />
           Loading project…
         </div>
+      </AppShell>
+    );
+  }
+
+  if (loadError || !project) {
+    return (
+      <AppShell>
+        <main className="mx-auto flex w-full max-w-xl flex-col items-center px-6 py-20 text-center">
+          <div
+            className="w-full rounded-2xl border border-border bg-card p-6"
+            role="alert"
+            aria-live="polite"
+          >
+            <h1 className="text-xl font-semibold">Project unavailable</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {loadError ??
+                "This project may have been removed, or you may no longer have permission to view it."}
+            </p>
+
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              <Button onClick={() => void refresh()}>Try again</Button>
+              <Button asChild variant="outline">
+                <Link to="/projects">Back to projects</Link>
+              </Button>
+            </div>
+          </div>
+        </main>
       </AppShell>
     );
   }
@@ -182,9 +218,19 @@ function ProjectDetailPage() {
   const archived = !!project.archived_at;
 
   async function toggleArchive() {
-    await fnArchive({ data: { id: projectId, archived: !archived } });
-    toast.success(archived ? "Project restored" : "Project archived");
-    await refresh();
+    try {
+      await fnArchive({ data: { id: projectId, archived: !archived } });
+      toast.success(archived ? "Project restored" : "Project archived");
+      await refresh();
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : archived
+            ? "Failed to restore project"
+            : "Failed to archive project",
+      );
+    }
   }
 
   return (
@@ -408,6 +454,22 @@ function callServerFnDirect<T>(fn: unknown, arg: unknown): Promise<T> {
   return (fn as (a: unknown) => Promise<T>)(arg);
 }
 
+function ProjectSectionError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div
+      className="rounded-xl border border-destructive/30 bg-destructive/5 p-4"
+      role="alert"
+      aria-live="polite"
+    >
+      <div className="font-medium">Unable to load this section</div>
+      <p className="mt-1 text-sm text-muted-foreground">{message}</p>
+      <Button type="button" variant="outline" size="sm" className="mt-3" onClick={onRetry}>
+        Try again
+      </Button>
+    </div>
+  );
+}
+
 // ===================== OVERVIEW =====================
 function OverviewTab({ projectId, onJump }: { projectId: string; onJump: (k: string) => void }) {
   const fnAct = useServerFn(listActivity);
@@ -415,32 +477,46 @@ function OverviewTab({ projectId, onJump }: { projectId: string; onJump: (k: str
   const [activity, setActivity] = useState<ProjectActivity[]>([]);
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
   const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const [a, t] = await Promise.all([
-          fnAct({ data: { project_id: projectId } }),
-          fnTasks({ data: { project_id: projectId } }),
-        ]);
-        setActivity(a);
-        setTasks(t);
-      } finally {
-        setLoading(false);
-      }
-    })();
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const [a, t] = await Promise.all([
+        fnAct({ data: { project_id: projectId } }),
+        fnTasks({ data: { project_id: projectId } }),
+      ]);
+      setActivity(a);
+      setTasks(t);
+    } catch (loadError) {
+      setError(
+        loadError instanceof Error ? loadError.message : "Project overview could not be loaded.",
+      );
+    } finally {
+      setLoading(false);
+    }
   }, [projectId, fnAct, fnTasks]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const openTasks = tasks.filter((t) => t.status !== "done").slice(0, 5);
   const doneCount = tasks.filter((t) => t.status === "done").length;
 
   if (loading)
     return (
-      <div className="text-muted-foreground text-sm flex items-center gap-2">
+      <div className="text-muted-foreground text-sm flex items-center gap-2" role="status">
         <Loader2 className="w-4 h-4 animate-spin" />
         Loading…
       </div>
     );
+
+  if (error) {
+    return <ProjectSectionError message={error} onRetry={() => void load()} />;
+  }
 
   return (
     <>
@@ -542,9 +618,13 @@ function ChatsTab({
     }
   }
   async function handleDelete(id: string) {
-    await fnDelete({ data: { id } });
-    setConfirmId(null);
-    await onRefresh();
+    try {
+      await fnDelete({ data: { id } });
+      setConfirmId(null);
+      await onRefresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete chat");
+    }
   }
 
   return (
@@ -657,6 +737,7 @@ function FilesTab({
   const fnDelete = useServerFn(deleteProjectFile);
   const [items, setItems] = useState<ProjectFile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -664,10 +745,16 @@ function FilesTab({
 
   const refresh = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
+
     try {
       setItems(await fnList({ data: { project_id: projectId, kind } }));
-    } catch {
-      toast.error("Failed to load");
+    } catch (error) {
+      setLoadError(
+        error instanceof Error
+          ? error.message
+          : `Project ${kind === "image" ? "images" : "files"} could not be loaded.`,
+      );
     } finally {
       setLoading(false);
     }
@@ -708,6 +795,12 @@ function FilesTab({
         });
       }
       await refresh();
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : `Failed to upload ${kind === "image" ? "image" : "file"}.`,
+      );
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -762,10 +855,12 @@ function FilesTab({
       )}
 
       {loading ? (
-        <div className="text-muted-foreground text-sm flex items-center gap-2">
+        <div className="text-muted-foreground text-sm flex items-center gap-2" role="status">
           <Loader2 className="w-4 h-4 animate-spin" />
           Loading…
         </div>
+      ) : loadError ? (
+        <ProjectSectionError message={loadError} onRetry={() => void refresh()} />
       ) : items.length === 0 ? (
         <EmptyState
           icon={
@@ -863,9 +958,18 @@ function FilesTab({
         destructive
         onConfirm={async () => {
           if (!confirmId) return;
-          await fnDelete({ data: { id: confirmId } });
-          setConfirmId(null);
-          await refresh();
+
+          try {
+            await fnDelete({ data: { id: confirmId } });
+            setConfirmId(null);
+            await refresh();
+          } catch (error) {
+            toast.error(
+              error instanceof Error
+                ? error.message
+                : `Failed to delete ${kind === "image" ? "image" : "file"}`,
+            );
+          }
         }}
       />
     </div>
@@ -987,20 +1091,32 @@ function NotesTab({ projectId, canEdit }: { projectId: string; canEdit: boolean 
   const fnSave = useServerFn(saveProjectNote);
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialized = useRef(false);
 
-  useEffect(() => {
-    (async () => {
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    initialized.current = false;
+
+    try {
       const n = await fnGet({ data: { project_id: projectId } });
       setContent(n.content);
       initialized.current = true;
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Project notes could not be loaded.");
+    } finally {
       setLoading(false);
-    })();
+    }
   }, [projectId, fnGet]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   useEffect(() => {
     if (!initialized.current || !canEdit) return;
@@ -1025,11 +1141,15 @@ function NotesTab({ projectId, canEdit }: { projectId: string; canEdit: boolean 
 
   if (loading)
     return (
-      <div className="text-muted-foreground text-sm flex items-center gap-2">
+      <div className="text-muted-foreground text-sm flex items-center gap-2" role="status">
         <Loader2 className="w-4 h-4 animate-spin" />
         Loading notes…
       </div>
     );
+
+  if (loadError) {
+    return <ProjectSectionError message={loadError} onRetry={() => void load()} />;
+  }
 
   return (
     <div>
@@ -1069,6 +1189,7 @@ function TasksTab({ projectId, canEdit }: { projectId: string; canEdit: boolean 
   const fnReorder = useServerFn(reorderTasks);
   const [tasks, setTasks] = useState<ProjectTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [due, setDue] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1077,8 +1198,12 @@ function TasksTab({ projectId, canEdit }: { projectId: string; canEdit: boolean 
 
   const refresh = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
+
     try {
       setTasks(await fnList({ data: { project_id: projectId } }));
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Project tasks could not be loaded.");
     } finally {
       setLoading(false);
     }
@@ -1107,8 +1232,13 @@ function TasksTab({ projectId, canEdit }: { projectId: string; canEdit: boolean 
   async function cycleStatus(t: ProjectTask) {
     if (!canEdit) return;
     const next = t.status === "todo" ? "doing" : t.status === "doing" ? "done" : "todo";
-    await fnUpdate({ data: { id: t.id, status: next } });
-    await refresh();
+
+    try {
+      await fnUpdate({ data: { id: t.id, status: next } });
+      await refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update task");
+    }
   }
 
   function onDragStart(id: string) {
@@ -1122,9 +1252,16 @@ function TasksTab({ projectId, canEdit }: { projectId: string; canEdit: boolean 
     const next = tasks.slice();
     const [moved] = next.splice(from, 1);
     next.splice(to, 0, moved);
+    const previous = tasks;
     setTasks(next);
     dragId.current = null;
-    await fnReorder({ data: { project_id: projectId, order: next.map((t) => t.id) } });
+
+    try {
+      await fnReorder({ data: { project_id: projectId, order: next.map((t) => t.id) } });
+    } catch (error) {
+      setTasks(previous);
+      toast.error(error instanceof Error ? error.message : "Failed to reorder tasks");
+    }
   }
 
   const grouped = useMemo(
@@ -1138,11 +1275,15 @@ function TasksTab({ projectId, canEdit }: { projectId: string; canEdit: boolean 
 
   if (loading)
     return (
-      <div className="text-muted-foreground text-sm flex items-center gap-2">
+      <div className="text-muted-foreground text-sm flex items-center gap-2" role="status">
         <Loader2 className="w-4 h-4 animate-spin" />
         Loading tasks…
       </div>
     );
+
+  if (loadError) {
+    return <ProjectSectionError message={loadError} onRetry={() => void refresh()} />;
+  }
 
   return (
     <div>
@@ -1252,9 +1393,14 @@ function TasksTab({ projectId, canEdit }: { projectId: string; canEdit: boolean 
         destructive
         onConfirm={async () => {
           if (!confirmId) return;
-          await fnDelete({ data: { id: confirmId } });
-          setConfirmId(null);
-          await refresh();
+
+          try {
+            await fnDelete({ data: { id: confirmId } });
+            setConfirmId(null);
+            await refresh();
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Failed to delete task");
+          }
         }}
       />
     </div>
@@ -1268,14 +1414,19 @@ function MemoryTab({ projectId, canEdit }: { projectId: string; canEdit: boolean
   const fnDelete = useServerFn(deleteMemory);
   const [items, setItems] = useState<ProjectMemoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [content, setContent] = useState("");
   const [busy, setBusy] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
+
     try {
       setItems(await fnList({ data: { project_id: projectId } }));
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Project memory could not be loaded.");
     } finally {
       setLoading(false);
     }
@@ -1326,10 +1477,12 @@ function MemoryTab({ projectId, canEdit }: { projectId: string; canEdit: boolean
         </div>
       )}
       {loading ? (
-        <div className="text-muted-foreground text-sm flex items-center gap-2">
+        <div className="text-muted-foreground text-sm flex items-center gap-2" role="status">
           <Loader2 className="w-4 h-4 animate-spin" />
           Loading…
         </div>
+      ) : loadError ? (
+        <ProjectSectionError message={loadError} onRetry={() => void refresh()} />
       ) : items.length === 0 ? (
         <EmptyState
           icon={<Brain className="w-10 h-10" />}
@@ -1364,9 +1517,14 @@ function MemoryTab({ projectId, canEdit }: { projectId: string; canEdit: boolean
         destructive
         onConfirm={async () => {
           if (!confirmId) return;
-          await fnDelete({ data: { id: confirmId } });
-          setConfirmId(null);
-          await refresh();
+
+          try {
+            await fnDelete({ data: { id: confirmId } });
+            setConfirmId(null);
+            await refresh();
+          } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Failed to remove memory");
+          }
         }}
       />
     </div>
@@ -1389,11 +1547,14 @@ function SearchDialog({
   const [q, setQ] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     if (!open) {
       setQ("");
       setResults([]);
+      setSearchError(null);
       return;
     }
   }, [open]);
@@ -1401,20 +1562,28 @@ function SearchDialog({
   useEffect(() => {
     if (!open || q.trim().length < 2) {
       setResults([]);
+      setSearchError(null);
       return;
     }
+
     const t = setTimeout(async () => {
       setLoading(true);
+      setSearchError(null);
+
       try {
         setResults(await fn({ data: { project_id: projectId, q: q.trim() } }));
-      } catch {
-        /* ignore */
+      } catch (error) {
+        setResults([]);
+        setSearchError(
+          error instanceof Error ? error.message : "Project search could not be completed.",
+        );
       } finally {
         setLoading(false);
       }
     }, 250);
+
     return () => clearTimeout(t);
-  }, [q, open, projectId, fn]);
+  }, [q, open, projectId, fn, retryKey]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1436,6 +1605,20 @@ function SearchDialog({
             </div>
           ) : q.trim().length < 2 ? (
             <div className="p-4 text-sm text-muted-foreground">Type at least 2 characters.</div>
+          ) : searchError ? (
+            <div className="p-4" role="alert" aria-live="polite">
+              <div className="text-sm font-medium">Search failed</div>
+              <div className="mt-1 text-sm text-muted-foreground">{searchError}</div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={() => setRetryKey((value) => value + 1)}
+              >
+                Try again
+              </Button>
+            </div>
           ) : results.length === 0 ? (
             <div className="p-4 text-sm text-muted-foreground">No matches.</div>
           ) : (
@@ -1749,6 +1932,10 @@ function ConfirmDialog({
               setBusy(true);
               try {
                 await onConfirm();
+              } catch (error) {
+                toast.error(
+                  error instanceof Error ? error.message : "Action failed. Please try again.",
+                );
               } finally {
                 setBusy(false);
               }
