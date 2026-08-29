@@ -58,14 +58,14 @@ export function validateCommonAzureTemplate({ template, parameters, environment 
   ]) {
     requireMatch(template, new RegExp(role, "u"), `required role assignment ${role} is missing`);
   }
-  for (const resource of ["acrPull", "keyVaultSecretsUser", "azureOpenAiUser"]) {
+  for (const assignment of ["acrPull", "keyVaultSecretsUser", "azureOpenAiUser"]) {
     requireMatch(
       template,
       new RegExp(
-        `resource ${resource} 'Microsoft\\.Authorization/roleAssignments@2022-04-01'`,
+        `(?:resource ${assignment} 'Microsoft\\.Authorization/roleAssignments@2022-04-01'|module ${assignment} '../modules/[A-Za-z0-9._/-]*role-assignment\\.bicep')`,
         "u",
       ),
-      `${resource} role assignment is missing`,
+      `${assignment} role assignment is missing`,
     );
   }
 

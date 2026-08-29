@@ -50,3 +50,4 @@ artifacts/ui-parity/*
 !artifacts/ui-parity/computed-styles/
 artifacts/ui-parity/computed-styles/*
 !artifacts/ui-parity/computed-styles/comparison.json
+test-results/

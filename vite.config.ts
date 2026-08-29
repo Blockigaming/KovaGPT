@@ -34,7 +34,14 @@ export default defineConfig(({ mode }) => {
       tsconfigPaths({ projects: ["./tsconfig.json"] }),
       // TanStack resolves this entry relative to the default src directory.
       // Using "src/server.ts" would incorrectly resolve to "src/src/server.ts".
-      tanstackStart({ server: { entry: "server" } }),
+      tanstackStart({
+        serverFns: {
+          // KovaGPT applies its own request-level same-origin/Fetch-Metadata
+          // mutation guard in src/start.ts and src/server.ts.
+          disableCsrfMiddlewareWarning: true,
+        },
+        server: { entry: "server" },
+      }),
       // Production deploys the generated Nitro Cloudflare module. Browser CI
       // uses Nitro's in-process Node preview to avoid Wrangler's dev-only proxy.
       nitro({

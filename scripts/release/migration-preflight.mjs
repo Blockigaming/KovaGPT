@@ -5,6 +5,14 @@ const VERSION = /^\d{14}$/u;
 const FILENAME = /^(\d{14})_[A-Za-z0-9_.-]+\.sql$/u;
 const SHA256 = /^[a-f0-9]{64}$/u;
 
+const KNOWN_HISTORICAL_DUPLICATE_GROUPS = new Set([
+  ["20260623194741_email_infra.sql", "20260623195646_email_infra.sql"].sort().join("\0"),
+]);
+
+function isKnownHistoricalDuplicate(group) {
+  return KNOWN_HISTORICAL_DUPLICATE_GROUPS.has([...group].sort().join("\0"));
+}
+
 export function analyzeMigrationManifest(manifest) {
   if (!manifest || typeof manifest !== "object") throw new Error("migration_manifest_invalid");
   const migrations = Array.isArray(manifest.migrations) ? manifest.migrations : [];
@@ -42,12 +50,16 @@ export function analyzeMigrationManifest(manifest) {
   if (manifest.latest !== migrations.at(-1).filename)
     throw new Error("migration_manifest_latest_mismatch");
   const duplicateContent = [...hashes.values()].filter((group) => group.length > 1);
+  const unexpectedDuplicateContent = duplicateContent.filter(
+    (group) => !isKnownHistoricalDuplicate(group),
+  );
   return {
     count: migrations.length,
     first: migrations[0].filename,
     latest: migrations.at(-1).filename,
     versions,
     duplicateContent,
+    unexpectedDuplicateContent,
     destructive,
     dataBackfill,
     rlsChanges,
@@ -125,7 +137,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   }
 
   for (const group of analysis.duplicateContent) {
-    console.warn(`MIGRATION_DUPLICATE_CONTENT=${group.join(",")}`);
+    const label = isKnownHistoricalDuplicate(group)
+      ? "MIGRATION_KNOWN_HISTORICAL_DUPLICATE"
+      : "MIGRATION_DUPLICATE_CONTENT";
+    console.warn(`${label}=${group.join(",")}`);
+  }
+
+  if (analysis.unexpectedDuplicateContent.length) {
+    throw new Error("unexpected_duplicate_migration_content");
   }
   console.log(`MIGRATION_PREFLIGHT=${JSON.stringify(report)}`);
 }

@@ -21,7 +21,7 @@ export function validateAzureStagingTemplate() {
   );
   requireMatch(
     template,
-    /ipSecurityRestrictions: restrictIngress \? \[for/u,
+    /ipSecurityRestrictions: restrictIngress \? (?:\[for|stagingIpSecurityRestrictions)/u,
     "staging CIDR restrictions are missing",
   );
   requireMatch(

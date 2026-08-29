@@ -405,32 +405,32 @@ resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' 
   tags: tags
 }
 
-resource acrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(acr.id, identity.id, acrPullRoleDefinitionId)
-  scope: acr
-  properties: {
+module acrPull '../modules/acr-role-assignment.bicep' = {
+  name: 'acrPull-${uniqueString(acr.id, identity.id)}'
+  scope: resourceGroup(acrResourceGroupName)
+  params: {
+    acrName: acrName
     principalId: identity.properties.principalId
-    principalType: 'ServicePrincipal'
     roleDefinitionId: acrPullRoleDefinitionId
   }
 }
 
-resource keyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(keyVault.id, identity.id, keyVaultSecretsUserRoleDefinitionId)
-  scope: keyVault
-  properties: {
+module keyVaultSecretsUser '../modules/keyvault-role-assignment.bicep' = {
+  name: 'keyVaultSecretsUser-${uniqueString(keyVault.id, identity.id)}'
+  scope: resourceGroup(keyVaultResourceGroupName)
+  params: {
+    keyVaultName: keyVaultName
     principalId: identity.properties.principalId
-    principalType: 'ServicePrincipal'
     roleDefinitionId: keyVaultSecretsUserRoleDefinitionId
   }
 }
 
-resource azureOpenAiUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(azureOpenAi.id, identity.id, cognitiveServicesOpenAiUserRoleDefinitionId)
-  scope: azureOpenAi
-  properties: {
+module azureOpenAiUser '../modules/openai-role-assignment.bicep' = {
+  name: 'azureOpenAiUser-${uniqueString(azureOpenAi.id, identity.id)}'
+  scope: resourceGroup(azureOpenAiResourceGroupName)
+  params: {
+    accountName: azureOpenAiAccountName
     principalId: identity.properties.principalId
-    principalType: 'ServicePrincipal'
     roleDefinitionId: cognitiveServicesOpenAiUserRoleDefinitionId
   }
 }
@@ -501,6 +501,25 @@ resource originCertificate 'Microsoft.App/managedEnvironments/certificates@2025-
   ]
 }
 
+var customDomainBindings = [for domain in customDomains: {
+  name: domain
+  bindingType: 'SniEnabled'
+  certificateId: resourceId(
+    'Microsoft.App/managedEnvironments/certificates',
+    environment.name,
+    customDomainCertificateName
+  )
+}]
+
+var stagingIpSecurityRestrictions = [
+  for (cidr, index) in allowedIngressCidrs: {
+    name: 'staging-${index}'
+    description: 'Controlled staging ingress'
+    ipAddressRange: cidr
+    action: 'Allow'
+  }
+]
+
 resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
   name: webAppName
   location: location
@@ -520,17 +539,8 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
         allowInsecure: false
         targetPort: 3000
         transport: 'auto'
-        customDomains: bindCustomDomains ? [for domain in customDomains: {
-          name: domain
-          bindingType: 'SniEnabled'
-          certificateId: originCertificate.id
-        }] : []
-        ipSecurityRestrictions: restrictIngress ? [for (cidr, index) in allowedIngressCidrs: {
-          name: 'staging-${index}'
-          description: 'Controlled staging ingress'
-          ipAddressRange: cidr
-          action: 'Allow'
-        }] : []
+        customDomains: bindCustomDomains ? customDomainBindings : []
+        ipSecurityRestrictions: restrictIngress ? stagingIpSecurityRestrictions : []
         traffic: [
           {
             latestRevision: true
