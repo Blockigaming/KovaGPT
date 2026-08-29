@@ -6,9 +6,7 @@ type TestimonialQuery = {
   insert: (value: Record<string, unknown>) => TestimonialQuery;
   select: (columns: string) => TestimonialQuery;
   eq: (column: string, value: unknown) => TestimonialQuery;
-  not: (column: string, operator: string, value: unknown) => TestimonialQuery;
   order: (column: string, options: { ascending: boolean }) => TestimonialQuery;
-  limit: (count: number) => TestimonialQuery;
   single: () => Promise<{ data: unknown; error: unknown }>;
   then: PromiseLike<{ data: unknown; error: unknown }>["then"];
 };
@@ -18,6 +16,24 @@ const TestimonialInput = z.object({
   displayName: z.string().trim().min(1).max(120),
   displayRole: z.string().trim().min(1).max(160).optional(),
   consentToPublish: z.literal(true),
+});
+
+const SubmittedTestimonial = z.object({
+  id: z.string(),
+  status: z.string(),
+  submitted_at: z.string(),
+});
+
+const TestimonialHistoryItem = z.object({
+  id: z.string(),
+  quote: z.string(),
+  display_name: z.string(),
+  display_role: z.string().nullable(),
+  consent_to_publish: z.boolean(),
+  status: z.string(),
+  published: z.boolean(),
+  submitted_at: z.string(),
+  reviewed_at: z.string().nullable(),
 });
 
 function table(context: { supabase: unknown }): TestimonialQuery {
@@ -44,7 +60,7 @@ export const submitTestimonial = createServerFn({ method: "POST" })
       .single();
 
     if (error) throw new Error("Testimonial could not be submitted.");
-    return inserted;
+    return SubmittedTestimonial.parse(inserted);
   });
 
 export const listMyTestimonials = createServerFn({ method: "GET" })
@@ -58,5 +74,5 @@ export const listMyTestimonials = createServerFn({ method: "GET" })
       .order("submitted_at", { ascending: false });
 
     if (error) throw new Error("Testimonials could not be loaded.");
-    return Array.isArray(data) ? data : [];
+    return z.array(TestimonialHistoryItem).parse(data);
   });
