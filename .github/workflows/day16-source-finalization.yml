@@ -11,7 +11,7 @@ permissions:
 
 concurrency:
   group: day16-source-finalization
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   source-finalization:
