@@ -39,6 +39,9 @@ jobs:
       - name: Regenerate migration manifest
         run: npm run release:manifest
 
+      - name: Generate TanStack route tree
+        run: npm run build
+
       - name: Normalize generated and newly added source files
         run: npx prettier --write release-migrations.json docs/day16/MASTER_LEDGER.json src/routes/api/admin/testimonials.ts src/lib/testimonials.functions.ts src/components/TestimonialSubmissionDialog.tsx src/routes/contact-support.tsx tests/unit/day16-testimonial-system.test.mjs .github/workflows/day16-source-finalization.yml
 
@@ -51,7 +54,7 @@ jobs:
           else
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add release-migrations.json docs/day16/MASTER_LEDGER.json src/routes/api/admin/testimonials.ts src/lib/testimonials.functions.ts src/components/TestimonialSubmissionDialog.tsx src/routes/contact-support.tsx tests/unit/day16-testimonial-system.test.mjs .github/workflows/day16-source-finalization.yml
+            git add release-migrations.json src/routeTree.gen.ts docs/day16/MASTER_LEDGER.json src/routes/api/admin/testimonials.ts src/lib/testimonials.functions.ts src/components/TestimonialSubmissionDialog.tsx src/routes/contact-support.tsx tests/unit/day16-testimonial-system.test.mjs .github/workflows/day16-source-finalization.yml
             git commit -m "chore: normalize testimonial finalization sources"
             git push origin HEAD:finalization/checkpoint-2026-08-28
           fi
