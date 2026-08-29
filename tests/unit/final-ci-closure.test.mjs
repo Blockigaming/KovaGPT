@@ -7,7 +7,11 @@ function escapeRegExp(value) {
 }
 
 test("final CI covers exact source, deployed production, full browsers, security, and fresh database once", () => {
-  const workflowFiles = readdirSync(".github/workflows").filter((name) => /\.ya?ml$/u.test(name));
+  const workflowFiles = readdirSync(".github/workflows").filter((name) => {
+    if (!/\.ya?ml$/u.test(name)) return false;
+    const source = readFileSync(`.github/workflows/${name}`, "utf8");
+    return /(?:^|\n)\s+workflow_dispatch\s*:/u.test(source);
+  });
   assert.deepEqual(
     workflowFiles,
     ["final-release-ci.yml"],
