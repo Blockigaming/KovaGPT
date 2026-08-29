@@ -93,7 +93,9 @@
     "supabase:restore:rehearsal": "bash scripts/supabase/restore-rehearsal.sh",
     "test:e2e:release:signed-out": "playwright test --config=playwright.release.config.ts",
     "test:e2e:release:signed-in": "KOVA_RELEASE_AUTHENTICATED=1 playwright test --config=playwright.release.config.ts",
-    "release:day16:source": "npm run release:architecture && npm run azure:validate && npm run azure:staging:validate && npm run azure:production:validate && npm run release:supabase:production && npm run release:zero-lovable:strict && npm run release:security && npm run release:ui-truthfulness && npm run release:visible-controls && npm run release:ai-provider-contract && npm run release:stripe:contract && npm run release:bundle"
+    "release:day16:source": "npm run release:architecture && npm run azure:validate && npm run azure:staging:validate && npm run azure:production:validate && npm run release:supabase:production && npm run release:zero-lovable:strict && npm run release:security && npm run release:ui-truthfulness && npm run release:visible-controls && npm run release:ai-provider-contract && npm run release:stripe:contract && npm run release:bundle",
+    "release:day16:ledger": "node scripts/release/day16-ledger.mjs",
+    "release:day16:complete": "node scripts/release/day16-ledger.mjs --require-complete"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

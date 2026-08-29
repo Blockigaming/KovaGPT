@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "authoritativeBaselineSha": "1585aaf01372a93f82fb39d25de078867adfd53f",
+  "completionRule": "Source requirements must be verified_local or verified_production. Production requirements must be verified_production. No required item may remain in_progress, missing, blocked_external_evidence, or unverified_runtime.",
+  "allowedStatuses": [
+    "verified_local",
+    "verified_production",
+    "in_progress",
+    "missing",
+    "blocked_external_evidence",
+    "unverified_runtime",
+    "not_applicable"
+  ],
+  "items": [
+    {
+      "id": "architecture_source_contracts",
+      "category": "architecture",
+      "requirement": "Azure runtime, Cloudflare edge, Supabase data layer",
+      "verification": "source",
+      "status": "verified_local",
+      "evidence": ["release architecture tests", "Azure template tests"],
+      "required": true
+    },
+    {
+      "id": "zero_lovable_source",
+      "category": "architecture",
+      "requirement": "No active Lovable dependency in source, build or lockfile",
+      "verification": "source",
+      "status": "verified_local",
+      "evidence": ["release:zero-lovable:strict"],
+      "required": true
+    },
+    {
+      "id": "supabase_rls_migrations",
+      "category": "security",
+      "requirement": "Migrations, RLS, ownership and two-user isolation contracts",
+      "verification": "source",
+      "status": "verified_local",
+      "evidence": ["isolated database rebuild", "Supabase production contract"],
+      "required": true
+    },
+    {
+      "id": "ai_provider_source_contract",
+      "category": "ai",
+      "requirement": "GPT-5.6 Sol approved provider and managed-identity contract",
+      "verification": "source",
+      "status": "verified_local",
+      "evidence": ["release:ai-provider-contract"],
+      "required": true
+    },
+    {
+      "id": "local_quality_gates",
+      "category": "quality",
+      "requirement": "Typecheck, lint, unit, API, integration, release and build",
+      "verification": "source",
+      "status": "verified_local",
+      "evidence": ["422 unit tests", "9 API tests", "328 integration tests", "21 release tests"],
+      "required": true
+    },
+    {
+      "id": "ui_source_truthfulness",
+      "category": "ui",
+      "requirement": "No fake visible controls and no visible voice implementation",
+      "verification": "source",
+      "status": "verified_local",
+      "evidence": ["release:ui-truthfulness", "release:visible-controls"],
+      "required": true
+    },
+    {
+      "id": "growth_foundation",
+      "category": "commercial",
+      "requirement": "Referral, onboarding, upgrade and feature attribution seams",
+      "verification": "source",
+      "status": "verified_local",
+      "evidence": ["Day 16 growth and commercial unit contracts"],
+      "required": true
+    },
+    {
+      "id": "durable_growth_transport",
+      "category": "commercial",
+      "requirement": "Growth events reach the existing bounded operational analytics client",
+      "verification": "source",
+      "status": "in_progress",
+      "evidence": [],
+      "required": true
+    },
+    {
+      "id": "payment_recovery_ui",
+      "category": "commercial",
+      "requirement": "Past-due, unpaid and incomplete subscriptions have a recovery path",
+      "verification": "source",
+      "status": "in_progress",
+      "evidence": [],
+      "required": true
+    },
+    {
+      "id": "cancellation_feedback_ui",
+      "category": "commercial",
+      "requirement": "Cancellation intent captures bounded fixed-choice feedback",
+      "verification": "source",
+      "status": "in_progress",
+      "evidence": [],
+      "required": true
+    },
+    {
+      "id": "testimonial_collection_system",
+      "category": "commercial",
+      "requirement": "Opt-in submission, approval and publication workflow",
+      "verification": "source",
+      "status": "in_progress",
+      "evidence": [],
+      "required": true
+    },
+    {
+      "id": "real_approved_testimonials",
+      "category": "commercial",
+      "requirement": "Real customer-approved testimonial content",
+      "verification": "production",
+      "status": "blocked_external_evidence",
+      "evidence": [],
+      "required": true
+    },
+    {
+      "id": "feature_to_subscription_live_attribution",
+      "category": "commercial",
+      "requirement": "Production events connect prior feature usage to confirmed subscription",
+      "verification": "production",
+      "status": "unverified_runtime",
+      "evidence": [],
+      "required": true
+    },
+    {
+      "id": "local_visual_runtime_matrix",
+      "category": "ui",
+      "requirement": "Rendered local browser matrix across required widths, themes and states",
+      "verification": "source",
+      "status": "in_progress",
+      "evidence": ["matrix definition exists; rendered evidence still required"],
+      "required": true
+    },
+    {
+      "id": "production_visual_runtime_matrix",
+      "category": "ui",
+      "requirement": "Rendered production matrix across required browsers and viewports",
+      "verification": "production",
+      "status": "unverified_runtime",
+      "evidence": [],
+      "required": true
+    },
+    {
+      "id": "azure_staging_deployment",
+      "category": "deployment",
+      "requirement": "Exact SHA deployed and verified in Azure staging",
+      "verification": "production",
+      "status": "unverified_runtime",
+      "evidence": [],
+      "required": true
+    },
+    {
+      "id": "azure_production_deployment",
+      "category": "deployment",
+      "requirement": "Exact SHA deployed and verified in Azure production",
+      "verification": "production",
+      "status": "unverified_runtime",
+      "evidence": [],
+      "required": true
+    },
+    {
+      "id": "cloudflare_production_route",
+      "category": "deployment",
+      "requirement": "kovagpt.com proxied to approved Azure production origin",
+      "verification": "production",
+      "status": "unverified_runtime",
+      "evidence": [],
+      "required": true
+    },
+    {
+      "id": "production_supabase_target",
+      "category": "deployment",
+      "requirement": "Browser and server point to approved production Supabase",
+      "verification": "production",
+      "status": "unverified_runtime",
+      "evidence": [],
+      "required": true
+    },
+    {
+      "id": "production_gpt56_sol",
+      "category": "ai",
+      "requirement": "GPT-5.6 Sol streaming works in production",
+      "verification": "production",
+      "status": "unverified_runtime",
+      "evidence": [],
+      "required": true
+    },
+    {
+      "id": "production_tools_multimodal",
+      "category": "ai",
+      "requirement": "Search, tools, files, vision, images and research work in production",
+      "verification": "production",
+      "status": "unverified_runtime",
+      "evidence": [],
+      "required": true
+    },
+    {
+      "id": "production_auth",
+      "category": "authentication",
+      "requirement": "Signup, login, OAuth, recovery, MFA and deletion work in production",
+      "verification": "production",
+      "status": "unverified_runtime",
+      "evidence": [],
+      "required": true
+    },
+    {
+      "id": "production_billing",
+      "category": "billing",
+      "requirement": "Checkout, webhook, entitlement, portal and recovery work in production",
+      "verification": "production",
+      "status": "unverified_runtime",
+      "evidence": [],
+      "required": true
+    },
+    {
+      "id": "production_scheduled_workers",
+      "category": "workers",
+      "requirement": "Scheduled and background execution works in Azure",
+      "verification": "production",
+      "status": "unverified_runtime",
+      "evidence": [],
+      "required": true
+    },
+    {
+      "id": "production_observability",
+      "category": "operations",
+      "requirement": "Logs, metrics, alerts, liveness and readiness are proven",
+      "verification": "production",
+      "status": "unverified_runtime",
+      "evidence": [],
+      "required": true
+    },
+    {
+      "id": "production_rollback",
+      "category": "operations",
+      "requirement": "Distinct immutable rollback image is exercised and proven",
+      "verification": "production",
+      "status": "unverified_runtime",
+      "evidence": [],
+      "required": true
+    },
+    {
+      "id": "production_backup_recovery",
+      "category": "operations",
+      "requirement": "Backup and recovery procedure is exercised",
+      "verification": "production",
+      "status": "unverified_runtime",
+      "evidence": [],
+      "required": true
+    },
+    {
+      "id": "exact_sha_ci",
+      "category": "github",
+      "requirement": "Required CI passes against exact deployed production SHA",
+      "verification": "production",
+      "status": "unverified_runtime",
+      "evidence": [],
+      "required": true
+    },
+    {
+      "id": "github_pr_reconciliation",
+      "category": "github",
+      "requirement": "Every open PR is classified and reconciled",
+      "verification": "source",
+      "status": "in_progress",
+      "evidence": [],
+      "required": true
+    },
+    {
+      "id": "production_no_p0_p1",
+      "category": "quality",
+      "requirement": "No known production P0 or P1 defects",
+      "verification": "production",
+      "status": "unverified_runtime",
+      "evidence": [],
+      "required": true
+    }
+  ]
+}
