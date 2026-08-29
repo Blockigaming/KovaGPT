@@ -91,6 +91,10 @@ export type WorkDetail = {
 };
 
 const db = (value: unknown) => value as Db;
+
+function rows<T = any>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
 const runFields =
   "id,kind,status,attempts,max_attempts,project_id,created_at,started_at,completed_at,error,input";
 function mapRun(row: any): WorkRun {
@@ -135,7 +139,7 @@ export const listWorkRuns = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) throw new Error("Unable to load Work runs");
-    return (data ?? []).map(mapRun);
+    return rows(data).map(mapRun);
   });
 export const getWorkRun = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -189,7 +193,7 @@ export const getWorkRun = createServerFn({ method: "GET" })
         .maybeSingle(),
     ]);
     const mappedEvents: WorkEvent[] = await Promise.all(
-      (events.data ?? []).map(async (event: any) => {
+      rows(events.data).map(async (event: any) => {
         let previewUrl: string | null = null;
         const storagePath = event.payload?.storage_path;
         if (typeof storagePath === "string" && storagePath) {
@@ -210,10 +214,10 @@ export const getWorkRun = createServerFn({ method: "GET" })
     return {
       run: mapRun(runResult.data),
       events: mappedEvents,
-      deliverables: (deliverables.data ?? []).map(mapDeliverable),
+      deliverables: rows(deliverables.data).map(mapDeliverable),
       approvals: approvals.error
         ? []
-        : (approvals.data ?? []).map((a: any) => ({
+        : rows(approvals.data).map((a: any) => ({
             id: a.id,
             runId: a.run_id,
             tool: a.tool,
@@ -226,7 +230,7 @@ export const getWorkRun = createServerFn({ method: "GET" })
           })),
       tasks: tasks.error
         ? []
-        : (tasks.data ?? []).map((task: any) => ({
+        : rows(tasks.data).map((task: any) => ({
             id: task.id,
             key: task.specialist_key,
             role: task.role,
@@ -239,7 +243,7 @@ export const getWorkRun = createServerFn({ method: "GET" })
           })),
       edges: edges.error
         ? []
-        : (edges.data ?? []).map((edge: any) => ({
+        : rows(edges.data).map((edge: any) => ({
             id: edge.id,
             source: edge.source_task_id,
             target: edge.destination_task_id,
@@ -540,7 +544,7 @@ export const listDeliverableVersions = createServerFn({ method: "GET" })
       .eq("deliverable_key", source.data.deliverable_key)
       .order("revision", { ascending: false });
     if (versions.error) throw new Error("Unable to load version history");
-    return (versions.data ?? []).map(mapDeliverable);
+    return rows(versions.data).map(mapDeliverable);
   });
 
 export const restoreDeliverableRevision = createServerFn({ method: "POST" })

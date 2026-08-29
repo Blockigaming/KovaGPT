@@ -76,21 +76,42 @@ function WorkRoute() {
     );
   const loadRuns = useCallback(async () => {
     try {
-      const rows = await fetchRuns();
+      const result = await fetchRuns();
+      const rows = Array.isArray(result) ? result : [];
+
       setRuns(rows);
       setSelected((id) => id ?? rows[0]?.id ?? null);
       setError(null);
     } catch {
+      setRuns([]);
+      setSelected(null);
       setError("Work runs could not be loaded.");
     } finally {
       setLoading(false);
     }
   }, [fetchRuns]);
   const loadDetail = useCallback(async () => {
-    if (!selected) return;
+    if (!selected) {
+      setDetail(null);
+      return;
+    }
+
     try {
-      setDetail(await fetchDetail({ data: { id: selected } }));
+      const result = await fetchDetail({ data: { id: selected } });
+
+      const normalized: WorkDetail = {
+        ...result,
+        events: Array.isArray(result.events) ? result.events : [],
+        deliverables: Array.isArray(result.deliverables) ? result.deliverables : [],
+        approvals: Array.isArray(result.approvals) ? result.approvals : [],
+        tasks: Array.isArray(result.tasks) ? result.tasks : [],
+        edges: Array.isArray(result.edges) ? result.edges : [],
+      };
+
+      setDetail(normalized);
+      setError(null);
     } catch {
+      setDetail(null);
       setError("The selected run could not be loaded.");
     }
   }, [fetchDetail, selected]);
@@ -789,7 +810,9 @@ function Deliverables({
                 className="work-small"
                 onClick={() =>
                   void versions({ data: { id: item.id } })
-                    .then(setHistory)
+                    .then((result) => {
+                      setHistory(Array.isArray(result) ? result : []);
+                    })
                     .catch(() => toast.error("Version history unavailable."))
                 }
               >
