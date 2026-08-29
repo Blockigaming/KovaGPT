@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 82,
-  "latest": "20260824094500_day15_canonical_workspace_rpc_aliases.sql",
+  "count": 83,
+  "latest": "20260829163000_testimonial_collection_system.sql",
   "migrations": [
     {
       "order": 1,
@@ -1670,6 +1670,24 @@
       "rls": [],
       "policies": [],
       "indexes": []
+    },
+    {
+      "order": 83,
+      "filename": "20260829163000_testimonial_collection_system.sql",
+      "timestamp": "20260829163000",
+      "sha256": "03bbcb3535a7fa16f44c6e093d8b8ffd8db8f5c02386f49ff726af93a1991338",
+      "tables": ["testimonial_submissions"],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": false,
+      "reversible": false,
+      "rls": ["testimonial_submissions"],
+      "policies": [
+        "Users submit their own testimonials",
+        "Users read their own testimonial submissions",
+        "Public reads approved published testimonials"
+      ],
+      "indexes": ["testimonial_submissions_owner_idx", "testimonial_submissions_review_idx"]
     }
   ]
 }
