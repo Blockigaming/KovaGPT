@@ -80,8 +80,13 @@
       "category": "commercial",
       "requirement": "Growth events reach the existing bounded operational analytics client",
       "verification": "source",
-      "status": "in_progress",
-      "evidence": [],
+      "status": "verified_local",
+      "evidence": [
+        "src/lib/growth-events.ts",
+        "src/lib/growth-operational-adapter.ts",
+        "src/lib/operational-analytics.ts",
+        "tests/unit/day16-retention-recovery.test.mjs"
+      ],
       "required": true
     },
     {
@@ -89,8 +94,12 @@
       "category": "commercial",
       "requirement": "Past-due, unpaid and incomplete subscriptions have a recovery path",
       "verification": "source",
-      "status": "in_progress",
-      "evidence": [],
+      "status": "verified_local",
+      "evidence": [
+        "src/components/SettingsDialog.tsx",
+        "tests/unit/day16-payment-recovery-order.test.mjs",
+        "tests/unit/day16-retention-recovery.test.mjs"
+      ],
       "required": true
     },
     {
@@ -98,8 +107,12 @@
       "category": "commercial",
       "requirement": "Cancellation intent captures bounded fixed-choice feedback",
       "verification": "source",
-      "status": "in_progress",
-      "evidence": [],
+      "status": "verified_local",
+      "evidence": [
+        "src/components/CancellationFeedbackDialog.tsx",
+        "src/components/SettingsDialog.tsx",
+        "tests/unit/day16-retention-recovery.test.mjs"
+      ],
       "required": true
     },
     {
