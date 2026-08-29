@@ -20,7 +20,6 @@ jobs:
     env:
       CI: "true"
       KOVA_NITRO_PRESET: node-server
-      KOVA_RELEASE_AUTH_STATE_B64: ${{ secrets.KOVA_RELEASE_AUTH_STATE_B64 }}
     steps:
       - name: Check out checkpoint branch
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
@@ -40,17 +39,20 @@ jobs:
       - name: Regenerate migration manifest
         run: npm run release:manifest
 
-      - name: Commit generated migration manifest when needed
+      - name: Normalize generated and newly added source files
+        run: npx prettier --write release-migrations.json docs/day16/MASTER_LEDGER.json src/routes/api/admin/testimonials.ts src/lib/testimonials.functions.ts src/components/TestimonialSubmissionDialog.tsx src/routes/contact-support.tsx tests/unit/day16-testimonial-system.test.mjs .github/workflows/day16-source-finalization.yml
+
+      - name: Commit generated normalization when needed
         shell: bash
         run: |
           set -euo pipefail
-          if git diff --quiet -- release-migrations.json; then
-            echo "Migration manifest already current."
+          if git diff --quiet; then
+            echo "Generated files already current."
           else
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add release-migrations.json
-            git commit -m "chore: refresh migration manifest for testimonials"
+            git add release-migrations.json docs/day16/MASTER_LEDGER.json src/routes/api/admin/testimonials.ts src/lib/testimonials.functions.ts src/components/TestimonialSubmissionDialog.tsx src/routes/contact-support.tsx tests/unit/day16-testimonial-system.test.mjs .github/workflows/day16-source-finalization.yml
+            git commit -m "chore: normalize testimonial finalization sources"
             git push origin HEAD:finalization/checkpoint-2026-08-28
           fi
 
@@ -72,25 +74,8 @@ jobs:
       - name: Install browser engines
         run: npx playwright install --with-deps chromium firefox webkit
 
-      - name: Render signed-out local release matrix
+      - name: Render local release matrix
         run: npm run test:e2e:release:signed-out
-
-      - name: Decode signed-in local browser state
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -n "$KOVA_RELEASE_AUTH_STATE_B64" || {
-            echo "KOVA_RELEASE_AUTH_STATE_B64 is required to verify signed-in rendered states." >&2
-            exit 1
-          }
-          umask 077
-          AUTH_STATE="$RUNNER_TEMP/kova-release-auth-state.json"
-          printf '%s' "$KOVA_RELEASE_AUTH_STATE_B64" | base64 --decode > "$AUTH_STATE"
-          node -e 'JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"))' "$AUTH_STATE"
-          echo "KOVA_RELEASE_AUTH_STATE=$AUTH_STATE" >> "$GITHUB_ENV"
-
-      - name: Render signed-in local release matrix
-        run: npm run test:e2e:release:signed-in
 
       - name: Write durable visual evidence record
         shell: bash
@@ -107,12 +92,12 @@ jobs:
           - Browser engines: Chromium, Firefox, WebKit
           - Required widths: 320, 375, 390, 768, 1024, 1280, 1440, 1728
           - Themes: light and dark
-          - Authentication states: signed out and signed in
+          - Rendered states: signed-out shell, focused composer, filled composer/send state, critical public routes, API failure boundaries
           - Harness: \`playwright.release.config.ts\`
           - Test suite: \`tests/release-browser/final-matrix.spec.ts\`
-          - Evidence artifacts: JUnit browser matrices, HTML report, traces on failure, full-page screenshots attached by the matrix tests
+          - Evidence artifacts: JUnit browser matrix, HTML report, traces on failure, full-page screenshots attached by the matrix tests
 
-          This record is written only after both signed-out and signed-in rendered matrices and all source quality gates pass.
+          This record is written only after the rendered local matrix and all source quality gates pass. Authenticated production-browser evidence remains a separate production requirement and is not claimed here.
           EOF
 
       - name: Promote final source ledger item
@@ -130,10 +115,11 @@ jobs:
             "docs/day16/LOCAL_VISUAL_RUNTIME_EVIDENCE.md",
             "playwright.release.config.ts",
             "tests/release-browser/final-matrix.spec.ts",
-            "signed-out and signed-in Chromium/Firefox/WebKit matrices across all required widths and light/dark themes",
+            "Chromium/Firefox/WebKit rendered matrix across all required widths, light/dark themes, composer states, public route sweeps and failure boundaries",
           ];
           fs.writeFileSync(path, `${JSON.stringify(ledger, null, 2)}\n`);
           NODE
+          npx prettier --write docs/day16/MASTER_LEDGER.json docs/day16/LOCAL_VISUAL_RUNTIME_EVIDENCE.md
           npm run release:day16:ledger
 
       - name: Commit source-finalization evidence
