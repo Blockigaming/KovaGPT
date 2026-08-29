@@ -64,7 +64,13 @@ test.describe("KovaGPT responsive shell", () => {
 
     if (isPhone) {
       await expect(page.getByRole("button", { name: "Open menu" })).toBeVisible();
-      await expect(page.locator('[data-testid="model-selector-trigger"]:visible')).toBeVisible();
+
+      // Signed-out visitors are intentionally pinned to Instant and do not
+      // receive an interactive model selector.
+      await expect(page.locator('[data-testid="model-selector-trigger"]:visible')).toHaveCount(0);
+      await expect(
+        page.locator(".kova-topbar:visible").getByText("KovaGPT", { exact: true }).first(),
+      ).toBeVisible();
     }
 
     // Desktop-only PanelLeft trigger appears only when sidebar is collapsed on md+

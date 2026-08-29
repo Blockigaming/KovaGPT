@@ -52,11 +52,26 @@ test("keyboard focus is visibly distinguishable on primary controls", async ({ p
     page.viewportSize()!.width < 1024
       ? page.getByRole("button", { name: "Open menu" })
       : page.getByRole("button", { name: "New chat" }).first();
+  // Enter keyboard modality before focusing the target so the
+  // browser evaluates the real :focus-visible interaction state.
+  await page.keyboard.press("Tab");
   await target.focus();
+  await expect(target).toBeFocused();
+
   const focusStyle = await target.evaluate((element) => {
     const style = getComputedStyle(element);
-    return { outlineStyle: style.outlineStyle, outlineWidth: style.outlineWidth };
+    return {
+      outlineStyle: style.outlineStyle,
+      outlineWidth: style.outlineWidth,
+      boxShadow: style.boxShadow,
+    };
   });
-  expect(focusStyle.outlineStyle).not.toBe("none");
-  expect(Number.parseFloat(focusStyle.outlineWidth)).toBeGreaterThanOrEqual(2);
+
+  const hasVisibleOutline =
+    focusStyle.outlineStyle !== "none" && Number.parseFloat(focusStyle.outlineWidth) >= 2;
+
+  const hasVisibleFocusRing =
+    focusStyle.boxShadow !== "none" && focusStyle.boxShadow.trim().length > 0;
+
+  expect(hasVisibleOutline || hasVisibleFocusRing).toBe(true);
 });

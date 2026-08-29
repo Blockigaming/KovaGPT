@@ -37,7 +37,10 @@ test("secondary controls remain keyboard-visible and touchable", async ({ page }
   await expect(async () => {
     await refresh.focus();
     await page.waitForTimeout(100);
-    await expect(refresh).toBeFocused();
+
+    await expect
+      .poll(async () => refresh.evaluate((element) => element === document.activeElement))
+      .toBe(true);
   }).toPass({ timeout: 5_000 });
 
   if (page.viewportSize()!.width < 1024) {

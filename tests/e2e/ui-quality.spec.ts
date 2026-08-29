@@ -81,35 +81,36 @@ test("mobile greeting and composer actions fit the viewport", async ({ page }) =
 test("rich conversation rhythm and actions remain stable at every core viewport", async ({
   page,
 }) => {
-  await page.addInitScript(() => {
-    const now = Date.now();
-    localStorage.setItem(
-      "nova-gpt-conversations-v2",
-      JSON.stringify([
-        {
-          id: "workspace-quality",
-          title: "Workspace quality review with a title that truncates cleanly",
-          mode: "instant",
-          createdAt: now,
-          updatedAt: now,
-          messages: [
-            { id: "user-quality", role: "user", content: "Explain the result clearly." },
-            {
-              id: "assistant-quality",
+  await page.route("**/api/chat", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body: `data: ${JSON.stringify({
+        choices: [
+          {
+            index: 0,
+            delta: {
               role: "assistant",
               content:
                 "## Result\n\nReadable copy with a [source](https://example.com).\n\n| Metric | Value |\n|---|---:|\n| Stability | 100 |\n\n```ts\nconst longValue = 'abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz';\n```",
             },
-          ],
-        },
-      ]),
-    );
-    localStorage.setItem("nova-gpt-pending-active", "workspace-quality");
+          },
+        ],
+      })}\n\ndata: [DONE]\n\n`,
+    });
   });
+
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await expect(page.locator(".kova-user-message")).toBeVisible();
-  await expect(page.locator(".kova-assistant-message")).toBeVisible();
+
+  const composer = page.getByRole("textbox", { name: "Message KovaGPT" }).first();
+  await expect(composer).toBeVisible();
+
+  await composer.fill("Explain the result clearly.");
+  await page.getByRole("button", { name: "Send" }).first().click();
+
+  await expect(page.locator(".kova-user-message")).toContainText("Explain the result clearly.");
+  await expect(page.locator(".kova-assistant-message")).toContainText("Result");
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);
@@ -121,14 +122,17 @@ test("rich conversation rhythm and actions remain stable at every core viewport"
   if (page.viewportSize()!.width < 1024) {
     const action = page.getByRole("button", { name: "Copy", exact: true });
     await expect(action).toBeVisible();
+
     const box = await action.boundingBox();
     expect(box).not.toBeNull();
-    // Chromium can report an exact 44 CSS-pixel target a few millionths below 44
-    // after device-scale rounding. Keep the WCAG target while tolerating only that noise.
+
     const subpixelTolerance = 0.01;
     expect(box!.width + subpixelTolerance).toBeGreaterThanOrEqual(44);
     expect(box!.height + subpixelTolerance).toBeGreaterThanOrEqual(44);
+
     await page.getByRole("button", { name: "Open menu" }).click();
   }
-  await expect(page.locator(".kova-chat-row")).toBeVisible();
+
+  await expect(page.locator(".kova-user-message")).toContainText("Explain the result clearly.");
+  await expect(page.locator(".kova-assistant-message")).toContainText("Result");
 });

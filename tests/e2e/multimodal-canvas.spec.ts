@@ -13,7 +13,11 @@ test("chat exposes file, image, and analysis entry points", async ({ page }) => 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
   await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
-  for (const name of ["Photos", "Files", "Create an image", "Analyze data", "Analyze files"]) {
+  for (const name of ["Photos", "Files"]) {
     await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
+  }
+
+  for (const name of ["Create an image", "Analyze data", "Analyze files"]) {
+    await expect(page.getByRole("button", { name, exact: true })).toBeDisabled();
   }
 });

@@ -36,7 +36,16 @@ test("the built preview serves its safe health endpoint", async ({ request }) =>
   expect(response.headers()["cache-control"]).toBe("no-store");
 
   const body = await response.json();
-  expect(body).toEqual({ ok: true, app: "KovaGPT" });
+  expect(body).toEqual(
+    expect.objectContaining({
+      ok: true,
+      app: "KovaGPT",
+      status: "ok",
+      service: "kovagpt-web",
+    }),
+  );
+  expect(typeof body.environment).toBe("string");
+  expect(typeof body.timestamp).toBe("string");
   expect(JSON.stringify(body)).not.toMatch(
     /secret|token|credential|private|service[_-]?role|api[_-]?key|commit|branch/i,
   );

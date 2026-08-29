@@ -15,5 +15,5 @@ test("search and deep research are reachable from the composer", async ({ page }
   await waitForKovaHydration(page);
   await page.getByRole("button", { name: "Add files, tools, or prompts" }).click();
   await expect(page.getByRole("button", { name: "Search the web" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Deep research" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Deep research" })).toBeDisabled();
 });

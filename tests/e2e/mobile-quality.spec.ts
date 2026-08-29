@@ -82,41 +82,56 @@ test("mobile workspaces and settings never overflow", async ({ page }) => {
 test("long rich assistant output scrolls locally instead of widening the page", async ({
   page,
 }) => {
-  await page.addInitScript(() => {
-    const now = Date.now();
-    localStorage.setItem(
-      "nova-gpt-conversations-v2",
-      JSON.stringify([
-        {
-          id: "mobile-rich",
-          title: "A very long conversation title that must remain contained on a phone",
-          mode: "instant",
-          createdAt: now,
-          updatedAt: now,
-          messages: [
-            { id: "u", role: "user", content: "Show a rich response" },
-            {
-              id: "a",
+  const response =
+    "## Mobile report\n\n" +
+    "Averylongunbrokenwordthatmustwrapwithoutmovingtheentireviewportsideways.\n\n" +
+    "| Metric | Result |\n|---|---|\n| Containment | Stable |\n\n" +
+    "```ts\n" +
+    "const extremelyLongIdentifierThatMustOnlyScrollInsideThisCodeBlock = " +
+    "'abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0123456789';\n" +
+    "```";
+
+  await page.route("**/api/chat", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body: `data: ${JSON.stringify({
+        choices: [
+          {
+            index: 0,
+            delta: {
               role: "assistant",
-              content:
-                "## Mobile report\n\nAverylongunbrokenwordthatmustwrapwithoutmovingtheentireviewportsideways.\n\n| Metric | Result |\n|---|---|\n| Containment | Stable |\n\n```ts\nconst extremelyLongIdentifierThatMustOnlyScrollInsideThisCodeBlock = 'abcdefghijklmnopqrstuvwxyz0123456789';\n```",
+              content: response,
             },
-          ],
-        },
-      ]),
-    );
+          },
+        ],
+      })}\n\ndata: [DONE]\n\n`,
+    });
   });
+
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await waitForKovaHydration(page);
-  await page.getByRole("button", { name: "Open menu" }).click();
-  await page.getByRole("button", { name: /Open chat A very long conversation/ }).click();
+
+  const composer = page.getByRole("textbox", { name: "Message KovaGPT" }).first();
+
+  await expect(composer).toBeVisible();
+  await composer.fill("Show a rich response");
+
+  const send = page.getByRole("button", { name: "Send" }).first();
+  await expect(send).toBeEnabled();
+  await send.click();
+
   await expect(page.getByRole("heading", { name: "Mobile report" })).toBeVisible();
+
   await expectNoPageOverflow(page);
+
   const code = page.locator("pre").first();
   await expect(code).toBeVisible();
+
   const dimensions = await code.evaluate((element) => ({
     client: element.clientWidth,
     scroll: element.scrollWidth,
   }));
+
   expect(dimensions.scroll).toBeGreaterThanOrEqual(dimensions.client);
 });

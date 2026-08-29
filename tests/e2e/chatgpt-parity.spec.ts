@@ -21,7 +21,16 @@ test.describe("KovaGPT parity invariants", () => {
     await stablePage(page);
     const input = page.locator(".kova-composer textarea");
     await input.focus();
-    await expect(page.locator(".kova-composer")).toHaveCSS("outline-style", "solid");
+    const composer = page.locator(".kova-composer");
+    const focused = await composer.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        borderColor: style.borderColor,
+        boxShadow: style.boxShadow,
+      };
+    });
+    expect(focused.borderColor).not.toBe("rgba(0, 0, 0, 0)");
+    expect(focused.boxShadow).not.toBe("none");
     await expect(input).toHaveCSS("font-size", "16px");
   });
 });

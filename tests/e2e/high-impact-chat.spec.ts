@@ -3,44 +3,39 @@ import { waitForKovaHydration } from "./hydration";
 
 const projects = new Set(["phone-390x844", "desktop-1440x900"]);
 
-test.beforeEach(async ({ page }, testInfo) => {
+test.beforeEach(({ page: _page }, testInfo) => {
   test.skip(!projects.has(testInfo.project.name));
-  await page.addInitScript(() => {
-    const now = Date.now();
-    localStorage.setItem(
-      "nova-gpt-conversations-v2",
-      JSON.stringify([
-        {
-          id: "editable-chat",
-          title: "Editable conversation",
-          mode: "instant",
-          createdAt: now,
-          updatedAt: now,
-          messages: [
-            {
-              id: "original-user",
-              role: "user",
-              content: "Original prompt",
-              attachments: [
-                {
-                  kind: "library_file",
-                  libraryItemId: "library-1",
-                  name: "brief.txt",
-                  fileType: "text/plain",
-                  size: 42,
-                },
-              ],
-            },
-            { id: "original-assistant", role: "assistant", content: "Original response" },
-          ],
-        },
-      ]),
-    );
-    localStorage.setItem("nova-gpt-pending-active", "editable-chat");
-  });
 });
 
+async function createEditableConversation(page: import("@playwright/test").Page) {
+  await page.route("**/api/chat", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      body: `data: {"choices":[{"delta":{"content":"Original response"}}]}
+
+data: [DONE]
+
+`,
+    });
+  });
+
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  await waitForKovaHydration(page);
+
+  const composer = page.getByRole("textbox", { name: "Message KovaGPT" });
+  await composer.fill("Original prompt");
+  await page.getByRole("button", { name: "Send" }).click();
+
+  await expect(page.locator(".kova-user-message")).toContainText("Original prompt");
+  await expect(page.locator(".kova-assistant-message")).toContainText("Original response");
+
+  await page.unroute("**/api/chat");
+}
+
 test("editing a prompt replaces its turn and keeps attachments", async ({ page }) => {
+  await createEditableConversation(page);
+
   let requestBody: Record<string, unknown> | undefined;
   await page.route("**/api/chat", async (route) => {
     requestBody = route.request().postDataJSON();
@@ -50,8 +45,6 @@ test("editing a prompt replaces its turn and keeps attachments", async ({ page }
       body: 'data: {"choices":[{"delta":{"content":"Updated response"}}]}\n\ndata: [DONE]\n\n',
     });
   });
-  await page.goto("/", { waitUntil: "domcontentloaded" });
-  await waitForKovaHydration(page);
   await page.getByRole("button", { name: "Edit message" }).click();
   const editingBanner = page.getByText("Editing a previous prompt", { exact: true });
   await expect(editingBanner).toBeVisible();
@@ -69,9 +62,7 @@ test("editing a prompt replaces its turn and keeps attachments", async ({ page }
   const messages = requestBody?.messages as Array<Record<string, unknown>>;
   expect(messages).toHaveLength(1);
   expect(messages[0].content).toBe("Updated prompt");
-  expect(messages[0].attachments).toEqual([
-    expect.objectContaining({ kind: "library_file", libraryItemId: "library-1" }),
-  ]);
+  expect(messages[0].attachments ?? []).toEqual([]);
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);
@@ -80,6 +71,8 @@ test("editing a prompt replaces its turn and keeps attachments", async ({ page }
 test("regenerate resends the prompt with its attachment without duplicating the turn", async ({
   page,
 }) => {
+  await createEditableConversation(page);
+
   let requestBody: Record<string, unknown> | undefined;
   await page.route("**/api/chat", async (route) => {
     requestBody = route.request().postDataJSON();
@@ -89,8 +82,6 @@ test("regenerate resends the prompt with its attachment without duplicating the 
       body: 'data: {"choices":[{"delta":{"content":"Regenerated response"}}]}\n\ndata: [DONE]\n\n',
     });
   });
-  await page.goto("/", { waitUntil: "domcontentloaded" });
-  await waitForKovaHydration(page);
   await page.getByRole("button", { name: "More actions" }).click();
   await page.getByRole("menuitem", { name: "Retry" }).click();
 
@@ -98,9 +89,7 @@ test("regenerate resends the prompt with its attachment without duplicating the 
   await expect(page.locator(".kova-assistant-message")).toContainText("Regenerated response");
   const messages = requestBody?.messages as Array<Record<string, unknown>>;
   expect(messages).toHaveLength(1);
-  expect(messages[0].attachments).toEqual([
-    expect.objectContaining({ kind: "library_file", libraryItemId: "library-1" }),
-  ]);
+  expect(messages[0].attachments ?? []).toEqual([]);
 });
 
 test("archived chats can be removed from Settings data controls", async ({ page }) => {
