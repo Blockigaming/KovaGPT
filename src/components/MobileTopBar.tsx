@@ -44,7 +44,7 @@ export function MobileTopBar({
           type="button"
           onClick={onOpenSidebar}
           aria-label="Open menu"
-          className="kova-action w-11 h-11 text-foreground"
+          className="kova-action w-11 h-11 text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           <Menu className="w-5 h-5" />
         </button>

@@ -1148,7 +1148,7 @@ function KovaGPT() {
           };
           err.requestId = requestId;
           err.category = category;
-          err.retryable = Boolean(errJson.retryable);
+          err.retryable = typeof errJson.retryable === "boolean" ? errJson.retryable : undefined;
           throw err;
         }
 
@@ -1156,13 +1156,32 @@ function KovaGPT() {
         const decoder = new TextDecoder();
         let buffer = "";
         let done = false;
+        let terminalEventSeen = false;
+
         while (!done) {
           const { done: d, value } = await reader.read();
+
           if (!isCurrentRequest()) {
             void reader.cancel().catch(() => undefined);
             return;
           }
-          if (d) break;
+
+          if (d) {
+            if (!terminalEventSeen) {
+              const error = new Error(
+                "The connection ended before KovaGPT finished the response.",
+              ) as Error & {
+                category?: string;
+                retryable?: boolean;
+              };
+
+              error.category = "streaming_interruption";
+              error.retryable = true;
+              throw error;
+            }
+
+            break;
+          }
           buffer += decoder.decode(value, { stream: true });
           let idx: number;
           while ((idx = buffer.indexOf("\n")) !== -1) {
@@ -1173,6 +1192,7 @@ function KovaGPT() {
             if (!line.startsWith("data: ")) continue;
             const data = line.slice(6).trim();
             if (data === "[DONE]") {
+              terminalEventSeen = true;
               done = true;
               break;
             }
@@ -1314,6 +1334,9 @@ function KovaGPT() {
           }
 
           const requestId = err.requestId;
+          const canManualRetry =
+            err.retryable === true || (err.retryable !== false && retryableCategory);
+
           const friendly =
             category === "rate_limit"
               ? "You're going a bit fast — try again in a moment."
@@ -1333,28 +1356,31 @@ function KovaGPT() {
           const detail = requestId ? `${friendly} (ref: ${requestId})` : friendly;
           toast.error(friendly, {
             description: requestId ? `Reference ID: ${requestId}` : undefined,
-            action: {
-              label: "Retry",
-              onClick: () => {
-                setConversations((prev) =>
-                  prev.map((c) =>
-                    c.id === nextConvId
-                      ? {
-                          ...c,
-                          messages: c.messages.filter(
-                            (m) => m.id !== assistantMsg.id && m.id !== userMsg.id,
-                          ),
-                        }
-                      : c,
-                  ),
-                );
-                retryTimerRef.current = window.setTimeout(() => {
-                  retryTimerRef.current = null;
-                  if (!isCurrentRequest() || activeIdRef.current !== nextConvId) return;
-                  void send(text, atts, 0, nextConvId, priorMessages);
-                }, 100);
-              },
-            },
+            action: canManualRetry
+              ? {
+                  label: "Retry",
+                  onClick: () => {
+                    setConversations((prev) =>
+                      prev.map((c) =>
+                        c.id === nextConvId
+                          ? {
+                              ...c,
+                              messages: c.messages.filter(
+                                (m) => m.id !== assistantMsg.id && m.id !== userMsg.id,
+                              ),
+                            }
+                          : c,
+                      ),
+                    );
+
+                    retryTimerRef.current = window.setTimeout(() => {
+                      retryTimerRef.current = null;
+                      if (!isCurrentRequest() || activeIdRef.current !== nextConvId) return;
+                      void send(text, atts, 0, nextConvId, priorMessages);
+                    }, 100);
+                  },
+                }
+              : undefined,
           });
           updateAssistant(`\n\n_${detail}_`);
         }
@@ -1395,8 +1421,6 @@ function KovaGPT() {
     inFlightRef.current = false;
     setIsStreaming(false);
   }, []);
-
-  // Image generation removed; can be reintroduced when user explicitly asks.
 
   return (
     <div

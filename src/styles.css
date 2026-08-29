@@ -1790,7 +1790,7 @@ body {
     border-radius: calc(var(--composer-height) / 2) !important;
     border: 1px solid color-mix(in oklab, var(--foreground) 7%, transparent) !important;
     background: var(--surface-composer) !important;
-    box-shadow: none !important;
+    box-shadow: none;
     transition:
       border-color var(--motion-fast) var(--ease-standard),
       box-shadow var(--motion-fast) var(--ease-standard),
@@ -2164,9 +2164,9 @@ body {
   }
 }
 
-/* DAY16_COMPOSER_FOCUS_AUTHORITY */
-.kova-composer:focus-within {
-  outline: none !important;
-  border-color: color-mix(in oklab, var(--foreground) 24%, transparent) !important;
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--foreground) 5%, transparent) !important;
+@media (max-width: 1023px) {
+  .kova-message-actions > button[aria-label="Copy"] {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
 }

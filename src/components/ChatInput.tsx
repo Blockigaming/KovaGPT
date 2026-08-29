@@ -63,7 +63,7 @@ type ComposerAction = {
 };
 
 const COMPOSER_TOOLS: readonly ComposerAction[] = [
-  { id: "web_search", label: "Search the Web", icon: Globe },
+  { id: "web_search", label: "Search the web", icon: Globe },
   { id: "deep_research", label: "Deep research", icon: Telescope },
   { id: "image", label: "Create Image", icon: ImagePlus },
 ];
@@ -191,6 +191,12 @@ export function ChatInput({
       document.removeEventListener("keydown", onEsc);
     };
   }, [plusOpen]);
+
+  const [clientReady, setClientReady] = useState(false);
+
+  useEffect(() => {
+    setClientReady(true);
+  }, []);
 
   useEffect(() => {
     const el = ref.current;
@@ -599,7 +605,21 @@ export function ChatInput({
     const imageTool = COMPOSER_TOOLS.find((tool) => tool.id === "image");
     const deepResearchTool = COMPOSER_TOOLS.find((tool) => tool.id === "deep_research");
 
-    const addPhotosRow = (
+    const photosRow = (
+      <button
+        type="button"
+        onClick={() => {
+          setPlusOpen(false);
+          fileRef.current?.click();
+        }}
+        className={rowClass}
+      >
+        <ImageIcon className={iconClass} />
+        <span>Photos</span>
+      </button>
+    );
+
+    const filesRow = (
       <button
         type="button"
         onClick={() => {
@@ -609,7 +629,7 @@ export function ChatInput({
         className={rowClass}
       >
         <Paperclip className={iconClass} />
-        <span>Add photos and files</span>
+        <span>Files</span>
       </button>
     );
 
@@ -651,25 +671,30 @@ export function ChatInput({
         Icon: React.ComponentType<{ className?: string }>,
         label: string,
       ) => (
-        <div
+        <button
           key={key}
+          type="button"
+          disabled
           aria-disabled="true"
           className={`${rowClass} cursor-not-allowed text-muted-foreground hover:bg-transparent active:bg-transparent`}
         >
           <Icon className={`${iconClass} opacity-70`} />
           <span className="opacity-70">{label}</span>
-        </div>
+        </button>
       );
       return (
         <>
-          {addPhotosRow}
+          {photosRow}
+          {filesRow}
           {cameraRow}
-          {webSearchTool ? toolRow({ ...webSearchTool, label: "Web search" }) : null}
+          {webSearchTool ? toolRow({ ...webSearchTool, label: "Search the web" }) : null}
           <p className={`pt-3 pb-1 text-sm text-muted-foreground ${mobile ? "px-4" : "px-3"}`}>
             Log in to use...
           </p>
           {lockedRow("locked-deep-research", deepResearchTool?.icon ?? Telescope, "Deep research")}
-          {lockedRow("locked-image", imageTool?.icon ?? ImageIcon, "Create image")}
+          {lockedRow("locked-image", imageTool?.icon ?? ImageIcon, "Create an image")}
+          {lockedRow("locked-analyze-data", FileText, "Analyze data")}
+          {lockedRow("locked-analyze-files", FileText, "Analyze files")}
           <button
             type="button"
             className={rowClass}
@@ -686,7 +711,8 @@ export function ChatInput({
 
     return (
       <>
-        {addPhotosRow}
+        {photosRow}
+        {filesRow}
         {cameraRow}
         {COMPOSER_TOOLS.map(toolRow)}
         <button type="button" className={rowClass} onClick={() => (window.location.href = "/apps")}>
@@ -706,7 +732,7 @@ export function ChatInput({
       onDragOver={handleDragOver}
     >
       <div className="mx-auto max-w-[48rem]">
-        {!online ? (
+        {clientReady && !online ? (
           <p role="status" className="pb-2 text-center text-xs text-destructive">
             Reconnect to send
           </p>

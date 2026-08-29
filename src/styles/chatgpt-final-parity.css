@@ -236,8 +236,12 @@
     padding-inline: 0.875rem;
   }
 
-  [role="dialog"] {
+  [role="dialog"]:not([data-kova-command-palette="true"]) {
     max-width: calc(100vw - 1rem);
+  }
+
+  [data-kova-command-palette="true"] {
+    max-width: none !important;
   }
 }
 

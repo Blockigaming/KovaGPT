@@ -1710,12 +1710,39 @@ export const Route = createFileRoute("/api/chat")({
                   );
                 }
                 try {
+                  const usageDecoder = new TextDecoder();
+
                   while (true) {
                     const { done, value } = await upstreamReader.read();
                     if (done) break;
-                    usageBuffer += new TextDecoder().decode(value, { stream: true });
+
+                    usageBuffer += usageDecoder.decode(value, { stream: true });
                     controller.enqueue(value);
                   }
+
+                  usageBuffer += usageDecoder.decode();
+
+                  const providerTerminalEventSeen =
+                    /(?:^|\r?\n)data:\s*\[DONE\]\s*(?:\r?\n|$)/m.test(usageBuffer);
+
+                  if (!request.signal.aborted && !providerTerminalEventSeen) {
+                    await finalizeUsage("provider_failed", "stream_missing_terminal_event");
+
+                    logSafeFailure(
+                      "error",
+                      "[chat] final provider stream ended without terminal event",
+                      logContext,
+                      {
+                        status: 502,
+                        category: "provider",
+                        code: "final_provider_stream_missing_terminal",
+                      },
+                    );
+
+                    controller.error(new Error("provider_stream_missing_terminal_event"));
+                    return;
+                  }
+
                   await finalizeUsage(request.signal.aborted ? "aborted" : "completed");
                 } catch {
                   await finalizeUsage(

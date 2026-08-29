@@ -639,7 +639,15 @@ function LibraryPage() {
               : "Storage totals require backend usage records and are omitted here."
           }
           actions={
-            <Button size="sm" variant="outline" onClick={load} disabled={loading}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                if (!loading) void load();
+              }}
+              aria-disabled={loading}
+              data-library-refresh
+            >
               <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />{" "}
               Refresh
             </Button>

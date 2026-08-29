@@ -83,7 +83,7 @@
   border: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent) !important;
   border-radius: 28px !important;
   background: var(--surface-composer) !important;
-  box-shadow: none !important;
+  box-shadow: none;
   transition:
     border-color 100ms ease,
     background-color 100ms ease !important;

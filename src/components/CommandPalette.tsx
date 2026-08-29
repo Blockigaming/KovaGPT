@@ -417,9 +417,10 @@ export function CommandPalette({
     <div
       ref={dialogRef}
       data-kova-shell-overlay=""
-      className="fixed inset-0 z-[70] flex items-start justify-center bg-black/50 px-[max(.75rem,var(--safe-left),var(--safe-right))] pb-[var(--safe-bottom)] pt-[max(12vh,var(--safe-top))]"
+      className="fixed inset-0 z-[70] flex items-start justify-center bg-black/50 p-0 md:px-[max(.75rem,var(--safe-left),var(--safe-right))] md:pb-[var(--safe-bottom)] md:pt-[max(12vh,var(--safe-top))]"
       role="dialog"
       aria-modal="true"
+      data-kova-command-palette="true"
       aria-label="Search chats and actions"
       onKeyDown={(event) => {
         if (event.key === "Tab" && dialogRef.current) {
@@ -466,7 +467,7 @@ export function CommandPalette({
         }
       }}
     >
-      <div className="w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-xl animate-in fade-in duration-100">
+      <div className="h-full w-full max-w-none overflow-hidden rounded-none border-0 bg-popover text-popover-foreground shadow-none animate-in fade-in duration-100 md:h-auto md:max-w-2xl md:rounded-xl md:border md:border-border md:shadow-xl">
         <div className="flex items-center gap-3 border-b border-border px-4 py-3">
           <Search className="h-5 w-5 text-muted-foreground" />
           <input
@@ -495,7 +496,7 @@ export function CommandPalette({
           id="command-palette-results"
           role="listbox"
           aria-label="Command palette results"
-          className="max-h-[60vh] overflow-y-auto p-2"
+          className="max-h-[calc(100dvh-4.25rem)] overflow-y-auto p-2 md:max-h-[60vh]"
         >
           <div className="px-3 pb-1 pt-2 text-xs font-medium text-muted-foreground">Actions</div>
           <button
