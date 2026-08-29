@@ -86,6 +86,7 @@ import { Route as Char126oauthCallbackRouteImport } from './routes/~oauth.callba
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as ApiAdminAiUsageRouteImport } from './routes/api/admin/ai-usage'
 import { Route as ApiAdminDiagnosticsRouteImport } from './routes/api/admin/diagnostics'
+import { Route as ApiAdminTestimonialsRouteImport } from './routes/api/admin/testimonials'
 import { Route as ApiAgentsRunsRouteImport } from './routes/api/agents/runs'
 import { Route as ApiAgentsTeamsRouteImport } from './routes/api/agents/teams'
 import { Route as ApiChatConfirmRouteImport } from './routes/api/chat/confirm'
@@ -502,6 +503,11 @@ const ApiAdminDiagnosticsRoute = ApiAdminDiagnosticsRouteImport.update({
   path: '/api/admin/diagnostics',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAdminTestimonialsRoute = ApiAdminTestimonialsRouteImport.update({
+  id: '/api/admin/testimonials',
+  path: '/api/admin/testimonials',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAgentsRunsRoute = ApiAgentsRunsRouteImport.update({
   id: '/api/agents/runs',
   path: '/api/agents/runs',
@@ -712,6 +718,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
+  '/api/admin/testimonials': typeof ApiAdminTestimonialsRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
@@ -816,6 +823,7 @@ export interface FileRoutesByTo {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
+  '/api/admin/testimonials': typeof ApiAdminTestimonialsRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
@@ -921,6 +929,7 @@ export interface FileRoutesById {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/admin/ai-usage': typeof ApiAdminAiUsageRoute
   '/api/admin/diagnostics': typeof ApiAdminDiagnosticsRoute
+  '/api/admin/testimonials': typeof ApiAdminTestimonialsRoute
   '/api/agents/runs': typeof ApiAgentsRunsRoute
   '/api/agents/teams': typeof ApiAgentsTeamsRoute
   '/api/chat/confirm': typeof ApiChatConfirmRoute
@@ -1027,6 +1036,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/api/admin/ai-usage'
     | '/api/admin/diagnostics'
+    | '/api/admin/testimonials'
     | '/api/agents/runs'
     | '/api/agents/teams'
     | '/api/chat/confirm'
@@ -1131,6 +1141,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/api/admin/ai-usage'
     | '/api/admin/diagnostics'
+    | '/api/admin/testimonials'
     | '/api/agents/runs'
     | '/api/agents/teams'
     | '/api/chat/confirm'
@@ -1235,6 +1246,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/api/admin/ai-usage'
     | '/api/admin/diagnostics'
+    | '/api/admin/testimonials'
     | '/api/agents/runs'
     | '/api/agents/teams'
     | '/api/chat/confirm'
@@ -1338,6 +1350,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiAdminAiUsageRoute: typeof ApiAdminAiUsageRoute
   ApiAdminDiagnosticsRoute: typeof ApiAdminDiagnosticsRoute
+  ApiAdminTestimonialsRoute: typeof ApiAdminTestimonialsRoute
   ApiAgentsRunsRoute: typeof ApiAgentsRunsRoute
   ApiAgentsTeamsRoute: typeof ApiAgentsTeamsRoute
   ApiFinancesExchangeRoute: typeof ApiFinancesExchangeRoute
@@ -1904,6 +1917,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminDiagnosticsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/admin/testimonials': {
+      id: '/api/admin/testimonials'
+      path: '/api/admin/testimonials'
+      fullPath: '/api/admin/testimonials'
+      preLoaderRoute: typeof ApiAdminTestimonialsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/agents/runs': {
       id: '/api/agents/runs'
       path: '/api/agents/runs'
@@ -2205,6 +2225,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiAdminAiUsageRoute: ApiAdminAiUsageRoute,
   ApiAdminDiagnosticsRoute: ApiAdminDiagnosticsRoute,
+  ApiAdminTestimonialsRoute: ApiAdminTestimonialsRoute,
   ApiAgentsRunsRoute: ApiAgentsRunsRoute,
   ApiAgentsTeamsRoute: ApiAgentsTeamsRoute,
   ApiFinancesExchangeRoute: ApiFinancesExchangeRoute,

@@ -159,9 +159,7 @@ export const Route = createFileRoute("/api/admin/testimonials")({
             signal: AbortSignal.timeout(5000),
           },
         ).catch(() => null);
-        const updatedRows = updateResponse?.ok
-          ? await updateResponse.json().catch(() => [])
-          : [];
+        const updatedRows = updateResponse?.ok ? await updateResponse.json().catch(() => []) : [];
         const updated = ReviewedTestimonial.safeParse(
           Array.isArray(updatedRows) ? updatedRows[0] : null,
         );
