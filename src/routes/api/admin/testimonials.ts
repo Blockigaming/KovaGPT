@@ -96,10 +96,7 @@ export const Route = createFileRoute("/api/admin/testimonials")({
           );
         }
 
-        return Response.json(
-          { testimonial: data },
-          { headers: { "Cache-Control": "no-store" } },
-        );
+        return Response.json({ testimonial: data }, { headers: { "Cache-Control": "no-store" } });
       },
     },
   },
