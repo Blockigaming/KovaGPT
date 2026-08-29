@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - finalization/checkpoint-2026-08-28
-  workflow_dispatch:
 
 permissions:
   contents: write
