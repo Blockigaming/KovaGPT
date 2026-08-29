@@ -1,0 +1,1128 @@
+{
+  "schemaVersion": 1,
+  "scope": "P0 UI/product surfaces",
+  "rule": "This is a source-risk audit only. A low risk score does not mean complete. Runtime, accessibility, browser, responsive, security, backend, and production verification remain separate gates.",
+  "surfaces": [
+    {
+      "surface": "Project workspace",
+      "expectedKova": "/projects/$projectId",
+      "files": ["src/routes/projects.$projectId.tsx"],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 0,
+        "todo_marker": 6,
+        "placeholder_language": 7,
+        "possibly_fake_success": 4,
+        "disabled_control": 11,
+        "error_state": 34,
+        "loading_state": 28,
+        "empty_state": 8,
+        "auth_state": 6
+      },
+      "riskLines": [
+        {
+          "file": "src/routes/projects.$projectId.tsx",
+          "line": 955,
+          "text": "placeholder={"
+        },
+        {
+          "file": "src/routes/projects.$projectId.tsx",
+          "line": 1054,
+          "text": "placeholder={canEdit ? \"Start writing shared notes for the team\u2026\" : \"No notes yet.\"}"
+        },
+        {
+          "file": "src/routes/projects.$projectId.tsx",
+          "line": 1109,
+          "text": "const next = t.status === \"todo\" ? \"doing\" : t.status === \"doing\" ? \"done\" : \"todo\";"
+        },
+        {
+          "file": "src/routes/projects.$projectId.tsx",
+          "line": 1132,
+          "text": "todo: tasks.filter((t) => t.status === \"todo\"),"
+        },
+        {
+          "file": "src/routes/projects.$projectId.tsx",
+          "line": 1154,
+          "text": "placeholder=\"New task\u2026\""
+        },
+        {
+          "file": "src/routes/projects.$projectId.tsx",
+          "line": 1186,
+          "text": "{([\"todo\", \"doing\", \"done\"] as const).map((k) => ("
+        },
+        {
+          "file": "src/routes/projects.$projectId.tsx",
+          "line": 1189,
+          "text": "{k === \"todo\" ? \"To do\" : k === \"doing\" ? \"In progress\" : \"Done\"} \u00b7{\" \"}"
+        },
+        {
+          "file": "src/routes/projects.$projectId.tsx",
+          "line": 1311,
+          "text": "placeholder=\"e.g. Our brand voice is warm and concise.\""
+        },
+        {
+          "file": "src/routes/projects.$projectId.tsx",
+          "line": 1427,
+          "text": "placeholder=\"Search chats, notes, tasks, files, memory\u2026\""
+        },
+        {
+          "file": "src/routes/projects.$projectId.tsx",
+          "line": 1514,
+          "text": "placeholder=\"teammate@example.com\""
+        },
+        {
+          "file": "src/routes/projects.$projectId.tsx",
+          "line": 1647,
+          "text": "placeholder=\"Persistent instructions added to every chat in this project (e.g. brand voice, product details).\""
+        }
+      ],
+      "riskScore": 57
+    },
+    {
+      "surface": "Memory",
+      "expectedKova": "/memory + Settings",
+      "files": ["src/routes/memory.tsx", "src/components/SettingsDialog.tsx"],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 2,
+        "todo_marker": 0,
+        "placeholder_language": 11,
+        "possibly_fake_success": 23,
+        "disabled_control": 14,
+        "error_state": 112,
+        "loading_state": 13,
+        "empty_state": 3,
+        "auth_state": 23
+      },
+      "riskLines": [
+        {
+          "file": "src/routes/memory.tsx",
+          "line": 125,
+          "text": "placeholder=\"Search memories\""
+        },
+        {
+          "file": "src/routes/memory.tsx",
+          "line": 296,
+          "text": "Relevant saved context may be included with a future prompt. Retrieved connector data is"
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 772,
+          "text": "placeholder={user?.firstName || \"Your name\"}"
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 783,
+          "text": "placeholder=\"e.g. I'm a student in Chicago. I prefer metric. I'm learning Python.\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 820,
+          "text": "placeholder=\"e.g. Answer in clear bullets. Use simple language. Skip disclaimers.\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 923,
+          "text": "integrations work today; others are on the roadmap."
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 1651,
+          "text": "placeholder=\"Type DELETE\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 2188,
+          "text": "placeholder=\"Search title or content...\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 2788,
+          "text": "placeholder=\"New PIN (4-8 digits)\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 2796,
+          "text": "placeholder=\"Confirm PIN\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 2812,
+          "text": "placeholder=\"Current PIN\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 2820,
+          "text": "placeholder=\"New PIN\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 2828,
+          "text": "placeholder=\"Confirm new PIN\""
+        }
+      ],
+      "riskScore": 49
+    },
+    {
+      "surface": "Apps / connectors",
+      "expectedKova": "/apps",
+      "files": ["src/routes/apps.tsx", "src/components/SettingsDialog.tsx"],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 1,
+        "todo_marker": 0,
+        "placeholder_language": 12,
+        "possibly_fake_success": 21,
+        "disabled_control": 16,
+        "error_state": 145,
+        "loading_state": 11,
+        "empty_state": 3,
+        "auth_state": 32
+      },
+      "riskLines": [
+        {
+          "file": "src/routes/apps.tsx",
+          "line": 524,
+          "text": "placeholder=\"Search GitHub repositories\""
+        },
+        {
+          "file": "src/routes/apps.tsx",
+          "line": 938,
+          "text": "placeholder=\"Search apps\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 772,
+          "text": "placeholder={user?.firstName || \"Your name\"}"
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 783,
+          "text": "placeholder=\"e.g. I'm a student in Chicago. I prefer metric. I'm learning Python.\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 820,
+          "text": "placeholder=\"e.g. Answer in clear bullets. Use simple language. Skip disclaimers.\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 923,
+          "text": "integrations work today; others are on the roadmap."
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 1651,
+          "text": "placeholder=\"Type DELETE\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 2188,
+          "text": "placeholder=\"Search title or content...\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 2788,
+          "text": "placeholder=\"New PIN (4-8 digits)\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 2796,
+          "text": "placeholder=\"Confirm PIN\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 2812,
+          "text": "placeholder=\"Current PIN\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 2820,
+          "text": "placeholder=\"New PIN\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 2828,
+          "text": "placeholder=\"Confirm new PIN\""
+        }
+      ],
+      "riskScore": 44
+    },
+    {
+      "surface": "Settings",
+      "expectedKova": "SettingsDialog",
+      "files": ["src/components/SettingsDialog.tsx"],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 1,
+        "todo_marker": 0,
+        "placeholder_language": 10,
+        "possibly_fake_success": 20,
+        "disabled_control": 14,
+        "error_state": 97,
+        "loading_state": 9,
+        "empty_state": 2,
+        "auth_state": 18
+      },
+      "riskLines": [
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 772,
+          "text": "placeholder={user?.firstName || \"Your name\"}"
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 783,
+          "text": "placeholder=\"e.g. I'm a student in Chicago. I prefer metric. I'm learning Python.\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 820,
+          "text": "placeholder=\"e.g. Answer in clear bullets. Use simple language. Skip disclaimers.\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 923,
+          "text": "integrations work today; others are on the roadmap."
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 1651,
+          "text": "placeholder=\"Type DELETE\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 2188,
+          "text": "placeholder=\"Search title or content...\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 2788,
+          "text": "placeholder=\"New PIN (4-8 digits)\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 2796,
+          "text": "placeholder=\"Confirm PIN\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 2812,
+          "text": "placeholder=\"Current PIN\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 2820,
+          "text": "placeholder=\"New PIN\""
+        },
+        {
+          "file": "src/components/SettingsDialog.tsx",
+          "line": 2828,
+          "text": "placeholder=\"Confirm new PIN\""
+        }
+      ],
+      "riskScore": 38
+    },
+    {
+      "surface": "Work / long-running execution",
+      "expectedKova": "/work",
+      "files": [
+        "src/routes/work.tsx",
+        "src/components/AgentWorkspace.tsx",
+        "src/components/AgentTeamWorkspace.tsx"
+      ],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 0,
+        "todo_marker": 0,
+        "placeholder_language": 9,
+        "possibly_fake_success": 1,
+        "disabled_control": 6,
+        "error_state": 38,
+        "loading_state": 12,
+        "empty_state": 2,
+        "auth_state": 0
+      },
+      "riskLines": [
+        {
+          "file": "src/routes/work.tsx",
+          "line": 586,
+          "text": "placeholder=\"Search evidence\""
+        },
+        {
+          "file": "src/routes/work.tsx",
+          "line": 720,
+          "text": "placeholder=\"Search deliverables\""
+        },
+        {
+          "file": "src/components/AgentWorkspace.tsx",
+          "line": 239,
+          "text": "placeholder=\"Agent name\""
+        },
+        {
+          "file": "src/components/AgentWorkspace.tsx",
+          "line": 246,
+          "text": "placeholder=\"Project (optional)\""
+        },
+        {
+          "file": "src/components/AgentWorkspace.tsx",
+          "line": 253,
+          "text": "placeholder=\"What should this agent accomplish?\""
+        },
+        {
+          "file": "src/components/AgentWorkspace.tsx",
+          "line": 260,
+          "text": "placeholder=\"Guardrails and output requirements\""
+        },
+        {
+          "file": "src/components/AgentWorkspace.tsx",
+          "line": 267,
+          "text": "placeholder={"
+        },
+        {
+          "file": "src/components/AgentTeamWorkspace.tsx",
+          "line": 213,
+          "text": "placeholder=\"What should your team accomplish?\""
+        },
+        {
+          "file": "src/components/AgentTeamWorkspace.tsx",
+          "line": 220,
+          "text": "placeholder=\"Project ID (optional)\""
+        }
+      ],
+      "riskScore": 27
+    },
+    {
+      "surface": "Sharing",
+      "expectedKova": "ShareChatDialog + Projects",
+      "files": ["src/components/ShareChatDialog.tsx", "src/components/ProjectCollaboration.tsx"],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 2,
+        "todo_marker": 0,
+        "placeholder_language": 2,
+        "possibly_fake_success": 3,
+        "disabled_control": 5,
+        "error_state": 20,
+        "loading_state": 11,
+        "empty_state": 0,
+        "auth_state": 0
+      },
+      "riskLines": [
+        {
+          "file": "src/components/ShareChatDialog.tsx",
+          "line": 93,
+          "text": "placeholder=\"friend@example.com\""
+        },
+        {
+          "file": "src/components/ShareChatDialog.tsx",
+          "line": 101,
+          "text": "included. Future replies in your chat won't update theirs."
+        },
+        {
+          "file": "src/components/ProjectCollaboration.tsx",
+          "line": 75,
+          "text": "opens and are ready for a future realtime subscription."
+        },
+        {
+          "file": "src/components/ProjectCollaboration.tsx",
+          "line": 95,
+          "text": "placeholder=\"Add a project comment or inline note\u2026\""
+        }
+      ],
+      "riskScore": 22
+    },
+    {
+      "surface": "Core chat",
+      "expectedKova": "/",
+      "files": [
+        "src/routes/index.tsx",
+        "src/components/ChatInput.tsx",
+        "src/components/ChatMessage.tsx",
+        "src/components/ResponsiveModelSelector.tsx"
+      ],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 0,
+        "todo_marker": 0,
+        "placeholder_language": 7,
+        "possibly_fake_success": 12,
+        "disabled_control": 11,
+        "error_state": 99,
+        "loading_state": 46,
+        "empty_state": 4,
+        "auth_state": 38
+      },
+      "riskLines": [
+        {
+          "file": "src/routes/index.tsx",
+          "line": 1714,
+          "text": "placeholder=\"Ask anything\""
+        },
+        {
+          "file": "src/routes/index.tsx",
+          "line": 2023,
+          "text": "placeholder=\"Ask anything\""
+        },
+        {
+          "file": "src/components/ChatInput.tsx",
+          "line": 103,
+          "text": "placeholder,"
+        },
+        {
+          "file": "src/components/ChatInput.tsx",
+          "line": 134,
+          "text": "placeholder?: string;"
+        },
+        {
+          "file": "src/components/ChatInput.tsx",
+          "line": 520,
+          "text": "placeholder=\"Search files\""
+        },
+        {
+          "file": "src/components/ChatInput.tsx",
+          "line": 918,
+          "text": "placeholder={placeholder ?? \"Ask anything\"}"
+        }
+      ],
+      "riskScore": 21
+    },
+    {
+      "surface": "Data analysis",
+      "expectedKova": "Chat tool",
+      "files": ["src/components/ChatInput.tsx", "src/routes/index.tsx"],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 0,
+        "todo_marker": 0,
+        "placeholder_language": 7,
+        "possibly_fake_success": 6,
+        "disabled_control": 8,
+        "error_state": 84,
+        "loading_state": 38,
+        "empty_state": 4,
+        "auth_state": 32
+      },
+      "riskLines": [
+        {
+          "file": "src/components/ChatInput.tsx",
+          "line": 103,
+          "text": "placeholder,"
+        },
+        {
+          "file": "src/components/ChatInput.tsx",
+          "line": 134,
+          "text": "placeholder?: string;"
+        },
+        {
+          "file": "src/components/ChatInput.tsx",
+          "line": 520,
+          "text": "placeholder=\"Search files\""
+        },
+        {
+          "file": "src/components/ChatInput.tsx",
+          "line": 918,
+          "text": "placeholder={placeholder ?? \"Ask anything\"}"
+        },
+        {
+          "file": "src/routes/index.tsx",
+          "line": 1714,
+          "text": "placeholder=\"Ask anything\""
+        },
+        {
+          "file": "src/routes/index.tsx",
+          "line": 2023,
+          "text": "placeholder=\"Ask anything\""
+        }
+      ],
+      "riskScore": 21
+    },
+    {
+      "surface": "Deep Research",
+      "expectedKova": "/research-planner + chat mode",
+      "files": ["src/routes/research-planner.tsx", "src/components/ChatInput.tsx"],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 0,
+        "todo_marker": 0,
+        "placeholder_language": 7,
+        "possibly_fake_success": 1,
+        "disabled_control": 14,
+        "error_state": 57,
+        "loading_state": 10,
+        "empty_state": 2,
+        "auth_state": 7
+      },
+      "riskLines": [
+        {
+          "file": "src/routes/research-planner.tsx",
+          "line": 249,
+          "text": "placeholder=\"What should KovaGPT investigate?\""
+        },
+        {
+          "file": "src/routes/research-planner.tsx",
+          "line": 283,
+          "text": "placeholder=\"Website allow list, one domain per line (optional)\""
+        },
+        {
+          "file": "src/components/ChatInput.tsx",
+          "line": 103,
+          "text": "placeholder,"
+        },
+        {
+          "file": "src/components/ChatInput.tsx",
+          "line": 134,
+          "text": "placeholder?: string;"
+        },
+        {
+          "file": "src/components/ChatInput.tsx",
+          "line": 520,
+          "text": "placeholder=\"Search files\""
+        },
+        {
+          "file": "src/components/ChatInput.tsx",
+          "line": 918,
+          "text": "placeholder={placeholder ?? \"Ask anything\"}"
+        }
+      ],
+      "riskScore": 21
+    },
+    {
+      "surface": "Scheduled Tasks",
+      "expectedKova": "/scheduled-tasks",
+      "files": ["src/routes/scheduled-tasks.tsx", "src/components/AutomationBuilder.tsx"],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 0,
+        "todo_marker": 0,
+        "placeholder_language": 6,
+        "possibly_fake_success": 3,
+        "disabled_control": 6,
+        "error_state": 48,
+        "loading_state": 10,
+        "empty_state": 5,
+        "auth_state": 5
+      },
+      "riskLines": [
+        {
+          "file": "src/routes/scheduled-tasks.tsx",
+          "line": 434,
+          "text": "placeholder=\"Morning market summary\""
+        },
+        {
+          "file": "src/routes/scheduled-tasks.tsx",
+          "line": 448,
+          "text": "placeholder=\"Summarize the top 5 AI news stories from the last 24 hours.\""
+        },
+        {
+          "file": "src/routes/scheduled-tasks.tsx",
+          "line": 518,
+          "text": "placeholder=\"Search tasks\""
+        },
+        {
+          "file": "src/components/AutomationBuilder.tsx",
+          "line": 93,
+          "text": "placeholder=\"Weekly project briefing\""
+        },
+        {
+          "file": "src/components/AutomationBuilder.tsx",
+          "line": 103,
+          "text": "placeholder=\"Summarize the progress and open questions in my project notes.\""
+        },
+        {
+          "file": "src/components/AutomationBuilder.tsx",
+          "line": 113,
+          "text": "placeholder=\"there are new notes since the prior run\""
+        }
+      ],
+      "riskScore": 18
+    },
+    {
+      "surface": "Conversation search/history",
+      "expectedKova": "Sidebar + command palette",
+      "files": [
+        "src/components/Sidebar.tsx",
+        "src/components/CommandPalette.tsx",
+        "src/components/ArchivedChatsDialog.tsx"
+      ],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 0,
+        "todo_marker": 0,
+        "placeholder_language": 4,
+        "possibly_fake_success": 0,
+        "disabled_control": 8,
+        "error_state": 0,
+        "loading_state": 0,
+        "empty_state": 2,
+        "auth_state": 8
+      },
+      "riskLines": [
+        {
+          "file": "src/components/Sidebar.tsx",
+          "line": 460,
+          "text": "placeholder=\"Search titles, messages, or operators\u2026\""
+        },
+        {
+          "file": "src/components/CommandPalette.tsx",
+          "line": 477,
+          "text": "placeholder=\"Search chats, apps, files, and actions\""
+        },
+        {
+          "file": "src/components/CommandPalette.tsx",
+          "line": 483,
+          "text": "className=\"h-10 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground\""
+        },
+        {
+          "file": "src/components/ArchivedChatsDialog.tsx",
+          "line": 97,
+          "text": "placeholder=\"Search titles or message content\""
+        }
+      ],
+      "riskScore": 16
+    },
+    {
+      "surface": "Study mode",
+      "expectedKova": "/study-assistant + chat mode",
+      "files": ["src/routes/study-assistant.tsx", "src/components/ChatInput.tsx"],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 0,
+        "todo_marker": 0,
+        "placeholder_language": 5,
+        "possibly_fake_success": 0,
+        "disabled_control": 8,
+        "error_state": 36,
+        "loading_state": 7,
+        "empty_state": 1,
+        "auth_state": 2
+      },
+      "riskLines": [
+        {
+          "file": "src/components/ChatInput.tsx",
+          "line": 103,
+          "text": "placeholder,"
+        },
+        {
+          "file": "src/components/ChatInput.tsx",
+          "line": 134,
+          "text": "placeholder?: string;"
+        },
+        {
+          "file": "src/components/ChatInput.tsx",
+          "line": 520,
+          "text": "placeholder=\"Search files\""
+        },
+        {
+          "file": "src/components/ChatInput.tsx",
+          "line": 918,
+          "text": "placeholder={placeholder ?? \"Ask anything\"}"
+        }
+      ],
+      "riskScore": 15
+    },
+    {
+      "surface": "Authentication",
+      "expectedKova": "/auth + dialogs",
+      "files": [
+        "src/routes/auth.tsx",
+        "src/components/auth/AuthDialog.tsx",
+        "src/components/auth/ClerkSafe.tsx"
+      ],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 0,
+        "todo_marker": 0,
+        "placeholder_language": 4,
+        "possibly_fake_success": 4,
+        "disabled_control": 7,
+        "error_state": 95,
+        "loading_state": 45,
+        "empty_state": 0,
+        "auth_state": 12
+      },
+      "riskLines": [
+        {
+          "file": "src/routes/auth.tsx",
+          "line": 221,
+          "text": "placeholder=\"Email address\""
+        },
+        {
+          "file": "src/routes/auth.tsx",
+          "line": 242,
+          "text": "placeholder=\"Your name (optional)\""
+        },
+        {
+          "file": "src/routes/auth.tsx",
+          "line": 255,
+          "text": "placeholder=\"Password\""
+        },
+        {
+          "file": "src/components/auth/AuthDialog.tsx",
+          "line": 208,
+          "text": "placeholder=\"Email address\""
+        }
+      ],
+      "riskScore": 12
+    },
+    {
+      "surface": "Terms",
+      "expectedKova": "/terms",
+      "files": ["src/routes/terms.tsx"],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 1,
+        "todo_marker": 0,
+        "placeholder_language": 0,
+        "possibly_fake_success": 0,
+        "disabled_control": 0,
+        "error_state": 0,
+        "loading_state": 0,
+        "empty_state": 0,
+        "auth_state": 0
+      },
+      "riskLines": [
+        {
+          "file": "src/routes/terms.tsx",
+          "line": 68,
+          "text": "from your account settings; canceling stops future renewals but your current plan may"
+        }
+      ],
+      "riskScore": 12
+    },
+    {
+      "surface": "Canvas / artifacts",
+      "expectedKova": "ArtifactEditor",
+      "files": [
+        "src/components/ArtifactEditor.tsx",
+        "src/components/SelectionEditDialog.tsx",
+        "src/components/EditableResponseBlock.tsx"
+      ],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 0,
+        "todo_marker": 0,
+        "placeholder_language": 3,
+        "possibly_fake_success": 5,
+        "disabled_control": 5,
+        "error_state": 36,
+        "loading_state": 1,
+        "empty_state": 3,
+        "auth_state": 11
+      },
+      "riskLines": [
+        {
+          "file": "src/components/ArtifactEditor.tsx",
+          "line": 443,
+          "text": "placeholder=\"Find heading\""
+        },
+        {
+          "file": "src/components/ArtifactEditor.tsx",
+          "line": 603,
+          "text": "placeholder=\"Comment on the document or current selection\""
+        },
+        {
+          "file": "src/components/SelectionEditDialog.tsx",
+          "line": 259,
+          "text": "placeholder=\"Make it shorter and less formal\""
+        }
+      ],
+      "riskScore": 9
+    },
+    {
+      "surface": "Projects",
+      "expectedKova": "/projects",
+      "files": ["src/routes/projects.tsx"],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 0,
+        "todo_marker": 0,
+        "placeholder_language": 3,
+        "possibly_fake_success": 7,
+        "disabled_control": 7,
+        "error_state": 39,
+        "loading_state": 10,
+        "empty_state": 2,
+        "auth_state": 7
+      },
+      "riskLines": [
+        {
+          "file": "src/routes/projects.tsx",
+          "line": 621,
+          "text": "placeholder=\"Search projects\""
+        },
+        {
+          "file": "src/routes/projects.tsx",
+          "line": 788,
+          "text": "placeholder=\"Marketing campaign\""
+        },
+        {
+          "file": "src/routes/projects.tsx",
+          "line": 798,
+          "text": "placeholder=\"What's this project about?\""
+        }
+      ],
+      "riskScore": 9
+    },
+    {
+      "surface": "Temporary Chat",
+      "expectedKova": "Chat mode",
+      "files": ["src/routes/index.tsx", "src/components/ChatWorkspaceDialog.tsx"],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 0,
+        "todo_marker": 0,
+        "placeholder_language": 3,
+        "possibly_fake_success": 9,
+        "disabled_control": 4,
+        "error_state": 63,
+        "loading_state": 34,
+        "empty_state": 7,
+        "auth_state": 42
+      },
+      "riskLines": [
+        {
+          "file": "src/routes/index.tsx",
+          "line": 1714,
+          "text": "placeholder=\"Ask anything\""
+        },
+        {
+          "file": "src/routes/index.tsx",
+          "line": 2023,
+          "text": "placeholder=\"Ask anything\""
+        },
+        {
+          "file": "src/components/ChatWorkspaceDialog.tsx",
+          "line": 235,
+          "text": "placeholder=\"Always answer in British English and keep responses under 150 words.\""
+        }
+      ],
+      "riskScore": 9
+    },
+    {
+      "surface": "Custom assistants / Kovas",
+      "expectedKova": "/assistants",
+      "files": ["src/routes/assistants.tsx"],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 0,
+        "todo_marker": 0,
+        "placeholder_language": 1,
+        "possibly_fake_success": 0,
+        "disabled_control": 0,
+        "error_state": 0,
+        "loading_state": 0,
+        "empty_state": 1,
+        "auth_state": 0
+      },
+      "riskLines": [
+        {
+          "file": "src/routes/assistants.tsx",
+          "line": 45,
+          "text": "placeholder=\"Search assistants\""
+        }
+      ],
+      "riskScore": 7
+    },
+    {
+      "surface": "Images",
+      "expectedKova": "/images",
+      "files": ["src/routes/images.tsx"],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 0,
+        "todo_marker": 0,
+        "placeholder_language": 2,
+        "possibly_fake_success": 2,
+        "disabled_control": 4,
+        "error_state": 32,
+        "loading_state": 8,
+        "empty_state": 1,
+        "auth_state": 13
+      },
+      "riskLines": [
+        {
+          "file": "src/routes/images.tsx",
+          "line": 573,
+          "text": "placeholder=\"Describe a new image\""
+        },
+        {
+          "file": "src/routes/images.tsx",
+          "line": 576,
+          "text": "className=\"min-w-0 flex-1 border-0 bg-transparent text-[16px] outline-none placeholder:text-muted-foreground focus:outline-none focus:ring-0\""
+        }
+      ],
+      "riskScore": 6
+    },
+    {
+      "surface": "Billing return/recovery",
+      "expectedKova": "/checkout/return",
+      "files": ["src/routes/checkout.return.tsx"],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 0,
+        "todo_marker": 0,
+        "placeholder_language": 0,
+        "possibly_fake_success": 0,
+        "disabled_control": 0,
+        "error_state": 0,
+        "loading_state": 0,
+        "empty_state": 1,
+        "auth_state": 0
+      },
+      "riskLines": [],
+      "riskScore": 4
+    },
+    {
+      "surface": "Pricing / plans",
+      "expectedKova": "/pricing",
+      "files": ["src/routes/pricing.tsx"],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 0,
+        "todo_marker": 0,
+        "placeholder_language": 0,
+        "possibly_fake_success": 0,
+        "disabled_control": 1,
+        "error_state": 0,
+        "loading_state": 0,
+        "empty_state": 0,
+        "auth_state": 2
+      },
+      "riskLines": [],
+      "riskScore": 4
+    },
+    {
+      "surface": "Files",
+      "expectedKova": "/files",
+      "files": ["src/routes/files.tsx"],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 0,
+        "todo_marker": 0,
+        "placeholder_language": 1,
+        "possibly_fake_success": 0,
+        "disabled_control": 0,
+        "error_state": 6,
+        "loading_state": 4,
+        "empty_state": 1,
+        "auth_state": 5
+      },
+      "riskLines": [
+        {
+          "file": "src/routes/files.tsx",
+          "line": 92,
+          "text": "placeholder=\"Search files\""
+        }
+      ],
+      "riskScore": 3
+    },
+    {
+      "surface": "Library",
+      "expectedKova": "/library",
+      "files": ["src/routes/library.tsx"],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 0,
+        "todo_marker": 0,
+        "placeholder_language": 1,
+        "possibly_fake_success": 5,
+        "disabled_control": 1,
+        "error_state": 20,
+        "loading_state": 21,
+        "empty_state": 3,
+        "auth_state": 9
+      },
+      "riskLines": [
+        {
+          "file": "src/routes/library.tsx",
+          "line": 678,
+          "text": "placeholder=\"Search Library\""
+        }
+      ],
+      "riskScore": 3
+    },
+    {
+      "surface": "Project conversation",
+      "expectedKova": "/projects/$projectId/chat/$chatId",
+      "files": ["src/routes/projects.$projectId.chat.$chatId.tsx"],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 0,
+        "todo_marker": 0,
+        "placeholder_language": 1,
+        "possibly_fake_success": 0,
+        "disabled_control": 7,
+        "error_state": 36,
+        "loading_state": 7,
+        "empty_state": 0,
+        "auth_state": 6
+      },
+      "riskLines": [
+        {
+          "file": "src/routes/projects.$projectId.chat.$chatId.tsx",
+          "line": 448,
+          "text": "placeholder={canEdit ? \"Message the project\u2026\" : \"You have view-only access\"}"
+        }
+      ],
+      "riskScore": 3
+    },
+    {
+      "surface": "Assistant detail",
+      "expectedKova": "/assistants/$assistantSlug",
+      "files": ["src/routes/assistants.$assistantSlug.tsx"],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 0,
+        "todo_marker": 0,
+        "placeholder_language": 0,
+        "possibly_fake_success": 0,
+        "disabled_control": 0,
+        "error_state": 1,
+        "loading_state": 0,
+        "empty_state": 0,
+        "auth_state": 0
+      },
+      "riskLines": [],
+      "riskScore": 2
+    },
+    {
+      "surface": "Privacy",
+      "expectedKova": "/privacy",
+      "files": ["src/routes/privacy.tsx"],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 0,
+        "todo_marker": 0,
+        "placeholder_language": 0,
+        "possibly_fake_success": 0,
+        "disabled_control": 0,
+        "error_state": 2,
+        "loading_state": 0,
+        "empty_state": 0,
+        "auth_state": 0
+      },
+      "riskLines": [],
+      "riskScore": 2
+    },
+    {
+      "surface": "Password recovery",
+      "expectedKova": "/reset-password",
+      "files": ["src/routes/reset-password.tsx"],
+      "missingFiles": [],
+      "signals": {
+        "unfinished_copy": 0,
+        "todo_marker": 0,
+        "placeholder_language": 0,
+        "possibly_fake_success": 1,
+        "disabled_control": 1,
+        "error_state": 20,
+        "loading_state": 3,
+        "empty_state": 0,
+        "auth_state": 0
+      },
+      "riskLines": [],
+      "riskScore": 0
+    }
+  ]
+}

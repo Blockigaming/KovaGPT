@@ -1,0 +1,946 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Canonical inventory for the KovaGPT finalized goal. A route existing does not mean the surface is complete.",
+  "completionRule": "A required surface is complete only when functionality, backend integration, responsive UI, accessibility, light/dark themes, auth states, failure states, tests, and production verification are all proven.",
+  "requiredWidths": [320, 375, 390, 768, 1024, 1280, 1440, 1728],
+  "requiredBrowsers": ["chromium", "firefox", "webkit"],
+  "requiredThemes": ["light", "dark"],
+  "requiredAuthStates": ["signed-out", "signed-in"],
+  "requiredRuntimeStates": [
+    "loading",
+    "empty",
+    "success",
+    "partial-success",
+    "disabled",
+    "offline",
+    "expired-auth",
+    "provider-unavailable",
+    "rate-limit",
+    "permission-denied",
+    "retry",
+    "cancellation",
+    "unexpected-failure"
+  ],
+  "surfaces": [
+    {
+      "surface": "Core chat",
+      "expectedKova": "/",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Conversation search/history",
+      "expectedKova": "Sidebar + command palette",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Temporary Chat",
+      "expectedKova": "Chat mode",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Projects",
+      "expectedKova": "/projects",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Project workspace",
+      "expectedKova": "/projects/$projectId",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Project conversation",
+      "expectedKova": "/projects/$projectId/chat/$chatId",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Files",
+      "expectedKova": "/files",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Library",
+      "expectedKova": "/library",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Images",
+      "expectedKova": "/images",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Deep Research",
+      "expectedKova": "/research-planner + chat mode",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Study mode",
+      "expectedKova": "/study-assistant + chat mode",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Data analysis",
+      "expectedKova": "Chat tool",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Canvas / artifacts",
+      "expectedKova": "ArtifactEditor",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Work / long-running execution",
+      "expectedKova": "/work",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Scheduled Tasks",
+      "expectedKova": "/scheduled-tasks",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Apps / connectors",
+      "expectedKova": "/apps",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Custom assistants / Kovas",
+      "expectedKova": "/assistants",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Assistant detail",
+      "expectedKova": "/assistants/$assistantSlug",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Memory",
+      "expectedKova": "/memory + Settings",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Notifications",
+      "expectedKova": "/notifications + Settings",
+      "priority": "P1",
+      "required": true
+    },
+    {
+      "surface": "Sharing",
+      "expectedKova": "ShareChatDialog + Projects",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Settings",
+      "expectedKova": "SettingsDialog",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Authentication",
+      "expectedKova": "/auth + dialogs",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Password recovery",
+      "expectedKova": "/reset-password",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Pricing / plans",
+      "expectedKova": "/pricing",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Billing return/recovery",
+      "expectedKova": "/checkout/return",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Help",
+      "expectedKova": "/help",
+      "priority": "P1",
+      "required": true
+    },
+    {
+      "surface": "Contact support",
+      "expectedKova": "/contact-support",
+      "priority": "P1",
+      "required": true
+    },
+    {
+      "surface": "Getting started",
+      "expectedKova": "/getting-started",
+      "priority": "P1",
+      "required": true
+    },
+    {
+      "surface": "Developer platform",
+      "expectedKova": "/developers",
+      "priority": "P1",
+      "required": true
+    },
+    {
+      "surface": "OAuth consent",
+      "expectedKova": "/oauth/consent",
+      "priority": "P1",
+      "required": true
+    },
+    {
+      "surface": "Status",
+      "expectedKova": "/status",
+      "priority": "P1",
+      "required": true
+    },
+    {
+      "surface": "Privacy",
+      "expectedKova": "/privacy",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Terms",
+      "expectedKova": "/terms",
+      "priority": "P0",
+      "required": true
+    },
+    {
+      "surface": "Safety",
+      "expectedKova": "/ai-safety",
+      "priority": "P1",
+      "required": true
+    }
+  ],
+  "discoveredRoutes": [
+    {
+      "route": "/$locale/home",
+      "source": "src/routes/$locale.home.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": false,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/$section/$articleSlug",
+      "source": "src/routes/$section.$articleSlug.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": false,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/$slug",
+      "source": "src/routes/$slug.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": true,
+      "errorState": false,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/ai-humanizer",
+      "source": "src/routes/ai-humanizer.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": false,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/ai-image-generator",
+      "source": "src/routes/ai-image-generator.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": true,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/ai-safety",
+      "source": "src/routes/ai-safety.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": false,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/ai-writer",
+      "source": "src/routes/ai-writer.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": false,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/apps",
+      "source": "src/routes/apps.tsx",
+      "appShell": true,
+      "workspaceHeader": true,
+      "signInGate": true,
+      "loadingState": true,
+      "emptyState": true,
+      "errorState": true,
+      "retryState": true,
+      "placeholderRisk": true
+    },
+    {
+      "route": "/assistants/$assistantSlug",
+      "source": "src/routes/assistants.$assistantSlug.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": true,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/assistants",
+      "source": "src/routes/assistants.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": true,
+      "errorState": false,
+      "retryState": false,
+      "placeholderRisk": true
+    },
+    {
+      "route": "/audit-log",
+      "source": "src/routes/audit-log.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": true,
+      "emptyState": true,
+      "errorState": true,
+      "retryState": true,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/auth",
+      "source": "src/routes/auth.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": true,
+      "loadingState": true,
+      "emptyState": false,
+      "errorState": true,
+      "retryState": true,
+      "placeholderRisk": true
+    },
+    {
+      "route": "/blog/ai-market-research-guide",
+      "source": "src/routes/blog.ai-market-research-guide.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": true,
+      "errorState": false,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/blog/best-ai-assistants",
+      "source": "src/routes/blog.best-ai-assistants.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": false,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/blog/best-ai-market-research-tools",
+      "source": "src/routes/blog.best-ai-market-research-tools.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": true,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/brain",
+      "source": "src/routes/brain.tsx",
+      "appShell": true,
+      "workspaceHeader": false,
+      "signInGate": true,
+      "loadingState": true,
+      "emptyState": false,
+      "errorState": true,
+      "retryState": true,
+      "placeholderRisk": true
+    },
+    {
+      "route": "/changelog",
+      "source": "src/routes/changelog.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": true,
+      "errorState": false,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/chatgpt-alternative",
+      "source": "src/routes/chatgpt-alternative.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": false,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/checkout/return",
+      "source": "src/routes/checkout.return.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": false,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/code-helper",
+      "source": "src/routes/code-helper.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": true,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/connect",
+      "source": "src/routes/connect.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": true,
+      "loadingState": true,
+      "emptyState": false,
+      "errorState": false,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/contact-support",
+      "source": "src/routes/contact-support.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": false,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/context-packs",
+      "source": "src/routes/context-packs.tsx",
+      "appShell": true,
+      "workspaceHeader": false,
+      "signInGate": true,
+      "loadingState": true,
+      "emptyState": false,
+      "errorState": true,
+      "retryState": true,
+      "placeholderRisk": true
+    },
+    {
+      "route": "/developers/$docSlug",
+      "source": "src/routes/developers.$docSlug.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": true,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/developers/index",
+      "source": "src/routes/developers.index.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": false,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/files",
+      "source": "src/routes/files.tsx",
+      "appShell": true,
+      "workspaceHeader": true,
+      "signInGate": true,
+      "loadingState": true,
+      "emptyState": false,
+      "errorState": true,
+      "retryState": false,
+      "placeholderRisk": true
+    },
+    {
+      "route": "/getting-started",
+      "source": "src/routes/getting-started.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": true,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": false,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/goals",
+      "source": "src/routes/goals.tsx",
+      "appShell": true,
+      "workspaceHeader": true,
+      "signInGate": true,
+      "loadingState": true,
+      "emptyState": true,
+      "errorState": true,
+      "retryState": true,
+      "placeholderRisk": true
+    },
+    {
+      "route": "/help",
+      "source": "src/routes/help.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": true,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": true,
+      "retryState": true,
+      "placeholderRisk": true
+    },
+    {
+      "route": "/humanize-ai-text",
+      "source": "src/routes/humanize-ai-text.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": false,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/images",
+      "source": "src/routes/images.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": true,
+      "loadingState": true,
+      "emptyState": true,
+      "errorState": true,
+      "retryState": false,
+      "placeholderRisk": true
+    },
+    {
+      "route": "/",
+      "source": "src/routes/index.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": true,
+      "loadingState": true,
+      "emptyState": true,
+      "errorState": true,
+      "retryState": true,
+      "placeholderRisk": true
+    },
+    {
+      "route": "/knowledge-graph",
+      "source": "src/routes/knowledge-graph.tsx",
+      "appShell": true,
+      "workspaceHeader": false,
+      "signInGate": true,
+      "loadingState": true,
+      "emptyState": true,
+      "errorState": true,
+      "retryState": true,
+      "placeholderRisk": true
+    },
+    {
+      "route": "/library",
+      "source": "src/routes/library.tsx",
+      "appShell": true,
+      "workspaceHeader": true,
+      "signInGate": true,
+      "loadingState": true,
+      "emptyState": true,
+      "errorState": true,
+      "retryState": true,
+      "placeholderRisk": true
+    },
+    {
+      "route": "/maps",
+      "source": "src/routes/maps.tsx",
+      "appShell": true,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": false,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/memory",
+      "source": "src/routes/memory.tsx",
+      "appShell": true,
+      "workspaceHeader": true,
+      "signInGate": true,
+      "loadingState": true,
+      "emptyState": false,
+      "errorState": true,
+      "retryState": false,
+      "placeholderRisk": true
+    },
+    {
+      "route": "/modes",
+      "source": "src/routes/modes.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": false,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/notifications",
+      "source": "src/routes/notifications.tsx",
+      "appShell": true,
+      "workspaceHeader": true,
+      "signInGate": true,
+      "loadingState": true,
+      "emptyState": true,
+      "errorState": true,
+      "retryState": true,
+      "placeholderRisk": true
+    },
+    {
+      "route": "/oauth/consent",
+      "source": "src/routes/oauth.consent.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": true,
+      "loadingState": true,
+      "emptyState": false,
+      "errorState": true,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/omega",
+      "source": "src/routes/omega.tsx",
+      "appShell": true,
+      "workspaceHeader": true,
+      "signInGate": true,
+      "loadingState": true,
+      "emptyState": true,
+      "errorState": true,
+      "retryState": true,
+      "placeholderRisk": true
+    },
+    {
+      "route": "/pricing",
+      "source": "src/routes/pricing.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": true,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": false,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/privacy",
+      "source": "src/routes/privacy.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": true,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/projects/$projectId/chat/$chatId",
+      "source": "src/routes/projects.$projectId.chat.$chatId.tsx",
+      "appShell": true,
+      "workspaceHeader": false,
+      "signInGate": true,
+      "loadingState": true,
+      "emptyState": false,
+      "errorState": true,
+      "retryState": false,
+      "placeholderRisk": true
+    },
+    {
+      "route": "/projects/$projectId",
+      "source": "src/routes/projects.$projectId.tsx",
+      "appShell": true,
+      "workspaceHeader": false,
+      "signInGate": true,
+      "loadingState": true,
+      "emptyState": true,
+      "errorState": true,
+      "retryState": true,
+      "placeholderRisk": true
+    },
+    {
+      "route": "/projects",
+      "source": "src/routes/projects.tsx",
+      "appShell": true,
+      "workspaceHeader": true,
+      "signInGate": true,
+      "loadingState": true,
+      "emptyState": true,
+      "errorState": true,
+      "retryState": true,
+      "placeholderRisk": true
+    },
+    {
+      "route": "/prompt-studio",
+      "source": "src/routes/prompt-studio.tsx",
+      "appShell": true,
+      "workspaceHeader": true,
+      "signInGate": true,
+      "loadingState": true,
+      "emptyState": true,
+      "errorState": true,
+      "retryState": true,
+      "placeholderRisk": true
+    },
+    {
+      "route": "/refund",
+      "source": "src/routes/refund.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": true,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/research-assistant",
+      "source": "src/routes/research-assistant.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": false,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/research-planner",
+      "source": "src/routes/research-planner.tsx",
+      "appShell": true,
+      "workspaceHeader": true,
+      "signInGate": true,
+      "loadingState": true,
+      "emptyState": true,
+      "errorState": true,
+      "retryState": true,
+      "placeholderRisk": true
+    },
+    {
+      "route": "/reset-password",
+      "source": "src/routes/reset-password.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": true,
+      "emptyState": false,
+      "errorState": true,
+      "retryState": true,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/scheduled-tasks",
+      "source": "src/routes/scheduled-tasks.tsx",
+      "appShell": true,
+      "workspaceHeader": false,
+      "signInGate": true,
+      "loadingState": true,
+      "emptyState": true,
+      "errorState": true,
+      "retryState": true,
+      "placeholderRisk": true
+    },
+    {
+      "route": "/status",
+      "source": "src/routes/status.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": true,
+      "emptyState": false,
+      "errorState": false,
+      "retryState": true,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/study-assistant",
+      "source": "src/routes/study-assistant.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": false,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/summary",
+      "source": "src/routes/summary.tsx",
+      "appShell": true,
+      "workspaceHeader": false,
+      "signInGate": true,
+      "loadingState": true,
+      "emptyState": true,
+      "errorState": true,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/terms",
+      "source": "src/routes/terms.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": false,
+      "retryState": false,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/unsubscribe",
+      "source": "src/routes/unsubscribe.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": true,
+      "emptyState": false,
+      "errorState": true,
+      "retryState": true,
+      "placeholderRisk": false
+    },
+    {
+      "route": "/work",
+      "source": "src/routes/work.tsx",
+      "appShell": true,
+      "workspaceHeader": false,
+      "signInGate": false,
+      "loadingState": true,
+      "emptyState": true,
+      "errorState": true,
+      "retryState": true,
+      "placeholderRisk": true
+    },
+    {
+      "route": "/write",
+      "source": "src/routes/write.tsx",
+      "appShell": true,
+      "workspaceHeader": false,
+      "signInGate": true,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": true,
+      "retryState": false,
+      "placeholderRisk": true
+    },
+    {
+      "route": "/~oauth/callback",
+      "source": "src/routes/~oauth.callback.tsx",
+      "appShell": false,
+      "workspaceHeader": false,
+      "signInGate": true,
+      "loadingState": false,
+      "emptyState": false,
+      "errorState": true,
+      "retryState": true,
+      "placeholderRisk": false
+    }
+  ]
+}
