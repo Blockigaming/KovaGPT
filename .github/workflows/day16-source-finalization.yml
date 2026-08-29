@@ -91,8 +91,8 @@ jobs:
       - name: Migration preflight
         run: npm run release:migration-preflight
 
-      - name: Day 16 source ledger gate
-        run: npm run release:day16:source
+      - name: Day 16 source ledger report
+        run: npm run release:day16:ledger
 
       - name: Final source build
         run: npm run build
@@ -126,7 +126,7 @@ jobs:
           This record is written only after the rendered local matrix and all source quality gates pass. Authenticated production-browser evidence remains a separate production requirement and is not claimed here.
           EOF
 
-      - name: Promote final source ledger item
+      - name: Promote and verify final source ledger item
         shell: bash
         run: |
           set -euo pipefail
@@ -147,6 +147,7 @@ jobs:
           NODE
           npx prettier --write docs/day16/MASTER_LEDGER.json docs/day16/LOCAL_VISUAL_RUNTIME_EVIDENCE.md
           npm run release:day16:ledger
+          npm run release:day16:source
 
       - name: Commit source-finalization evidence
         shell: bash
