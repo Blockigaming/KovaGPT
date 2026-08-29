@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PublicFooter } from "@/components/PublicFooter";
 import { LegalArticle } from "@/components/LegalArticle";
+import { TestimonialSubmissionDialog } from "@/components/TestimonialSubmissionDialog";
 
 export const Route = createFileRoute("/contact-support")({
   head: () => ({
@@ -23,6 +25,8 @@ export const Route = createFileRoute("/contact-support")({
 });
 
 function ContactSupportPage() {
+  const [testimonialOpen, setTestimonialOpen] = useState(false);
+
   return (
     <>
       <LegalArticle>
@@ -58,6 +62,22 @@ function ContactSupportPage() {
           Have an idea for KovaGPT? Send feature requests to{" "}
           <a href="mailto:support@kovagpt.com">support@kovagpt.com</a>. We review suggestions as we
           improve the product.
+        </p>
+
+        <h2>Share Your Experience</h2>
+        <p>
+          Signed-in customers can optionally submit a testimonial for review. Submissions are never
+          published automatically, and KovaGPT only publishes an approved submission when the
+          customer explicitly grants publication permission.
+        </p>
+        <p>
+          <button
+            type="button"
+            className="underline underline-offset-4"
+            onClick={() => setTestimonialOpen(true)}
+          >
+            Submit a testimonial for review
+          </button>
         </p>
 
         <h2>Account and Data Deletion</h2>
@@ -106,6 +126,10 @@ function ContactSupportPage() {
         </p>
       </LegalArticle>
       <PublicFooter />
+      <TestimonialSubmissionDialog
+        open={testimonialOpen}
+        onClose={() => setTestimonialOpen(false)}
+      />
     </>
   );
 }
