@@ -119,6 +119,8 @@ import { useClerkSafe as useClerk } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, DEFAULT_THEME, type ThemeColors, type ThemeMode } from "@/lib/theme";
 import { authFetch } from "@/lib/auth-fetch";
 
+import { CancellationFeedbackDialog } from "@/components/CancellationFeedbackDialog";
+import { recordGrowthEvent } from "@/lib/growth-events";
 export type Mood = "neutral" | "friendly" | "professional" | "concise";
 
 export type Settings = {
@@ -287,6 +289,8 @@ export function SettingsDialog({
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [cancelFeedbackOpen, setCancelFeedbackOpen] = useState(false);
+  const paymentRecoverySeenRef = useRef<string | null>(null);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [deleteAccountBusy, setDeleteAccountBusy] = useState(false);
@@ -338,8 +342,44 @@ export function SettingsDialog({
     };
   }, [open, tab, loggedIn]);
 
+  useEffect(() => {
+    const status = subSummary?.status;
+
+    if (
+      !open ||
+      tab !== "subscription" ||
+      !status ||
+      !["past_due", "unpaid", "incomplete"].includes(status)
+    ) {
+      return;
+    }
+
+    const key = `${status}:${subSummary?.currentPeriodEnd ?? "unknown"}`;
+
+    if (paymentRecoverySeenRef.current === key) return;
+
+    paymentRecoverySeenRef.current = key;
+
+    void recordGrowthEvent("payment_recovery_viewed", {
+      surface: "settings_subscription",
+      reason: status,
+      plan: subSummary?.tier ?? undefined,
+    });
+  }, [open, tab, subSummary?.status, subSummary?.currentPeriodEnd, subSummary?.tier]);
+
   const handleManageBilling = async () => {
     if (portalLoading || !subSummary?.hasBillingAccount) return;
+    if (
+      subSummary.status === "past_due" ||
+      subSummary.status === "unpaid" ||
+      subSummary.status === "incomplete"
+    ) {
+      void recordGrowthEvent("payment_recovery_started", {
+        surface: "settings_subscription",
+        reason: subSummary.status,
+        plan: subSummary?.tier ?? undefined,
+      });
+    }
     setPortalLoading(true);
     try {
       const res = await createPortalSession({ data: {} });
@@ -879,11 +919,12 @@ export function SettingsDialog({
                     <section className="space-y-1">
                       <h3 className="text-sm font-semibold">Apps</h3>
                       <p className="text-xs text-muted-foreground">
-                        Connect external accounts so KovaGPT can use them in your chats. Live
-                        integrations work today; others are on the roadmap.
+                        Connect supported external accounts so KovaGPT can use them in your chats.
+                        Available integrations can be linked now. Integrations that need deployment
+                        setup or are not yet available are clearly labeled and cannot be connected.
                       </p>
                       <p className="text-xs text-muted-foreground pt-1">
-                        Linking apps is free for everyone. Disconnect at any time.
+                        Linking available apps is free for everyone. Disconnect at any time.
                       </p>
                     </section>
 
@@ -1002,6 +1043,34 @@ export function SettingsDialog({
                     )}
                 </div>
 
+                {subSummary &&
+                  (subSummary.status === "past_due" ||
+                    subSummary.status === "unpaid" ||
+                    subSummary.status === "incomplete") &&
+                  !inheritedSubscription && (
+                    <div
+                      role="alert"
+                      className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 space-y-3"
+                    >
+                      <div>
+                        <div className="text-sm font-medium">Payment needs attention</div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Update the payment method or complete the outstanding payment in Stripe.
+                          KovaGPT will refresh access after Stripe confirms the subscription status.
+                        </p>
+                      </div>
+
+                      <Button
+                        size="sm"
+                        onClick={handleManageBilling}
+                        disabled={portalLoading || subscriptionLoading}
+                      >
+                        <CreditCard className="mr-2 h-4 w-4" />
+                        {portalLoading ? "Opening…" : "Fix payment"}
+                      </Button>
+                    </div>
+                  )}
+
                 <div className="rounded-lg border border-border p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="text-sm font-medium">Usage today</div>
@@ -1103,6 +1172,15 @@ export function SettingsDialog({
                         You can cancel from the Stripe billing portal above. After canceling, you'll
                         keep access to your current plan until the end of the billing period.
                       </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCancelFeedbackOpen(true)}
+                        disabled={portalLoading || subscriptionLoading}
+                      >
+                        Review cancellation options
+                      </Button>
                     </div>
                   )}
 
@@ -1512,6 +1590,12 @@ export function SettingsDialog({
           </Tabs>
         )}
       </DialogContent>
+      <CancellationFeedbackDialog
+        open={cancelFeedbackOpen}
+        onOpenChange={setCancelFeedbackOpen}
+        onContinue={handleManageBilling}
+        busy={portalLoading}
+      />
       <LogoutConfirmDialog
         open={logoutConfirmOpen}
         onOpenChange={setLogoutConfirmOpen}

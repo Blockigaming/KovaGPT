@@ -32,7 +32,7 @@ export const Route = createFileRoute("/checkout/return")({
 
 function CheckoutReturn() {
   useEffect(() => {
-    void recordGrowthEvent("checkout_completed", {
+    void recordGrowthEvent("checkout_opened", {
       surface: "checkout_return",
     });
   }, []);

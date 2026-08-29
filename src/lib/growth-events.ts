@@ -64,15 +64,16 @@ export async function recordGrowthEvent(
 
   try {
     window.dispatchEvent(new CustomEvent("kova:growth-event", { detail }));
-
-    /*
-     * PlatformRuntime owns durable operational analytics flushing.
-     * This DOM event is intentionally content-free and gives the
-     * analytics runtime a stable growth/conversion seam without
-     * coupling product actions to analytics availability.
-     */
   } catch {
-    // Analytics must never block the action that caused the event.
+    // Browser event delivery must never block the product action.
+  }
+
+  try {
+    const { persistGrowthEvent } = await import("@/lib/growth-operational-adapter");
+
+    await persistGrowthEvent(name, detail.metadata);
+  } catch {
+    // Analytics remains failure-safe and never blocks the product action.
   }
 }
 
