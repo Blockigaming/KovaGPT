@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { chromium, firefox, webkit } from "@playwright/test";
+import { isFatalRuntimeEvent } from "./browser-runtime-events.mjs";
 
 const engines = { chromium, firefox, webkit };
 const args = new Map(
@@ -15,7 +16,7 @@ const baseUrl = new URL(
   args.get("url") || process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:8080",
 );
 const timeoutMs = Number(args.get("timeout-ms") || 30_000);
-const settleMs = Number(args.get("settle-ms") || 8_000);
+const settleMs = Number(args.get("settle-ms") || 0);
 const outputPath = args.get("output") || "artifacts/release/browser-runtime-diagnostic.json";
 const width = Number(args.get("width") || 390);
 const height = Number(args.get("height") || 844);
@@ -37,14 +38,22 @@ if (!Number.isFinite(width) || !Number.isFinite(height) || width < 240 || height
 const events = [];
 const startedAt = new Date().toISOString();
 const started = Date.now();
+let closing = false;
+let signalFatal;
+const fatalEvent = new Promise((resolveFatal) => {
+  signalFatal = resolveFatal;
+});
 
 function record(type, detail, url = null) {
-  events.push({
+  if (closing) return;
+  const event = {
     atMs: Date.now() - started,
     type,
     detail: String(detail).slice(0, 4_000),
     ...(url ? { url } : {}),
-  });
+  };
+  events.push(event);
+  if (isFatalRuntimeEvent(event, baseUrl.href)) signalFatal();
 }
 
 let browser;
@@ -52,12 +61,13 @@ let context;
 let page;
 let navigationError = null;
 let state = null;
+let documentHeaders = null;
 
 try {
   browser = await browserType.launch({ headless: true });
   context = await browser.newContext({
     viewport: { width, height },
-    isMobile: width <= 390,
+    isMobile: engineName !== "firefox" && width <= 390,
     hasTouch: width <= 1024,
     reducedMotion: "reduce",
   });
@@ -88,13 +98,39 @@ try {
   });
 
   try {
-    await page.goto(baseUrl.href, { waitUntil: "domcontentloaded", timeout: timeoutMs });
+    const response = await page.goto(baseUrl.href, {
+      waitUntil: "domcontentloaded",
+      timeout: timeoutMs,
+    });
+    const headers = response?.headers() ?? {};
+    documentHeaders = {
+      contentSecurityPolicy: headers["content-security-policy"] ?? null,
+      strictTransportSecurity: headers["strict-transport-security"] ?? null,
+      contentType: headers["content-type"] ?? null,
+    };
   } catch (error) {
     navigationError = error instanceof Error ? error.stack || error.message : String(error);
     record("navigation_error", navigationError, baseUrl.href);
   }
 
-  if (settleMs > 0) await page.waitForTimeout(settleMs);
+  // Wait for the real readiness condition, not an arbitrary eight-second sleep.
+  // A fatal resource failure ends the wait immediately and is still recorded.
+  const hydration = page
+    .waitForFunction(
+      () =>
+        document.documentElement.dataset.kovaHydration === "ready" &&
+        document.readyState === "complete",
+      undefined,
+      { timeout: timeoutMs },
+    )
+    .then((handle) => handle.dispose())
+    .catch((error) => {
+      record("hydration_timeout", error instanceof Error ? error.message : String(error));
+    });
+  await Promise.race([hydration, fatalEvent]);
+  if (settleMs > 0 && !events.some((event) => isFatalRuntimeEvent(event, baseUrl.href))) {
+    await page.waitForTimeout(settleMs);
+  }
 
   state = await page.evaluate(() => {
     const html = document.documentElement;
@@ -115,22 +151,14 @@ try {
 } catch (error) {
   record("diagnostic_error", error instanceof Error ? error.stack || error.message : String(error));
 } finally {
+  // Closing a healthy context can cancel background requests; these are not
+  // application failures and must not overwrite the completed diagnostic.
+  closing = true;
   await context?.close().catch(() => undefined);
   await browser?.close().catch(() => undefined);
 }
 
-const sameOriginFatalEvents = events.filter((event) => {
-  if (["page_crash", "page_error", "navigation_error", "diagnostic_error"].includes(event.type)) {
-    return true;
-  }
-  if (!["request_failed", "http_error"].includes(event.type) || !event.url) return false;
-  try {
-    return new URL(event.url).origin === baseUrl.origin;
-  } catch {
-    return false;
-  }
-});
-
+const sameOriginFatalEvents = events.filter((event) => isFatalRuntimeEvent(event, baseUrl.href));
 const passed =
   navigationError === null &&
   state?.hydration === "ready" &&
@@ -139,7 +167,7 @@ const passed =
   sameOriginFatalEvents.length === 0;
 
 const evidence = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   startedAt,
   finishedAt: new Date().toISOString(),
   engine: engineName,
@@ -149,8 +177,10 @@ const evidence = {
   settleMs,
   passed,
   navigationError,
+  documentHeaders,
   state,
   eventCount: events.length,
+  // Kept for existing readers; now includes HTTP-to-HTTPS upgraded resources.
   sameOriginFatalEventCount: sameOriginFatalEvents.length,
   events,
 };
