@@ -41,8 +41,9 @@ test("the early bootstrap replays both global shortcuts after hydration", async 
   const NativeKeyboardEvent = globalThis.KeyboardEvent;
   globalThis.KeyboardEvent = class KeyboardEvent extends Event {
     constructor(type, init = {}) {
-      super(type, init);
-      Object.assign(this, init);
+      const { bubbles, cancelable, composed, ...properties } = init;
+      super(type, { bubbles, cancelable, composed });
+      Object.assign(this, properties);
     }
   };
   try {
