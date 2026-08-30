@@ -1,5 +1,6 @@
 import { renderErrorPage } from "./lib/error-page";
 import { rejectCrossSiteRequest } from "./lib/http-security.server";
+import { applyLocalPreviewTransportPolicy } from "./lib/local-preview-security.server";
 
 import { validateAzureRuntimeEnv } from "./lib/azure-runtime-env.server";
 import { withRuntimeBindings } from "./lib/runtime-env.server";
@@ -27,7 +28,7 @@ const CONTENT_SECURITY_POLICY = [
   "upgrade-insecure-requests",
 ].join("; ");
 
-function hardenResponse(response: Response): Response {
+function hardenResponse(response: Response, request: Request): Response {
   const headers = new Headers(response.headers);
   const securityHeaders: Record<string, string> = {
     "Content-Security-Policy": CONTENT_SECURITY_POLICY,
@@ -42,6 +43,7 @@ function hardenResponse(response: Response): Response {
     "X-Frame-Options": "SAMEORIGIN",
   };
   for (const [name, value] of Object.entries(securityHeaders)) headers.set(name, value);
+  applyLocalPreviewTransportPolicy(headers, request);
   if (!headers.has("Cache-Control") && response.status >= 400) {
     headers.set("Cache-Control", "no-store");
   }
@@ -119,20 +121,23 @@ export default {
     try {
       if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
         const rejected = rejectCrossSiteRequest(request);
-        if (rejected) return hardenResponse(rejected);
+        if (rejected) return hardenResponse(rejected, request);
       }
       const contentLength = Number(request.headers.get("content-length") ?? "0");
       if (Number.isFinite(contentLength) && contentLength > 16 * 1024 * 1024) {
-        return hardenResponse(Response.json({ error: "Request too large" }, { status: 413 }));
+        return hardenResponse(
+          Response.json({ error: "Request too large" }, { status: 413 }),
+          request,
+        );
       }
       const handler = await getServerEntry();
       const response = await withRuntimeBindings(env, () => handler.fetch(request, env, ctx));
-      return hardenResponse(await normalizeCatastrophicSsrResponse(response));
+      return hardenResponse(await normalizeCatastrophicSsrResponse(response), request);
     } catch (error) {
       console.error("[server] request failed", {
         name: error instanceof Error ? error.name : "UnknownError",
       });
-      return hardenResponse(brandedErrorResponse());
+      return hardenResponse(brandedErrorResponse(), request);
     }
   },
 };
