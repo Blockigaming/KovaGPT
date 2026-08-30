@@ -7,7 +7,7 @@ const dockerfile = readFileSync("Dockerfile", "utf8");
 const production = readFileSync("infra/azure/production/main.bicep", "utf8");
 
 test("production emits a Node server for Azure Container Apps only", () => {
-  assert.match(vite, /tanstackStart\(\{ server: \{ entry: "server" \} \}\)/u);
+  assert.match(vite, /tanstackStart\(\{[\s\S]*server:\s*\{ entry: "server" \},[\s\S]*\}\)/u);
   assert.match(vite, /preset:\s*"node-server"/u);
   assert.doesNotMatch(vite, /cloudflare-module|@cloudflare\/vite-plugin|wrangler/u);
   assert.match(dockerfile, /CMD \["node", "dist\/server\/index\.mjs"\]/u);
