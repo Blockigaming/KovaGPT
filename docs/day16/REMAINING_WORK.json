@@ -41,11 +41,7 @@
     "activeExecutionsPerAuthState": 50,
     "authStates": 2,
     "minimumActiveExecutions": 100,
-    "browsers": [
-      "Chromium",
-      "Firefox",
-      "WebKit"
-    ],
+    "browsers": ["Chromium", "Firefox", "WebKit"],
     "viewports": [
       "320x700",
       "375x812",
@@ -56,14 +52,8 @@
       "1440x900",
       "1728x1117"
     ],
-    "themes": [
-      "light",
-      "dark"
-    ],
-    "authStateLabels": [
-      "signed-out",
-      "signed-in"
-    ]
+    "themes": ["light", "dark"],
+    "authStateLabels": ["signed-out", "signed-in"]
   },
   "migrationState": {
     "localManifestCount": 83,

@@ -21,7 +21,8 @@ function summarize(items, accepted) {
     total: items.length,
     complete: complete.length,
     remaining: remaining.length,
-    percentComplete: items.length === 0 ? 100 : Number(((complete.length / items.length) * 100).toFixed(1)),
+    percentComplete:
+      items.length === 0 ? 100 : Number(((complete.length / items.length) * 100).toFixed(1)),
     completeIds: complete.map((item) => item.id),
     remainingIds: remaining.map((item) => item.id),
   };
@@ -33,7 +34,8 @@ export async function calculateRemainingWork({ path = ledgerPath } = {}) {
   const source = required.filter((item) => item.verification === "source");
   const production = required.filter((item) => item.verification === "production");
   const remaining = required.filter((item) => {
-    const accepted = item.verification === "production" ? productionAcceptedStatuses : acceptedStatuses;
+    const accepted =
+      item.verification === "production" ? productionAcceptedStatuses : acceptedStatuses;
     return !accepted.has(item.status);
   });
 
@@ -86,11 +88,15 @@ function markdown(result) {
     "",
     "## Remaining by category",
     "",
-    ...Object.entries(result.remainingByCategory).map(([category, count]) => `- ${category}: **${count}**`),
+    ...Object.entries(result.remainingByCategory).map(
+      ([category, count]) => `- ${category}: **${count}**`,
+    ),
     "",
     "## Remaining by status",
     "",
-    ...Object.entries(result.remainingByStatus).map(([status, count]) => `- ${status}: **${count}**`),
+    ...Object.entries(result.remainingByStatus).map(
+      ([status, count]) => `- ${status}: **${count}**`,
+    ),
     "",
   ];
   return `${lines.join("\n")}\n`;

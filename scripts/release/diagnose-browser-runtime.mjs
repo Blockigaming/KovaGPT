@@ -11,7 +11,9 @@ const args = new Map(
 );
 
 const engineName = args.get("engine") || "webkit";
-const baseUrl = new URL(args.get("url") || process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:8080");
+const baseUrl = new URL(
+  args.get("url") || process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:8080",
+);
 const timeoutMs = Number(args.get("timeout-ms") || 30_000);
 const settleMs = Number(args.get("settle-ms") || 8_000);
 const outputPath = args.get("output") || "artifacts/release/browser-runtime-diagnostic.json";
