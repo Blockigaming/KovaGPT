@@ -129,12 +129,6 @@ function classifyFailure(reason: unknown): {
 }
 
 async function claimTasks(workerId: string, limit: number): Promise<ClaimedScheduledTask[]> {
-  const recovered = await admin.rpc<number>("recover_expired_scheduled_task_leases");
-
-  if (recovered.error) {
-    throw new Error(`Scheduled lease recovery failed: ${recovered.error.message}`);
-  }
-
   const claimed = await admin.rpc<ClaimedScheduledTask[]>("claim_due_scheduled_tasks", {
     p_worker_id: workerId,
     p_limit: limit,
@@ -145,7 +139,31 @@ async function claimTasks(workerId: string, limit: number): Promise<ClaimedSched
     throw new Error(`Scheduled claim failed: ${claimed.error.message}`);
   }
 
-  return claimed.data ?? [];
+  if (!Array.isArray(claimed.data) || claimed.data.length > limit) {
+    throw new Error("Scheduled claim returned an invalid batch.");
+  }
+
+  return claimed.data;
+}
+
+function assertClaimReady(task: ClaimedScheduledTask, workerId: string): void {
+  if (
+    typeof task.user_id !== "string" ||
+    !task.user_id.trim() ||
+    typeof task.prompt !== "string" ||
+    !task.prompt.trim() ||
+    task.status !== "running" ||
+    task.worker_id !== workerId ||
+    !Number.isInteger(task.execution_attempts) ||
+    task.execution_attempts < 1
+  ) {
+    throw new Error("Scheduled claim has invalid execution ownership or input.");
+  }
+
+  const expiresAt = Date.parse(task.lease_expires_at ?? "");
+  if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+    throw new Error("Scheduled claim has an invalid or expired lease.");
+  }
 }
 
 async function writeRunStart(task: ClaimedScheduledTask, workerId: string): Promise<string> {
@@ -204,7 +222,8 @@ async function executePrompt(task: ClaimedScheduledTask): Promise<string> {
   });
 
   if (!response.ok) {
-    const body = await response.text().catch(() => "");
+    // Provider error bodies are not needed for classification or safe user copy.
+    await response.body?.cancel().catch(() => undefined);
     throw new AiProviderError({
       error: "KovaGPT could not complete the scheduled task.",
       code:
@@ -244,35 +263,14 @@ async function executeClaimedTask(
   task: ClaimedScheduledTask,
   workerId: string,
 ): Promise<ScheduledExecutionResult> {
+  assertClaimReady(task, workerId);
   const id = await writeRunStart(task, workerId);
+  // History persistence may be slow. Do not spend on an already-expired lease.
+  assertClaimReady(task, workerId);
 
+  let result: string;
   try {
-    const result = await executePrompt(task);
-
-    const settlement = await admin.rpc<SuccessSettlementRow[]>("settle_scheduled_task_success", {
-      p_task_id: task.id,
-      p_worker_id: workerId,
-      p_scheduled_for: scheduledFor(task),
-      p_run_id: id,
-      p_result: result,
-    });
-
-    if (settlement.error) {
-      throw new Error(`Task completion settlement failed: ${settlement.error.message}`);
-    }
-
-    const row = settlement.data?.[0];
-
-    if (!row) {
-      throw new Error("Task completion settlement returned no result.");
-    }
-
-    return {
-      taskId: task.id,
-      runId: id,
-      status: "complete",
-      retryAt: null,
-    };
+    result = await executePrompt(task);
   } catch (reason) {
     const failure = classifyFailure(reason);
     const message = safeError(reason);
@@ -292,9 +290,12 @@ async function executeClaimedTask(
       });
     }
 
-    const row = settlement.data?.[0];
+    const row =
+      Array.isArray(settlement.data) && settlement.data.length === 1
+        ? settlement.data[0]
+        : undefined;
 
-    if (!row) {
+    if (!row || typeof row.retry_at === "undefined") {
       throw new Error("Task failure settlement returned no result.", {
         cause: reason,
       });
@@ -307,6 +308,36 @@ async function executeClaimedTask(
       retryAt: row.retry_at,
     };
   }
+
+  // Generation has already completed. A lost settlement response may mean the
+  // database committed successfully. Do not convert it to a provider failure,
+  // write a contradictory failure, or continue claiming more work. Recovery of
+  // ambiguous outcomes still requires the occurrence/attempt v2 protocol.
+  const settlement = await admin.rpc<SuccessSettlementRow[]>("settle_scheduled_task_success", {
+    p_task_id: task.id,
+    p_worker_id: workerId,
+    p_scheduled_for: scheduledFor(task),
+    p_run_id: id,
+    p_result: result,
+  });
+
+  if (settlement.error) {
+    throw new Error(`Task completion settlement failed: ${settlement.error.message}`);
+  }
+
+  const row =
+    Array.isArray(settlement.data) && settlement.data.length === 1 ? settlement.data[0] : undefined;
+
+  if (!row || typeof row.delivery_status !== "string") {
+    throw new Error("Task completion settlement returned no result.");
+  }
+
+  return {
+    taskId: task.id,
+    runId: id,
+    status: "complete",
+    retryAt: null,
+  };
 }
 
 export async function runScheduledExecutionBatch(options?: {
@@ -322,18 +353,35 @@ export async function runScheduledExecutionBatch(options?: {
   const workerId =
     options?.workerId?.trim() || `scheduled-worker-${process.pid}-${randomUUID().slice(0, 8)}`;
 
-  const limit = Math.max(1, Math.min(options?.limit ?? 5, 25));
+  const limit = options?.limit ?? 5;
+  if (!Number.isInteger(limit) || limit < 1 || limit > 25) {
+    throw new Error("Scheduled batch limit must be an integer between 1 and 25.");
+  }
 
-  const tasks = await claimTasks(workerId, limit);
+  const recovered = await admin.rpc<number>("recover_expired_scheduled_task_leases");
+  if (recovered.error) {
+    throw new Error(`Scheduled lease recovery failed: ${recovered.error.message}`);
+  }
+
   const results: ScheduledExecutionResult[] = [];
+  const seenTaskIds = new Set<string>();
 
-  for (const task of tasks) {
+  // This legacy executor is sequential: leasing several rows up front lets
+  // later leases expire while earlier generations run. Claim only when ready.
+  while (results.length < limit) {
+    const tasks = await claimTasks(workerId, 1);
+    if (tasks.length === 0) break;
+    const task = tasks[0];
+    if (!task || typeof task.id !== "string" || !task.id || seenTaskIds.has(task.id)) {
+      throw new Error("Scheduled claim returned an invalid or repeated task.");
+    }
+    seenTaskIds.add(task.id);
     results.push(await executeClaimedTask(task, workerId));
   }
 
   return {
     workerId,
-    claimed: tasks.length,
+    claimed: results.length,
     complete: results.filter((result) => result.status === "complete").length,
     failed: results.filter((result) => result.status === "failed").length,
     results,
