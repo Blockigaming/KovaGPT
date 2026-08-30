@@ -4,30 +4,33 @@ import test from "node:test";
 
 const read = (path) => readFile(path, "utf8");
 
-// The early bootstrap must not let a click or global shortcut race hydration. This source-level
-// contract complements the rendered hydration guard spec without depending on browser timing.
 test("the server shell reports hydration state without globally disabling controls", async () => {
   const root = await read("src/routes/__root.tsx");
-  const start = await read("src/start.ts");
   const styles = await read("src/styles.css");
 
-  assert.match(root, /data-kova-hydration=\{hydrated \? "ready" : "pending"\}/);
+  assert.match(root, /data-kova-hydration="pending"/);
+  assert.match(root, /aria-busy="true"/);
+  assert.match(root, /document\.documentElement\.dataset\.kovaHydration\s*=\s*"ready"/);
+  assert.match(root, /document\.documentElement\.removeAttribute\("aria-busy"\)/);
+  assert.match(root, /window\.dispatchEvent\(new Event\(HYDRATION_READY_EVENT\)\)/);
   assert.doesNotMatch(root, /aria-disabled=\{!hydrated\}/);
   assert.doesNotMatch(root, /pointer-events-none/);
-  assert.match(start, /data-kova-hydration/);
-  assert.match(start, /closest\("\[data-kova-hydration='pending'\]"\)/);
   assert.doesNotMatch(styles, /data-kova-hydration=['"]pending['"][^}]*pointer-events:\s*none/s);
 });
 
 test("the early bootstrap replays both global shortcuts after hydration", async () => {
-  const start = await read("src/start.ts");
+  const root = await read("src/routes/__root.tsx");
 
-  assert.match(start, /event\.key\.toLowerCase\(\) === "k"/);
-  assert.match(start, /event\.key\.toLowerCase\(\) === "o"/);
-  assert.match(start, /new KeyboardEvent\("keydown"/);
-  assert.match(start, /key:\s*event\.key/);
-  assert.match(start, /metaKey:\s*event\.metaKey/);
-  assert.match(start, /shiftKey:\s*event\.shiftKey/);
+  assert.match(root, /const EARLY_SHORTCUT_BOOTSTRAP/);
+  assert.match(root, /const key = event\.key\.toLowerCase\(\)/);
+  assert.match(root, /key !== "k"/);
+  assert.match(root, /event\.shiftKey && key === "o"/);
+  assert.match(root, /pendingShortcuts\.push\(\{/);
+  assert.match(root, /new KeyboardEvent\("keydown"/);
+  assert.match(root, /\.\.\.shortcut/);
+  assert.match(root, /bubbles:\s*true/);
+  assert.match(root, /window\.addEventListener\("keydown", captureShortcut, true\)/);
+  assert.match(root, /window\.addEventListener\("\$\{HYDRATION_READY_EVENT\}", replayShortcuts/);
 
   const replayed = [];
   const fakeWindow = {
@@ -43,19 +46,16 @@ test("the early bootstrap replays both global shortcuts after hydration", async 
     }
   };
   try {
-    const replay = (event) =>
+    const replay = (shortcut) =>
       fakeWindow.dispatchEvent(
         new KeyboardEvent("keydown", {
-          key: event.key,
-          metaKey: event.metaKey,
-          ctrlKey: event.ctrlKey,
-          altKey: event.altKey,
-          shiftKey: event.shiftKey,
+          ...shortcut,
           bubbles: true,
+          cancelable: true,
         }),
       );
-    replay({ key: "K", metaKey: true, ctrlKey: false, altKey: false, shiftKey: false });
-    replay({ key: "O", metaKey: true, ctrlKey: false, altKey: false, shiftKey: true });
+    replay({ key: "K", metaKey: true, ctrlKey: false, shiftKey: false });
+    replay({ key: "O", metaKey: true, ctrlKey: false, shiftKey: true });
   } finally {
     globalThis.KeyboardEvent = NativeKeyboardEvent;
   }
