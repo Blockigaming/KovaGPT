@@ -1,0 +1,930 @@
+{
+  "schemaVersion": 1,
+  "asOf": "2026-08-30",
+  "authoritativeOverallProgressPercent": 14.6,
+  "authoritativeOverallRemainingPercent": 85.4,
+  "highLevelLedger": {
+    "requiredGates": 30,
+    "verifiedGates": 12,
+    "remainingGates": 18,
+    "source": {
+      "verified": 12,
+      "total": 13,
+      "remaining": 1
+    },
+    "production": {
+      "verified": 0,
+      "total": 17,
+      "remaining": 17
+    }
+  },
+  "knownUiAudit": {
+    "totalIssues": 29,
+    "conservativeClassification": {
+      "definitelyOpen": 23,
+      "codeFixCandidatesPendingRenderedVerification": 3,
+      "sourceFixedProductionProofPending": 1,
+      "scopeDecisionRequired": 2
+    },
+    "notes": [
+      "KOVA-AUD-026, KOVA-AUD-027, and KOVA-AUD-028 have code-fix candidates but require fresh rendered verification.",
+      "KOVA-AUD-020 has source removal work but still requires production network, route, bundle, log, and configuration proof.",
+      "KOVA-AUD-021 Voice and KOVA-AUD-022 Enterprise require explicit final-scope decisions."
+    ]
+  },
+  "minimumVisualAcceptance": {
+    "projectsPerAuthState": 24,
+    "themeShellTestsPerProject": 2,
+    "primaryShellExecutionsPerAuthState": 48,
+    "representativeRouteSweepsPerAuthState": 1,
+    "apiBoundaryProbesPerAuthState": 1,
+    "activeExecutionsPerAuthState": 50,
+    "authStates": 2,
+    "minimumActiveExecutions": 100,
+    "browsers": [
+      "Chromium",
+      "Firefox",
+      "WebKit"
+    ],
+    "viewports": [
+      "320x700",
+      "375x812",
+      "390x844",
+      "768x1024",
+      "1024x768",
+      "1280x800",
+      "1440x900",
+      "1728x1117"
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "authStateLabels": [
+      "signed-out",
+      "signed-in"
+    ]
+  },
+  "migrationState": {
+    "localManifestCount": 83,
+    "lastCapturedProductionCount": 82,
+    "knownMissingForwardMigration": "20260829163000_testimonial_collection_system.sql",
+    "rule": "Re-fetch production history before deployment; back up and rehearse restore before applying any missing forward migration."
+  },
+  "costPolicy": {
+    "lovableCredits": 0,
+    "githubActions": "One manual final exact-SHA workflow only after local/staging evidence passes.",
+    "azure": "One consolidated staging deployment and one production promotion; keep staging temporary and resources minimal.",
+    "potentiallyCostBearingPackages": 13
+  },
+  "executionPackageCount": 84,
+  "phaseCounts": {
+    "local_source_closure": 9,
+    "feature_completion": 33,
+    "release_candidate_and_data": 10,
+    "azure_staging": 12,
+    "production_cutover": 20
+  },
+  "packages": [
+    {
+      "id": "A01",
+      "phase": "local_source_closure",
+      "title": "Synchronize the latest checkpoint and prove a clean branch/index",
+      "gate": "local_visual_runtime_matrix",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Local HEAD equals remote checkpoint; no tracked or staged changes."
+    },
+    {
+      "id": "A02",
+      "phase": "local_source_closure",
+      "title": "Run targeted format, lint, type and unit checks for the latest audit-log, browser-diagnostic and remaining-work changes",
+      "gate": "local_visual_runtime_matrix",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "All directly affected source/tests pass locally."
+    },
+    {
+      "id": "A03",
+      "phase": "local_source_closure",
+      "title": "Generate the machine-readable remaining-work snapshot from MASTER_LEDGER",
+      "gate": "local_visual_runtime_matrix",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Remaining-work JSON/Markdown reports 30 required, 12 verified and 18 remaining gates."
+    },
+    {
+      "id": "A04",
+      "phase": "local_source_closure",
+      "title": "Build the exact current checkpoint SHA with the Node/Azure production preset",
+      "gate": "local_visual_runtime_matrix",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Production build succeeds and embeds the exact SHA."
+    },
+    {
+      "id": "A05",
+      "phase": "local_source_closure",
+      "title": "Run the repository-resident WebKit hydration/runtime diagnostic",
+      "gate": "local_visual_runtime_matrix",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "WebKit reaches hydration=ready with no fatal same-origin page/resource failures."
+    },
+    {
+      "id": "A06",
+      "phase": "local_source_closure",
+      "title": "Run the signed-out Chromium, Firefox and WebKit matrix engine-by-engine",
+      "gate": "local_visual_runtime_matrix",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "50 active signed-out acceptance tests pass: 48 shell/theme cases plus route sweep and API boundary."
+    },
+    {
+      "id": "A07",
+      "phase": "local_source_closure",
+      "title": "Create a lawful disposable signed-in release storage state without committing credentials",
+      "gate": "local_visual_runtime_matrix",
+      "owner": "user_external_account",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "KOVA_RELEASE_AUTH_STATE points to a valid, private, disposable authenticated state."
+    },
+    {
+      "id": "A08",
+      "phase": "local_source_closure",
+      "title": "Run the signed-in Chromium, Firefox and WebKit matrix engine-by-engine",
+      "gate": "local_visual_runtime_matrix",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "50 active signed-in acceptance tests pass: 48 shell/theme cases plus route sweep and API boundary."
+    },
+    {
+      "id": "A09",
+      "phase": "local_source_closure",
+      "title": "Record browser evidence and promote local_visual_runtime_matrix only after both auth matrices pass",
+      "gate": "local_visual_runtime_matrix",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Durable exact-SHA evidence exists and the source ledger becomes 13/13."
+    },
+    {
+      "id": "B01",
+      "phase": "feature_completion",
+      "title": "Implement the canonical Work forward migration around agent_jobs",
+      "gate": "production_tools_multimodal",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Work is no longer a history-only disabled surface and passes isolated staging execution evidence."
+    },
+    {
+      "id": "B02",
+      "phase": "feature_completion",
+      "title": "Implement owner-scoped transactional Work creation and command RPCs",
+      "gate": "production_tools_multimodal",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Work is no longer a history-only disabled surface and passes isolated staging execution evidence."
+    },
+    {
+      "id": "B03",
+      "phase": "feature_completion",
+      "title": "Implement fenced Work leasing, heartbeat, checkpoint, event and settlement RPCs",
+      "gate": "production_tools_multimodal",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Work is no longer a history-only disabled surface and passes isolated staging execution evidence."
+    },
+    {
+      "id": "B04",
+      "phase": "feature_completion",
+      "title": "Retire or freeze the incompatible legacy agent_runs ingress/runtime",
+      "gate": "production_tools_multimodal",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Work is no longer a history-only disabled surface and passes isolated staging execution evidence."
+    },
+    {
+      "id": "B05",
+      "phase": "feature_completion",
+      "title": "Build the dedicated Azure Work worker runtime",
+      "gate": "production_tools_multimodal",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Work is no longer a history-only disabled surface and passes isolated staging execution evidence."
+    },
+    {
+      "id": "B06",
+      "phase": "feature_completion",
+      "title": "Pin Work model execution to managed-identity GPT-5.6 Sol with no direct-key fallback",
+      "gate": "production_tools_multimodal",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Work is no longer a history-only disabled surface and passes isolated staging execution evidence."
+    },
+    {
+      "id": "B07",
+      "phase": "feature_completion",
+      "title": "Implement deny-by-default Work tool policies and bounded approval contracts",
+      "gate": "production_tools_multimodal",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Work is no longer a history-only disabled surface and passes isolated staging execution evidence."
+    },
+    {
+      "id": "B08",
+      "phase": "feature_completion",
+      "title": "Implement durable Work evidence, artifact, checksum and private-storage contracts",
+      "gate": "production_tools_multimodal",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Work is no longer a history-only disabled surface and passes isolated staging execution evidence."
+    },
+    {
+      "id": "B09",
+      "phase": "feature_completion",
+      "title": "Harden the isolated browser pool against SSRF, egress, downloads, credentials and lease loss",
+      "gate": "production_tools_multimodal",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Work is no longer a history-only disabled surface and passes isolated staging execution evidence."
+    },
+    {
+      "id": "B10",
+      "phase": "feature_completion",
+      "title": "Implement Work accounting, quotas, budgets, retries and reconciliation",
+      "gate": "production_tools_multimodal",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Work is no longer a history-only disabled surface and passes isolated staging execution evidence."
+    },
+    {
+      "id": "B11",
+      "phase": "feature_completion",
+      "title": "Complete Work UI creation, pause, resume, cancel, retry, approval and failure recovery",
+      "gate": "production_tools_multimodal",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Work is no longer a history-only disabled surface and passes isolated staging execution evidence."
+    },
+    {
+      "id": "B12",
+      "phase": "feature_completion",
+      "title": "Add Work realtime/history pagination, structured failure and terminal-result evidence",
+      "gate": "production_tools_multimodal",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Work is no longer a history-only disabled surface and passes isolated staging execution evidence."
+    },
+    {
+      "id": "B13",
+      "phase": "feature_completion",
+      "title": "Add the scheduled-task production execution migration and least-privilege owner RPCs",
+      "gate": "production_scheduled_workers",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "A real Azure-scheduled occurrence executes once, records history/delivery and survives retry/cancel cases."
+    },
+    {
+      "id": "B14",
+      "phase": "feature_completion",
+      "title": "Implement IANA timezone, recurrence, DST and missed-run semantics",
+      "gate": "production_scheduled_workers",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "A real Azure-scheduled occurrence executes once, records history/delivery and survives retry/cancel cases."
+    },
+    {
+      "id": "B15",
+      "phase": "feature_completion",
+      "title": "Implement atomic occurrence claim, attempt, heartbeat, retry and settlement RPCs",
+      "gate": "production_scheduled_workers",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "A real Azure-scheduled occurrence executes once, records history/delivery and survives retry/cancel cases."
+    },
+    {
+      "id": "B16",
+      "phase": "feature_completion",
+      "title": "Build the dedicated one-shot scheduled-worker entry point",
+      "gate": "production_scheduled_workers",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "A real Azure-scheduled occurrence executes once, records history/delivery and survives retry/cancel cases."
+    },
+    {
+      "id": "B17",
+      "phase": "feature_completion",
+      "title": "Wire the Azure Container Apps scheduled Job to the immutable worker image",
+      "gate": "production_scheduled_workers",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "A real Azure-scheduled occurrence executes once, records history/delivery and survives retry/cancel cases."
+    },
+    {
+      "id": "B18",
+      "phase": "feature_completion",
+      "title": "Enforce entitlement, concurrency, retry and cancellation rules at claim time",
+      "gate": "production_scheduled_workers",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "A real Azure-scheduled occurrence executes once, records history/delivery and survives retry/cancel cases."
+    },
+    {
+      "id": "B19",
+      "phase": "feature_completion",
+      "title": "Complete task editing, resume/retry, execution history and delivery UI",
+      "gate": "production_scheduled_workers",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "A real Azure-scheduled occurrence executes once, records history/delivery and survives retry/cancel cases."
+    },
+    {
+      "id": "B20",
+      "phase": "feature_completion",
+      "title": "Implement scheduler heartbeat/readiness, metrics, alerts and stale-job detection",
+      "gate": "production_scheduled_workers",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "A real Azure-scheduled occurrence executes once, records history/delivery and survives retry/cancel cases."
+    },
+    {
+      "id": "B21",
+      "phase": "feature_completion",
+      "title": "Add scheduler duplicate-claim, lease-expiry, DST, retry, downgrade and two-user tests",
+      "gate": "production_scheduled_workers",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "A real Azure-scheduled occurrence executes once, records history/delivery and survives retry/cancel cases."
+    },
+    {
+      "id": "B22",
+      "phase": "feature_completion",
+      "title": "Decide Maps scope: ship an accessible licensed map provider or remove the product surface and classify it truthfully",
+      "gate": "production_tools_multimodal",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "The relevant final-goal surface is functional, truthful and evidenced or explicitly approved as N/A."
+    },
+    {
+      "id": "B23",
+      "phase": "feature_completion",
+      "title": "Decide and implement/exclude sandboxed data analysis and code execution with truthful capability copy",
+      "gate": "production_tools_multimodal",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "The relevant final-goal surface is functional, truthful and evidenced or explicitly approved as N/A."
+    },
+    {
+      "id": "B24",
+      "phase": "feature_completion",
+      "title": "Complete or explicitly scope Custom Kova authoring, knowledge, tools, ownership, preview and publishing states",
+      "gate": "production_tools_multimodal",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "The relevant final-goal surface is functional, truthful and evidenced or explicitly approved as N/A."
+    },
+    {
+      "id": "B25",
+      "phase": "feature_completion",
+      "title": "Complete or truthfully scope adaptive Study workflows, quizzes, progress and incorrect-answer feedback",
+      "gate": "production_tools_multimodal",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "The relevant final-goal surface is functional, truthful and evidenced or explicitly approved as N/A."
+    },
+    {
+      "id": "B26",
+      "phase": "feature_completion",
+      "title": "Prove Google/GitHub connector OAuth, scope, expiry, revoke, reconnect, sync and outage flows",
+      "gate": "production_tools_multimodal",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "The relevant final-goal surface is functional, truthful and evidenced or explicitly approved as N/A."
+    },
+    {
+      "id": "B27",
+      "phase": "feature_completion",
+      "title": "Prove Files/Library ownership, MIME spoofing, extraction failures, large-file limits and removal races",
+      "gate": "production_tools_multimodal",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "The relevant final-goal surface is functional, truthful and evidenced or explicitly approved as N/A."
+    },
+    {
+      "id": "B28",
+      "phase": "feature_completion",
+      "title": "Prove Memory enable/disable and Temporary Chat no-read/no-write behavior across sessions",
+      "gate": "production_tools_multimodal",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "The relevant final-goal surface is functional, truthful and evidenced or explicitly approved as N/A."
+    },
+    {
+      "id": "B29",
+      "phase": "feature_completion",
+      "title": "Complete artifact create/edit/version/restore/export and storage-failure recovery",
+      "gate": "production_tools_multimodal",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "The relevant final-goal surface is functional, truthful and evidenced or explicitly approved as N/A."
+    },
+    {
+      "id": "B30",
+      "phase": "feature_completion",
+      "title": "Resolve unnamed and undersized interactive controls found by the UI audit",
+      "gate": "production_no_p0_p1",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "The relevant final-goal surface is functional, truthful and evidenced or explicitly approved as N/A."
+    },
+    {
+      "id": "B31",
+      "phase": "feature_completion",
+      "title": "Run and remediate physical-device safe-area, keyboard, rotation, zoom and 200% text tests",
+      "gate": "production_no_p0_p1",
+      "owner": "user_external_device",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "The relevant final-goal surface is functional, truthful and evidenced or explicitly approved as N/A."
+    },
+    {
+      "id": "B32",
+      "phase": "feature_completion",
+      "title": "Connect status/support surfaces to independently verifiable delivery and telemetry",
+      "gate": "production_observability",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "The relevant final-goal surface is functional, truthful and evidenced or explicitly approved as N/A."
+    },
+    {
+      "id": "B33",
+      "phase": "feature_completion",
+      "title": "Refresh the 29-issue UI audit and close only issues with rendered or production evidence",
+      "gate": "production_no_p0_p1",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "The relevant final-goal surface is functional, truthful and evidenced or explicitly approved as N/A."
+    },
+    {
+      "id": "C01",
+      "phase": "release_candidate_and_data",
+      "title": "Refresh the current ChatGPT/OpenAI parity matrix shortly before release",
+      "gate": "production_no_p0_p1",
+      "owner": "assistant+web_research",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Sanitized exact-target evidence is recorded; no secret or customer content is committed."
+    },
+    {
+      "id": "C02",
+      "phase": "release_candidate_and_data",
+      "title": "Reconcile the checkpoint into a minimal clean main-branch release history",
+      "gate": "exact_sha_ci",
+      "owner": "assistant+github",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Sanitized exact-target evidence is recorded; no secret or customer content is committed."
+    },
+    {
+      "id": "C03",
+      "phase": "release_candidate_and_data",
+      "title": "Freeze one exact clean release SHA and source tree",
+      "gate": "exact_sha_ci",
+      "owner": "assistant+github",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Sanitized exact-target evidence is recorded; no secret or customer content is committed."
+    },
+    {
+      "id": "C04",
+      "phase": "release_candidate_and_data",
+      "title": "Fetch and reconcile the production Supabase migration list",
+      "gate": "production_supabase_target",
+      "owner": "user_supabase_credentials",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Sanitized exact-target evidence is recorded; no secret or customer content is committed."
+    },
+    {
+      "id": "C05",
+      "phase": "release_candidate_and_data",
+      "title": "Create and checksum a fresh production Supabase backup",
+      "gate": "production_backup_recovery",
+      "owner": "user_supabase_credentials",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Sanitized exact-target evidence is recorded; no secret or customer content is committed."
+    },
+    {
+      "id": "C06",
+      "phase": "release_candidate_and_data",
+      "title": "Complete a disposable Supabase restore rehearsal",
+      "gate": "production_backup_recovery",
+      "owner": "user_supabase_credentials",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Sanitized exact-target evidence is recorded; no secret or customer content is committed."
+    },
+    {
+      "id": "C07",
+      "phase": "release_candidate_and_data",
+      "title": "Run a fresh-database migration/schema/reference test through all 83 local migrations",
+      "gate": "production_supabase_target",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Sanitized exact-target evidence is recorded; no secret or customer content is committed."
+    },
+    {
+      "id": "C08",
+      "phase": "release_candidate_and_data",
+      "title": "Run the executable two-user RLS and ownership isolation suite",
+      "gate": "production_supabase_target",
+      "owner": "user_supabase_credentials",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Sanitized exact-target evidence is recorded; no secret or customer content is committed."
+    },
+    {
+      "id": "C09",
+      "phase": "release_candidate_and_data",
+      "title": "Apply only reviewed forward migrations missing from production and prove the exact production project ref",
+      "gate": "production_supabase_target",
+      "owner": "user_supabase_credentials",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Sanitized exact-target evidence is recorded; no secret or customer content is committed."
+    },
+    {
+      "id": "C10",
+      "phase": "release_candidate_and_data",
+      "title": "Collect at least one genuine customer-approved testimonial through the implemented consent/review workflow",
+      "gate": "real_approved_testimonials",
+      "owner": "external_customer",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Sanitized exact-target evidence is recorded; no secret or customer content is committed."
+    },
+    {
+      "id": "D01",
+      "phase": "azure_staging",
+      "title": "Verify Azure subscription access, regional quota and the approved GPT-5.6 Sol/image/embedding deployments",
+      "gate": "production_gpt56_sol",
+      "owner": "user_azure_credentials",
+      "paid": true,
+      "dependencies": [],
+      "acceptance": "Staging evidence is tied to the exact SHA/digest; resources are scaled down or removed after the consolidated rehearsal."
+    },
+    {
+      "id": "D02",
+      "phase": "azure_staging",
+      "title": "Build the exact release image locally and scan it for secrets",
+      "gate": "azure_staging_deployment",
+      "owner": "assistant+local",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Staging evidence is tied to the exact SHA/digest; resources are scaled down or removed after the consolidated rehearsal."
+    },
+    {
+      "id": "D03",
+      "phase": "azure_staging",
+      "title": "Push one immutable image to ACR and resolve repository@sha256 digest/provenance",
+      "gate": "azure_staging_deployment",
+      "owner": "user_azure_credentials",
+      "paid": true,
+      "dependencies": [],
+      "acceptance": "Staging evidence is tied to the exact SHA/digest; resources are scaled down or removed after the consolidated rehearsal."
+    },
+    {
+      "id": "D04",
+      "phase": "azure_staging",
+      "title": "Run and review the staging Azure what-if plan",
+      "gate": "azure_staging_deployment",
+      "owner": "user_azure_credentials",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Staging evidence is tied to the exact SHA/digest; resources are scaled down or removed after the consolidated rehearsal."
+    },
+    {
+      "id": "D05",
+      "phase": "azure_staging",
+      "title": "Deploy the exact digest to minimal-cost Azure staging",
+      "gate": "azure_staging_deployment",
+      "owner": "user_azure_credentials",
+      "paid": true,
+      "dependencies": [],
+      "acceptance": "Staging evidence is tied to the exact SHA/digest; resources are scaled down or removed after the consolidated rehearsal."
+    },
+    {
+      "id": "D06",
+      "phase": "azure_staging",
+      "title": "Verify staging health, readiness, exact SHA, managed identity, RBAC and intended Supabase target",
+      "gate": "azure_staging_deployment",
+      "owner": "user_azure_credentials",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Staging evidence is tied to the exact SHA/digest; resources are scaled down or removed after the consolidated rehearsal."
+    },
+    {
+      "id": "D07",
+      "phase": "azure_staging",
+      "title": "Run staging auth, MFA/recovery, billing, connectors and multi-principal journeys",
+      "gate": "production_auth",
+      "owner": "user_test_accounts",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Staging evidence is tied to the exact SHA/digest; resources are scaled down or removed after the consolidated rehearsal."
+    },
+    {
+      "id": "D08",
+      "phase": "azure_staging",
+      "title": "Run staging GPT-5.6 Sol streaming, stop/retry/fault injection, search, research, files, images and citations",
+      "gate": "production_tools_multimodal",
+      "owner": "user_provider_credentials",
+      "paid": true,
+      "dependencies": [],
+      "acceptance": "Staging evidence is tied to the exact SHA/digest; resources are scaled down or removed after the consolidated rehearsal."
+    },
+    {
+      "id": "D09",
+      "phase": "azure_staging",
+      "title": "Run staging Work and Scheduled Tasks end-to-end with history, retry, cancellation and delivery evidence",
+      "gate": "production_scheduled_workers",
+      "owner": "user_azure_credentials",
+      "paid": true,
+      "dependencies": [],
+      "acceptance": "Staging evidence is tied to the exact SHA/digest; resources are scaled down or removed after the consolidated rehearsal."
+    },
+    {
+      "id": "D10",
+      "phase": "azure_staging",
+      "title": "Run signed-out and signed-in staging browser matrices",
+      "gate": "production_visual_runtime_matrix",
+      "owner": "user_test_accounts",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Staging evidence is tied to the exact SHA/digest; resources are scaled down or removed after the consolidated rehearsal."
+    },
+    {
+      "id": "D11",
+      "phase": "azure_staging",
+      "title": "Verify staging logs, metrics, alerts, liveness/readiness and correlation",
+      "gate": "production_observability",
+      "owner": "user_azure_credentials",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Staging evidence is tied to the exact SHA/digest; resources are scaled down or removed after the consolidated rehearsal."
+    },
+    {
+      "id": "D12",
+      "phase": "azure_staging",
+      "title": "Exercise staging rollback to a distinct immutable image and triage every P0/P1",
+      "gate": "production_rollback",
+      "owner": "user_azure_credentials",
+      "paid": true,
+      "dependencies": [],
+      "acceptance": "Staging evidence is tied to the exact SHA/digest; resources are scaled down or removed after the consolidated rehearsal."
+    },
+    {
+      "id": "E01",
+      "phase": "production_cutover",
+      "title": "Take and verify the immediate pre-production Supabase backup",
+      "gate": "production_backup_recovery",
+      "owner": "user_supabase_credentials",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Exact production SHA evidence passes; no secret data is exposed; the operation is not repeated without a source change or failed gate."
+    },
+    {
+      "id": "E02",
+      "phase": "production_cutover",
+      "title": "Deploy the exact immutable digest to Azure production with generation, domains and scheduler initially gated",
+      "gate": "azure_production_deployment",
+      "owner": "user_azure_credentials",
+      "paid": true,
+      "dependencies": [],
+      "acceptance": "Exact production SHA evidence passes; no secret data is exposed; the operation is not repeated without a source change or failed gate."
+    },
+    {
+      "id": "E03",
+      "phase": "production_cutover",
+      "title": "Verify production health, readiness, exact SHA/tree/digest, RBAC and capability map",
+      "gate": "azure_production_deployment",
+      "owner": "user_azure_credentials",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Exact production SHA evidence passes; no secret data is exposed; the operation is not repeated without a source change or failed gate."
+    },
+    {
+      "id": "E04",
+      "phase": "production_cutover",
+      "title": "Route apex and www through Cloudflare, prove TLS/proxy/WAF and restrict Azure ingress to current Cloudflare CIDRs",
+      "gate": "cloudflare_production_route",
+      "owner": "user_cloudflare_credentials",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Exact production SHA evidence passes; no secret data is exposed; the operation is not repeated without a source change or failed gate."
+    },
+    {
+      "id": "E05",
+      "phase": "production_cutover",
+      "title": "Enable generation only after readiness and prove GPT-5.6 Sol identity, streaming and usage evidence",
+      "gate": "production_gpt56_sol",
+      "owner": "user_azure_credentials",
+      "paid": true,
+      "dependencies": [],
+      "acceptance": "Exact production SHA evidence passes; no secret data is exposed; the operation is not repeated without a source change or failed gate."
+    },
+    {
+      "id": "E06",
+      "phase": "production_cutover",
+      "title": "Enable the scheduled Azure Job only after fresh scheduler heartbeat/readiness",
+      "gate": "production_scheduled_workers",
+      "owner": "user_azure_credentials",
+      "paid": true,
+      "dependencies": [],
+      "acceptance": "Exact production SHA evidence passes; no secret data is exposed; the operation is not repeated without a source change or failed gate."
+    },
+    {
+      "id": "E07",
+      "phase": "production_cutover",
+      "title": "Verify signup, login, OAuth, recovery, MFA, refresh and deletion in production",
+      "gate": "production_auth",
+      "owner": "user_test_accounts",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Exact production SHA evidence passes; no secret data is exposed; the operation is not repeated without a source change or failed gate."
+    },
+    {
+      "id": "E08",
+      "phase": "production_cutover",
+      "title": "Verify checkout, webhook, entitlement, portal, cancellation, past-due and recovery in production",
+      "gate": "production_billing",
+      "owner": "user_stripe_test_account",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Exact production SHA evidence passes; no secret data is exposed; the operation is not repeated without a source change or failed gate."
+    },
+    {
+      "id": "E09",
+      "phase": "production_cutover",
+      "title": "Verify search, citations, tools, files, vision, images, research, connectors and storage in production",
+      "gate": "production_tools_multimodal",
+      "owner": "user_test_accounts",
+      "paid": true,
+      "dependencies": [],
+      "acceptance": "Exact production SHA evidence passes; no secret data is exposed; the operation is not repeated without a source change or failed gate."
+    },
+    {
+      "id": "E10",
+      "phase": "production_cutover",
+      "title": "Verify Work execution in production if retained in final scope",
+      "gate": "production_tools_multimodal",
+      "owner": "user_test_accounts",
+      "paid": true,
+      "dependencies": [],
+      "acceptance": "Exact production SHA evidence passes; no secret data is exposed; the operation is not repeated without a source change or failed gate."
+    },
+    {
+      "id": "E11",
+      "phase": "production_cutover",
+      "title": "Run the 100 active production browser acceptance executions across signed-out and signed-in states",
+      "gate": "production_visual_runtime_matrix",
+      "owner": "user_test_accounts",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Exact production SHA evidence passes; no secret data is exposed; the operation is not repeated without a source change or failed gate."
+    },
+    {
+      "id": "E12",
+      "phase": "production_cutover",
+      "title": "Prove production feature-use to confirmed-subscription attribution",
+      "gate": "feature_to_subscription_live_attribution",
+      "owner": "user_stripe_test_account",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Exact production SHA evidence passes; no secret data is exposed; the operation is not repeated without a source change or failed gate."
+    },
+    {
+      "id": "E13",
+      "phase": "production_cutover",
+      "title": "Moderate and publish only genuine consented testimonial content",
+      "gate": "real_approved_testimonials",
+      "owner": "external_customer",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Exact production SHA evidence passes; no secret data is exposed; the operation is not repeated without a source change or failed gate."
+    },
+    {
+      "id": "E14",
+      "phase": "production_cutover",
+      "title": "Verify production logs, metrics, alerts, liveness/readiness, tracing and independent status telemetry",
+      "gate": "production_observability",
+      "owner": "user_azure_credentials",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Exact production SHA evidence passes; no secret data is exposed; the operation is not repeated without a source change or failed gate."
+    },
+    {
+      "id": "E15",
+      "phase": "production_cutover",
+      "title": "Exercise and verify production rollback to the previous immutable image, then restore the approved release",
+      "gate": "production_rollback",
+      "owner": "user_azure_credentials",
+      "paid": true,
+      "dependencies": [],
+      "acceptance": "Exact production SHA evidence passes; no secret data is exposed; the operation is not repeated without a source change or failed gate."
+    },
+    {
+      "id": "E16",
+      "phase": "production_cutover",
+      "title": "Verify backup integrity and recovery procedure against production-compatible evidence",
+      "gate": "production_backup_recovery",
+      "owner": "user_supabase_credentials",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Exact production SHA evidence passes; no secret data is exposed; the operation is not repeated without a source change or failed gate."
+    },
+    {
+      "id": "E17",
+      "phase": "production_cutover",
+      "title": "Scan production HTML, network, bundles, logs, routes and configuration for zero active Lovable dependency",
+      "gate": "production_no_p0_p1",
+      "owner": "assistant+production_read",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Exact production SHA evidence passes; no secret data is exposed; the operation is not repeated without a source change or failed gate."
+    },
+    {
+      "id": "E18",
+      "phase": "production_cutover",
+      "title": "Complete final P0/P1 triage and prove no known production P0 or P1 defects",
+      "gate": "production_no_p0_p1",
+      "owner": "assistant+production_read",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Exact production SHA evidence passes; no secret data is exposed; the operation is not repeated without a source change or failed gate."
+    },
+    {
+      "id": "E19",
+      "phase": "production_cutover",
+      "title": "Run the single manual exact-SHA GitHub final release workflow once",
+      "gate": "exact_sha_ci",
+      "owner": "user_github_environment_secrets",
+      "paid": true,
+      "dependencies": [],
+      "acceptance": "Exact production SHA evidence passes; no secret data is exposed; the operation is not repeated without a source change or failed gate."
+    },
+    {
+      "id": "E20",
+      "phase": "production_cutover",
+      "title": "Assemble the evidence index, mark only proven ledger items verified_production, and declare completion only if zero remain",
+      "gate": "production_no_p0_p1",
+      "owner": "assistant+github",
+      "paid": false,
+      "dependencies": [],
+      "acceptance": "Exact production SHA evidence passes; no secret data is exposed; the operation is not repeated without a source change or failed gate."
+    }
+  ]
+}
