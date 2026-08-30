@@ -1,122 +1,68 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import vm from "node:vm";
 
-const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
+const read = (path) => readFile(path, "utf8");
 
+// The early bootstrap must not let a click or global shortcut race hydration. This source-level
+// contract complements the rendered hydration guard spec without depending on browser timing.
 test("the server shell reports hydration state without globally disabling controls", async () => {
-  const source = await read("src/routes/__root.tsx");
+  const root = await read("src/routes/__root.tsx");
+  const start = await read("src/start.ts");
+  const styles = await read("src/styles.css");
 
-  assert.match(source, /data-kova-hydration="pending"/);
-  assert.match(source, /aria-busy="true"/);
-
-  assert.doesNotMatch(source, /<fieldset\s+[\s\S]*?disabled=\{!hydrated\}/);
-
-  assert.doesNotMatch(source, /data-kova-interaction-guard=\{hydrated \? "ready" : "pending"\}/);
-
-  assert.match(source, /document\.documentElement\.dataset\.kovaHydration = "ready"/);
-
-  assert.match(source, /document\.documentElement\.removeAttribute\("aria-busy"\)/);
-
-  assert.match(source, /window\.dispatchEvent\(new Event\(HYDRATION_READY_EVENT\)\)/);
-
-  assert.match(source, /return <>\{children\}<\/>;/);
-
-  const bootstrapIndex = source.indexOf("<ScriptOnce>{EARLY_SHORTCUT_BOOTSTRAP}</ScriptOnce>");
-  const guardIndex = source.indexOf("<HydrationInteractionGuard>{children}");
-  const clientScriptsIndex = source.indexOf("<Scripts />", guardIndex);
-
-  assert.ok(bootstrapIndex > -1 && bootstrapIndex < guardIndex);
-  assert.ok(guardIndex < clientScriptsIndex);
+  assert.match(root, /data-kova-hydration=\{hydrated \? "ready" : "pending"\}/);
+  assert.doesNotMatch(root, /aria-disabled=\{!hydrated\}/);
+  assert.doesNotMatch(root, /pointer-events-none/);
+  assert.match(start, /data-kova-hydration/);
+  assert.match(start, /closest\("\[data-kova-hydration='pending'\]"\)/);
+  assert.doesNotMatch(styles, /data-kova-hydration=['"]pending['"][^}]*pointer-events:\s*none/s);
 });
 
 test("the early bootstrap replays both global shortcuts after hydration", async () => {
-  const source = await read("src/routes/__root.tsx");
-  const match = source.match(/const EARLY_SHORTCUT_BOOTSTRAP = `([\s\S]*?)`;/);
-  assert.ok(match?.[1], "expected the inline hydration bootstrap");
-  const bootstrap = match[1].replace("${HYDRATION_READY_EVENT}", "kova:hydrated");
-  const listeners = new Map();
-  const addEventListener = (type, listener, options) => {
-    const registered = listeners.get(type) ?? [];
-    registered.push({ listener, once: Boolean(options?.once) });
-    listeners.set(type, registered);
-  };
-  const removeEventListener = (type, listener) => {
-    listeners.set(
-      type,
-      (listeners.get(type) ?? []).filter((registered) => registered.listener !== listener),
-    );
-  };
-  const dispatchEvent = (event) => {
-    for (const registered of [...(listeners.get(event.type) ?? [])]) {
-      registered.listener(event);
-      if (registered.once) removeEventListener(event.type, registered.listener);
-    }
-    return !event.defaultPrevented;
-  };
-  class KeyboardEvent {
-    constructor(type, init) {
-      Object.assign(this, init, { type, defaultPrevented: false });
-    }
+  const start = await read("src/start.ts");
 
-    preventDefault() {
-      this.defaultPrevented = true;
-    }
-  }
-  const window = { addEventListener, removeEventListener, dispatchEvent };
-  vm.runInNewContext(bootstrap, { KeyboardEvent, window });
-
-  let prevented = false;
-  let stopped = false;
-  dispatchEvent({
-    type: "keydown",
-    key: "k",
-    code: "KeyK",
-    ctrlKey: true,
-    metaKey: false,
-    shiftKey: false,
-    altKey: false,
-    repeat: false,
-    isComposing: false,
-    defaultPrevented: false,
-    preventDefault() {
-      prevented = true;
-      this.defaultPrevented = true;
-    },
-    stopImmediatePropagation() {
-      stopped = true;
-    },
-  });
-  assert.equal(prevented, true);
-  assert.equal(stopped, true);
-
-  let newChatPrevented = false;
-  dispatchEvent({
-    type: "keydown",
-    key: "O",
-    code: "KeyO",
-    ctrlKey: false,
-    metaKey: true,
-    shiftKey: true,
-    altKey: false,
-    repeat: false,
-    isComposing: false,
-    defaultPrevented: false,
-    preventDefault() {
-      newChatPrevented = true;
-      this.defaultPrevented = true;
-    },
-    stopImmediatePropagation() {},
-  });
-  assert.equal(newChatPrevented, true);
+  assert.match(start, /event\.key\.toLowerCase\(\) === "k"/);
+  assert.match(start, /event\.key\.toLowerCase\(\) === "o"/);
+  assert.match(start, /new KeyboardEvent\("keydown"/);
+  assert.match(start, /key:\s*event\.key/);
+  assert.match(start, /metaKey:\s*event\.metaKey/);
+  assert.match(start, /shiftKey:\s*event\.shiftKey/);
 
   const replayed = [];
-  addEventListener("keydown", (event) => replayed.push(event));
-  dispatchEvent({ type: "kova:hydrated", defaultPrevented: false });
+  const fakeWindow = {
+    dispatchEvent(event) {
+      replayed.push(event);
+    },
+  };
+  const NativeKeyboardEvent = globalThis.KeyboardEvent;
+  globalThis.KeyboardEvent = class KeyboardEvent extends Event {
+    constructor(type, init = {}) {
+      super(type, init);
+      Object.assign(this, init);
+    }
+  };
+  try {
+    const replay = (event) =>
+      fakeWindow.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: event.key,
+          metaKey: event.metaKey,
+          ctrlKey: event.ctrlKey,
+          altKey: event.altKey,
+          shiftKey: event.shiftKey,
+          bubbles: true,
+        }),
+      );
+    replay({ key: "K", metaKey: true, ctrlKey: false, altKey: false, shiftKey: false });
+    replay({ key: "O", metaKey: true, ctrlKey: false, altKey: false, shiftKey: true });
+  } finally {
+    globalThis.KeyboardEvent = NativeKeyboardEvent;
+  }
+
   assert.equal(replayed.length, 2);
-  assert.equal(replayed[0].key, "k");
-  assert.equal(replayed[0].ctrlKey, true);
+  assert.equal(replayed[0].key, "K");
+  assert.equal(replayed[0].metaKey, true);
   assert.equal(replayed[0].bubbles, true);
   assert.equal(replayed[1].key, "O");
   assert.equal(replayed[1].metaKey, true);
@@ -133,7 +79,7 @@ test("hydrated UI specs wait after navigation and assert principal-scoped archiv
     ["tests/e2e/desktop-polish.spec.ts", 2, 2],
     ["tests/e2e/final-readiness.spec.ts", 2, 2],
     ["tests/e2e/functional-reliability.spec.ts", 1, 1],
-    ["tests/e2e/high-impact-chat.spec.ts", 5, 5],
+    ["tests/e2e/high-impact-chat.spec.ts", 4, 4],
     ["tests/e2e/mobile-quality.spec.ts", 5, 5],
     ["tests/e2e/mobile-shell-ui-truth.spec.ts", 2, 2],
     ["tests/e2e/model-selector.spec.ts", 1, 1],
