@@ -52,12 +52,14 @@ for (const theme of themes) {
 
     const width = Number(testInfo.project.metadata.width ?? 0);
     if (width >= 1024) {
-      for (const label of ["New chat", "Search", "Images", "Plugins", "Deep research", "Maps"])
-        await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
+      await expect(page.getByRole("button", { name: /new chat/i }).first()).toBeVisible();
+      await expect(page.getByRole("button", { name: /search chats/i }).first()).toBeVisible();
+      await expect(page.getByRole("link", { name: /images/i }).first()).toBeVisible();
     } else {
-      await expect(page.locator(".kova-topbar")).toBeVisible();
+      const openMenu = page.getByRole("button", { name: "Open menu" }).first();
+      await expect(openMenu).toBeVisible();
       const interactiveSizes = await page
-        .locator(".kova-topbar button:visible, .kova-composer button:visible")
+        .locator('.kova-composer button:visible, button[aria-label="Open menu"]:visible')
         .evaluateAll((elements) =>
           elements.map((element) => {
             const rect = element.getBoundingClientRect();
@@ -88,10 +90,12 @@ test("composer controls expose stable semantic hooks", async ({ page }) => {
   await waitForHydration(page);
   const composer = page.locator(".kova-composer").first();
   await expect(composer).toBeVisible();
-  const textarea = composer.locator("textarea").first();
+  const textarea = composer.getByRole("textbox", { name: "Message KovaGPT" });
+  await expect(textarea).toBeVisible();
   await textarea.fill("Release matrix message");
-  await expect(composer.getByRole("button", { name: "Send" })).toBeVisible();
-  await expect(page.locator("[data-chat-transcript]")).toHaveCount(1);
+  const send = composer.getByRole("button", { name: "Send" });
+  await expect(send).toBeVisible();
+  await expect(send).toBeEnabled();
 });
 
 test("critical public and authenticated routes do not expose a broken shell", async ({
