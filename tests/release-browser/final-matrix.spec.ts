@@ -1,17 +1,25 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 const themes = ["light", "dark"] as const;
+
+async function waitForHydration(page: Page) {
+  await expect(page.locator("html")).toHaveAttribute("data-kova-hydration", "ready", {
+    timeout: 30_000,
+  });
+}
 
 for (const theme of themes) {
   test(`${theme} ChatGPT-first shell is usable and Voice-free`, async ({ page }, testInfo) => {
     await page.addInitScript((mode) => localStorage.setItem("kova-theme-mode", mode), theme);
     await page.goto("/");
+    await waitForHydration(page);
     await page.waitForLoadState("networkidle").catch(() => undefined);
 
     const authenticated = Boolean(testInfo.project.metadata.authenticated);
     const textarea = page.locator("textarea").first();
+    const composer = page.locator(".kova-composer").first();
     await expect(textarea).toBeVisible();
-    await expect(page.locator(".kova-composer").first()).toBeVisible();
+    await expect(composer).toBeVisible();
 
     const bodyText = await page.locator("body").innerText();
     expect(bodyText).not.toMatch(/\b(?:Voice mode|Dictate|Start listening|Stop listening)\b/iu);
@@ -30,18 +38,17 @@ for (const theme of themes) {
     expect(dimensions.documentHeight).toBeGreaterThan(0);
 
     await textarea.focus();
-    const composerFocus = await page
-      .locator(".kova-composer")
-      .first()
-      .evaluate((element) => {
-        const style = getComputedStyle(element);
-        return {
-          outlineStyle: style.outlineStyle,
-          outlineWidth: Number.parseFloat(style.outlineWidth || "0"),
-        };
-      });
-    expect(composerFocus.outlineStyle).not.toBe("none");
-    expect(composerFocus.outlineWidth).toBeGreaterThanOrEqual(2);
+    const composerFocus = await composer.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        boxShadow: style.boxShadow,
+        borderStyle: style.borderStyle,
+        borderWidth: Number.parseFloat(style.borderWidth || "0"),
+      };
+    });
+    expect(composerFocus.boxShadow).not.toBe("none");
+    expect(composerFocus.borderStyle).not.toBe("none");
+    expect(composerFocus.borderWidth).toBeGreaterThanOrEqual(1);
 
     const width = Number(testInfo.project.metadata.width ?? 0);
     if (width >= 1024) {
@@ -78,11 +85,12 @@ for (const theme of themes) {
 
 test("composer controls expose stable semantic hooks", async ({ page }) => {
   await page.goto("/");
+  await waitForHydration(page);
   const composer = page.locator(".kova-composer").first();
   await expect(composer).toBeVisible();
   const textarea = composer.locator("textarea").first();
   await textarea.fill("Release matrix message");
-  await expect(composer.locator('[data-testid="send-button"]')).toBeVisible();
+  await expect(composer.getByRole("button", { name: "Send" })).toBeVisible();
   await expect(page.locator("[data-chat-transcript]")).toHaveCount(1);
 });
 
@@ -104,6 +112,7 @@ test("critical public and authenticated routes do not expose a broken shell", as
   for (const route of routes) {
     await page.goto(route);
     await page.waitForLoadState("domcontentloaded");
+    await waitForHydration(page);
     await expect(page.locator("body")).not.toContainText(
       /this page didn.t load|application error|internal server error/i,
     );
