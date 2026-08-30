@@ -50,6 +50,12 @@ for (const theme of themes) {
     expect(composerFocus.borderStyle).not.toBe("none");
     expect(composerFocus.borderWidth).toBeGreaterThanOrEqual(1);
 
+    await textarea.fill("Release matrix message");
+    const send = composer.getByRole("button", { name: "Send" });
+    await expect(send).toBeVisible();
+    await expect(send).toBeEnabled();
+    await textarea.fill("");
+
     const width = Number(testInfo.project.metadata.width ?? 0);
     if (width >= 1024) {
       await expect(page.getByRole("button", { name: /new chat/i }).first()).toBeVisible();
@@ -84,19 +90,6 @@ for (const theme of themes) {
     });
   });
 }
-
-test("composer controls expose stable semantic hooks", async ({ page }) => {
-  await page.goto("/");
-  await waitForHydration(page);
-  const composer = page.locator(".kova-composer").first();
-  await expect(composer).toBeVisible();
-  const textarea = composer.getByRole("textbox", { name: "Message KovaGPT" });
-  await expect(textarea).toBeVisible();
-  await textarea.fill("Release matrix message");
-  const send = composer.getByRole("button", { name: "Send" });
-  await expect(send).toBeVisible();
-  await expect(send).toBeEnabled();
-});
 
 test("critical public and authenticated routes do not expose a broken shell", async ({
   page,
