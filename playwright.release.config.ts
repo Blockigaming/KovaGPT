@@ -37,7 +37,7 @@ const projects: Project[] = engines.flatMap((browserName) =>
     use: {
       browserName,
       viewport: { width, height },
-      isMobile: width <= 390,
+      isMobile: browserName !== "firefox" && width <= 390,
       hasTouch: width <= 1024,
       storageState: authenticated ? storageState : undefined,
     },
@@ -64,9 +64,10 @@ export default defineConfig({
   webServer: externalBaseUrl
     ? undefined
     : {
-        command: "npm run preview -- --host 127.0.0.1 --port 8080",
+        command: "npm run preview -- --host 127.0.0.1 --port 8080 --strictPort",
         url: "http://127.0.0.1:8080",
-        reuseExistingServer: !process.env.CI,
+        env: { KOVA_LOCAL_HTTP_PREVIEW: "1" },
+        reuseExistingServer: false,
         timeout: 120_000,
       },
   use: {
