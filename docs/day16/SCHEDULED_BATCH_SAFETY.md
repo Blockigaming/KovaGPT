@@ -45,9 +45,11 @@ scheduled execution. No production ledger item is promoted.
 
 ## Tradeoff and remaining work
 
-For N processed tasks, a nonempty batch now makes N claim calls rather than one.
-The additional N-1 small database round trips avoid spending a waiting task's
-lease while earlier tasks run. The change does not add polling or retry sleeps.
+For a full batch of N processed tasks, the executor makes N claim calls rather
+than one. When the queue empties before the limit, it makes one additional empty
+claim and stops. A full default batch of five therefore adds four claim round
+trips while avoiding pre-leased tasks waiting behind earlier generations. Lease
+recovery still runs once per batch. No polling or retry sleeps are added.
 
 A local expiry check cannot replace database fencing or stop a lease being
 revoked after the check. Ambiguous provider/settlement outcomes can still be
