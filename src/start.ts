@@ -3,6 +3,7 @@ import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 
 import { renderErrorPage } from "./lib/error-page";
 import { rejectCrossSiteRequest } from "./lib/http-security.server";
+import { applyLocalPreviewTransportPolicy } from "./lib/local-preview-security.server";
 
 const SECURITY_HEADERS: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
@@ -33,11 +34,12 @@ const SECURITY_HEADERS: Record<string, string> = {
   "Origin-Agent-Cluster": "?1",
 };
 
-function applySecurityHeaders(res: Response): Response {
+function applySecurityHeaders(res: Response, request: Request): Response {
   const headers = new Headers(res.headers);
   for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
     if (!headers.has(key)) headers.set(key, value);
   }
+  applyLocalPreviewTransportPolicy(headers, request);
   return new Response(res.body, {
     status: res.status,
     statusText: res.statusText,
@@ -49,17 +51,20 @@ const errorMiddleware = createMiddleware().server(async ({ next, request }) => {
   try {
     if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
       const rejected = rejectCrossSiteRequest(request);
-      if (rejected) return applySecurityHeaders(rejected);
+      if (rejected) return applySecurityHeaders(rejected, request);
     }
     const contentLength = Number(request.headers.get("content-length") ?? "0");
     if (Number.isFinite(contentLength) && contentLength > 16 * 1024 * 1024) {
-      return applySecurityHeaders(Response.json({ error: "Request too large" }, { status: 413 }));
+      return applySecurityHeaders(
+        Response.json({ error: "Request too large" }, { status: 413 }),
+        request,
+      );
     }
     const result = await next();
     const contextResult = result as { response?: Response };
     const maybeResponse = contextResult.response;
     if (maybeResponse instanceof Response) {
-      contextResult.response = applySecurityHeaders(maybeResponse);
+      contextResult.response = applySecurityHeaders(maybeResponse, request);
     }
     return result;
   } catch (error) {
@@ -74,6 +79,7 @@ const errorMiddleware = createMiddleware().server(async ({ next, request }) => {
         status: 500,
         headers: { "content-type": "text/html; charset=utf-8" },
       }),
+      request,
     );
   }
 });
