@@ -25,9 +25,10 @@ function AuditLogPage() {
     setError(null);
     try {
       const data = await fetchRows();
-      setRows(data as Row[]);
+      setRows(Array.isArray(data) ? (data as Row[]) : []);
     } catch (e) {
       setError((e as Error).message);
+      setRows([]);
     } finally {
       setLoading(false);
     }
