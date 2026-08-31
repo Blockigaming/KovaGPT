@@ -31,6 +31,8 @@ export function ScheduledTaskEditor({
   const [when, setWhen] = useState(() => toLocalInput(editableRunAt(task)));
   const [repeat, setRepeat] = useState<ScheduledTask["repeat"]>(task.repeat);
   const timeZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", []);
+  const editable =
+    executionAvailable && ["scheduled", "running", "paused"].includes(task.status);
 
   const reset = () => {
     setTitle(task.title);
@@ -41,7 +43,7 @@ export function ScheduledTaskEditor({
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!executionAvailable || !title.trim() || !prompt.trim() || !when) return;
+    if (!editable || !title.trim() || !prompt.trim() || !when) return;
     setSaving(true);
     try {
       const next = await update({
@@ -76,10 +78,16 @@ export function ScheduledTaskEditor({
           reset();
           setOpen(true);
         }}
-        disabled={!executionAvailable}
+        disabled={!editable}
         className="p-2 rounded-md hover:bg-accent transition disabled:opacity-40"
         aria-label="Edit scheduled task"
-        title={executionAvailable ? "Edit" : "Editing unavailable while scheduled execution is disabled"}
+        title={
+          editable
+            ? "Edit"
+            : executionAvailable
+              ? "Only active or paused tasks can be edited"
+              : "Editing unavailable while scheduled execution is disabled"
+        }
       >
         <Pencil className="h-4 w-4" />
       </button>
