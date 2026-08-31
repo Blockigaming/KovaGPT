@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 85,
-  "latest": "20260831140000_scheduled_time_semantics_v2.sql",
+  "count": 86,
+  "latest": "20260831180000_scheduled_delivery_observability_v2.sql",
   "migrations": [
     {
       "order": 1,
@@ -1761,6 +1761,24 @@
       "rls": [],
       "policies": [],
       "indexes": []
+    },
+    {
+      "order": 86,
+      "filename": "20260831180000_scheduled_delivery_observability_v2.sql",
+      "timestamp": "20260831180000",
+      "sha256": "542e3358b868a22ed5190fcadd7101a8ba0ab629805dad197c2da32df22f59d4",
+      "tables": [],
+      "functions": [
+        "deliver_scheduled_in_app_outbox_v2",
+        "recover_stale_scheduled_delivery_v2",
+        "scheduled_worker_readiness_v2"
+      ],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": ["scheduled_task_delivery_outbox_processing_idx"]
     }
   ]
 }

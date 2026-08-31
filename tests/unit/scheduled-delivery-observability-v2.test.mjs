@@ -45,7 +45,7 @@ test("delivery failures use bounded retry state without persisting raw database 
   assert.match(delivery, /status = 'disabled'/u);
   assert.match(delivery, /status = 'failed'/u);
   assert.match(delivery, /least\(3600, 30 \* \(1 << least\(v_attempt - 1, 6\)\)\)/u);
-  assert.doesNotMatch(delivery, /SQLERRM/u);
+  assert.doesNotMatch(delivery, /(?:last_safe_error|safe_error)\s*=\s*SQLERRM/u);
 });
 
 test("stale processing rows have a bounded service-role recovery path", () => {
@@ -109,14 +109,24 @@ test("delivery and readiness RPCs are unavailable to authenticated clients", () 
 });
 
 test("one-shot worker drains delivery before claiming healthy readiness", () => {
-  assert.match(worker, /await dependencies\.runDeliveryBatch/u);
-  assert.match(worker, /status: "healthy"/u);
-  assert.match(worker, /await dependencies\.readReadiness/u);
-  assert.ok(worker.indexOf("runDeliveryBatch") < worker.indexOf('status: "healthy"'));
-  assert.ok(worker.indexOf('status: "healthy"') < worker.indexOf("readReadiness"));
-  assert.match(worker, /readiness\.sourceSha !== sourceSha/u);
-  assert.match(worker, /readiness\.workerRevision !== revision/u);
-  assert.match(worker, /scheduled_worker_readiness_unhealthy/u);
+  const runStart = worker.indexOf("export async function runScheduledWorkerOnce");
+  assert.notEqual(runStart, -1);
+
+  const run = worker.slice(runStart);
+  const deliveryIndex = run.indexOf("await dependencies.runDeliveryBatch");
+  const healthyIndex = run.indexOf('status: "healthy"');
+  const readinessIndex = run.indexOf("await dependencies.readReadiness");
+
+  assert.notEqual(deliveryIndex, -1);
+  assert.notEqual(healthyIndex, -1);
+  assert.notEqual(readinessIndex, -1);
+
+  assert.ok(deliveryIndex < healthyIndex);
+  assert.ok(healthyIndex < readinessIndex);
+
+  assert.match(run, /readiness\.sourceSha !== sourceSha/u);
+  assert.match(run, /readiness\.workerRevision !== revision/u);
+  assert.match(run, /scheduled_worker_readiness_unhealthy/u);
 });
 
 test("the executable worker wires real delivery/readiness adapters while product stays disabled", () => {

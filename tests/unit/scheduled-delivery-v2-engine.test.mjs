@@ -45,13 +45,10 @@ function harness(handlers = {}) {
     },
   };
   const exports = {};
-  new Function("require", "exports", compiled)(
-    (name) => {
-      if (name === "@/integrations/supabase/client.server") return { supabaseAdmin: admin };
-      throw new Error(`Unexpected import ${name}`);
-    },
-    exports,
-  );
+  new Function("require", "exports", compiled)((name) => {
+    if (name === "@/integrations/supabase/client.server") return { supabaseAdmin: admin };
+    throw new Error(`Unexpected import ${name}`);
+  }, exports);
   return { ...exports, calls };
 }
 

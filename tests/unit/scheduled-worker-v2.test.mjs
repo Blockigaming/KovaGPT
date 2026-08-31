@@ -275,10 +275,7 @@ test("an unhealthy readiness snapshot flips the terminal heartbeat to failed", a
 });
 
 test("readiness must match the exact source SHA and worker revision", async () => {
-  for (const patch of [
-    { sourceSha: "b".repeat(40) },
-    { workerRevision: "older-revision" },
-  ]) {
+  for (const patch of [{ sourceSha: "b".repeat(40) }, { workerRevision: "older-revision" }]) {
     const fixture = harness({
       readiness() {
         return { ...healthyReadiness(), ...patch };
