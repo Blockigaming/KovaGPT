@@ -37,9 +37,9 @@ process.stdout.write(JSON.stringify({
 NODE
 )"
 
-readarray -t VALUES < <(node --input-type=module - "$STRUCTURE" <<'NODE'
+STRUCTURE_VALUES="$(node --input-type=module - "$STRUCTURE" <<'NODE'
 const value = JSON.parse(process.argv[2]);
-for (const item of [
+process.stdout.write([
   value.trigger,
   value.cron,
   value.image,
@@ -52,22 +52,14 @@ for (const item of [
   value.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
   value.env.KOVA_IP_HASH_SECRET ?? '',
   JSON.stringify(value.secrets),
-]) console.log(item);
+].join('\t'));
 NODE
-)
+)"
 
-TRIGGER="${VALUES[0]:-}"
-CRON="${VALUES[1]:-}"
-JOB_IMAGE="${VALUES[2]:-}"
-COMMAND_JSON="${VALUES[3]:-}"
-ARGS_JSON="${VALUES[4]:-}"
-WORKER_ENABLED="${VALUES[5]:-}"
-WORKER_ENVIRONMENT="${VALUES[6]:-}"
-SOURCE_SHA="${VALUES[7]:-}"
-WORKER_REVISION="${VALUES[8]:-}"
-SUPABASE_SECRET_REF="${VALUES[9]:-}"
-IP_HASH_SECRET_REF="${VALUES[10]:-}"
-SECRETS_JSON="${VALUES[11]:-}"
+IFS=$'\t' read -r \
+  TRIGGER CRON JOB_IMAGE COMMAND_JSON ARGS_JSON WORKER_ENABLED WORKER_ENVIRONMENT \
+  SOURCE_SHA WORKER_REVISION SUPABASE_SECRET_REF IP_HASH_SECRET_REF SECRETS_JSON \
+  <<< "$STRUCTURE_VALUES"
 
 [[ "$TRIGGER" == "Schedule" ]] || fail "job trigger is not Schedule"
 [[ -n "$CRON" ]] || fail "job cron expression is missing"
