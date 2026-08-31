@@ -104,7 +104,10 @@ test("owner RPCs persist canonical rules and fence edits during execution", () =
   assert.match(create, /normalize_scheduled_task_rule_v2/u);
   assert.match(create, /schedule_rule,[\s\S]*v_rule/u);
   assert.match(update, /v_schedule_changed/u);
-  assert.match(update, /cancel_requested_at = case when status = 'running' then now\(\) else null end/u);
+  assert.match(
+    update,
+    /cancel_requested_at = case when status = 'running' then now\(\) else null end/u,
+  );
   assert.match(update, /state_version = state_version \+ 1/u);
 });
 

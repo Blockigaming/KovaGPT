@@ -6,6 +6,21 @@ import {
   type ScheduledWorkerHeartbeat,
 } from "@/workers/scheduled-v2-runner";
 
+type ScheduledWorkerRpcClient = {
+  rpc: (
+    name: string,
+    args?: Record<string, unknown>,
+  ) => Promise<{
+    error: unknown;
+  }>;
+};
+
+// The forward migration is intentionally not applied yet, so the generated
+// Supabase Database type cannot include this new service-role RPC. Keep the
+// exception local to this server-only worker until types are regenerated from
+// the approved migrated schema.
+const scheduledWorkerAdmin = supabaseAdmin as unknown as ScheduledWorkerRpcClient;
+
 function log(level: "info" | "error", event: string, fields: Record<string, unknown> = {}) {
   process.stdout.write(
     `${JSON.stringify({
@@ -19,7 +34,7 @@ function log(level: "info" | "error", event: string, fields: Record<string, unkn
 }
 
 async function recordHeartbeat(heartbeat: ScheduledWorkerHeartbeat): Promise<void> {
-  const { error } = await supabaseAdmin.rpc("record_scheduled_worker_heartbeat_v2", {
+  const { error } = await scheduledWorkerAdmin.rpc("record_scheduled_worker_heartbeat_v2", {
     p_environment: heartbeat.environment,
     p_worker_revision: heartbeat.revision,
     p_source_sha: heartbeat.sourceSha,

@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 83,
-  "latest": "20260829163000_testimonial_collection_system.sql",
+  "count": 85,
+  "latest": "20260831140000_scheduled_time_semantics_v2.sql",
   "migrations": [
     {
       "order": 1,
@@ -1688,6 +1688,79 @@
         "Public reads approved published testimonials"
       ],
       "indexes": ["testimonial_submissions_owner_idx", "testimonial_submissions_review_idx"]
+    },
+    {
+      "order": 84,
+      "filename": "20260831100000_scheduled_execution_v2.sql",
+      "timestamp": "20260831100000",
+      "sha256": "ecb56d337f89bcf9057a3f62f3cec185d9655b06d0ac1204156388b3961c85a3",
+      "tables": [
+        "scheduled_task_occurrences",
+        "scheduled_task_attempts",
+        "scheduled_task_delivery_outbox",
+        "scheduled_worker_heartbeats"
+      ],
+      "functions": [
+        "scheduled_task_plan_tier_v2",
+        "scheduled_task_max_active_v2",
+        "owner_create_scheduled_task_v2",
+        "owner_update_scheduled_task_v2",
+        "owner_set_scheduled_task_state_v2",
+        "pause_ineligible_scheduled_tasks_v2",
+        "claim_due_scheduled_task_occurrence_v2",
+        "heartbeat_scheduled_task_attempt_v2",
+        "recover_expired_scheduled_task_attempts_v2",
+        "settle_scheduled_task_success_v2",
+        "settle_scheduled_task_failure_v2",
+        "settle_scheduled_task_canceled_v2",
+        "record_scheduled_worker_heartbeat_v2"
+      ],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [
+        "scheduled_task_occurrences",
+        "scheduled_task_attempts",
+        "scheduled_task_delivery_outbox",
+        "scheduled_worker_heartbeats"
+      ],
+      "policies": [
+        "scheduled occurrences owner read",
+        "scheduled attempts owner read",
+        "scheduled outbox owner read"
+      ],
+      "indexes": [
+        "scheduled_tasks_id_user_uidx",
+        "scheduled_task_occurrences_owner_time_idx",
+        "scheduled_task_occurrences_retry_idx",
+        "scheduled_task_attempts_live_lease_idx",
+        "scheduled_task_attempts_owner_time_idx",
+        "scheduled_task_delivery_outbox_ready_idx"
+      ]
+    },
+    {
+      "order": 85,
+      "filename": "20260831140000_scheduled_time_semantics_v2.sql",
+      "timestamp": "20260831140000",
+      "sha256": "0fb30b3fc3cc4be0db70c0cebe681e43aa09112e3f29405d144c4f6f183cdb0a",
+      "tables": [],
+      "functions": [
+        "scheduled_time_zone_is_valid_v2",
+        "normalize_scheduled_task_rule_v2",
+        "scheduled_resolve_local_v2",
+        "scheduled_next_occurrence_v2",
+        "scheduled_coalesce_due_v2",
+        "owner_create_scheduled_task_v2",
+        "owner_update_scheduled_task_v2",
+        "claim_due_scheduled_task_occurrence_v2",
+        "settle_scheduled_task_success_v2"
+      ],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
     }
   ]
 }

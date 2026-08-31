@@ -51,7 +51,10 @@ function harness(options = {}) {
 test("the worker is fail-closed unless explicitly enabled", async () => {
   const fixture = harness();
   await assert.rejects(
-    runScheduledWorkerOnce(fixture.dependencies, { ...validEnv, KOVA_SCHEDULED_WORKER_ENABLED: "0" }),
+    runScheduledWorkerOnce(fixture.dependencies, {
+      ...validEnv,
+      KOVA_SCHEDULED_WORKER_ENABLED: "0",
+    }),
     /scheduled_worker_disabled/u,
   );
   assert.deepEqual(fixture.calls, []);
@@ -59,7 +62,11 @@ test("the worker is fail-closed unless explicitly enabled", async () => {
 
 for (const [name, patch, message] of [
   ["environment", { KOVA_SCHEDULED_WORKER_ENVIRONMENT: "" }, /environment_required/u],
-  ["environment characters", { KOVA_SCHEDULED_WORKER_ENVIRONMENT: "Bad Env" }, /environment_invalid/u],
+  [
+    "environment characters",
+    { KOVA_SCHEDULED_WORKER_ENVIRONMENT: "Bad Env" },
+    /environment_invalid/u,
+  ],
   ["revision", { KOVA_WORKER_REVISION: "" }, /revision_required/u],
   ["source SHA", { KOVA_SOURCE_SHA: "short" }, /source_sha_invalid/u],
   ["batch zero", { KOVA_SCHEDULED_WORKER_BATCH_LIMIT: "0" }, /batch_limit_invalid/u],
@@ -124,14 +131,11 @@ test("batch failure records a failed heartbeat and preserves the original cause"
       throw original;
     },
   });
-  await assert.rejects(
-    runScheduledWorkerOnce(fixture.dependencies, validEnv),
-    (error) => {
-      assert.equal(error.message, "The scheduled worker could not complete its one-shot batch.");
-      assert.equal(error.cause, original);
-      return true;
-    },
-  );
+  await assert.rejects(runScheduledWorkerOnce(fixture.dependencies, validEnv), (error) => {
+    assert.equal(error.message, "The scheduled worker could not complete its one-shot batch.");
+    assert.equal(error.cause, original);
+    return true;
+  });
   assert.deepEqual(fixture.calls, [
     "log:scheduled_worker_started",
     "heartbeat:running",
@@ -164,7 +168,10 @@ test("a failed terminal heartbeat never hides the original batch failure", async
     "log:scheduled_worker_failure_heartbeat_failed",
     "log:scheduled_worker_failed",
   ]);
-  assert.doesNotMatch(JSON.stringify(fixture.logs), /private batch detail|private heartbeat detail/u);
+  assert.doesNotMatch(
+    JSON.stringify(fixture.logs),
+    /private batch detail|private heartbeat detail/u,
+  );
 });
 
 test("startup heartbeat failure prevents paid batch execution", async () => {
@@ -173,6 +180,9 @@ test("startup heartbeat failure prevents paid batch execution", async () => {
       if (heartbeat.status === "running") throw new Error("fixture unavailable");
     },
   });
-  await assert.rejects(runScheduledWorkerOnce(fixture.dependencies, validEnv), /fixture unavailable/u);
+  await assert.rejects(
+    runScheduledWorkerOnce(fixture.dependencies, validEnv),
+    /fixture unavailable/u,
+  );
   assert.deepEqual(fixture.calls, ["log:scheduled_worker_started", "heartbeat:running"]);
 });

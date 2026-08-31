@@ -10,10 +10,7 @@ const dockerfile = readFileSync("Dockerfile", "utf8");
 const product = readFileSync("src/lib/scheduled-tasks.functions.ts", "utf8");
 
 test("the normal production build includes one bundled scheduled worker", () => {
-  assert.equal(
-    packageJson.scripts.build,
-    "vite build && npm run build:scheduled-worker",
-  );
+  assert.equal(packageJson.scripts.build, "vite build && npm run build:scheduled-worker");
   assert.equal(
     packageJson.scripts["build:scheduled-worker"],
     "vite build --config vite.scheduled-worker.config.ts",

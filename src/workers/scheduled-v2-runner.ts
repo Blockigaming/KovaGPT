@@ -41,7 +41,12 @@ function required(value: string | undefined, code: string): string {
   return normalized;
 }
 
-function boundedInteger(value: string | undefined, fallback: number, minimum: number, maximum: number) {
+function boundedInteger(
+  value: string | undefined,
+  fallback: number,
+  minimum: number,
+  maximum: number,
+) {
   const parsed = value == null || value.trim() === "" ? fallback : Number(value);
   if (!Number.isInteger(parsed) || parsed < minimum || parsed > maximum) {
     throw new Error("scheduled_worker_batch_limit_invalid");
@@ -91,7 +96,10 @@ export async function runScheduledWorkerOnce(
   }
 
   const batchLimit = boundedInteger(environment.KOVA_SCHEDULED_WORKER_BATCH_LIMIT, 5, 1, 25);
-  const host = dependencies.hostname().replace(/[^a-zA-Z0-9._-]/gu, "-").slice(0, 80);
+  const host = dependencies
+    .hostname()
+    .replace(/[^a-zA-Z0-9._-]/gu, "-")
+    .slice(0, 80);
   const workerId = `${workerEnvironment}-${revision}-${host}`.slice(0, 240);
   const heartbeatBase = {
     environment: workerEnvironment,
