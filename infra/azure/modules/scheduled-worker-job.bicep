@@ -382,5 +382,5 @@ resource schedulerMissingSuccessAlert 'Microsoft.Insights/scheduledQueryRules@20
 output scheduledJobName string = scheduledJob.name
 output scheduledJobResourceId string = scheduledJob.id
 output schedulerAlertsEnabled bool = alertsEnabled
-output schedulerFailureAlertName string = alertsEnabled ? schedulerFailureAlert.name : ''
-output schedulerMissingSuccessAlertName string = alertsEnabled ? schedulerMissingSuccessAlert.name : ''
+output schedulerFailureAlertName string = alertsEnabled ? '${jobName}-failure' : ''
+output schedulerMissingSuccessAlertName string = alertsEnabled ? '${jobName}-missing-success' : ''
