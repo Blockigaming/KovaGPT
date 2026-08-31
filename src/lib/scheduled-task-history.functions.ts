@@ -103,23 +103,32 @@ export const listScheduledTaskHistory = createServerFn({ method: "POST" })
   .validator((input: unknown) => TaskIdSchema.parse(input))
   .handler(async ({ data, context }): Promise<ScheduledTaskHistoryOccurrence[]> => {
     const client = context.supabase as unknown as LooseClient;
-    const [occurrences, attempts, deliveries] = await Promise.all([
-      client
-        .from("scheduled_task_occurrences")
-        .select(
-          "id,task_id,scheduled_for,recurrence_anchor,manual_retry_of,scheduled_local,time_zone,status,result_summary,failure_type,safe_error,retry_after,completed_at,schedule_resolution,missed_count",
-        )
-        .eq("user_id", context.userId)
-        .eq("task_id", data.taskId)
-        .order("scheduled_for", { ascending: false })
-        .limit(50),
+    const occurrences = await client
+      .from("scheduled_task_occurrences")
+      .select(
+        "id,task_id,scheduled_for,recurrence_anchor,manual_retry_of,scheduled_local,time_zone,status,result_summary,failure_type,safe_error,retry_after,completed_at,schedule_resolution,missed_count",
+      )
+      .eq("user_id", context.userId)
+      .eq("task_id", data.taskId)
+      .order("scheduled_for", { ascending: false })
+      .limit(50);
+
+    if (occurrences.error) {
+      throw new Error("Scheduled task history could not be loaded.");
+    }
+
+    const occurrenceRows = (occurrences.data ?? []) as OccurrenceRow[];
+    if (occurrenceRows.length === 0) return [];
+    const occurrenceIds = occurrenceRows.map((row) => row.id);
+
+    const [attempts, deliveries] = await Promise.all([
       client
         .from("scheduled_task_attempts")
         .select(
           "id,occurrence_id,attempt_number,status,failure_type,safe_error,retry_after,started_at,completed_at",
         )
         .eq("user_id", context.userId)
-        .eq("task_id", data.taskId)
+        .in("occurrence_id", occurrenceIds)
         .order("created_at", { ascending: false })
         .limit(200),
       client
@@ -128,11 +137,12 @@ export const listScheduledTaskHistory = createServerFn({ method: "POST" })
           "id,occurrence_id,channel,event_type,status,attempt_count,delivered_at,last_safe_error",
         )
         .eq("user_id", context.userId)
+        .in("occurrence_id", occurrenceIds)
         .order("created_at", { ascending: false })
         .limit(200),
     ]);
 
-    if (occurrences.error || attempts.error || deliveries.error) {
+    if (attempts.error || deliveries.error) {
       throw new Error("Scheduled task history could not be loaded.");
     }
 
@@ -167,7 +177,7 @@ export const listScheduledTaskHistory = createServerFn({ method: "POST" })
       deliveriesByOccurrence.set(row.occurrence_id, items);
     }
 
-    return ((occurrences.data ?? []) as OccurrenceRow[]).map((row) => ({
+    return occurrenceRows.map((row) => ({
       id: row.id,
       scheduledFor: row.scheduled_for,
       recurrenceAnchor: row.recurrence_anchor,
