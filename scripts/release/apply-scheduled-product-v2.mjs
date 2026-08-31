@@ -154,16 +154,18 @@ test("manual retry creates a new occurrence while preserving recurring cadence",
   assert.doesNotMatch(retryMigration, /update public\\.scheduled_task_attempts[\\s\\S]*?attempt_number = 1/u);
 });
 
-test("manual retry stays owner-only paid and the UI fails closed until deployment readiness", () => {
+test("manual retry stays owner-only paid and the UI fails closed until explicit runtime activation", () => {
   assert.match(retryMigration, /v_user_id uuid := auth\\.uid\\(\\)/u);
   assert.match(retryMigration, /scheduled_task_plan_tier_v2\\(v_user_id\\) not in \\('plus', 'pro'\\)/u);
   assert.match(retryMigration, /grant execute on function public\\.owner_retry_scheduled_task_v2\\(uuid\\)[\\s\\S]*?to authenticated/u);
-  assert.match(functions, /if \\(!scheduledExecutionAvailable\\)/u);
+  assert.match(functions, /if \\(!scheduledExecutionRuntimeAvailable\\(\\)\\)/u);
   assert.match(taskFunctions, /export const scheduledExecutionAvailable = false;/u);
+  assert.match(taskFunctions, /export function scheduledExecutionRuntimeAvailable/u);
 });
 
-test("running owner mutations are explicitly canceled and edited tasks requeue safely", () => {
+test("running owner mutations are explicitly canceled, lease fenced and edited tasks requeue safely", () => {
   assert.match(mutationMigration, /p_action in \\('pause', 'cancel', 'delete'\\) and status = 'running'/u);
+  assert.match(mutationMigration, /v_attempt\\.lease_expires_at <= now\\(\\)/u);
   assert.match(mutationMigration, /v_task\\.state_version <> v_occ\\.task_state_version/u);
   assert.match(mutationMigration, /v_requeue :=/u);
   assert.match(mutationMigration, /status = case when v_requeue then 'scheduled' else 'paused' end/u);
@@ -180,11 +182,12 @@ test("history reads only owner-scoped rows for the selected occurrence set and o
   assert.match(functions, /limit\\(200\\)/u);
 });
 
-test("editing schedule fields replaces the normalized wall-clock rule", () => {
+test("editing schedule fields replaces the normalized wall-clock rule and only mutable lifecycle states can edit", () => {
   assert.match(taskFunctions, /const scheduleChanged =/u);
   assert.match(taskFunctions, /p_replace_schedule_rule: scheduleChanged/u);
   assert.match(editor, /editableRunAt\\(task\\)/u);
   assert.match(editor, /time_zone: timeZone/u);
+  assert.match(editor, /executionAvailable && \\["scheduled", "running", "paused"\\]\\.includes\\(task\\.status\\)/u);
 });
 
 test("scheduled-task page wires real edit history timezone and manual retry UI", () => {
