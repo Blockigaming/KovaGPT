@@ -588,10 +588,7 @@
     "validate_agent_dependency_edge",
     "writing_documents_touch"
   ],
-  "enums": [
-    "project_role",
-    "project_task_status"
-  ],
+  "enums": ["project_role", "project_task_status"],
   "extensions": [
     "pg_cron",
     "pg_cron",
