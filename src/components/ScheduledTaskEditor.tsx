@@ -10,6 +10,10 @@ function toLocalInput(value: string) {
   return local.toISOString().slice(0, 16);
 }
 
+function editableRunAt(task: ScheduledTask) {
+  return task.next_run_at ?? task.run_at;
+}
+
 export function ScheduledTaskEditor({
   task,
   executionAvailable,
@@ -24,14 +28,14 @@ export function ScheduledTaskEditor({
   const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState(task.title);
   const [prompt, setPrompt] = useState(task.prompt);
-  const [when, setWhen] = useState(() => toLocalInput(task.run_at));
+  const [when, setWhen] = useState(() => toLocalInput(editableRunAt(task)));
   const [repeat, setRepeat] = useState<ScheduledTask["repeat"]>(task.repeat);
   const timeZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", []);
 
   const reset = () => {
     setTitle(task.title);
     setPrompt(task.prompt);
-    setWhen(toLocalInput(task.run_at));
+    setWhen(toLocalInput(editableRunAt(task)));
     setRepeat(task.repeat);
   };
 
@@ -52,7 +56,11 @@ export function ScheduledTaskEditor({
       });
       onUpdated(next);
       setOpen(false);
-      toast.success(task.status === "running" ? "Task updated; the active run will stop safely" : "Task updated");
+      toast.success(
+        task.status === "running"
+          ? "Task updated; the active occurrence will stop and the new schedule will continue"
+          : "Task updated",
+      );
     } catch (reason) {
       toast.error(reason instanceof Error ? reason.message : "Scheduled task could not be updated");
     } finally {
