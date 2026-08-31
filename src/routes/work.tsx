@@ -16,7 +16,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { RealtimeReadiness } from "@/components/RealtimeReadiness";
@@ -79,7 +79,7 @@ function WorkRoute() {
     detailRequestId = useRef(0),
     selectedRef = useRef<string | null>(null);
   const loadDetail = useCallback(
-    async (id: string | null) => {
+    async (id: string | null = selectedRef.current) => {
       const requestId = ++detailRequestId.current;
       if (!id) {
         setDetail(null);
