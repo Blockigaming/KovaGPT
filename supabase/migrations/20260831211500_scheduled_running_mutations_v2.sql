@@ -116,8 +116,8 @@ begin
   if v_attempt.status = 'canceled' then
     return true;
   end if;
-  if v_attempt.status <> 'running' then
-    raise exception 'scheduled_attempt_not_running' using errcode = '55000';
+  if v_attempt.status <> 'running' or v_attempt.lease_expires_at <= now() then
+    raise exception 'scheduled_execution_lease_not_owned' using errcode = '55000';
   end if;
 
   select * into v_occ
