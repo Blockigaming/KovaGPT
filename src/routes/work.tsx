@@ -38,6 +38,7 @@ import {
   type WorkRun,
 } from "@/lib/work.functions";
 import { calculateCriticalPath, dagLayout } from "@/lib/work-graph.mjs";
+import { parseWorkRunList } from "@/lib/work-response.mjs";
 
 export const Route = createFileRoute("/work")({
   component: WorkRoute,
@@ -75,12 +76,16 @@ function WorkRoute() {
       "graph",
     );
   const loadRuns = useCallback(async () => {
+    setLoading(true);
     try {
-      const rows = await fetchRuns();
+      const rows = parseWorkRunList(await fetchRuns());
       setRuns(rows);
       setSelected((id) => id ?? rows[0]?.id ?? null);
       setError(null);
     } catch {
+      setRuns([]);
+      setSelected(null);
+      setDetail(null);
       setError("Work runs could not be loaded.");
     } finally {
       setLoading(false);
