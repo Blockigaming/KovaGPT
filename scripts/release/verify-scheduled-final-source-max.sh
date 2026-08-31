@@ -43,12 +43,18 @@ for tool in eslint prettier tsc vite; do
 done
 command -v node >/dev/null || { echo "STOP=MISSING_NODE"; exit 1; }
 
+SHELL_FILES=(
+  scripts/release/finalize-scheduled-source.sh
+  scripts/release/finalize-scheduled-source-max.sh
+  scripts/release/verify-scheduled-final-source.sh
+  scripts/release/verify-scheduled-final-source-max.sh
+  scripts/azure/verify-scheduled-job-local.sh
+)
+
 FORMAT_FILES=(
   scripts/release/apply-scheduled-azure-v2.mjs
   scripts/release/apply-scheduled-runtime-activation-v2.mjs
   scripts/release/apply-scheduled-product-v2.mjs
-  scripts/release/finalize-scheduled-source.sh
-  scripts/release/verify-scheduled-final-source.sh
   scripts/azure/template-contract.mjs
   scripts/azure/validate-production-template.mjs
   scripts/azure/validate-staging-template.mjs
@@ -77,7 +83,7 @@ FORMAT_FILES=(
   tests/unit/scheduled-delivery-v2-engine.test.mjs
 )
 
-for file in "${FORMAT_FILES[@]}"; do
+for file in "${SHELL_FILES[@]}" "${FORMAT_FILES[@]}"; do
   [ -f "$file" ] || { echo "STOP=MISSING_FINAL_SCHEDULER_FILE:$file"; exit 1; }
 done
 
@@ -86,6 +92,10 @@ if [ "$MIGRATION_COUNT" != "$EXPECTED_MIGRATIONS" ]; then
   echo "STOP=UNEXPECTED_MIGRATION_COUNT:$MIGRATION_COUNT"
   exit 1
 fi
+
+# Shell files use the shell parser. Prettier and ESLint are intentionally
+# restricted to the JavaScript/TypeScript source they support.
+gate shell-syntax bash -n "${SHELL_FILES[@]}"
 
 # The complete committed scheduler source must be the fixed point of all three
 # deterministic transforms, including same-image runtime activation.
