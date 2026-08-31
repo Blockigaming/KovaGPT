@@ -41,6 +41,7 @@ scripts/azure/validate-production-template.mjs
 scripts/azure/validate-staging-template.mjs
 scripts/release/apply-scheduled-azure-v2.mjs
 scripts/release/apply-scheduled-product-v2.mjs
+scripts/release/apply-scheduled-runtime-activation-v2.mjs
 src/components/ScheduledTaskEditor.tsx
 src/components/ScheduledTaskHistoryPanel.tsx
 src/lib/scheduled-task-history.functions.ts
@@ -50,18 +51,21 @@ tests/unit/azure-production-template.test.mjs
 tests/unit/azure-staging-template.test.mjs
 tests/unit/scheduled-azure-v2-source.test.mjs
 tests/unit/scheduled-history-retry-v2.test.mjs
+tests/unit/scheduled-runtime-activation-v2.test.mjs
 EOF
 sort -o "$ALLOWED_FILE" "$ALLOWED_FILE"
 
 echo
-echo "=== 1. APPLY THE TWO DETERMINISTIC FINAL TRANSFORMS ==="
+echo "=== 1. APPLY THE THREE DETERMINISTIC FINAL TRANSFORMS ==="
 node scripts/release/apply-scheduled-azure-v2.mjs
+node scripts/release/apply-scheduled-runtime-activation-v2.mjs
 node scripts/release/apply-scheduled-product-v2.mjs
 
 echo
 echo "=== 2. FORMAT ONLY SCHEDULER SOURCE OWNED BY THIS BATCH ==="
 node_modules/.bin/prettier --write \
   scripts/release/apply-scheduled-azure-v2.mjs \
+  scripts/release/apply-scheduled-runtime-activation-v2.mjs \
   scripts/release/apply-scheduled-product-v2.mjs \
   scripts/azure/template-contract.mjs \
   scripts/azure/validate-production-template.mjs \
@@ -74,7 +78,8 @@ node_modules/.bin/prettier --write \
   tests/unit/azure-production-template.test.mjs \
   tests/unit/azure-staging-template.test.mjs \
   tests/unit/scheduled-azure-v2-source.test.mjs \
-  tests/unit/scheduled-history-retry-v2.test.mjs
+  tests/unit/scheduled-history-retry-v2.test.mjs \
+  tests/unit/scheduled-runtime-activation-v2.test.mjs
 
 echo
 echo "=== 3. REGENERATE THE COMPLETE MIGRATION MANIFEST ONCE ==="
@@ -153,7 +158,8 @@ echo "============================================================"
 echo " KOVAGPT_SCHEDULED_SOURCE_STACK=PASS"
 echo " VERIFIED_SHA=$VERIFY_SHA"
 echo " MIGRATION_COUNT=$MIGRATION_COUNT"
-echo " SCHEDULER_ENABLED=NO"
+echo " SCHEDULER_SOURCE_DEFAULT=DISABLED"
+echo " RUNTIME_ACTIVATION=EXPLICIT_SAME_IMAGE_FLAG"
 echo " PRODUCTION_MIGRATIONS_APPLIED=0"
 echo " PROVIDER_LIVE_CALLS=0"
 echo " APPLICATION_BUILD_RUN=NO"
