@@ -32,9 +32,13 @@ export type ScheduledTask = {
   run_at: string;
   repeat: "none" | "daily" | "weekly" | "monthly";
   status: "scheduled" | "running" | "paused" | "completed" | "failed";
+  time_zone: string;
   last_run_at: string | null;
   next_run_at: string | null;
   last_result: string | null;
+  last_failure_type?: string | null;
+  last_error?: string | null;
+  execution_blocked_reason?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -173,6 +177,8 @@ export const updateScheduledTask = createServerFn({ method: "POST" })
       data.run_at !== undefined ||
       data.repeat !== undefined ||
       data.time_zone !== undefined;
+    const scheduleChanged =
+      data.run_at !== undefined || data.repeat !== undefined || data.time_zone !== undefined;
 
     if (hasContentPatch) {
       const update = await rpc.rpc<ScheduledTask>("owner_update_scheduled_task_v2", {
@@ -183,7 +189,7 @@ export const updateScheduledTask = createServerFn({ method: "POST" })
         p_repeat: data.repeat ?? null,
         p_time_zone: data.time_zone ?? null,
         p_schedule_rule: null,
-        p_replace_schedule_rule: false,
+        p_replace_schedule_rule: scheduleChanged,
       });
       if (update.error) {
         console.error("[serverfn]", update.error.message);
