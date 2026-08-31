@@ -22,6 +22,7 @@ export function readTemplatePair(environment) {
 }
 
 export function validateCommonAzureTemplate({ template, parameters, environment }) {
+  const schedulerModule = readFileSync("infra/azure/modules/scheduled-worker-job.bicep", "utf8");
   const parsedParameters = JSON.parse(parameters);
   const values = parsedParameters.parameters ?? {};
 
@@ -32,8 +33,13 @@ export function validateCommonAzureTemplate({ template, parameters, environment 
   );
   requireMatch(
     template,
-    /resource scheduledJob 'Microsoft\.App\/jobs@2025-01-01' = if \(deployScheduledJob\)/u,
-    `${environment} scheduled job is required`,
+    /module scheduledWorker '\.\.\/modules\/scheduled-worker-job\.bicep' = if \(deployScheduledJob\)/u,
+    `${environment} must wire the dedicated scheduled-worker module`,
+  );
+  requireMatch(
+    schedulerModule,
+    /resource scheduledJob 'Microsoft\.App\/jobs@2025-01-01'/u,
+    "scheduled-worker module must use Container Apps Jobs",
   );
   requireMatch(
     template,
@@ -150,17 +156,50 @@ export function validateCommonAzureTemplate({ template, parameters, environment 
     /image: imageReference/u,
     "the container must use the immutable image parameter",
   );
-  requireMatch(template, /KOVA_SCHEDULED_EXECUTION_ENDPOINT/u, "scheduled job endpoint is missing");
-  requireMatch(
+  rejectMatch(
     template,
-    /authorization: `Bearer \$\{token\}`/u,
-    "scheduler must authenticate with a bearer token",
+    /schedulerScript|KOVA_SCHEDULED_EXECUTION_ENDPOINT/u,
+    "HTTP-wrapper scheduled execution is prohibited",
   );
-  requireMatch(template, /scheduleTriggerConfig/u, "scheduled trigger configuration is missing");
   requireMatch(
-    template,
-    /cronExpression: schedulerCronExpression/u,
+    schedulerModule,
+    /args: \[\s*'dist\/worker\/scheduled-v2\.mjs'\s*\]/u,
+    "scheduled job must execute the dedicated one-shot worker",
+  );
+  requireMatch(
+    schedulerModule,
+    /name: 'KOVA_SCHEDULED_WORKER_ENABLED'[\s\S]*?value: '1'/u,
+    "scheduled worker must require an explicit enable flag",
+  );
+  requireMatch(
+    schedulerModule,
+    /name: 'KOVA_SOURCE_SHA'[\s\S]*?value: sourceSha/u,
+    "scheduled worker must carry exact source identity",
+  );
+  requireMatch(
+    schedulerModule,
+    /scheduleTriggerConfig/u,
+    "scheduled trigger configuration is missing",
+  );
+  requireMatch(
+    schedulerModule,
+    /cronExpression: cronExpression/u,
     "scheduler cron must be explicit",
+  );
+  requireMatch(
+    schedulerModule,
+    /Microsoft\.Insights\/scheduledQueryRules@2023-12-01/u,
+    "scheduler alert definitions are missing",
+  );
+  requireMatch(
+    schedulerModule,
+    /scheduled_worker_failed/u,
+    "scheduler failure alert query is missing",
+  );
+  requireMatch(
+    schedulerModule,
+    /scheduled_worker_completed/u,
+    "scheduler missing-success alert query is missing",
   );
   requireMatch(
     template,

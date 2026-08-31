@@ -68,6 +68,8 @@ export function validateAzureStagingTemplate() {
     isolatedObservability: true,
     scaleToZero: true,
     scheduledJobDefined: true,
+    dedicatedScheduledWorker: true,
+    schedulerAlertsDefined: true,
     publicUrlConfigured: true,
     zeroLovable: true,
     ...compilation,

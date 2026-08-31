@@ -10,6 +10,8 @@ test("production Azure template is immutable, keyless, observable, Cloudflare-re
   assert.equal(evidence.managedIdentityRbac, true);
   assert.equal(evidence.cloudflareOnlyOrigin, true);
   assert.equal(evidence.scheduledJobDefined, true);
+  assert.equal(evidence.dedicatedScheduledWorker, true);
+  assert.equal(evidence.schedulerAlertsDefined, true);
   assert.equal(evidence.publicUrlConfigured, true);
   assert.equal(evidence.zeroLovable, true);
 });

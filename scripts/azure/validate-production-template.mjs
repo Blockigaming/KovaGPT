@@ -102,6 +102,8 @@ export function validateAzureProductionTemplate() {
     keyVaultReferences: true,
     cloudflareOnlyOrigin: true,
     scheduledJobDefined: true,
+    dedicatedScheduledWorker: true,
+    schedulerAlertsDefined: true,
     applicationInsights: true,
     publicUrlConfigured: true,
     zeroLovable: true,

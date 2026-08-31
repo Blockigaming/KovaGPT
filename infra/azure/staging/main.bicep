@@ -136,6 +136,40 @@ param schedulerTimeoutSeconds int = 300
 @maxValue(10)
 param schedulerRetryLimit int = 2
 
+@description('Maximum task occurrences processed by one scheduler execution.')
+@minValue(1)
+@maxValue(25)
+param schedulerBatchLimit int = 5
+
+@description('Maximum delivery rows processed by one scheduler execution.')
+@minValue(1)
+@maxValue(200)
+param schedulerDeliveryBatchLimit int = 50
+
+@description('Age in seconds after which a delivery processing row may be recovered.')
+@minValue(30)
+@maxValue(3600)
+param schedulerDeliveryStaleSeconds int = 300
+
+@description('Maximum healthy scheduler heartbeat age in seconds.')
+@minValue(30)
+@maxValue(3600)
+param schedulerReadinessStaleSeconds int = 600
+
+@description('Maximum pending or failed delivery backlog accepted as healthy.')
+@minValue(0)
+@maxValue(10000)
+param schedulerMaxDeliveryBacklog int = 100
+
+@description('Expose Scheduled Tasks in the web UI only after schema, worker and canary verification. The runtime remains disabled unless the Job and generation are also enabled.')
+param scheduledTasksEnabled bool = false
+
+@description('Deploy Azure Monitor scheduler failure and missing-success alerts.')
+param deploySchedulerAlerts bool = false
+
+@description('Azure Monitor action-group resource IDs for scheduler alerts.')
+param schedulerAlertActionGroupResourceIds array = []
+
 @description('Log Analytics retention in days.')
 @minValue(30)
 @maxValue(730)
@@ -260,6 +294,10 @@ var coreEnvironment = [
     value: sourceTree
   }
   {
+    name: 'KOVA_SCHEDULED_TASKS_ENABLED'
+    value: scheduledTasksEnabled && deployScheduledJob && generationEnabled ? '1' : '0'
+  }
+  {
     name: 'KOVA_EXPECTED_SUPABASE_PROJECT_REF'
     value: expectedSupabaseProjectRef
   }
@@ -357,33 +395,6 @@ var additionalPlainEnvironment = [for binding in additionalEnvironmentItems: {
   value: string(binding.value)
 }]
 var webEnvironment = concat(coreEnvironment, additionalSecretEnvironment, additionalPlainEnvironment)
-var schedulerScript = '''
-const controller = new AbortController();
-const timeout = setTimeout(() => controller.abort(), 55000);
-(async () => {
-  const endpoint = process.env.KOVA_SCHEDULED_EXECUTION_ENDPOINT;
-  const token = process.env.SCHEDULED_TASK_SECRET;
-  if (!endpoint || !token) throw new Error('scheduler_configuration_missing');
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      authorization: `Bearer ${token}`,
-    },
-    body: '{}',
-    signal: controller.signal,
-  });
-  const body = await response.text();
-  if (!response.ok) throw new Error(`scheduler_http_${response.status}`);
-  console.log(JSON.stringify({ ok: true, status: response.status, responseBytes: Buffer.byteLength(body) }));
-})()
-  .catch((error) => {
-    console.error(error instanceof Error ? error.message : 'scheduler_execution_failed');
-    process.exitCode = 1;
-  })
-  .finally(() => clearTimeout(timeout));
-'''
-
 resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
   name: acrName
   scope: resourceGroup(acrResourceGroupName)
@@ -628,75 +639,45 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
   ]
 }
 
-resource scheduledJob 'Microsoft.App/jobs@2025-01-01' = if (deployScheduledJob) {
-  name: scheduledJobResourceName
-  location: location
-  tags: tags
-  identity: {
-    type: 'UserAssigned'
-    userAssignedIdentities: {
-      '${identity.id}': {}
-    }
-  }
-  properties: {
-    environmentId: environment.id
-    configuration: {
-      triggerType: 'Schedule'
-      replicaTimeout: schedulerTimeoutSeconds
-      replicaRetryLimit: schedulerRetryLimit
-      scheduleTriggerConfig: {
-        cronExpression: schedulerCronExpression
-        parallelism: 1
-        replicaCompletionCount: 1
-      }
-      registries: [
-        {
-          server: acr.properties.loginServer
-          identity: identity.id
-        }
-      ]
-      secrets: [
-        {
-          name: 'scheduled-execution-secret'
-          keyVaultUrl: scheduledExecutionSecretUri
-          identity: identity.id
-        }
-      ]
-    }
-    template: {
-      containers: [
-        {
-          name: 'scheduler'
-          image: imageReference
-          command: [
-            'node'
-          ]
-          args: [
-            '-e'
-            schedulerScript
-          ]
-          env: [
-            {
-              name: 'KOVA_SCHEDULED_EXECUTION_ENDPOINT'
-              value: '${publicBaseUrl}/api/internal/scheduled-execution'
-            }
-            {
-              name: 'SCHEDULED_TASK_SECRET'
-              secretRef: 'scheduled-execution-secret'
-            }
-          ]
-          resources: {
-            cpu: json('0.25')
-            memory: '0.5Gi'
-          }
-        }
-      ]
-    }
+module scheduledWorker '../modules/scheduled-worker-job.bicep' = if (deployScheduledJob) {
+  name: 'scheduled-worker-${uniqueString(scheduledJobResourceName, sourceSha)}'
+  params: {
+    location: location
+    jobName: scheduledJobResourceName
+    managedEnvironmentId: environment.id
+    imageReference: imageReference
+    registryServer: acr.properties.loginServer
+    managedIdentityResourceId: identity.id
+    managedIdentityClientId: identity.properties.clientId
+    supabaseServiceRoleSecretUri: supabaseServiceRoleSecretUri
+    kovaIpHashSecretUri: kovaIpHashSecretUri
+    supabaseUrl: supabaseUrl
+    azureOpenAiEndpoint: azureOpenAi.properties.endpoint
+    azureOpenAiChatDeployment: azureOpenAiChatDeployment
+    azureOpenAiThinkingDeployment: azureOpenAiThinkingDeployment
+    azureOpenAiDeepDeployment: azureOpenAiDeepDeployment
+    sourceSha: sourceSha
+    schedulerEnvironment: 'staging'
+    cronExpression: schedulerCronExpression
+    timeoutSeconds: schedulerTimeoutSeconds
+    retryLimit: schedulerRetryLimit
+    batchLimit: schedulerBatchLimit
+    deliveryBatchLimit: schedulerDeliveryBatchLimit
+    deliveryStaleSeconds: schedulerDeliveryStaleSeconds
+    readinessStaleSeconds: schedulerReadinessStaleSeconds
+    maxDeliveryBacklog: schedulerMaxDeliveryBacklog
+    generationEnabled: generationEnabled
+    logAnalyticsWorkspaceId: workspace.id
+    deployAlerts: deploySchedulerAlerts
+    alertActionGroupResourceIds: schedulerAlertActionGroupResourceIds
+    alertEvaluationFrequency: 'PT5M'
+    alertWindowSize: 'PT15M'
+    tags: tags
   }
   dependsOn: [
-    webApp
     acrPull
     keyVaultSecretsUser
+    azureOpenAiUser
   ]
 }
 
@@ -744,6 +725,7 @@ resource budget 'Microsoft.Consumption/budgets@2024-08-01' = if (deployBudget) {
 output containerAppName string = webApp.name
 output containerAppFqdn string = webApp.properties.configuration.ingress.fqdn
 output scheduledJobName string = deployScheduledJob ? scheduledJobResourceName : ''
+output schedulerAlertsEnabled bool = deployScheduledJob && deploySchedulerAlerts && length(schedulerAlertActionGroupResourceIds) > 0
 output customDomainsBound bool = bindCustomDomains
 output ingressRestricted bool = restrictIngress
 output managedEnvironmentName string = environment.name

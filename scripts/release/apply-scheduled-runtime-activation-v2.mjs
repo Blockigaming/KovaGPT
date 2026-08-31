@@ -6,7 +6,11 @@ const paths = ["infra/azure/production/main.bicep", "infra/azure/staging/main.bi
 function replaceOnce(source, before, after, label) {
   const index = source.indexOf(before);
   assert.notEqual(index, -1, `${label}: expected source was not found`);
-  assert.equal(source.indexOf(before, index + before.length), -1, `${label}: source was not unique`);
+  assert.equal(
+    source.indexOf(before, index + before.length),
+    -1,
+    `${label}: source was not unique`,
+  );
   return source.slice(0, index) + after + source.slice(index + before.length);
 }
 

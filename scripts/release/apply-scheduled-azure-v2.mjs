@@ -29,7 +29,11 @@ const environments = [
 function replaceOnce(source, before, after, label) {
   const index = source.indexOf(before);
   assert.notEqual(index, -1, `${label}: expected source was not found`);
-  assert.equal(source.indexOf(before, index + before.length), -1, `${label}: expected source was not unique`);
+  assert.equal(
+    source.indexOf(before, index + before.length),
+    -1,
+    `${label}: expected source was not unique`,
+  );
   return source.slice(0, index) + after + source.slice(index + before.length);
 }
 
@@ -136,15 +140,33 @@ function patchEnvironment(config) {
 @minValue(0)
 @maxValue(10)
 param schedulerRetryLimit int = ${config.retryLimit}`;
-  source = replaceOnce(source, retryBlock, schedulerParameterBlock(config), `${config.name} scheduler parameters`);
+  source = replaceOnce(
+    source,
+    retryBlock,
+    schedulerParameterBlock(config),
+    `${config.name} scheduler parameters`,
+  );
 
   const scriptStart = "var schedulerScript = '''";
   const resourceAcr = "resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01'";
-  source = replaceRange(source, scriptStart, resourceAcr, "", `${config.name} obsolete HTTP wrapper`);
+  source = replaceRange(
+    source,
+    scriptStart,
+    resourceAcr,
+    "",
+    `${config.name} obsolete HTTP wrapper`,
+  );
 
-  const jobStart = "resource scheduledJob 'Microsoft.App/jobs@2025-01-01' = if (deployScheduledJob) {";
+  const jobStart =
+    "resource scheduledJob 'Microsoft.App/jobs@2025-01-01' = if (deployScheduledJob) {";
   const budgetStart = "resource budget 'Microsoft.Consumption/budgets@2024-08-01'";
-  source = replaceRange(source, jobStart, budgetStart, scheduledWorkerModuleBlock(config), `${config.name} scheduled worker wiring`);
+  source = replaceRange(
+    source,
+    jobStart,
+    budgetStart,
+    scheduledWorkerModuleBlock(config),
+    `${config.name} scheduled worker wiring`,
+  );
 
   source = replaceOnce(
     source,
@@ -153,7 +175,10 @@ param schedulerRetryLimit int = ${config.retryLimit}`;
     `${config.name} scheduler outputs`,
   );
 
-  assert.match(source, /module scheduledWorker '\.\.\/modules\/scheduled-worker-job\.bicep' = if \(deployScheduledJob\)/u);
+  assert.match(
+    source,
+    /module scheduledWorker '\.\.\/modules\/scheduled-worker-job\.bicep' = if \(deployScheduledJob\)/u,
+  );
   assert.doesNotMatch(source, /var schedulerScript = '''|KOVA_SCHEDULED_EXECUTION_ENDPOINT/u);
   writeFileSync(config.path, source);
   return true;
@@ -161,11 +186,16 @@ param schedulerRetryLimit int = ${config.retryLimit}`;
 
 function patchTemplateContract() {
   let source = readFileSync(contractPath, "utf8");
-  if (source.includes('const schedulerModule = readFileSync("infra/azure/modules/scheduled-worker-job.bicep"')) return false;
+  if (
+    source.includes(
+      'const schedulerModule = readFileSync("infra/azure/modules/scheduled-worker-job.bicep"',
+    )
+  )
+    return false;
 
   source = replaceOnce(
     source,
-    'export function validateCommonAzureTemplate({ template, parameters, environment }) {\n  const parsedParameters = JSON.parse(parameters);',
+    "export function validateCommonAzureTemplate({ template, parameters, environment }) {\n  const parsedParameters = JSON.parse(parameters);",
     'export function validateCommonAzureTemplate({ template, parameters, environment }) {\n  const schedulerModule = readFileSync("infra/azure/modules/scheduled-worker-job.bicep", "utf8");\n  const parsedParameters = JSON.parse(parameters);',
     "template contract module load",
   );
@@ -191,7 +221,8 @@ function patchTemplateContract() {
   ].join("\n");
   source = replaceOnce(source, oldJobContract, newJobContract, "template contract job module");
 
-  const oldSchedulerStart = '  requireMatch(template, /KOVA_SCHEDULED_EXECUTION_ENDPOINT/u, "scheduled job endpoint is missing");';
+  const oldSchedulerStart =
+    '  requireMatch(template, /KOVA_SCHEDULED_EXECUTION_ENDPOINT/u, "scheduled job endpoint is missing");';
   const applicationInsightsStart = [
     "  requireMatch(",
     "    template,",
@@ -233,7 +264,13 @@ function patchTemplateContract() {
     '  requireMatch(schedulerModule, /scheduled_worker_completed/u, "scheduler missing-success alert query is missing");',
     "",
   ].join("\n");
-  source = replaceRange(source, oldSchedulerStart, applicationInsightsStart, newSchedulerContract, "template contract scheduler boundary");
+  source = replaceRange(
+    source,
+    oldSchedulerStart,
+    applicationInsightsStart,
+    newSchedulerContract,
+    "template contract scheduler boundary",
+  );
 
   writeFileSync(contractPath, source);
   return true;

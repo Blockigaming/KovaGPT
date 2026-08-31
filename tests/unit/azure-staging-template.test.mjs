@@ -9,6 +9,8 @@ test("staging Azure template is isolated, keyless, observable, and cost bounded"
   assert.equal(evidence.isolatedObservability, true);
   assert.equal(evidence.scaleToZero, true);
   assert.equal(evidence.scheduledJobDefined, true);
+  assert.equal(evidence.dedicatedScheduledWorker, true);
+  assert.equal(evidence.schedulerAlertsDefined, true);
   assert.equal(evidence.publicUrlConfigured, true);
   assert.equal(evidence.zeroLovable, true);
 });

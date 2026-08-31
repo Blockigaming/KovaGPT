@@ -125,14 +125,15 @@ if [ -n "$UNEXPECTED" ]; then
   exit 1
 fi
 
+# Generated contract tests can already be at the deterministic fixed point.
+# They are required and executed by the consolidated verifier, but they
+# do not need to appear in the mutation diff.
 for required in \
   infra/azure/production/main.bicep \
   infra/azure/staging/main.bicep \
   release-migrations.json \
   scripts/azure/template-contract.mjs \
-  src/routes/scheduled-tasks.tsx \
-  tests/unit/scheduled-azure-v2-source.test.mjs \
-  tests/unit/scheduled-history-retry-v2.test.mjs; do
+  src/routes/scheduled-tasks.tsx; do
   grep -qxF "$required" "$CHANGED_FILE" || {
     echo "STOP=EXPECTED_SOURCE_CLOSURE_FILE_NOT_CHANGED:$required"
     cat "$CHANGED_FILE"

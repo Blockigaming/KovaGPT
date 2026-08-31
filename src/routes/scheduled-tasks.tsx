@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { AppShell } from "@/components/AppShell";
+import { ScheduledTaskEditor } from "@/components/ScheduledTaskEditor";
+import { ScheduledTaskHistoryPanel } from "@/components/ScheduledTaskHistoryPanel";
 import {
   listScheduledTasks,
   createScheduledTask,
@@ -28,6 +30,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { AutomationBuilder, type AutomationDraft } from "@/components/AutomationBuilder";
+import { retryScheduledTask } from "@/lib/scheduled-task-history.functions";
 import { RelatedWorkspaceItems } from "@/components/WorkspaceIntelligence";
 import {
   browserStoragePrincipal,
@@ -76,6 +79,10 @@ function ScheduledTasksPage() {
   const [filter, setFilter] = useState<TaskFilter>("all");
   const [builderOpen, setBuilderOpen] = useState(false);
   const [executionAvailable, setExecutionAvailable] = useState(false);
+  const browserTimeZone = useMemo(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+    [],
+  );
 
   const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
@@ -86,6 +93,7 @@ function ScheduledTasksPage() {
   const create = useServerFn(createScheduledTask);
   const update = useServerFn(updateScheduledTask);
   const remove = useServerFn(deleteScheduledTask);
+  const retryTask = useServerFn(retryScheduledTask);
   const checkEligible = useServerFn(isScheduledTasksEligible);
 
   useEffect(() => {
@@ -238,7 +246,13 @@ function ScheduledTasksPage() {
     try {
       const iso = new Date(when).toISOString();
       const row = await create({
-        data: { title: title.trim(), prompt: prompt.trim(), run_at: iso, repeat },
+        data: {
+          title: title.trim(),
+          prompt: prompt.trim(),
+          run_at: iso,
+          repeat,
+          time_zone: browserTimeZone,
+        },
       });
       if (generation !== generationRef.current || principalRef.current !== principal) return;
       setTasks((t) => [...t, row].sort((a, b) => a.run_at.localeCompare(b.run_at)));
@@ -262,7 +276,13 @@ function ScheduledTasksPage() {
     if (!dataReady || dataGeneration !== generationRef.current) return;
     const generation = generationRef.current;
     const row = await create({
-      data: { title: draft.title, prompt: draft.prompt, run_at: draft.runAt, repeat: draft.repeat },
+      data: {
+        title: draft.title,
+        prompt: draft.prompt,
+        run_at: draft.runAt,
+        repeat: draft.repeat,
+        time_zone: browserTimeZone,
+      },
     });
     if (generation !== generationRef.current || principalRef.current !== principal) return;
     setTasks((current) => [...current, row].sort((a, b) => a.run_at.localeCompare(b.run_at)));
@@ -302,7 +322,7 @@ function ScheduledTasksPage() {
     if (!dataReady || dataGeneration !== generationRef.current) return;
     const generation = generationRef.current;
     try {
-      const updated = await update({ data: { id: task.id, status: "scheduled" } });
+      const updated = await retryTask({ data: { taskId: task.id } });
       if (generation !== generationRef.current || principalRef.current !== principal) return;
       setTasks((current) => current.map((item) => (item.id === task.id ? updated : item)));
       toast.success("Task queued to retry");
@@ -496,7 +516,7 @@ function ScheduledTasksPage() {
                 <div>
                   <h2 className="font-display text-lg font-semibold">Your scheduled tasks</h2>
                   <p className="text-xs text-muted-foreground">
-                    Times are shown in {Intl.DateTimeFormat().resolvedOptions().timeZone}.
+                    Times are shown in {browserTimeZone}.
                   </p>
                 </div>
                 <button
@@ -611,8 +631,18 @@ function ScheduledTasksPage() {
                             {t.last_result ? ` · ${t.last_result}` : ""}
                           </p>
                         ) : null}
+                        <ScheduledTaskHistoryPanel taskId={t.id} />
                       </div>
                       <div className="flex items-center gap-1">
+                        <ScheduledTaskEditor
+                          task={t}
+                          executionAvailable={executionAvailable}
+                          onUpdated={(updated) =>
+                            setTasks((current) =>
+                              current.map((item) => (item.id === updated.id ? updated : item)),
+                            )
+                          }
+                        />
                         {t.status === "failed" ? (
                           <button
                             onClick={() => retry(t)}
@@ -624,19 +654,21 @@ function ScheduledTasksPage() {
                             <RotateCcw className="h-4 w-4" />
                           </button>
                         ) : null}
-                        <button
-                          onClick={() => togglePause(t)}
-                          disabled={t.status === "paused" && !executionAvailable}
-                          className="p-2 rounded-md hover:bg-accent transition"
-                          aria-label={t.status === "paused" ? "Resume" : "Pause"}
-                          title={t.status === "paused" ? "Resume" : "Pause"}
-                        >
-                          {t.status === "paused" ? (
-                            <Play className="w-4 h-4" />
-                          ) : (
-                            <Pause className="w-4 h-4" />
-                          )}
-                        </button>
+                        {["scheduled", "running", "paused"].includes(t.status) ? (
+                          <button
+                            onClick={() => togglePause(t)}
+                            disabled={t.status === "paused" && !executionAvailable}
+                            className="p-2 rounded-md hover:bg-accent transition"
+                            aria-label={t.status === "paused" ? "Resume" : "Pause"}
+                            title={t.status === "paused" ? "Resume" : "Pause"}
+                          >
+                            {t.status === "paused" ? (
+                              <Play className="w-4 h-4" />
+                            ) : (
+                              <Pause className="w-4 h-4" />
+                            )}
+                          </button>
+                        ) : null}
                         <button
                           onClick={() => del(t)}
                           className="p-2 rounded-md hover:bg-destructive/10 text-destructive transition"

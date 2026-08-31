@@ -7,7 +7,11 @@ const testPath = "tests/unit/scheduled-history-retry-v2.test.mjs";
 function replaceOnce(source, before, after, label) {
   const index = source.indexOf(before);
   assert.notEqual(index, -1, `${label}: expected source was not found`);
-  assert.equal(source.indexOf(before, index + before.length), -1, `${label}: source was not unique`);
+  assert.equal(
+    source.indexOf(before, index + before.length),
+    -1,
+    `${label}: source was not unique`,
+  );
   return source.slice(0, index) + after + source.slice(index + before.length);
 }
 
@@ -35,36 +39,36 @@ function patchRoute() {
 
   source = replaceOnce(
     source,
-    '  const [executionAvailable, setExecutionAvailable] = useState(false);\n\n',
+    "  const [executionAvailable, setExecutionAvailable] = useState(false);\n\n",
     '  const [executionAvailable, setExecutionAvailable] = useState(false);\n  const browserTimeZone = useMemo(\n    () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",\n    [],\n  );\n\n',
     "scheduled route browser timezone",
   );
 
   source = replaceOnce(
     source,
-    '  const remove = useServerFn(deleteScheduledTask);\n  const checkEligible = useServerFn(isScheduledTasksEligible);\n',
-    '  const remove = useServerFn(deleteScheduledTask);\n  const retryTask = useServerFn(retryScheduledTask);\n  const checkEligible = useServerFn(isScheduledTasksEligible);\n',
+    "  const remove = useServerFn(deleteScheduledTask);\n  const checkEligible = useServerFn(isScheduledTasksEligible);\n",
+    "  const remove = useServerFn(deleteScheduledTask);\n  const retryTask = useServerFn(retryScheduledTask);\n  const checkEligible = useServerFn(isScheduledTasksEligible);\n",
     "scheduled route retry server function",
   );
 
   source = replaceOnce(
     source,
-    '        data: { title: title.trim(), prompt: prompt.trim(), run_at: iso, repeat },\n',
-    '        data: {\n          title: title.trim(),\n          prompt: prompt.trim(),\n          run_at: iso,\n          repeat,\n          time_zone: browserTimeZone,\n        },\n',
+    "        data: { title: title.trim(), prompt: prompt.trim(), run_at: iso, repeat },\n",
+    "        data: {\n          title: title.trim(),\n          prompt: prompt.trim(),\n          run_at: iso,\n          repeat,\n          time_zone: browserTimeZone,\n        },\n",
     "scheduled route form timezone",
   );
 
   source = replaceOnce(
     source,
-    '      data: { title: draft.title, prompt: draft.prompt, run_at: draft.runAt, repeat: draft.repeat },\n',
-    '      data: {\n        title: draft.title,\n        prompt: draft.prompt,\n        run_at: draft.runAt,\n        repeat: draft.repeat,\n        time_zone: browserTimeZone,\n      },\n',
+    "      data: { title: draft.title, prompt: draft.prompt, run_at: draft.runAt, repeat: draft.repeat },\n",
+    "      data: {\n        title: draft.title,\n        prompt: draft.prompt,\n        run_at: draft.runAt,\n        repeat: draft.repeat,\n        time_zone: browserTimeZone,\n      },\n",
     "scheduled route automation timezone",
   );
 
   source = replaceOnce(
     source,
     '      const updated = await update({ data: { id: task.id, status: "scheduled" } });\n',
-    '      const updated = await retryTask({ data: { taskId: task.id } });\n',
+    "      const updated = await retryTask({ data: { taskId: task.id } });\n",
     "scheduled route manual retry",
   );
 
@@ -112,7 +116,12 @@ function patchRoute() {
                           </button>
                         ) : null}
 `;
-  source = replaceOnce(source, pauseButton, boundedPauseButton, "scheduled route lifecycle controls");
+  source = replaceOnce(
+    source,
+    pauseButton,
+    boundedPauseButton,
+    "scheduled route lifecycle controls",
+  );
 
   source = source.replace(
     "Times are shown in {Intl.DateTimeFormat().resolvedOptions().timeZone}.",

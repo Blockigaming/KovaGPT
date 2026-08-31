@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 86,
-  "latest": "20260831180000_scheduled_delivery_observability_v2.sql",
+  "count": 88,
+  "latest": "20260831211500_scheduled_running_mutations_v2.sql",
   "migrations": [
     {
       "order": 1,
@@ -1779,6 +1779,38 @@
       "rls": [],
       "policies": [],
       "indexes": ["scheduled_task_delivery_outbox_processing_idx"]
+    },
+    {
+      "order": 87,
+      "filename": "20260831210000_scheduled_history_retry_v2.sql",
+      "timestamp": "20260831210000",
+      "sha256": "25faa0f7c4d88d56d6746b1a3f8c873f146cabb6b0a72de3c2ddf74b9d50d890",
+      "tables": [],
+      "functions": [
+        "set_scheduled_occurrence_anchor_v2",
+        "owner_retry_scheduled_task_v2",
+        "settle_scheduled_task_success_v2"
+      ],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": ["scheduled_task_occurrences_manual_retry_idx"]
+    },
+    {
+      "order": 88,
+      "filename": "20260831211500_scheduled_running_mutations_v2.sql",
+      "timestamp": "20260831211500",
+      "sha256": "afaddfc83276716eb1ecd7040e09478e5dbd883e186e29382243d0de6bb0c96e",
+      "tables": [],
+      "functions": ["owner_set_scheduled_task_state_v2", "settle_scheduled_task_canceled_v2"],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": [],
+      "indexes": []
     }
   ]
 }

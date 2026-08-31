@@ -19,7 +19,9 @@ export function ScheduledTaskHistoryPanel({ taskId }: { taskId: string }) {
     try {
       setItems(await loadHistory({ data: { taskId } }));
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Scheduled task history could not be loaded.");
+      setError(
+        reason instanceof Error ? reason.message : "Scheduled task history could not be loaded.",
+      );
     } finally {
       setLoading(false);
     }
@@ -60,7 +62,10 @@ export function ScheduledTaskHistoryPanel({ taskId }: { taskId: string }) {
       {open ? (
         <div className="mt-2 space-y-2" aria-live="polite">
           {error ? (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs" role="alert">
+            <div
+              className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs"
+              role="alert"
+            >
               {error}
             </div>
           ) : loading && items.length === 0 ? (
@@ -69,14 +74,21 @@ export function ScheduledTaskHistoryPanel({ taskId }: { taskId: string }) {
             <div className="text-xs text-muted-foreground">No execution occurrences yet.</div>
           ) : (
             items.map((occurrence) => (
-              <div key={occurrence.id} className="rounded-lg border border-border/70 bg-background p-3 text-xs">
+              <div
+                key={occurrence.id}
+                className="rounded-lg border border-border/70 bg-background p-3 text-xs"
+              >
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium capitalize">{occurrence.status.replaceAll("_", " ")}</span>
+                  <span className="font-medium capitalize">
+                    {occurrence.status.replaceAll("_", " ")}
+                  </span>
                   <span className="text-muted-foreground">
                     {new Date(occurrence.scheduledFor).toLocaleString()}
                   </span>
                   {occurrence.manualRetryOf ? (
-                    <span className="rounded bg-accent px-1.5 py-0.5 text-[11px]">manual retry</span>
+                    <span className="rounded bg-accent px-1.5 py-0.5 text-[11px]">
+                      manual retry
+                    </span>
                   ) : null}
                   {occurrence.missedCount > 0 ? (
                     <span className="rounded bg-accent px-1.5 py-0.5 text-[11px]">
@@ -86,7 +98,9 @@ export function ScheduledTaskHistoryPanel({ taskId }: { taskId: string }) {
                 </div>
 
                 {occurrence.resultSummary ? (
-                  <p className="mt-2 line-clamp-3 text-muted-foreground">{occurrence.resultSummary}</p>
+                  <p className="mt-2 line-clamp-3 text-muted-foreground">
+                    {occurrence.resultSummary}
+                  </p>
                 ) : occurrence.safeError ? (
                   <p className="mt-2 text-muted-foreground">{occurrence.safeError}</p>
                 ) : null}

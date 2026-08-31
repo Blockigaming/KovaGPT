@@ -83,7 +83,16 @@ function requireTaskRow(value: unknown, fallback: string): ScheduledTask {
   if (!value || typeof value !== "object" || typeof (value as { id?: unknown }).id !== "string") {
     throw new Error(fallback);
   }
-  return value as ScheduledTask;
+
+  const row = value as Record<string, unknown>;
+  const task = row as unknown as Omit<ScheduledTask, "time_zone">;
+  const timeZone =
+    typeof row.time_zone === "string" && row.time_zone.trim() ? row.time_zone : "UTC";
+
+  return {
+    ...task,
+    time_zone: timeZone,
+  };
 }
 
 // Source default remains fail-closed. Operations may explicitly enable this
@@ -117,7 +126,7 @@ export const listScheduledTasks = createServerFn({ method: "POST" })
       console.error("[serverfn]", error.message);
       throw new Error("Request failed. Please try again.");
     }
-    return (data ?? []) as ScheduledTask[];
+    return (data ?? []).map((row) => requireTaskRow(row, "Scheduled task data could not be read."));
   });
 
 const CreateSchema = z.object({

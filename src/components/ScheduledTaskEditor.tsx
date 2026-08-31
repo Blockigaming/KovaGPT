@@ -31,8 +31,7 @@ export function ScheduledTaskEditor({
   const [when, setWhen] = useState(() => toLocalInput(editableRunAt(task)));
   const [repeat, setRepeat] = useState<ScheduledTask["repeat"]>(task.repeat);
   const timeZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", []);
-  const editable =
-    executionAvailable && ["scheduled", "running", "paused"].includes(task.status);
+  const editable = executionAvailable && ["scheduled", "running", "paused"].includes(task.status);
 
   const reset = () => {
     setTitle(task.title);
@@ -102,11 +101,15 @@ export function ScheduledTaskEditor({
           >
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <h2 id={`scheduled-task-edit-${task.id}`} className="font-display text-lg font-semibold">
+                <h2
+                  id={`scheduled-task-edit-${task.id}`}
+                  className="font-display text-lg font-semibold"
+                >
                   Edit scheduled task
                 </h2>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Times use {timeZone}. Editing an active run requests cancellation before the new schedule is used.
+                  Times use {timeZone}. Editing an active run requests cancellation before the new
+                  schedule is used.
                 </p>
               </div>
               <button
