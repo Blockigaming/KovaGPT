@@ -1,7 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { scheduledExecutionAvailable, type ScheduledTask } from "@/lib/scheduled-tasks.functions";
+import {
+  scheduledExecutionRuntimeAvailable,
+  type ScheduledTask,
+} from "@/lib/scheduled-tasks.functions";
 
 type LooseClient = {
   // Forward scheduler migrations intentionally precede generated production
@@ -201,7 +204,7 @@ export const retryScheduledTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => TaskIdSchema.parse(input))
   .handler(async ({ data, context }): Promise<ScheduledTask> => {
-    if (!scheduledExecutionAvailable) {
+    if (!scheduledExecutionRuntimeAvailable()) {
       throw new Error("Scheduled execution is not available, so this task cannot be retried.");
     }
 
