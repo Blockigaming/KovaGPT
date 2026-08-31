@@ -86,15 +86,21 @@ function requireTaskRow(value: unknown, fallback: string): ScheduledTask {
   return value as ScheduledTask;
 }
 
-// Keep fail-closed until the v2 schema, dedicated worker, Azure scheduled Job,
-// fresh heartbeat and production canary are all proven together.
+// Source default remains fail-closed. Operations may explicitly enable this
+// exact immutable image after schema, worker, heartbeat and canary proof by
+// setting KOVA_SCHEDULED_TASKS_ENABLED=1 on the web runtime configuration.
 export const scheduledExecutionAvailable = false;
+export function scheduledExecutionRuntimeAvailable(): boolean {
+  const runtimeValue =
+    typeof process === "undefined" ? undefined : process.env.KOVA_SCHEDULED_TASKS_ENABLED;
+  return scheduledExecutionAvailable || runtimeValue === "1" || runtimeValue === "true";
+}
 
 export const isScheduledTasksEligible = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<{ eligible: boolean; executionAvailable: boolean }> => ({
     eligible: await hasPaidScheduledTaskPlan(context.supabase, context.userId),
-    executionAvailable: scheduledExecutionAvailable,
+    executionAvailable: scheduledExecutionRuntimeAvailable(),
   }));
 
 export const listScheduledTasks = createServerFn({ method: "POST" })
@@ -126,7 +132,7 @@ export const createScheduledTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((i: unknown) => CreateSchema.parse(i))
   .handler(async ({ data, context }): Promise<ScheduledTask> => {
-    if (!scheduledExecutionAvailable) {
+    if (!scheduledExecutionRuntimeAvailable()) {
       throw new Error(
         "Scheduled execution is not available in this deployment. No task was created.",
       );
@@ -165,7 +171,7 @@ export const updateScheduledTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((i: unknown) => UpdateSchema.parse(i))
   .handler(async ({ data, context }): Promise<ScheduledTask> => {
-    if (data.status === "scheduled" && !scheduledExecutionAvailable) {
+    if (data.status === "scheduled" && !scheduledExecutionRuntimeAvailable()) {
       throw new Error("Scheduled execution is not available, so this task cannot be resumed.");
     }
 
