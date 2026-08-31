@@ -1,5 +1,4 @@
-const isRecord = (value) =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
+const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 
 const isStringOrNull = (value) => value === null || typeof value === "string";
 
