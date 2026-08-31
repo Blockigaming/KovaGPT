@@ -9,19 +9,13 @@
       "filename": "20260622225346_fc79eb26-e67a-44b2-a578-5aed762ee7d3.sql",
       "timestamp": "20260622225346",
       "sha256": "dfc4b6bf58b9e94a6b190a3e36f329ad2fbd4ec12482e606c82a0b16d6ec6ecd",
-      "tables": [
-        "daily_usage"
-      ],
+      "tables": ["daily_usage"],
       "functions": [],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
-      "rls": [
-        "daily_usage"
-      ],
-      "policies": [
-        "Users can view own usage"
-      ],
+      "rls": ["daily_usage"],
+      "policies": ["Users can view own usage"],
       "indexes": []
     },
     {
@@ -29,25 +23,14 @@
       "filename": "20260623005558_958e6b70-e297-45fc-b775-939e9ba0e859.sql",
       "timestamp": "20260623005558",
       "sha256": "8f9d241486cdeb63faf196254635c4872f21c7fbaa19d1c8cfcba255c6cc8ccc",
-      "tables": [
-        "subscriptions"
-      ],
-      "functions": [
-        "has_active_subscription"
-      ],
+      "tables": ["subscriptions"],
+      "functions": ["has_active_subscription"],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
-      "rls": [
-        "subscriptions"
-      ],
-      "policies": [
-        "Users can view own subscription"
-      ],
-      "indexes": [
-        "idx_subscriptions_user_id",
-        "idx_subscriptions_stripe_id"
-      ]
+      "rls": ["subscriptions"],
+      "policies": ["Users can view own subscription"],
+      "indexes": ["idx_subscriptions_user_id", "idx_subscriptions_stripe_id"]
     },
     {
       "order": 3,
@@ -83,17 +66,13 @@
       "timestamp": "20260623154814",
       "sha256": "e9c04a64416f199a14af1e448e61fb33f66002aca7b4b8e0537014716f905f36",
       "tables": [],
-      "functions": [
-        "try_increment_daily_usage"
-      ],
+      "functions": ["try_increment_daily_usage"],
       "destructive": false,
       "dataBackfill": true,
       "reversible": false,
       "rls": [],
       "policies": [],
-      "indexes": [
-        "daily_usage_user_date_uidx"
-      ]
+      "indexes": ["daily_usage_user_date_uidx"]
     },
     {
       "order": 6,
@@ -128,21 +107,13 @@
       "filename": "20260623161227_42bc3281-6ed9-4106-bcee-747c1be209b7.sql",
       "timestamp": "20260623161227",
       "sha256": "d306f726cfcb13e9f83d9c919102ed456b70b82d75aeb691e374ad25fe7af1f8",
-      "tables": [
-        "banned_users",
-        "feature_flags"
-      ],
+      "tables": ["banned_users", "feature_flags"],
       "functions": [],
       "destructive": false,
       "dataBackfill": true,
       "reversible": false,
-      "rls": [
-        "banned_users",
-        "feature_flags"
-      ],
-      "policies": [
-        "Flags are publicly readable"
-      ],
+      "rls": ["banned_users", "feature_flags"],
+      "policies": ["Flags are publicly readable"],
       "indexes": []
     },
     {
@@ -150,16 +121,12 @@
       "filename": "20260623161519_27341efb-2a64-41dd-a483-743741d90048.sql",
       "timestamp": "20260623161519",
       "sha256": "7a037b6d0a163dccbde2081977b875800920d2feb8b7ca9eead2c064656a7361",
-      "tables": [
-        "processed_stripe_events"
-      ],
+      "tables": ["processed_stripe_events"],
       "functions": [],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
-      "rls": [
-        "processed_stripe_events"
-      ],
+      "rls": ["processed_stripe_events"],
       "policies": [],
       "indexes": []
     },
@@ -174,12 +141,7 @@
         "suppressed_emails",
         "email_unsubscribe_tokens"
       ],
-      "functions": [
-        "enqueue_email",
-        "read_email_batch",
-        "delete_email",
-        "move_to_dlq"
-      ],
+      "functions": ["enqueue_email", "read_email_batch", "delete_email", "move_to_dlq"],
       "destructive": true,
       "dataBackfill": true,
       "reversible": false,
@@ -220,12 +182,7 @@
         "suppressed_emails",
         "email_unsubscribe_tokens"
       ],
-      "functions": [
-        "enqueue_email",
-        "read_email_batch",
-        "delete_email",
-        "move_to_dlq"
-      ],
+      "functions": ["enqueue_email", "read_email_batch", "delete_email", "move_to_dlq"],
       "destructive": true,
       "dataBackfill": true,
       "reversible": false,
@@ -274,22 +231,13 @@
       "filename": "20260624124535_f00c96da-6231-4282-8d15-4905a26c14dd.sql",
       "timestamp": "20260624124535",
       "sha256": "0646bc319e2d01aa25abdfcdd9941d2193c907e840c216721705153648a0e09d",
-      "tables": [
-        "user_storage"
-      ],
-      "functions": [
-        "try_increment_daily_usage",
-        "try_add_storage_bytes"
-      ],
+      "tables": ["user_storage"],
+      "functions": ["try_increment_daily_usage", "try_add_storage_bytes"],
       "destructive": false,
       "dataBackfill": true,
       "reversible": false,
-      "rls": [
-        "user_storage"
-      ],
-      "policies": [
-        "Users can read their own storage"
-      ],
+      "rls": ["user_storage"],
+      "policies": ["Users can read their own storage"],
       "indexes": []
     },
     {
@@ -311,49 +259,31 @@
       "filename": "20260624230040_7e466bca-9fb0-476f-8779-2788bec60e53.sql",
       "timestamp": "20260624230040",
       "sha256": "e9e14edd660d7765022ecb9402cd15943eb7113b2d373fb598b0f8b3c1149eec",
-      "tables": [
-        "chat_memories"
-      ],
+      "tables": ["chat_memories"],
       "functions": [],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
-      "rls": [
-        "chat_memories"
-      ],
+      "rls": ["chat_memories"],
       "policies": [
         "Users read own memories",
         "Users insert own memories",
         "Users update own memories",
         "Users delete own memories"
       ],
-      "indexes": [
-        "chat_memories_user_updated_idx"
-      ]
+      "indexes": ["chat_memories_user_updated_idx"]
     },
     {
       "order": 16,
       "filename": "20260625132920_4b3ef37f-c0ab-4cf4-9255-d61a0848f198.sql",
       "timestamp": "20260625132920",
       "sha256": "d556453348d726ec35d1e530740452200c7c2f2567f41b7817c1f8e005199361",
-      "tables": [
-        "user_library_items",
-        "shared_chats",
-        "plaid_items",
-        "financial_accounts"
-      ],
-      "functions": [
-        "touch_updated_at"
-      ],
+      "tables": ["user_library_items", "shared_chats", "plaid_items", "financial_accounts"],
+      "functions": ["touch_updated_at"],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
-      "rls": [
-        "user_library_items",
-        "shared_chats",
-        "plaid_items",
-        "financial_accounts"
-      ],
+      "rls": ["user_library_items", "shared_chats", "plaid_items", "financial_accounts"],
       "policies": [
         "library_select_own",
         "library_insert_own",
@@ -412,22 +342,14 @@
       "filename": "20260627210732_128bcdac-00eb-458b-8801-2a1bdb24915f.sql",
       "timestamp": "20260627210732",
       "sha256": "ee765191dc5b646e32bfd53f07b59e1fbc9fada1265d966dc6fd29350284b6c4",
-      "tables": [
-        "scheduled_tasks"
-      ],
+      "tables": ["scheduled_tasks"],
       "functions": [],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
-      "rls": [
-        "scheduled_tasks"
-      ],
-      "policies": [
-        "Users manage their own scheduled tasks"
-      ],
-      "indexes": [
-        "scheduled_tasks_user_idx"
-      ]
+      "rls": ["scheduled_tasks"],
+      "policies": ["Users manage their own scheduled tasks"],
+      "indexes": ["scheduled_tasks_user_idx"]
     },
     {
       "order": 20,
@@ -455,20 +377,14 @@
       "reversible": false,
       "rls": [],
       "policies": [],
-      "indexes": [
-        "idx_user_library_items_user_created"
-      ]
+      "indexes": ["idx_user_library_items_user_created"]
     },
     {
       "order": 22,
       "filename": "20260702163905_0663df95-a332-4ab8-959a-e802db899983.sql",
       "timestamp": "20260702163905",
       "sha256": "435fd5c250f4d5eef2e9d4118a207ae5eee29c9be98570d260b3917f4ea8c3d9",
-      "tables": [
-        "family_groups",
-        "family_members",
-        "family_invites"
-      ],
+      "tables": ["family_groups", "family_members", "family_invites"],
       "functions": [
         "try_increment_daily_usage",
         "is_family_member",
@@ -478,11 +394,7 @@
       "destructive": false,
       "dataBackfill": true,
       "reversible": false,
-      "rls": [
-        "family_groups",
-        "family_members",
-        "family_invites"
-      ],
+      "rls": ["family_groups", "family_members", "family_invites"],
       "policies": [
         "Owner reads own group",
         "Members read their group",
@@ -496,11 +408,7 @@
         "Owner creates invites",
         "Owner deletes invites"
       ],
-      "indexes": [
-        "idx_family_members_group",
-        "idx_family_members_user",
-        "idx_family_invites_group"
-      ]
+      "indexes": ["idx_family_members_group", "idx_family_members_user", "idx_family_invites_group"]
     },
     {
       "order": 23,
@@ -521,27 +429,14 @@
       "filename": "20260704033129_4459a668-0d41-48f1-995e-09d2377c7b01.sql",
       "timestamp": "20260704033129",
       "sha256": "fb1dc6d1025824b81c6ed7650f75804abf169bcdcd8500166caee15b2c40f2d1",
-      "tables": [
-        "google_oauth_tokens",
-        "connected_account_audit_log",
-        "user_onboarding"
-      ],
+      "tables": ["google_oauth_tokens", "connected_account_audit_log", "user_onboarding"],
       "functions": [],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
-      "rls": [
-        "google_oauth_tokens",
-        "connected_account_audit_log",
-        "user_onboarding"
-      ],
-      "policies": [
-        "own audit select",
-        "own"
-      ],
-      "indexes": [
-        "connected_account_audit_log_user_created_idx"
-      ]
+      "rls": ["google_oauth_tokens", "connected_account_audit_log", "user_onboarding"],
+      "policies": ["own audit select", "own"],
+      "indexes": ["connected_account_audit_log_user_created_idx"]
     },
     {
       "order": 25,
@@ -562,32 +457,21 @@
       "filename": "20260707005030_9b3885d2-44e1-4469-8e87-40b7c83d6dc5.sql",
       "timestamp": "20260707005030",
       "sha256": "b4570801051a6b191d1eeb324d8258b07a03e40c4cc9aca0c77784e27f4be592",
-      "tables": [
-        "pending_tool_actions"
-      ],
+      "tables": ["pending_tool_actions"],
       "functions": [],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
-      "rls": [
-        "pending_tool_actions"
-      ],
+      "rls": ["pending_tool_actions"],
       "policies": [],
-      "indexes": [
-        "pending_tool_actions_user_idx"
-      ]
+      "indexes": ["pending_tool_actions_user_idx"]
     },
     {
       "order": 27,
       "filename": "20260712011732_d735f53a-21fb-4543-8ecb-456c04bade12.sql",
       "timestamp": "20260712011732",
       "sha256": "617a5208fa1a2cd1272036e6a175eaf6b71f2071a29a869d9e26dd9751f004f4",
-      "tables": [
-        "projects",
-        "project_members",
-        "project_invites",
-        "project_chats"
-      ],
+      "tables": ["projects", "project_members", "project_invites", "project_chats"],
       "functions": [
         "is_project_member",
         "project_role_of",
@@ -597,12 +481,7 @@
       "destructive": false,
       "dataBackfill": true,
       "reversible": false,
-      "rls": [
-        "projects",
-        "project_members",
-        "project_invites",
-        "project_chats"
-      ],
+      "rls": ["projects", "project_members", "project_invites", "project_chats"],
       "policies": [
         "members can view projects",
         "users can create their own projects",
@@ -640,11 +519,7 @@
       "dataBackfill": false,
       "reversible": false,
       "rls": [],
-      "policies": [
-        "Owner adds members",
-        "owner can add members",
-        "owner can update invite"
-      ],
+      "policies": ["Owner adds members", "owner can add members", "owner can update invite"],
       "indexes": []
     },
     {
@@ -698,38 +573,26 @@
       "timestamp": "20260718151609",
       "sha256": "63423b39a26fa7456c38d506fff37a2ffd96378b0a09d01b493e79c03055c1fc",
       "tables": [],
-      "functions": [
-        "user_plan_tier"
-      ],
+      "functions": ["user_plan_tier"],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
       "rls": [],
       "policies": [],
-      "indexes": [
-        "projects_pinned_at_idx"
-      ]
+      "indexes": ["projects_pinned_at_idx"]
     },
     {
       "order": 31,
       "filename": "20260718152250_f4747acd-8022-4ff5-90f3-8cdc49e59086.sql",
       "timestamp": "20260718152250",
       "sha256": "ff4fada29c706716845266945c2780353a5c4104c19fc3a9a784aa7602770f11",
-      "tables": [
-        "project_file_chunks"
-      ],
-      "functions": [
-        "match_project_chunks"
-      ],
+      "tables": ["project_file_chunks"],
+      "functions": ["match_project_chunks"],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
-      "rls": [
-        "project_file_chunks"
-      ],
-      "policies": [
-        "Members can read project chunks"
-      ],
+      "rls": ["project_file_chunks"],
+      "policies": ["Members can read project chunks"],
       "indexes": [
         "project_file_chunks_project_idx",
         "project_file_chunks_file_idx",
@@ -755,20 +618,12 @@
       "filename": "20260721211500_deep_research_runs.sql",
       "timestamp": "20260721211500",
       "sha256": "4784f4092f682e40d921be744f254037545c442137a882dd45ee7ab024f2a358",
-      "tables": [
-        "deep_research_runs",
-        "deep_research_evidence"
-      ],
-      "functions": [
-        "set_deep_research_updated_at"
-      ],
+      "tables": ["deep_research_runs", "deep_research_evidence"],
+      "functions": ["set_deep_research_updated_at"],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
-      "rls": [
-        "deep_research_runs",
-        "deep_research_evidence"
-      ],
+      "rls": ["deep_research_runs", "deep_research_evidence"],
       "policies": [
         "deep_research_runs_select_own",
         "deep_research_runs_insert_own",
@@ -888,45 +743,31 @@
       "filename": "20260727090000_context_packs.sql",
       "timestamp": "20260727090000",
       "sha256": "75181c0279e2eff938fba535ef4d4c4d5ab99fc72070e0d2a2506e8a8853ba8d",
-      "tables": [
-        "context_packs"
-      ],
+      "tables": ["context_packs"],
       "functions": [],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
-      "rls": [
-        "context_packs"
-      ],
+      "rls": ["context_packs"],
       "policies": [
         "context_packs_select_own",
         "context_packs_insert_own",
         "context_packs_update_own",
         "context_packs_delete_own"
       ],
-      "indexes": [
-        "context_packs_user_updated_idx"
-      ]
+      "indexes": ["context_packs_user_updated_idx"]
     },
     {
       "order": 37,
       "filename": "20260727120000_professional_os.sql",
       "timestamp": "20260727120000",
       "sha256": "748f2d465e2607ef48343443c911fe54ed87dd26d052af4ee1270359ac130f37",
-      "tables": [
-        "project_comments",
-        "prompt_templates",
-        "research_templates"
-      ],
+      "tables": ["project_comments", "prompt_templates", "research_templates"],
       "functions": [],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
-      "rls": [
-        "project_comments",
-        "prompt_templates",
-        "research_templates"
-      ],
+      "rls": ["project_comments", "prompt_templates", "research_templates"],
       "policies": [
         "members view comments",
         "members create comments",
@@ -935,36 +776,21 @@
         "prompt_templates_own",
         "research_templates_own"
       ],
-      "indexes": [
-        "project_comments_project_created_idx",
-        "prompt_templates_user_updated_idx"
-      ]
+      "indexes": ["project_comments_project_created_idx", "prompt_templates_user_updated_idx"]
     },
     {
       "order": 38,
       "filename": "20260727150000_prompt_studio_2.sql",
       "timestamp": "20260727150000",
       "sha256": "d655887fcc270351c5c4752942e9cc6d0ac93f441f7c1e5a0648db73a6328ad1",
-      "tables": [
-        "prompt_versions",
-        "prompt_evaluations"
-      ],
+      "tables": ["prompt_versions", "prompt_evaluations"],
       "functions": [],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
-      "rls": [
-        "prompt_versions",
-        "prompt_evaluations"
-      ],
-      "policies": [
-        "prompt_versions_own",
-        "prompt_evaluations_own"
-      ],
-      "indexes": [
-        "prompt_versions_prompt_created_idx",
-        "prompt_evaluations_prompt_created_idx"
-      ]
+      "rls": ["prompt_versions", "prompt_evaluations"],
+      "policies": ["prompt_versions_own", "prompt_evaluations_own"],
+      "indexes": ["prompt_versions_prompt_created_idx", "prompt_evaluations_prompt_created_idx"]
     },
     {
       "order": 39,
@@ -1032,24 +858,14 @@
       "filename": "20260727230000_apollo_agent_graphs.sql",
       "timestamp": "20260727230000",
       "sha256": "c311e725dfe2b7b20b0f8ef53cc9e8430f2fcb9ea4cf983370cbd1b603a7da01",
-      "tables": [
-        "agent_run_tasks"
-      ],
+      "tables": ["agent_run_tasks"],
       "functions": [],
       "destructive": false,
       "dataBackfill": true,
       "reversible": false,
-      "rls": [
-        "agent_run_tasks"
-      ],
-      "policies": [
-        "agent task owner read",
-        "agent evidence owner read"
-      ],
-      "indexes": [
-        "agent_tasks_ready",
-        "agent_tasks_run"
-      ]
+      "rls": ["agent_run_tasks"],
+      "policies": ["agent task owner read", "agent evidence owner read"],
+      "indexes": ["agent_tasks_ready", "agent_tasks_run"]
     },
     {
       "order": 41,
@@ -1108,32 +924,18 @@
       "filename": "20260728120000_zenith_work_graph.sql",
       "timestamp": "20260728120000",
       "sha256": "301207c0b0dfb81a4ce98d28740ca64fd507bfa1ff578803bc0a30c7e7977d8f",
-      "tables": [
-        "agent_specialist_tasks",
-        "agent_dependency_edges",
-        "agent_graph_preferences"
-      ],
-      "functions": [
-        "validate_agent_dependency_edge",
-        "ready_agent_specialist_tasks"
-      ],
+      "tables": ["agent_specialist_tasks", "agent_dependency_edges", "agent_graph_preferences"],
+      "functions": ["validate_agent_dependency_edge", "ready_agent_specialist_tasks"],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
-      "rls": [
-        "agent_specialist_tasks",
-        "agent_dependency_edges",
-        "agent_graph_preferences"
-      ],
+      "rls": ["agent_specialist_tasks", "agent_dependency_edges", "agent_graph_preferences"],
       "policies": [
         "Owners read specialist tasks",
         "Owners read dependency edges",
         "Owners manage graph preferences"
       ],
-      "indexes": [
-        "agent_dependency_edges_active_unique",
-        "agent_dependency_edges_run_idx"
-      ]
+      "indexes": ["agent_dependency_edges_active_unique", "agent_dependency_edges_run_idx"]
     },
     {
       "order": 43,
@@ -1146,9 +948,7 @@
         "agent_resource_activity",
         "agent_resource_audit"
       ],
-      "functions": [
-        "promote_agent_deliverable"
-      ],
+      "functions": ["promote_agent_deliverable"],
       "destructive": false,
       "dataBackfill": true,
       "reversible": false,
@@ -1179,9 +979,7 @@
         "github_webhooks",
         "github_tool_audit"
       ],
-      "functions": [
-        "disconnect_github_account"
-      ],
+      "functions": ["disconnect_github_account"],
       "destructive": true,
       "dataBackfill": true,
       "reversible": false,
@@ -1208,44 +1006,27 @@
       "filename": "20260728200000_mercury_github_oauth.sql",
       "timestamp": "20260728200000",
       "sha256": "b936ae0fe2e284fadd890582499eeaa4d757c5e731e7f3fbdb128943a7e92dbf",
-      "tables": [
-        "github_oauth_states"
-      ],
+      "tables": ["github_oauth_states"],
       "functions": [],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
-      "rls": [
-        "github_oauth_states"
-      ],
+      "rls": ["github_oauth_states"],
       "policies": [],
-      "indexes": [
-        "github_oauth_states_expiry_idx"
-      ]
+      "indexes": ["github_oauth_states_expiry_idx"]
     },
     {
       "order": 46,
       "filename": "20260728220000_mercury_github_operations.sql",
       "timestamp": "20260728220000",
       "sha256": "9d0cf83c5680f0d012d840f00b41cf57bb3ecdf3d66f580b36031868249cfc3e",
-      "tables": [
-        "github_webhook_deliveries",
-        "github_sync_records",
-        "github_coding_selections"
-      ],
+      "tables": ["github_webhook_deliveries", "github_sync_records", "github_coding_selections"],
       "functions": [],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
-      "rls": [
-        "github_webhook_deliveries",
-        "github_sync_records",
-        "github_coding_selections"
-      ],
-      "policies": [
-        "Owners read GitHub sync",
-        "Owners manage coding selections"
-      ],
+      "rls": ["github_webhook_deliveries", "github_sync_records", "github_coding_selections"],
+      "policies": ["Owners read GitHub sync", "Owners manage coding selections"],
       "indexes": []
     },
     {
@@ -1254,15 +1035,11 @@
       "timestamp": "20260731120000",
       "sha256": "94604cee0b252233b1b38e2d0a93cce4e8303f4c4726d23d324953e1bb3651c0",
       "tables": [],
-      "functions": [
-        "set_feedback_submission_updated_at"
-      ],
+      "functions": ["set_feedback_submission_updated_at"],
       "destructive": true,
       "dataBackfill": false,
       "reversible": false,
-      "rls": [
-        "feedback_submissions"
-      ],
+      "rls": ["feedback_submissions"],
       "policies": [
         "Owners insert response feedback",
         "Owners read response feedback",
@@ -1279,20 +1056,12 @@
       "filename": "20260801120000_writing_documents.sql",
       "timestamp": "20260801120000",
       "sha256": "d77c035fd917896f32dc648053e509fe04c4cac24a187a678a7d29d8230e98ec",
-      "tables": [
-        "writing_documents",
-        "writing_document_versions"
-      ],
-      "functions": [
-        "save_writing_document"
-      ],
+      "tables": ["writing_documents", "writing_document_versions"],
+      "functions": ["save_writing_document"],
       "destructive": true,
       "dataBackfill": true,
       "reversible": false,
-      "rls": [
-        "writing_documents",
-        "writing_document_versions"
-      ],
+      "rls": ["writing_documents", "writing_document_versions"],
       "policies": [
         "Owners manage writing documents",
         "Owners read writing versions",
@@ -1317,18 +1086,14 @@
       "reversible": false,
       "rls": [],
       "policies": [],
-      "indexes": [
-        "deep_research_runs_user_archive_updated_idx"
-      ]
+      "indexes": ["deep_research_runs_user_archive_updated_idx"]
     },
     {
       "order": 50,
       "filename": "20260801235959_agent_runtime_event_schema_compatibility.sql",
       "timestamp": "20260801235959",
       "sha256": "546d288c173b5a2d65bdecddc24231979d261bdf69a15d7e6b08b5a6117ede9b",
-      "tables": [
-        "agent_job_events"
-      ],
+      "tables": ["agent_job_events"],
       "functions": [
         "enforce_supported_agent_job_kind",
         "lease_agent_job",
@@ -1344,16 +1109,9 @@
       "destructive": false,
       "dataBackfill": true,
       "reversible": false,
-      "rls": [
-        "agent_job_events"
-      ],
-      "policies": [
-        "Owners read job events",
-        "Owners create agent jobs"
-      ],
-      "indexes": [
-        "agent_job_events_job_idx"
-      ]
+      "rls": ["agent_job_events"],
+      "policies": ["Owners read job events", "Owners create agent jobs"],
+      "indexes": ["agent_job_events_job_idx"]
     },
     {
       "order": 51,
@@ -1374,28 +1132,19 @@
       "filename": "20260802120000_agent_definitions.sql",
       "timestamp": "20260802120000",
       "sha256": "8510151ce75c8f62e4f9f61eabf46110ce1e6e06f18c8a77dc34436c5b97df9e",
-      "tables": [
-        "agent_definitions",
-        "agent_definition_versions"
-      ],
+      "tables": ["agent_definitions", "agent_definition_versions"],
       "functions": [],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
-      "rls": [
-        "agent_definitions",
-        "agent_definition_versions"
-      ],
+      "rls": ["agent_definitions", "agent_definition_versions"],
       "policies": [
         "Owners manage agent definitions",
         "Owners read agent versions",
         "Owners insert agent versions",
         "Owners delete agent versions"
       ],
-      "indexes": [
-        "agent_definitions_owner_updated_idx",
-        "agent_definition_versions_latest_idx"
-      ]
+      "indexes": ["agent_definitions_owner_updated_idx", "agent_definition_versions_latest_idx"]
     },
     {
       "order": 53,
@@ -1403,17 +1152,13 @@
       "timestamp": "20260802130000",
       "sha256": "a7966eece1b692116372e2db0cc2c738dc190a998b5e290f35958ca4e3837385",
       "tables": [],
-      "functions": [
-        "update_agent_definition"
-      ],
+      "functions": ["update_agent_definition"],
       "destructive": true,
       "dataBackfill": true,
       "reversible": false,
       "rls": [],
       "policies": [],
-      "indexes": [
-        "agent_definition_versions_owner_time_idx"
-      ]
+      "indexes": ["agent_definition_versions_owner_time_idx"]
     },
     {
       "order": 54,
@@ -1427,53 +1172,38 @@
       "reversible": false,
       "rls": [],
       "policies": [],
-      "indexes": [
-        "agent_runs_definition_time_idx"
-      ]
+      "indexes": ["agent_runs_definition_time_idx"]
     },
     {
       "order": 55,
       "filename": "20260802132000_operational_analytics.sql",
       "timestamp": "20260802132000",
       "sha256": "1ef8b9bedcf9ca87c668e2a6bfe0c29d988c5e50343d41f6cd733912774a9f47",
-      "tables": [
-        "operational_events"
-      ],
+      "tables": ["operational_events"],
       "functions": [],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
-      "rls": [
-        "operational_events"
-      ],
+      "rls": ["operational_events"],
       "policies": [
         "Owners read operational events",
         "Owners insert operational events",
         "Owners delete operational events"
       ],
-      "indexes": [
-        "operational_events_owner_time_idx",
-        "operational_events_expiry_idx"
-      ]
+      "indexes": ["operational_events_owner_time_idx", "operational_events_expiry_idx"]
     },
     {
       "order": 56,
       "filename": "20260803100000_knowledge_provenance.sql",
       "timestamp": "20260803100000",
       "sha256": "29aee6e6b36b817c8be434aa6be704593a1f684c9675700c996d3463bc6611ef",
-      "tables": [
-        "knowledge_relationships"
-      ],
+      "tables": ["knowledge_relationships"],
       "functions": [],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
-      "rls": [
-        "knowledge_relationships"
-      ],
-      "policies": [
-        "Owners manage knowledge relationships"
-      ],
+      "rls": ["knowledge_relationships"],
+      "policies": ["Owners manage knowledge relationships"],
       "indexes": [
         "knowledge_relationships_owner_source_idx",
         "knowledge_relationships_owner_target_idx"
@@ -1491,9 +1221,7 @@
       "reversible": false,
       "rls": [],
       "policies": [],
-      "indexes": [
-        "agent_runs_prior_run_idx"
-      ]
+      "indexes": ["agent_runs_prior_run_idx"]
     },
     {
       "order": 58,
@@ -1507,27 +1235,19 @@
       "reversible": false,
       "rls": [],
       "policies": [],
-      "indexes": [
-        "processed_stripe_events_processed_at_idx"
-      ]
+      "indexes": ["processed_stripe_events_processed_at_idx"]
     },
     {
       "order": 59,
       "filename": "20260803120000_schema_contract_health.sql",
       "timestamp": "20260803120000",
       "sha256": "a610689dddc6c269c3a009c296c2e2f20a493b09195dd2c64b31c1eb9b5f09aa",
-      "tables": [
-        "kova_schema_contract"
-      ],
-      "functions": [
-        "kovagpt_schema_health"
-      ],
+      "tables": ["kova_schema_contract"],
+      "functions": ["kovagpt_schema_health"],
       "destructive": false,
       "dataBackfill": true,
       "reversible": false,
-      "rls": [
-        "kova_schema_contract"
-      ],
+      "rls": ["kova_schema_contract"],
       "policies": [],
       "indexes": []
     },
@@ -1543,28 +1263,19 @@
       "reversible": false,
       "rls": [],
       "policies": [],
-      "indexes": [
-        "subscriptions_stripe_order_idx",
-        "processed_stripe_events_order_idx"
-      ]
+      "indexes": ["subscriptions_stripe_order_idx", "processed_stripe_events_order_idx"]
     },
     {
       "order": 61,
       "filename": "20260803122000_distributed_diagnostics_limit.sql",
       "timestamp": "20260803122000",
       "sha256": "ea33a587d6db85ae1c50a77bff5711d626fe2893bac38765d3ce6cd3541e5c1b",
-      "tables": [
-        "diagnostic_rate_limits"
-      ],
-      "functions": [
-        "consume_diagnostic_rate_limit"
-      ],
+      "tables": ["diagnostic_rate_limits"],
+      "functions": ["consume_diagnostic_rate_limit"],
       "destructive": true,
       "dataBackfill": true,
       "reversible": false,
-      "rls": [
-        "diagnostic_rate_limits"
-      ],
+      "rls": ["diagnostic_rate_limits"],
       "policies": [],
       "indexes": []
     },
@@ -1580,31 +1291,20 @@
       "reversible": false,
       "rls": [],
       "policies": [],
-      "indexes": [
-        "processed_stripe_events_subscription_order_idx"
-      ]
+      "indexes": ["processed_stripe_events_subscription_order_idx"]
     },
     {
       "order": 63,
       "filename": "20260803130000_ai_usage_accounting.sql",
       "timestamp": "20260803130000",
       "sha256": "bff734c01ddeabda56038b7da43e416f1fe9480ad2fd0a2bf80e6f72624e6538",
-      "tables": [
-        "ai_usage_events"
-      ],
-      "functions": [
-        "acquire_ai_generation",
-        "finalize_ai_generation"
-      ],
+      "tables": ["ai_usage_events"],
+      "functions": ["acquire_ai_generation", "finalize_ai_generation"],
       "destructive": false,
       "dataBackfill": true,
       "reversible": false,
-      "rls": [
-        "ai_usage_events"
-      ],
-      "policies": [
-        "Users inspect own AI usage"
-      ],
+      "rls": ["ai_usage_events"],
+      "policies": ["Users inspect own AI usage"],
       "indexes": [
         "ai_usage_events_user_created_idx",
         "ai_usage_events_guest_created_idx",
@@ -1627,10 +1327,7 @@
         "developer_api_requests",
         "credit_purchases"
       ],
-      "functions": [
-        "prevent_financial_entry_mutation",
-        "reserve_developer_api_credit"
-      ],
+      "functions": ["prevent_financial_entry_mutation", "reserve_developer_api_credit"],
       "destructive": false,
       "dataBackfill": true,
       "reversible": false,
@@ -1644,37 +1341,21 @@
         "credit_purchases"
       ],
       "policies": [],
-      "indexes": [
-        "upstream_price_active_idx"
-      ]
+      "indexes": ["upstream_price_active_idx"]
     },
     {
       "order": 65,
       "filename": "20260803184741_2fcabe55-857e-40eb-aa49-9e3d29d99bad.sql",
       "timestamp": "20260803184741",
       "sha256": "28052ad10731ce4a50911f07520d8033bd685527c9e222aa74eda453bbf91831",
-      "tables": [
-        "writing_documents",
-        "writing_document_versions"
-      ],
-      "functions": [
-        "save_writing_document"
-      ],
+      "tables": ["writing_documents", "writing_document_versions"],
+      "functions": ["save_writing_document"],
       "destructive": false,
       "dataBackfill": true,
       "reversible": false,
-      "rls": [
-        "writing_documents",
-        "writing_document_versions"
-      ],
-      "policies": [
-        "Users manage own writing documents",
-        "Users manage own writing versions"
-      ],
-      "indexes": [
-        "writing_documents_owner_updated_idx",
-        "writing_document_versions_doc_idx"
-      ]
+      "rls": ["writing_documents", "writing_document_versions"],
+      "policies": ["Users manage own writing documents", "Users manage own writing versions"],
+      "indexes": ["writing_documents_owner_updated_idx", "writing_document_versions_doc_idx"]
     },
     {
       "order": 66,
@@ -1701,9 +1382,7 @@
       "dataBackfill": false,
       "reversible": false,
       "rls": [],
-      "policies": [
-        "project_files_update"
-      ],
+      "policies": ["project_files_update"],
       "indexes": []
     },
     {
@@ -1711,19 +1390,12 @@
       "filename": "20260803202921_1e097656-2cd6-4be0-ba5c-dcfd1146e02e.sql",
       "timestamp": "20260803202921",
       "sha256": "a54b3058fba594bc0370b155d9a31376c01aa6536debc6e48ddccc27ccac935e",
-      "tables": [
-        "ai_generation_events"
-      ],
-      "functions": [
-        "acquire_ai_generation",
-        "finalize_ai_generation"
-      ],
+      "tables": ["ai_generation_events"],
+      "functions": ["acquire_ai_generation", "finalize_ai_generation"],
       "destructive": false,
       "dataBackfill": true,
       "reversible": false,
-      "rls": [
-        "ai_generation_events"
-      ],
+      "rls": ["ai_generation_events"],
       "policies": [],
       "indexes": [
         "ai_generation_events_user_period_idx",
@@ -1782,11 +1454,7 @@
       "timestamp": "20260805123909",
       "sha256": "ecf0d80667a3a6fdb35c5fbe93d5818d2f284bc521336ce1fb16ada70618acd9",
       "tables": [],
-      "functions": [
-        "is_project_member",
-        "can_edit_project",
-        "is_family_member"
-      ],
+      "functions": ["is_project_member", "can_edit_project", "is_family_member"],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
@@ -1814,10 +1482,7 @@
       "timestamp": "20260816213000",
       "sha256": "d23e502741d770d71ff33275da0bfde1cd59d3ada4a013e63f34096e28e47d3c",
       "tables": [],
-      "functions": [
-        "accept_project_invite",
-        "decline_project_invite"
-      ],
+      "functions": ["accept_project_invite", "decline_project_invite"],
       "destructive": false,
       "dataBackfill": true,
       "reversible": false,
@@ -1844,22 +1509,13 @@
       "filename": "20260822122000_day13_goals.sql",
       "timestamp": "20260822122000",
       "sha256": "f4bebe4290fd09ccc3398498874d25b2d92da74350374e36471ae0c660595d4e",
-      "tables": [
-        "goals",
-        "goal_milestones"
-      ],
+      "tables": ["goals", "goal_milestones"],
       "functions": [],
       "destructive": false,
       "dataBackfill": false,
       "reversible": false,
-      "rls": [
-        "goals",
-        "goal_milestones"
-      ],
-      "policies": [
-        "Owners manage goals",
-        "Owners manage goal milestones"
-      ],
+      "rls": ["goals", "goal_milestones"],
+      "policies": ["Owners manage goals", "Owners manage goal milestones"],
       "indexes": [
         "goals_owner_status_updated_idx",
         "goals_owner_target_idx",
@@ -1884,10 +1540,7 @@
       "reversible": false,
       "rls": [],
       "policies": [],
-      "indexes": [
-        "idx_scheduled_tasks_due_execution",
-        "idx_scheduled_tasks_execution_lease"
-      ]
+      "indexes": ["idx_scheduled_tasks_due_execution", "idx_scheduled_tasks_execution_lease"]
     },
     {
       "order": 77,
@@ -1895,10 +1548,7 @@
       "timestamp": "20260823113000",
       "sha256": "3f0e9a3ceb96c0354b1bc032df5a3b77cd02892e53c169c409c7edb303dd9189",
       "tables": [],
-      "functions": [
-        "settle_scheduled_task_success",
-        "settle_scheduled_task_failure"
-      ],
+      "functions": ["settle_scheduled_task_success", "settle_scheduled_task_failure"],
       "destructive": false,
       "dataBackfill": true,
       "reversible": false,
@@ -1917,20 +1567,11 @@
         "chat_message_versions",
         "chat_pinned_files"
       ],
-      "functions": [
-        "kova_set_updated_at",
-        "kova_chat_branch_lineage_guard",
-        "kova_can_pin_source"
-      ],
+      "functions": ["kova_set_updated_at", "kova_chat_branch_lineage_guard", "kova_can_pin_source"],
       "destructive": true,
       "dataBackfill": false,
       "reversible": false,
-      "rls": [
-        "chat_branches",
-        "chat_custom_rules",
-        "chat_message_versions",
-        "chat_pinned_files"
-      ],
+      "rls": ["chat_branches", "chat_custom_rules", "chat_message_versions", "chat_pinned_files"],
       "policies": [
         "chat_branches_owner_select",
         "chat_branches_owner_insert",
@@ -1993,9 +1634,7 @@
       "dataBackfill": false,
       "reversible": false,
       "rls": [],
-      "policies": [
-        "%s_no_client_access"
-      ],
+      "policies": ["%s_no_client_access"],
       "indexes": []
     },
     {
@@ -2016,10 +1655,7 @@
       "reversible": false,
       "rls": [],
       "policies": [],
-      "indexes": [
-        "uq_chat_branches_conversation",
-        "idx_chat_branches_owner_chat_active"
-      ]
+      "indexes": ["uq_chat_branches_conversation", "idx_chat_branches_owner_chat_active"]
     },
     {
       "order": 82,
