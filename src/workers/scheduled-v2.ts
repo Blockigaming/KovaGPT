@@ -1,5 +1,9 @@
 import os from "node:os";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import {
+  readScheduledWorkerReadinessV2,
+  runScheduledDeliveryBatchV2,
+} from "@/lib/scheduled-delivery-v2.server";
 import { runScheduledExecutionBatchV2 } from "@/lib/scheduled-execution-v2.server";
 import {
   runScheduledWorkerOnce,
@@ -49,6 +53,8 @@ async function recordHeartbeat(heartbeat: ScheduledWorkerHeartbeat): Promise<voi
 try {
   await runScheduledWorkerOnce({
     runBatch: runScheduledExecutionBatchV2,
+    runDeliveryBatch: runScheduledDeliveryBatchV2,
+    readReadiness: readScheduledWorkerReadinessV2,
     recordHeartbeat,
     log,
     hostname: os.hostname,
