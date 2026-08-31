@@ -77,7 +77,13 @@ function assertClaim(value: unknown): ScheduledClaimV2 {
     throw new Error("Scheduled v2 claim is malformed.");
   }
   const claim = value as Partial<ScheduledClaimV2>;
-  const ids = [claim.task_id, claim.user_id, claim.occurrence_id, claim.attempt_id, claim.lease_token];
+  const ids = [
+    claim.task_id,
+    claim.user_id,
+    claim.occurrence_id,
+    claim.attempt_id,
+    claim.lease_token,
+  ];
   if (ids.some((id) => typeof id !== "string" || !id.trim())) {
     throw new Error("Scheduled v2 claim is missing execution identity.");
   }
@@ -168,7 +174,10 @@ async function heartbeat(claim: ScheduledClaimV2): Promise<HeartbeatRow> {
   return row;
 }
 
-function startLeaseGuard(claim: ScheduledClaimV2, controller: AbortController): {
+function startLeaseGuard(
+  claim: ScheduledClaimV2,
+  controller: AbortController,
+): {
   stop: () => void;
   failure: () => Error | null;
   cancellationSeen: () => boolean;
@@ -258,7 +267,8 @@ async function executePrompt(
 
   return {
     content,
-    providerRequestId: response.headers.get("x-request-id") ?? response.headers.get("apim-request-id"),
+    providerRequestId:
+      response.headers.get("x-request-id") ?? response.headers.get("apim-request-id"),
     receipt: createHash("sha256").update(content).digest("hex"),
   };
 }
@@ -271,7 +281,9 @@ async function settleCanceled(claim: ScheduledClaimV2): Promise<ScheduledExecuti
     p_lease_token: claim.lease_token,
   });
   if (settled.error || settled.data !== true) {
-    throw new Error(`Scheduled v2 cancellation settlement failed: ${settled.error?.message ?? "invalid acknowledgement"}`);
+    throw new Error(
+      `Scheduled v2 cancellation settlement failed: ${settled.error?.message ?? "invalid acknowledgement"}`,
+    );
   }
   return {
     taskId: claim.task_id,
@@ -294,7 +306,9 @@ async function executeClaim(claim: ScheduledClaimV2): Promise<ScheduledExecution
       guard.stop();
       const guardFailure = guard.failure();
       if (guardFailure) {
-        throw new LeaseUncertainError(`Scheduled v2 lease became uncertain: ${guardFailure.message}`);
+        throw new LeaseUncertainError(
+          `Scheduled v2 lease became uncertain: ${guardFailure.message}`,
+        );
       }
 
       const finalHeartbeat = await heartbeat(claim);
@@ -314,7 +328,9 @@ async function executeClaim(claim: ScheduledClaimV2): Promise<ScheduledExecution
       });
       const row = singleRow(result, "Scheduled v2 failure settlement");
       if (typeof row.terminal !== "boolean" || typeof row.retry_at === "undefined") {
-        throw new Error("Scheduled v2 failure settlement returned an invalid result.");
+        throw new Error("Scheduled v2 failure settlement returned an invalid result.", {
+          cause: reason,
+        });
       }
       return {
         taskId: claim.task_id,

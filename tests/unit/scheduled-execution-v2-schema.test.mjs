@@ -34,13 +34,19 @@ test("v2 persists immutable occurrences, separate attempts, outbox, and heartbea
   assert.match(migration, /unique \(occurrence_id, channel, event_type\)/u);
   assert.match(migration, /lease_token uuid not null default gen_random_uuid\(\)/u);
   assert.match(migration, /task_state_version bigint not null/u);
-  assert.match(migration, /foreign key \(task_id, user_id\)[\s\S]*scheduled_tasks \(id, user_id\)/u);
+  assert.match(
+    migration,
+    /foreign key \(task_id, user_id\)[\s\S]*scheduled_tasks \(id, user_id\)/u,
+  );
 });
 
 test("claims are service-only, owner-isolated, entitlement checked and concurrency bounded", () => {
   assert.match(migration, /auth\.role\(\) <> 'service_role'/u);
   assert.match(migration, /scheduled_task_plan_tier_v2\(st\.user_id\) in \('plus', 'pro'\)/u);
-  assert.match(migration, /active_occ\.user_id = st\.user_id[\s\S]*active_occ\.status = 'running'/u);
+  assert.match(
+    migration,
+    /active_occ\.user_id = st\.user_id[\s\S]*active_occ\.status = 'running'/u,
+  );
   assert.match(migration, /for update skip locked/u);
   assert.match(migration, /limit 1;/u);
   assert.match(migration, /retry_occurrence_id/u);
@@ -69,24 +75,41 @@ test("success settlement queues an idempotent outbox record instead of deliverin
 });
 
 test("retry protocol is bounded, deterministic and keeps one occurrence across attempts", () => {
-  assert.match(migration, /attempt_number integer not null check \(attempt_number between 1 and 4\)/u);
+  assert.match(
+    migration,
+    /attempt_number integer not null check \(attempt_number between 1 and 4\)/u,
+  );
   assert.match(migration, /when 1 then 60[\s\S]*when 2 then 300[\s\S]*else 900/u);
-  assert.match(migration, /hashtextextended\(p_occurrence_id::text, v_attempt\.attempt_number::bigint\)/u);
-  assert.match(migration, /retry_occurrence_id = case when v_retry_at is null then null else p_occurrence_id end/u);
+  assert.match(
+    migration,
+    /hashtextextended\(p_occurrence_id::text, v_attempt\.attempt_number::bigint\)/u,
+  );
+  assert.match(
+    migration,
+    /retry_occurrence_id = case when v_retry_at is null then null else p_occurrence_id end/u,
+  );
 });
 
 test("expired leases become explicit attempts and are never silently reset", () => {
   const recovery = migration.slice(
-    migration.indexOf("create or replace function public.recover_expired_scheduled_task_attempts_v2"),
+    migration.indexOf(
+      "create or replace function public.recover_expired_scheduled_task_attempts_v2",
+    ),
     migration.indexOf("create or replace function public.settle_scheduled_task_success_v2"),
   );
   assert.match(recovery, /status = 'expired'/u);
   assert.match(recovery, /failure_type = 'lease_expired'/u);
-  assert.match(recovery, /status = case when v_retry_at is null then 'failed' else 'retry_wait' end/u);
+  assert.match(
+    recovery,
+    /status = case when v_retry_at is null then 'failed' else 'retry_wait' end/u,
+  );
 });
 
 test("authenticated clients lose direct scheduled-task mutation and use owner RPC boundaries", () => {
-  assert.match(migration, /revoke insert, update, delete on public\.scheduled_tasks from authenticated/u);
+  assert.match(
+    migration,
+    /revoke insert, update, delete on public\.scheduled_tasks from authenticated/u,
+  );
   for (const name of [
     "owner_create_scheduled_task_v2",
     "owner_update_scheduled_task_v2",
