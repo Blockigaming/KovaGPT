@@ -95,7 +95,11 @@ fi
 
 # Shell files use the shell parser. Prettier and ESLint are intentionally
 # restricted to the JavaScript/TypeScript source they support.
-gate shell-syntax bash -n "${SHELL_FILES[@]}"
+gate shell-syntax bash -c '
+  for file in "$@"; do
+    bash -n "$file"
+  done
+' bash "${SHELL_FILES[@]}"
 
 # The complete committed scheduler source must be the fixed point of all three
 # deterministic transforms, including same-image runtime activation.
