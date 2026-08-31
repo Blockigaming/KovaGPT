@@ -87,11 +87,16 @@ if [ "$MIGRATION_COUNT" != "$EXPECTED_MIGRATIONS" ]; then
   exit 1
 fi
 
-# Re-running both deterministic transforms must produce no tracked diff. This
-# proves the source-closure scripts are idempotent and the expected wiring is
-# already present in the committed SHA.
-gate transform-idempotence bash -c \
-  'node scripts/release/apply-scheduled-azure-v2.mjs && node scripts/release/apply-scheduled-product-v2.mjs'
+# Re-running both deterministic transforms plus normalizing their generated
+# source-contract tests must produce no tracked diff. This proves the committed
+# source is the canonical fixed point of the source-closure transforms.
+gate transform-idempotence bash -c '
+  node scripts/release/apply-scheduled-azure-v2.mjs &&
+  node scripts/release/apply-scheduled-product-v2.mjs &&
+  node_modules/.bin/prettier --write \
+    tests/unit/scheduled-azure-v2-source.test.mjs \
+    tests/unit/scheduled-history-retry-v2.test.mjs
+'
 if ! git diff --quiet || ! git diff --cached --quiet; then
   echo "STOP=TRANSFORM_NOT_IDEMPOTENT"
   git status --short --branch
