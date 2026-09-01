@@ -30,6 +30,7 @@ test("Stripe pins Dahlia and verifies Checkout and webhook safety contracts", as
   assert.doesNotMatch(checkoutSource, /automatic_tax\s*:/);
   assert.doesNotMatch(checkoutSource, /sessionParams\s+as\s+Parameters/);
   assert.match(checkoutSource, /return_url: CHECKOUT_RETURN_URL/);
+  assert.match(checkoutSource, /parseCheckoutRequest\(data\)/);
   assert.doesNotMatch(checkoutSource, /\breturnUrl\b|data\.returnUrl/);
   assert.match(hook, /code.*23505/);
   assert.match(hook, /processed_stripe_events"\)\.delete/);
