@@ -113,7 +113,7 @@ test("Stripe release contract pins the API and embedded Checkout identity", () =
     webhookSource:
       'normalizeStripeEnvironment value === "sandbox" || value === "live" processed_stripe_events 23505',
     stripeSource:
-      'PAYMENTS_SANDBOX_WEBHOOK_SECRET PAYMENTS_LIVE_WEBHOOK_SECRET timingSafeEqual apiVersion: "2026-07-29.dahlia"',
+      'PAYMENTS_SANDBOX_WEBHOOK_SECRET PAYMENTS_LIVE_WEBHOOK_SECRET timingSafeEqual apiVersion: "2026-08-26.dahlia"',
     planSource: "plus_monthly pro_monthly",
     checkoutSource:
       'const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = { integration_identifier: "kovagpt_checkout_wshrfyef" }; stripe.checkout.sessions.create(sessionParams)',
@@ -123,7 +123,7 @@ test("Stripe release contract pins the API and embedded Checkout identity", () =
   assert.deepEqual(
     verifyStripeTestPath({
       ...valid,
-      stripeSource: valid.stripeSource.replace("2026-07-29", "2026-03-25"),
+      stripeSource: valid.stripeSource.replace("2026-08-26", "2026-07-29"),
     }),
     ["current Stripe API version missing"],
   );
