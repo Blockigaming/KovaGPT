@@ -1,10 +1,10 @@
-name: Deploy KovaGPT to Cloudflare production
+name: Validate KovaGPT Cloudflare production edge boundary
 
 on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: Type DEPLOY to request the protected production deployment
+        description: Type VALIDATE to run the non-deploying production edge checks
         required: true
         type: string
 
@@ -12,90 +12,27 @@ permissions:
   contents: read
 
 concurrency:
-  group: kovagpt-cloudflare-production
-  cancel-in-progress: false
+  group: kovagpt-cloudflare-production-validation
+  cancel-in-progress: true
 
 jobs:
-  deploy:
-    if: inputs.confirmation == 'DEPLOY' && github.ref == 'refs/heads/main'
+  validate-only:
+    if: inputs.confirmation == 'VALIDATE' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    environment:
-      name: production
-    env:
-      WRANGLER_SEND_METRICS: "false"
+    timeout-minutes: 10
     steps:
       - name: Checkout the selected revision
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
 
-      - name: Validate protected environment configuration
-        shell: bash
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          KOVA_CLOUDFLARE_WORKER_NAME: ${{ vars.KOVA_CLOUDFLARE_WORKER_NAME }}
-        run: |
-          set -euo pipefail
-          missing=0
-          for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID KOVA_CLOUDFLARE_WORKER_NAME; do
-            if [ -z "${!name:-}" ]; then
-              echo "::error::Required production environment setting ${name} is not configured."
-              missing=1
-            fi
-          done
-          if [ "$missing" -ne 0 ]; then
-            exit 1
-          fi
-
-          if [[ ! "$CLOUDFLARE_ACCOUNT_ID" =~ ^[0-9A-Fa-f]{32}$ ]]; then
-            echo "::error::CLOUDFLARE_ACCOUNT_ID must be a 32-character hexadecimal account ID."
-            exit 1
-          fi
-
-          if [[ ! "$KOVA_CLOUDFLARE_WORKER_NAME" =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$ ]]; then
-            echo "::error::KOVA_CLOUDFLARE_WORKER_NAME must be a 1-63 character DNS label containing only letters, numbers, and internal dashes."
-            exit 1
-          fi
-
       - name: Set up Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
-          cache: npm
 
-      - name: Install locked dependencies
-        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Validate the Cloudflare edge-only architecture
+        run: node --test tests/unit/cloudflare-deploy-workflow.test.mjs
 
-      - name: Build the Nitro Cloudflare module
-        env:
-          KOVA_BUILD_SHA: ${{ github.sha }}
-          KOVA_BUILD_TIME: ${{ github.event.repository.updated_at }}
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
-        run: |
-          node scripts/validate-public-build-env.mjs
-          npm run build
-
-      - name: Validate the generated Worker artifact
-        run: node --test tests/integration/production-worker-artifact.test.mjs
-
-      - name: Deploy the generated Worker with Wrangler
-        shell: bash
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          KOVA_CLOUDFLARE_WORKER_NAME: ${{ vars.KOVA_CLOUDFLARE_WORKER_NAME }}
-        run: |
-          set -euo pipefail
-          npx --no-install wrangler deploy \
-            --config dist/server/wrangler.json \
-            --name "$KOVA_CLOUDFLARE_WORKER_NAME" \
-            --keep-vars
-
-      - name: Verify the exact deployed revision
-        env:
-          KOVA_SMOKE_BASE_URL: https://kovagpt.com
-          KOVA_EXPECTED_SHA: ${{ github.sha }}
-        run: npm run smoke:deployment
+      - name: Record the non-deployment boundary
+        run: echo "Validation complete. Azure Container Apps remains the application origin; this workflow cannot deploy or shift traffic."

@@ -2,65 +2,74 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "location": {
-      "value": "eastus"
-    },
     "namePrefix": {
       "value": "kovagpt-prod"
     },
+    "managedEnvironmentName": {
+      "value": "REPLACE_WITH_PRODUCTION_CONTAINER_APPS_ENVIRONMENT"
+    },
+    "managedIdentityName": {
+      "value": "REPLACE_WITH_PRODUCTION_MANAGED_IDENTITY"
+    },
+    "logAnalyticsWorkspaceName": {
+      "value": "REPLACE_WITH_PRODUCTION_LOG_ANALYTICS_WORKSPACE"
+    },
     "imageReference": {
-      "value": "kovagptacr-dte9hugbhjghcyb8.azurecr.io/kovagpt-web@sha256:REPLACE_WITH_64_HEX_DIGEST"
+      "value": "REPLACE_WITH_PRODUCTION_ACR_LOGIN_SERVER/kovagpt-web@sha256:REPLACE_WITH_64_HEX_DIGEST"
     },
     "acrName": {
-      "value": "kovagptacr"
+      "value": "REPLACE_WITH_PRODUCTION_ACR_NAME"
     },
     "acrResourceGroupName": {
-      "value": "rg-kovagpt-dev"
+      "value": "REPLACE_WITH_PRODUCTION_ACR_RESOURCE_GROUP"
     },
     "keyVaultName": {
-      "value": "REPLACE_WITH_STAGING_KEY_VAULT"
+      "value": "REPLACE_WITH_PRODUCTION_KEY_VAULT"
     },
     "keyVaultResourceGroupName": {
-      "value": "rg-kovagpt-dev"
+      "value": "REPLACE_WITH_PRODUCTION_KEY_VAULT_RESOURCE_GROUP"
     },
     "supabaseServiceRoleSecretUri": {
-      "value": "https://REPLACE_WITH_STAGING_KEY_VAULT.vault.azure.net/secrets/supabase-service-role-key/REPLACE_WITH_VERSION"
+      "value": "https://REPLACE_WITH_PRODUCTION_KEY_VAULT.vault.azure.net/secrets/supabase-service-role-key/REPLACE_WITH_VERSION"
+    },
+    "kovaIpHashSecretUri": {
+      "value": "https://REPLACE_WITH_PRODUCTION_KEY_VAULT.vault.azure.net/secrets/kova-ip-hash-secret/REPLACE_WITH_VERSION"
     },
     "azureOpenAiAccountName": {
-      "value": "REPLACE_WITH_AZURE_OPENAI_ACCOUNT"
+      "value": "REPLACE_WITH_PRODUCTION_AZURE_OPENAI_ACCOUNT"
     },
     "azureOpenAiResourceGroupName": {
-      "value": "rg-kovagpt-dev"
+      "value": "REPLACE_WITH_PRODUCTION_AZURE_OPENAI_RESOURCE_GROUP"
     },
     "azureOpenAiChatDeployment": {
-      "value": "kova-chat"
+      "value": "REPLACE_WITH_PRODUCTION_CHAT_DEPLOYMENT"
     },
     "azureOpenAiThinkingDeployment": {
-      "value": "kova-think"
+      "value": "REPLACE_WITH_PRODUCTION_THINKING_DEPLOYMENT"
     },
     "azureOpenAiDeepDeployment": {
-      "value": "kova-deep"
+      "value": "REPLACE_WITH_PRODUCTION_DEEP_DEPLOYMENT"
     },
     "azureOpenAiImageDeployment": {
-      "value": "kova-image"
+      "value": "REPLACE_WITH_PRODUCTION_IMAGE_DEPLOYMENT"
     },
     "azureOpenAiEmbeddingDeployment": {
-      "value": "kova-embedding"
+      "value": "REPLACE_WITH_PRODUCTION_EMBEDDING_DEPLOYMENT"
     },
     "supabaseUrl": {
-      "value": "https://REPLACE_WITH_SYNTHETIC_STAGING_PROJECT.supabase.co"
+      "value": "https://REPLACE_WITH_PRODUCTION_SUPABASE_PROJECT_REF.supabase.co"
     },
     "supabasePublishableKey": {
-      "value": "REPLACE_WITH_SYNTHETIC_STAGING_PUBLISHABLE_KEY"
+      "value": "REPLACE_WITH_PRODUCTION_SUPABASE_PUBLISHABLE_KEY"
     },
     "generationEnabled": {
       "value": false
     },
     "minReplicas": {
-      "value": 0
+      "value": 1
     },
     "maxReplicas": {
-      "value": 2
+      "value": 4
     },
     "logRetentionDays": {
       "value": 30
@@ -72,10 +81,7 @@
       "value": false
     },
     "monthlyBudgetAmount": {
-      "value": 25
-    },
-    "budgetStartDate": {
-      "value": "2026-08-01T00:00:00Z"
+      "value": 100
     },
     "budgetContactEmails": {
       "value": []
