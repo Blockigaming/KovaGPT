@@ -11,12 +11,7 @@ interface Props {
   userId?: string;
 }
 
-export function StripeEmbeddedCheckout({
-  priceId,
-  quantity,
-  customerEmail,
-  userId,
-}: Props) {
+export function StripeEmbeddedCheckout({ priceId, quantity, customerEmail, userId }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
