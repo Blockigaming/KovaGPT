@@ -116,7 +116,7 @@ test("Stripe release contract pins the API and embedded Checkout identity", () =
       'PAYMENTS_SANDBOX_WEBHOOK_SECRET PAYMENTS_LIVE_WEBHOOK_SECRET timingSafeEqual apiVersion: "2026-08-26.dahlia"',
     planSource: "plus_monthly pro_monthly",
     checkoutSource:
-      'const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = { integration_identifier: "kovagpt_checkout_wshrfyef" }; stripe.checkout.sessions.create(sessionParams)',
+      'const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = { integration_identifier: "kovagpt_checkout_wshrfyef" }; stripe.checkout.sessions.create(sessionParams); parseAllowedCheckoutReturnUrl(data.returnUrl)',
   };
   assert.deepEqual(verifyStripeTestPath(valid), []);
 
@@ -164,6 +164,16 @@ test("Stripe release contract pins the API and embedded Checkout identity", () =
       checkoutSource: `${valid.checkoutSource} automatic_tax: { enabled: true }`,
     }),
     ["automatic tax requires approved registrations"],
+  );
+  assert.deepEqual(
+    verifyStripeTestPath({
+      ...valid,
+      checkoutSource: valid.checkoutSource.replace(
+        "parseAllowedCheckoutReturnUrl(data.returnUrl)",
+        "",
+      ),
+    }),
+    ["Checkout return URL allowlist missing"],
   );
 });
 
