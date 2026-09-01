@@ -23,7 +23,7 @@ import { useUser } from "@/components/auth/ClerkSafe";
 import { useLayout } from "@/hooks/use-mobile";
 import { useSharedSendOnEnter } from "@/lib/composer-preferences";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { tryUseUpload } from "@/lib/limits";
 import { toast } from "sonner";
 import { ResponsiveModelSelector as ModelSelector } from "@/components/ResponsiveModelSelector";
@@ -80,6 +80,17 @@ const TEXT_LIKE_EXT =
   /\.(txt|md|markdown|csv|tsv|json|jsonl|ya?ml|toml|xml|html?|css|scss|less|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|h|cc|cpp|hpp|cs|php|sql|sh|bash|zsh|fish|env|ini|conf|log|srt|vtt)$/i;
 const MAX_TEXT_FILE_BYTES = 256 * 1024; // 256 KB inline cap to keep prompts reasonable
 const MAX_IMAGE_FILE_BYTES = 3 * 1024 * 1024; // bounded for inline vision requests and device history
+
+const subscribeToOnlineStatus = (onStoreChange: () => void) => {
+  window.addEventListener("online", onStoreChange);
+  window.addEventListener("offline", onStoreChange);
+  return () => {
+    window.removeEventListener("online", onStoreChange);
+    window.removeEventListener("offline", onStoreChange);
+  };
+};
+const getOnlineStatusSnapshot = () => navigator.onLine !== false;
+const getServerOnlineStatusSnapshot = () => true;
 
 export function ChatInput({
   value,
@@ -154,18 +165,11 @@ export function ChatInput({
   const plusTriggerRef = useRef<HTMLButtonElement>(null);
 
   const [plusOpen, setPlusOpen] = useState(false);
-  const [online, setOnline] = useState(() =>
-    typeof navigator === "undefined" ? true : navigator.onLine,
+  const online = useSyncExternalStore(
+    subscribeToOnlineStatus,
+    getOnlineStatusSnapshot,
+    getServerOnlineStatusSnapshot,
   );
-  useEffect(() => {
-    const update = () => setOnline(navigator.onLine);
-    window.addEventListener("online", update);
-    window.addEventListener("offline", update);
-    return () => {
-      window.removeEventListener("online", update);
-      window.removeEventListener("offline", update);
-    };
-  }, []);
   const [kbOffset, setKbOffset] = useState(0);
   const submittingRef = useRef(false);
   const composingRef = useRef(false);
