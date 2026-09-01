@@ -26,15 +26,11 @@ function requestWithHash(hash) {
 
 test("trusted proxy fingerprints are strict and support a two-certificate rotation", () => {
   assert.deepEqual(
-    parseTrustedProxyCertificateFingerprints(
-      `${fingerprintA},${fingerprintB.toUpperCase()}`,
-    ),
+    parseTrustedProxyCertificateFingerprints(`${fingerprintA},${fingerprintB.toUpperCase()}`),
     [fingerprintA, fingerprintB],
   );
   assert.deepEqual(
-    parseTrustedProxyCertificateFingerprints(
-      fingerprintA.toUpperCase().match(/.{2}/gu).join(":"),
-    ),
+    parseTrustedProxyCertificateFingerprints(fingerprintA.toUpperCase().match(/.{2}/gu).join(":")),
     [fingerprintA],
   );
 
@@ -51,14 +47,9 @@ test("trusted proxy fingerprints are strict and support a two-certificate rotati
 
 test("forwarded certificate parsing rejects missing, malformed, and ambiguous hashes", () => {
   assert.equal(parseForwardedClientCertificateFingerprint(null), null);
+  assert.equal(parseForwardedClientCertificateFingerprint("Cert=redacted;"), null);
   assert.equal(
-    parseForwardedClientCertificateFingerprint("Cert=redacted;"),
-    null,
-  );
-  assert.equal(
-    parseForwardedClientCertificateFingerprint(
-      `Hash=${fingerprintA};Hash=${fingerprintB};`,
-    ),
+    parseForwardedClientCertificateFingerprint(`Hash=${fingerprintA};Hash=${fingerprintB};`),
     null,
   );
   assert.equal(
@@ -68,9 +59,7 @@ test("forwarded certificate parsing rejects missing, malformed, and ambiguous ha
     null,
   );
   assert.equal(
-    parseForwardedClientCertificateFingerprint(
-      `Hash=${fingerprintA.toUpperCase()};Cert=x;`,
-    ),
+    parseForwardedClientCertificateFingerprint(`Hash=${fingerprintA.toUpperCase()};Cert=x;`),
     fingerprintA,
   );
 });
@@ -80,20 +69,14 @@ test("Azure production rejects raw-origin traffic and accepts only a pinned prox
     new Request("https://ca-kovagpt-prod.example/"),
     requestWithHash(fingerprintB),
   ]) {
-    const response = enforceAzureProductionOriginBoundary(
-      request,
-      productionEnvironment,
-    );
+    const response = enforceAzureProductionOriginBoundary(request, productionEnvironment);
     assert.equal(response?.status, 403);
     assert.equal(response?.headers.get("cache-control"), "no-store");
     assert.equal(await response?.text(), "Forbidden");
   }
 
   assert.equal(
-    enforceAzureProductionOriginBoundary(
-      requestWithHash(fingerprintA),
-      productionEnvironment,
-    ),
+    enforceAzureProductionOriginBoundary(requestWithHash(fingerprintA), productionEnvironment),
     null,
   );
   assert.equal(
@@ -106,10 +89,7 @@ test("Azure production rejects raw-origin traffic and accepts only a pinned prox
 
 test("Azure production refuses to boot without a valid pinned proxy certificate", () => {
   const validator = readFileSync("src/lib/azure-runtime-env.server.ts", "utf8");
-  assert.match(
-    validator,
-    /AZURE_ENVIRONMENT\?\.trim\(\)\.toLowerCase\(\) === "production"/u,
-  );
+  assert.match(validator, /AZURE_ENVIRONMENT\?\.trim\(\)\.toLowerCase\(\) === "production"/u);
   assert.match(validator, /parseTrustedProxyCertificateFingerprints/u);
   assert.match(
     validator,

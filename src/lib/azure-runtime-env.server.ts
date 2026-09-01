@@ -1,7 +1,6 @@
 import { parseTrustedProxyCertificateFingerprints } from "./origin-boundary.server";
 
-const SECRET_NAME_PATTERN =
-  /(SECRET|TOKEN|KEY|PASSWORD|PRIVATE|CONNECTION_STRING)/u;
+const SECRET_NAME_PATTERN = /(SECRET|TOKEN|KEY|PASSWORD|PRIVATE|CONNECTION_STRING)/u;
 
 const PUBLIC_CLIENT_ALLOWLIST = new Set([
   "VITE_SUPABASE_PUBLISHABLE_KEY",
@@ -25,11 +24,7 @@ const optionalServerValues = [
   "AZURE_CLIENT_ID",
 ] as const;
 
-function booleanEnv(
-  environment: NodeJS.ProcessEnv,
-  name: string,
-  fallback: boolean,
-): boolean {
+function booleanEnv(environment: NodeJS.ProcessEnv, name: string, fallback: boolean): boolean {
   const raw = environment[name];
   if (raw == null || raw.trim() === "") return fallback;
   if (/^(1|true|yes|on)$/iu.test(raw)) return true;
@@ -38,16 +33,11 @@ function booleanEnv(
 }
 
 function missing(environment: NodeJS.ProcessEnv, names: string[]): string[] {
-  return names.filter(
-    (name) => !environment[name] || environment[name]?.trim() === "",
-  );
+  return names.filter((name) => !environment[name] || environment[name]?.trim() === "");
 }
 
 function azureIdentityReady(environment: NodeJS.ProcessEnv): boolean {
-  return Boolean(
-    environment.IDENTITY_ENDPOINT?.trim() &&
-    environment.IDENTITY_HEADER?.trim(),
-  );
+  return Boolean(environment.IDENTITY_ENDPOINT?.trim() && environment.IDENTITY_HEADER?.trim());
 }
 
 export function validateAzureRuntimeEnv(environment = process.env): void {
@@ -76,22 +66,14 @@ export function validateAzureRuntimeEnv(environment = process.env): void {
     );
   }
 
-  const aiGenerationEnabled = booleanEnv(
-    environment,
-    "AI_GENERATION_ENABLED",
-    false,
-  );
+  const aiGenerationEnabled = booleanEnv(environment, "AI_GENERATION_ENABLED", false);
   const azureEndpoint = environment.AZURE_OPENAI_ENDPOINT?.trim();
   const azureCredentialsReady = Boolean(
     environment.AZURE_OPENAI_API_KEY?.trim() || azureIdentityReady(environment),
   );
   const directOpenAiReady = Boolean(environment.OPENAI_API_KEY?.trim());
 
-  if (
-    aiGenerationEnabled &&
-    !directOpenAiReady &&
-    !(azureEndpoint && azureCredentialsReady)
-  ) {
+  if (aiGenerationEnabled && !directOpenAiReady && !(azureEndpoint && azureCredentialsReady)) {
     throw new Error(
       "[env] AI_GENERATION_ENABLED=true requires OPENAI_API_KEY, or AZURE_OPENAI_ENDPOINT with AZURE_OPENAI_API_KEY or Container Apps managed identity. Set AI_GENERATION_ENABLED=false before model access is approved.",
     );
@@ -102,9 +84,7 @@ export function validateAzureRuntimeEnv(environment = process.env): void {
     try {
       endpoint = new URL(azureEndpoint);
     } catch {
-      throw new Error(
-        "[env] AZURE_OPENAI_ENDPOINT must be a valid HTTPS Azure OpenAI endpoint.",
-      );
+      throw new Error("[env] AZURE_OPENAI_ENDPOINT must be a valid HTTPS Azure OpenAI endpoint.");
     }
     const allowedHost =
       endpoint.hostname.endsWith(".openai.azure.com") ||
@@ -119,9 +99,7 @@ export function validateAzureRuntimeEnv(environment = process.env): void {
       endpoint.search ||
       endpoint.hash
     ) {
-      throw new Error(
-        "[env] AZURE_OPENAI_ENDPOINT must use an approved Azure OpenAI hostname.",
-      );
+      throw new Error("[env] AZURE_OPENAI_ENDPOINT must use an approved Azure OpenAI hostname.");
     }
 
     const requiredAzureOpenAi = missing(environment, [

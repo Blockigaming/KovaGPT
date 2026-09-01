@@ -8,11 +8,7 @@ import { withRuntimeBindings } from "./lib/runtime-env.server";
 validateAzureRuntimeEnv();
 
 type ServerEntry = {
-  fetch: (
-    request: Request,
-    env: unknown,
-    ctx: unknown,
-  ) => Promise<Response> | Response;
+  fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
 };
 
 const CONTENT_SECURITY_POLICY = [
@@ -40,15 +36,13 @@ function hardenResponse(response: Response): Response {
     "Cross-Origin-Resource-Policy": "same-origin",
     "Origin-Agent-Cluster": "?1",
     // Voice and browser dictation are intentionally absent from KovaGPT.
-    "Permissions-Policy":
-      "camera=(), geolocation=(self), microphone=(), payment=(self), usb=()",
+    "Permissions-Policy": "camera=(), geolocation=(self), microphone=(), payment=(self), usb=()",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "SAMEORIGIN",
   };
-  for (const [name, value] of Object.entries(securityHeaders))
-    headers.set(name, value);
+  for (const [name, value] of Object.entries(securityHeaders)) headers.set(name, value);
   if (!headers.has("Cache-Control") && response.status >= 400) {
     headers.set("Cache-Control", "no-store");
   }
@@ -65,8 +59,7 @@ async function getServerEntry(): Promise<ServerEntry> {
   if (!serverEntryPromise) {
     const pending = import("@tanstack/react-start/server-entry").then(
       (module) =>
-        (module as { default?: ServerEntry }).default ??
-        (module as unknown as ServerEntry),
+        (module as { default?: ServerEntry }).default ?? (module as unknown as ServerEntry),
     );
     serverEntryPromise = pending;
     void pending.catch(() => {
@@ -83,10 +76,7 @@ function brandedErrorResponse(): Response {
   });
 }
 
-function isCatastrophicSsrErrorBody(
-  body: string,
-  responseStatus: number,
-): boolean {
+function isCatastrophicSsrErrorBody(body: string, responseStatus: number): boolean {
   let payload: unknown;
   try {
     payload = JSON.parse(body);
@@ -111,9 +101,7 @@ function isCatastrophicSsrErrorBody(
   );
 }
 
-async function normalizeCatastrophicSsrResponse(
-  response: Response,
-): Promise<Response> {
+async function normalizeCatastrophicSsrResponse(response: Response): Promise<Response> {
   if (response.status < 500) return response;
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) return response;
@@ -137,18 +125,12 @@ export default {
         const rejected = rejectCrossSiteRequest(request);
         if (rejected) return hardenResponse(rejected);
       }
-      const contentLength = Number(
-        request.headers.get("content-length") ?? "0",
-      );
+      const contentLength = Number(request.headers.get("content-length") ?? "0");
       if (Number.isFinite(contentLength) && contentLength > 16 * 1024 * 1024) {
-        return hardenResponse(
-          Response.json({ error: "Request too large" }, { status: 413 }),
-        );
+        return hardenResponse(Response.json({ error: "Request too large" }, { status: 413 }));
       }
       const handler = await getServerEntry();
-      const response = await withRuntimeBindings(env, () =>
-        handler.fetch(request, env, ctx),
-      );
+      const response = await withRuntimeBindings(env, () => handler.fetch(request, env, ctx));
       return hardenResponse(await normalizeCatastrophicSsrResponse(response));
     } catch (error) {
       console.error("[server] request failed", {

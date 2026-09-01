@@ -16,10 +16,7 @@ export function parseTrustedProxyCertificateFingerprints(
   if (!value?.trim()) return null;
 
   const rawFingerprints = value.split(",");
-  if (
-    rawFingerprints.length === 0 ||
-    rawFingerprints.length > MAX_TRUSTED_CERTIFICATES
-  ) {
+  if (rawFingerprints.length === 0 || rawFingerprints.length > MAX_TRUSTED_CERTIFICATES) {
     return null;
   }
 
@@ -27,14 +24,10 @@ export function parseTrustedProxyCertificateFingerprints(
   if (fingerprints.some((fingerprint) => fingerprint === null)) return null;
 
   const validFingerprints = fingerprints as string[];
-  return new Set(validFingerprints).size === validFingerprints.length
-    ? validFingerprints
-    : null;
+  return new Set(validFingerprints).size === validFingerprints.length ? validFingerprints : null;
 }
 
-export function parseForwardedClientCertificateFingerprint(
-  header: string | null,
-): string | null {
+export function parseForwardedClientCertificateFingerprint(header: string | null): string | null {
   if (!header || header.includes(",")) return null;
 
   const hashFields = header
@@ -43,9 +36,7 @@ export function parseForwardedClientCertificateFingerprint(
     .filter((field) => /^hash=/iu.test(field));
   if (hashFields.length !== 1) return null;
 
-  return normalizeSha256Fingerprint(
-    hashFields[0].slice(hashFields[0].indexOf("=") + 1),
-  );
+  return normalizeSha256Fingerprint(hashFields[0].slice(hashFields[0].indexOf("=") + 1));
 }
 
 function fingerprintMatches(left: string, right: string): boolean {
@@ -80,9 +71,7 @@ export function enforceAzureProductionOriginBoundary(
 
   let authorized = 0;
   for (const trustedFingerprint of trustedFingerprints) {
-    authorized += Number(
-      fingerprintMatches(presentedFingerprint, trustedFingerprint),
-    );
+    authorized += Number(fingerprintMatches(presentedFingerprint, trustedFingerprint));
   }
   return authorized === 1 ? null : forbidden();
 }
