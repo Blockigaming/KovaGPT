@@ -4,6 +4,8 @@ import { parseCheckoutRequest } from "../../src/lib/checkout-request.mjs";
 const STRIPE_API_VERSION_PATTERN = /apiVersion:\s*"2026-08-26\.dahlia"/u;
 const EXPECTED_INTEGRATION_IDENTIFIER = "kovagpt_checkout_wshrfyef";
 const INTEGRATION_IDENTIFIER_PATTERN = /^kovagpt_checkout_[a-z]{8}$/u;
+const CHECKOUT_VALIDATOR_PATTERN =
+  /\.validator\(\(data: unknown\) => \{\s*const parsed = parseCheckoutRequest\(data\);\s*if \(!resolveBillingPlan\(parsed\.priceId\)\) throw new Error\("Invalid priceId"\);\s*return parsed;\s*\}\)/u;
 
 export function normalizeStripeEnvironmentValue(value) {
   return value === "sandbox" || value === "live" ? value : null;
@@ -92,8 +94,8 @@ export function verifyStripeTestPath({ webhookSource, stripeSource, planSource, 
     failures.push("fixed Checkout return URL missing");
   if (/\breturnUrl\b|data\.returnUrl/u.test(checkoutSource))
     failures.push("Checkout return URL remains browser-selectable");
-  if (!/parseCheckoutRequest\(data\)/u.test(checkoutSource))
-    failures.push("Checkout request sanitizer missing");
+  if (!CHECKOUT_VALIDATOR_PATTERN.test(checkoutSource))
+    failures.push("sanitized Checkout validator missing");
 
   failures.push(...verifyCheckoutRequestBoundary());
   return failures;
