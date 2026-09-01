@@ -21,6 +21,7 @@ import {
 import { MobileBottomSheet } from "@/components/MobileBottomSheet";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { useLayout } from "@/hooks/use-mobile";
+import { useOnline } from "@/hooks/use-online";
 import { useSharedSendOnEnter } from "@/lib/composer-preferences";
 
 import { useEffect, useRef, useState } from "react";
@@ -154,18 +155,7 @@ export function ChatInput({
   const plusTriggerRef = useRef<HTMLButtonElement>(null);
 
   const [plusOpen, setPlusOpen] = useState(false);
-  const [online, setOnline] = useState(() =>
-    typeof navigator === "undefined" ? true : navigator.onLine,
-  );
-  useEffect(() => {
-    const update = () => setOnline(navigator.onLine);
-    window.addEventListener("online", update);
-    window.addEventListener("offline", update);
-    return () => {
-      window.removeEventListener("online", update);
-      window.removeEventListener("offline", update);
-    };
-  }, []);
+  const online = useOnline();
   const [kbOffset, setKbOffset] = useState(0);
   const submittingRef = useRef(false);
   const composingRef = useRef(false);
