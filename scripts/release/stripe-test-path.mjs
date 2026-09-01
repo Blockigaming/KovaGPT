@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { parseCheckoutRequest } from "../../src/lib/checkout-request.mjs";
 
 const STRIPE_API_VERSION_PATTERN = /apiVersion:\s*"2026-08-26\.dahlia"/u;
 const EXPECTED_INTEGRATION_IDENTIFIER = "kovagpt_checkout_wshrfyef";
@@ -6,6 +7,43 @@ const INTEGRATION_IDENTIFIER_PATTERN = /^kovagpt_checkout_[a-z]{8}$/u;
 
 export function normalizeStripeEnvironmentValue(value) {
   return value === "sandbox" || value === "live" ? value : null;
+}
+
+export function verifyCheckoutRequestBoundary() {
+  const failures = [];
+  try {
+    const hostileUrl = "https://evil.example/checkout/return";
+    const parsed = parseCheckoutRequest({
+      priceId: "plus_monthly",
+      quantity: 1,
+      environment: "sandbox",
+      returnUrl: hostileUrl,
+      redirect_url: hostileUrl,
+      return_url: hostileUrl,
+    });
+    const keys = Object.keys(parsed).sort();
+    if (
+      parsed.priceId !== "plus_monthly" ||
+      parsed.quantity !== 1 ||
+      keys.length !== 2 ||
+      keys[0] !== "priceId" ||
+      keys[1] !== "quantity"
+    ) {
+      failures.push("Checkout request allowlist leaked browser fields");
+    }
+    if (!Object.isFrozen(parsed)) failures.push("Checkout request is not frozen");
+    try {
+      parsed.return_url = hostileUrl;
+    } catch {
+      // Expected for a frozen object in an ES module.
+    }
+    if ("returnUrl" in parsed || "redirect_url" in parsed || "return_url" in parsed) {
+      failures.push("Checkout request accepted a browser redirect field");
+    }
+  } catch {
+    failures.push("Checkout request boundary could not be verified");
+  }
+  return failures;
 }
 
 export function verifyStripeTestPath({ webhookSource, stripeSource, planSource, checkoutSource }) {
@@ -54,7 +92,10 @@ export function verifyStripeTestPath({ webhookSource, stripeSource, planSource, 
     failures.push("fixed Checkout return URL missing");
   if (/\breturnUrl\b|data\.returnUrl/u.test(checkoutSource))
     failures.push("Checkout return URL remains browser-selectable");
+  if (!/parseCheckoutRequest\(data\)/u.test(checkoutSource))
+    failures.push("Checkout request sanitizer missing");
 
+  failures.push(...verifyCheckoutRequestBoundary());
   return failures;
 }
 
