@@ -1,3 +1,5 @@
+import { parseTrustedProxyCertificateFingerprints } from "./origin-boundary.server";
+
 const SECRET_NAME_PATTERN = /(SECRET|TOKEN|KEY|PASSWORD|PRIVATE|CONNECTION_STRING)/u;
 
 const PUBLIC_CLIENT_ALLOWLIST = new Set([
@@ -50,6 +52,17 @@ export function validateAzureRuntimeEnv(environment = process.env): void {
       `[env] Refusing to start because public VITE_ variables look secret-bearing: ${leakedPublicSecrets.join(
         ", ",
       )}. Move server-only secrets to non-VITE_ variables so they are not bundled for browsers.`,
+    );
+  }
+
+  if (
+    environment.AZURE_ENVIRONMENT?.trim().toLowerCase() === "production" &&
+    !parseTrustedProxyCertificateFingerprints(
+      environment.KOVA_CLOUDFLARE_CLIENT_CERT_SHA256_FINGERPRINTS,
+    )
+  ) {
+    throw new Error(
+      "[env] Azure production requires one or two valid Cloudflare client-certificate SHA-256 fingerprints.",
     );
   }
 

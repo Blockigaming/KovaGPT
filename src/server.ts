@@ -2,6 +2,7 @@ import { renderErrorPage } from "./lib/error-page";
 import { rejectCrossSiteRequest } from "./lib/http-security.server";
 
 import { validateAzureRuntimeEnv } from "./lib/azure-runtime-env.server";
+import { enforceAzureProductionOriginBoundary } from "./lib/origin-boundary.server";
 import { withRuntimeBindings } from "./lib/runtime-env.server";
 
 validateAzureRuntimeEnv();
@@ -117,6 +118,9 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const rejectedOrigin = enforceAzureProductionOriginBoundary(request);
+      if (rejectedOrigin) return hardenResponse(rejectedOrigin);
+
       if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
         const rejected = rejectCrossSiteRequest(request);
         if (rejected) return hardenResponse(rejected);

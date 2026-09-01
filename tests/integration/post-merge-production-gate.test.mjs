@@ -4,11 +4,16 @@ import test from "node:test";
 
 const read = (path) => readFileSync(path, "utf8");
 
-test("externally merged production and security slices coexist on the current main line", () => {
-  const deployment = read(".github/workflows/deploy-cloudflare-production.yml");
+test("Azure-origin, edge-validation, and security slices coexist on the current main line", () => {
+  const edgeValidation = read(".github/workflows/deploy-cloudflare-production.yml");
+  const azureDigestDeployment = read(
+    ".github/workflows/ca-kovagpt-dev-AutoDeployTrigger-1724b7ba-d38e-4fd3-95e8-bef7f7fbc290.yml",
+  );
+  const azureProduction = read("infra/azure/production/main.bicep");
+  const originBoundary = read("src/lib/origin-boundary.server.ts");
+  const serverEntry = read("src/server.ts");
   const ci = read(".github/workflows/ci.yml");
   const playwright = read("playwright.config.ts");
-  const vite = read("vite.config.ts");
   const boundedJson = read("src/lib/bounded-json.server.mjs");
   const confirmation = read("src/routes/api/chat/confirm.ts");
   const seoPolicy = read("src/lib/seo-policy.mjs");
@@ -19,19 +24,51 @@ test("externally merged production and security slices coexist on the current ma
   const deepResearch = read("src/lib/ai/deep-research-access.mjs");
   const paymentWebhook = read("src/routes/api/public/payments/webhook.ts");
 
-  assert.match(deployment, /^on:\n  workflow_dispatch:/m);
+  assert.match(edgeValidation, /^on:\n  workflow_dispatch:/m);
   assert.match(
-    deployment,
-    /inputs\.confirmation == 'DEPLOY' && github\.ref == 'refs\/heads\/main'/,
+    edgeValidation,
+    /inputs\.confirmation == 'VALIDATE' && github\.ref == 'refs\/heads\/main'/u,
   );
-  assert.match(deployment, /environment:\n      name: production/);
-  assert.match(deployment, /--config dist\/server\/wrangler\.json/);
-  assert.doesNotMatch(deployment, /^  (push|pull_request):/m);
+  assert.match(edgeValidation, /validate-only:/u);
+  assert.match(edgeValidation, /permissions:\n  contents: read/u);
+  assert.match(edgeValidation, /Azure Container Apps remains the application origin/u);
+  assert.doesNotMatch(edgeValidation, /^  (?:push|pull_request|schedule):/m);
+  for (const forbidden of [
+    /CLOUDFLARE_API_TOKEN/u,
+    /CLOUDFLARE_ACCOUNT_ID/u,
+    /environment:\n      name: production/u,
+    /npm run build/u,
+    /wrangler deploy/u,
+    /--config dist\/server\/wrangler\.json/u,
+    /id-token:\s*write/u,
+  ]) {
+    assert.doesNotMatch(edgeValidation, forbidden);
+  }
 
-  assert.match(vite, /preset:\s*useNodeBrowserPreview \? "node-server" : "cloudflare-module"/);
-  assert.match(vite, /output:\s*{\s*dir: "dist"/s);
-  assert.match(vite, /serverDir: "dist\/server"/);
-  assert.match(vite, /publicDir: "dist\/client"/);
+  assert.match(azureDigestDeployment, /^on:\n  workflow_dispatch:/m);
+  assert.match(azureDigestDeployment, /inputs\.confirm_deploy == true/u);
+  assert.match(azureDigestDeployment, /id-token: write/u);
+  assert.match(azureDigestDeployment, /azure\/login@/u);
+  assert.match(
+    azureDigestDeployment,
+    /digest_image="\$\{ACR_LOGIN_SERVER\}\/\$\{IMAGE_NAME\}@\$\{digest\}"/u,
+  );
+  assert.match(azureDigestDeployment, /az containerapp update/u);
+  assert.match(azureDigestDeployment, /--image "\$\{\{ steps\.image\.outputs\.digest_image \}\}"/u);
+  assert.match(azureDigestDeployment, /\/api\/version/u);
+  assert.match(azureDigestDeployment, /"\$runtime_sha" == "\$GITHUB_SHA"/u);
+  assert.match(azureProduction, /param imageReference string/u);
+  assert.match(azureProduction, /image: imageReference/u);
+  assert.match(azureProduction, /activeRevisionsMode: 'Single'/u);
+  assert.match(azureProduction, /clientCertificateMode: 'require'/u);
+  assert.match(azureProduction, /param cloudflareClientCertificateSha256Fingerprints array/u);
+  assert.match(azureProduction, /name: 'KOVA_CLOUDFLARE_CLIENT_CERT_SHA256_FINGERPRINTS'/u);
+  assert.equal((azureProduction.match(/tcpSocket:/gu) ?? []).length, 3);
+  assert.doesNotMatch(azureProduction, /httpGet:/u);
+  assert.match(originBoundary, /request\.headers\.get\("x-forwarded-client-cert"\)/u);
+  assert.match(originBoundary, /timingSafeEqual/u);
+  assert.match(originBoundary, /new Response\("Forbidden"/u);
+  assert.match(serverEntry, /enforceAzureProductionOriginBoundary\(request\)/u);
 
   assert.match(playwright, /process\.env\.PLAYWRIGHT_PREBUILT === "1"/);
   assert.match(playwright, /usePrebuiltPreview \? \[\] : \["npm run build"\]/);

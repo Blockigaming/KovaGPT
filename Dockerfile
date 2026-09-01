@@ -69,6 +69,6 @@ COPY --from=build --chown=kova:kova /app/package.json ./package.json
 USER kova
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || '3000') + '/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+  CMD node -e "const net=require('node:net');const socket=net.connect(Number(process.env.PORT||3000),'127.0.0.1');socket.setTimeout(4000);socket.once('connect',()=>{socket.destroy();process.exit(0)});socket.once('timeout',()=>process.exit(1));socket.once('error',()=>process.exit(1))"
 
 CMD ["node", "dist/server/index.mjs"]
