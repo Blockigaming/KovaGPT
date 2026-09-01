@@ -23,7 +23,10 @@ test("does not expose a Checkout return URL browser input", async () => {
       new URL("../../src/hooks/useStripeCheckout.tsx", import.meta.url),
       "utf8",
     ),
-    pricingSource = await readFile(new URL("../../src/routes/pricing.tsx", import.meta.url), "utf8");
+    pricingSource = await readFile(
+      new URL("../../src/routes/pricing.tsx", import.meta.url),
+      "utf8",
+    );
 
   assert.match(serverSource, /return_url: CHECKOUT_RETURN_URL/);
   assert.doesNotMatch(serverSource, /\breturnUrl\b|data\.returnUrl/);
