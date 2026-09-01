@@ -124,7 +124,8 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         if (prior.data.length > 0) isPlusTrialEligible = false;
       }
 
-      const sessionParams: Record<string, unknown> = {
+      const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
+        integration_identifier: "kovagpt_checkout_wshrfyef",
         line_items: [{ price: stripePrice.id, quantity: 1 }],
         mode: "subscription",
         ui_mode: "embedded_page",
@@ -139,9 +140,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
           }),
         },
       };
-      const session = await stripe.checkout.sessions.create(
-        sessionParams as Parameters<typeof stripe.checkout.sessions.create>[0],
-      );
+      const session = await stripe.checkout.sessions.create(sessionParams);
 
       return { clientSecret: session.client_secret ?? "" };
     } catch (error) {
