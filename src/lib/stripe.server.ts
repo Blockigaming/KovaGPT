@@ -17,7 +17,7 @@ export function createStripeClient(env: StripeEnv): Stripe {
   const connectionApiKey = getConnectionApiKey(env);
 
   return new Stripe(connectionApiKey, {
-    apiVersion: "2026-07-29.dahlia",
+    apiVersion: "2026-08-26.dahlia",
   });
 }
 
