@@ -119,6 +119,21 @@ if ! git diff --quiet || ! git diff --cached --quiet; then
   exit 1
 fi
 
+# Deterministic generators must not silently create source contracts that
+# remain outside Git. Local release evidence is intentionally excluded.
+UNTRACKED_SOURCE="$(
+  git ls-files --others --exclude-standard |
+    grep -v '^release-artifacts/' |
+    sort ||
+    true
+)"
+
+if [ -n "$UNTRACKED_SOURCE" ]; then
+  echo "STOP=TRANSFORM_CREATED_UNTRACKED_SOURCE"
+  printf '%s\n' "$UNTRACKED_SOURCE"
+  exit 1
+fi
+
 gate targeted-format node_modules/.bin/prettier --check "${FORMAT_FILES[@]}"
 gate targeted-lint node_modules/.bin/eslint "${FORMAT_FILES[@]}"
 gate migration-contract node scripts/release/migrations.mjs
