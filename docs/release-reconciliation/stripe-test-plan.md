@@ -16,7 +16,7 @@ This inventory supersedes the stale August 16 snapshot that referred to a differ
 
 The webhook accepts only the allowlisted `sandbox` and `live` environments. Each environment uses its own API key and signing secret. Checkout return state never grants entitlement; verified subscription and invoice webhooks remain authoritative.
 
-The server uses Stripe SDK `22.4.0` with API `2026-07-29.dahlia`. Embedded Checkout sends the stable integration identifier `kovagpt_checkout_wshrfyef`. It deliberately omits `payment_method_types` so Stripe can manage eligible payment methods, and it does not enable automatic tax without approved registrations.
+The server uses Stripe SDK `22.6.0` with API `2026-08-26.dahlia`. Embedded Checkout sends the stable integration identifier `kovagpt_checkout_wshrfyef`. It deliberately omits `payment_method_types` so Stripe can manage eligible payment methods, and it does not enable automatic tax without approved registrations.
 
 `npm run release:stripe:contract` verifies:
 
