@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { type StripeEnv, createStripeClient } from "@/lib/stripe.server";
 import { parseAllowedBillingPortalUrl } from "@/lib/billing-portal-url.mjs";
-import { parseAllowedCheckoutReturnUrl } from "@/lib/checkout-return-url.mjs";
+import { CHECKOUT_RETURN_URL } from "@/lib/checkout-return-url.mjs";
 import { BILLING_ENV, resolveBillingPlan, tierForLookupKey } from "@/lib/billing-plans";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -48,13 +48,10 @@ async function resolveOrCreateCustomer(
 export const createCheckoutSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(
-    (data: { priceId: string; quantity?: number; returnUrl: string; environment: StripeEnv }) => {
+    (data: { priceId: string; quantity?: number; environment: StripeEnv }) => {
       if (!resolveBillingPlan(data.priceId)) throw new Error("Invalid priceId");
       if (data.quantity !== undefined && data.quantity !== 1) throw new Error("Invalid quantity");
-      return {
-        ...data,
-        returnUrl: parseAllowedCheckoutReturnUrl(data.returnUrl),
-      };
+      return data;
     },
   )
   .handler(async ({ data, context }): Promise<CheckoutSessionResult> => {
@@ -133,7 +130,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         line_items: [{ price: stripePrice.id, quantity: 1 }],
         mode: "subscription",
         ui_mode: "embedded_page",
-        return_url: data.returnUrl,
+        return_url: CHECKOUT_RETURN_URL,
         managed_payments: { enabled: true },
         customer: customerId,
         metadata: { userId },
