@@ -16,7 +16,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { RealtimeReadiness } from "@/components/RealtimeReadiness";
@@ -38,6 +38,7 @@ import {
   type WorkRun,
 } from "@/lib/work.functions";
 import { calculateCriticalPath, dagLayout } from "@/lib/work-graph.mjs";
+import { parseWorkRunList } from "@/lib/work-response.mjs";
 
 export const Route = createFileRoute("/work")({
   component: WorkRoute,
@@ -74,37 +75,77 @@ function WorkRoute() {
     [tab, setTab] = useState<"graph" | "timeline" | "evidence" | "deliverables" | "approvals">(
       "graph",
     );
-  const loadRuns = useCallback(async () => {
-    try {
-      const rows = await fetchRuns();
-      setRuns(rows);
-      setSelected((id) => id ?? rows[0]?.id ?? null);
+  const runRequestId = useRef(0),
+    detailRequestId = useRef(0),
+    selectedRef = useRef<string | null>(null);
+  const loadDetail = useCallback(
+    async (id: string | null = selectedRef.current) => {
+      const requestId = ++detailRequestId.current;
+      if (!id) {
+        setDetail(null);
+        return;
+      }
+      try {
+        const nextDetail = await fetchDetail({ data: { id } });
+        if (requestId !== detailRequestId.current || selectedRef.current !== id) return;
+        setDetail(nextDetail);
+        setError(null);
+      } catch {
+        if (requestId !== detailRequestId.current || selectedRef.current !== id) return;
+        setDetail(null);
+        setError("The selected run could not be loaded.");
+      }
+    },
+    [fetchDetail],
+  );
+  const selectRun = useCallback(
+    (id: string) => {
+      if (selectedRef.current === id) return;
+      selectedRef.current = id;
+      setSelected(id);
+      setDetail(null);
       setError(null);
+      void loadDetail(id);
+    },
+    [loadDetail],
+  );
+  const loadRuns = useCallback(async () => {
+    const requestId = ++runRequestId.current;
+    setLoading(true);
+    try {
+      const rows = parseWorkRunList(await fetchRuns());
+      if (requestId !== runRequestId.current) return;
+      const currentSelection = selectedRef.current;
+      let nextSelection = rows[0]?.id ?? null;
+      if (currentSelection && rows.some((run) => run.id === currentSelection))
+        nextSelection = currentSelection;
+      setRuns(rows);
+      if (nextSelection !== currentSelection) {
+        selectedRef.current = nextSelection;
+        setSelected(nextSelection);
+        setDetail(null);
+      }
+      setError(null);
+      await loadDetail(nextSelection);
     } catch {
+      if (requestId !== runRequestId.current) return;
+      detailRequestId.current += 1;
+      selectedRef.current = null;
+      setRuns([]);
+      setSelected(null);
+      setDetail(null);
       setError("Work runs could not be loaded.");
     } finally {
-      setLoading(false);
+      if (requestId === runRequestId.current) setLoading(false);
     }
-  }, [fetchRuns]);
-  const loadDetail = useCallback(async () => {
-    if (!selected) return;
-    try {
-      setDetail(await fetchDetail({ data: { id: selected } }));
-    } catch {
-      setError("The selected run could not be loaded.");
-    }
-  }, [fetchDetail, selected]);
+  }, [fetchRuns, loadDetail]);
   useEffect(() => {
     void loadRuns();
   }, [loadRuns]);
-  useEffect(() => {
-    void loadDetail();
-  }, [loadDetail]);
   async function cancelRun() {
     if (!selected) return;
     try {
       await control({ data: { id: selected, action: "cancel" } });
-      await loadDetail();
       await loadRuns();
     } catch {
       toast.error("The historical run could not be cancelled. Reload and try again.");
@@ -127,7 +168,7 @@ function WorkRoute() {
           {runs.map((run) => (
             <button
               key={run.id}
-              onClick={() => setSelected(run.id)}
+              onClick={() => selectRun(run.id)}
               className={`mb-2 w-full rounded-2xl border p-3 text-left ${selected === run.id ? "border-primary bg-primary/5" : ""}`}
             >
               <span className="flex items-center gap-2 text-sm font-medium capitalize">
@@ -197,7 +238,7 @@ function WorkRoute() {
                 <select
                   className="mt-3 min-h-11 w-full rounded-xl border bg-background px-3 md:hidden"
                   value={selected ?? ""}
-                  onChange={(e) => setSelected(e.target.value)}
+                  onChange={(e) => selectRun(e.target.value)}
                 >
                   {runs.map((r) => (
                     <option key={r.id} value={r.id}>
