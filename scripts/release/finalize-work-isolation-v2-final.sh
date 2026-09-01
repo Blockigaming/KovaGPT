@@ -42,7 +42,7 @@ for tool in node npm git; do
   }
 done
 
-git fetch origin "$BRANCH"
+git fetch origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
 BASE_SHA="$(git rev-parse HEAD)"
 REMOTE_SHA="$(git rev-parse "origin/$BRANCH")"
 if [ "$BASE_SHA" != "$REMOTE_SHA" ]; then
@@ -152,7 +152,7 @@ bash scripts/release/verify-work-isolation-v2-final.sh
 
 printf '\n=== 6. PUSH ONLY AFTER COMPLETE SUCCESS ===\n'
 if [ "$FINAL_SHA" != "$BASE_SHA" ]; then
-  git fetch origin "$BRANCH"
+  git fetch origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
   CURRENT_REMOTE_SHA="$(git rev-parse "origin/$BRANCH")"
   if [ "$CURRENT_REMOTE_SHA" != "$BASE_SHA" ]; then
     echo "STOP=REMOTE_MOVED_DURING_VERIFICATION"
