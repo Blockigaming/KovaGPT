@@ -49,13 +49,18 @@ SHELL_FILES=(
 )
 FORMAT_FILES=(
   package.json
+  scripts/release/apply-work-v2-product.mjs
   scripts/release/apply-work-v2-source.mjs
+  src/components/WorkRunComposer.tsx
   src/lib/work-execution-v2.server.ts
+  src/lib/work.functions.ts
+  src/routes/work.tsx
   src/workers/work-v2-runner.ts
   src/workers/work-v2.ts
   tests/unit/scheduled-worker-build-v2.test.mjs
   tests/unit/work-execution-v2-schema.test.mjs
   tests/unit/work-execution-v2-engine.test.mjs
+  tests/unit/work-product-v2.test.mjs
   tests/unit/work-worker-v2.test.mjs
   tests/unit/work-worker-build-v2.test.mjs
   vite.work-worker.config.ts
@@ -83,9 +88,12 @@ gate shell-syntax bash -c '
 
 gate transform-idempotence bash -c '
   node scripts/release/apply-work-v2-source.mjs &&
+  node scripts/release/apply-work-v2-product.mjs &&
   node_modules/.bin/prettier --write \
     package.json \
     src/lib/work-execution-v2.server.ts \
+    src/lib/work.functions.ts \
+    src/routes/work.tsx \
     tests/unit/scheduled-worker-build-v2.test.mjs
 '
 if ! git diff --quiet || ! git diff --cached --quiet; then
@@ -97,13 +105,18 @@ fi
 
 gate targeted-format node_modules/.bin/prettier --check "${FORMAT_FILES[@]}"
 gate targeted-lint node_modules/.bin/eslint \
+  scripts/release/apply-work-v2-product.mjs \
   scripts/release/apply-work-v2-source.mjs \
+  src/components/WorkRunComposer.tsx \
   src/lib/work-execution-v2.server.ts \
+  src/lib/work.functions.ts \
+  src/routes/work.tsx \
   src/workers/work-v2-runner.ts \
   src/workers/work-v2.ts \
   tests/unit/scheduled-worker-build-v2.test.mjs \
   tests/unit/work-execution-v2-schema.test.mjs \
   tests/unit/work-execution-v2-engine.test.mjs \
+  tests/unit/work-product-v2.test.mjs \
   tests/unit/work-worker-v2.test.mjs \
   tests/unit/work-worker-build-v2.test.mjs \
   vite.work-worker.config.ts
@@ -114,6 +127,7 @@ gate migration-preflight node scripts/release/migration-preflight.mjs --source-o
 WORK_TESTS=(
   tests/unit/work-execution-v2-schema.test.mjs
   tests/unit/work-execution-v2-engine.test.mjs
+  tests/unit/work-product-v2.test.mjs
   tests/unit/work-worker-v2.test.mjs
   tests/unit/work-worker-build-v2.test.mjs
   tests/unit/scheduled-worker-build-v2.test.mjs
@@ -209,8 +223,24 @@ grep -qF 'tools that are not yet available in the isolated Work worker' \
   echo "STOP=WORK_TOOL_RUNTIME_NOT_FAIL_CLOSED"
   exit 1
 }
+grep -qF 'export const workExecutionAvailable = false;' src/lib/work.functions.ts || {
+  echo "STOP=WORK_PRODUCT_SOURCE_DEFAULT_NOT_DISABLED"
+  exit 1
+}
+grep -qF 'process.env.KOVA_WORK_EXECUTION_ENABLED' src/lib/work.functions.ts || {
+  echo "STOP=WORK_RUNTIME_FLAG_MISSING"
+  exit 1
+}
+grep -qF 'owner_create_work_job_v2' src/lib/work.functions.ts || {
+  echo "STOP=WORK_PRODUCT_CREATION_RPC_MISSING"
+  exit 1
+}
+grep -qF '<WorkRunComposer' src/routes/work.tsx || {
+  echo "STOP=WORK_RUNTIME_GATED_COMPOSER_MISSING"
+  exit 1
+}
 grep -qF 'Agent execution is unavailable.' src/routes/work.tsx || {
-  echo "STOP=WORK_UI_PREMATURELY_ENABLED"
+  echo "STOP=WORK_UI_FAIL_CLOSED_COPY_MISSING"
   exit 1
 }
 grep -qF '{ error: "browser_agent_unavailable" }' src/routes/api/agents/runs.ts || {
@@ -238,7 +268,7 @@ printf ' BOUNDED_RETRY_RECOVERY=SOURCE_VERIFIED\n'
 printf ' MODEL_ONLY_WORKER=SOURCE_VERIFIED\n'
 printf ' MANAGED_IDENTITY_ONLY=SOURCE_VERIFIED\n'
 printf ' TOOL_EXECUTION=FAIL_CLOSED\n'
-printf ' WORK_UI=HISTORY_ONLY\n'
+printf ' WORK_UI=RUNTIME_GATED_MODEL_ONLY\n'
 printf ' WORK_RUNTIME_DEFAULT=DISABLED\n'
 printf ' PRODUCTION_MIGRATIONS_APPLIED=0\n'
 printf ' PROVIDER_LIVE_CALLS=0\n'
