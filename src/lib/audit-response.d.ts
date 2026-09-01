@@ -3,7 +3,7 @@ declare module "@/lib/audit-response.mjs" {
     id: string;
     provider: string;
     action: string;
-    status: string;
+    status: "success" | "failure";
     resource_id: string | null;
     summary: string | null;
     created_at: string;
