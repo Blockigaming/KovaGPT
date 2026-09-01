@@ -68,6 +68,11 @@ param supabaseUrl string
 @secure()
 param supabasePublishableKey string
 
+@description('One active Cloudflare per-hostname Authenticated Origin Pull client-certificate SHA-256 fingerprint, or two during a zero-downtime rotation. Use uppercase or lowercase hexadecimal, with optional colons.')
+@minLength(1)
+@maxLength(2)
+param cloudflareClientCertificateSha256Fingerprints array
+
 @description('Enable production AI generation only after production provider verification.')
 param generationEnabled bool = false
 
@@ -189,6 +194,7 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
       ingress: {
         external: true
         allowInsecure: false
+        clientCertificateMode: 'require'
         targetPort: 3000
         transport: 'auto'
         traffic: [
@@ -296,6 +302,10 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
               secretRef: 'kova-ip-hash-secret'
             }
             {
+              name: 'KOVA_CLOUDFLARE_CLIENT_CERT_SHA256_FINGERPRINTS'
+              value: join(cloudflareClientCertificateSha256Fingerprints, ',')
+            }
+            {
               name: 'KOVA_INSTANT_MODEL'
               value: 'gpt-5.6-luna'
             }
@@ -322,11 +332,19 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
           ]
           probes: [
             {
-              type: 'Liveness'
-              httpGet: {
-                path: '/api/health'
+              type: 'Startup'
+              tcpSocket: {
                 port: 3000
-                scheme: 'HTTP'
+              }
+              initialDelaySeconds: 1
+              periodSeconds: 2
+              timeoutSeconds: 1
+              failureThreshold: 60
+            }
+            {
+              type: 'Liveness'
+              tcpSocket: {
+                port: 3000
               }
               initialDelaySeconds: 20
               periodSeconds: 30
@@ -335,10 +353,8 @@ resource webApp 'Microsoft.App/containerApps@2025-01-01' = {
             }
             {
               type: 'Readiness'
-              httpGet: {
-                path: '/api/health'
+              tcpSocket: {
                 port: 3000
-                scheme: 'HTTP'
               }
               initialDelaySeconds: 5
               periodSeconds: 10

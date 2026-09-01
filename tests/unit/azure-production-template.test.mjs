@@ -16,8 +16,12 @@ test("production Azure example is complete, inert, and production-scoped", () =>
     "azureOpenAiAccountName",
     "supabaseUrl",
     "supabasePublishableKey",
+    "cloudflareClientCertificateSha256Fingerprints",
   ]) {
-    assert.ok(Object.hasOwn(parameters, name), `missing production parameter: ${name}`);
+    assert.ok(
+      Object.hasOwn(parameters, name),
+      `missing production parameter: ${name}`,
+    );
   }
 
   for (const name of [
@@ -50,9 +54,37 @@ test("production Azure example is complete, inert, and production-scoped", () =>
   assert.equal(parameters.generationEnabled.value, false);
   assert.equal(parameters.minReplicas.value, 1);
   assert.equal(parameters.deployBudget.value, false);
+  assert.deepEqual(
+    parameters.cloudflareClientCertificateSha256Fingerprints.value,
+    ["REPLACE_WITH_64_HEX_CLOUDFLARE_CLIENT_CERT_SHA256"],
+  );
 
   const bicep = read("infra/azure/production/main.bicep");
   assert.match(bicep, /param kovaIpHashSecretUri string/u);
   assert.match(bicep, /keyVaultUrl: kovaIpHashSecretUri/u);
   assert.match(bicep, /secretRef: 'kova-ip-hash-secret'/u);
+  assert.match(bicep, /clientCertificateMode: 'require'/u);
+  assert.match(
+    bicep,
+    /param cloudflareClientCertificateSha256Fingerprints array/u,
+  );
+  assert.match(
+    bicep,
+    /name: 'KOVA_CLOUDFLARE_CLIENT_CERT_SHA256_FINGERPRINTS'/u,
+  );
+  assert.match(
+    bicep,
+    /join\(cloudflareClientCertificateSha256Fingerprints, ','\)/u,
+  );
+  assert.equal((bicep.match(/tcpSocket:/gu) ?? []).length, 3);
+  for (const type of ["Startup", "Liveness", "Readiness"]) {
+    assert.match(bicep, new RegExp(`type: '${type}'[\\s\\S]*?tcpSocket:`, "u"));
+  }
+  assert.doesNotMatch(bicep, /httpGet:/u);
+
+  const exampleEnv = read(".env.example");
+  assert.match(
+    exampleEnv,
+    /^KOVA_CLOUDFLARE_CLIENT_CERT_SHA256_FINGERPRINTS=$/mu,
+  );
 });

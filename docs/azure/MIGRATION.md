@@ -1,99 +1,110 @@
-# KovaGPT Azure Migration Plan
+# KovaGPT Azure production architecture
 
-## Current architecture
+## Current production contract
 
-KovaGPT is a TanStack Start application built with Vite and Nitro. Production currently remains on the existing Lovable/Cloudflare-oriented deployment path, with Supabase for auth/data, Stripe billing, Google OAuth, direct OpenAI, email integrations, and connector OAuth still active. Do not delete Lovable, Supabase, Stripe, Google OAuth, OpenAI, or existing DNS while this parallel Azure development deployment is validated.
+KovaGPT is a TanStack Start application built with Vite and Nitro. Azure Container Apps is the single production application origin and deployment target. Azure Container Registry stores immutable application images, Key Vault or Container Apps secret references supply server credentials, and managed identity is used for Azure resource access.
 
-## Target Azure architecture
+Cloudflare is an edge-only layer in front of Azure Container Apps. Its allowed production responsibilities are proxied DNS, TLS, WAF/rate limiting, canonical redirects, and authenticated origin protection. Cloudflare Workers are not a KovaGPT application runtime or deployment target. The historical `.github/workflows/deploy-cloudflare-production.yml` file is intentionally validation-only and cannot deploy or shift traffic.
 
-The initial Azure target is a separate development deployment on Azure Container Apps running the generated Nitro Node server from `dist/server/index.mjs` and serving static assets from `dist/client`. Azure Container Apps supplies `PORT`; the app binds to `HOST=0.0.0.0`. Azure Container Registry stores images. Key Vault stores secrets. Managed identity is used for Azure resource access.
+Supabase remains the identity authority and provides PostgreSQL and storage. Stripe remains the billing provider. Google and connector OAuth integrations remain independent provider integrations; they do not replace Supabase Auth.
 
-## Dependencies that remain temporarily
+This document defines the repository contract. It does not by itself prove that the live Azure revision, Cloudflare zone, DNS records, or origin protection match the contract.
 
-- Lovable production deployment and configuration.
-- `kovagpt.com` DNS and existing production traffic path.
-- Supabase auth, PostgreSQL, storage, and service-role operations.
-- Stripe billing and webhooks.
-- Google OAuth and connector OAuth providers.
-- Direct OpenAI variables for rollback compatibility.
+## Production topology
 
-## Required Azure resources
+The browser reaches the canonical hostname through Cloudflare. Cloudflare forwards approved traffic to the protected Azure Container Apps ingress. The Container App runs the generated Nitro Node server from `dist/server/index.mjs`, serves assets from `dist/client`, binds to the `PORT` supplied by Azure on `HOST=0.0.0.0`, and accesses server credentials through secret references.
 
-- Resource group for development/staging.
-- Azure Container Registry.
-- Azure Container Apps environment and Container App.
+The production resource set is:
+
+- Azure Container Apps managed environment and production Container App.
+- Azure Container Registry with digest-addressed images.
 - User-assigned managed identity.
-- Azure Key Vault.
-- Log Analytics workspace.
-- Azure OpenAI / Foundry project and deployments when quota is approved.
-- Future Azure Database for PostgreSQL Flexible Server.
-- Future Blob Storage account.
-- Future email provider or Azure Communication Services Email.
+- Azure Key Vault for server-only secrets.
+- Log Analytics and Application Insights.
+- Azure OpenAI/Foundry deployments when production access and quotas are approved.
+- Supabase Auth, PostgreSQL, and storage.
+- Stripe billing and webhooks.
+- Cloudflare edge configuration, managed separately by an authorized zone owner.
 
 ## Required environment variables
 
-Public browser-safe variables must use `VITE_`. Server-only secrets must never use `VITE_` and must come from Container Apps secrets or Key Vault references.
+Browser-safe variables must use the `VITE_` prefix. Server-only secrets must never use `VITE_` and must come from Container Apps secrets or versioned Key Vault references.
 
-Azure-ready non-secret values:
+Azure and application values include:
 
-- `AZURE_ENVIRONMENT`
-- `AZURE_FOUNDRY_ENDPOINT`
+- `AZURE_ENVIRONMENT=production`
 - `AZURE_OPENAI_ENDPOINT`
-- `AZURE_OPENAI_API_VERSION`
 - `AZURE_OPENAI_DEPLOYMENT_CHAT`
 - `AZURE_OPENAI_DEPLOYMENT_THINKING`
 - `AZURE_OPENAI_DEPLOYMENT_DEEP`
+- `AZURE_OPENAI_DEPLOYMENT_IMAGE`
+- `AZURE_OPENAI_DEPLOYMENT_EMBEDDING`
 - `AZURE_CLIENT_ID`
 - `PORT`
 - `HOST`
 - `AI_GENERATION_ENABLED`
+- `SUPABASE_URL`
+- `SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `KOVA_CLOUDFLARE_CLIENT_CERT_SHA256_FINGERPRINTS`
 
-Keep current OpenAI, Supabase, Stripe, Google OAuth, and connector variables until rollback is no longer needed.
+The browser and server Supabase configuration must resolve to the same approved production project. Supabase service-role, Stripe, OAuth, connector-encryption, and hashing secrets remain server-only.
 
-## Managed identity plan
+## Identity and deployment
 
-Create a user-assigned managed identity for the Container App. Grant only the minimum roles needed: Key Vault secret read access, ACR pull if not handled by registry credentials, and future Azure OpenAI access. Avoid long-lived client secrets.
+The Container App uses a user-assigned managed identity with only the required roles: ACR pull, Key Vault secret read, monitoring access where needed, and Azure OpenAI user access when generation is enabled. Avoid long-lived Azure credentials.
 
-## GitHub Actions workload identity federation plan
+GitHub Actions authenticates to Azure with OIDC scoped to this repository and a protected deployment environment. A production deployment must:
 
-Configure GitHub Actions OIDC with Azure workload identity federation after the development deployment is ready. Scope federated credentials to this repository and deployment branches/environments. Do not create long-lived Azure credentials.
+1. Start from an exact green Git SHA and clean Git archive.
+2. Validate the browser and server Supabase project identity.
+3. Build and push to ACR with source SHA/tree/project provenance.
+4. Capture and verify the pushed manifest's `sha256` digest.
+5. Deploy `registry/repository@sha256:<digest>` to Azure Container Apps.
+6. Confirm the Azure revision reports that exact image reference.
+7. Verify `/api/livez`, `/api/readyz`, and `/api/version` on the revision-specific endpoint through an authorized origin-authenticated or internal probe, and then verify the same build identity on the canonical hostname.
 
-## Azure Container Registry plan
+A mutable image tag may be retained for discovery, but it is never deployment or rollback identity.
 
-Build images in CI, push immutable tags to ACR after OIDC is configured, and deploy by digest or immutable tag. Enable vulnerability scanning if available in the selected Azure plan.
+## Azure Container Apps boundary
 
-## Azure Container Apps plan
+Production ingress is HTTPS-only and uses `clientCertificateMode: require`. Cloudflare presents a custom per-hostname Authenticated Origin Pull certificate, Azure overwrites `X-Forwarded-Client-Cert` with the presented certificate, and the application compares its SHA-256 thumbprint against one or two configured fingerprints using a timing-safe comparison. A second fingerprint is permitted only for zero-downtime rotation. Raw Azure access without a client certificate must fail at the TLS boundary; a request that presents an unpinned certificate must receive a generic non-cacheable `403`. Verify both cases after every edge, certificate, or ingress change.
 
-Deploy a separate development Container App with ingress enabled, target port `3000`, and health probes pointed at `/api/health`. Configure min/max replicas separately from production Lovable. Do not route production DNS to Azure until the cutover checklist is complete.
+Container Apps startup, liveness, and readiness probes are TCP probes to the application port. This keeps platform probes independent of the public HTTP certificate boundary; authenticated HTTP health, readiness, and exact-build checks remain mandatory before traffic promotion.
 
-## Key Vault plan
+Production revision mode and traffic changes must preserve a known-good rollback target. Scaling limits, probes, Log Analytics retention, Application Insights, and optional budget alerts are declared in `infra/azure/production/main.bicep`.
 
-Store Supabase service-role keys, Stripe keys, webhook secrets, OAuth secrets, OpenAI keys, connector encryption keys, and future Azure OpenAI credentials in Key Vault or Container Apps secrets. Never commit real values.
+## Data, storage, billing, and email
 
-## Foundry / Azure OpenAI plan
+Supabase remains the production authentication, PostgreSQL, and storage platform. Any future data or object-storage migration requires rehearsed checksums, owner-isolation validation, backups, and a separately approved cutover; it is not part of an application deployment.
 
-Start with `AI_GENERATION_ENABLED=false` so the container can boot before Foundry or Azure OpenAI quota is approved. After quota approval, set Azure endpoints, API version, deployment names, and managed identity access. Keep direct OpenAI variables temporarily for rollback.
+Stripe remains the billing authority. Webhook secrets stay in Key Vault or Container Apps secrets, and webhook replay is permitted only after signature verification and durable idempotent persistence are confirmed.
 
-## PostgreSQL migration plan
+Existing email behavior remains until a replacement provider is separately approved, authenticated, and tested for delivery, bounce, and complaint handling.
 
-Continue using Supabase PostgreSQL during development. Later, create Azure Database for PostgreSQL Flexible Server, rehearse schema/data migration, verify row-level security/auth semantics, run dual-read or staged validation where practical, and cut over only after backups and rollback are tested.
+## Cloudflare edge operations
 
-## Blob Storage migration plan
+Source validation cannot mutate or attest the live Cloudflare zone. An authorized operator must inventory and back up the live zone, apply only approved edge/DNS changes, retain rollback values, and capture redacted proof of proxy state, TLS, WAF/rate limits, canonical redirects, cache behavior, `CF-Ray`, and unauthorized raw-origin denial.
 
-Continue Supabase Storage temporarily. Later, provision Blob Storage containers, migrate objects with checksums, update signed URL flows, and validate access controls before switching writes.
-
-## Email migration plan
-
-Keep existing email behavior initially. Evaluate Azure Communication Services Email or another provider, migrate templates and sender authentication, test bounce/complaint handling, and keep rollback to the current provider until production cutover is complete.
+The validation-only Cloudflare workflow must never receive deployment credentials, build the application, run Wrangler deployment, create routes or DNS records, or shift production traffic.
 
 ## Rollback strategy
 
-For this phase, rollback is simply stopping the Azure development Container App; production remains on Lovable and `kovagpt.com` DNS is unchanged. For future cutovers, keep old infrastructure warm, preserve database backups, and use reversible configuration changes.
+Before each deployment, record the active Azure revision and immutable ACR digest. Rollback is revision/digest based:
 
-## Zero-downtime DNS cutover plan
+1. Route traffic back to the last verified Azure revision when it remains available, or update the Container App to the recorded prior `repository@sha256:<digest>` image.
+2. Verify the restored revision image reference, `/api/livez`, `/api/readyz`, and `/api/version` against the rollback SHA through an authorized origin-authenticated or internal probe.
+3. Verify the canonical hostname serves that SHA through Cloudflare and still denies unauthorized raw-origin requests.
+4. Record the incident, selected revision/digest, validation evidence, and any required forward-fix migration.
 
-Do not change DNS now. Later, validate Azure staging, lower DNS TTL, run parallel smoke tests, switch a canary hostname first, monitor logs/metrics, then update production DNS only after sign-off. Keep Lovable and Supabase intact until Azure production has been stable through the agreed observation window.
+Do not roll back with a mutable tag, a branch name, a Cloudflare application deployment, or an unreviewed reverse database migration.
 
-## Explicit warning
+## Explicit constraints
 
-Do not delete Lovable or Supabase yet. Do not modify `kovagpt.com` DNS during this development-container phase.
+- Do not deploy the KovaGPT application to Cloudflare.
+- Do not treat a validation-only workflow run as live-zone or production proof.
+- Do not delete or replace Supabase Auth/PostgreSQL/storage as part of an application release.
+- Do not change production DNS or edge policy without an authorized owner, a backup, a rollback value, and post-change evidence.
+- Do not claim production completion until the canonical hostname serves the exact approved SHA from the verified Azure digest and every required gate passes.

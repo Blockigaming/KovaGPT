@@ -62,6 +62,9 @@
     "supabasePublishableKey": {
       "value": "REPLACE_WITH_PRODUCTION_SUPABASE_PUBLISHABLE_KEY"
     },
+    "cloudflareClientCertificateSha256Fingerprints": {
+      "value": ["REPLACE_WITH_64_HEX_CLOUDFLARE_CLIENT_CERT_SHA256"]
+    },
     "generationEnabled": {
       "value": false
     },
