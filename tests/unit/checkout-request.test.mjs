@@ -51,10 +51,7 @@ test("accepts omitted quantity and rejects malformed Checkout requests", () => {
 
 test("reads only own Checkout properties and snapshots accessors once", () => {
   assert.throws(
-    () =>
-      parseCheckoutRequest(
-        Object.create({ priceId: "plus_monthly", quantity: 1 }),
-      ),
+    () => parseCheckoutRequest(Object.create({ priceId: "plus_monthly", quantity: 1 })),
     /Invalid checkout request/,
   );
 
