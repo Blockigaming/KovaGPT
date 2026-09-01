@@ -6,6 +6,15 @@ test("SSR controls wait for hydration and early shortcuts replay once", async ({
 }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-1440x900");
 
+  const hydrationErrors: string[] = [];
+  const captureHydrationError = (message: string) => {
+    if (/hydration|#418/iu.test(message)) hydrationErrors.push(message);
+  };
+  page.on("pageerror", (error) => captureHydrationError(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") captureHydrationError(message.text());
+  });
+
   let releaseScripts!: () => void;
   const scriptsReleased = new Promise<void>((resolve) => {
     releaseScripts = resolve;
@@ -17,6 +26,7 @@ test("SSR controls wait for hydration and early shortcuts replay once", async ({
 
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(page.locator("html")).toHaveAttribute("data-kova-hydration", "pending");
+  await expect(page.getByText("Reconnect to send", { exact: true })).toHaveCount(0);
   await expect(page.locator('button[aria-label="Add files, tools, or prompts"]')).toBeDisabled();
 
   await page.evaluate(() => {
@@ -33,6 +43,8 @@ test("SSR controls wait for hydration and early shortcuts replay once", async ({
 
   releaseScripts();
   await waitForKovaHydration(page);
+  await expect(page.getByText("Reconnect to send", { exact: true })).toHaveCount(0);
+  expect(hydrationErrors).toEqual([]);
   await expect(page.locator('button[aria-label="Add files, tools, or prompts"]')).toBeEnabled();
   await expect
     .poll(() =>
