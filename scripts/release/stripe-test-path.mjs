@@ -29,9 +29,7 @@ export function verifyStripeTestPath({ webhookSource, stripeSource, planSource, 
   if (/unit_amount|1400|1600|8900/u.test(planSource))
     failures.push("source hard-codes Stripe price amounts");
 
-  const integrationIdentifier = checkoutSource.match(
-    /integration_identifier:\s*"([^"]+)"/u,
-  )?.[1];
+  const integrationIdentifier = checkoutSource.match(/integration_identifier:\s*"([^"]+)"/u)?.[1];
   if (!integrationIdentifier) {
     failures.push("embedded Checkout integration identifier missing");
   } else if (!INTEGRATION_IDENTIFIER_PATTERN.test(integrationIdentifier)) {
