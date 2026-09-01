@@ -104,18 +104,66 @@ test("RLS matrix is executable and production execution is prohibited", () => {
   );
 });
 
-test("Stripe sandbox is supported without weakening environment allowlisting", () => {
+test("Stripe release contract pins the API and embedded Checkout identity", () => {
   assert.equal(normalizeStripeEnvironmentValue("sandbox"), "sandbox");
   assert.equal(normalizeStripeEnvironmentValue("live"), "live");
   assert.equal(normalizeStripeEnvironmentValue("test"), null);
+
+  const valid = {
+    webhookSource:
+      'normalizeStripeEnvironment value === "sandbox" || value === "live" processed_stripe_events 23505',
+    stripeSource:
+      'PAYMENTS_SANDBOX_WEBHOOK_SECRET PAYMENTS_LIVE_WEBHOOK_SECRET timingSafeEqual apiVersion: "2026-07-29.dahlia"',
+    planSource: "plus_monthly pro_monthly",
+    checkoutSource:
+      'const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = { integration_identifier: "kovagpt_checkout_wshrfyef" }; stripe.checkout.sessions.create(sessionParams)',
+  };
+  assert.deepEqual(verifyStripeTestPath(valid), []);
+
   assert.deepEqual(
     verifyStripeTestPath({
-      webhookSource:
-        'normalizeStripeEnvironment value === "sandbox" || value === "live" processed_stripe_events 23505',
-      stripeSource: "PAYMENTS_SANDBOX_WEBHOOK_SECRET PAYMENTS_LIVE_WEBHOOK_SECRET timingSafeEqual",
-      planSource: "plus_monthly pro_monthly",
+      ...valid,
+      stripeSource: valid.stripeSource.replace("2026-07-29", "2026-03-25"),
     }),
-    [],
+    ["current Stripe API version missing"],
+  );
+  assert.deepEqual(
+    verifyStripeTestPath({
+      ...valid,
+      checkoutSource: valid.checkoutSource.replace(
+        'integration_identifier: "kovagpt_checkout_wshrfyef"',
+        "",
+      ),
+    }),
+    ["embedded Checkout integration identifier missing"],
+  );
+  assert.deepEqual(
+    verifyStripeTestPath({
+      ...valid,
+      checkoutSource: valid.checkoutSource.replace("wshrfyef", "INVALID"),
+    }),
+    ["embedded Checkout integration identifier malformed"],
+  );
+  assert.deepEqual(
+    verifyStripeTestPath({
+      ...valid,
+      checkoutSource: valid.checkoutSource.replace("wshrfyef", "abcdefgh"),
+    }),
+    ["embedded Checkout integration identifier changed"],
+  );
+  assert.deepEqual(
+    verifyStripeTestPath({
+      ...valid,
+      checkoutSource: `${valid.checkoutSource} payment_method_types: ["card"]`,
+    }),
+    ["Checkout payment methods must remain dynamic"],
+  );
+  assert.deepEqual(
+    verifyStripeTestPath({
+      ...valid,
+      checkoutSource: `${valid.checkoutSource} automatic_tax: { enabled: true }`,
+    }),
+    ["automatic tax requires approved registrations"],
   );
 });
 
