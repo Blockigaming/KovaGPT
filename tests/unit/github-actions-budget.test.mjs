@@ -58,4 +58,10 @@ test("production Azure deployment is manual and confirmation-gated", async () =>
   assert.doesNotMatch(workflow, /^\s*push:/mu);
   assert.match(workflow, /confirm_deploy:/u);
   assert.match(workflow, /Verify ACR push access before building/u);
+  assert.match(workflow, /vars\.KOVA_DEV_SUPABASE_PROJECT_REF/u);
+  assert.match(workflow, /vars\.KOVA_DEV_SUPABASE_URL/u);
+  assert.match(workflow, /secrets\.KOVA_DEV_SUPABASE_PUBLISHABLE_KEY/u);
+  assert.match(workflow, /vars\.KOVA_DEV_FORBIDDEN_SUPABASE_PROJECT_REFS/u);
+  assert.match(workflow, /dev deployment cannot target a forbidden Supabase project/u);
+  assert.doesNotMatch(workflow, /KOVA_PRODUCTION_SUPABASE/u);
 });

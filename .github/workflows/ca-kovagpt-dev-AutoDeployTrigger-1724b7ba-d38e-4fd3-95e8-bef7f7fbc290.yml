@@ -28,10 +28,10 @@ env:
   CONTAINER_APP_NAME: ca-kovagpt-dev
   RESOURCE_GROUP: rg-kovagpt-dev
   IMAGE_NAME: kovagpt-web
-  KOVA_EXPECTED_SUPABASE_PROJECT_REF: ${{ vars.KOVA_PRODUCTION_SUPABASE_PROJECT_REF }}
-  KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS: ${{ vars.KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS }}
-  VITE_SUPABASE_URL: ${{ vars.KOVA_PRODUCTION_SUPABASE_URL }}
-  VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.KOVA_PRODUCTION_SUPABASE_PUBLISHABLE_KEY }}
+  KOVA_EXPECTED_SUPABASE_PROJECT_REF: ${{ vars.KOVA_DEV_SUPABASE_PROJECT_REF }}
+  KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS: ${{ vars.KOVA_DEV_FORBIDDEN_SUPABASE_PROJECT_REFS }}
+  VITE_SUPABASE_URL: ${{ vars.KOVA_DEV_SUPABASE_URL }}
+  VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.KOVA_DEV_SUPABASE_PUBLISHABLE_KEY }}
 
 jobs:
   build-and-deploy:
@@ -68,11 +68,27 @@ jobs:
         run: |
           set -euo pipefail
           if [[ ! "$KOVA_EXPECTED_SUPABASE_PROJECT_REF" =~ ^[a-z0-9]{20}$ ]]; then
-            echo "::error::The production Supabase project ref is missing or invalid."
+            echo "::error::The dev Supabase project ref is missing or invalid."
             exit 1
           fi
+          normalized_forbidden="${KOVA_FORBIDDEN_SUPABASE_PROJECT_REFS//,/ }"
+          read -r -a forbidden_refs <<< "$normalized_forbidden"
+          if (( ${#forbidden_refs[@]} == 0 )); then
+            echo "::error::KOVA_DEV_FORBIDDEN_SUPABASE_PROJECT_REFS must list at least one non-dev project."
+            exit 1
+          fi
+          for forbidden_ref in "${forbidden_refs[@]}"; do
+            if [[ ! "$forbidden_ref" =~ ^[a-z0-9]{20}$ ]]; then
+              echo "::error::A forbidden Supabase project ref is invalid."
+              exit 1
+            fi
+            if [[ "$forbidden_ref" == "$KOVA_EXPECTED_SUPABASE_PROJECT_REF" ]]; then
+              echo "::error::The dev deployment cannot target a forbidden Supabase project."
+              exit 1
+            fi
+          done
           if [[ "$VITE_SUPABASE_URL" != "https://${KOVA_EXPECTED_SUPABASE_PROJECT_REF}.supabase.co" ]]; then
-            echo "::error::The production Supabase URL does not match the approved project ref."
+            echo "::error::The dev Supabase URL does not match the approved project ref."
             exit 1
           fi
           if [[ "$VITE_SUPABASE_PUBLISHABLE_KEY" != sb_publishable_* ]]; then
