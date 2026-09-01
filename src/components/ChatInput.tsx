@@ -63,7 +63,7 @@ type ComposerAction = {
 };
 
 const COMPOSER_TOOLS: readonly ComposerAction[] = [
-  { id: "web_search", label: "Search the Web", icon: Globe },
+  { id: "web_search", label: "Search the web", icon: Globe },
   { id: "image", label: "Create Image", icon: ImagePlus },
 ];
 
@@ -598,7 +598,21 @@ export function ChatInput({
     const imageTool = COMPOSER_TOOLS.find((tool) => tool.id === "image");
     const deepResearchTool = COMPOSER_TOOLS.find((tool) => tool.id === "deep_research");
 
-    const addPhotosRow = (
+    const photosRow = (
+      <button
+        type="button"
+        onClick={() => {
+          setPlusOpen(false);
+          photoRef.current?.click();
+        }}
+        className={rowClass}
+      >
+        <ImageIcon className={iconClass} />
+        <span>Photos</span>
+      </button>
+    );
+
+    const filesRow = (
       <button
         type="button"
         onClick={() => {
@@ -608,7 +622,7 @@ export function ChatInput({
         className={rowClass}
       >
         <Paperclip className={iconClass} />
-        <span>Add photos and files</span>
+        <span>Files</span>
       </button>
     );
 
@@ -661,7 +675,8 @@ export function ChatInput({
       );
       return (
         <>
-          {addPhotosRow}
+          {photosRow}
+          {filesRow}
           {cameraRow}
           {webSearchTool ? toolRow({ ...webSearchTool, label: "Web search" }) : null}
           <p className={`pt-3 pb-1 text-sm text-muted-foreground ${mobile ? "px-4" : "px-3"}`}>
@@ -685,7 +700,8 @@ export function ChatInput({
 
     return (
       <>
-        {addPhotosRow}
+        {photosRow}
+          {filesRow}
         {cameraRow}
         {COMPOSER_TOOLS.map(toolRow)}
         <button type="button" className={rowClass} onClick={() => (window.location.href = "/apps")}>
