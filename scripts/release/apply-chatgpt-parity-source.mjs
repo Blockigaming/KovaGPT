@@ -6,11 +6,11 @@ const replacements = [
   {
     path: "src/components/ChatInput.tsx",
     before: `const COMPOSER_TOOLS: readonly ComposerAction[] = [
-  { id: "web_search", label: "Search the Web", icon: Globe },
+  { id: "web_search", label: "Search the web", icon: Globe },
   { id: "image", label: "Create Image", icon: ImagePlus },
 ];`,
     after: `const COMPOSER_TOOLS: readonly ComposerAction[] = [
-  { id: "web_search", label: "Search the Web", icon: Globe },
+  { id: "web_search", label: "Search the web", icon: Globe },
   { id: "deep_research", label: "Deep research", icon: Telescope },
   { id: "image", label: "Create Image", icon: ImagePlus },
 ];`,
