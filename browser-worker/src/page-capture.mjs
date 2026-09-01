@@ -18,7 +18,10 @@ function stripHtml(value) {
 }
 
 function safeTitle(value) {
-  return String(value ?? "Untitled source").replace(/\s+/gu, " ").trim().slice(0, 300);
+  return String(value ?? "Untitled source")
+    .replace(/\s+/gu, " ")
+    .trim()
+    .slice(0, 300);
 }
 
 export async function captureAllowedPage({
@@ -92,7 +95,10 @@ export async function captureAllowedPage({
       throw new Error("browser_source_content_type_unsupported");
     }
 
-    let text = await page.locator("body").innerText().catch(() => "");
+    let text = await page
+      .locator("body")
+      .innerText()
+      .catch(() => "");
     if (text.trim().length < 200) {
       const body = await response.body();
       if (body.byteLength > 2_000_000) throw new Error("browser_source_body_too_large");

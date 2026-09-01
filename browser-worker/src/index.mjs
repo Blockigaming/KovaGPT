@@ -1,6 +1,9 @@
 import os from "node:os";
 import { createClient } from "@supabase/supabase-js";
-import { validateBrowserManagedIdentityBoundary, synthesizeBrowserResearch } from "./azure-openai.mjs";
+import {
+  validateBrowserManagedIdentityBoundary,
+  synthesizeBrowserResearch,
+} from "./azure-openai.mjs";
 import { captureAllowedPage } from "./page-capture.mjs";
 import { runBrowserWorkOnce } from "./runner.mjs";
 
@@ -52,9 +55,10 @@ async function main() {
 
   async function rpc(name, args) {
     const result = await supabase.rpc(name, args);
-    if (result.error) throw new Error(`Browser Work database operation failed: ${name}`, {
-      cause: result.error,
-    });
+    if (result.error)
+      throw new Error(`Browser Work database operation failed: ${name}`, {
+        cause: result.error,
+      });
     return result.data;
   }
 

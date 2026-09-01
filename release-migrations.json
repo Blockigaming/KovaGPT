@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 89,
-  "latest": "20260901010000_work_execution_v2.sql",
+  "count": 90,
+  "latest": "20260901100000_work_browser_research_v2.sql",
   "migrations": [
     {
       "order": 1,
@@ -1871,6 +1871,31 @@
         "agent_job_tool_calls_v2_job_idx",
         "agent_job_evidence_v2_job_idx"
       ]
+    },
+    {
+      "order": 90,
+      "filename": "20260901100000_work_browser_research_v2.sql",
+      "timestamp": "20260901100000",
+      "sha256": "74e3657b96144c60516d1b31ba38ac88bae8930aa30211a9fc50fd43fdc12e4d",
+      "tables": ["work_browser_worker_heartbeats_v2"],
+      "functions": [
+        "work_browser_runtime_enabled_v2",
+        "set_work_browser_runtime_v2",
+        "owner_create_browser_work_job_v2",
+        "claim_work_job_kind_v3",
+        "claim_work_job_v2",
+        "claim_browser_work_job_v2",
+        "record_work_browser_tool_result_v2",
+        "settle_work_browser_success_v2",
+        "record_work_browser_worker_heartbeat_v2",
+        "work_browser_worker_readiness_v2"
+      ],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": ["work_browser_worker_heartbeats_v2"],
+      "policies": [],
+      "indexes": []
     }
   ]
 }

@@ -43,9 +43,7 @@ function privateIpv6(value) {
       const high = Number.parseInt(words[0], 16);
       const low = Number.parseInt(words[1], 16);
       if (Number.isInteger(high) && Number.isInteger(low)) {
-        return privateIpv4(
-          `${(high >> 8) & 255}.${high & 255}.${(low >> 8) & 255}.${low & 255}`,
-        );
+        return privateIpv4(`${(high >> 8) & 255}.${high & 255}.${(low >> 8) & 255}.${low & 255}`);
       }
     }
   }
@@ -123,11 +121,7 @@ async function resolvedAddresses(hostname, resolver) {
   return addresses;
 }
 
-export async function resolvePinnedPublicUrl(
-  raw,
-  allowedDomains,
-  resolver = dns.lookup,
-) {
+export async function resolvePinnedPublicUrl(raw, allowedDomains, resolver = dns.lookup) {
   const url = parseAllowedHttpsUrl(raw, allowedDomains);
   const addresses = await resolvedAddresses(url.hostname, resolver);
   const pinnedAddress = addresses.find((address) => net.isIP(address) === 4) ?? addresses[0];

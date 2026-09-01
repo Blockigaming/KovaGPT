@@ -17,7 +17,8 @@ const environment = {
 
 test("browser synthesis rejects non-Azure platforms and every direct-key path", () => {
   assert.throws(
-    () => validateBrowserManagedIdentityBoundary({ ...environment, KOVA_RUNTIME_PLATFORM: "local" }),
+    () =>
+      validateBrowserManagedIdentityBoundary({ ...environment, KOVA_RUNTIME_PLATFORM: "local" }),
     /browser_runtime_platform_invalid/u,
   );
   assert.throws(
@@ -42,7 +43,8 @@ test("invalid Azure endpoints are rejected before any request", () => {
     "https://user:pass@kova.openai.azure.com",
   ]) {
     assert.throws(
-      () => validateBrowserManagedIdentityBoundary({ ...environment, AZURE_OPENAI_ENDPOINT: endpoint }),
+      () =>
+        validateBrowserManagedIdentityBoundary({ ...environment, AZURE_OPENAI_ENDPOINT: endpoint }),
       /browser_azure_openai_endpoint_invalid/u,
     );
   }
@@ -73,10 +75,7 @@ test("research synthesis obtains managed identity and calls the Azure Responses 
           expires_on: Math.floor(Date.now() / 1000) + 3600,
         });
       }
-      assert.equal(
-        String(url),
-        "https://kova.openai.azure.com/openai/v1/responses",
-      );
+      assert.equal(String(url), "https://kova.openai.azure.com/openai/v1/responses");
       assert.equal(init.headers.Authorization, "Bearer fixture-managed-identity-token");
       const body = JSON.parse(init.body);
       assert.equal(body.model, "gpt-5.6-sol-deployment");

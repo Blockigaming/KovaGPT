@@ -63,7 +63,9 @@ async function requestManagedIdentityToken(environment, fetchImpl) {
   if (inFlightToken) return inFlightToken;
 
   inFlightToken = (async () => {
-    const endpoint = new URL(required(environment.IDENTITY_ENDPOINT, "browser_identity_endpoint_required"));
+    const endpoint = new URL(
+      required(environment.IDENTITY_ENDPOINT, "browser_identity_endpoint_required"),
+    );
     if (endpoint.protocol !== "http:" || !["localhost", "127.0.0.1"].includes(endpoint.hostname)) {
       throw new Error("browser_identity_endpoint_invalid");
     }
@@ -88,9 +90,10 @@ async function requestManagedIdentityToken(environment, fetchImpl) {
     const expiresOnSeconds = Number(payload?.expires_on ?? 0);
     cachedToken = {
       value,
-      expiresAtMs: Number.isFinite(expiresOnSeconds) && expiresOnSeconds > 0
-        ? expiresOnSeconds * 1000
-        : Date.now() + 5 * 60_000,
+      expiresAtMs:
+        Number.isFinite(expiresOnSeconds) && expiresOnSeconds > 0
+          ? expiresOnSeconds * 1000
+          : Date.now() + 5 * 60_000,
     };
     return value;
   })();
@@ -146,7 +149,10 @@ export async function synthesizeBrowserResearch(
   fetchImpl = fetch,
 ) {
   validateBrowserManagedIdentityBoundary(environment);
-  const normalizedObjective = required(objective, "browser_research_objective_required").slice(0, 12_000);
+  const normalizedObjective = required(objective, "browser_research_objective_required").slice(
+    0,
+    12_000,
+  );
   const normalizedSources = boundedSources(sources);
   const budget = Math.max(1_000, Math.min(Number(tokenBudget) || 12_000, 50_000));
   const token = await requestManagedIdentityToken(environment, fetchImpl);
@@ -158,8 +164,7 @@ export async function synthesizeBrowserResearch(
 
   const sourceText = normalizedSources
     .map(
-      (source) =>
-        `[${source.index}] ${source.title}\nURL: ${source.url}\nCONTENT:\n${source.text}`,
+      (source) => `[${source.index}] ${source.title}\nURL: ${source.url}\nCONTENT:\n${source.text}`,
     )
     .join("\n\n---\n\n");
   const prompt = [
@@ -186,7 +191,9 @@ export async function synthesizeBrowserResearch(
   });
   if (!response.ok) {
     const retryable = response.status === 429 || response.status >= 500;
-    const error = new Error(retryable ? "browser_research_provider_temporary" : "browser_research_provider_failed");
+    const error = new Error(
+      retryable ? "browser_research_provider_temporary" : "browser_research_provider_failed",
+    );
     error.retryable = retryable;
     error.status = response.status;
     await response.body?.cancel().catch(() => undefined);

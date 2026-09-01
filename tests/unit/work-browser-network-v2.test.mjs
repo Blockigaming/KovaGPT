@@ -56,9 +56,7 @@ test("only exact owner-approved HTTPS hosts are accepted", () => {
     parseAllowedHttpsUrl("https://example.com/report?q=1#section", ["example.com"]).href,
     "https://example.com/report?q=1",
   );
-  assert.throws(() =>
-    parseAllowedHttpsUrl("https://sub.example.com/report", ["example.com"]),
-  );
+  assert.throws(() => parseAllowedHttpsUrl("https://sub.example.com/report", ["example.com"]));
   assert.throws(() =>
     parseAllowedHttpsUrl("https://example.com.attacker.test/report", ["example.com"]),
   );
@@ -93,26 +91,20 @@ test("redirects remain on the exact host and retain the pinned DNS answer", asyn
     ["example.com"],
     async () => [{ address: "93.184.216.34", family: 4 }],
   );
-  const safe = await assertRequestRemainsSafe(
-    "https://example.com/final",
-    target,
-    async () => [{ address: "93.184.216.34", family: 4 }],
-  );
+  const safe = await assertRequestRemainsSafe("https://example.com/final", target, async () => [
+    { address: "93.184.216.34", family: 4 },
+  ]);
   assert.equal(safe.pathname, "/final");
   await assert.rejects(
-    assertRequestRemainsSafe(
-      "https://example.com/final",
-      target,
-      async () => [{ address: "93.184.216.35", family: 4 }],
-    ),
+    assertRequestRemainsSafe("https://example.com/final", target, async () => [
+      { address: "93.184.216.35", family: 4 },
+    ]),
     /browser_dns_binding_changed/u,
   );
   await assert.rejects(
-    assertRequestRemainsSafe(
-      "https://attacker.test/final",
-      target,
-      async () => [{ address: "93.184.216.34", family: 4 }],
-    ),
+    assertRequestRemainsSafe("https://attacker.test/final", target, async () => [
+      { address: "93.184.216.34", family: 4 },
+    ]),
     /browser_url_not_allowlisted/u,
   );
 });

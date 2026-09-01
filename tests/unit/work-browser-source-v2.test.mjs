@@ -161,7 +161,10 @@ test("the browser runtime is isolated in a pinned Playwright image", () => {
 test("Azure defines separate exact-SHA model and browser jobs with browser disabled by default", () => {
   assert.match(azure, /param deployBrowserJob bool = false/u);
   assert.match(azure, /resource modelJob 'Microsoft\.App\/jobs@2025-01-01'/u);
-  assert.match(azure, /resource browserJob 'Microsoft\.App\/jobs@2025-01-01' = if \(deployBrowserJob\)/u);
+  assert.match(
+    azure,
+    /resource browserJob 'Microsoft\.App\/jobs@2025-01-01' = if \(deployBrowserJob\)/u,
+  );
   assert.match(azure, /dist\/worker\/work-v2\.mjs/u);
   assert.match(azure, /KOVA_WORK_BROWSER_WORKER_ENABLED/u);
   assert.match(azure, /browserImageReference/u);

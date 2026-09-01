@@ -94,11 +94,15 @@ function reportTitle(objectiveValue) {
 }
 
 function sourceMarkdown(sources) {
-  return sources.map((source, index) => `${index + 1}. [${source.title}](${source.url})`).join("\n");
+  return sources
+    .map((source, index) => `${index + 1}. [${source.title}](${source.url})`)
+    .join("\n");
 }
 
 function normalizeReport(report, sources) {
-  const body = String(report ?? "").trim().slice(0, 100_000);
+  const body = String(report ?? "")
+    .trim()
+    .slice(0, 100_000);
   if (!body) throw new Error("browser_research_report_empty");
   const hasSources = /(^|\n)#+\s+Sources\b/iu.test(body);
   return `${body}${hasSources ? "" : `\n\n## Sources\n\n${sourceMarkdown(sources)}`}\n`;
@@ -317,11 +321,12 @@ export async function runBrowserWorkOnce(dependencies, environment = process.env
     3_600,
     "browser_work_readiness_stale_invalid",
   );
-  const host = dependencies.hostname().replace(/[^a-zA-Z0-9._-]/gu, "-").slice(0, 80);
-  const workerId = `${workerEnvironment}-browser-${revision}-${host}-${randomUUID().slice(0, 8)}`.slice(
-    0,
-    240,
-  );
+  const host = dependencies
+    .hostname()
+    .replace(/[^a-zA-Z0-9._-]/gu, "-")
+    .slice(0, 80);
+  const workerId =
+    `${workerEnvironment}-browser-${revision}-${host}-${randomUUID().slice(0, 8)}`.slice(0, 240);
   const heartbeatBase = { environment: workerEnvironment, revision, sourceSha, capacity };
 
   dependencies.log("info", "work_browser_worker_started", {
