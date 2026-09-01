@@ -44,10 +44,7 @@ function isAuditRow(value) {
 
 function isDenseAuditRowArray(value) {
   for (let index = 0; index < value.length; index += 1) {
-    if (
-      !Object.prototype.hasOwnProperty.call(value, index) ||
-      !isAuditRow(value[index])
-    ) {
+    if (!Object.prototype.hasOwnProperty.call(value, index) || !isAuditRow(value[index])) {
       return false;
     }
   }
