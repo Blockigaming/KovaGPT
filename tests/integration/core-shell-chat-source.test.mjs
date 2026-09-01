@@ -65,8 +65,10 @@ test("shared composer protects input, attachments, IME submission, and upload an
   assert.match(input, /Retry \$\{a\.name\}/);
   assert.match(input, /sendOnEnter/);
   assert.match(input, /Reconnect to send/);
-  assert.match(input, /import \{ useOnline \} from "@\/hooks\/use-online"/);
-  assert.match(input, /const online = useOnline\(\);/);
+  assert.match(input, /useSyncExternalStore/);
+  assert.match(input, /const getOnlineStatusSnapshot = \(\) => navigator\.onLine !== false/);
+  assert.match(input, /const getServerOnlineStatusSnapshot = \(\) => true/);
+  assert.match(input, /const online = useSyncExternalStore\(/);
   assert.doesNotMatch(input, /typeof navigator === "undefined" \? true : navigator\.onLine/);
 });
 
