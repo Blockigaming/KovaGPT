@@ -491,6 +491,16 @@ begin
     raise exception 'work_project_write_access_required' using errcode = '42501';
   end if;
 
+  -- Resolve a retried request before checking the owner's active-run limit.
+  select * into v_row
+  from public.agent_jobs
+  where owner_id = v_user_id
+    and idempotency_key = p_idempotency_key
+    and deleted_at is null;
+  if found then
+    return v_row;
+  end if;
+
   v_tier := public.work_plan_tier_v2(v_user_id);
   v_limit := public.work_max_concurrency_v2(v_tier);
   if v_limit = 0 then
@@ -512,15 +522,6 @@ begin
     );
   if v_active >= v_limit then
     raise exception 'work_concurrency_limit_reached' using errcode = '54000';
-  end if;
-
-  select * into v_row
-  from public.agent_jobs
-  where owner_id = v_user_id
-    and idempotency_key = p_idempotency_key
-    and deleted_at is null;
-  if found then
-    return v_row;
   end if;
 
   begin

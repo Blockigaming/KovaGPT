@@ -130,10 +130,7 @@ export function validateWorkManagedIdentityBoundary(
     throw new Error("work_direct_api_key_forbidden");
   }
 
-  const pinned = required(
-    environment.KOVA_WORK_MODEL_DEPLOYMENT,
-    "work_model_deployment_required",
-  );
+  const pinned = required(environment.KOVA_WORK_MODEL_DEPLOYMENT, "work_model_deployment_required");
   if (pinned !== environment.AZURE_OPENAI_DEPLOYMENT_DEEP) {
     throw new Error("work_model_deployment_mismatch");
   }
@@ -369,12 +366,13 @@ function usageFor(payload: ChatCompletionPayload): Record<string, number> {
 
 function normalizeModelResult(content: string): Record<string, unknown> {
   const trimmed = content.trim();
-  if (!trimmed) throw new AiProviderError({
-    error: "KovaGPT returned an empty Work result.",
-    code: "provider_bad_response",
-    retryable: true,
-    status: 502,
-  });
+  if (!trimmed)
+    throw new AiProviderError({
+      error: "KovaGPT returned an empty Work result.",
+      code: "provider_bad_response",
+      retryable: true,
+      status: 502,
+    });
 
   try {
     const parsed = JSON.parse(trimmed) as unknown;
@@ -502,7 +500,7 @@ async function settleOwnerAction(
     },
     "Work owner action settlement failed",
   );
-  if (!['paused', 'cancelled'].includes(row.status)) {
+  if (!["paused", "cancelled"].includes(row.status)) {
     throw new Error("Work owner action settlement returned an invalid status.");
   }
   return {
@@ -519,7 +517,14 @@ async function executeClaimedWork(
   options: { leaseSeconds: number; heartbeatIntervalMs: number },
 ): Promise<WorkExecutionResultV2> {
   assertClaim(job);
-  await heartbeat(dependencies, job, options.leaseSeconds);
+  try {
+    await heartbeat(dependencies, job, options.leaseSeconds);
+  } catch (reason) {
+    if (reason instanceof WorkOwnerActionError) return settleOwnerAction(dependencies, job);
+    throw new WorkLeaseUncertainError("Work lease was uncertain before execution.", {
+      cause: reason,
+    });
+  }
   await appendEvent(dependencies, job, "planning_started", {
     attempt_id: job.attempt_id,
     attempt_number: job.attempt_number,
@@ -679,7 +684,9 @@ export async function runWorkExecutionBatchV2(
   if (!workerRevision || workerRevision.length > 200) {
     throw new Error("work_worker_revision_invalid");
   }
-  if (!/^[a-f0-9]{40}$/u.test(sourceSha)) throw new Error("work_source_sha_invalid");
+  if (!sourceSha || !/^[a-f0-9]{40}$/u.test(sourceSha)) {
+    throw new Error("work_source_sha_invalid");
+  }
   if (!Number.isInteger(limit) || limit < 1 || limit > 25) {
     throw new Error("work_batch_limit_invalid");
   }

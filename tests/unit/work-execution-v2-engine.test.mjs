@@ -18,32 +18,29 @@ class FakeProviderError extends Error {
   }
 }
 
-new Function("require", "exports", compiled)(
-  (name) => {
-    if (name === "node:crypto") return { createHash };
-    if (name === "@/integrations/supabase/client.server") return { supabaseAdmin: {} };
-    if (name === "@/lib/ai/provider.server") {
-      return {
-        AiProviderError: FakeProviderError,
-        chatCompletions: async () => {
-          throw new Error("Default provider dependency must not run in isolated tests");
-        },
-        chatModel: (kind) => `fixture-${kind}`,
-        async providerErrorFromResponse(response) {
-          await response.body?.cancel().catch(() => undefined);
-          return new FakeProviderError({
-            error: "safe fixture provider failure",
-            code: response.status === 429 ? "provider_rate_limited" : "provider_unavailable",
-            retryable: response.status === 429 || response.status >= 500,
-            status: response.status,
-          });
-        },
-      };
-    }
-    throw new Error(`Unexpected module import: ${name}`);
-  },
-  exports,
-);
+new Function("require", "exports", compiled)((name) => {
+  if (name === "node:crypto") return { createHash };
+  if (name === "@/integrations/supabase/client.server") return { supabaseAdmin: {} };
+  if (name === "@/lib/ai/provider.server") {
+    return {
+      AiProviderError: FakeProviderError,
+      chatCompletions: async () => {
+        throw new Error("Default provider dependency must not run in isolated tests");
+      },
+      chatModel: (kind) => `fixture-${kind}`,
+      async providerErrorFromResponse(response) {
+        await response.body?.cancel().catch(() => undefined);
+        return new FakeProviderError({
+          error: "safe fixture provider failure",
+          code: response.status === 429 ? "provider_rate_limited" : "provider_unavailable",
+          retryable: response.status === 429 || response.status >= 500,
+          status: response.status,
+        });
+      },
+    };
+  }
+  throw new Error(`Unexpected module import: ${name}`);
+}, exports);
 
 const { runWorkExecutionBatchV2, validateWorkManagedIdentityBoundary } = exports;
 const sourceSha = "a".repeat(40);
@@ -179,7 +176,10 @@ for (const [name, patch, message] of [
 ]) {
   test(`invalid ${name} stops before database or provider work`, async () => {
     const fixture = harness({ claims: [claim()] });
-    await assert.rejects(runWorkExecutionBatchV2({ ...options, ...patch }, fixture.dependencies), message);
+    await assert.rejects(
+      runWorkExecutionBatchV2({ ...options, ...patch }, fixture.dependencies),
+      message,
+    );
     assert.deepEqual(fixture.calls, []);
   });
 }
@@ -241,7 +241,10 @@ test("provider failure uses safe classified settlement and never exposes raw res
   assert.equal(settled.args.p_failure_type, "temporary");
   assert.equal(settled.args.p_retryable, true);
   assert.doesNotMatch(settled.args.p_safe_error, /private upstream/u);
-  assert.equal(fixture.rpcCalls.some((call) => call.name === "settle_work_success_v2"), false);
+  assert.equal(
+    fixture.rpcCalls.some((call) => call.name === "settle_work_success_v2"),
+    false,
+  );
 });
 
 test("nonempty tool policy fails safely without pretending to execute tools", async () => {
@@ -280,8 +283,14 @@ test("owner pause observed on the initial heartbeat settles before model spend",
   const result = await runWorkExecutionBatchV2(options, fixture.dependencies);
   assert.equal(result.paused, 1);
   assert.equal(fixture.chats.length, 0);
-  assert.equal(fixture.rpcCalls.some((call) => call.name === "settle_work_owner_action_v2"), true);
-  assert.equal(fixture.rpcCalls.some((call) => call.name === "append_work_event_v2"), false);
+  assert.equal(
+    fixture.rpcCalls.some((call) => call.name === "settle_work_owner_action_v2"),
+    true,
+  );
+  assert.equal(
+    fixture.rpcCalls.some((call) => call.name === "append_work_event_v2"),
+    false,
+  );
 });
 
 test("ambiguous success settlement never becomes a contradictory failure", async () => {
@@ -293,7 +302,10 @@ test("ambiguous success settlement never becomes a contradictory failure", async
     runWorkExecutionBatchV2(options, fixture.dependencies),
     /completion settlement failed/u,
   );
-  assert.equal(fixture.rpcCalls.some((call) => call.name === "settle_work_failure_v2"), false);
+  assert.equal(
+    fixture.rpcCalls.some((call) => call.name === "settle_work_failure_v2"),
+    false,
+  );
   assert.equal(fixture.chats.length, 1);
 });
 
@@ -301,10 +313,7 @@ test("repeated job identity cannot execute twice in one batch", async () => {
   const fixture = harness({ claims: [claim(), claim()] });
   await assert.rejects(runWorkExecutionBatchV2(options, fixture.dependencies), /repeated job/u);
   assert.equal(fixture.chats.length, 1);
-  assert.equal(
-    fixture.rpcCalls.filter((call) => call.name === "settle_work_success_v2").length,
-    1,
-  );
+  assert.equal(fixture.rpcCalls.filter((call) => call.name === "settle_work_success_v2").length, 1);
 });
 
 test("managed-identity boundary requires Azure Container Apps and rejects every direct key path", () => {

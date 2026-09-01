@@ -49,7 +49,7 @@ function requireWorkRuntime(): void {
 
   source = replaceOnce(
     source,
-    "export const listWorkRuns = createServerFn({ method: \"GET\" })",
+    'export const listWorkRuns = createServerFn({ method: "GET" })',
     `const createWorkSchema = z.object({
   objective: z.string().trim().min(1).max(12000),
   projectId: z.string().uuid().nullable().optional(),
@@ -213,6 +213,7 @@ function patchRoute() {
   if (source.includes("<WorkRunComposer")) {
     assert.match(source, /getWorkExecutionAvailability/u);
     assert.match(source, /executionAvailable=\{executionAvailable\}/u);
+    assert.match(source, /factualStatus\(detail\.run, executionAvailable\)/u);
     return false;
   }
 
@@ -311,6 +312,10 @@ function patchRoute() {
 
   source = source.replaceAll("factualStatus(run)", "factualStatus(run, executionAvailable)");
   source = source.replaceAll("factualStatus(r)", "factualStatus(r, executionAvailable)");
+  source = source.replaceAll(
+    "factualStatus(detail.run)",
+    "factualStatus(detail.run, executionAvailable)",
+  );
 
   source = replaceOnce(
     source,

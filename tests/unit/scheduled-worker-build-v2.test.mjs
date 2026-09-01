@@ -9,13 +9,22 @@ const runner = readFileSync("src/workers/scheduled-v2-runner.ts", "utf8");
 const dockerfile = readFileSync("Dockerfile", "utf8");
 const product = readFileSync("src/lib/scheduled-tasks.functions.ts", "utf8");
 
-test("the normal production build includes one bundled scheduled worker", () => {
-  assert.equal(packageJson.scripts.build, "vite build && npm run build:scheduled-worker");
+test("the normal production build includes both one-shot worker bundles", () => {
+  assert.equal(packageJson.scripts.build, "vite build && npm run build:workers");
+  assert.equal(
+    packageJson.scripts["build:workers"],
+    "npm run build:scheduled-worker && npm run build:work-worker",
+  );
   assert.equal(
     packageJson.scripts["build:scheduled-worker"],
     "vite build --config vite.scheduled-worker.config.ts",
   );
   assert.equal(packageJson.scripts["worker:scheduled:v2"], "node dist/worker/scheduled-v2.mjs");
+  assert.equal(
+    packageJson.scripts["build:work-worker"],
+    "vite build --config vite.work-worker.config.ts",
+  );
+  assert.equal(packageJson.scripts["worker:work:v2"], "node dist/worker/work-v2.mjs");
   assert.match(config, /src\/workers\/scheduled-v2\.ts/u);
   assert.match(config, /dist\/worker/u);
   assert.match(config, /entryFileNames: "scheduled-v2\.mjs"/u);

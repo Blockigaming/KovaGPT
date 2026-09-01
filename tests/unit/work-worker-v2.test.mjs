@@ -94,7 +94,11 @@ for (const [name, patch, message] of [
   ["batch", { KOVA_WORK_WORKER_BATCH_LIMIT: "26" }, /batch_limit_invalid/u],
   ["lease", { KOVA_WORK_WORKER_LEASE_SECONDS: "59" }, /lease_seconds_invalid/u],
   ["heartbeat", { KOVA_WORK_WORKER_HEARTBEAT_MS: "90000" }, /heartbeat_interval_invalid/u],
-  ["readiness stale", { KOVA_WORK_WORKER_READINESS_STALE_SECONDS: "29" }, /readiness_stale_invalid/u],
+  [
+    "readiness stale",
+    { KOVA_WORK_WORKER_READINESS_STALE_SECONDS: "29" },
+    /readiness_stale_invalid/u,
+  ],
 ]) {
   test(`invalid ${name} stops before provider validation or database work`, async () => {
     const fixture = harness();
@@ -192,10 +196,7 @@ for (const [name, patch] of [
         };
       },
     });
-    await assert.rejects(
-      runWorkWorkerOnce(fixture.dependencies, validEnv),
-      /one-shot batch/u,
-    );
+    await assert.rejects(runWorkWorkerOnce(fixture.dependencies, validEnv), /one-shot batch/u);
     assert.deepEqual(fixture.calls.slice(-2), ["heartbeat:failed", "log:work_worker_failed"]);
   });
 }
@@ -207,14 +208,11 @@ test("batch failure records a bounded failed heartbeat and preserves the origina
       throw original;
     },
   });
-  await assert.rejects(
-    runWorkWorkerOnce(fixture.dependencies, validEnv),
-    (error) => {
-      assert.equal(error.message, "The Work worker could not complete its one-shot batch.");
-      assert.equal(error.cause, original);
-      return true;
-    },
-  );
+  await assert.rejects(runWorkWorkerOnce(fixture.dependencies, validEnv), (error) => {
+    assert.equal(error.message, "The Work worker could not complete its one-shot batch.");
+    assert.equal(error.cause, original);
+    return true;
+  });
   assert.equal(fixture.calls.includes("readiness"), false);
   assert.doesNotMatch(JSON.stringify(fixture.logs), /private batch detail/u);
 });
@@ -234,7 +232,10 @@ test("failed terminal heartbeat never hides the original Work failure", async ()
     (error) => error.cause === original,
   );
   assert.equal(fixture.calls.includes("log:work_worker_failure_heartbeat_failed"), true);
-  assert.doesNotMatch(JSON.stringify(fixture.logs), /private batch detail|private heartbeat detail/u);
+  assert.doesNotMatch(
+    JSON.stringify(fixture.logs),
+    /private batch detail|private heartbeat detail/u,
+  );
 });
 
 test("startup heartbeat failure prevents batch execution", async () => {

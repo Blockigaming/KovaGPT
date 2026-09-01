@@ -112,12 +112,7 @@ function patchMigration() {
   end if;
 `;
 
-  source = replaceOnce(
-    source,
-    oldOrder,
-    idempotentOrder,
-    "Work idempotency before concurrency",
-  );
+  source = replaceOnce(source, oldOrder, idempotentOrder, "Work idempotency before concurrency");
   writeFileSync(migrationPath, source);
   return true;
 }
@@ -126,7 +121,8 @@ function patchEngine() {
   let source = readFileSync(enginePath, "utf8");
   let changed = false;
 
-  const unsafeSha = '  if (!/^[a-f0-9]{40}$/u.test(sourceSha)) throw new Error("work_source_sha_invalid");';
+  const unsafeSha =
+    '  if (!/^[a-f0-9]{40}$/u.test(sourceSha)) throw new Error("work_source_sha_invalid");';
   const safeSha =
     '  if (!sourceSha || !/^[a-f0-9]{40}$/u.test(sourceSha)) {\n    throw new Error("work_source_sha_invalid");\n  }';
   if (source.includes(unsafeSha)) {
@@ -159,7 +155,7 @@ function patchEngine() {
     changed = true;
   } else {
     assert.ok(
-      source.includes('Work lease was uncertain before execution.'),
+      source.includes("Work lease was uncertain before execution."),
       "initial Work heartbeat fence is missing",
     );
   }

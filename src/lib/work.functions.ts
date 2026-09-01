@@ -92,6 +92,21 @@ export type WorkDetail = {
 
 const db = (value: unknown) => value as Db;
 
+// Source remains fail-closed. Operations may enable model-only Work only after
+// the exact image, schema, worker heartbeat, and canary are independently proven.
+export const workExecutionAvailable = false;
+export function workExecutionRuntimeAvailable(): boolean {
+  const runtimeValue =
+    typeof process === "undefined" ? undefined : process.env.KOVA_WORK_EXECUTION_ENABLED;
+  return workExecutionAvailable || runtimeValue === "1" || runtimeValue === "true";
+}
+
+function requireWorkRuntime(): void {
+  if (!workExecutionRuntimeAvailable()) {
+    throw new Error("Work execution is not available in this deployment.");
+  }
+}
+
 function rows<T = any>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
@@ -128,6 +143,47 @@ function mapDeliverable(row: any): WorkDeliverable {
     createdAt: row.created_at,
   };
 }
+
+const createWorkSchema = z.object({
+  objective: z.string().trim().min(1).max(12000),
+  projectId: z.string().uuid().nullable().optional(),
+  idempotencyKey: z.string().trim().min(8).max(200),
+});
+
+export const getWorkExecutionAvailability = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(
+    async (): Promise<{
+      executionAvailable: boolean;
+      mode: "model_only_v2" | "history_only";
+    }> => {
+      const executionAvailable = workExecutionRuntimeAvailable();
+      return {
+        executionAvailable,
+        mode: executionAvailable ? "model_only_v2" : "history_only",
+      };
+    },
+  );
+
+export const createWorkRun = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((value: unknown) => createWorkSchema.parse(value))
+  .handler(async ({ data, context }): Promise<WorkRun> => {
+    requireWorkRuntime();
+    const result = await db(context.supabase).rpc("owner_create_work_job_v2", {
+      p_objective: data.objective,
+      p_project_id: data.projectId ?? null,
+      p_idempotency_key: data.idempotencyKey,
+      p_allowed_domains: [],
+      p_tool_policy: { allowed_tools: [] },
+      p_token_budget: 12000,
+    });
+    if (result.error || !result.data) {
+      console.error("[work] create failed", { code: result.error?.code ?? "unknown" });
+      throw new Error("Work could not be started.");
+    }
+    return mapRun(result.data);
+  });
 
 export const listWorkRuns = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -304,17 +360,34 @@ export const controlWorkRun = createServerFn({ method: "POST" })
     z
       .object({
         id: z.string().uuid(),
-        action: z.literal("cancel"),
+        action: z.enum(["pause", "resume", "cancel", "delete"]),
       })
       .parse(v),
   )
   .handler(async ({ data, context }) => {
-    const { data: row, error } = await db(context.supabase).rpc("control_agent_job", {
+    const client = db(context.supabase);
+    if (workExecutionRuntimeAvailable()) {
+      const result = await client.rpc("owner_control_work_job_v2", {
+        p_job_id: data.id,
+        p_action: data.action,
+      });
+      if (result.error || !result.data) {
+        throw new Error("Run state changed; reload and try again");
+      }
+      return mapRun(result.data);
+    }
+
+    if (data.action !== "cancel") {
+      throw new Error("Work execution is unavailable, so this action cannot be completed.");
+    }
+    const legacy = await client.rpc("control_agent_job", {
       p_job_id: data.id,
       p_action: data.action,
     });
-    if (error || !row) throw new Error("Run state changed; reload and try again");
-    return row;
+    if (legacy.error || !legacy.data) {
+      throw new Error("Run state changed; reload and try again");
+    }
+    return legacy.data;
   });
 
 const deliverableMutation = z.object({ id: z.string().uuid() });
@@ -586,17 +659,31 @@ export const decideApproval = createServerFn({ method: "POST" })
     z
       .object({
         id: z.string().uuid(),
-        decision: z.literal("denied"),
+        decision: z.enum(["approved", "denied"]),
         editedRequest: z.record(z.string(), z.unknown()).optional(),
       })
       .parse(v),
   )
   .handler(async ({ data, context }) => {
-    const { error } = await db(context.supabase).rpc("decide_agent_approval", {
+    const client = db(context.supabase);
+    if (workExecutionRuntimeAvailable()) {
+      const result = await client.rpc("owner_decide_work_approval_v2", {
+        p_approval_id: data.id,
+        p_decision: data.decision,
+        p_edited_request: data.editedRequest ?? null,
+      });
+      if (result.error || !result.data) throw new Error("Approval is no longer pending");
+      return { ok: true };
+    }
+
+    if (data.decision !== "denied") {
+      throw new Error("Approval is disabled while Work execution is unavailable.");
+    }
+    const legacy = await client.rpc("decide_agent_approval", {
       p_approval_id: data.id,
       p_decision: data.decision,
       p_edited_request: data.editedRequest,
     });
-    if (error) throw new Error("Approval is no longer pending");
+    if (legacy.error) throw new Error("Approval is no longer pending");
     return { ok: true };
   });

@@ -2,10 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const migration = readFileSync(
-  "supabase/migrations/20260901010000_work_execution_v2.sql",
-  "utf8",
-);
+const migration = readFileSync("supabase/migrations/20260901010000_work_execution_v2.sql", "utf8");
 const workRoute = readFileSync("src/routes/work.tsx", "utf8");
 const agentRoute = readFileSync("src/routes/api/agents/runs.ts", "utf8");
 const agentRuntime = readFileSync("src/agents/execution.server.ts", "utf8");
@@ -27,7 +24,10 @@ test("Work v2 extends the canonical agent_jobs queue without deleting historical
   assert.match(migration, /add column if not exists tool_policy jsonb/u);
   assert.match(migration, /add column if not exists token_budget integer/u);
   assert.doesNotMatch(migration, /drop table|truncate table|delete from public\.agent_jobs/iu);
-  assert.doesNotMatch(migration, /alter table public\.agent_runs rename|drop table public\.agent_runs/iu);
+  assert.doesNotMatch(
+    migration,
+    /alter table public\.agent_runs rename|drop table public\.agent_runs/iu,
+  );
 });
 
 test("runtime activation is service-only, exact-SHA pinned, and disabled after migration", () => {
@@ -43,7 +43,10 @@ test("runtime activation is service-only, exact-SHA pinned, and disabled after m
   assert.match(controls, /active_source_sha text/u);
   assert.match(activation, /auth\.role\(\) <> 'service_role'/u);
   assert.match(activation, /p_source_sha !~ '\^\[a-f0-9\]\{40\}\$'/u);
-  assert.match(migration, /grant execute on function public\.set_work_runtime_v2[\s\S]*?to service_role/u);
+  assert.match(
+    migration,
+    /grant execute on function public\.set_work_runtime_v2[\s\S]*?to service_role/u,
+  );
   assert.match(
     migration,
     /update public\.work_runtime_controls_v2[\s\S]*?set enabled = false,[\s\S]*?active_source_sha = null/u,
@@ -192,14 +195,26 @@ test("readiness binds health to heartbeat freshness, exact SHA, runtime activati
 });
 
 test("authenticated clients receive owner reads and RPCs but no direct execution-table writes", () => {
-  assert.match(migration, /revoke all on table public\.agent_job_attempts_v2 from anon, authenticated/u);
+  assert.match(
+    migration,
+    /revoke all on table public\.agent_job_attempts_v2 from anon, authenticated/u,
+  );
   assert.match(migration, /grant select on public\.agent_job_attempts_v2 to authenticated/u);
   assert.match(migration, /grant select on public\.agent_job_checkpoints_v2 to authenticated/u);
   assert.match(migration, /grant select on public\.agent_job_tool_calls_v2 to authenticated/u);
   assert.match(migration, /grant select on public\.agent_job_evidence_v2 to authenticated/u);
-  assert.match(migration, /grant execute on function public\.owner_create_work_job_v2[\s\S]*?to authenticated/u);
-  assert.match(migration, /grant execute on function public\.owner_control_work_job_v2[\s\S]*?to authenticated/u);
-  assert.match(migration, /grant execute on function public\.owner_decide_work_approval_v2[\s\S]*?to authenticated/u);
+  assert.match(
+    migration,
+    /grant execute on function public\.owner_create_work_job_v2[\s\S]*?to authenticated/u,
+  );
+  assert.match(
+    migration,
+    /grant execute on function public\.owner_control_work_job_v2[\s\S]*?to authenticated/u,
+  );
+  assert.match(
+    migration,
+    /grant execute on function public\.owner_decide_work_approval_v2[\s\S]*?to authenticated/u,
+  );
   assert.match(migration, /claim_work_job_v2[\s\S]*?to service_role/u);
 });
 

@@ -162,7 +162,10 @@ export async function runWorkWorkerOnce(
 
   dependencies.validateProviderBoundary();
 
-  const host = dependencies.hostname().replace(/[^a-zA-Z0-9._-]/gu, "-").slice(0, 80);
+  const host = dependencies
+    .hostname()
+    .replace(/[^a-zA-Z0-9._-]/gu, "-")
+    .slice(0, 80);
   const workerId = `${workerEnvironment}-${revision}-${host}`.slice(0, 240);
   const heartbeatBase = {
     environment: workerEnvironment,

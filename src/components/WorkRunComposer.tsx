@@ -100,7 +100,11 @@ export function WorkRunComposer({ onCreated }: { onCreated: (run: WorkRun) => vo
               className="inline-flex min-h-10 items-center gap-2 rounded-full bg-foreground px-4 text-sm font-medium text-background disabled:opacity-50"
               disabled={!objective.trim() || submitting}
             >
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              {submitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4" />
+              )}
               Start Work
             </button>
           </div>

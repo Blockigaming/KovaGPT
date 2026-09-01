@@ -5,10 +5,7 @@ import test from "node:test";
 const functions = readFileSync("src/lib/work.functions.ts", "utf8");
 const route = readFileSync("src/routes/work.tsx", "utf8");
 const composer = readFileSync("src/components/WorkRunComposer.tsx", "utf8");
-const migration = readFileSync(
-  "supabase/migrations/20260901010000_work_execution_v2.sql",
-  "utf8",
-);
+const migration = readFileSync("supabase/migrations/20260901010000_work_execution_v2.sql", "utf8");
 
 test("Work runtime stays source-disabled and requires an explicit deployment flag", () => {
   assert.match(functions, /export const workExecutionAvailable = false;/u);
@@ -47,6 +44,7 @@ test("the Work page discovers runtime capability instead of assuming execution i
   assert.match(route, /getWorkExecutionAvailability/u);
   assert.match(route, /setExecutionAvailable\(result\.executionAvailable === true\)/u);
   assert.match(route, /setExecutionAvailable\(false\)/u);
+  assert.match(route, /factualStatus\(detail\.run, executionAvailable\)/u);
   assert.match(route, /executionAvailable \? \(/u);
   assert.match(route, /<WorkRunComposer/u);
   assert.match(route, /Agent execution is unavailable/u);
@@ -64,7 +62,7 @@ test("the Work page exposes pause resume cancel delete and bounded approval cont
 
 test("the composer describes its real model-only boundary and creates idempotent runs", () => {
   assert.match(composer, /Start model-only Work/u);
-  assert.match(composer, /Browser and external tool actions remain unavailable/u);
+  assert.match(composer, /Browser and external tool\s+actions remain unavailable/u);
   assert.match(composer, /crypto\.randomUUID\(\)/u);
   assert.match(composer, /maxLength=\{12000\}/u);
   assert.match(composer, /createWorkRun/u);

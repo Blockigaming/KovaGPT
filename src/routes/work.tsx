@@ -10,6 +10,8 @@ import {
   FileText,
   Globe,
   Loader2,
+  Pause,
+  Play,
   RefreshCw,
   Search,
   Square,
@@ -19,12 +21,14 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { WorkRunComposer } from "@/components/WorkRunComposer";
 import { RealtimeReadiness } from "@/components/RealtimeReadiness";
 import { EmptyState, ErrorState } from "@/components/states";
 import { RelatedWorkspaceItems } from "@/components/WorkspaceIntelligence";
 import {
   controlWorkRun,
   decideApproval,
+  getWorkExecutionAvailability,
   deleteDeliverable,
   downloadDeliverable,
   duplicateDeliverable,
@@ -56,8 +60,8 @@ const statusTone: Record<string, string> = {
   approval_required: "bg-violet-500",
   retrying: "bg-orange-500",
 };
-function factualStatus(run: WorkRun) {
-  if (!terminal.has(run.status))
+function factualStatus(run: WorkRun, executionAvailable: boolean) {
+  if (!executionAvailable && !terminal.has(run.status))
     return `Execution unavailable · stored status: ${run.status.replaceAll("_", " ")}`;
   return run.status.replaceAll("_", " ");
 }
@@ -65,11 +69,13 @@ function factualStatus(run: WorkRun) {
 function WorkRoute() {
   const fetchRuns = useServerFn(listWorkRuns),
     fetchDetail = useServerFn(getWorkRun),
-    control = useServerFn(controlWorkRun);
+    control = useServerFn(controlWorkRun),
+    getAvailability = useServerFn(getWorkExecutionAvailability);
   const [runs, setRuns] = useState<WorkRun[]>([]),
     [selected, setSelected] = useState<string | null>(null),
     [detail, setDetail] = useState<WorkDetail | null>(null),
     [loading, setLoading] = useState(true),
+    [executionAvailable, setExecutionAvailable] = useState(false),
     [error, setError] = useState<string | null>(null),
     [tab, setTab] = useState<"graph" | "timeline" | "evidence" | "deliverables" | "approvals">(
       "graph",
@@ -119,16 +125,22 @@ function WorkRoute() {
     void loadRuns();
   }, [loadRuns]);
   useEffect(() => {
+    void getAvailability()
+      .then((result) => setExecutionAvailable(result.executionAvailable === true))
+      .catch(() => setExecutionAvailable(false));
+  }, [getAvailability]);
+  useEffect(() => {
     void loadDetail();
   }, [loadDetail]);
-  async function cancelRun() {
+  async function runAction(action: "pause" | "resume" | "cancel" | "delete") {
     if (!selected) return;
     try {
-      await control({ data: { id: selected, action: "cancel" } });
-      await loadDetail();
+      await control({ data: { id: selected, action } });
+      if (action === "delete") setSelected(null);
       await loadRuns();
+      if (action !== "delete") await loadDetail();
     } catch {
-      toast.error("The historical run could not be cancelled. Reload and try again.");
+      toast.error("The Work run changed or this action is unavailable. Reload and try again.");
     }
   }
   return (
@@ -158,7 +170,7 @@ function WorkRoute() {
                 {run.kind} run
               </span>
               <span className="mt-1 block text-xs capitalize text-muted-foreground">
-                {factualStatus(run)}
+                {factualStatus(run, executionAvailable)}
               </span>
               <time className="text-xs text-muted-foreground">
                 {new Date(run.createdAt).toLocaleString()}
@@ -167,6 +179,16 @@ function WorkRoute() {
           ))}
         </aside>
         <section className="min-w-0 flex-1 overflow-hidden rounded-3xl border bg-card">
+          {executionAvailable ? (
+            <div className="border-b p-4">
+              <WorkRunComposer
+                onCreated={(run) => {
+                  setRuns((current) => [run, ...current.filter((item) => item.id !== run.id)]);
+                  setSelected(run.id);
+                }}
+              />
+            </div>
+          ) : null}
           {loading ? (
             <div className="grid h-full place-items-center" role="status">
               <Loader2 className="animate-spin" />
@@ -182,7 +204,11 @@ function WorkRoute() {
             <EmptyState
               icon={Activity}
               title="No Work runs"
-              description="Agent execution is unavailable. Historical records will appear here when present."
+              description={
+                executionAvailable
+                  ? "Start model-only Work to create a durable reasoning or writing run."
+                  : "Agent execution is unavailable. Historical records will appear here when present."
+              }
             />
           ) : (
             <>
@@ -196,24 +222,49 @@ function WorkRoute() {
                       <h2 className="font-semibold capitalize">{detail.run.kind} run</h2>
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground" aria-live="polite">
-                      {factualStatus(detail.run)} · {detail.events.length} recorded events
+                      {factualStatus(detail.run, executionAvailable)} · {detail.events.length}{" "}
+                      recorded events
                     </p>
                   </div>
-                  <div className="flex gap-2">
-                    {!terminal.has(detail.run.status) && (
+                  <div className="flex flex-wrap gap-2">
+                    {executionAvailable &&
+                    ["queued", "leased", "running", "retrying", "approval_required"].includes(
+                      detail.run.status,
+                    ) ? (
+                      <button onClick={() => void runAction("pause")} className="work-action">
+                        <Pause />
+                        Pause
+                      </button>
+                    ) : null}
+                    {executionAvailable && detail.run.status === "paused" ? (
+                      <button onClick={() => void runAction("resume")} className="work-action">
+                        <Play />
+                        Resume
+                      </button>
+                    ) : null}
+                    {!terminal.has(detail.run.status) ? (
                       <button
-                        onClick={() => void cancelRun()}
+                        onClick={() => void runAction("cancel")}
                         className="work-action text-destructive"
                       >
                         <Square />
                         Cancel
                       </button>
-                    )}
+                    ) : executionAvailable ? (
+                      <button
+                        onClick={() => void runAction("delete")}
+                        className="work-action text-destructive"
+                      >
+                        <Trash2 />
+                        Delete
+                      </button>
+                    ) : null}
                   </div>
                 </div>
                 <p className="mt-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm">
-                  Agent execution is unavailable. Historical records remain readable; active legacy
-                  runs can only be cancelled.
+                  {executionAvailable
+                    ? "Model-only Work is enabled for durable reasoning and writing. Browser and external tool actions remain unavailable."
+                    : "Agent execution is unavailable. Historical records remain readable; active legacy runs can only be cancelled."}
                 </p>
                 <select
                   className="mt-3 min-h-11 w-full rounded-xl border bg-background px-3 md:hidden"
@@ -222,7 +273,7 @@ function WorkRoute() {
                 >
                   {runs.map((r) => (
                     <option key={r.id} value={r.id}>
-                      {r.kind} · {factualStatus(r)}
+                      {r.kind} · {factualStatus(r, executionAvailable)}
                     </option>
                   ))}
                 </select>
@@ -251,7 +302,13 @@ function WorkRoute() {
                 {tab === "deliverables" && (
                   <Deliverables items={detail.deliverables} refresh={loadDetail} />
                 )}{" "}
-                {tab === "approvals" && <Approvals detail={detail} refresh={loadDetail} />}
+                {tab === "approvals" && (
+                  <Approvals
+                    detail={detail}
+                    refresh={loadDetail}
+                    executionAvailable={executionAvailable}
+                  />
+                )}
               </div>
             </>
           )}
@@ -920,14 +977,22 @@ function Deliverables({
     </section>
   );
 }
-function Approvals({ detail, refresh }: { detail: WorkDetail; refresh: () => Promise<void> }) {
+function Approvals({
+  detail,
+  refresh,
+  executionAvailable,
+}: {
+  detail: WorkDetail;
+  refresh: () => Promise<void>;
+  executionAvailable: boolean;
+}) {
   const decide = useServerFn(decideApproval);
-  async function deny(id: string) {
+  async function decidePending(id: string, decision: "approved" | "denied") {
     try {
-      await decide({ data: { id, decision: "denied" } });
+      await decide({ data: { id, decision } });
       await refresh();
     } catch {
-      toast.error("Approval is no longer pending.");
+      toast.error("Approval is no longer pending or execution is unavailable.");
     }
   }
   return (
@@ -951,13 +1016,27 @@ function Approvals({ detail, refresh }: { detail: WorkDetail; refresh: () => Pro
                 <p className="mt-1 text-sm text-muted-foreground">Destination: {a.destination}</p>
                 {a.status === "pending" && (
                   <div className="mt-3 flex gap-2">
-                    <button className="work-small text-destructive" onClick={() => void deny(a.id)}>
+                    {executionAvailable ? (
+                      <button
+                        className="work-small"
+                        onClick={() => void decidePending(a.id, "approved")}
+                      >
+                        <Check />
+                        Approve
+                      </button>
+                    ) : null}
+                    <button
+                      className="work-small text-destructive"
+                      onClick={() => void decidePending(a.id, "denied")}
+                    >
                       <X />
                       Deny
                     </button>
-                    <span className="self-center text-xs text-muted-foreground">
-                      Approval is disabled while execution is unavailable.
-                    </span>
+                    {!executionAvailable ? (
+                      <span className="self-center text-xs text-muted-foreground">
+                        Approval is disabled while execution is unavailable.
+                      </span>
+                    ) : null}
                   </div>
                 )}
               </div>
