@@ -1,15 +1,34 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-test("Stripe verifies raw signed body, bounds replay age, and releases failed claims", async () => {
-  const verify = await readFile(new URL("../../src/lib/stripe.server.ts", import.meta.url), "utf8"),
+test("Stripe pins Dahlia and verifies Checkout and webhook safety contracts", async () => {
+  const stripeSource = await readFile(
+      new URL("../../src/lib/stripe.server.ts", import.meta.url),
+      "utf8",
+    ),
+    checkoutSource = await readFile(
+      new URL("../../src/utils/payments.functions.ts", import.meta.url),
+      "utf8",
+    ),
     hook = await readFile(
       new URL("../../src/routes/api/public/payments/webhook.ts", import.meta.url),
       "utf8",
-    );
-  assert.match(verify, /req\.text\(\)/);
-  assert.match(verify, /age > 300/);
-  assert.match(verify, /timingSafeEqualText/);
+    ),
+    pkg = JSON.parse(await readFile(new URL("../../package.json", import.meta.url), "utf8"));
+
+  assert.equal(pkg.dependencies.stripe, "22.6.0");
+  assert.match(stripeSource, /apiVersion: "2026-08-26\.dahlia"/);
+  assert.match(stripeSource, /req\.text\(\)/);
+  assert.match(stripeSource, /age > 300/);
+  assert.match(stripeSource, /timingSafeEqualText/);
+  assert.match(checkoutSource, /integration_identifier: "kovagpt_checkout_wshrfyef"/);
+  assert.match(
+    checkoutSource,
+    /const sessionParams: Parameters<typeof stripe\.checkout\.sessions\.create>\[0\]/,
+  );
+  assert.doesNotMatch(checkoutSource, /payment_method_types\s*:/);
+  assert.doesNotMatch(checkoutSource, /automatic_tax\s*:/);
+  assert.doesNotMatch(checkoutSource, /sessionParams\s+as\s+Parameters/);
   assert.match(hook, /code.*23505/);
   assert.match(hook, /processed_stripe_events"\)\.delete/);
   assert.match(hook, /correlationId/);
