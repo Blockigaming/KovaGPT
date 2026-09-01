@@ -1,41 +1,38 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { CheckCircle2, RefreshCw, XCircle } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { OperationalState } from "@/components/OperationalState";
+import { parseAuditLogRows, type AuditLogRow } from "@/lib/audit-response.mjs";
 import { listAuditLog } from "@/lib/audit.functions";
-import { CheckCircle2, XCircle, RefreshCw } from "lucide-react";
-
-type Row = {
-  id: string;
-  provider: string;
-  action: string;
-  status: string;
-  resource_id: string | null;
-  summary: string | null;
-  created_at: string;
-};
 
 function AuditLogPage() {
   const fetchRows = useServerFn(listAuditLog);
-  const [rows, setRows] = useState<Row[]>([]);
+  const [rows, setRows] = useState<AuditLogRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const requestId = useRef(0);
 
-  const load = async () => {
+  const load = useCallback(async () => {
+    const currentRequest = ++requestId.current;
     setLoading(true);
-    setError(null);
+    setFailed(false);
     try {
-      const data = await fetchRows();
-      setRows(data as Row[]);
-    } catch (e) {
-      setError((e as Error).message);
+      const data = parseAuditLogRows(await fetchRows());
+      if (currentRequest !== requestId.current) return;
+      setRows(data);
+    } catch {
+      if (currentRequest !== requestId.current) return;
+      setRows([]);
+      setFailed(true);
     } finally {
-      setLoading(false);
+      if (currentRequest === requestId.current) setLoading(false);
     }
-  };
+  }, [fetchRows]);
 
   useEffect(() => {
-    load();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    void load();
+  }, [load]);
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8">
@@ -47,42 +44,52 @@ function AuditLogPage() {
           </p>
         </div>
         <button
-          onClick={load}
-          className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted"
+          type="button"
+          onClick={() => void load()}
+          disabled={loading}
+          aria-label="Refresh activity"
+          className="inline-flex min-h-11 items-center gap-2 rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <RefreshCw className="h-4 w-4" /> Refresh
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} aria-hidden /> Refresh
         </button>
       </div>
 
       {loading ? (
-        <div className="text-sm text-muted-foreground">Loading…</div>
-      ) : error ? (
-        <div className="text-sm text-destructive">{error}</div>
+        <div role="status" aria-live="polite" className="text-sm text-muted-foreground">
+          Loading activity…
+        </div>
+      ) : failed ? (
+        <OperationalState
+          state="unavailable"
+          title="Activity unavailable"
+          description="Your connected-account activity could not be loaded. Try again."
+          onRetry={() => void load()}
+        />
       ) : rows.length === 0 ? (
         <div className="rounded-lg border border-border p-8 text-center text-sm text-muted-foreground">
           No connected-account activity yet. Connect Google from the Apps page to get started.
         </div>
       ) : (
         <ul className="divide-y divide-border rounded-lg border border-border">
-          {rows.map((r) => (
-            <li key={r.id} className="flex items-start gap-3 px-4 py-3">
-              {r.status === "success" ? (
-                <CheckCircle2 className="mt-0.5 h-4 w-4 text-green-500" />
+          {rows.map((row) => (
+            <li key={row.id} className="flex items-start gap-3 px-4 py-3">
+              {row.status === "success" ? (
+                <CheckCircle2 className="mt-0.5 h-4 w-4 text-green-500" aria-hidden />
               ) : (
-                <XCircle className="mt-0.5 h-4 w-4 text-destructive" />
+                <XCircle className="mt-0.5 h-4 w-4 text-destructive" aria-hidden />
               )}
               <div className="min-w-0 flex-1">
                 <div className="text-sm">
-                  <span className="font-medium capitalize">{r.provider}</span>{" "}
+                  <span className="font-medium capitalize">{row.provider}</span>{" "}
                   <span className="text-muted-foreground">·</span>{" "}
-                  <span className="capitalize">{r.action}</span>
+                  <span className="capitalize">{row.action}</span>
                 </div>
-                {r.summary && (
-                  <div className="truncate text-sm text-muted-foreground">{r.summary}</div>
+                {row.summary && (
+                  <div className="truncate text-sm text-muted-foreground">{row.summary}</div>
                 )}
               </div>
               <time className="shrink-0 text-xs text-muted-foreground">
-                {new Date(r.created_at).toLocaleString()}
+                {new Date(row.created_at).toLocaleString()}
               </time>
             </li>
           ))}
@@ -92,20 +99,19 @@ function AuditLogPage() {
   );
 }
 
-function AuditLogErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
+function AuditLogErrorComponent({ reset }: { error: unknown; reset: () => void }) {
   const router = useRouter();
   return (
-    <div className="mx-auto max-w-md p-8 text-center">
-      <p className="mb-4 text-sm text-destructive">{(error as Error).message}</p>
-      <button
-        className="rounded-md border px-3 py-1.5 text-sm"
-        onClick={() => {
-          router.invalidate();
+    <div className="mx-auto max-w-md p-8">
+      <OperationalState
+        state="unavailable"
+        title="Activity unavailable"
+        description="The Activity page could not be loaded. Try again."
+        onRetry={() => {
+          void router.invalidate();
           reset();
         }}
-      >
-        Try again
-      </button>
+      />
     </div>
   );
 }
