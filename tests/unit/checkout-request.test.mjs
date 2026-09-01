@@ -12,7 +12,8 @@ test("returns a frozen allowlisted Checkout request", () => {
     return_url: "https://evil.example",
   });
 
-  assert.deepEqual(parsed, { priceId: "plus_monthly", quantity: 1 });
+  assert.deepEqual({ ...parsed }, { priceId: "plus_monthly", quantity: 1 });
+  assert.equal(Object.getPrototypeOf(parsed), null);
   assert.equal(Object.isFrozen(parsed), true);
   assert.equal("environment" in parsed, false);
   assert.equal("returnUrl" in parsed, false);
@@ -24,9 +25,12 @@ test("returns a frozen allowlisted Checkout request", () => {
 });
 
 test("accepts omitted quantity and rejects malformed Checkout requests", () => {
-  assert.deepEqual(parseCheckoutRequest({ priceId: "pro_monthly" }), {
-    priceId: "pro_monthly",
-  });
+  assert.deepEqual(
+    { ...parseCheckoutRequest({ priceId: "pro_monthly" }) },
+    {
+      priceId: "pro_monthly",
+    },
+  );
 
   for (const value of [
     null,
@@ -43,4 +47,31 @@ test("accepts omitted quantity and rejects malformed Checkout requests", () => {
       message: "Invalid checkout request",
     });
   }
+});
+
+test("reads only own Checkout properties and snapshots accessors once", () => {
+  assert.throws(
+    () =>
+      parseCheckoutRequest(
+        Object.create({ priceId: "plus_monthly", quantity: 1 }),
+      ),
+    /Invalid checkout request/,
+  );
+
+  let priceIdReads = 0;
+  let quantityReads = 0;
+  const parsed = parseCheckoutRequest({
+    get priceId() {
+      priceIdReads += 1;
+      return priceIdReads === 1 ? "plus_monthly" : new String("plus_monthly");
+    },
+    get quantity() {
+      quantityReads += 1;
+      return quantityReads === 1 ? 1 : 2;
+    },
+  });
+
+  assert.deepEqual({ ...parsed }, { priceId: "plus_monthly", quantity: 1 });
+  assert.equal(priceIdReads, 1);
+  assert.equal(quantityReads, 1);
 });
