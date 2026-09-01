@@ -14,9 +14,7 @@ test("Stripe pins Dahlia and verifies Checkout and webhook safety contracts", as
       new URL("../../src/routes/api/public/payments/webhook.ts", import.meta.url),
       "utf8",
     ),
-    pkg = JSON.parse(
-      await readFile(new URL("../../package.json", import.meta.url), "utf8"),
-    );
+    pkg = JSON.parse(await readFile(new URL("../../package.json", import.meta.url), "utf8"));
 
   assert.equal(pkg.dependencies.stripe, "22.4.0");
   assert.match(stripeSource, /apiVersion: "2026-07-29\.dahlia"/);
