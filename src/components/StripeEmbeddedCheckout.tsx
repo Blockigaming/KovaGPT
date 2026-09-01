@@ -1,7 +1,7 @@
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { getStripe, getStripeEnvironment } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { createCheckoutSession } from "@/utils/payments.functions";
 
 interface Props {
@@ -21,7 +21,6 @@ export function StripeEmbeddedCheckout({ priceId, quantity, customerEmail, userI
         data: {
           priceId,
           quantity,
-          environment: getStripeEnvironment(),
         },
       });
       if ("error" in result) throw new Error(result.error);
