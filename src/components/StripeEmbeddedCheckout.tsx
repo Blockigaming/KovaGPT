@@ -1,7 +1,7 @@
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { getStripe, getStripeEnvironment } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { createCheckoutSession } from "@/utils/payments.functions";
 
 interface Props {
@@ -9,16 +9,9 @@ interface Props {
   quantity?: number;
   customerEmail?: string;
   userId?: string;
-  returnUrl?: string;
 }
 
-export function StripeEmbeddedCheckout({
-  priceId,
-  quantity,
-  customerEmail,
-  userId,
-  returnUrl,
-}: Props) {
+export function StripeEmbeddedCheckout({ priceId, quantity, customerEmail, userId }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -28,8 +21,6 @@ export function StripeEmbeddedCheckout({
         data: {
           priceId,
           quantity,
-          returnUrl: returnUrl || window.location.href,
-          environment: getStripeEnvironment(),
         },
       });
       if ("error" in result) throw new Error(result.error);

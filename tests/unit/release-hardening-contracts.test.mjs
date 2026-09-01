@@ -9,6 +9,7 @@ import {
 import { assertSafeRlsTarget, validateRlsMatrix } from "../../scripts/release/rls-two-user.mjs";
 import {
   normalizeStripeEnvironmentValue,
+  verifyCheckoutRequestBoundary,
   verifyStripeTestPath,
 } from "../../scripts/release/stripe-test-path.mjs";
 import { verifyAiProviderContract } from "../../scripts/release/ai-provider-contract.mjs";
@@ -108,6 +109,7 @@ test("Stripe release contract pins the API and embedded Checkout identity", () =
   assert.equal(normalizeStripeEnvironmentValue("sandbox"), "sandbox");
   assert.equal(normalizeStripeEnvironmentValue("live"), "live");
   assert.equal(normalizeStripeEnvironmentValue("test"), null);
+  assert.deepEqual(verifyCheckoutRequestBoundary(), []);
 
   const valid = {
     webhookSource:
@@ -116,7 +118,7 @@ test("Stripe release contract pins the API and embedded Checkout identity", () =
       'PAYMENTS_SANDBOX_WEBHOOK_SECRET PAYMENTS_LIVE_WEBHOOK_SECRET timingSafeEqual apiVersion: "2026-08-26.dahlia"',
     planSource: "plus_monthly pro_monthly",
     checkoutSource:
-      'const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = { integration_identifier: "kovagpt_checkout_wshrfyef" }; stripe.checkout.sessions.create(sessionParams)',
+      '.validator((data: unknown) => { const parsed = parseCheckoutRequest(data); if (!resolveBillingPlan(parsed.priceId)) throw new Error("Invalid priceId"); return parsed; }) const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = { integration_identifier: "kovagpt_checkout_wshrfyef", return_url: CHECKOUT_RETURN_URL }; stripe.checkout.sessions.create(sessionParams)',
   };
   assert.deepEqual(verifyStripeTestPath(valid), []);
 
@@ -164,6 +166,34 @@ test("Stripe release contract pins the API and embedded Checkout identity", () =
       checkoutSource: `${valid.checkoutSource} automatic_tax: { enabled: true }`,
     }),
     ["automatic tax requires approved registrations"],
+  );
+  assert.deepEqual(
+    verifyStripeTestPath({
+      ...valid,
+      checkoutSource: valid.checkoutSource.replace("return_url: CHECKOUT_RETURN_URL", ""),
+    }),
+    ["fixed Checkout return URL missing"],
+  );
+  assert.deepEqual(
+    verifyStripeTestPath({
+      ...valid,
+      checkoutSource: `${valid.checkoutSource} returnUrl: data.returnUrl`,
+    }),
+    ["Checkout return URL remains browser-selectable"],
+  );
+  assert.deepEqual(
+    verifyStripeTestPath({
+      ...valid,
+      checkoutSource: valid.checkoutSource.replace("parseCheckoutRequest(data)", ""),
+    }),
+    ["sanitized Checkout validator missing"],
+  );
+  assert.deepEqual(
+    verifyStripeTestPath({
+      ...valid,
+      checkoutSource: valid.checkoutSource.replace("return parsed;", "return data;"),
+    }),
+    ["sanitized Checkout validator missing"],
   );
 });
 

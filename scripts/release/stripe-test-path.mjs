@@ -1,11 +1,51 @@
 import { readFileSync } from "node:fs";
+import { parseCheckoutRequest } from "../../src/lib/checkout-request.mjs";
 
 const STRIPE_API_VERSION_PATTERN = /apiVersion:\s*"2026-08-26\.dahlia"/u;
 const EXPECTED_INTEGRATION_IDENTIFIER = "kovagpt_checkout_wshrfyef";
 const INTEGRATION_IDENTIFIER_PATTERN = /^kovagpt_checkout_[a-z]{8}$/u;
+const CHECKOUT_VALIDATOR_PATTERN =
+  /\.validator\(\(data: unknown\) => \{\s*const parsed = parseCheckoutRequest\(data\);\s*if \(!resolveBillingPlan\(parsed\.priceId\)\) throw new Error\("Invalid priceId"\);\s*return parsed;\s*\}\)/u;
 
 export function normalizeStripeEnvironmentValue(value) {
   return value === "sandbox" || value === "live" ? value : null;
+}
+
+export function verifyCheckoutRequestBoundary() {
+  const failures = [];
+  try {
+    const hostileUrl = "https://evil.example/checkout/return";
+    const parsed = parseCheckoutRequest({
+      priceId: "plus_monthly",
+      quantity: 1,
+      environment: "sandbox",
+      returnUrl: hostileUrl,
+      redirect_url: hostileUrl,
+      return_url: hostileUrl,
+    });
+    const keys = Object.keys(parsed).sort();
+    if (
+      parsed.priceId !== "plus_monthly" ||
+      parsed.quantity !== 1 ||
+      keys.length !== 2 ||
+      keys[0] !== "priceId" ||
+      keys[1] !== "quantity"
+    ) {
+      failures.push("Checkout request allowlist leaked browser fields");
+    }
+    if (!Object.isFrozen(parsed)) failures.push("Checkout request is not frozen");
+    try {
+      parsed.return_url = hostileUrl;
+    } catch {
+      // Expected for a frozen object in an ES module.
+    }
+    if ("returnUrl" in parsed || "redirect_url" in parsed || "return_url" in parsed) {
+      failures.push("Checkout request accepted a browser redirect field");
+    }
+  } catch {
+    failures.push("Checkout request boundary could not be verified");
+  }
+  return failures;
 }
 
 export function verifyStripeTestPath({ webhookSource, stripeSource, planSource, checkoutSource }) {
@@ -50,7 +90,14 @@ export function verifyStripeTestPath({ webhookSource, stripeSource, planSource, 
   }
   if (/sessionParams\s+as\s+Parameters</u.test(checkoutSource))
     failures.push("Checkout parameters use an unsafe type assertion");
+  if (!/return_url:\s*CHECKOUT_RETURN_URL/u.test(checkoutSource))
+    failures.push("fixed Checkout return URL missing");
+  if (/\breturnUrl\b|data\.returnUrl/u.test(checkoutSource))
+    failures.push("Checkout return URL remains browser-selectable");
+  if (!CHECKOUT_VALIDATOR_PATTERN.test(checkoutSource))
+    failures.push("sanitized Checkout validator missing");
 
+  failures.push(...verifyCheckoutRequestBoundary());
   return failures;
 }
 
