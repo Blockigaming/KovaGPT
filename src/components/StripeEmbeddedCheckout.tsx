@@ -9,7 +9,6 @@ interface Props {
   quantity?: number;
   customerEmail?: string;
   userId?: string;
-  returnUrl?: string;
 }
 
 export function StripeEmbeddedCheckout({
@@ -17,7 +16,6 @@ export function StripeEmbeddedCheckout({
   quantity,
   customerEmail,
   userId,
-  returnUrl,
 }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -28,7 +26,6 @@ export function StripeEmbeddedCheckout({
         data: {
           priceId,
           quantity,
-          returnUrl: returnUrl || window.location.href,
           environment: getStripeEnvironment(),
         },
       });
