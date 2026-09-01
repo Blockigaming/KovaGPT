@@ -50,8 +50,10 @@ export function verifyStripeTestPath({ webhookSource, stripeSource, planSource, 
   }
   if (/sessionParams\s+as\s+Parameters</u.test(checkoutSource))
     failures.push("Checkout parameters use an unsafe type assertion");
-  if (!/parseAllowedCheckoutReturnUrl\(data\.returnUrl\)/u.test(checkoutSource))
-    failures.push("Checkout return URL allowlist missing");
+  if (!/return_url:\s*CHECKOUT_RETURN_URL/u.test(checkoutSource))
+    failures.push("fixed Checkout return URL missing");
+  if (/\breturnUrl\b|data\.returnUrl/u.test(checkoutSource))
+    failures.push("Checkout return URL remains browser-selectable");
 
   return failures;
 }
