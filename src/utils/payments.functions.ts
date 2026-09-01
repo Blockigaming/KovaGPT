@@ -47,13 +47,11 @@ async function resolveOrCreateCustomer(
 
 export const createCheckoutSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator(
-    (data: { priceId: string; quantity?: number; environment: StripeEnv }) => {
-      if (!resolveBillingPlan(data.priceId)) throw new Error("Invalid priceId");
-      if (data.quantity !== undefined && data.quantity !== 1) throw new Error("Invalid quantity");
-      return data;
-    },
-  )
+  .validator((data: { priceId: string; quantity?: number; environment: StripeEnv }) => {
+    if (!resolveBillingPlan(data.priceId)) throw new Error("Invalid priceId");
+    if (data.quantity !== undefined && data.quantity !== 1) throw new Error("Invalid quantity");
+    return data;
+  })
   .handler(async ({ data, context }): Promise<CheckoutSessionResult> => {
     try {
       const plan = resolveBillingPlan(data.priceId);
