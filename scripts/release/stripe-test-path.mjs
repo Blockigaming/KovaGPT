@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-const STRIPE_API_VERSION_PATTERN = /apiVersion:\s*"2026-07-29\.dahlia"/u;
+const STRIPE_API_VERSION_PATTERN = /apiVersion:\s*"2026-08-26\.dahlia"/u;
 const EXPECTED_INTEGRATION_IDENTIFIER = "kovagpt_checkout_wshrfyef";
 const INTEGRATION_IDENTIFIER_PATTERN = /^kovagpt_checkout_[a-z]{8}$/u;
 
