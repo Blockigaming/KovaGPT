@@ -8,7 +8,7 @@ import { applyChatGptParitySource } from "../../scripts/release/apply-chatgpt-pa
 
 const fixtures = {
   "src/components/ChatInput.tsx": `const COMPOSER_TOOLS: readonly ComposerAction[] = [
-  { id: "web_search", label: "Search the Web", icon: Globe },
+  { id: "web_search", label: "Search the web", icon: Globe },
   { id: "image", label: "Create Image", icon: ImagePlus },
 ];
 {COMPOSER_TOOLS.map(toolRow)}
@@ -37,6 +37,10 @@ test("ChatGPT parity transformer is exact and idempotent", () => {
     assert.match(readFileSync("src/components/ChatInput.tsx", "utf8"), /deep_research/u);
     assert.match(
       readFileSync("src/components/ChatInput.tsx", "utf8"),
+      /label: "Search the web"/u,
+    );
+    assert.match(
+      readFileSync("src/components/ChatInput.tsx", "utf8"),
       /data-testid="send-button"/u,
     );
     assert.match(readFileSync("src/routes/index.tsx", "utf8"), /data-chat-transcript/u);
@@ -57,7 +61,7 @@ test("ChatGPT parity transformer fails closed on source drift", () => {
       mkdirSync(dirname(target), { recursive: true });
       writeFileSync(
         target,
-        path.endsWith("ChatInput.tsx") ? source.replace("Search the Web", "Web") : source,
+        path.endsWith("ChatInput.tsx") ? source.replace("Search the web", "Web") : source,
       );
     }
     process.chdir(root);
