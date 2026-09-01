@@ -35,14 +35,21 @@ test("Work exposes historical evidence and fail-closed controls", () => {
     assert.ok(route.includes(contract), contract);
 });
 
-test("consequential Work transitions are validated in security-definer RPCs", () => {
+test("legacy controls stay fail-closed while Work v2 lifecycle transitions are runtime-gated", () => {
   assert.match(migration, /control_agent_job[\s\S]+owner_id=auth\.uid\(\)/);
   assert.match(migration, /decide_agent_approval[\s\S]+status='pending'/);
   assert.match(migration, /p_action <> 'cancel'/);
   assert.match(migration, /p_decision <> 'denied'/);
   assert.match(migration, /grant execute on function public\.decide_agent_approval/);
-  assert.match(server, /action: z\.literal\("cancel"\)/);
-  assert.match(server, /decision: z\.literal\("denied"\)/);
+
+  assert.match(server, /export const workExecutionAvailable = false/u);
+  assert.match(server, /workExecutionRuntimeAvailable/u);
+  assert.match(server, /action: z\.enum\(\["pause", "resume", "cancel", "delete"\]\)/u);
+  assert.match(server, /decision: z\.enum\(\["approved", "denied"\]\)/u);
+  assert.match(server, /owner_control_work_job_v2/u);
+  assert.match(server, /owner_decide_work_approval_v2/u);
+  assert.match(server, /if \(data\.action !== "cancel"\)/u);
+  assert.match(server, /if \(data\.decision !== "denied"\)/u);
 });
 
 test("Work graph, evidence, inspector, and revision controls are interactive", () => {
