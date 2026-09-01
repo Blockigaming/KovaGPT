@@ -65,6 +65,9 @@ test("shared composer protects input, attachments, IME submission, and upload an
   assert.match(input, /Retry \$\{a\.name\}/);
   assert.match(input, /sendOnEnter/);
   assert.match(input, /Reconnect to send/);
+  assert.match(input, /import \{ useOnline \} from "@\/hooks\/use-online"/);
+  assert.match(input, /const online = useOnline\(\);/);
+  assert.doesNotMatch(input, /typeof navigator === "undefined" \? true : navigator\.onLine/);
 });
 
 test("chat storage rejects malformed records and stays bounded", () => {
