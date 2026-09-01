@@ -11,15 +11,19 @@ test("OAuth uses one canonical callback URI", () => {
   assert.doesNotMatch(source, /return "https:\/\/kovagpt\.com\/"/);
 });
 
-test("deployment identity is non-secret, no-store, and verified after deploy", () => {
+test("Azure deployment identity is non-secret, no-store, digest-bound, and verified", () => {
   const route = read("src/routes/api/version.ts");
-  const workflow = read(".github/workflows/deploy-cloudflare-production.yml");
+  const workflow = read(
+    ".github/workflows/ca-kovagpt-dev-AutoDeployTrigger-1724b7ba-d38e-4fd3-95e8-bef7f7fbc290.yml",
+  );
   const smoke = read("scripts/post-deploy-smoke.mjs");
   assert.match(route, /"X-Kova-Build"/);
   assert.match(route, /"Cache-Control": "no-store, max-age=0"/);
   assert.doesNotMatch(route, /process\.env|SUPABASE|SECRET|TOKEN/);
-  assert.match(workflow, /KOVA_BUILD_SHA: \$\{\{ github\.sha \}\}/);
-  assert.match(workflow, /npm run smoke:deployment/);
+  assert.match(workflow, /--build-arg KOVA_SOURCE_SHA="\$GITHUB_SHA"/u);
+  assert.match(workflow, /digest_image="\$\{ACR_LOGIN_SERVER\}\/\$\{IMAGE_NAME\}@\$\{digest\}"/u);
+  assert.match(workflow, /\/api\/version/u);
+  assert.match(workflow, /"\$runtime_sha" == "\$GITHUB_SHA"/u);
   assert.match(smoke, /identity\.sha !== expectedSha/);
 });
 
