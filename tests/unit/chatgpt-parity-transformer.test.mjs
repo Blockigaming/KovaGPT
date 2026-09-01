@@ -35,10 +35,7 @@ test("ChatGPT parity transformer is exact and idempotent", () => {
     const first = applyChatGptParitySource({ check: false });
     assert.deepEqual(first.changed, Object.keys(fixtures).sort());
     assert.match(readFileSync("src/components/ChatInput.tsx", "utf8"), /deep_research/u);
-    assert.match(
-      readFileSync("src/components/ChatInput.tsx", "utf8"),
-      /label: "Search the web"/u,
-    );
+    assert.match(readFileSync("src/components/ChatInput.tsx", "utf8"), /label: "Search the web"/u);
     assert.match(
       readFileSync("src/components/ChatInput.tsx", "utf8"),
       /data-testid="send-button"/u,
