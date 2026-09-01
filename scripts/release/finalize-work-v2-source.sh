@@ -44,32 +44,43 @@ trap cleanup EXIT
 cat >"$ALLOWED_FILE" <<'EOF'
 package.json
 release-migrations.json
+scripts/release/apply-work-v2-product.mjs
 scripts/release/apply-work-v2-source.mjs
+src/components/WorkRunComposer.tsx
 src/lib/work-execution-v2.server.ts
+src/lib/work.functions.ts
+src/routes/work.tsx
 src/workers/work-v2-runner.ts
 src/workers/work-v2.ts
 tests/unit/scheduled-worker-build-v2.test.mjs
 tests/unit/work-execution-v2-engine.test.mjs
 tests/unit/work-execution-v2-schema.test.mjs
+tests/unit/work-product-v2.test.mjs
 tests/unit/work-worker-build-v2.test.mjs
 tests/unit/work-worker-v2.test.mjs
 vite.work-worker.config.ts
 EOF
 sort -o "$ALLOWED_FILE" "$ALLOWED_FILE"
 
-printf '\n=== 1. APPLY THE DETERMINISTIC WORK V2 INTEGRATION ===\n'
+printf '\n=== 1. APPLY BOTH DETERMINISTIC WORK V2 TRANSFORMS ===\n'
 node scripts/release/apply-work-v2-source.mjs
+node scripts/release/apply-work-v2-product.mjs
 
 printf '\n=== 2. FORMAT THE OWNED SOURCE ONCE ===\n'
 node_modules/.bin/prettier --write \
   package.json \
+  scripts/release/apply-work-v2-product.mjs \
   scripts/release/apply-work-v2-source.mjs \
+  src/components/WorkRunComposer.tsx \
   src/lib/work-execution-v2.server.ts \
+  src/lib/work.functions.ts \
+  src/routes/work.tsx \
   src/workers/work-v2-runner.ts \
   src/workers/work-v2.ts \
   tests/unit/scheduled-worker-build-v2.test.mjs \
   tests/unit/work-execution-v2-engine.test.mjs \
   tests/unit/work-execution-v2-schema.test.mjs \
+  tests/unit/work-product-v2.test.mjs \
   tests/unit/work-worker-build-v2.test.mjs \
   tests/unit/work-worker-v2.test.mjs \
   vite.work-worker.config.ts
@@ -113,6 +124,8 @@ for required in \
   package.json \
   release-migrations.json \
   src/lib/work-execution-v2.server.ts \
+  src/lib/work.functions.ts \
+  src/routes/work.tsx \
   tests/unit/scheduled-worker-build-v2.test.mjs; do
   grep -qxF "$required" "$CHANGED_FILE" || {
     echo "STOP=EXPECTED_WORK_V2_FILE_NOT_CHANGED:$required"
@@ -175,7 +188,7 @@ printf ' KOVAGPT_WORK_V2_SOURCE_FOUNDATION=PASS\n'
 printf ' VERIFIED_SHA=%s\n' "$VERIFY_SHA"
 printf ' MIGRATION_COUNT=%s\n' "$MIGRATION_COUNT"
 printf ' WORK_RUNTIME_DEFAULT=DISABLED\n'
-printf ' WORK_UI=HISTORY_ONLY\n'
+printf ' WORK_UI=RUNTIME_GATED_MODEL_ONLY\n'
 printf ' MODEL_ONLY_WORKER=SOURCE_VERIFIED\n'
 printf ' TOOL_EXECUTION=FAIL_CLOSED\n'
 printf ' MANAGED_IDENTITY_ONLY=SOURCE_VERIFIED\n'
