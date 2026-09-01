@@ -1,17 +1,24 @@
-const isRecord = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+const isRecord = (value) =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
 
 export function parseCheckoutRequest(value) {
+  if (!isRecord(value)) {
+    throw new TypeError("Invalid checkout request");
+  }
+
+  const priceId = Object.hasOwn(value, "priceId") ? value.priceId : undefined;
+  const quantity = Object.hasOwn(value, "quantity")
+    ? value.quantity
+    : undefined;
   if (
-    !isRecord(value) ||
-    typeof value.priceId !== "string" ||
-    value.priceId.length === 0 ||
-    (value.quantity !== undefined && value.quantity !== 1)
+    typeof priceId !== "string" ||
+    priceId.length === 0 ||
+    (quantity !== undefined && quantity !== 1)
   ) {
     throw new TypeError("Invalid checkout request");
   }
 
-  return Object.freeze({
-    priceId: value.priceId,
-    ...(value.quantity === 1 && { quantity: 1 }),
-  });
+  const parsed = Object.assign(Object.create(null), { priceId });
+  if (quantity === 1) parsed.quantity = 1;
+  return Object.freeze(parsed);
 }
