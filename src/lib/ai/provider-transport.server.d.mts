@@ -11,6 +11,7 @@ export class ProviderTransportTimeoutError extends Error {
   constructor(phase?: string);
 }
 
+export function isProviderTimeoutError(error: unknown): boolean;
 export function isAbortError(error: unknown): boolean;
 
 export type RequestDeadline = {
@@ -18,6 +19,7 @@ export type RequestDeadline = {
   timeoutMs: number;
   phase: string;
   didTimeout(): boolean;
+  didParentAbort(): boolean;
   normalize(error: unknown): unknown;
   cleanup(): void;
 };

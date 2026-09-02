@@ -8,6 +8,7 @@ import {
   createRequestDeadline,
   fetchWithDeadline,
   isAbortError,
+  isProviderTimeoutError,
   type DeadlineOutcome,
 } from "@/lib/ai/provider-transport.server.mjs";
 
@@ -382,7 +383,11 @@ function normalizeProviderError(error: unknown): AiProviderError {
 }
 
 export async function providerErrorFromResponse(response: Response): Promise<AiProviderError> {
-  await response.body?.cancel().catch(() => undefined);
+  try {
+    void response.body?.cancel().catch(() => undefined);
+  } catch {
+    // Provider cancellation is best-effort and must never delay the error response.
+  }
 
   if (response.status === 401 || response.status === 402 || response.status === 403) {
     return new AiProviderError({
@@ -496,16 +501,22 @@ async function providerFetch(
     return response;
   } catch (error) {
     deadline.cleanup();
-    const normalized = normalizeProviderError(deadline.normalize(error));
-    logProviderEvent("warn", "provider.request.error", {
-      provider: target.provider,
-      capability,
-      path,
-      deployment,
-      status: normalized.status,
-      durationMs: Date.now() - startedAt,
-      code: normalized.code,
-    });
+    const cause = deadline.normalize(error);
+    const callerCancelled = deadline.didParentAbort() && !isProviderTimeoutError(cause);
+    const normalized = normalizeProviderError(cause);
+    logProviderEvent(
+      callerCancelled ? "info" : "warn",
+      callerCancelled ? "provider.request.cancelled" : "provider.request.error",
+      {
+        provider: target.provider,
+        capability,
+        path,
+        deployment,
+        status: callerCancelled ? 499 : normalized.status,
+        durationMs: Date.now() - startedAt,
+        code: callerCancelled ? "provider_request_cancelled" : normalized.code,
+      },
+    );
     throw normalized;
   }
 }
@@ -680,10 +691,28 @@ async function responsesJsonToChatJson(response: Response): Promise<Response> {
   );
 }
 
+async function bufferSuccessfulProviderResponse(response: Response): Promise<Response> {
+  if (!response.ok || !response.body) return response;
+  try {
+    const body = await response.arrayBuffer();
+    return new Response(body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    });
+  } catch (error) {
+    throw normalizeProviderError(error);
+  }
+}
+
 export async function imageGenerations(body: JsonObject, init?: RequestInit): Promise<Response> {
-  return providerFetch("/images/generations", "image_generation", body, init);
+  return bufferSuccessfulProviderResponse(
+    await providerFetch("/images/generations", "image_generation", body, init),
+  );
 }
 
 export async function embeddings(body: JsonObject, init?: RequestInit): Promise<Response> {
-  return providerFetch("/embeddings", "embeddings", body, init);
+  return bufferSuccessfulProviderResponse(
+    await providerFetch("/embeddings", "embeddings", body, init),
+  );
 }

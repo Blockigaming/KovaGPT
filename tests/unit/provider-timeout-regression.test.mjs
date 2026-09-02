@@ -72,6 +72,58 @@ test("a provider call that never returns headers is bounded even if fetch ignore
   assert.ok(Date.now() - startedAt < 500, "provider header timeout must finish promptly");
 });
 
+test("a response that arrives after the deadline is cancelled without being exposed", async () => {
+  let resolveFetch;
+  let cancelled = false;
+  const deadline = createRequestDeadline(undefined, 25, "provider_request");
+  const pending = fetchWithDeadline(
+    () =>
+      new Promise((resolve) => {
+        resolveFetch = resolve;
+      }),
+    "https://example.invalid/openai/v1/responses",
+    { method: "POST" },
+    deadline,
+  );
+
+  await assert.rejects(pending, assertProviderTimeout);
+  resolveFetch(
+    new Response(
+      new ReadableStream({
+        cancel() {
+          cancelled = true;
+        },
+      }),
+    ),
+  );
+  await sleep(0);
+  assert.equal(cancelled, true);
+});
+
+test("a parent-signal abort before headers is classified as aborted, not failed or timed out", async () => {
+  const parent = new AbortController();
+  const outcomes = [];
+  const deadline = createRequestDeadline(parent.signal, 500, "provider_request");
+  const pending = fetchWithDeadline(
+    () => new Promise(() => {}),
+    "https://example.invalid/openai/v1/responses",
+    { method: "POST" },
+    deadline,
+    (outcome) => outcomes.push(outcome),
+  );
+  const reason = new Error("client_disconnected");
+  reason.name = "AbortError";
+  parent.abort(reason);
+
+  await assert.rejects(pending, (error) => error === reason);
+  assert.equal(deadline.didParentAbort(), true);
+  assert.equal(deadline.didTimeout(), false);
+  assert.deepEqual(
+    outcomes.map((value) => value.outcome),
+    ["aborted"],
+  );
+});
+
 test("rejected provider responses preserve status and terminate their deadline on cancellation", async () => {
   const outcomes = [];
   const deadline = createRequestDeadline(undefined, 500, "provider_request");
@@ -94,6 +146,30 @@ test("rejected provider responses preserve status and terminate their deadline o
     outcomes.map((value) => value.outcome),
     ["cancelled"],
   );
+});
+
+test("wrapped response cancellation does not await an unbounded source cancel algorithm", async () => {
+  const deadline = createRequestDeadline(undefined, 500, "provider_request");
+  const response = await fetchWithDeadline(
+    async () =>
+      new Response(
+        new ReadableStream({
+          cancel() {
+            return new Promise(() => {});
+          },
+        }),
+      ),
+    "https://example.invalid/openai/v1/responses",
+    { method: "POST" },
+    deadline,
+  );
+
+  await Promise.race([
+    response.body.cancel("provider_rejected"),
+    sleep(100).then(() => {
+      throw new Error("wrapped cancellation did not settle");
+    }),
+  ]);
 });
 
 test("a provider stream that starts and then stalls terminates with provider_timeout", async () => {
@@ -136,7 +212,12 @@ test("provider source covers authentication, connection, and full-body deadlines
   assert.match(provider, /fetchWithDeadline\(/u);
   assert.match(provider, /getTimeoutMs:\s*\(\) => DEFAULT_MANAGED_IDENTITY_TIMEOUT_MS/u);
   assert.match(transport, /wrapResponseBodyWithDeadline/u);
-  assert.match(transport, /waitForPromiseWithSignal\([\s\S]{0,220}fetchImpl/u);
+  assert.match(transport, /didParentAbort/u);
+  assert.match(transport, /lateResponse[\s\S]{0,220}cancelBodyWithoutWaiting/u);
+  assert.match(transport, /waitForPromiseWithSignal\([\s\S]{0,220}fetchPromise/u);
+  assert.match(provider, /bufferSuccessfulProviderResponse/u);
+  assert.match(provider, /providerErrorFromResponse[\s\S]{0,220}void response\.body\?\.cancel/u);
+  assert.match(provider, /provider\.request\.cancelled/u);
   assert.doesNotMatch(provider, /function mergeSignals/u);
 });
 
@@ -159,10 +240,11 @@ test("chat failures complete with a user-visible error and SSE terminator", () =
   const chat = readFileSync("src/routes/api/chat.ts", "utf8");
   const client = readFileSync("src/routes/index.tsx", "utf8");
 
-  assert.match(
-    chat,
-    /final provider stream stopped[\s\S]{0,900}sseChunk\([\s\S]{0,500}sseDone\(\)/u,
-  );
+  assert.match(chat, /isProviderTimeoutError\(error\)/u);
+  assert.match(chat, /KovaGPT took too long to respond/u);
+  assert.match(chat, /providerTimedOut \? 504 : 502/u);
+  assert.match(chat, /sseChunk\(providerFailureMessage\)[\s\S]{0,300}sseDone\(\)/u);
+  assert.match(chat, /request\.signal\.aborted[\s\S]{0,220}status: 499/u);
   assert.match(
     chat,
     /final provider request failed[\s\S]{0,700}AI service is temporarily unavailable/u,
