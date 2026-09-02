@@ -8,6 +8,27 @@ export type Database = {
   };
   public: {
     Tables: {
+      billing_plan_tiers: {
+        Row: {
+          environment: string;
+          lookup_key: string;
+          stripe_price_id: string;
+          tier: string;
+        };
+        Insert: {
+          environment: string;
+          lookup_key: string;
+          stripe_price_id: string;
+          tier: string;
+        };
+        Update: {
+          environment?: string;
+          lookup_key?: string;
+          stripe_price_id?: string;
+          tier?: string;
+        };
+        Relationships: [];
+      };
       ai_generation_events: {
         Row: {
           actual_cost_usd: number | null;
@@ -763,21 +784,51 @@ export type Database = {
       };
       processed_stripe_events: {
         Row: {
+          checkout_session_id: string | null;
+          correlation_id: string | null;
+          customer_id: string | null;
           environment: string;
+          event_created_at: string | null;
           event_id: string;
+          invoice_id: string | null;
+          object_id: string | null;
+          outcome: string;
+          payload_hash: string | null;
           processed_at: string;
+          retryable: boolean;
+          subscription_id: string | null;
           type: string;
         };
         Insert: {
+          checkout_session_id?: string | null;
+          correlation_id?: string | null;
+          customer_id?: string | null;
           environment: string;
+          event_created_at?: string | null;
           event_id: string;
+          invoice_id?: string | null;
+          object_id?: string | null;
+          outcome?: string;
+          payload_hash?: string | null;
           processed_at?: string;
+          retryable?: boolean;
+          subscription_id?: string | null;
           type: string;
         };
         Update: {
+          checkout_session_id?: string | null;
+          correlation_id?: string | null;
+          customer_id?: string | null;
           environment?: string;
+          event_created_at?: string | null;
           event_id?: string;
+          invoice_id?: string | null;
+          object_id?: string | null;
+          outcome?: string;
+          payload_hash?: string | null;
           processed_at?: string;
+          retryable?: boolean;
+          subscription_id?: string | null;
           type?: string;
         };
         Relationships: [];
@@ -1257,6 +1308,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      stripe_customer_mappings: {
+        Row: {
+          created_at: string;
+          environment: string;
+          stripe_customer_id: string;
+          updated_at: string;
+          user_id: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          environment: string;
+          stripe_customer_id: string;
+          updated_at?: string;
+          user_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          environment?: string;
+          stripe_customer_id?: string;
+          updated_at?: string;
+          user_id?: string | null;
+        };
+        Relationships: [];
+      };
       subscriptions: {
         Row: {
           cancel_at_period_end: boolean | null;
@@ -1560,6 +1635,29 @@ export type Database = {
       can_edit_project: {
         Args: { _project_id: string; _user_id: string };
         Returns: boolean;
+      };
+      complete_stripe_event: {
+        Args: {
+          _apply_subscription: boolean;
+          _cancel_at_period_end?: boolean;
+          _checkout_session_id?: string;
+          _correlation_id?: string;
+          _current_period_end?: string;
+          _current_period_start?: string;
+          _customer_id?: string;
+          _environment: string;
+          _event_created_at: string;
+          _event_id: string;
+          _event_type: string;
+          _invoice_id?: string;
+          _object_id?: string;
+          _outcome: string;
+          _price_id?: string;
+          _product_id?: string;
+          _status?: string;
+          _subscription_id?: string;
+        };
+        Returns: Json;
       };
       delete_email: {
         Args: { message_id: number; queue_name: string };
