@@ -33,3 +33,4 @@ test("every Kova email uses the shared brand system", async () => {
     assert.doesNotMatch(source, /const LOGO_URL/, `${template} must not define a separate logo`);
   }
 });
+\n  assert.match(brand, /KovaGPT will never ask/);\n  assert.doesNotMatch(brand, />\\s*Kova\\s*</);
