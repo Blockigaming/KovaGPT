@@ -6,38 +6,53 @@ import test from "node:test";
 const root = process.cwd();
 const read = (path) => readFileSync(join(root, path), "utf8");
 
-test("legacy Lovable email URLs are inert compatibility tombstones", () => {
-  const routes = [
-    "src/routes/lovable/email/auth/preview.ts",
-    "src/routes/lovable/email/auth/webhook.ts",
-    "src/routes/lovable/email/queue/process.ts",
-    "src/routes/lovable/email/suppression.ts",
-    "src/routes/lovable/email/transactional/preview.ts",
-    "src/routes/lovable/email/transactional/send.ts",
-  ];
-  const helper = read("src/lib/legacy-lovable-route.ts");
-  assert.match(helper, /status:\s*410/u);
-  assert.match(helper, /legacy_lovable_route_retired/u);
-  assert.match(helper, /performs no work/u);
+const retiredRuntimeFiles = [
+  "src/lib/legacy-lovable-route.ts",
+  "src/routes/[.]lovable.oauth.consent.tsx",
+  "src/routes/lovable/email/auth/preview.ts",
+  "src/routes/lovable/email/auth/webhook.ts",
+  "src/routes/lovable/email/queue/process.ts",
+  "src/routes/lovable/email/suppression.ts",
+  "src/routes/lovable/email/transactional/preview.ts",
+  "src/routes/lovable/email/transactional/send.ts",
+];
 
-  for (const route of routes) {
-    const source = read(route);
-    assert.match(source, /legacyLovableRouteGone/u);
-    assert.doesNotMatch(source, /@lovable\.dev|LOVABLE_API_KEY|sendLovableEmail/u);
-    assert.doesNotMatch(source, /success:\s*true|queued:\s*true|processed:/u);
+test("Lovable-named runtime routes, helper, generated entries, and chunks are absent", () => {
+  for (const path of retiredRuntimeFiles) {
+    assert.equal(existsSync(join(root, path)), false, path);
   }
+
+  const routeTree = read("src/routeTree.gen.ts");
+  const routeManifest = read("docs/release-reconciliation/canonical-route-manifest.json");
+  assert.doesNotMatch(routeTree, /lovable/iu);
+  assert.doesNotMatch(routeManifest, /lovable/iu);
+
+  const gate = read("scripts/release/zero-lovable.mjs");
+  assert.match(gate, /Lovable-named runtime source/u);
+  assert.match(gate, /Lovable-named bundle asset or content/u);
 });
 
-test("Supabase OAuth consent uses a Kova route and the legacy path only redirects", () => {
+test("Kova-owned OAuth consent, suppression, and auth-email templates remain intact", () => {
   const consent = read("src/routes/oauth.consent.tsx");
-  const redirect = read("src/routes/[.]lovable.oauth.consent.tsx");
+  const suppression = read("src/routes/email/unsubscribe.ts");
+  const unsubscribePage = read("src/routes/unsubscribe.tsx");
+  const signupTemplate = read("src/lib/email-templates/signup.tsx");
+  const magicLinkTemplate = read("src/lib/email-templates/magic-link.tsx");
+
   assert.match(consent, /createFileRoute\("\/oauth\/consent"\)/u);
   assert.match(consent, /getAuthorizationDetails/u);
   assert.match(consent, /approveAuthorization/u);
   assert.match(consent, /denyAuthorization/u);
-  assert.match(redirect, /window\.location\.replace/u);
-  assert.match(redirect, /\/oauth\/consent/u);
-  assert.doesNotMatch(redirect, /getAuthorizationDetails|approveAuthorization|denyAuthorization/u);
+
+  assert.match(suppression, /createFileRoute\("\/email\/unsubscribe"\)/u);
+  assert.match(suppression, /suppressThenConsumeToken/u);
+  assert.match(suppression, /suppressed_emails/u);
+  assert.match(unsubscribePage, /fetch\(`\/email\/unsubscribe/u);
+
+  assert.match(signupTemplate, /export const SignupEmail/u);
+  assert.match(magicLinkTemplate, /export const MagicLinkEmail/u);
+  assert.match(signupTemplate, /BrandHeader/u);
+  assert.match(magicLinkTemplate, /BrandHeader/u);
 });
 
 test("active package declarations and package-manager policy contain no Lovable dependency", () => {

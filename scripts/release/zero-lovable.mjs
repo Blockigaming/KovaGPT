@@ -25,15 +25,6 @@ const scannerDefinitionFiles = new Set([
   "scripts/release/ai-provider-contract.mjs",
   "scripts/security/scan-ai-runtime.mjs",
 ]);
-const compatibilityRoutes = new Set([
-  "src/routes/lovable/email/auth/preview.ts",
-  "src/routes/lovable/email/auth/webhook.ts",
-  "src/routes/lovable/email/queue/process.ts",
-  "src/routes/lovable/email/suppression.ts",
-  "src/routes/lovable/email/transactional/preview.ts",
-  "src/routes/lovable/email/transactional/send.ts",
-]);
-const legacyOauthRedirect = "src/routes/[.]lovable.oauth.consent.tsx";
 const forbiddenPatterns = [
   { label: "Lovable SDK import", pattern: /@lovable\.dev\//iu },
   {
@@ -129,24 +120,8 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
     const source = readIfPresent(path);
     if (source === null) continue;
 
-    if (compatibilityRoutes.has(path)) {
-      if (
-        !/legacyLovableRouteGone/u.test(source) ||
-        /@lovable\.dev|LOVABLE_API_KEY|success:\s*true/iu.test(source)
-      ) {
-        errors.push(`${path}: legacy route is not an inert 410 tombstone`);
-      }
-      continue;
-    }
-
-    if (path === legacyOauthRedirect) {
-      if (
-        !/window\.location\.replace/u.test(source) ||
-        /supabase\.auth\.oauth|approveAuthorization|denyAuthorization/u.test(source)
-      ) {
-        errors.push(`${path}: legacy OAuth path must only redirect to /oauth/consent`);
-      }
-      continue;
+    if (path.startsWith("src/") && (/lovable/iu.test(path) || /lovable/iu.test(source))) {
+      errors.push(`${path}: Lovable-named runtime source`);
     }
 
     for (const rule of forbiddenPatterns) {
@@ -162,6 +137,10 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
     for (const path of filesUnder(join(root, bundleRoot))) {
       if (!readable.has(extname(path))) continue;
       const source = readFileSync(path, "utf8");
+      const bundlePath = relative(root, path).replaceAll("\\", "/");
+      if (/lovable/iu.test(bundlePath) || /lovable/iu.test(source)) {
+        errors.push(`${bundlePath}: Lovable-named bundle asset or content`);
+      }
       for (const rule of forbiddenPatterns) {
         if (rule.pattern.test(source)) {
           errors.push(`${relative(root, path).replaceAll("\\", "/")}: ${rule.label}`);

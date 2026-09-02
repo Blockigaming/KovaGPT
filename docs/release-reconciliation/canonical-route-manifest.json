@@ -2,15 +2,15 @@
   "schemaVersion": 1,
   "generatedAt": "2026-08-12",
   "sourceOfTruth": "src/routes plus src/lib/seo-policy.mjs",
-  "routeFileCount": 106,
+  "routeFileCount": 99,
   "sitemapCount": 23,
   "reviewedPublicRouteCount": 87,
   "classificationCounts": {
     "dynamic": 7,
-    "application_or_authenticated": 21,
-    "reserved_service": 46,
+    "reserved_service": 40,
     "root_shell": 1,
     "public": 26,
+    "application_or_authenticated": 20,
     "reserved_auth_or_callback": 5
   },
   "records": [
@@ -31,7 +31,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/$locale.home.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/$locale.home.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/$section/$articleSlug",
@@ -50,7 +53,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/$section.$articleSlug.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/$section.$articleSlug.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/$slug",
@@ -69,26 +75,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/$slug.tsx", "npm run build"]
-    },
-    {
-      "canonicalPath": "/.lovable/oauth/consent",
-      "routeFile": "src/routes/[.]lovable.oauth.consent.tsx",
-      "template": false,
-      "classification": "application_or_authenticated",
-      "indexingDecision": "noindex_or_not_public",
-      "sitemapIncluded": false,
-      "canonicalUrl": null,
-      "contentOwner": "route subsystem owner",
-      "contentSource": "[.]lovable.oauth.consent.tsx",
-      "contentCompleteness": "fixture_or_contract_dependent",
-      "legalReviewRequired": false,
-      "administratorContentRequired": false,
-      "runtimeResult": "not_crawled_requires_fixture",
-      "metadataResult": "not_applicable_or_fixture_required",
-      "authorizationBoundary": "application route; authentication and ownership remain route-specific",
-      "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/[.]lovable.oauth.consent.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/$slug.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/.mcp/invoke-tool/$tool",
@@ -107,7 +97,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/[.mcp]/invoke-tool/$tool.ts", "npm run build"]
+      "evidence": [
+        "src/routes/[.mcp]/invoke-tool/$tool.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/.mcp/list-tools",
@@ -126,7 +119,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/[.mcp]/list-tools.ts", "npm run build"]
+      "evidence": [
+        "src/routes/[.mcp]/list-tools.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/.well-known/oauth-protected-resource",
@@ -145,7 +141,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/[.well-known]/oauth-protected-resource.ts", "npm run build"]
+      "evidence": [
+        "src/routes/[.well-known]/oauth-protected-resource.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "<root-shell>",
@@ -164,7 +163,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/__root.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/__root.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/ai-humanizer",
@@ -183,7 +185,10 @@
       "metadataResult": "reviewed",
       "authorizationBoundary": "signed-out public response",
       "finalDecision": "retain_in_sitemap",
-      "evidence": ["src/routes/ai-humanizer.tsx", "docs/page-parity/indexable-content-review.json"]
+      "evidence": [
+        "src/routes/ai-humanizer.tsx",
+        "docs/page-parity/indexable-content-review.json"
+      ]
     },
     {
       "canonicalPath": "/ai-image-generator",
@@ -224,7 +229,10 @@
       "metadataResult": "reviewed",
       "authorizationBoundary": "signed-out public response",
       "finalDecision": "retain_in_sitemap",
-      "evidence": ["src/routes/ai-safety.tsx", "docs/page-parity/indexable-content-review.json"]
+      "evidence": [
+        "src/routes/ai-safety.tsx",
+        "docs/page-parity/indexable-content-review.json"
+      ]
     },
     {
       "canonicalPath": "/ai-writer",
@@ -243,7 +251,10 @@
       "metadataResult": "reviewed",
       "authorizationBoundary": "signed-out public response",
       "finalDecision": "retain_in_sitemap",
-      "evidence": ["src/routes/ai-writer.tsx", "docs/page-parity/indexable-content-review.json"]
+      "evidence": [
+        "src/routes/ai-writer.tsx",
+        "docs/page-parity/indexable-content-review.json"
+      ]
     },
     {
       "canonicalPath": "/api/account",
@@ -262,7 +273,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/account.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/account.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/admin/ai-usage",
@@ -281,7 +295,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/admin/ai-usage.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/admin/ai-usage.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/admin/diagnostics",
@@ -300,7 +317,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/admin/diagnostics.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/admin/diagnostics.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/agents/runs",
@@ -319,7 +339,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/agents/runs.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/agents/runs.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/agents/teams",
@@ -338,7 +361,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/agents/teams.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/agents/teams.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/chat",
@@ -357,7 +383,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/chat.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/chat.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/chat/confirm",
@@ -376,7 +405,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/chat/confirm.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/chat/confirm.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/finances/exchange",
@@ -395,7 +427,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/finances/exchange.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/finances/exchange.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/finances/link-token",
@@ -414,7 +449,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/finances/link-token.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/finances/link-token.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/finances/webhook",
@@ -433,7 +471,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/finances/webhook.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/finances/webhook.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/generate-image",
@@ -452,7 +493,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/generate-image.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/generate-image.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/github/auth",
@@ -471,7 +515,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/github/auth.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/github/auth.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/github/callback",
@@ -490,7 +537,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/github/callback.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/github/callback.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/github/tool",
@@ -509,7 +559,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/github/tool.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/github/tool.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/github/webhook",
@@ -528,7 +581,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/github/webhook.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/github/webhook.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/google/auth",
@@ -547,7 +603,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/google/auth.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/google/auth.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/google/calendar",
@@ -566,7 +625,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/google/calendar.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/google/calendar.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/google/callback",
@@ -585,7 +647,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/google/callback.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/google/callback.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/google/disconnect",
@@ -604,7 +669,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/google/disconnect.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/google/disconnect.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/google/drive",
@@ -623,7 +691,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/google/drive.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/google/drive.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/google/gmail",
@@ -642,7 +713,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/google/gmail.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/google/gmail.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/google/status",
@@ -661,7 +735,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/google/status.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/google/status.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/health",
@@ -680,7 +757,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/health.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/health.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/integrations/accounts",
@@ -699,7 +779,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/integrations/accounts.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/integrations/accounts.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/integrations/oauth/callback/$provider",
@@ -718,7 +801,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/integrations/oauth/callback/$provider.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/integrations/oauth/callback/$provider.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/integrations/oauth/disconnect",
@@ -737,7 +823,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/integrations/oauth/disconnect.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/integrations/oauth/disconnect.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/integrations/oauth/start",
@@ -756,7 +845,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/integrations/oauth/start.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/integrations/oauth/start.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/livez",
@@ -775,7 +867,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/livez.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/livez.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/memory",
@@ -794,7 +889,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/memory.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/memory.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/project-suggest",
@@ -813,7 +911,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/project-suggest.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/project-suggest.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/public/help-submit",
@@ -832,7 +933,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/public/help-submit.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/public/help-submit.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/public/payments/webhook",
@@ -851,7 +955,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/public/payments/webhook.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/public/payments/webhook.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/readyz",
@@ -870,7 +977,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/readyz.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/readyz.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/title",
@@ -889,7 +999,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/title.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/title.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/version",
@@ -908,7 +1021,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/version.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/version.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/api/write",
@@ -927,7 +1043,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/api/write.ts", "npm run build"]
+      "evidence": [
+        "src/routes/api/write.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/apps",
@@ -946,7 +1065,10 @@
       "metadataResult": "reviewed",
       "authorizationBoundary": "signed-out public response",
       "finalDecision": "retain_noindex",
-      "evidence": ["src/routes/apps.tsx", "docs/page-parity/indexable-content-review.json"]
+      "evidence": [
+        "src/routes/apps.tsx",
+        "docs/page-parity/indexable-content-review.json"
+      ]
     },
     {
       "canonicalPath": "/assistants/$assistantSlug",
@@ -965,7 +1087,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/assistants.$assistantSlug.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/assistants.$assistantSlug.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/assistants",
@@ -984,7 +1109,10 @@
       "metadataResult": "reviewed",
       "authorizationBoundary": "signed-out public response",
       "finalDecision": "retain_noindex",
-      "evidence": ["src/routes/assistants.tsx", "docs/page-parity/indexable-content-review.json"]
+      "evidence": [
+        "src/routes/assistants.tsx",
+        "docs/page-parity/indexable-content-review.json"
+      ]
     },
     {
       "canonicalPath": "/audit-log",
@@ -1003,7 +1131,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/audit-log.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/audit-log.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/auth",
@@ -1022,7 +1153,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "dedicated authentication/callback route; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/auth.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/auth.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/blog/ai-market-research-guide",
@@ -1107,7 +1241,10 @@
       "metadataResult": "reviewed",
       "authorizationBoundary": "signed-out public response",
       "finalDecision": "retain_noindex",
-      "evidence": ["src/routes/changelog.tsx", "docs/page-parity/indexable-content-review.json"]
+      "evidence": [
+        "src/routes/changelog.tsx",
+        "docs/page-parity/indexable-content-review.json"
+      ]
     },
     {
       "canonicalPath": "/chatgpt-alternative",
@@ -1148,7 +1285,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "dedicated authentication/callback route; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/checkout.return.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/checkout.return.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/code-helper",
@@ -1167,7 +1307,10 @@
       "metadataResult": "reviewed",
       "authorizationBoundary": "signed-out public response",
       "finalDecision": "retain_in_sitemap",
-      "evidence": ["src/routes/code-helper.tsx", "docs/page-parity/indexable-content-review.json"]
+      "evidence": [
+        "src/routes/code-helper.tsx",
+        "docs/page-parity/indexable-content-review.json"
+      ]
     },
     {
       "canonicalPath": "/connect",
@@ -1186,7 +1329,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/connect.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/connect.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/contact-support",
@@ -1227,7 +1373,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/context-packs.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/context-packs.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/developers/$docSlug",
@@ -1246,7 +1395,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/developers.$docSlug.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/developers.$docSlug.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/developers/",
@@ -1265,7 +1417,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/developers.index.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/developers.index.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/email/unsubscribe",
@@ -1284,7 +1439,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "dedicated authentication/callback route; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/email/unsubscribe.ts", "npm run build"]
+      "evidence": [
+        "src/routes/email/unsubscribe.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/files",
@@ -1303,7 +1461,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/files.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/files.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/getting-started",
@@ -1344,7 +1505,10 @@
       "metadataResult": "reviewed",
       "authorizationBoundary": "signed-out public response",
       "finalDecision": "retain_in_sitemap",
-      "evidence": ["src/routes/help.tsx", "docs/page-parity/indexable-content-review.json"]
+      "evidence": [
+        "src/routes/help.tsx",
+        "docs/page-parity/indexable-content-review.json"
+      ]
     },
     {
       "canonicalPath": "/humanize-ai-text",
@@ -1385,7 +1549,10 @@
       "metadataResult": "reviewed",
       "authorizationBoundary": "signed-out public response",
       "finalDecision": "retain_in_sitemap",
-      "evidence": ["src/routes/images.tsx", "docs/page-parity/indexable-content-review.json"]
+      "evidence": [
+        "src/routes/images.tsx",
+        "docs/page-parity/indexable-content-review.json"
+      ]
     },
     {
       "canonicalPath": "/",
@@ -1404,7 +1571,10 @@
       "metadataResult": "reviewed",
       "authorizationBoundary": "signed-out public response",
       "finalDecision": "retain_in_sitemap",
-      "evidence": ["src/routes/index.tsx", "docs/page-parity/indexable-content-review.json"]
+      "evidence": [
+        "src/routes/index.tsx",
+        "docs/page-parity/indexable-content-review.json"
+      ]
     },
     {
       "canonicalPath": "/knowledge-graph",
@@ -1423,7 +1593,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/knowledge-graph.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/knowledge-graph.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/library",
@@ -1442,121 +1615,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/library.tsx", "npm run build"]
-    },
-    {
-      "canonicalPath": "/lovable/email/auth/preview",
-      "routeFile": "src/routes/lovable/email/auth/preview.ts",
-      "template": false,
-      "classification": "reserved_service",
-      "indexingDecision": "noindex_or_not_public",
-      "sitemapIncluded": false,
-      "canonicalUrl": null,
-      "contentOwner": "route subsystem owner",
-      "contentSource": "lovable/email/auth/preview.ts",
-      "contentCompleteness": "fixture_or_contract_dependent",
-      "legalReviewRequired": false,
-      "administratorContentRequired": false,
-      "runtimeResult": "not_crawled_requires_fixture",
-      "metadataResult": "not_applicable_or_fixture_required",
-      "authorizationBoundary": "server handler authorization; public catch-all prohibited",
-      "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/lovable/email/auth/preview.ts", "npm run build"]
-    },
-    {
-      "canonicalPath": "/lovable/email/auth/webhook",
-      "routeFile": "src/routes/lovable/email/auth/webhook.ts",
-      "template": false,
-      "classification": "reserved_service",
-      "indexingDecision": "noindex_or_not_public",
-      "sitemapIncluded": false,
-      "canonicalUrl": null,
-      "contentOwner": "route subsystem owner",
-      "contentSource": "lovable/email/auth/webhook.ts",
-      "contentCompleteness": "fixture_or_contract_dependent",
-      "legalReviewRequired": false,
-      "administratorContentRequired": false,
-      "runtimeResult": "not_crawled_requires_fixture",
-      "metadataResult": "not_applicable_or_fixture_required",
-      "authorizationBoundary": "server handler authorization; public catch-all prohibited",
-      "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/lovable/email/auth/webhook.ts", "npm run build"]
-    },
-    {
-      "canonicalPath": "/lovable/email/queue/process",
-      "routeFile": "src/routes/lovable/email/queue/process.ts",
-      "template": false,
-      "classification": "reserved_service",
-      "indexingDecision": "noindex_or_not_public",
-      "sitemapIncluded": false,
-      "canonicalUrl": null,
-      "contentOwner": "route subsystem owner",
-      "contentSource": "lovable/email/queue/process.ts",
-      "contentCompleteness": "fixture_or_contract_dependent",
-      "legalReviewRequired": false,
-      "administratorContentRequired": false,
-      "runtimeResult": "not_crawled_requires_fixture",
-      "metadataResult": "not_applicable_or_fixture_required",
-      "authorizationBoundary": "server handler authorization; public catch-all prohibited",
-      "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/lovable/email/queue/process.ts", "npm run build"]
-    },
-    {
-      "canonicalPath": "/lovable/email/suppression",
-      "routeFile": "src/routes/lovable/email/suppression.ts",
-      "template": false,
-      "classification": "reserved_service",
-      "indexingDecision": "noindex_or_not_public",
-      "sitemapIncluded": false,
-      "canonicalUrl": null,
-      "contentOwner": "route subsystem owner",
-      "contentSource": "lovable/email/suppression.ts",
-      "contentCompleteness": "fixture_or_contract_dependent",
-      "legalReviewRequired": false,
-      "administratorContentRequired": false,
-      "runtimeResult": "not_crawled_requires_fixture",
-      "metadataResult": "not_applicable_or_fixture_required",
-      "authorizationBoundary": "server handler authorization; public catch-all prohibited",
-      "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/lovable/email/suppression.ts", "npm run build"]
-    },
-    {
-      "canonicalPath": "/lovable/email/transactional/preview",
-      "routeFile": "src/routes/lovable/email/transactional/preview.ts",
-      "template": false,
-      "classification": "reserved_service",
-      "indexingDecision": "noindex_or_not_public",
-      "sitemapIncluded": false,
-      "canonicalUrl": null,
-      "contentOwner": "route subsystem owner",
-      "contentSource": "lovable/email/transactional/preview.ts",
-      "contentCompleteness": "fixture_or_contract_dependent",
-      "legalReviewRequired": false,
-      "administratorContentRequired": false,
-      "runtimeResult": "not_crawled_requires_fixture",
-      "metadataResult": "not_applicable_or_fixture_required",
-      "authorizationBoundary": "server handler authorization; public catch-all prohibited",
-      "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/lovable/email/transactional/preview.ts", "npm run build"]
-    },
-    {
-      "canonicalPath": "/lovable/email/transactional/send",
-      "routeFile": "src/routes/lovable/email/transactional/send.ts",
-      "template": false,
-      "classification": "reserved_service",
-      "indexingDecision": "noindex_or_not_public",
-      "sitemapIncluded": false,
-      "canonicalUrl": null,
-      "contentOwner": "route subsystem owner",
-      "contentSource": "lovable/email/transactional/send.ts",
-      "contentCompleteness": "fixture_or_contract_dependent",
-      "legalReviewRequired": false,
-      "administratorContentRequired": false,
-      "runtimeResult": "not_crawled_requires_fixture",
-      "metadataResult": "not_applicable_or_fixture_required",
-      "authorizationBoundary": "server handler authorization; public catch-all prohibited",
-      "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/lovable/email/transactional/send.ts", "npm run build"]
+      "evidence": [
+        "src/routes/library.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/maps",
@@ -1575,7 +1637,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/maps.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/maps.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/mcp",
@@ -1594,7 +1659,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "server handler authorization; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/mcp.ts", "npm run build"]
+      "evidence": [
+        "src/routes/mcp.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/memory",
@@ -1613,7 +1681,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/memory.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/memory.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/modes",
@@ -1632,7 +1703,10 @@
       "metadataResult": "reviewed",
       "authorizationBoundary": "signed-out public response",
       "finalDecision": "retain_in_sitemap",
-      "evidence": ["src/routes/modes.tsx", "docs/page-parity/indexable-content-review.json"]
+      "evidence": [
+        "src/routes/modes.tsx",
+        "docs/page-parity/indexable-content-review.json"
+      ]
     },
     {
       "canonicalPath": "/notifications",
@@ -1651,7 +1725,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/notifications.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/notifications.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/omega",
@@ -1670,7 +1747,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/omega.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/omega.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/pricing",
@@ -1689,7 +1769,10 @@
       "metadataResult": "reviewed",
       "authorizationBoundary": "signed-out public response",
       "finalDecision": "retain_in_sitemap",
-      "evidence": ["src/routes/pricing.tsx", "docs/page-parity/indexable-content-review.json"]
+      "evidence": [
+        "src/routes/pricing.tsx",
+        "docs/page-parity/indexable-content-review.json"
+      ]
     },
     {
       "canonicalPath": "/privacy",
@@ -1708,7 +1791,10 @@
       "metadataResult": "reviewed",
       "authorizationBoundary": "signed-out public response",
       "finalDecision": "retain_in_sitemap",
-      "evidence": ["src/routes/privacy.tsx", "docs/page-parity/indexable-content-review.json"]
+      "evidence": [
+        "src/routes/privacy.tsx",
+        "docs/page-parity/indexable-content-review.json"
+      ]
     },
     {
       "canonicalPath": "/projects/$projectId/chat/$chatId",
@@ -1727,7 +1813,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/projects.$projectId.chat.$chatId.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/projects.$projectId.chat.$chatId.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/projects/$projectId",
@@ -1746,7 +1835,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/projects.$projectId.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/projects.$projectId.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/projects",
@@ -1765,7 +1857,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/projects.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/projects.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/prompt-studio",
@@ -1784,7 +1879,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/prompt-studio.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/prompt-studio.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/refund",
@@ -1803,7 +1901,10 @@
       "metadataResult": "reviewed",
       "authorizationBoundary": "signed-out public response",
       "finalDecision": "retain_in_sitemap",
-      "evidence": ["src/routes/refund.tsx", "docs/page-parity/indexable-content-review.json"]
+      "evidence": [
+        "src/routes/refund.tsx",
+        "docs/page-parity/indexable-content-review.json"
+      ]
     },
     {
       "canonicalPath": "/research-assistant",
@@ -1844,7 +1945,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/research-planner.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/research-planner.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/reset-password",
@@ -1863,7 +1967,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "dedicated authentication/callback route; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/reset-password.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/reset-password.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/scheduled-tasks",
@@ -1882,7 +1989,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/scheduled-tasks.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/scheduled-tasks.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/sitemap.xml",
@@ -1901,7 +2011,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/sitemap[.]xml.ts", "npm run build"]
+      "evidence": [
+        "src/routes/sitemap[.]xml.ts",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/status",
@@ -1920,7 +2033,10 @@
       "metadataResult": "reviewed",
       "authorizationBoundary": "signed-out public response",
       "finalDecision": "retain_in_sitemap",
-      "evidence": ["src/routes/status.tsx", "docs/page-parity/indexable-content-review.json"]
+      "evidence": [
+        "src/routes/status.tsx",
+        "docs/page-parity/indexable-content-review.json"
+      ]
     },
     {
       "canonicalPath": "/study-assistant",
@@ -1961,7 +2077,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/summary.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/summary.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/terms",
@@ -1980,7 +2099,10 @@
       "metadataResult": "reviewed",
       "authorizationBoundary": "signed-out public response",
       "finalDecision": "retain_in_sitemap",
-      "evidence": ["src/routes/terms.tsx", "docs/page-parity/indexable-content-review.json"]
+      "evidence": [
+        "src/routes/terms.tsx",
+        "docs/page-parity/indexable-content-review.json"
+      ]
     },
     {
       "canonicalPath": "/unsubscribe",
@@ -1999,7 +2121,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "dedicated authentication/callback route; public catch-all prohibited",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/unsubscribe.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/unsubscribe.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/work",
@@ -2018,7 +2143,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/work.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/work.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/write",
@@ -2037,7 +2165,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/write.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/write.tsx",
+        "npm run build"
+      ]
     },
     {
       "canonicalPath": "/~oauth/callback",
@@ -2056,7 +2187,10 @@
       "metadataResult": "not_applicable_or_fixture_required",
       "authorizationBoundary": "application route; authentication and ownership remain route-specific",
       "finalDecision": "retain_route_outside_public_sitemap",
-      "evidence": ["src/routes/~oauth.callback.tsx", "npm run build"]
+      "evidence": [
+        "src/routes/~oauth.callback.tsx",
+        "npm run build"
+      ]
     }
   ]
 }

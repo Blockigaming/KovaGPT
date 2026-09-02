@@ -27,7 +27,7 @@ for (const file of files) {
   const route =
     relativeFile === "__root.tsx" ? "<root-shell>" : declared || `<generated:${relativeFile}>`;
   const isDynamic = route.includes("$") || relativeFile.includes("$");
-  const isService = /^\/(?:api|lovable|\.mcp|\.well-known|mcp)(?:\/|$)/u.test(route);
+  const isService = /^\/(?:api|\.mcp|\.well-known|mcp)(?:\/|$)/u.test(route);
   const isReserved =
     /^\/(?:auth|login|signup|reset-password|oauth|checkout|email|unsubscribe)(?:\/|$)/u.test(route);
   const isReviewed = reviewed.has(route);
