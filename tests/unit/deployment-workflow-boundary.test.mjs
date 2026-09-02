@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
 import { readFileSync } from "node:fs";
+import { createServer } from "node:http";
 import test from "node:test";
 
 const read = (path) => readFileSync(path, "utf8");
@@ -100,10 +103,102 @@ test("deployment smoke bounds every request and inspects the deployed browser bu
   assert.match(smoke, /AbortController/u);
   assert.match(smoke, /KOVA_EXPECTED_SUPABASE_URL/u);
   assert.match(smoke, /No deployed JavaScript assets were found/u);
-  assert.match(smoke, /candidate\\.startsWith\\("assets\\/"\\)/u);
+  assert.ok(smoke.includes('candidate.startsWith("assets/")'));
   assert.match(smoke, /does not contain the expected Supabase project URL/u);
   assert.match(smoke, /contains an unexpected Supabase project URL/u);
   assert.doesNotMatch(smoke, /await fetch\(/u);
+});
+
+test("deployment smoke resolves Vite root, relative, and preload-map asset paths", async () => {
+  const expectedSha = "a".repeat(40);
+  const expectedProjectRef = "stagingprojectref123";
+  const requestedPaths = [];
+  const scripts = new Map([
+    [
+      "/assets/index.js",
+      'import "./relative.js"; import "/assets/root.js"; const deps = ["assets/preloaded.js"];',
+    ],
+    ["/assets/relative.js", "export const relative = true;"],
+    ["/assets/root.js", "export const root = true;"],
+    [
+      "/assets/preloaded.js",
+      `export const supabaseUrl = "https://${expectedProjectRef}.supabase.co";`,
+    ],
+  ]);
+
+  const server = createServer((request, response) => {
+    requestedPaths.push(request.url);
+    if (request.url === "/api/version") {
+      response.writeHead(200, {
+        "content-type": "application/json",
+        "x-kova-build": expectedSha,
+      });
+      response.end(JSON.stringify({ sha: expectedSha }));
+      return;
+    }
+    if (request.url === "/") {
+      response.writeHead(200, { "content-type": "text/html" });
+      response.end('<script type="module" src="/assets/index.js"></script>');
+      return;
+    }
+    if (scripts.has(request.url)) {
+      response.writeHead(200, { "content-type": "application/javascript" });
+      response.end(scripts.get(request.url));
+      return;
+    }
+    if (request.url === "/robots.txt") {
+      response.writeHead(200, { "content-type": "text/plain" });
+      response.end("User-agent: *");
+      return;
+    }
+    if (request.url === "/sitemap.xml") {
+      response.writeHead(200, { "content-type": "application/xml" });
+      response.end("<urlset />");
+      return;
+    }
+    if (["/pricing", "/modes", "/~oauth/callback"].includes(request.url)) {
+      response.writeHead(200, { "content-type": "text/html" });
+      response.end("<main>KovaGPT</main>");
+      return;
+    }
+    response.writeHead(404, { "content-type": "text/plain" });
+    response.end("missing");
+  });
+
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const address = server.address();
+  assert.ok(address && typeof address === "object");
+
+  const child = spawn(process.execPath, ["scripts/post-deploy-smoke.mjs"], {
+    env: {
+      ...process.env,
+      KOVA_SMOKE_BASE_URL: `http://127.0.0.1:${address.port}`,
+      KOVA_EXPECTED_SHA: expectedSha,
+      KOVA_EXPECTED_SUPABASE_URL: `https://${expectedProjectRef}.supabase.co`,
+      KOVA_SMOKE_REQUEST_TIMEOUT_MS: "1000",
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  let stdout = "";
+  let stderr = "";
+  child.stdout.on("data", (chunk) => {
+    stdout += chunk;
+  });
+  child.stderr.on("data", (chunk) => {
+    stderr += chunk;
+  });
+
+  const [code] = await once(child, "exit");
+  server.close();
+  await once(server, "close");
+
+  assert.equal(code, 0, stderr);
+  assert.match(stdout, /passed smoke checks/u);
+  assert.ok(requestedPaths.includes("/assets/relative.js"));
+  assert.ok(requestedPaths.includes("/assets/root.js"));
+  assert.ok(requestedPaths.includes("/assets/preloaded.js"));
+  assert.ok(!requestedPaths.includes("/assets/assets/preloaded.js"));
 });
 
 test("production planning documentation records the apply blockers without claiming deployment", () => {
