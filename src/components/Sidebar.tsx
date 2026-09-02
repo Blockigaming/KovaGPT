@@ -1,6 +1,5 @@
 import {
   Archive,
-  Calendar,
   Copy as CopyIcon,
   CreditCard,
   FolderKanban,
@@ -463,13 +462,8 @@ export function Sidebar({
             {showSignedIn ? renderNavLink("/projects", "Projects", FolderKanban) : null}
             {showSignedIn ? renderNavLink("/library", "Library", FolderOpen) : null}
             {renderNavLink("/images", "Images", ImageIcon)}
-
             {showSignedIn ? renderNavLink("/apps", "Plugins", Blocks) : null}
             {showSignedIn ? renderNavLink("/research-planner", "Deep research", Telescope) : null}
-
-            {showSignedIn && (tier === "plus" || tier === "pro")
-              ? renderNavLink("/scheduled-tasks", "Scheduled tasks", Calendar)
-              : null}
             {showSignedIn && tier !== "plus" && tier !== "pro"
               ? renderNavLink("/pricing", "Plans", CreditCard)
               : null}
