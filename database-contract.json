@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "marker": "20260803120000-v1",
-  "migrationCount": 82,
+  "migrationCount": 83,
   "tables": [
     "account_audit_entries",
     "agent_approvals",
@@ -383,6 +383,7 @@
     "Owners read GitHub installations",
     "Owners read GitHub sync",
     "Owners read GitHub webhooks",
+    "Owners read agent evidence",
     "Owners read agent evidence",
     "Owners read agent jobs",
     "Owners read agent versions",
@@ -949,6 +950,8 @@
     "ALL ON FUNCTION public.save_writing_document(uuid, text, text, integer, text) FROM PUBLIC, anon",
     "ALL ON FUNCTION public.try_increment_daily_usage(uuid, text, int, int) FROM PUBLIC",
     "ALL ON FUNCTION public.user_plan_tier(uuid) FROM PUBLIC, anon",
+    "ALL ON SEQUENCES FROM PUBLIC, anon, authenticated",
+    "ALL ON TABLES FROM PUBLIC, anon, authenticated",
     "ALL ON public.ai_generation_events FROM anon, authenticated",
     "ALL ON public.banned_users FROM anon, authenticated",
     "ALL ON public.pending_tool_actions FROM anon, authenticated",
@@ -1078,5 +1081,5 @@
     "truncate, trigger, references on %s from anon, authenticated', r.tbl)",
     "update on sequence %s from anon, authenticated', r.seq)"
   ],
-  "sha256": "fb508ba80c60043cccf912d19af58aafdeec2ce6e36416c0b48aef5293841b9d"
+  "sha256": "ffb5c61a6c6221ec5443d264b94bb0ea46e869a1b8e0afbc7fd43321435f60a7"
 }
