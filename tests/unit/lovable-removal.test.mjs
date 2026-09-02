@@ -49,6 +49,8 @@ test("Lovable-named runtime routes, helper, generated entries, and chunks are ab
     "dist/client/license.txt",
     "dist/client/RUNTIME.TXT",
     "dist/client/logo.svg",
+    "dist/client/_headers",
+    "dist/client/_redirects",
   ]) {
     assert.equal(hasReadableBundleContent(path), true, path);
   }

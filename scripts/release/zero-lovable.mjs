@@ -23,6 +23,7 @@ const readable = new Set([
   ".yaml",
   ".yml",
 ]);
+const readableBundleBasenames = new Set(["_headers", "_redirects"]);
 const ignoredPrefixes = ["artifacts/", "docs/", "tests/"];
 const runtimeSourcePrefixes = ["src/", "worker/", "workers/"];
 const scannerDefinitionFiles = new Set([
@@ -58,7 +59,7 @@ export function hasLovableBundlePath(path) {
 }
 
 export function hasReadableBundleContent(path) {
-  return readable.has(extname(path).toLowerCase());
+  return readable.has(extname(path).toLowerCase()) || readableBundleBasenames.has(basename(path));
 }
 
 export function hasReadableRuntimeContent(path) {
