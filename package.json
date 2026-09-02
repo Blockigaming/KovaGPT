@@ -21,7 +21,7 @@
     "test:e2e:production": "playwright test --config=playwright.production.config.ts",
     "test:e2e:install": "playwright install --with-deps chromium",
     "test:a11y": "node --test tests/a11y/*.test.mjs",
-    "test:visual": "node --test tests/visual/*.test.mjs",
+    "test:visual": "node --test tests/visual/*.test.mjs && KOVA_BROWSER_PREVIEW=node playwright test tests/e2e/ui-quality.spec.ts --project=phone-390x844 --project=tablet-1024x768 --project=desktop-1440x900",
     "test:ui-parity": "playwright test tests/e2e/chatgpt-parity.spec.ts --project=desktop-1280x800",
     "test:ui-parity:shell": "playwright test tests/e2e/chatgpt-shell-parity.spec.ts --config=playwright.release.config.ts",
     "smoke:deployment": "node scripts/post-deploy-smoke.mjs",

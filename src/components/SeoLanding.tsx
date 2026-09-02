@@ -1,6 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { NovaLogo } from "@/components/NovaLogo";
-import { PublicFooter } from "@/components/PublicFooter";
+import { PublicShell } from "@/components/public/PublicShell";
 
 export type SeoLandingCta = { label: string; to: string };
 export type SeoFaq = { q: string; a: string };
@@ -17,25 +16,8 @@ export type SeoLandingProps = {
 
 export function SeoLanding({ h1, intro, benefits, prompts, ctas, details, faq }: SeoLandingProps) {
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <header className="border-b border-border">
-        <div className="max-w-4xl mx-auto px-6 h-14 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <NovaLogo className="w-6 h-6" />
-            <span className="font-semibold">KovaGPT</span>
-          </Link>
-          <nav className="flex items-center gap-4 text-sm">
-            <Link to="/pricing" className="hover:underline">
-              Pricing
-            </Link>
-            <Link to="/modes" className="hover:underline">
-              Modes
-            </Link>
-          </nav>
-        </div>
-      </header>
-
-      <main className="flex-1 mx-auto max-w-3xl px-6 py-14 w-full">
+    <PublicShell>
+      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl flex-1 px-6 py-14">
         <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight mb-4">{h1}</h1>
         <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-10">{intro}</p>
 
@@ -46,8 +28,8 @@ export function SeoLanding({ h1, intro, benefits, prompts, ctas, details, faq }:
               to={c.to}
               className={
                 i === 0
-                  ? "text-sm font-medium px-4 py-2 rounded-full bg-foreground text-background hover:opacity-90 transition"
-                  : "text-sm font-medium px-4 py-2 rounded-full border border-border hover:bg-accent transition"
+                  ? "inline-flex min-h-11 items-center rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background transition hover:opacity-90"
+                  : "inline-flex min-h-11 items-center rounded-full border border-border px-4 py-2 text-sm font-medium transition hover:bg-accent"
               }
             >
               {c.label}
@@ -124,8 +106,6 @@ export function SeoLanding({ h1, intro, benefits, prompts, ctas, details, faq }:
           </Link>
         </nav>
       </main>
-
-      <PublicFooter />
-    </div>
+    </PublicShell>
   );
 }

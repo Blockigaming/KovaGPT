@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { PublicFooter } from "@/components/PublicFooter";
 import { LegalArticle } from "@/components/LegalArticle";
+import { PublicShell } from "@/components/public/PublicShell";
 
 const DESCRIPTION =
   "How KovaGPT handles account data, prompts, files, provider processing, local history, billing, and deletion requests.";
@@ -21,7 +21,7 @@ export const Route = createFileRoute("/privacy")({
 
 function PrivacyPage() {
   return (
-    <>
+    <PublicShell>
       <LegalArticle>
         <h1>Privacy Policy</h1>
         <p className="text-sm text-muted-foreground">Last updated: August 1, 2026</p>
@@ -177,7 +177,6 @@ function PrivacyPage() {
           <Link to="/">← Back to KovaGPT</Link> · <Link to="/terms">Terms of Service</Link>
         </p>
       </LegalArticle>
-      <PublicFooter />
-    </>
+    </PublicShell>
   );
 }

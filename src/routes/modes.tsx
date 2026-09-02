@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { PublicFooter } from "@/components/PublicFooter";
+import { PublicShell } from "@/components/public/PublicShell";
 import { CAPABILITY_REGISTRY } from "@/lib/capability-registry";
 
 export const Route = createFileRoute("/modes")({
@@ -34,8 +34,8 @@ export const Route = createFileRoute("/modes")({
 
 function ModesPage() {
   return (
-    <>
-      <main className="mx-auto max-w-3xl px-6 py-16">
+    <PublicShell>
+      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
         <h1 className="text-4xl font-bold tracking-tight mb-3">KovaGPT AI Modes</h1>
         <p className="text-muted-foreground mb-10">
           Choose how much speed and reasoning you want. Mode access follows your current plan;
@@ -86,7 +86,6 @@ function ModesPage() {
           </Link>
         </div>
       </main>
-      <PublicFooter />
-    </>
+    </PublicShell>
   );
 }

@@ -15,7 +15,9 @@ import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -556,7 +558,7 @@ export function SettingsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="kova-settings-dialog bg-background border border-border max-w-4xl max-h-[92vh] overflow-hidden flex flex-col gap-0 p-0 rounded-xl"
+        className="kova-settings-dialog bg-[var(--surface-modal)] text-[var(--popover-foreground)] border border-border max-w-4xl max-h-[92vh] overflow-hidden flex flex-col gap-0 p-0 rounded-xl"
         onCloseAutoFocus={(event) => {
           event.preventDefault();
           if (window.innerWidth < 1024) {
@@ -614,19 +616,41 @@ export function SettingsDialog({
             orientation="vertical"
             className="flex-1 overflow-hidden flex flex-col md:flex-row"
           >
-            {/* Mobile: horizontal scrolling section nav */}
-            <TabsList className="md:hidden flex w-full overflow-x-auto scrollbar-none justify-start gap-1 p-2 bg-muted/40 border-b border-border rounded-none h-auto shrink-0">
-              {TAB_GROUPS.flatMap((g) => g.tabs).map(({ v, icon: Icon, label }) => (
-                <TabsTrigger
-                  key={v}
-                  value={v}
-                  className="shrink-0 gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium text-muted-foreground data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+            {/* Mobile: one grouped picker keeps every section reachable without a 19-tab rail. */}
+            <div className="kova-settings-mobile-nav flex shrink-0 items-center gap-3 border-b border-border px-4 py-2 md:hidden">
+              <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                Settings section
+              </span>
+              <Select value={tab} onValueChange={setTab}>
+                <SelectTrigger
+                  aria-label="Settings section"
+                  className="ml-auto h-11 min-w-0 max-w-56 rounded-xl bg-[var(--surface-modal)]"
                 >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{label}</span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="max-h-[min(70dvh,32rem)]">
+                  {TAB_GROUPS.map((group) => (
+                    <SelectGroup key={group.title}>
+                      <SelectLabel className="text-xs text-muted-foreground">
+                        {group.title}
+                      </SelectLabel>
+                      {group.tabs.map(({ v, icon: Icon, label }) => (
+                        <SelectItem
+                          key={v}
+                          value={v}
+                          className="kova-settings-mobile-section-option min-h-11 md:min-h-8"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Icon className="h-4 w-4" aria-hidden="true" />
+                            <span>{label}</span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Desktop: grouped sidebar */}
             <TabsList className="hidden md:flex flex-col h-full w-64 shrink-0 overflow-y-auto items-stretch justify-start gap-4 p-3 bg-muted/40 border-r border-border rounded-none">
@@ -689,7 +713,7 @@ export function SettingsDialog({
                         })
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger aria-label="Preferred response length">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -756,7 +780,7 @@ export function SettingsDialog({
                       value={settings.mood}
                       onValueChange={(v) => onChange({ ...settings, mood: v as Mood })}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger aria-label="Response tone">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1294,11 +1318,9 @@ export function SettingsDialog({
                   role="note"
                   className="rounded-lg border border-border bg-muted/30 p-4 space-y-2"
                 >
-                  <div className="text-sm font-medium">Model training</div>
+                  <div className="text-sm font-medium">AI data controls</div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    The removed model-improvement switch changed only a browser-local value; it was
-                    not wired to an account-level or AI-provider training control. No toggle is
-                    shown until a real remote control exists. See the{" "}
+                    Model-training preferences are not available in Settings. Review the{" "}
                     <Link
                       to="/privacy"
                       onClick={() => onOpenChange(false)}
@@ -1306,13 +1328,9 @@ export function SettingsDialog({
                     >
                       Privacy Policy
                     </Link>{" "}
-                    for how provider processing is described.
+                    to understand how chats may be processed by KovaGPT and its AI providers.
                   </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  removed guest training and marketing switches changed only browser-local values.
-                  Deprecated local-only value retained only for safe import compatibility.
-                </p>
                 <SecurityRow
                   title="Export your data"
                   body="Download chats, archived chats, and preferences stored on this device. Cloud account records are not included."
@@ -2106,7 +2124,7 @@ function LibraryPanel() {
             className="h-8 text-xs"
           />
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="h-8 text-xs sm:w-44">
+            <SelectTrigger aria-label="Filter library by item type" className="h-8 text-xs sm:w-44">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -2265,7 +2283,7 @@ function SignedOutSettings({
   void onChange;
 
   return (
-    <div className="flex max-h-[78vh] min-h-0 flex-1 flex-col overflow-hidden bg-background md:flex-row">
+    <div className="kova-settings-surface flex max-h-[78vh] min-h-0 flex-1 flex-col overflow-hidden bg-[var(--surface-modal)] md:flex-row">
       <nav
         aria-label="Settings sections"
         className="flex shrink-0 gap-1 overflow-x-auto border-b border-border p-2 md:w-56 md:flex-col md:overflow-visible md:border-b-0 md:border-r md:p-3"
@@ -2303,7 +2321,7 @@ function SignedOutSettings({
                   value={settings.mode ?? "system"}
                   onValueChange={(v) => setMode(v as ThemeMode)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger aria-label="Appearance">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -2336,10 +2354,11 @@ function SignedOutSettings({
           <div className="space-y-5">
             <ArchivedChatsPanel userKey={null} />
             <div className="rounded-xl border border-border/60 bg-card/40 p-4">
-              <div className="text-sm font-medium">Guest data stays on this device</div>
+              <div className="text-sm font-medium">How signed-out data is stored</div>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Signed out chats and preferences are stored in this browser session only and are
-                cleared when the tab closes. Read the{" "}
+                Signed-out chats stay in this tab until you refresh or close it. Appearance and
+                language preferences remain in this browser, but nothing here is synced to an
+                account. Read the{" "}
                 <Link
                   to="/privacy"
                   onClick={onClose}
@@ -2494,7 +2513,7 @@ function GuestLanguageSelect() {
         }
       }}
     >
-      <SelectTrigger>
+      <SelectTrigger aria-label="Language">
         <SelectValue />
       </SelectTrigger>
       <SelectContent className="max-h-72">

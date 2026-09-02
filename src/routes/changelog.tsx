@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PublicFooter } from "@/components/PublicFooter";
+import { PublicShell } from "@/components/public/PublicShell";
 
 export const Route = createFileRoute("/changelog")({
   head: () => ({
@@ -15,8 +15,8 @@ export const Route = createFileRoute("/changelog")({
     links: [{ rel: "canonical", href: "https://kovagpt.com/changelog" }],
   }),
   component: () => (
-    <>
-      <main className="mx-auto max-w-3xl px-6 py-16">
+    <PublicShell>
+      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-3xl flex-1 px-6 py-16">
         <h1 className="text-4xl font-bold tracking-tight mb-3">KovaGPT Changelog</h1>
         <p className="text-muted-foreground mb-8">
           Follow product updates, fixes, and new features for KovaGPT.
@@ -25,7 +25,6 @@ export const Route = createFileRoute("/changelog")({
           No major public updates have been posted yet.
         </p>
       </main>
-      <PublicFooter />
-    </>
+    </PublicShell>
   ),
 });
