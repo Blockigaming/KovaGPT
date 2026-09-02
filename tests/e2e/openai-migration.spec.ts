@@ -1,9 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { waitForKovaHydration } from "./hydration";
 
-const STRIPE_PAYMENT_PERMISSION_WARNING =
-  "Potential permissions policy violation: payment is not allowed in this document.";
-
 const sse = (...chunks: string[]) =>
   chunks
     .map((content) =>
@@ -18,11 +15,7 @@ test("guest chat consumes Kova SSE, persists once, and renders one top-left logo
 }, testInfo) => {
   const errors: string[] = [];
   page.on("console", (message) => {
-    if (
-      message.type() === "error" &&
-      !message.text().startsWith("Failed to load resource:") &&
-      message.text() !== STRIPE_PAYMENT_PERMISSION_WARNING
-    )
+    if (message.type() === "error" && !message.text().startsWith("Failed to load resource:"))
       errors.push(message.text());
   });
   page.on("pageerror", (error) => errors.push(error.message));

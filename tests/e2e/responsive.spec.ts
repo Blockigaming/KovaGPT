@@ -2,9 +2,6 @@ import { test, expect, type Page } from "@playwright/test";
 
 import { waitForKovaHydration } from "./hydration";
 
-const STRIPE_PAYMENT_PERMISSION_WARNING =
-  "Potential permissions policy violation: payment is not allowed in this document.";
-
 /**
  * Responsive smoke suite. Runs against every viewport project in
  * playwright.config.ts. Verifies core invariants:
@@ -54,9 +51,7 @@ test.describe("KovaGPT responsive shell", () => {
 
     // No uncaught console errors (excluding known 3rd-party auth noise).
     const filtered = errors.filter(
-      (e) =>
-        e !== STRIPE_PAYMENT_PERMISSION_WARNING &&
-        !/clerk|supabase|analytics|extension|Failed to load resource/i.test(e),
+      (e) => !/clerk|supabase|analytics|extension|Failed to load resource/i.test(e),
     );
     expect(filtered, `unexpected client errors: ${filtered.join("\n")}`).toEqual([]);
   });
