@@ -25,7 +25,7 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 120_000,
     env: {
-      VITE_SUPABASE_URL: "https://auth-visual.invalid",
+      VITE_SUPABASE_URL: baseURL,
       VITE_SUPABASE_PUBLISHABLE_KEY: "auth-visual-public-key",
     },
   },

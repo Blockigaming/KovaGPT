@@ -10,7 +10,7 @@ const themeByProject = new Map<string, ThemeMode>([
   ["desktop-1440x900", "light"],
   ["phone-390x844", "dark"],
 ]);
-const authFixtureOrigin = "https://auth-visual.invalid";
+const authFixtureOrigin = "http://127.0.0.1:8081";
 const corsHeaders = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "GET, HEAD, OPTIONS",
@@ -101,6 +101,7 @@ test("guest auth dialog visual baseline", async ({ page }, testInfo) => {
   }, theme);
 
   await page.goto("/auth", { waitUntil: "domcontentloaded" });
+  expect(new URL(page.url()).origin).toBe(authFixtureOrigin);
   await waitForKovaHydration(page);
 
   const dialog = page.getByRole("dialog", { name: "Log in or sign up" });
@@ -114,7 +115,7 @@ test("guest auth dialog visual baseline", async ({ page }, testInfo) => {
   await expect(googleButton).toHaveAttribute("aria-busy", "false");
   await expect(googleButton.locator(".animate-spin")).toHaveCount(0);
   expect(authNetwork.settingsReads).toBe(1);
-  expect(authNetwork.settingsPreflights).toBeLessThanOrEqual(1);
+  expect(authNetwork.settingsPreflights).toBe(0);
   expect(authNetwork.unexpectedFixtureRequests).toEqual([]);
 
   await page.evaluate(() => document.fonts.ready);
