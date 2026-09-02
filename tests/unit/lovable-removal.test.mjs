@@ -77,10 +77,7 @@ test("Lovable-named runtime routes, helper, generated entries, and chunks are ab
   assert.equal(hasLovableProductionInput("docs/history.md", "Lovable was retired"), false);
 
   const lovableText = "https://lovable.app/runtime";
-  const utf16le = Buffer.concat([
-    Buffer.from([0xff, 0xfe]),
-    Buffer.from(lovableText, "utf16le"),
-  ]);
+  const utf16le = Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from(lovableText, "utf16le")]);
   const utf16beBody = Buffer.from(lovableText, "utf16le");
   for (let index = 0; index < utf16beBody.length; index += 2) {
     const first = utf16beBody[index];

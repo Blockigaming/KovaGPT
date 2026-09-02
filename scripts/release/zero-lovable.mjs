@@ -141,9 +141,7 @@ function readForAudit(filePath, displayPath, errors) {
 
 /** Tracked-but-deleted paths must not crash the audit before the deletion is committed. */
 function readIfPresent(path, errors) {
-  return existsSync(join(root, path))
-    ? readForAudit(join(root, path), path, errors)
-    : null;
+  return existsSync(join(root, path)) ? readForAudit(join(root, path), path, errors) : null;
 }
 
 export function inspectPackageManifest(pkg) {
