@@ -54,10 +54,7 @@ test("Lovable-named runtime routes, helper, generated entries, and chunks are ab
   }
   assert.equal(hasReadableRuntimeContent("worker/Dockerfile"), true);
   assert.equal(hasReadableRuntimeContent("worker/.env.example"), true);
-  assert.equal(
-    hasLovableRuntimeSource("worker/Dockerfile", "ENV LOVABLE_API_KEY=test"),
-    true,
-  );
+  assert.equal(hasLovableRuntimeSource("worker/Dockerfile", "ENV LOVABLE_API_KEY=test"), true);
   const deletedPath = "src/routes/lovable/pending-delete.ts";
   assert.equal(existsSync(join(root, deletedPath)), false);
   assert.doesNotMatch(
