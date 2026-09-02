@@ -10,23 +10,47 @@ const themeByProject = new Map<string, ThemeMode>([
   ["desktop-1440x900", "light"],
   ["phone-390x844", "dark"],
 ]);
+const authFixtureOrigin = "https://auth-visual.invalid";
+const corsHeaders = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-methods": "GET, HEAD, OPTIONS",
+  "access-control-allow-headers": "accept, apikey, authorization, content-type, x-client-info",
+};
 
 async function installDeterministicAuthGuard(page: Page) {
   const observations = {
+    settingsPreflights: 0,
     settingsReads: 0,
+    unexpectedFixtureRequests: [] as string[],
     writes: [] as string[],
   };
 
   await page.route("**/auth/v1/**", async (route) => {
     const request = route.request();
     const method = request.method().toUpperCase();
-    const path = new URL(request.url()).pathname;
+    const url = new URL(request.url());
+    const path = url.pathname;
+    const isFixtureOrigin = url.origin === authFixtureOrigin;
+    const isSettings = /\/auth\/v1\/settings\/?$/u.test(path);
 
-    if (method === "GET" && /\/auth\/v1\/settings\/?$/u.test(path)) {
+    if (isFixtureOrigin && method === "OPTIONS" && isSettings) {
+      observations.settingsPreflights += 1;
+      await route.fulfill({
+        status: 204,
+        headers: corsHeaders,
+        body: "",
+      });
+      return;
+    }
+
+    if (isFixtureOrigin && method === "GET" && isSettings) {
       observations.settingsReads += 1;
       await route.fulfill({
         status: 200,
-        contentType: "application/json",
+        headers: {
+          ...corsHeaders,
+          "content-type": "application/json",
+        },
         body: JSON.stringify({
           external: {
             google: true,
@@ -43,7 +67,13 @@ async function installDeterministicAuthGuard(page: Page) {
     }
 
     if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
-      observations.writes.push(`${method} ${path}`);
+      observations.writes.push(`${method} ${url.origin}${path}`);
+      await route.abort("blockedbyclient");
+      return;
+    }
+
+    if (isFixtureOrigin) {
+      observations.unexpectedFixtureRequests.push(`${method} ${path}`);
       await route.abort("blockedbyclient");
       return;
     }
@@ -83,7 +113,9 @@ test("guest auth dialog visual baseline", async ({ page }, testInfo) => {
   await expect(googleButton).toBeEnabled({ timeout: 15_000 });
   await expect(googleButton).toHaveAttribute("aria-busy", "false");
   await expect(googleButton.locator(".animate-spin")).toHaveCount(0);
-  expect(authNetwork.settingsReads).toBeGreaterThanOrEqual(1);
+  expect(authNetwork.settingsReads).toBe(1);
+  expect(authNetwork.settingsPreflights).toBeLessThanOrEqual(1);
+  expect(authNetwork.unexpectedFixtureRequests).toEqual([]);
 
   await page.evaluate(() => document.fonts.ready);
   await dialog.evaluate(async (element) => {
@@ -95,6 +127,7 @@ test("guest auth dialog visual baseline", async ({ page }, testInfo) => {
   });
 
   expect(authNetwork.writes).toEqual([]);
+  expect(authNetwork.unexpectedFixtureRequests).toEqual([]);
   await expect(page).toHaveScreenshot("guest-auth-dialog.png", {
     animations: "disabled",
     caret: "hide",
@@ -102,4 +135,5 @@ test("guest auth dialog visual baseline", async ({ page }, testInfo) => {
     scale: "css",
   });
   expect(authNetwork.writes).toEqual([]);
+  expect(authNetwork.unexpectedFixtureRequests).toEqual([]);
 });
