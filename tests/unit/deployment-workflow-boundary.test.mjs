@@ -19,6 +19,11 @@ test("staging rehearsal verifies a predeployed exact SHA and cannot deploy the a
   assert.match(workflow, /KOVA_EXPECTED_SHA: "\$\{\{ github\.sha \}\}"/u);
   assert.match(workflow, /KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS: not-run/u);
   assert.doesNotMatch(workflow, /KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS: passed/u);
+  assert.match(
+    workflow,
+    /PLAYWRIGHT_BASE_URL: "\$\{\{ vars\.STAGING_BASE_URL \}\}"/u,
+  );
+  assert.doesNotMatch(workflow, /PLAYWRIGHT_BASE_URL=\$\{\{/u);
 
   const identityGate = workflow.indexOf("run: npm run smoke:deployment");
   const edgeProbe = workflow.indexOf("run: npm run release:edge");

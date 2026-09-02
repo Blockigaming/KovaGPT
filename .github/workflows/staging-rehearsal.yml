@@ -59,7 +59,9 @@ jobs:
           KOVA_STAGING_SECONDARY_TOKEN: "${{ secrets.STAGING_SECONDARY_TOKEN }}"
           SUPABASE_URL: "${{ secrets.STAGING_SUPABASE_URL }}"
           SUPABASE_PUBLISHABLE_KEY: "${{ secrets.STAGING_SUPABASE_PUBLISHABLE_KEY }}"
-      - run: PLAYWRIGHT_BASE_URL=${{ vars.STAGING_BASE_URL }} npm run test:e2e -- --reporter=line
+      - run: npm run test:e2e -- --reporter=line
+        env:
+          PLAYWRIGHT_BASE_URL: "${{ vars.STAGING_BASE_URL }}"
       - run: KOVA_REPOSITORY_VALIDATED=1 KOVA_E2E_VALIDATED=1 KOVA_STAGING_VALIDATED=1 KOVA_RELEASE_TARGET=staging npm run release:candidate
       - name: Consolidate immutable staging evidence
         run: npm run release:launch-report
