@@ -39,7 +39,7 @@ jobs:
 
           files="$(git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD)"
           printf '%s\n' "$files"
-          if printf '%s\n' "$files" | grep -Eq '^(\.github/workflows/(azure-container-ci|ca-kovagpt-dev-AutoDeployTrigger-1724b7ba-d38e-4fd3-95e8-bef7f7fbc290)\.yml$|\.dockerignore$|Dockerfile$|\.env\.example$|package(-lock)?\.json$|infra/azure/|scripts/azure/|src/lib/azure-runtime-env\.server\.ts$|src/lib/readiness\.server\.ts$|src/routes/api/health\.ts$|src/server\.ts$|src/start\.ts$|vite\.config\.ts$)'; then
+          if printf '%s\n' "$files" | grep -Eq '^(\.github/workflows/(azure-container-ci|ca-kovagpt-dev-AutoDeployTrigger-1724b7ba-d38e-4fd3-95e8-bef7f7fbc290|validate-azure-production)\.yml$|\.dockerignore$|Dockerfile$|\.env\.example$|package(-lock)?\.json$|infra/azure/|scripts/azure/|src/lib/azure-runtime-env\.server\.ts$|src/lib/readiness\.server\.ts$|src/routes/api/health\.ts$|src/server\.ts$|src/start\.ts$|vite\.config\.ts$)'; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
