@@ -1675,7 +1675,7 @@
       "order": 83,
       "filename": "20260902013000_storage_bucket_and_default_privilege_reconciliation.sql",
       "timestamp": "20260902013000",
-      "sha256": "424558129235ce65a4e7748080099d9fc15c1f6cf33279324b0b157268980a96",
+      "sha256": "412b574ebc965c40857829cf4a01deb75d56a574a60bb7045f4170bf83ad753f",
       "tables": [],
       "functions": [],
       "destructive": false,
