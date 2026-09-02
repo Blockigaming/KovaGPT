@@ -29,6 +29,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/library")({
   component: LibraryPage,
@@ -154,6 +155,7 @@ function LibraryPage() {
   );
   const [previewItem, setPreviewItem] = useState<LibItem | null>(null);
   const visiblePreviewItem = principalReady ? previewItem : null;
+  const previewReturnFocusRef = useRef<HTMLButtonElement | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
 
   const load = useCallback(async () => {
@@ -286,15 +288,6 @@ function LibraryPage() {
     safeBrowserStorage("localStorage")?.setItem(VIEW_KEY, view);
   }, [view]);
 
-  useEffect(() => {
-    if (!visiblePreviewItem) return;
-    const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setPreviewItem(null);
-    };
-    window.addEventListener("keydown", close);
-    return () => window.removeEventListener("keydown", close);
-  }, [visiblePreviewItem]);
-
   const [pendingDelete, setPendingDelete] = useState<
     { kind: "one"; id: string } | { kind: "many" } | null
   >(null);
@@ -336,10 +329,10 @@ function LibraryPage() {
       const { deleteLibraryItem } = await import("@/lib/library.functions");
       await deleteLibraryItem({ data: { id } });
       if (isCurrent()) toast.success("Deleted.");
-    } catch (e) {
+    } catch {
       if (!isCurrent()) return;
       setItems(existing);
-      toast.error(e instanceof Error ? e.message : "Could not delete.");
+      toast.error("Could not delete this Library item. Please try again.");
     }
   };
 
@@ -396,10 +389,10 @@ function LibraryPage() {
       );
       setSelected([]);
       toast.success("Selected items deleted.");
-    } catch (error) {
+    } catch {
       if (!isCurrent()) return;
       if (!isSignedIn) setItems(existing);
-      toast.error(error instanceof Error ? error.message : "Selected items could not be deleted.");
+      toast.error("Some selected items could not be deleted. Review your Library and try again.");
     }
   };
 
@@ -469,6 +462,12 @@ function LibraryPage() {
           type="button"
           className="flex h-11 w-11 items-center justify-center rounded-[var(--kova-radius-input)] hover:bg-[var(--surface-hover)] focus-visible:ring-2 focus-visible:ring-ring"
           aria-label={`Actions for ${item.title}`}
+          onFocus={(event) => {
+            previewReturnFocusRef.current = event.currentTarget;
+          }}
+          onPointerDown={(event) => {
+            previewReturnFocusRef.current = event.currentTarget;
+          }}
         >
           <MoreHorizontal className="h-4 w-4" />
         </button>
@@ -854,39 +853,40 @@ function LibraryPage() {
             {filtered.map(renderItem)}
           </ul>
         )}
-        {visiblePreviewItem ? (
-          <div
-            className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-6"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="library-preview-title"
-            onClick={() => setPreviewItem(null)}
-          >
-            <section
-              className="kova-glass max-h-[90dvh] w-full overflow-hidden rounded-t-2xl sm:max-w-3xl sm:rounded-xl"
-              onClick={(event) => event.stopPropagation()}
+        <Dialog
+          open={Boolean(visiblePreviewItem)}
+          onOpenChange={(open) => {
+            if (!open) setPreviewItem(null);
+          }}
+        >
+          {visiblePreviewItem ? (
+            <DialogContent
+              className="gap-0 overflow-hidden p-0 sm:w-[min(92vw,768px)] sm:max-w-3xl sm:p-0 [&>div[aria-hidden]:first-child]:mt-2"
+              onCloseAutoFocus={(event) => {
+                event.preventDefault();
+                const trigger = previewReturnFocusRef.current;
+                if (trigger?.isConnected) trigger.focus();
+                previewReturnFocusRef.current = null;
+              }}
             >
-              <header className="flex items-center gap-3 border-b border-border p-4">
+              <header className="flex items-center gap-3 border-b border-border p-4 pr-16">
                 <div className="min-w-0 flex-1">
-                  <h2 id="library-preview-title" className="truncate font-semibold">
+                  <DialogTitle className="truncate text-base">
                     {visiblePreviewItem.title}
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
+                  </DialogTitle>
+                  <DialogDescription className="text-xs">
                     {visiblePreviewItem.item_type.replace(/_/g, " ")} ·{" "}
                     {new Date(visiblePreviewItem.created_at).toLocaleDateString()}
-                  </p>
+                  </DialogDescription>
                 </div>
-                <Button size="sm" variant="outline" onClick={() => reuseInChat(visiblePreviewItem)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="min-h-11"
+                  onClick={() => reuseInChat(visiblePreviewItem)}
+                >
                   Reuse in chat
                 </Button>
-                <button
-                  className="kova-icon-button"
-                  aria-label="Close preview"
-                  onClick={() => setPreviewItem(null)}
-                  autoFocus
-                >
-                  ×
-                </button>
               </header>
               <div className="max-h-[70dvh] overflow-auto p-4 sm:p-6">
                 {isImageItem(visiblePreviewItem) ? (
@@ -903,9 +903,9 @@ function LibraryPage() {
                   </pre>
                 )}
               </div>
-            </section>
-          </div>
-        ) : null}
+            </DialogContent>
+          ) : null}
+        </Dialog>
         <ConfirmActionDialog
           open={pendingDelete !== null}
           onOpenChange={(open) => !open && setPendingDelete(null)}
