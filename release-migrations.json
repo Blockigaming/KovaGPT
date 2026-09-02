@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "generatedFrom": "supabase/migrations",
-  "count": 82,
-  "latest": "20260824094500_day15_canonical_workspace_rpc_aliases.sql",
+  "count": 83,
+  "latest": "20260902013000_storage_bucket_and_default_privilege_reconciliation.sql",
   "migrations": [
     {
       "order": 1,
@@ -1669,6 +1669,20 @@
       "reversible": false,
       "rls": [],
       "policies": [],
+      "indexes": []
+    },
+    {
+      "order": 83,
+      "filename": "20260902013000_storage_bucket_and_default_privilege_reconciliation.sql",
+      "timestamp": "20260902013000",
+      "sha256": "412b574ebc965c40857829cf4a01deb75d56a574a60bb7045f4170bf83ad753f",
+      "tables": [],
+      "functions": [],
+      "destructive": false,
+      "dataBackfill": true,
+      "reversible": false,
+      "rls": [],
+      "policies": ["Owners read agent evidence"],
       "indexes": []
     }
   ]
