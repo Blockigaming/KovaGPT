@@ -38,7 +38,7 @@ if (
 }
 
 const SUPABASE_PROJECT_URL_PATTERN = /https:\/\/([a-z0-9]{20})\.supabase\.co/giu;
-const SUPABASE_PUBLISHABLE_KEY_PATTERN = /sb_publishable_[A-Za-z0-9_-]+/gu;
+const SUPABASE_PUBLISHABLE_KEY_PATTERN = /sb_publishable_[A-Za-z0-9_-]{16,}/gu;
 const SUPABASE_URL_DELIMITERS = new Set(['"', "'", "`"]);
 const DYNAMIC_IMPORT_PATTERN =
   /\bimport\s*\(\s*["'`]([^"'`\s]+?\.m?js(?:\?[^"'`\s]*)?)["'`]\s*\)/giu;
@@ -202,27 +202,31 @@ function nonCanonicalSupabaseUrl() {
   return new Error("The deployed browser bundle contains a non-canonical Supabase URL");
 }
 
+function hasCanonicalStringLiteralBoundaries(source, index, length) {
+  const openingDelimiterIndex = index - 1;
+  const closingDelimiterIndex = index + length;
+  const openingDelimiter = source[openingDelimiterIndex];
+  const closingDelimiter = source[closingDelimiterIndex];
+  const isEscaped = (characterIndex) => {
+    let backslashes = 0;
+    for (let offset = characterIndex - 1; offset >= 0 && source[offset] === "\\"; offset -= 1) {
+      backslashes += 1;
+    }
+    return backslashes % 2 === 1;
+  };
+  return (
+    SUPABASE_URL_DELIMITERS.has(openingDelimiter) &&
+    closingDelimiter === openingDelimiter &&
+    !isEscaped(openingDelimiterIndex) &&
+    !isEscaped(closingDelimiterIndex)
+  );
+}
+
 function discoverSupabaseProjectRefs(source, discoveredProjectRefs) {
   SUPABASE_PROJECT_URL_PATTERN.lastIndex = 0;
   for (const match of source.matchAll(SUPABASE_PROJECT_URL_PATTERN)) {
     const rawUrl = match[0];
-    const openingDelimiterIndex = match.index - 1;
-    const closingDelimiterIndex = match.index + rawUrl.length;
-    const openingDelimiter = source[openingDelimiterIndex];
-    const closingDelimiter = source[closingDelimiterIndex];
-    const isEscaped = (index) => {
-      let backslashes = 0;
-      for (let offset = index - 1; offset >= 0 && source[offset] === "\\"; offset -= 1) {
-        backslashes += 1;
-      }
-      return backslashes % 2 === 1;
-    };
-    if (
-      !SUPABASE_URL_DELIMITERS.has(openingDelimiter) ||
-      closingDelimiter !== openingDelimiter ||
-      isEscaped(openingDelimiterIndex) ||
-      isEscaped(closingDelimiterIndex)
-    ) {
+    if (!hasCanonicalStringLiteralBoundaries(source, match.index, rawUrl.length)) {
       throw nonCanonicalSupabaseUrl();
     }
 
@@ -253,6 +257,11 @@ function discoverSupabaseProjectRefs(source, discoveredProjectRefs) {
 function discoverSupabasePublishableKeyFingerprints(source, discoveredFingerprints) {
   SUPABASE_PUBLISHABLE_KEY_PATTERN.lastIndex = 0;
   for (const match of source.matchAll(SUPABASE_PUBLISHABLE_KEY_PATTERN)) {
+    if (!hasCanonicalStringLiteralBoundaries(source, match.index, match[0].length)) {
+      throw new Error(
+        "The deployed browser bundle contains a non-canonical Supabase publishable key",
+      );
+    }
     discoveredFingerprints.add(createHash("sha256").update(match[0]).digest("hex"));
   }
 }

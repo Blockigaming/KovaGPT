@@ -40,7 +40,7 @@ jobs:
           import { appendFileSync } from "node:fs";
 
           const publishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-          if (!/^sb_publishable_[A-Za-z0-9_-]+$/u.test(publishableKey || "")) {
+          if (!/^sb_publishable_[A-Za-z0-9_-]{16,}$/u.test(publishableKey || "")) {
             throw new Error("STAGING_SUPABASE_PUBLISHABLE_KEY must be a Supabase publishable key");
           }
           const fingerprint = createHash("sha256").update(publishableKey).digest("hex");

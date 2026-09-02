@@ -283,6 +283,26 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
     assert.ok(!passing.paths.includes("/assets/assets/preloaded.js"));
     assert.ok(!passing.paths.includes("/stripe.js"));
 
+    const malformedPublishableKeySources = [
+      'export const supabaseKey = "prefix' + expectedPublishableKey + '";',
+      'export const supabaseKey = "' + expectedPublishableKey + '.junk";',
+      'export const supabaseKey = "' + expectedPublishableKey + String.fromCharCode(39) + '";',
+      'export const payload = "{\\"key\\":\\"' + expectedPublishableKey + '\\"}";',
+    ];
+    for (const malformedKeySource of malformedPublishableKeySources) {
+      scripts.set(
+        "/assets/preloaded.js",
+        [
+          'export const supabaseUrl = "https://' + expectedProjectRef + '.supabase.co";',
+          malformedKeySource,
+          'export const buildSha = "' + expectedSha + '";',
+        ].join(" "),
+      );
+      const malformedPublishableKey = await runSmoke();
+      assert.notEqual(malformedPublishableKey.code, 0);
+      assert.match(malformedPublishableKey.stderr, /non-canonical Supabase publishable key/u);
+    }
+
     htmlCacheControl = "public, max-age=300";
     const cacheableHtml = await runSmoke();
     assert.notEqual(cacheableHtml.code, 0);
