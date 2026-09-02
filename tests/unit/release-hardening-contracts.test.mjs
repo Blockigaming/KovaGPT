@@ -112,11 +112,13 @@ test("Stripe release contract pins the API and embedded Checkout identity", () =
   assert.deepEqual(verifyCheckoutRequestBoundary(), []);
 
   const valid = {
-    webhookSource:
-      'normalizeStripeEnvironment value === "sandbox" || value === "live" processed_stripe_events 23505',
+    webhookSource: 'normalizeStripeEnvironment value === "sandbox" || value === "live"',
+    reliabilitySource:
+      'processed_stripe_events rpc("complete_stripe_event" retrieveSubscription',
     stripeSource:
       'PAYMENTS_SANDBOX_WEBHOOK_SECRET PAYMENTS_LIVE_WEBHOOK_SECRET timingSafeEqual apiVersion: "2026-08-26.dahlia"',
-    planSource: "plus_monthly pro_monthly",
+    planSource:
+      "plus_monthly pro_monthly livePriceId price_1UAzhHAEZlsb6DBYWw2oUCeO",
     checkoutSource:
       '.validator((data: unknown) => { const parsed = parseCheckoutRequest(data); if (!resolveBillingPlan(parsed.priceId)) throw new Error("Invalid priceId"); return parsed; }) const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = { integration_identifier: "kovagpt_checkout_wshrfyef", return_url: CHECKOUT_RETURN_URL }; stripe.checkout.sessions.create(sessionParams)',
   };
