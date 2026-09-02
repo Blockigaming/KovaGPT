@@ -25,10 +25,7 @@ export type ProviderCapability =
   | "file_analysis";
 
 export type ProviderErrorCode =
-  | "provider_timeout"
-  | "provider_rate_limited"
-  | "provider_unavailable"
-  | "provider_bad_response";
+  "provider_timeout" | "provider_rate_limited" | "provider_unavailable" | "provider_bad_response";
 
 export type ProviderErrorEnvelope = {
   error: string;
@@ -442,7 +439,11 @@ async function providerFetch(
   const requestBody = withProviderModel(body, capability);
   const deployment = typeof requestBody.model === "string" ? requestBody.model : undefined;
   const startedAt = Date.now();
-  const deadline = createRequestDeadline(init?.signal ?? undefined, config.timeoutMs, "provider_request");
+  const deadline = createRequestDeadline(
+    init?.signal ?? undefined,
+    config.timeoutMs,
+    "provider_request",
+  );
 
   logProviderEvent("info", "provider.request.start", {
     provider: target.provider,
@@ -470,7 +471,8 @@ async function providerFetch(
       },
       deadline,
       (outcome) => {
-        const level = outcome.outcome === "timeout" || outcome.outcome === "failed" ? "warn" : "info";
+        const level =
+          outcome.outcome === "timeout" || outcome.outcome === "failed" ? "warn" : "info";
         logProviderEvent(level, "provider.request.finish", {
           provider: target.provider,
           capability,

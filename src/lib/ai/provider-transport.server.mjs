@@ -12,8 +12,8 @@ export class ProviderTransportTimeoutError extends Error {
 export function isAbortError(error) {
   return Boolean(
     error &&
-      typeof error === "object" &&
-      (error.name === "AbortError" || error.code === "provider_timeout"),
+    typeof error === "object" &&
+    (error.name === "AbortError" || error.code === "provider_timeout"),
   );
 }
 
@@ -280,12 +280,7 @@ export function createManagedIdentityTokenFetcher({
     } catch {
       throw new Error("azure_managed_identity_unavailable");
     }
-    if (
-      endpoint.protocol !== "http:" ||
-      endpoint.username ||
-      endpoint.password ||
-      endpoint.hash
-    ) {
+    if (endpoint.protocol !== "http:" || endpoint.username || endpoint.password || endpoint.hash) {
       throw new Error("azure_managed_identity_unavailable");
     }
 
