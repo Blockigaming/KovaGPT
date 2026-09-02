@@ -11,13 +11,14 @@ import {
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
+import structuralProductCss from "../styles/structural-product-redesign.css?url";
 import { ClerkProvider } from "@/components/auth/ClerkSafe";
 import { Toaster } from "@/components/ui/sonner";
 import { useUser } from "@/components/auth/ClerkSafe";
 import { applyThemeMode, loadThemeMode } from "@/lib/theme";
 import { loadSettings } from "@/lib/use-nova-settings";
 import { isPublicIndexableRoute, robotsDirectiveForRoute } from "@/lib/seo-policy.mjs";
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import { PlatformRuntime } from "@/components/PlatformRuntime";
 
 const HYDRATION_READY_EVENT = "kova:hydrated";
@@ -215,6 +216,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       ],
       links: [
         { rel: "stylesheet", href: appCss },
+        { rel: "stylesheet", href: structuralProductCss },
         { rel: "icon", type: "image/png", sizes: "64x64", href: "/kova-favicon-20260807.png" },
         { rel: "shortcut icon", type: "image/png", href: "/kova-favicon-20260807.png" },
         { rel: "apple-touch-icon", sizes: "180x180", href: "/kova-touch-icon-20260807.png" },
