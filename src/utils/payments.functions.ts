@@ -33,32 +33,32 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         typeof context.claims.email === "string" ? context.claims.email : undefined;
       const stripe = createStripeClient(BILLING_ENV);
 
-      // Prevent duplicate active subscriptions for the same user in this env.
-      const { data: existing, error: existingError } = await context.supabase
+      // Read every row for an early user-facing check. The checkout-attempt
+      // RPC below is the concurrency authority and repeats this invariant while
+      // holding the durable per-user attempt row.
+      const { data: subscriptionHistory, error: existingError } = await context.supabase
         .from("subscriptions")
-        .select("status, current_period_end, cancel_at_period_end")
+        .select("status, current_period_end")
         .eq("user_id", userId)
-        .eq("environment", BILLING_ENV)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .eq("environment", BILLING_ENV);
       if (existingError) {
         return { error: "Billing status couldn't be verified. Try again." };
       }
-      if (existing) {
-        const periodEnd = existing.current_period_end
-          ? new Date(existing.current_period_end).getTime()
+      const hasActiveSubscription = (subscriptionHistory ?? []).some((subscription) => {
+        const periodEnd = subscription.current_period_end
+          ? new Date(subscription.current_period_end).getTime()
           : 0;
-        const stillActive =
-          (["active", "trialing", "past_due"].includes(existing.status) &&
-            (!existing.current_period_end || periodEnd > Date.now())) ||
-          (existing.status === "canceled" && periodEnd > Date.now());
-        if (stillActive && !existing.cancel_at_period_end) {
-          return {
-            error:
-              "You already have an active subscription. Manage your plan from the billing portal before starting a new one.",
-          };
-        }
+        return (
+          (["active", "trialing", "past_due"].includes(subscription.status) &&
+            (!subscription.current_period_end || periodEnd > Date.now())) ||
+          (subscription.status === "canceled" && periodEnd > Date.now())
+        );
+      });
+      if (hasActiveSubscription) {
+        return {
+          error:
+            "You already have an active subscription. Resume or manage it in Billing, or wait until it expires before starting another.",
+        };
       }
 
       const prices = await stripe.prices.list({
@@ -86,7 +86,8 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
 
       // Free-trial eligibility for Plus. A user is eligible only if they have
       // no subscription row and their mapped Stripe Customer has no history.
-      let isPlusTrialEligible = plan.trialPeriodDays > 0 && !existing;
+      let isPlusTrialEligible =
+        plan.trialPeriodDays > 0 && (subscriptionHistory ?? []).length === 0;
       if (isPlusTrialEligible) {
         const prior = await stripe.subscriptions.list({
           customer: customerId,
@@ -96,12 +97,54 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         if (prior.data.length > 0) isPlusTrialEligible = false;
       }
 
+      const { data: checkoutAttempt, error: checkoutAttemptError } =
+        await supabaseAdmin.rpc("claim_stripe_checkout_attempt", {
+          _user_id: userId,
+          _environment: BILLING_ENV,
+          _price_id: stripePrice.id,
+        });
+      if (checkoutAttemptError) {
+        const active = checkoutAttemptError.message?.includes(
+          "stripe_active_subscription_exists",
+        );
+        return {
+          error: active
+            ? "You already have an active subscription. Resume or manage it in Billing, or wait until it expires before starting another."
+            : "Checkout is unavailable right now. Try again.",
+        };
+      }
+      if (
+        !checkoutAttempt ||
+        typeof checkoutAttempt !== "object" ||
+        Array.isArray(checkoutAttempt)
+      ) {
+        throw new Error("Checkout attempt unavailable");
+      }
+      const attempt = checkoutAttempt as Record<string, unknown>;
+      const idempotencyKey =
+        typeof attempt.idempotencyKey === "string" ? attempt.idempotencyKey : "";
+      const attemptCustomerId =
+        typeof attempt.stripeCustomerId === "string" ? attempt.stripeCustomerId : "";
+      const sessionExpiresAt =
+        typeof attempt.sessionExpiresAt === "string"
+          ? Math.floor(new Date(attempt.sessionExpiresAt).getTime() / 1000)
+          : 0;
+      if (
+        !idempotencyKey ||
+        attemptCustomerId !== customerId ||
+        !Number.isSafeInteger(sessionExpiresAt) ||
+        sessionExpiresAt <= Math.floor(Date.now() / 1000)
+      ) {
+        throw new Error("Checkout attempt invalid");
+      }
+
       const sessionParams: Parameters<typeof stripe.checkout.sessions.create>[0] = {
         integration_identifier: "kovagpt_checkout_wshrfyef",
         line_items: [{ price: stripePrice.id, quantity: 1 }],
         mode: "subscription",
         ui_mode: "embedded_page",
         return_url: CHECKOUT_RETURN_URL,
+        expires_at: sessionExpiresAt,
         managed_payments: { enabled: true },
         customer: customerId,
         metadata: { userId },
@@ -112,7 +155,9 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
           }),
         },
       };
-      const session = await stripe.checkout.sessions.create(sessionParams);
+      const session = await stripe.checkout.sessions.create(sessionParams, {
+        idempotencyKey: `kova-checkout-${BILLING_ENV}-${userId}-${idempotencyKey}`,
+      });
 
       return { clientSecret: session.client_secret ?? "" };
     } catch (error) {
@@ -192,18 +237,32 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .validator((data: { environment: StripeEnv }) => data)
   .handler(async ({ context }): Promise<SubscriptionSummary> => {
-    const { supabase, userId } = context;
-    const { data: row, error: subscriptionError } = await supabase
-      .from("subscriptions")
-      .select("price_id, status, current_period_end, cancel_at_period_end")
-      .eq("user_id", userId)
-      .eq("environment", BILLING_ENV)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (subscriptionError) {
+    const { userId } = context;
+    const { data: resolvedSummary, error: summaryError } = await supabaseAdmin.rpc(
+      "user_subscription_summary",
+      { _user_id: userId },
+    );
+    if (
+      summaryError ||
+      !resolvedSummary ||
+      typeof resolvedSummary !== "object" ||
+      Array.isArray(resolvedSummary)
+    ) {
       throw new Error("Billing details couldn't be verified.");
     }
+    const summary = resolvedSummary as Record<string, unknown>;
+    const tierValue = summary.tier;
+    if (tierValue !== "free" && tierValue !== "plus" && tierValue !== "pro") {
+      throw new Error("Billing details couldn't be verified.");
+    }
+    const tier = tierValue;
+    const status = typeof summary.status === "string" ? summary.status : null;
+    const priceId = typeof summary.priceId === "string" ? summary.priceId : null;
+    const currentPeriodEnd =
+      typeof summary.currentPeriodEnd === "string" ? summary.currentPeriodEnd : null;
+    const cancelAtPeriodEnd = summary.cancelAtPeriodEnd === true;
+    const trialing = summary.trialing === true;
+
     const { data: mapping, error: mappingError } = await supabaseAdmin
       .from("stripe_customer_mappings")
       .select("stripe_customer_id")
@@ -212,22 +271,14 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
       .maybeSingle();
     if (mappingError) throw new Error("Billing details couldn't be verified.");
 
-    const priceId = row?.price_id ?? null;
-    const { data: resolvedTier, error: tierError } = await supabaseAdmin.rpc("user_plan_tier", {
-      _user_id: userId,
-    });
-    if (tierError || !["free", "plus", "pro"].includes(resolvedTier ?? "")) {
-      throw new Error("Billing details couldn't be verified.");
-    }
-    const tier = resolvedTier as "free" | "plus" | "pro";
     const hasBillingAccount = !!mapping?.stripe_customer_id;
     return {
       tier,
-      status: row?.status ?? null,
+      status,
       priceId,
-      currentPeriodEnd: row?.current_period_end ?? null,
-      cancelAtPeriodEnd: !!row?.cancel_at_period_end,
-      trialing: row?.status === "trialing",
+      currentPeriodEnd,
+      cancelAtPeriodEnd,
+      trialing,
       hasBillingAccount,
       billingPortalAvailable: hasBillingAccount && !!billingPortalConfigurationId(),
     };
