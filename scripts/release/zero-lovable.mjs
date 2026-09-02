@@ -4,6 +4,7 @@ import { extname, join, relative } from "node:path";
 
 const root = process.cwd();
 const strictLock = process.argv.includes("--strict-lock");
+const requireBuild = process.argv.includes("--require-build");
 const readable = new Set([
   ".cjs",
   ".css",
@@ -12,8 +13,11 @@ const readable = new Set([
   ".json",
   ".jsx",
   ".mjs",
+  ".map",
   ".sql",
+  ".svg",
   ".toml",
+  ".txt",
   ".ts",
   ".tsx",
   ".yaml",
@@ -51,6 +55,10 @@ export function hasLovableRuntimeSource(path, source = "") {
 
 export function hasLovableBundlePath(path) {
   return /lovable/iu.test(path);
+}
+
+export function hasReadableBundleContent(path) {
+  return readable.has(extname(path));
 }
 
 function trackedFiles() {
@@ -128,6 +136,7 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
   for (const path of files) {
     if (ignoredPrefixes.some((prefix) => path.startsWith(prefix))) continue;
     if (path === "package-lock.json" || scannerDefinitionFiles.has(path)) continue;
+    if (!existsSync(join(root, path))) continue;
     if (hasLovableRuntimeSource(path)) {
       errors.push(`${path}: Lovable-named runtime source`);
     }
@@ -148,13 +157,16 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
   if (existsSync(installedLovable)) errors.push("node_modules/@lovable.dev is installed");
 
   for (const bundleRoot of ["dist/client", "dist/server"]) {
-    if (!existsSync(join(root, bundleRoot))) continue;
+    if (!existsSync(join(root, bundleRoot))) {
+      if (requireBuild) errors.push(`${bundleRoot}: built output is required`);
+      continue;
+    }
     for (const path of filesUnder(join(root, bundleRoot))) {
       const bundlePath = relative(root, path).replaceAll("\\", "/");
       if (hasLovableBundlePath(bundlePath)) {
         errors.push(`${bundlePath}: Lovable-named bundle asset`);
       }
-      if (!readable.has(extname(path))) continue;
+      if (!hasReadableBundleContent(path)) continue;
       const source = readFileSync(path, "utf8");
       if (/lovable/iu.test(source)) {
         errors.push(`${bundlePath}: Lovable-named bundle content`);
@@ -191,6 +203,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exit(1);
   }
   console.log(
-    `ZERO_LOVABLE_SOURCE_BUILD_AUDIT=PASS strictLock=${strictLock} warnings=${result.warnings.length}`,
+    `ZERO_LOVABLE_SOURCE_BUILD_AUDIT=PASS strictLock=${strictLock} requireBuild=${requireBuild} warnings=${result.warnings.length}`,
   );
 }

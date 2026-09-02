@@ -52,9 +52,9 @@ following in one release record:
 3. No unresolved P0, P1, or P2 release blocker or unresolved required review thread.
 4. An immutable ACR image reference of the form `repository@sha256:<64 hex>` built from that SHA.
 5. A green staging deployment of that same digest, including authenticated owner-isolation and
-   rollback rehearsal evidence. The current `.github/workflows/staging-rehearsal.yml` still
-   performs a Wrangler/Cloudflare deployment and is not Azure same-digest staging proof; it must be
-   corrected before use.
+   rollback rehearsal evidence. The current `.github/workflows/staging-rehearsal.yml` is
+   deliberately non-deploying and verifies an externally staged exact-SHA target; it is not itself
+   Azure same-digest staging proof.
 6. A reviewed Supabase production migration/backup record and green readiness.
 7. Billing source remediations merged and proven in sandbox; no live customer or payment object is
    needed to satisfy this entry gate.
@@ -65,6 +65,12 @@ following in one release record:
    the second phase may enforce `clientCertificateMode: require` and the exact certificate hash
    only after proxied DNS/AOP has been proven for at least the prior DNS TTL. A one-phase
    require-and-proxy sequence is an engineering blocker, not a manual workaround.
+10. Before PR #227 or any equivalent compatibility-route removal is merged, a read-only caller
+    inventory for `/.lovable/oauth/consent` and `/lovable/email/*`: Supabase Auth authorization
+    and redirect configuration, Azure and Cloudflare routing/access logs, provider webhook/email
+    configuration and logs, and known external clients. Migrate every legitimate caller to the
+    Kova-owned routes, attach redacted evidence to issue #208, and keep the issue open through
+    post-deploy exact-SHA route/asset/network/log proof. Repository-only search is insufficient.
 
 From an exact detached checkout, the repository-side check begins with:
 

@@ -43,10 +43,22 @@ No production source caller referenced any of those URLs. Their only repository 
 
 - `npm run release:zero-lovable` rejects Lovable-named runtime source paths/content, active dependencies, prohibited project artifacts, hosted endpoints, credentials, billing metadata, and generated browser/server asset names/content. It reports stale npm lock metadata as a warning.
 - `npm run release:zero-lovable:strict` additionally rejects stale Lovable entries in the npm lockfile. This is mandatory for the final candidate.
+- `npm run release:zero-lovable:built` runs automatically after every `build` and `build:dev`, requires both built-output roots, and scans readable JavaScript, source-map, text, and SVG content after path-name rejection.
 - `npm run security:ai-runtime` separately rejects provider secrets and managed-gateway paths.
 - `tests/unit/lovable-removal.test.mjs` proves the retired files and generated manifest entries are absent while the Kova-owned OAuth, suppression, and auth-template paths remain.
 - `tests/api/help-submit-security.test.mjs` proves support delivery continues through the fixed-recipient Kova queue.
 
+## Merge and deployment blocker
+
+Repository caller proof does not establish that legitimate external callers are absent. Azure, Cloudflare, Supabase/provider configuration, authorization paths, access/request logs, and external-client inventory were unavailable. PR #227 must remain unmerged and undeployed, and issue #208 must remain open, until an owner:
+
+1. inventories those control planes, configurations, and logs;
+2. identifies and migrates every legitimate caller of the compatibility URLs;
+3. attaches pre-deploy evidence to the issue;
+4. reruns exact-head hosted CI and review after the final current-main synchronization.
+
+Closing the unmerged PR is the reversible fallback when caller migration cannot be proven. Green repository checks alone do not clear this blocker.
+
 ## Runtime proof still required
 
-Source and build scans do not prove the public deployment changed. After this exact commit is deployed, verify the public compatibility URLs return 404, no Lovable-named JavaScript asset is served, the deployed SHA matches the reviewed SHA, and browser/server/network/log evidence contains no Lovable runtime request. Azure, Supabase, or provider logs require operator access and are not claimed by this repository-only change.
+Source and build scans do not prove the public deployment changed. Only after the external-caller blocker is cleared may this exact commit be deployed. Then verify the public compatibility URLs return 404, no Lovable-named asset is served, the deployed SHA matches the reviewed SHA, and browser/server/network/log evidence contains no Lovable runtime request. Azure, Cloudflare, Supabase, and provider evidence requires operator access and is not claimed by this repository-only change.

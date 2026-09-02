@@ -3,8 +3,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
 import {
+  auditZeroLovable,
   hasLovableBundlePath,
   hasLovableRuntimeSource,
+  hasReadableBundleContent,
 } from "../../scripts/release/zero-lovable.mjs";
 
 const root = process.cwd();
@@ -41,9 +43,56 @@ test("Lovable-named runtime routes, helper, generated entries, and chunks are ab
   assert.equal(hasLovableRuntimeSource("src/assets/lovable-logo.png"), true);
   assert.equal(hasLovableRuntimeSource("tests/fixtures/lovable-proxy.mjs"), false);
   assert.equal(hasLovableBundlePath("dist/client/lovable-logo.png"), true);
+  for (const path of [
+    "dist/client/app.js.map",
+    "dist/client/license.txt",
+    "dist/client/logo.svg",
+  ]) {
+    assert.equal(hasReadableBundleContent(path), true, path);
+  }
+  const deletedPath = "src/routes/lovable/pending-delete.ts";
+  assert.equal(existsSync(join(root, deletedPath)), false);
+  assert.doesNotMatch(
+    auditZeroLovable({ files: [deletedPath] }).errors.join("\n"),
+    /Lovable-named runtime source/u,
+  );
   assert.ok(
     gate.indexOf("if (hasLovableBundlePath(bundlePath))") <
-      gate.indexOf("if (!readable.has(extname(path))) continue;", gate.indexOf("filesUnder")),
+      gate.indexOf("if (!hasReadableBundleContent(path)) continue;", gate.indexOf("filesUnder")),
+  );
+});
+
+test("every deployable build requires the strict built-output audit after Vite", () => {
+  const pkg = JSON.parse(read("package.json"));
+  assert.equal(
+    pkg.scripts["release:zero-lovable:built"],
+    "node scripts/release/zero-lovable.mjs --strict-lock --require-build",
+  );
+
+  for (const scriptName of ["build", "build:dev"]) {
+    const script = pkg.scripts[scriptName];
+    assert.match(script, /vite build/u, scriptName);
+    assert.match(script, /npm run release:zero-lovable:built/u, scriptName);
+    assert.ok(
+      script.indexOf("vite build") < script.indexOf("npm run release:zero-lovable:built"),
+      scriptName,
+    );
+  }
+
+  for (const path of [
+    ".github/workflows/ci.yml",
+    ".github/workflows/staging-rehearsal.yml",
+    ".github/workflows/azure-container-ci.yml",
+    "scripts/release/finalize-local-candidate.sh",
+  ]) {
+    assert.match(read(path), /npm run build/u, path);
+  }
+
+  const dockerfile = read("Dockerfile");
+  assert.match(dockerfile, /npm run build/u);
+  assert.match(
+    read(".github/workflows/ca-kovagpt-dev-AutoDeployTrigger-1724b7ba-d38e-4fd3-95e8-bef7f7fbc290.yml"),
+    /docker buildx build/u,
   );
 });
 
