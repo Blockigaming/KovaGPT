@@ -128,13 +128,54 @@ jobs:
         if: steps.scope.outputs.run_ci == 'true'
         run: npx playwright install --with-deps chromium
 
+      - name: Read-only deployed baseline audit
+        id: deployed_baseline
+        if: steps.scope.outputs.run_ci == 'true'
+        continue-on-error: true
+        run: npm run test:deployed-baseline:audit
+
+      - name: Report deployed baseline audit blocker
+        if: steps.scope.outputs.run_ci == 'true' && steps.deployed_baseline.outcome == 'failure'
+        run: echo "::warning::The observational deployed-baseline audit could not produce accepted evidence; strict candidate gates will continue."
+
+      - name: Upload deployed baseline evidence
+        if: steps.deployed_baseline.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: deployed-baseline-${{ github.sha }}
+          path: artifacts/ui-audit/deployed-baseline
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Accessibility checks
         if: steps.scope.outputs.run_ci == 'true'
+        env:
+          PLAYWRIGHT_PREBUILT: "1"
         run: npm run test:a11y
 
       - name: Visual checks
+        id: candidate_visual
         if: steps.scope.outputs.run_ci == 'true'
+        env:
+          PLAYWRIGHT_PREBUILT: "1"
         run: npm run test:visual
+
+      - name: Upload candidate visual baselines
+        if: always() && steps.candidate_visual.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: candidate-visual-baselines-${{ github.sha }}
+          path: |
+            tests/e2e/ui-quality.spec.ts-snapshots/*.png
+            tests/e2e/auth-visual-regression.spec.ts-snapshots/*.png
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Integrated UI interaction checks
+        if: steps.scope.outputs.run_ci == 'true'
+        env:
+          PLAYWRIGHT_PREBUILT: "1"
+        run: npm run test:runtime:features
 
       - name: Browser smoke checks
         if: steps.scope.outputs.run_ci == 'true'
@@ -156,6 +197,7 @@ jobs:
           path: |
             test-results
             playwright-report
+            tests/e2e/*-snapshots
           if-no-files-found: ignore
 
   browser:
