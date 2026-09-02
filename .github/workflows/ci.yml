@@ -67,7 +67,10 @@ jobs:
 
       - name: Formatting changed files
         if: steps.scope.outputs.run_ci == 'true'
-        run: npm run format:check:changed
+        run: |
+          npx prettier --write src/components/ChatInput.tsx
+          git diff --no-ext-diff -- src/components/ChatInput.tsx
+          exit 1
 
       - name: Legacy repository formatting audit
         if: steps.scope.outputs.run_ci == 'true'
