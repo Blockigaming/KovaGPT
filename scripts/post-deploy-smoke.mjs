@@ -46,17 +46,18 @@ function normalizeExpectedSupabaseUrl(raw) {
   };
 }
 
-async function request(pathOrUrl) {
+async function request(pathOrUrl, consume = (response) => response) {
   const url = pathOrUrl instanceof URL ? pathOrUrl : new URL(pathOrUrl, base);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
   timeout.unref?.();
 
   try {
-    return await globalThis.fetch(url, {
+    const response = await globalThis.fetch(url, {
       redirect: "manual",
       signal: controller.signal,
     });
+    return await consume(response);
   } catch (error) {
     if (controller.signal.aborted) {
       throw new Error(`${url.pathname} exceeded the ${requestTimeoutMs}ms request timeout`);
@@ -68,12 +69,13 @@ async function request(pathOrUrl) {
 }
 
 async function read(path, expectedType) {
-  const response = await request(path);
-  if (!response.ok) throw new Error(`${path} returned ${response.status}`);
-  const type = response.headers.get("content-type") || "";
-  if (!type.includes(expectedType))
-    throw new Error(`${path} returned ${type || "no content type"}`);
-  return { response, body: await response.text() };
+  return request(path, async (response) => {
+    if (!response.ok) throw new Error(`${path} returned ${response.status}`);
+    const type = response.headers.get("content-type") || "";
+    if (!type.includes(expectedType))
+      throw new Error(`${path} returned ${type || "no content type"}`);
+    return { response, body: await response.text() };
+  });
 }
 
 function addJavaScriptReference(candidate, parent, queue, seen) {
@@ -113,9 +115,10 @@ async function verifyDeployedBrowserTarget(rootHtml, expected) {
     }
 
     const url = queue.shift();
-    const response = await request(url);
-    if (!response.ok) throw new Error(`${url.pathname} returned ${response.status}`);
-    const source = await response.text();
+    const source = await request(url, async (response) => {
+      if (!response.ok) throw new Error(`${url.pathname} returned ${response.status}`);
+      return response.text();
+    });
     scannedAssets += 1;
     scannedBytes += Buffer.byteLength(source);
     if (scannedBytes > MAX_JAVASCRIPT_BYTES) {
