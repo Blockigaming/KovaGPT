@@ -29,9 +29,14 @@ export function useTier(): { tier: Tier; loading: boolean } {
         return;
       }
 
-      const { data, error } = await supabase.rpc("current_effective_plan_tier");
+      const { data, error } = await supabase.rpc("current_subscription_summary");
+      const summary =
+        !error && data && typeof data === "object" && !Array.isArray(data)
+          ? (data as Record<string, unknown>)
+          : null;
+      const effectiveTier = summary?.effectiveTier;
       const resolved: Tier =
-        !error && (data === "plus" || data === "pro") ? data : "free";
+        effectiveTier === "plus" || effectiveTier === "pro" ? effectiveTier : "free";
       if (!alive) return;
       setTier(resolved);
       setLoading(false);

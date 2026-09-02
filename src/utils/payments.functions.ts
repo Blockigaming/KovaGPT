@@ -222,6 +222,8 @@ export const createPortalSession = createServerFn({ method: "POST" })
 
 export type SubscriptionSummary = {
   tier: "free" | "plus" | "pro";
+  effectiveTier: "free" | "plus" | "pro";
+  inherited: boolean;
   status: string | null;
   priceId: string | null;
   currentPeriodEnd: string | null;
@@ -256,6 +258,16 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
       throw new Error("Billing details couldn't be verified.");
     }
     const tier = tierValue;
+    const effectiveTierValue = summary.effectiveTier;
+    if (
+      effectiveTierValue !== "free" &&
+      effectiveTierValue !== "plus" &&
+      effectiveTierValue !== "pro"
+    ) {
+      throw new Error("Billing details couldn't be verified.");
+    }
+    const effectiveTier = effectiveTierValue;
+    const inherited = summary.inherited === true;
     const status = typeof summary.status === "string" ? summary.status : null;
     const priceId = typeof summary.priceId === "string" ? summary.priceId : null;
     const currentPeriodEnd =
@@ -274,6 +286,8 @@ export const getSubscriptionSummary = createServerFn({ method: "GET" })
     const hasBillingAccount = !!mapping?.stripe_customer_id;
     return {
       tier,
+      effectiveTier,
+      inherited,
       status,
       priceId,
       currentPeriodEnd,

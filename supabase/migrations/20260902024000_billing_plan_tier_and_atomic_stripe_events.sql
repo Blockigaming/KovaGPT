@@ -146,7 +146,7 @@ language sql
 stable
 security definer
 set search_path = public, pg_temp
-as $
+as $$
   with principals as (
     select _user_id as user_id
     union
@@ -163,7 +163,7 @@ as $
     else 'free'
   end
   from tiers;
-$;
+$$;
 
 revoke execute on function public.effective_user_plan_tier(uuid)
   from public, anon, authenticated;
@@ -194,12 +194,12 @@ language sql
 stable
 security definer
 set search_path = public, pg_temp
-as $
+as $$
   select case
     when auth.uid() is null then 'free'
     else public.effective_user_plan_tier(auth.uid())
   end;
-$;
+$$;
 
 revoke execute on function public.current_effective_plan_tier()
   from public, anon;
@@ -214,7 +214,9 @@ security definer
 set search_path = public, pg_temp
 as $$
   with resolved as (
-    select public.user_plan_tier(_user_id) as tier
+    select
+      public.user_plan_tier(_user_id) as tier,
+      public.effective_user_plan_tier(_user_id) as effective_tier
   ),
   chosen as (
     select
@@ -252,6 +254,13 @@ as $$
   )
   select jsonb_build_object(
     'tier', resolved.tier,
+    'effectiveTier', resolved.effective_tier,
+    'inherited',
+      case
+        when resolved.effective_tier = 'pro' and resolved.tier <> 'pro' then true
+        when resolved.effective_tier = 'plus' and resolved.tier = 'free' then true
+        else false
+      end,
     'status', chosen.status,
     'priceId', chosen.price_id,
     'currentPeriodEnd', chosen.current_period_end,
@@ -266,6 +275,33 @@ revoke execute on function public.user_subscription_summary(uuid)
   from public, anon, authenticated;
 grant execute on function public.user_subscription_summary(uuid)
   to service_role;
+
+create or replace function public.current_subscription_summary()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select case
+    when auth.uid() is null then jsonb_build_object(
+      'tier', 'free',
+      'effectiveTier', 'free',
+      'inherited', false,
+      'status', null,
+      'priceId', null,
+      'currentPeriodEnd', null,
+      'cancelAtPeriodEnd', false,
+      'trialing', false
+    )
+    else public.user_subscription_summary(auth.uid())
+  end;
+$$;
+
+revoke execute on function public.current_subscription_summary()
+  from public, anon;
+grant execute on function public.current_subscription_summary()
+  to authenticated, service_role;
 
 create sequence if not exists public.stripe_subscription_observation_sequence
   as bigint;

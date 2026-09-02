@@ -531,8 +531,8 @@ export function SettingsDialog({
     }
   };
 
-  const inheritedSubscription = !!subSummary && tierRank(tier) > tierRank(subSummary.tier);
-  const displayedSubscriptionTier = inheritedSubscription ? tier : subSummary?.tier;
+  const inheritedSubscription = subSummary?.inherited === true;
+  const displayedSubscriptionTier = subSummary?.effectiveTier;
 
   // "Saved" indicator: whenever settings change while the dialog is open, show
   // a subtle pill for ~1.5s. Skips the very first render so it doesn't fire on
@@ -1091,7 +1091,7 @@ export function SettingsDialog({
                         : inheritedSubscription
                           ? "This shared plan is managed by the Family Sharing owner."
                           : subSummary?.hasBillingAccount && subSummary.billingPortalAvailable
-                            ? "Manage payment methods, invoices, cancellation, and plan changes in the Stripe billing portal."
+                            ? "Manage payment methods, invoices, account details, and cancellation in the Stripe billing portal."
                             : subSummary?.hasBillingAccount
                               ? "A Stripe billing account is linked, but the self-service portal is not configured. Contact support@kovagpt.com for billing help."
                               : "No Stripe billing account is linked to this KovaGPT account."}

@@ -124,7 +124,7 @@ $$;
 -- Keep the legacy single-column uniqueness contracts throughout the rollback
 -- window. The new composite keys are additive; a later, separately reviewed
 -- contract migration may remove the legacy keys after rollback is retired.
-do $
+do $$
 begin
   if not exists (
     select 1
@@ -144,7 +144,7 @@ begin
       unique (event_id, environment);
   end if;
 end;
-$;
+$$;
 
 alter table public.subscriptions
   drop constraint if exists subscriptions_environment_check;

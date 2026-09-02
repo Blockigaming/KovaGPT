@@ -1636,29 +1636,51 @@ export type Database = {
         Args: { _project_id: string; _user_id: string };
         Returns: boolean;
       };
-      complete_stripe_event: {
+      begin_stripe_event: {
         Args: {
-          _apply_subscription: boolean;
-          _cancel_at_period_end?: boolean;
           _checkout_session_id?: string;
           _correlation_id?: string;
-          _current_period_end?: string;
-          _current_period_start?: string;
           _customer_id?: string;
           _environment: string;
           _event_created_at: string;
           _event_id: string;
           _event_type: string;
           _invoice_id?: string;
+          _lease_seconds?: number;
           _object_id?: string;
           _outcome: string;
-          _price_id?: string;
-          _product_id?: string;
-          _status?: string;
           _subscription_id?: string;
         };
         Returns: Json;
       };
+      claim_stripe_checkout_attempt: {
+        Args: {
+          _environment: string;
+          _price_id: string;
+          _user_id: string;
+        };
+        Returns: Json;
+      };
+      complete_stripe_event: {
+        Args: {
+          _apply_subscription: boolean;
+          _cancel_at_period_end?: boolean;
+          _current_period_end?: string;
+          _current_period_start?: string;
+          _customer_id?: string;
+          _environment: string;
+          _event_id: string;
+          _lease_token: string;
+          _observation_sequence: number;
+          _price_id?: string;
+          _product_id?: string;
+          _status?: string;
+        };
+        Returns: Json;
+      };
+      current_effective_plan_tier: { Args: never; Returns: string };
+      current_subscription_summary: { Args: never; Returns: Json };
+      current_user_plan_tier: { Args: never; Returns: string };
       delete_email: {
         Args: { message_id: number; queue_name: string };
         Returns: boolean;
@@ -1913,7 +1935,9 @@ export type Database = {
         };
         Returns: boolean;
       };
+      effective_user_plan_tier: { Args: { _user_id: string }; Returns: string };
       user_plan_tier: { Args: { _user_id: string }; Returns: string };
+      user_subscription_summary: { Args: { _user_id: string }; Returns: Json };
     };
     Enums: {
       project_role: "owner" | "editor" | "viewer";
