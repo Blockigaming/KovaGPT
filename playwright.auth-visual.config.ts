@@ -1,12 +1,8 @@
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-
 import { defineConfig } from "@playwright/test";
 
 const host = "127.0.0.1";
 const port = 8081;
 const baseURL = `http://${host}:${port}`;
-const outputDirectory = join(tmpdir(), "kova-auth-visual-dist");
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -17,14 +13,13 @@ export default defineConfig({
   retries: 0,
   reporter: [["list"]],
   webServer: {
-    command: [
-      `npm run build -- --outDir ${outputDirectory}`,
-      `npm run preview -- --outDir ${outputDirectory} --host ${host} --port ${port} --strictPort`,
-    ].join(" && "),
+    command: "node tests/e2e/auth-visual-preview.mjs",
     url: baseURL,
     reuseExistingServer: false,
-    timeout: 120_000,
+    timeout: 180_000,
     env: {
+      KOVA_AUTH_VISUAL_HOST: host,
+      KOVA_AUTH_VISUAL_PORT: String(port),
       VITE_SUPABASE_URL: baseURL,
       VITE_SUPABASE_PUBLISHABLE_KEY: "auth-visual-public-key",
     },
