@@ -1,10 +1,7 @@
 const MAX_DIAGNOSTIC_VALUE_LENGTH = 96;
 
 function readProperty(value, key) {
-  if (
-    !value ||
-    (typeof value !== "object" && typeof value !== "function")
-  ) {
+  if (!value || (typeof value !== "object" && typeof value !== "function")) {
     return undefined;
   }
   try {
