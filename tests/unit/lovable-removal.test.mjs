@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
 import {
   auditZeroLovable,
+  decodeReadableText,
   hasLovableBundlePath,
+  hasLovableProductionInput,
   hasLovableRuntimeSource,
   hasReadableBundleContent,
   hasReadableRuntimeContent,
@@ -36,6 +39,7 @@ test("Lovable-named runtime routes, helper, generated entries, and chunks are ab
 
   const gate = read("scripts/release/zero-lovable.mjs");
   assert.match(gate, /Lovable-named runtime source/u);
+  assert.match(gate, /Lovable-named production input/u);
   assert.match(gate, /Lovable-named bundle asset/u);
   assert.match(gate, /Lovable-named bundle content/u);
   assert.equal(hasLovableRuntimeSource("worker/src/lovable-proxy.mjs"), true);
@@ -57,6 +61,40 @@ test("Lovable-named runtime routes, helper, generated entries, and chunks are ab
   assert.equal(hasReadableRuntimeContent("worker/Dockerfile"), true);
   assert.equal(hasReadableRuntimeContent("worker/.env.example"), true);
   assert.equal(hasLovableRuntimeSource("worker/Dockerfile", "ENV LOVABLE_API_KEY=test"), true);
+  assert.equal(hasReadableRuntimeContent("src/lib/provider.d.mts"), true);
+  assert.equal(
+    hasLovableRuntimeSource("src/lib/provider.d.mts", "export const key = 'LOVABLE_API_KEY';"),
+    true,
+  );
+  assert.equal(hasLovableProductionInput("Dockerfile", "RUN npx lovable-cli build"), true);
+  assert.equal(
+    hasLovableProductionInput(
+      "supabase/migrations/20260902000000_provider.sql",
+      "create table lovable_jobs (id uuid);",
+    ),
+    true,
+  );
+  assert.equal(hasLovableProductionInput("docs/history.md", "Lovable was retired"), false);
+
+  const lovableText = "https://lovable.app/runtime";
+  const utf16le = Buffer.concat([
+    Buffer.from([0xff, 0xfe]),
+    Buffer.from(lovableText, "utf16le"),
+  ]);
+  const utf16beBody = Buffer.from(lovableText, "utf16le");
+  for (let index = 0; index < utf16beBody.length; index += 2) {
+    const first = utf16beBody[index];
+    utf16beBody[index] = utf16beBody[index + 1];
+    utf16beBody[index + 1] = first;
+  }
+  const utf16be = Buffer.concat([Buffer.from([0xfe, 0xff]), utf16beBody]);
+  assert.match(decodeReadableText(utf16le), /lovable\.app/u);
+  assert.match(decodeReadableText(utf16be), /lovable\.app/u);
+  assert.throws(
+    () => decodeReadableText(Buffer.from([0x6c, 0x00, 0x6f, 0x00])),
+    /NUL-containing text/u,
+  );
+
   const deletedPath = "src/routes/lovable/pending-delete.ts";
   assert.equal(existsSync(join(root, deletedPath)), false);
   assert.doesNotMatch(

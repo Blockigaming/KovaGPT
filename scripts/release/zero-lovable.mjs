@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { basename, extname, join, relative } from "node:path";
+import { TextDecoder } from "node:util";
 
 const root = process.cwd();
 const strictLock = process.argv.includes("--strict-lock");
@@ -13,6 +14,7 @@ const readable = new Set([
   ".json",
   ".jsx",
   ".mjs",
+  ".mts",
   ".map",
   ".sql",
   ".svg",
@@ -26,6 +28,8 @@ const readable = new Set([
 const readableBundleBasenames = new Set(["_headers", "_redirects"]);
 const ignoredPrefixes = ["artifacts/", "docs/", "tests/"];
 const runtimeSourcePrefixes = ["src/", "worker/", "workers/"];
+const productionInputPrefixes = ["supabase/"];
+const productionInputBasenames = new Set(["Dockerfile"]);
 const scannerDefinitionFiles = new Set([
   "scripts/release/zero-lovable.mjs",
   "scripts/release/ai-provider-contract.mjs",
@@ -54,6 +58,14 @@ export function hasLovableRuntimeSource(path, source = "") {
   );
 }
 
+export function hasLovableProductionInput(path, source = "") {
+  return (
+    (productionInputPrefixes.some((prefix) => path.startsWith(prefix)) ||
+      productionInputBasenames.has(basename(path))) &&
+    (/lovable/iu.test(path) || /lovable/iu.test(source))
+  );
+}
+
 export function hasLovableBundlePath(path) {
   return /lovable/iu.test(path);
 }
@@ -64,6 +76,33 @@ export function hasReadableBundleContent(path) {
 
 export function hasReadableRuntimeContent(path) {
   return hasReadableBundleContent(path) || [".env.example", "Dockerfile"].includes(basename(path));
+}
+
+const utf8Decoder = new TextDecoder("utf-8", { fatal: true });
+
+export function decodeReadableText(input) {
+  const buffer = Buffer.isBuffer(input) ? input : Buffer.from(input);
+  let source;
+
+  if (buffer.length >= 2 && buffer[0] === 0xff && buffer[1] === 0xfe) {
+    const body = buffer.subarray(2);
+    if (body.length % 2 !== 0) throw new Error("truncated UTF-16LE text");
+    source = body.toString("utf16le");
+  } else if (buffer.length >= 2 && buffer[0] === 0xfe && buffer[1] === 0xff) {
+    const body = Buffer.from(buffer.subarray(2));
+    if (body.length % 2 !== 0) throw new Error("truncated UTF-16BE text");
+    for (let index = 0; index < body.length; index += 2) {
+      const first = body[index];
+      body[index] = body[index + 1];
+      body[index + 1] = first;
+    }
+    source = body.toString("utf16le");
+  } else {
+    source = utf8Decoder.decode(buffer);
+  }
+
+  if (source.includes("\0")) throw new Error("NUL-containing text");
+  return source;
 }
 
 function trackedFiles() {
@@ -88,12 +127,23 @@ function trackedFiles() {
 }
 
 function read(path) {
-  return readFileSync(join(root, path), "utf8");
+  return decodeReadableText(readFileSync(join(root, path)));
+}
+
+function readForAudit(filePath, displayPath, errors) {
+  try {
+    return decodeReadableText(readFileSync(filePath));
+  } catch {
+    errors.push(`${displayPath}: unsupported or NUL-containing text encoding`);
+    return null;
+  }
 }
 
 /** Tracked-but-deleted paths must not crash the audit before the deletion is committed. */
-function readIfPresent(path) {
-  return existsSync(join(root, path)) ? read(path) : null;
+function readIfPresent(path, errors) {
+  return existsSync(join(root, path))
+    ? readForAudit(join(root, path), path, errors)
+    : null;
 }
 
 export function inspectPackageManifest(pkg) {
@@ -145,12 +195,18 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
     if (hasLovableRuntimeSource(path)) {
       errors.push(`${path}: Lovable-named runtime source`);
     }
+    if (hasLovableProductionInput(path)) {
+      errors.push(`${path}: Lovable-named production input`);
+    }
     if (!hasReadableRuntimeContent(path)) continue;
-    const source = readIfPresent(path);
+    const source = readIfPresent(path, errors);
     if (source === null) continue;
 
     if (hasLovableRuntimeSource(path, source)) {
       errors.push(`${path}: Lovable-named runtime source`);
+    }
+    if (hasLovableProductionInput(path, source)) {
+      errors.push(`${path}: Lovable-named production input`);
     }
 
     for (const rule of forbiddenPatterns) {
@@ -172,7 +228,8 @@ export function auditZeroLovable({ files = trackedFiles() } = {}) {
         errors.push(`${bundlePath}: Lovable-named bundle asset`);
       }
       if (!hasReadableBundleContent(path)) continue;
-      const source = readFileSync(path, "utf8");
+      const source = readForAudit(path, bundlePath, errors);
+      if (source === null) continue;
       if (/lovable/iu.test(source)) {
         errors.push(`${bundlePath}: Lovable-named bundle content`);
       }
