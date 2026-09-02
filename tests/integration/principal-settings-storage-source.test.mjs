@@ -18,7 +18,10 @@ test("settings wait for an authenticated principal and never render stale accoun
     home,
     /if \(!isLoaded\) \{[\s\S]{0,100}setConversationState\(\{ principal: null, items: \[\] \}\)/,
   );
-  assert.match(home, /loadSettings\(userKey, \{ migrateLegacyGuest: userKey === null \}\)/);
+  assert.match(
+    home,
+    /loadSettings\(\s*userKey,\s*\{\s*migrateLegacyGuest: userKey === null,?\s*\},?\s*\)/,
+  );
 
   assert.match(root, /applyThemeMode\(loadThemeMode\(\)\)/);
   assert.match(

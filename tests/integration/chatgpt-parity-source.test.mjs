@@ -53,7 +53,10 @@ test("composer actions, message editing, and markdown stay reachable and lossles
     chatInput,
     /spellCheck\s+autoComplete="off"\s+autoCorrect="on"\s+autoCapitalize="sentences"/,
   );
-  assert.match(chatInput, /COMPOSER_TOOLS\.map/);
+  assert.match(
+    chatInput,
+    /COMPOSER_TOOLS\.filter\(\s*\(tool\) => tool\.id !== "deep_research" \|\| userTier !== "free",\s*\)\.map\(toolRow\)/,
+  );
   for (const [id, label] of [
     ["web_search", "Search the web"],
     ["deep_research", "Deep research"],
@@ -66,6 +69,14 @@ test("composer actions, message editing, and markdown stay reachable and lossles
   assert.match(chatInput, /const lockedRow = \(tool: ComposerAction\)[\s\S]{0,300}<button/);
   assert.match(chatInput, /<button[\s\S]{0,160}disabled[\s\S]{0,160}aria-disabled="true"/);
   assert.match(chatInput, /onToolSelect\?\.\(next\)/);
+  assert.match(
+    chatInput,
+    /tool\.id === "deep_research" && userTier === "free"[\s\S]{0,180}Upgrade to Plus or Pro/,
+  );
+  assert.match(
+    route,
+    /selectedTool === "deep_research" && tier === "free"[\s\S]{0,180}setSelectedTool\(null\)/,
+  );
   assert.equal((route.match(/selectedTool=\{selectedTool\}/g) ?? []).length, 2);
   assert.equal((route.match(/disabled=\{!principalReady\}/g) ?? []).length, 2);
   assert.match(chatInput, /kova-send-button is-enabled/);

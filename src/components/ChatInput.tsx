@@ -54,12 +54,7 @@ export type RecentLibraryFile = {
   projectName?: string | null;
 };
 export type ComposerToolId =
-  | "web_search"
-  | "deep_research"
-  | "image"
-  | "study"
-  | "data_analysis"
-  | "file_analysis";
+  "web_search" | "deep_research" | "image" | "study" | "data_analysis" | "file_analysis";
 
 type ComposerAction = {
   id: ComposerToolId;
@@ -585,6 +580,11 @@ export function ChatInput({
       setPlusOpen(false);
       return;
     }
+    if (tool.id === "deep_research" && userTier === "free") {
+      toast.message("Upgrade to Plus or Pro to use Deep research");
+      setPlusOpen(false);
+      return;
+    }
     const next = selectedTool === tool.id ? null : tool.id;
     onToolSelect?.(next);
     setPlusOpen(false);
@@ -720,7 +720,9 @@ export function ChatInput({
         {photosRow}
         {filesRow}
         {cameraRow}
-        {COMPOSER_TOOLS.map(toolRow)}
+        {COMPOSER_TOOLS.filter(
+          (tool) => tool.id !== "deep_research" || userTier !== "free",
+        ).map(toolRow)}
         <button type="button" className={rowClass} onClick={() => (window.location.href = "/apps")}>
           <Sparkles className={iconClass} />
           <span>Apps and connectors</span>

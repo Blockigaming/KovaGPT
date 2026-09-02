@@ -950,6 +950,11 @@ function KovaGPT() {
       const MAX_AUTO_RETRIES = 2;
       const trimmed = text.trim();
       if (!principalReady || (!trimmed && atts.length === 0) || inFlightRef.current) return;
+      if (selectedTool === "deep_research" && tier === "free") {
+        setSelectedTool(null);
+        toast.message("Deep research requires a Plus or Pro plan.");
+        return;
+      }
       const requestGeneration = storageGenerationRef.current;
       const requestPrincipal = storagePrincipal;
       const isCurrentRequest = () =>
@@ -1411,6 +1416,7 @@ function KovaGPT() {
       storagePrincipal,
       isLoaded,
       isSignedIn,
+      tier,
       userKey,
     ],
   );

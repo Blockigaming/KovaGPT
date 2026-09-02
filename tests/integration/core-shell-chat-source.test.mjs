@@ -14,7 +14,7 @@ const confirmDialog = await readFile("src/components/ConfirmActionDialog.tsx", "
 test("sidebar uses a stable desktop width, hidden collapse, mobile drawer, and focus trap", () => {
   assert.match(sidebar, /const EXPANDED_WIDTH = 260/);
   assert.doesNotMatch(sidebar, /COLLAPSED_WIDTH/);
-  assert.match(sidebar, /lg:!w-0 lg:border-r-0/);
+  assert.match(sidebar, /lg:!w-0 lg:!border-r-0/);
   assert.match(sidebar, /min\(88vw,320px\)/);
   assert.match(sidebar, /document\.body\.style\.overflow = "hidden"/);
   assert.match(sidebar, /event\.key === "Escape"/);
