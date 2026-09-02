@@ -53,9 +53,10 @@ following in one release record:
 4. An immutable ACR image reference of the form `repository@sha256:<64 hex>` built from that SHA.
 5. A green staging deployment of that same digest, including authenticated owner-isolation and
    rollback rehearsal evidence. The current `.github/workflows/staging-rehearsal.yml` is
-   deployment-capable: an approved dispatch invokes Wrangler and writes to Cloudflare staging. It
-   is neither validation-only nor Azure same-digest staging proof; do not dispatch it unless an
-   authorized Cloudflare staging deployment is intended.
+   deployment-capable: an approved dispatch invokes bare `npx wrangler deploy`, but no `--env` or
+   Wrangler staging environment proves which Cloudflare account and Worker it will write. It is
+   neither validation-only nor Azure same-digest staging proof; do not dispatch it until an
+   authorized owner verifies the exact Cloudflare account/Worker target and approves that write.
 6. A reviewed Supabase production migration/backup record and green readiness.
 7. Billing source remediations merged and proven in sandbox; no live customer or payment object is
    needed to satisfy this entry gate.

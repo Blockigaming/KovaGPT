@@ -29,7 +29,6 @@ const readableBundleBasenames = new Set(["_headers", "_redirects"]);
 const ignoredPrefixes = ["artifacts/", "docs/", "tests/"];
 const runtimeSourcePrefixes = ["src/", "worker/", "workers/"];
 const productionInputPrefixes = ["supabase/"];
-const productionInputBasenames = new Set(["Dockerfile"]);
 const scannerDefinitionFiles = new Set([
   "scripts/release/zero-lovable.mjs",
   "scripts/release/ai-provider-contract.mjs",
@@ -58,10 +57,13 @@ export function hasLovableRuntimeSource(path, source = "") {
   );
 }
 
+export function isDockerfilePath(path) {
+  return /(?:^|\.)dockerfile(?:\.|$)/iu.test(basename(path));
+}
+
 export function hasLovableProductionInput(path, source = "") {
   return (
-    (productionInputPrefixes.some((prefix) => path.startsWith(prefix)) ||
-      productionInputBasenames.has(basename(path))) &&
+    (productionInputPrefixes.some((prefix) => path.startsWith(prefix)) || isDockerfilePath(path)) &&
     (/lovable/iu.test(path) || /lovable/iu.test(source))
   );
 }
@@ -75,7 +77,9 @@ export function hasReadableBundleContent(path) {
 }
 
 export function hasReadableRuntimeContent(path) {
-  return hasReadableBundleContent(path) || [".env.example", "Dockerfile"].includes(basename(path));
+  return (
+    hasReadableBundleContent(path) || basename(path) === ".env.example" || isDockerfilePath(path)
+  );
 }
 
 const utf8Decoder = new TextDecoder("utf-8", { fatal: true });

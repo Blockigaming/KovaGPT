@@ -11,6 +11,7 @@ import {
   hasLovableRuntimeSource,
   hasReadableBundleContent,
   hasReadableRuntimeContent,
+  isDockerfilePath,
 } from "../../scripts/release/zero-lovable.mjs";
 
 const root = process.cwd();
@@ -59,14 +60,19 @@ test("Lovable-named runtime routes, helper, generated entries, and chunks are ab
     assert.equal(hasReadableBundleContent(path), true, path);
   }
   assert.equal(hasReadableRuntimeContent("worker/Dockerfile"), true);
+  assert.equal(hasReadableRuntimeContent("worker/Dockerfile.prod"), true);
+  assert.equal(hasReadableRuntimeContent("worker/app.Dockerfile"), true);
   assert.equal(hasReadableRuntimeContent("worker/.env.example"), true);
+  for (const path of ["Dockerfile", "Dockerfile.prod", "app.Dockerfile", "app.Dockerfile.dev"]) {
+    assert.equal(isDockerfilePath(path), true, path);
+    assert.equal(hasLovableProductionInput(path, "RUN npx lovable-cli build"), true, path);
+  }
   assert.equal(hasLovableRuntimeSource("worker/Dockerfile", "ENV LOVABLE_API_KEY=test"), true);
   assert.equal(hasReadableRuntimeContent("src/lib/provider.d.mts"), true);
   assert.equal(
     hasLovableRuntimeSource("src/lib/provider.d.mts", "export const key = 'LOVABLE_API_KEY';"),
     true,
   );
-  assert.equal(hasLovableProductionInput("Dockerfile", "RUN npx lovable-cli build"), true);
   assert.equal(
     hasLovableProductionInput(
       "supabase/migrations/20260902000000_provider.sql",
