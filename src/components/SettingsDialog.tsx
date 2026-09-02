@@ -339,7 +339,8 @@ export function SettingsDialog({
   }, [open, tab, loggedIn]);
 
   const handleManageBilling = async () => {
-    if (portalLoading || !subSummary?.hasBillingAccount) return;
+    if (portalLoading || !subSummary?.hasBillingAccount || !subSummary.billingPortalAvailable)
+      return;
     setPortalLoading(true);
     try {
       const res = await createPortalSession({ data: {} });
@@ -1060,6 +1061,7 @@ export function SettingsDialog({
                         subscriptionLoading ||
                         !!subscriptionError ||
                         !subSummary?.hasBillingAccount ||
+                        !subSummary.billingPortalAvailable ||
                         inheritedSubscription
                       }
                       aria-describedby="billing-management-status"
@@ -1088,9 +1090,11 @@ export function SettingsDialog({
                         ? "Checking the billing account linked to this KovaGPT account."
                         : inheritedSubscription
                           ? "This shared plan is managed by the Family Sharing owner."
-                          : subSummary?.hasBillingAccount
+                          : subSummary?.hasBillingAccount && subSummary.billingPortalAvailable
                             ? "Manage payment methods, invoices, cancellation, and plan changes in the Stripe billing portal."
-                            : "No Stripe billing account is linked to this KovaGPT account."}
+                            : subSummary?.hasBillingAccount
+                              ? "A Stripe billing account is linked, but the self-service portal is not configured. Contact support@kovagpt.com for billing help."
+                              : "No Stripe billing account is linked to this KovaGPT account."}
                   </p>
                 </div>
 
@@ -1100,8 +1104,9 @@ export function SettingsDialog({
                     <div className="rounded-lg border border-border p-4 space-y-2">
                       <div className="text-sm font-medium">Cancel subscription</div>
                       <p className="text-xs text-muted-foreground">
-                        You can cancel from the Stripe billing portal above. After canceling, you'll
-                        keep access to your current plan until the end of the billing period.
+                        {subSummary.billingPortalAvailable
+                          ? "You can cancel from the Stripe billing portal above. After canceling, you’ll keep access to your current plan until the end of the billing period."
+                          : "The self-service billing portal is not configured. Contact support@kovagpt.com for cancellation or other billing help."}
                       </p>
                     </div>
                   )}

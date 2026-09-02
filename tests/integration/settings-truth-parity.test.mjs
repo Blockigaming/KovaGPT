@@ -66,11 +66,15 @@ test("paid billing remains reachable and every unavailable state has a truthful 
   assert.match(settings, /No Stripe billing account is linked/);
   assert.match(settings, /parseAllowedBillingPortalUrl\(res\.url\)/);
   assert.match(settings, /createPortalSession\(\{ data: \{\} \}\)/);
+  assert.match(settings, /billingPortalAvailable/);
+  assert.match(settings, /self-service portal is not configured/);
   assert.doesNotMatch(settings, /window\.open\(/);
 
   const portal = billing.slice(billing.indexOf("export const createPortalSession"));
   assert.match(portal, /\.validator\(\(data: Record<string, never>\) => data\)/);
   assert.match(portal, /return_url: "https:\/\/kovagpt\.com\/"\s*,?/);
+  assert.match(portal, /configuration/);
+  assert.match(billing, /STRIPE_BILLING_PORTAL_CONFIGURATION_ID/);
   assert.doesNotMatch(portal, /data\.environment|data\.returnUrl/);
   assert.match(billing, /parseAllowedBillingPortalUrl\(portal\.url\)/);
   assert.match(billing, /existingError/);
