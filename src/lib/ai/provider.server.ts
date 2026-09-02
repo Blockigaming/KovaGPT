@@ -3,6 +3,14 @@ import { runtimeEnv } from "@/lib/runtime-env.server";
 import { responsesStreamToChatStream } from "@/lib/ai/responses-compat.server.mjs";
 import { getAiRuntimeConfig } from "@/lib/ai/config.server";
 import { maximumServerOutputForModel, modelForPolicy } from "@/lib/ai/model-catalog.server";
+import {
+  createManagedIdentityTokenFetcher,
+  createRequestDeadline,
+  fetchWithDeadline,
+  isAbortError,
+  isProviderTimeoutError,
+  type DeadlineOutcome,
+} from "@/lib/ai/provider-transport.server.mjs";
 
 export type JsonObject = Record<string, unknown>;
 
@@ -43,15 +51,21 @@ export type ProviderConfig = {
   configured: boolean;
 };
 
+type ProviderAuth = "azure_api_key" | "azure_managed_identity" | "openai_api_key" | "missing";
+
 type ProviderTarget = {
   provider: ProviderKind;
   baseUrl: string;
-  auth: "azure_api_key" | "azure_managed_identity" | "openai_api_key" | "missing";
+  auth: ProviderAuth;
 };
+
+type SafeLogValue = string | number | boolean | undefined;
+type SafeLogDetails = Record<string, SafeLogValue>;
 
 const OPENAI_API_BASE_URL = "https://api.openai.com/v1";
 const AZURE_OPENAI_RESOURCE = "https://cognitiveservices.azure.com";
 const DEFAULT_TIMEOUT_MS = 45_000;
+const DEFAULT_MANAGED_IDENTITY_TIMEOUT_MS = 5_000;
 const NO_STORE_HEADERS = { "Cache-Control": "no-store" } as const;
 const PROVIDER_FAILURE_CATEGORY = "model_provider_failure";
 
@@ -65,14 +79,6 @@ const DEFAULT_CAPABILITIES: ProviderCapability[] = [
   "vision",
   "file_analysis",
 ];
-
-let managedIdentityToken:
-  | {
-      accessToken: string;
-      expiresAtMs: number;
-    }
-  | undefined;
-let managedIdentityRequest: Promise<string> | undefined;
 
 export class AiProviderError extends Error {
   readonly code: ProviderErrorCode;
@@ -99,6 +105,17 @@ export class AiProviderError extends Error {
 
 function env(name: string): string | undefined {
   return runtimeEnv(name);
+}
+
+function logProviderEvent(
+  level: "info" | "warn" | "error",
+  event: string,
+  details: SafeLogDetails,
+): void {
+  const payload = { event, ...details };
+  if (level === "error") console.error("[ai-provider]", payload);
+  else if (level === "warn") console.warn("[ai-provider]", payload);
+  else console.info("[ai-provider]", payload);
 }
 
 function normalizeAzureOpenAiBaseUrl(value: string | undefined): string | undefined {
@@ -206,6 +223,13 @@ function parseCapabilities(value: string | undefined): ProviderCapability[] {
   return configured.length ? Array.from(new Set(configured)) : DEFAULT_CAPABILITIES;
 }
 
+const fetchManagedIdentityToken = createManagedIdentityTokenFetcher({
+  env,
+  resource: AZURE_OPENAI_RESOURCE,
+  getTimeoutMs: () => DEFAULT_MANAGED_IDENTITY_TIMEOUT_MS,
+  log: logProviderEvent,
+});
+
 export function getAiProviderConfig(): ProviderConfig {
   const target = providerTarget();
   return {
@@ -298,72 +322,7 @@ export function missingAiProviderResponse(fallback?: JsonObject): Response | nul
   );
 }
 
-function parseExpiry(value: unknown): number {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value > 10_000_000_000 ? value : value * 1000;
-  }
-  if (typeof value !== "string" || !value.trim()) return Date.now() + 5 * 60_000;
-  const numeric = Number(value);
-  if (Number.isFinite(numeric)) return numeric > 10_000_000_000 ? numeric : numeric * 1000;
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : Date.now() + 5 * 60_000;
-}
-
-async function fetchManagedIdentityToken(): Promise<string> {
-  if (managedIdentityToken && managedIdentityToken.expiresAtMs - Date.now() > 120_000) {
-    return managedIdentityToken.accessToken;
-  }
-  if (managedIdentityRequest) return managedIdentityRequest;
-
-  managedIdentityRequest = (async () => {
-    const endpointValue = env("IDENTITY_ENDPOINT");
-    const identityHeader = env("IDENTITY_HEADER");
-    if (!endpointValue || !identityHeader) throw new Error("azure_managed_identity_unavailable");
-
-    let endpoint: URL;
-    try {
-      endpoint = new URL(endpointValue);
-    } catch {
-      throw new Error("azure_managed_identity_unavailable");
-    }
-    if (endpoint.protocol !== "http:" || endpoint.username || endpoint.password) {
-      throw new Error("azure_managed_identity_unavailable");
-    }
-
-    endpoint.searchParams.set("resource", AZURE_OPENAI_RESOURCE);
-    endpoint.searchParams.set("api-version", "2019-08-01");
-    const clientId = env("AZURE_CLIENT_ID");
-    if (clientId) endpoint.searchParams.set("client_id", clientId);
-
-    const response = await fetch(endpoint, {
-      method: "GET",
-      redirect: "error",
-      headers: { "X-IDENTITY-HEADER": identityHeader },
-    });
-    if (!response.ok) {
-      await response.body?.cancel().catch(() => undefined);
-      throw new Error("azure_managed_identity_unavailable");
-    }
-
-    const value = (await response.json()) as Record<string, unknown>;
-    const accessToken = typeof value.access_token === "string" ? value.access_token : "";
-    if (!accessToken) throw new Error("azure_managed_identity_unavailable");
-
-    managedIdentityToken = {
-      accessToken,
-      expiresAtMs: parseExpiry(value.expires_on),
-    };
-    return accessToken;
-  })();
-
-  try {
-    return await managedIdentityRequest;
-  } finally {
-    managedIdentityRequest = undefined;
-  }
-}
-
-async function providerHeaders(): Promise<Record<string, string>> {
+async function providerHeaders(signal?: AbortSignal): Promise<Record<string, string>> {
   const target = providerTarget();
   if (target.auth === "azure_api_key") {
     return {
@@ -373,7 +332,7 @@ async function providerHeaders(): Promise<Record<string, string>> {
   }
   if (target.auth === "azure_managed_identity") {
     return {
-      Authorization: `Bearer ${await fetchManagedIdentityToken()}`,
+      Authorization: `Bearer ${await fetchManagedIdentityToken(signal)}`,
       "Content-Type": "application/json",
     };
   }
@@ -407,10 +366,7 @@ export function embeddingModel() {
 
 function normalizeProviderError(error: unknown): AiProviderError {
   if (error instanceof AiProviderError) return error;
-  if (
-    (error instanceof DOMException && error.name === "AbortError") ||
-    (error instanceof Error && error.name === "AbortError")
-  ) {
+  if (isAbortError(error)) {
     return new AiProviderError({
       error: "KovaGPT took too long to respond. Please try again.",
       code: "provider_timeout",
@@ -427,7 +383,11 @@ function normalizeProviderError(error: unknown): AiProviderError {
 }
 
 export async function providerErrorFromResponse(response: Response): Promise<AiProviderError> {
-  await response.body?.cancel().catch(() => undefined);
+  try {
+    void response.body?.cancel().catch(() => undefined);
+  } catch {
+    // Provider cancellation is best-effort and must never delay the error response.
+  }
 
   if (response.status === 401 || response.status === 402 || response.status === 403) {
     return new AiProviderError({
@@ -461,22 +421,13 @@ export async function providerErrorFromResponse(response: Response): Promise<AiP
   });
 }
 
-function mergeSignals(
-  signal: AbortSignal | undefined,
-  timeoutMs: number,
-): { signal: AbortSignal; cleanup: () => void } {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  const abort = () => controller.abort();
-  if (signal?.aborted) abort();
-  else signal?.addEventListener("abort", abort, { once: true });
-  return {
-    signal: controller.signal,
-    cleanup: () => {
-      clearTimeout(timeout);
-      signal?.removeEventListener("abort", abort);
-    },
-  };
+function providerOutcomeCode(outcome: DeadlineOutcome): string {
+  if (outcome.outcome === "timeout") return "provider_timeout";
+  if (outcome.outcome === "completed") return "provider_response_complete";
+  if (outcome.outcome === "cancelled" || outcome.outcome === "aborted") {
+    return "provider_response_cancelled";
+  }
+  return "provider_response_failed";
 }
 
 async function providerFetch(
@@ -488,24 +439,85 @@ async function providerFetch(
   const unavailable = providerUnavailableEnvelope(capability);
   if (unavailable) throw new AiProviderError(unavailable);
 
+  const target = providerTarget();
   const config = getAiProviderConfig();
-  const { signal, cleanup } = mergeSignals(init?.signal ?? undefined, config.timeoutMs);
+  const requestBody = withProviderModel(body, capability);
+  const deployment = typeof requestBody.model === "string" ? requestBody.model : undefined;
+  const startedAt = Date.now();
+  const deadline = createRequestDeadline(
+    init?.signal ?? undefined,
+    config.timeoutMs,
+    "provider_request",
+  );
+
+  logProviderEvent("info", "provider.request.start", {
+    provider: target.provider,
+    auth: target.auth,
+    capability,
+    path,
+    deployment,
+    timeoutMs: config.timeoutMs,
+  });
+
   try {
-    return await fetch(`${config.baseUrl}${path}`, {
-      ...init,
-      method: "POST",
-      redirect: "error",
-      signal,
-      headers: {
-        ...Object.fromEntries(new Headers(init?.headers).entries()),
-        ...(await providerHeaders()),
+    const headers = await providerHeaders(deadline.signal);
+    const response = await fetchWithDeadline(
+      fetch,
+      `${config.baseUrl}${path}`,
+      {
+        ...init,
+        method: "POST",
+        redirect: "error",
+        headers: {
+          ...Object.fromEntries(new Headers(init?.headers).entries()),
+          ...headers,
+        },
+        body: JSON.stringify(requestBody),
       },
-      body: JSON.stringify(withProviderModel(body, capability)),
+      deadline,
+      (outcome) => {
+        const level =
+          outcome.outcome === "timeout" || outcome.outcome === "failed" ? "warn" : "info";
+        logProviderEvent(level, "provider.request.finish", {
+          provider: target.provider,
+          capability,
+          path,
+          deployment,
+          status: outcome.status,
+          durationMs: Date.now() - startedAt,
+          code: providerOutcomeCode(outcome),
+        });
+      },
+    );
+
+    logProviderEvent("info", "provider.response.headers", {
+      provider: target.provider,
+      capability,
+      path,
+      deployment,
+      status: response.status,
+      durationMs: Date.now() - startedAt,
     });
+    return response;
   } catch (error) {
-    throw normalizeProviderError(error);
-  } finally {
-    cleanup();
+    deadline.cleanup();
+    const cause = deadline.normalize(error);
+    const callerCancelled = deadline.didParentAbort() && !isProviderTimeoutError(cause);
+    const normalized = normalizeProviderError(cause);
+    logProviderEvent(
+      callerCancelled ? "info" : "warn",
+      callerCancelled ? "provider.request.cancelled" : "provider.request.error",
+      {
+        provider: target.provider,
+        capability,
+        path,
+        deployment,
+        status: callerCancelled ? 499 : normalized.status,
+        durationMs: Date.now() - startedAt,
+        code: callerCancelled ? "provider_request_cancelled" : normalized.code,
+      },
+    );
+    throw normalized;
   }
 }
 
@@ -646,7 +658,12 @@ function responseOutputToMessage(value: JsonObject): JsonObject {
 }
 
 async function responsesJsonToChatJson(response: Response): Promise<Response> {
-  const value = (await response.json()) as JsonObject;
+  let value: JsonObject;
+  try {
+    value = (await response.json()) as JsonObject;
+  } catch (error) {
+    throw normalizeProviderError(error);
+  }
   const message = responseOutputToMessage(value);
   const usage = value.usage as JsonObject | undefined;
   return Response.json(
@@ -674,10 +691,28 @@ async function responsesJsonToChatJson(response: Response): Promise<Response> {
   );
 }
 
+async function bufferSuccessfulProviderResponse(response: Response): Promise<Response> {
+  if (!response.ok || !response.body) return response;
+  try {
+    const body = await response.arrayBuffer();
+    return new Response(body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    });
+  } catch (error) {
+    throw normalizeProviderError(error);
+  }
+}
+
 export async function imageGenerations(body: JsonObject, init?: RequestInit): Promise<Response> {
-  return providerFetch("/images/generations", "image_generation", body, init);
+  return bufferSuccessfulProviderResponse(
+    await providerFetch("/images/generations", "image_generation", body, init),
+  );
 }
 
 export async function embeddings(body: JsonObject, init?: RequestInit): Promise<Response> {
-  return providerFetch("/embeddings", "embeddings", body, init);
+  return bufferSuccessfulProviderResponse(
+    await providerFetch("/embeddings", "embeddings", body, init),
+  );
 }

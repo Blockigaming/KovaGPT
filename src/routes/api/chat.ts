@@ -28,6 +28,7 @@ import {
   imageModel,
   missingAiProviderResponse,
 } from "@/lib/ai/provider.server";
+import { isProviderTimeoutError } from "@/lib/ai/provider-transport.server.mjs";
 import { NEWS_TRIGGER, runWebSearch, shouldRunWebSearch } from "@/lib/ai/search.server";
 import { getDeepResearchAccess } from "@/lib/ai/deep-research-access.mjs";
 import { runDeepResearch, type ResearchProgressEvent } from "@/lib/ai/deep-research.server";
@@ -1717,24 +1718,25 @@ export const Route = createFileRoute("/api/chat")({
                     controller.enqueue(value);
                   }
                   await finalizeUsage(request.signal.aborted ? "aborted" : "completed");
-                } catch {
+                } catch (error) {
+                  const providerTimedOut = isProviderTimeoutError(error);
+                  const providerFailureCode = providerTimedOut
+                    ? "provider_timeout"
+                    : "stream_terminated";
+                  const providerFailureMessage = providerTimedOut
+                    ? "\n\n_KovaGPT took too long to respond. Please try again._"
+                    : "\n\n_The response stopped because the AI provider exceeded KovaGPT's safe response limit. Please retry with a narrower request._";
                   await finalizeUsage(
                     request.signal.aborted ? "client_disconnected" : "provider_failed",
-                    request.signal.aborted ? "client_disconnected" : "stream_terminated",
+                    request.signal.aborted ? "client_disconnected" : providerFailureCode,
                   );
                   if (!request.signal?.aborted) {
                     logSafeFailure("error", "[chat] final provider stream stopped", logContext, {
-                      status: 502,
+                      status: providerTimedOut ? 504 : 502,
                       category: "provider",
-                      code: "final_provider_stream_limit",
+                      code: providerTimedOut ? "provider_timeout" : "final_provider_stream_limit",
                     });
-                    controller.enqueue(
-                      enc.encode(
-                        sseChunk(
-                          "\n\n_The response stopped because the AI provider exceeded KovaGPT's safe response limit. Please retry with a narrower request._",
-                        ),
-                      ),
-                    );
+                    controller.enqueue(enc.encode(sseChunk(providerFailureMessage)));
                     controller.enqueue(enc.encode(sseDone()));
                   }
                 }
@@ -1758,6 +1760,12 @@ export const Route = createFileRoute("/api/chat")({
               },
             });
           } catch (e) {
+            if (request.signal.aborted) {
+              return new Response(null, {
+                status: 499,
+                headers: { "Cache-Control": "no-store" },
+              });
+            }
             const providerError = mapProviderError(e);
             const status = providerError.status;
             const envelope = buildErrorEnvelope(providerError, requestId, status);
