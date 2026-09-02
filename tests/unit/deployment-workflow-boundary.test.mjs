@@ -11,6 +11,8 @@ const read = (path) => readFileSync(path, "utf8");
 test("staging rehearsal verifies a predeployed exact SHA and cannot deploy the app", () => {
   const workflow = read(".github/workflows/staging-rehearsal.yml");
   const rootRoute = read("src/routes/__root.tsx");
+  const supabaseConfig = read("src/integrations/supabase/config.ts");
+  const supabaseClient = read("src/integrations/supabase/client.ts");
 
   assert.match(workflow, /^on: \{ workflow_dispatch: \{\} \}$/mu);
   assert.match(workflow, /if: github\.ref == 'refs\/heads\/main'/u);
@@ -30,8 +32,18 @@ test("staging rehearsal verifies a predeployed exact SHA and cannot deploy the a
   assert.match(workflow, /createHash\("sha256"\)\.update\(publishableKey\)/u);
   assert.match(workflow, /export VITE_SUPABASE_URL="\$staging_url"/u);
   assert.match(rootRoute, /name: "kova-build"/u);
+  assert.match(rootRoute, /SUPABASE_BROWSER_CONFIG/u);
+  assert.match(rootRoute, /name: "kova-supabase-url"/u);
+  assert.match(rootRoute, /name: "kova-supabase-publishable-key"/u);
   assert.match(rootRoute, /import\.meta\.env\.VITE_KOVA_BUILD_SHA/u);
   assert.match(rootRoute, /"Cache-Control": "no-store, max-age=0"/u);
+  assert.match(supabaseConfig, /import\.meta\.env\.VITE_SUPABASE_URL/u);
+  assert.match(supabaseConfig, /import\.meta\.env\.VITE_SUPABASE_PUBLISHABLE_KEY/u);
+  assert.doesNotMatch(supabaseConfig, /process\.env/u);
+  assert.match(supabaseConfig, /export const SUPABASE_BROWSER_CONFIG = Object\.freeze/u);
+  assert.match(supabaseConfig, /Server-only SUPABASE_\* variables belong/u);
+  assert.match(supabaseClient, /const \{ url, publishableKey \} = SUPABASE_BROWSER_CONFIG/u);
+  assert.match(supabaseClient, /createClient<Database>\(url, publishableKey/u);
   assert.match(workflow, /KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS: not-run/u);
   assert.doesNotMatch(workflow, /KOVA_GATE_ADMINISTRATOR_DIAGNOSTICS: passed/u);
   assert.match(workflow, /name: Derive authenticated staging gates/u);
@@ -141,16 +153,16 @@ test("deployment smoke bounds every request and inspects the deployed browser bu
   assert.match(smoke, /response\.body\.getReader\(\)/u);
   assert.match(smoke, /JAVASCRIPT_CONTENT_TYPES/u);
   assert.match(smoke, /JAVASCRIPT_DEPENDENCY_PATTERNS/u);
-  assert.match(smoke, /new URL\(rawUrl\)/u);
   assert.match(smoke, /assertNotCacheable/u);
   assert.match(smoke, /verifyRootBuildIdentity/u);
+  assert.match(smoke, /verifyRootSupabaseConfig/u);
+  assert.match(smoke, /getUniqueMetaContent/u);
   assert.match(smoke, /source\.includes\(expectedBuildSha\)/u);
   assert.match(smoke, /KOVA_EXPECTED_SUPABASE_URL/u);
   assert.match(smoke, /KOVA_EXPECTED_SUPABASE_PUBLISHABLE_KEY_SHA256/u);
-  assert.match(smoke, /SUPABASE_PUBLISHABLE_KEY_PATTERN/u);
   assert.match(smoke, /No deployed JavaScript assets were found/u);
-  assert.match(smoke, /does not contain the expected Supabase project URL/u);
-  assert.match(smoke, /contains an unexpected Supabase project URL/u);
+  assert.doesNotMatch(smoke, /SUPABASE_PROJECT_URL_PATTERN/u);
+  assert.doesNotMatch(smoke, /SUPABASE_PUBLISHABLE_KEY_PATTERN/u);
   assert.doesNotMatch(smoke, /QUOTED_JAVASCRIPT_PATTERN/u);
   assert.doesNotMatch(smoke, /collectJavaScriptStringLiterals/u);
   assert.doesNotMatch(smoke, /await fetch\(/u);
@@ -159,6 +171,7 @@ test("deployment smoke bounds every request and inspects the deployed browser bu
 test("deployment smoke safely traverses and validates deployed JavaScript", async () => {
   const expectedSha = "a".repeat(40);
   const expectedProjectRef = "stagingprojectref123";
+  const expectedSupabaseUrl = "https://" + expectedProjectRef + ".supabase.co";
   const expectedPublishableKey = "sb_publishable_" + "x".repeat(32);
   const expectedPublishableKeySha256 = createHash("sha256")
     .update(expectedPublishableKey)
@@ -167,6 +180,10 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
   let assetContentType = "application/javascript";
   let browserBuildSha = expectedSha;
   let htmlCacheControl = "no-store, max-age=0";
+  let runtimeSupabaseUrl = expectedSupabaseUrl;
+  let runtimeSupabasePublishableKey = expectedPublishableKey;
+  let includeRuntimeMetas = true;
+  let extraRuntimeMeta = "";
   const scripts = new Map([
     [
       "/assets/index.js",
@@ -211,7 +228,16 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
       response.end(
         '<meta name="kova-build" content="' +
           browserBuildSha +
-          '"><script type="module" src="/assets/index.js"></script>',
+          '">' +
+          (includeRuntimeMetas
+            ? '<meta name="kova-supabase-url" content="' +
+              runtimeSupabaseUrl +
+              '"><meta name="kova-supabase-publishable-key" content="' +
+              runtimeSupabasePublishableKey +
+              '">'
+            : "") +
+          extraRuntimeMeta +
+          '<script type="module" src="/assets/index.js"></script>',
       );
       return;
     }
@@ -254,7 +280,7 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
         ...process.env,
         KOVA_SMOKE_BASE_URL: "http://127.0.0.1:" + address.port,
         KOVA_EXPECTED_SHA: expectedSha,
-        KOVA_EXPECTED_SUPABASE_URL: "https://" + expectedProjectRef + ".supabase.co",
+        KOVA_EXPECTED_SUPABASE_URL: expectedSupabaseUrl,
         KOVA_EXPECTED_SUPABASE_PUBLISHABLE_KEY_SHA256: expectedPublishableKeySha256,
         KOVA_SMOKE_REQUEST_TIMEOUT_MS: "1000",
         ...extraEnv,
@@ -283,26 +309,6 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
     assert.ok(!passing.paths.includes("/assets/assets/preloaded.js"));
     assert.ok(!passing.paths.includes("/stripe.js"));
 
-    const malformedPublishableKeySources = [
-      'export const supabaseKey = "prefix' + expectedPublishableKey + '";',
-      'export const supabaseKey = "' + expectedPublishableKey + '.junk";',
-      'export const supabaseKey = "' + expectedPublishableKey + String.fromCharCode(39) + '";',
-      'export const payload = "{\\"key\\":\\"' + expectedPublishableKey + '\\"}";',
-    ];
-    for (const malformedKeySource of malformedPublishableKeySources) {
-      scripts.set(
-        "/assets/preloaded.js",
-        [
-          'export const supabaseUrl = "https://' + expectedProjectRef + '.supabase.co";',
-          malformedKeySource,
-          'export const buildSha = "' + expectedSha + '";',
-        ].join(" "),
-      );
-      const malformedPublishableKey = await runSmoke();
-      assert.notEqual(malformedPublishableKey.code, 0);
-      assert.match(malformedPublishableKey.stderr, /non-canonical Supabase publishable key/u);
-    }
-
     htmlCacheControl = "public, max-age=300";
     const cacheableHtml = await runSmoke();
     assert.notEqual(cacheableHtml.code, 0);
@@ -315,137 +321,43 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
     assert.match(fallback.stderr, /non-JavaScript content type text\/html/u);
     assetContentType = "application/javascript";
 
-    scripts.set(
-      "/assets/preloaded.js",
-      'export const bad = "https://' + expectedProjectRef + '.supabase.co.attacker.example";',
-    );
-    const suffixAttack = await runSmoke();
-    assert.notEqual(suffixAttack.code, 0);
-    assert.match(suffixAttack.stderr, /non-canonical Supabase URL/u);
+    // Exact dead literals remain in the fetched JavaScript; runtime metadata is authoritative.
+    runtimeSupabaseUrl = expectedSupabaseUrl + "@attacker.example";
+    const concatenatedRuntimeUrl = await runSmoke();
+    assert.notEqual(concatenatedRuntimeUrl.code, 0);
+    assert.match(concatenatedRuntimeUrl.stderr, /non-canonical Supabase runtime URL/u);
+    runtimeSupabaseUrl = expectedSupabaseUrl;
 
-    scripts.set(
-      "/assets/preloaded.js",
-      'export const bad = "https://' + expectedProjectRef + '.supabase.co@attacker.example";',
-    );
-    const userinfoAttack = await runSmoke();
-    assert.notEqual(userinfoAttack.code, 0);
-    assert.match(userinfoAttack.stderr, /non-canonical Supabase URL/u);
-
-    const apostrophe = String.fromCharCode(39);
-    const doubleQuote = String.fromCharCode(34);
-    scripts.set(
-      "/assets/preloaded.js",
-      [
-        'export const bad = "https://',
-        expectedProjectRef,
-        ".supabase.co",
-        apostrophe,
-        '@attacker.example";',
-      ].join(""),
-    );
-    const apostropheUserinfoAttack = await runSmoke();
-    assert.notEqual(apostropheUserinfoAttack.code, 0);
-    assert.match(apostropheUserinfoAttack.stderr, /non-canonical Supabase URL/u);
-
-    scripts.set(
-      "/assets/preloaded.js",
-      [
-        "export const bad = 'https://",
-        expectedProjectRef,
-        ".supabase.co",
-        doubleQuote,
-        "@attacker.example';",
-      ].join(""),
-    );
-    const quoteUserinfoAttack = await runSmoke();
-    assert.notEqual(quoteUserinfoAttack.code, 0);
-    assert.match(quoteUserinfoAttack.stderr, /non-canonical Supabase URL/u);
-
-    scripts.set(
-      "/assets/preloaded.js",
-      'export const bad = "https://' + expectedProjectRef + '.supabase.co;@attacker.example";',
-    );
-    const delimitedUserinfoAttack = await runSmoke();
-    assert.notEqual(delimitedUserinfoAttack.code, 0);
-    assert.match(delimitedUserinfoAttack.stderr, /non-canonical Supabase URL/u);
-
-    for (const userinfoDelimiter of [" ", "\t", "\n", "<", ">", "' "]) {
-      scripts.set(
-        "/assets/preloaded.js",
-        'export const bad = "https://' +
-          expectedProjectRef +
-          ".supabase.co" +
-          userinfoDelimiter +
-          '@attacker.example";',
-      );
-      const userinfoDelimiterAttack = await runSmoke();
-      assert.notEqual(userinfoDelimiterAttack.code, 0);
-      assert.match(userinfoDelimiterAttack.stderr, /non-canonical Supabase URL/u);
+    for (const malformedKey of [
+      "prefix" + expectedPublishableKey,
+      expectedPublishableKey + ".junk",
+      expectedPublishableKey + "&#46;junk",
+      expectedPublishableKey + String.fromCharCode(39),
+    ]) {
+      runtimeSupabasePublishableKey = malformedKey;
+      const malformedRuntimeKey = await runSmoke();
+      assert.notEqual(malformedRuntimeKey.code, 0);
+      assert.match(malformedRuntimeKey.stderr, /non-canonical Supabase publishable key/u);
+      assert.doesNotMatch(malformedRuntimeKey.stderr, /sb_publishable_/u);
     }
-
-    scripts.set(
-      "/assets/preloaded.js",
-      "export const bad = 'https://" + expectedProjectRef + ".supabase.co\" @attacker.example';",
-    );
-    const oppositeQuoteSpaceAttack = await runSmoke();
-    assert.notEqual(oppositeQuoteSpaceAttack.code, 0);
-    assert.match(oppositeQuoteSpaceAttack.stderr, /non-canonical Supabase URL/u);
-
-    for (const suffix of ["/wrong-base", "?wrong=true", "#wrong"]) {
-      scripts.set(
-        "/assets/preloaded.js",
-        'export const bad = "https://' + expectedProjectRef + ".supabase.co" + suffix + '";',
-      );
-      const nonRootUrl = await runSmoke();
-      assert.notEqual(nonRootUrl.code, 0);
-      assert.match(nonRootUrl.stderr, /non-canonical Supabase URL/u);
-    }
-
-    const otherProjectRef = "otherstageproject123";
-    const templateDelimiter = String.fromCharCode(96);
-    scripts.set(
-      "/assets/preloaded.js",
-      [
-        'const good = "https://',
-        expectedProjectRef,
-        '.supabase.co"; const bad = ',
-        templateDelimiter,
-        "prefix https://",
-        otherProjectRef,
-        ".supabase.co",
-        templateDelimiter,
-        ";",
-      ].join(""),
-    );
-    const embeddedOtherProject = await runSmoke();
-    assert.notEqual(embeddedOtherProject.code, 0);
-    assert.match(embeddedOtherProject.stderr, /non-canonical Supabase URL/u);
-
-    scripts.set(
-      "/assets/preloaded.js",
-      'const good = "https://' +
-        expectedProjectRef +
-        '.supabase.co"; const bad = "https://' +
-        otherProjectRef +
-        '.supabase.co";',
-    );
-    const otherProject = await runSmoke();
-    assert.notEqual(otherProject.code, 0);
-    assert.match(otherProject.stderr, /unexpected Supabase project URL/u);
-
-    scripts.set(
-      "/assets/preloaded.js",
-      'export const supabaseUrl = "https://' +
-        expectedProjectRef +
-        '.supabase.co"; export const supabaseKey = "sb_publishable_' +
-        "y".repeat(32) +
-        '"; export const buildSha = "' +
-        expectedSha +
-        '";',
-    );
+    runtimeSupabasePublishableKey = "sb_publishable_" + "y".repeat(32);
     const wrongPublishableKey = await runSmoke();
     assert.notEqual(wrongPublishableKey.code, 0);
     assert.match(wrongPublishableKey.stderr, /publishable-key fingerprint/u);
+    assert.doesNotMatch(wrongPublishableKey.stderr, /sb_publishable_/u);
+    runtimeSupabasePublishableKey = expectedPublishableKey;
+
+    includeRuntimeMetas = false;
+    const missingRuntimeConfig = await runSmoke();
+    assert.notEqual(missingRuntimeConfig.code, 0);
+    assert.match(missingRuntimeConfig.stderr, /exactly one valid kova-supabase-url meta/u);
+    includeRuntimeMetas = true;
+
+    extraRuntimeMeta = '<meta name="kova-supabase-url" content="' + expectedSupabaseUrl + '">';
+    const duplicateRuntimeConfig = await runSmoke();
+    assert.notEqual(duplicateRuntimeConfig.code, 0);
+    assert.match(duplicateRuntimeConfig.stderr, /exactly one valid kova-supabase-url meta/u);
+    extraRuntimeMeta = "";
 
     scripts.set(
       "/assets/preloaded.js",

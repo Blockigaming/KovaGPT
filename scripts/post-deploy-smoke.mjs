@@ -37,9 +37,6 @@ if (
   throw new Error("KOVA_SMOKE_MAX_JAVASCRIPT_BYTES must be an integer from 1024 through 67108864");
 }
 
-const SUPABASE_PROJECT_URL_PATTERN = /https:\/\/([a-z0-9]{20})\.supabase\.co/giu;
-const SUPABASE_PUBLISHABLE_KEY_PATTERN = /sb_publishable_[A-Za-z0-9_-]{16,}/gu;
-const SUPABASE_URL_DELIMITERS = new Set(['"', "'", "`"]);
 const DYNAMIC_IMPORT_PATTERN =
   /\bimport\s*\(\s*["'`]([^"'`\s]+?\.m?js(?:\?[^"'`\s]*)?)["'`]\s*\)/giu;
 const STATIC_IMPORT_PATTERN =
@@ -98,6 +95,46 @@ function verifyRootBuildIdentity(rootHtml, expectedBuildSha) {
   const buildShas = [...rootHtml.matchAll(buildMetaPattern)].map((match) => match[1]);
   if (buildShas.length !== 1 || buildShas[0] !== expectedBuildSha) {
     throw new Error("The deployed HTML does not contain the expected build SHA");
+  }
+}
+
+function getUniqueMetaContent(rootHtml, name) {
+  const values = [];
+  for (const tag of rootHtml.match(/<meta\b[^>]*>/giu) || []) {
+    const attributes = new Map();
+    const attributePattern = /\b([A-Za-z][\w:-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/gu;
+    for (const attribute of tag.matchAll(attributePattern)) {
+      attributes.set(attribute[1].toLowerCase(), attribute[2] ?? attribute[3]);
+    }
+    if (attributes.get("name") === name) values.push(attributes.get("content"));
+  }
+  if (values.length !== 1 || typeof values[0] !== "string" || !values[0]) {
+    throw new Error(`The deployed HTML must contain exactly one valid ${name} meta value`);
+  }
+  return values[0];
+}
+
+function verifyRootSupabaseConfig(rootHtml, expected, expectedPublishableKeySha256) {
+  const deployedUrlValue = getUniqueMetaContent(rootHtml, "kova-supabase-url");
+  const deployedPublishableKey = getUniqueMetaContent(rootHtml, "kova-supabase-publishable-key");
+
+  let deployedUrl;
+  try {
+    deployedUrl = normalizeExpectedSupabaseUrl(deployedUrlValue);
+  } catch {
+    throw new Error("The deployed HTML contains a non-canonical Supabase runtime URL");
+  }
+  if (!deployedUrl || deployedUrl.url !== expected.url) {
+    throw new Error("The deployed HTML does not match the expected Supabase runtime URL");
+  }
+  if (!/^sb_publishable_[A-Za-z0-9_-]{16,}$/u.test(deployedPublishableKey)) {
+    throw new Error("The deployed HTML contains a non-canonical Supabase publishable key");
+  }
+  const deployedFingerprint = createHash("sha256").update(deployedPublishableKey).digest("hex");
+  if (deployedFingerprint !== expectedPublishableKeySha256) {
+    throw new Error(
+      "The deployed HTML does not match the protected Supabase publishable-key fingerprint",
+    );
   }
 }
 
@@ -198,74 +235,6 @@ async function readBoundedJavaScript(response, url, maximumBytes) {
   return { source: decoded.join(""), bytes };
 }
 
-function nonCanonicalSupabaseUrl() {
-  return new Error("The deployed browser bundle contains a non-canonical Supabase URL");
-}
-
-function hasCanonicalStringLiteralBoundaries(source, index, length) {
-  const openingDelimiterIndex = index - 1;
-  const closingDelimiterIndex = index + length;
-  const openingDelimiter = source[openingDelimiterIndex];
-  const closingDelimiter = source[closingDelimiterIndex];
-  const isEscaped = (characterIndex) => {
-    let backslashes = 0;
-    for (let offset = characterIndex - 1; offset >= 0 && source[offset] === "\\"; offset -= 1) {
-      backslashes += 1;
-    }
-    return backslashes % 2 === 1;
-  };
-  return (
-    SUPABASE_URL_DELIMITERS.has(openingDelimiter) &&
-    closingDelimiter === openingDelimiter &&
-    !isEscaped(openingDelimiterIndex) &&
-    !isEscaped(closingDelimiterIndex)
-  );
-}
-
-function discoverSupabaseProjectRefs(source, discoveredProjectRefs) {
-  SUPABASE_PROJECT_URL_PATTERN.lastIndex = 0;
-  for (const match of source.matchAll(SUPABASE_PROJECT_URL_PATTERN)) {
-    const rawUrl = match[0];
-    if (!hasCanonicalStringLiteralBoundaries(source, match.index, rawUrl.length)) {
-      throw nonCanonicalSupabaseUrl();
-    }
-
-    let candidate;
-    try {
-      candidate = new URL(rawUrl);
-    } catch {
-      throw nonCanonicalSupabaseUrl();
-    }
-
-    const hostname = /^([a-z0-9]{20})\.supabase\.co$/u.exec(candidate.hostname);
-    if (
-      candidate.protocol !== "https:" ||
-      !hostname ||
-      candidate.username ||
-      candidate.password ||
-      candidate.port ||
-      candidate.pathname !== "/" ||
-      candidate.search ||
-      candidate.hash
-    ) {
-      throw nonCanonicalSupabaseUrl();
-    }
-    discoveredProjectRefs.add(hostname[1]);
-  }
-}
-
-function discoverSupabasePublishableKeyFingerprints(source, discoveredFingerprints) {
-  SUPABASE_PUBLISHABLE_KEY_PATTERN.lastIndex = 0;
-  for (const match of source.matchAll(SUPABASE_PUBLISHABLE_KEY_PATTERN)) {
-    if (!hasCanonicalStringLiteralBoundaries(source, match.index, match[0].length)) {
-      throw new Error(
-        "The deployed browser bundle contains a non-canonical Supabase publishable key",
-      );
-    }
-    discoveredFingerprints.add(createHash("sha256").update(match[0]).digest("hex"));
-  }
-}
-
 function addJavaScriptReference(candidate, parent, queue, seen) {
   let url;
   try {
@@ -288,20 +257,13 @@ function discoverJavaScript(source, parent, pattern, queue, seen) {
   }
 }
 
-async function verifyDeployedBrowserTarget(
-  rootHtml,
-  expected,
-  expectedBuildSha,
-  expectedPublishableKeySha256,
-) {
+async function verifyDeployedBrowserTarget(rootHtml, expectedBuildSha) {
   const queue = [];
   const seen = new Set();
   discoverJavaScript(rootHtml, base, HTML_JAVASCRIPT_PATTERN, queue, seen);
   if (queue.length === 0) throw new Error("No deployed JavaScript assets were found");
 
   verifyRootBuildIdentity(rootHtml, expectedBuildSha);
-  const discoveredProjectRefs = new Set();
-  const discoveredPublishableKeyFingerprints = new Set();
   let foundExpectedBuildSha = false;
   let scannedAssets = 0;
   let scannedBytes = 0;
@@ -320,29 +282,11 @@ async function verifyDeployedBrowserTarget(
     scannedBytes += result.bytes;
     if (result.source.includes(expectedBuildSha)) foundExpectedBuildSha = true;
 
-    discoverSupabaseProjectRefs(result.source, discoveredProjectRefs);
-    discoverSupabasePublishableKeyFingerprints(result.source, discoveredPublishableKeyFingerprints);
     for (const pattern of JAVASCRIPT_DEPENDENCY_PATTERNS) {
       discoverJavaScript(result.source, url, pattern, queue, seen);
     }
   }
 
-  if (!discoveredProjectRefs.has(expected.projectRef)) {
-    throw new Error(
-      "The deployed browser bundle does not contain the expected Supabase project URL",
-    );
-  }
-  if ([...discoveredProjectRefs].some((projectRef) => projectRef !== expected.projectRef)) {
-    throw new Error("The deployed browser bundle contains an unexpected Supabase project URL");
-  }
-  if (
-    discoveredPublishableKeyFingerprints.size !== 1 ||
-    !discoveredPublishableKeyFingerprints.has(expectedPublishableKeySha256)
-  ) {
-    throw new Error(
-      "The deployed browser bundle does not match the protected Supabase publishable-key fingerprint",
-    );
-  }
   if (!foundExpectedBuildSha) {
     throw new Error("The deployed browser bundle does not contain the expected build SHA");
   }
@@ -367,12 +311,8 @@ for (const path of ["/", "/pricing", "/modes", "/~oauth/callback", "/robots.txt"
 }
 
 if (expectedSupabaseUrl) {
-  await verifyDeployedBrowserTarget(
-    rootBody,
-    expectedSupabaseUrl,
-    expectedSha,
-    expectedSupabasePublishableKeySha256,
-  );
+  verifyRootSupabaseConfig(rootBody, expectedSupabaseUrl, expectedSupabasePublishableKeySha256);
+  await verifyDeployedBrowserTarget(rootBody, expectedSha);
 }
 
 const missing = await request(`/release-smoke-missing-${Date.now()}`);
