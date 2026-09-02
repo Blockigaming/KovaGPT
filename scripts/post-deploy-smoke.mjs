@@ -24,7 +24,7 @@ if (
   );
 }
 
-const ABSOLUTE_HTTPS_URL_PATTERN = /https:\/\/[^\s"'`\\<>()\[\]{},;]+/giu;
+const ABSOLUTE_HTTPS_URL_PATTERN = /https:\/\/[^\s"'`\\<>]+/giu;
 const DYNAMIC_IMPORT_PATTERN =
   /\bimport\s*\(\s*["'`]([^"'`\s]+?\.m?js(?:\?[^"'`\s]*)?)["'`]\s*\)/giu;
 const STATIC_IMPORT_PATTERN =

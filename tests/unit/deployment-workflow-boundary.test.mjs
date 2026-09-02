@@ -245,6 +245,16 @@ test("deployment smoke safely traverses and validates deployed JavaScript", asyn
 
     scripts.set(
       "/assets/preloaded.js",
+      'export const bad = "https://' +
+        expectedProjectRef +
+        '.supabase.co;@attacker.example";',
+    );
+    const delimitedUserinfoAttack = await runSmoke();
+    assert.notEqual(delimitedUserinfoAttack.code, 0);
+    assert.match(delimitedUserinfoAttack.stderr, /non-canonical Supabase URL/u);
+
+    scripts.set(
+      "/assets/preloaded.js",
       'export const supabaseUrl = "https://' + expectedProjectRef + '.supabase.co";',
     );
     scripts.set(
