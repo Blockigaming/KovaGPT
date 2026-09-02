@@ -55,7 +55,7 @@ test("composer actions, message editing, and markdown stay reachable and lossles
   );
   assert.match(
     chatInput,
-    /COMPOSER_TOOLS\.filter\(\s*\(tool\) => tool\.id !== "deep_research" \|\| userTier !== "free",\s*\)\.map\(toolRow\)/,
+    /COMPOSER_TOOLS\.filter\(\s*\(tool\) => tool\.id !== "deep_research" \|\| userTier !== "free",?\s*\)\.map\(\s*toolRow,?\s*\)/,
   );
   for (const [id, label] of [
     ["web_search", "Search the web"],

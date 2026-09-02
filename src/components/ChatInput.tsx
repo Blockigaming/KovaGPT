@@ -720,9 +720,9 @@ export function ChatInput({
         {photosRow}
         {filesRow}
         {cameraRow}
-        {COMPOSER_TOOLS.filter(
-          (tool) => tool.id !== "deep_research" || userTier !== "free",
-        ).map(toolRow)}
+        {COMPOSER_TOOLS.filter((tool) => tool.id !== "deep_research" || userTier !== "free").map(
+          toolRow,
+        )}
         <button type="button" className={rowClass} onClick={() => (window.location.href = "/apps")}>
           <Sparkles className={iconClass} />
           <span>Apps and connectors</span>

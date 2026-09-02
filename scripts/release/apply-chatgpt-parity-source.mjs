@@ -20,9 +20,9 @@ const replacements = [
   {
     path: "src/components/ChatInput.tsx",
     before: `{COMPOSER_TOOLS.map(toolRow)}`,
-    after: `{COMPOSER_TOOLS.filter(
-          (tool) => tool.id !== "deep_research" || userTier !== "free",
-        ).map(toolRow)}`,
+    after: `{COMPOSER_TOOLS.filter((tool) => tool.id !== "deep_research" || userTier !== "free").map(
+          toolRow,
+        )}`,
   },
   {
     path: "src/components/ChatInput.tsx",
