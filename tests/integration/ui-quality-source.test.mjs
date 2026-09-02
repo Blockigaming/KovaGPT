@@ -11,6 +11,7 @@ const composer = await readFile("src/components/ChatInput.tsx", "utf8");
 const modelSelector = await readFile("src/components/ResponsiveModelSelector.tsx", "utf8");
 const pricing = await readFile("src/routes/pricing.tsx", "utf8");
 const publicShell = await readFile("src/components/public/PublicShell.tsx", "utf8");
+const publicFooter = await readFile("src/components/PublicFooter.tsx", "utf8");
 const publicSite = await readFile("src/components/public/PublicSite.tsx", "utf8");
 const resetPassword = await readFile("src/routes/reset-password.tsx", "utf8");
 const seoLanding = await readFile("src/components/SeoLanding.tsx", "utf8");
@@ -69,12 +70,10 @@ test("core chat surfaces use shared workspace primitives", () => {
   assert.doesNotMatch(styles, /\.kova-logo-mark\s*\{[\s\S]*?mask: url/);
   assert.match(sidebar, /<NovaLogo decorative mark className="h-6 w-6 text-foreground" \/>/);
   assert.match(home, /<NovaLogo decorative mark className="h-5 w-5" \/>/);
-  assert.equal(
-    publicSite.match(/<NovaLogo decorative mark/g)?.length,
-    2,
-    "adjacent public-site marks remain decorative",
-  );
+  assert.match(publicSite, /<PublicShell>/);
+  assert.doesNotMatch(publicSite, /<NovaLogo/);
   assert.match(publicShell, /<NovaLogo decorative className="h-7 w-7" \/>/);
+  assert.match(publicFooter, /<NovaLogo decorative mark className="h-6 w-6" \/>/);
   assert.match(seoLanding, /<PublicShell>/);
   assert.doesNotMatch(seoLanding, /<NovaLogo/);
   assert.match(pricing, /<PublicShell>/);
