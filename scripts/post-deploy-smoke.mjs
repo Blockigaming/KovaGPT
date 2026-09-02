@@ -301,11 +301,7 @@ if (identity.sha !== expectedSha || version.response.headers.get("x-kova-build")
 
 let rootBody = "";
 for (const path of ["/", "/pricing", "/modes", "/~oauth/callback", "/robots.txt", "/sitemap.xml"]) {
-  const expectedType = path.endsWith(".xml")
-    ? "xml"
-    : path.endsWith(".txt")
-      ? "text"
-      : "text/html";
+  const expectedType = path.endsWith(".xml") ? "xml" : path.endsWith(".txt") ? "text" : "text/html";
   const { response, body } = await read(path, expectedType);
   if (expectedType === "text/html") assertNotCacheable(response, path);
   if (path === "/") rootBody = body;
