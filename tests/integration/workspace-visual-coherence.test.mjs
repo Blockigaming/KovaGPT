@@ -24,6 +24,8 @@ test("apps and plugins use one name and one truthful signed-out action", () => {
   assert.doesNotMatch(routes.apps, /FILTER_CATEGORIES|setCategory|You haven't connected any apps/);
   assert.match(routes.apps, /GitHub connection status is unavailable/);
   assert.match(routes.apps, /min-h-11/);
+  assert.match(routes.apps, /role="status"[\s\S]{0,180}Loading apps and plugins/);
+  assert.doesNotMatch(routes.apps, /aria-busy=\{!isLoaded \|\| undefined\}/);
 });
 
 test("Library reserves controls for real content and presents honest empty states", () => {

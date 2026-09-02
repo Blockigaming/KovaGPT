@@ -867,7 +867,6 @@ function AppsPage() {
         id="main-content"
         tabIndex={-1}
         aria-labelledby="apps-title"
-        aria-busy={!isLoaded || undefined}
         className="kova-page kova-secondary-page max-w-5xl space-y-8"
       >
         <Dialog open={!!visibleSelectedApp} onOpenChange={(open) => !open && setSelectedApp(null)}>

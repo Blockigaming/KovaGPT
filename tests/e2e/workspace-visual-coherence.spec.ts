@@ -12,6 +12,7 @@ test.beforeEach(({ page }, testInfo) => {
 async function expectOneMainWithoutOverflow(page: Page) {
   const main = page.locator("main#main-content");
   await expect(main).toHaveCount(1);
+  await expect(main).not.toHaveAttribute("aria-busy", "true");
   const dimensions = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
     scrollWidth: document.documentElement.scrollWidth,
